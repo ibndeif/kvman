@@ -1,4 +1,7 @@
+export * from './extension/record-extension.ts';
+export * from './extension/recording.ts';
 export * from './problems.ts';
+export * from './registry/kernel-registry.ts';
 export * from './storage/better-sqlite3-driver.ts';
 export * from './storage/commit-pipeline.ts';
 export * from './storage/commit-unit.ts';

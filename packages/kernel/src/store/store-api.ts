@@ -14,6 +14,14 @@ function logMatches(families: readonly string[], name: string): boolean {
   return families.some((family) => (family.endsWith(':*') ? name.startsWith(family.slice(0, -1)) && name.length > family.length - 1 : name === family));
 }
 
+// With a family's reference, log(history, key) is the log history:<key> (ADR 0044).
+function familyMember(context: StoreContext, family: string, key: string): string {
+  if (!family.endsWith(':*')) {
+    throw storeFailure(context, 'VALIDATION_FAILED', { detail: `"${family}" is not a log family`, hint: 'only a log family such as "history:*" takes a key' });
+  }
+  return `${family.slice(0, -1)}${key}`;
+}
+
 // Every document and log entry was checked against the collection's or log's registered schema when it was written,
 // so a stored value has the type the registering extension declared for it.
 function typedView<View>(untyped: unknown): View {
@@ -25,7 +33,7 @@ function scopedStore(binding: ScopeBinding): ScopedStore {
   const kv = createKvStore(binding);
   return {
     kv,
-    collection<Doc extends JsonObject = JsonObject>(name: string) {
+    collection<Doc extends object = JsonObject>(name: string) {
       const declaration = context.data.collections.find((collection) => collection.name === name);
       if (declaration === undefined) {
         const registered = context.data.collections.map((collection) => collection.name).join(', ') || 'none';
@@ -33,11 +41,12 @@ function scopedStore(binding: ScopeBinding): ScopedStore {
       }
       return typedView<Collection<Doc>>(createCollection(binding, declaration));
     },
-    log<Value extends Json = Json>(name: string) {
-      if (!logMatches(context.data.logs, name)) {
-        throw storeFailure(context, 'VALIDATION_FAILED', { detail: `"${name}" matches no registered log`, hint: `registered logs: ${context.data.logs.join(', ') || 'none'}` });
+    log<Value = Json>(name: string, key?: string) {
+      const logName = key === undefined ? name : familyMember(context, name, key);
+      if (!logMatches(context.data.logs, logName)) {
+        throw storeFailure(context, 'VALIDATION_FAILED', { detail: `"${logName}" matches no registered log`, hint: `registered logs: ${context.data.logs.join(', ') || 'none'}` });
       }
-      return typedView<Log<Value>>(createLog(binding, name));
+      return typedView<Log<Value>>(createLog(binding, logName));
     },
   };
 }
@@ -65,8 +74,8 @@ export function createHandlerStore(options: StoreOptions): HandlerStore {
     get kv() {
       return workspace.kv;
     },
-    collection: <Doc extends JsonObject = JsonObject>(name: string) => workspace.collection<Doc>(name),
-    log: <Value extends Json = Json>(name: string) => workspace.log<Value>(name),
+    collection: <Doc extends object = JsonObject>(name: string) => workspace.collection<Doc>(name),
+    log: <Value = Json>(name: string, key?: string) => workspace.log<Value>(name, key),
     global,
   };
   return { store, writes: () => context.pending.writes() };

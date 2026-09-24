@@ -53,10 +53,18 @@ function splitPackageSpecifier(specifier: string): { name: string; subpath: stri
   return { name: parts.slice(0, nameLength).join('/'), subpath: parts.slice(nameLength).join('/') };
 }
 
+// Test files may share another package's JSON fixtures: data, never code (ADR 0049).
+function isFixtureData(unit: WorkspaceUnit, target: string): boolean {
+  const repositoryRoot = path.dirname(path.dirname(unit.root));
+  const [folder, , testFolder, fixturesFolder] = path.relative(repositoryRoot, target).split(path.sep);
+  return folder !== undefined && unitFolders.includes(folder) && testFolder === 'test' && fixturesFolder === 'fixtures' && target.endsWith('.json');
+}
+
 function checkRelative(unit: WorkspaceUnit, use: ImportUse): string | undefined {
   const target = path.resolve(path.dirname(use.fromFile), use.specifier);
   const inside = path.relative(unit.root, target);
-  if (inside.startsWith('..') || path.isAbsolute(inside)) {
+  const sharedFixture = isTestFile(unit, use.fromFile) && isFixtureData(unit, target);
+  if ((inside.startsWith('..') || path.isAbsolute(inside)) && !sharedFixture) {
     return `"${use.specifier}" leaves ${unit.label}; import another package by its name (plan 01 §1.5)`;
   }
   return undefined;

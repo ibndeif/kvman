@@ -158,12 +158,12 @@ Four primitives, one shape each. There is no pagination anywhere in kvman: reads
 ```ts
 ctx.store.kv                       // small values by key
 ctx.store.collection(name | ref)   // typed documents with indexes and filters
-ctx.store.log(name)                // append-only sequences, numbered 1, 2, 3, …
+ctx.store.log(name | ref, key?)    // append-only sequences, numbered 1, 2, 3, …
 ctx.store.blobs                    // bytes (files), stored once per content
 ctx.store.global                   // the same four, in global scope instead of the current workspace
 ```
 
-Every call is scoped to the invocation's workspace (a handler without a workspace, i.e. a `global`-scope type, may use only `ctx.store.global`; the workspace store throws `WORKSPACE_INVALID` there, ADR 0040). The owner is always the calling extension; an extension cannot name another extension's data. `collection(name)` must name a collection the extension registered, and `log(name)` must match a log prefix it registered (`registerLog('history:*')` covers `history:abc`); any other name throws `VALIDATION_FAILED` with a hint. kv keys need no registration.
+Every call is scoped to the invocation's workspace (a handler without a workspace, i.e. a `global`-scope type, may use only `ctx.store.global`; the workspace store throws `WORKSPACE_INVALID` there, ADR 0040). The owner is always the calling extension; an extension cannot name another extension's data. `collection(name)` must name a collection the extension registered, and `log(name)` must match a log prefix it registered (`registerLog('history:*')` covers `history:abc`); any other name throws `VALIDATION_FAILED` with a hint. With a log family's reference, `log(history, key)` is the log `history:<key>` (ADR 0044). kv keys need no registration.
 
 ### Key-value
 ```ts
@@ -312,7 +312,7 @@ const text = await ctx.step('ocr', () => runOcr(blobId), { retrySafe: false });
 ## 4.8 Migrations
 
 - **Kernel**: ordered forward migrations recorded in `schema_versions` (owner `kernel`), run at boot before anything else.
-- **Extensions**: `ext.registerDataVersion(2, { migrations: [{ to: 2, up: async (m) => … }] })`; an extension that never calls it is at version 1. `m` offers bulk iterate/patch over the extension's own kv, collections, and logs (every workspace and global), and its config (below). The stored data version is the `schema_versions` row whose owner is the extension name (absent = the extension has no data yet, so no migration runs and the row is written with the code's version).
+- **Extensions**: `ext.registerDataVersion(2, { migrations: [{ to: 2, up: async (m) => … }] })`; an extension that never calls it is at version 1. There is exactly one migration for each `to` from 2 to the data version, and `compatibleWith` lists lower versions without duplicates (ADR 0046). `m` offers bulk iterate/patch over the extension's own kv, collections, and logs (every workspace and global), and its config (below). The stored data version is the `schema_versions` row whose owner is the extension name (absent = the extension has no data yet, so no migration runs and the row is written with the code's version).
 - **When they run**: at enable (the enabled digest's code) and at reload or upgrade (the target digest's code, `06` §6.6 step 4), before that code handles any message, whenever the stored version is lower than the code's data version (`registerDataVersion`, default 1).
 - **How they run**: migrations are extension code, so they run in the extension's host, started for this purpose if needed, at the most isolated of the isolation levels granted to the extension across the workspaces where it is (or is being) enabled. First the kernel records `extensions.migrating = { digest, grants? }`: the digest whose code runs the migration, and for a reload the confirmed `grants` from the command. Then each step (`to: n`) runs in its own unit of work, which also sets the stored version to `n`. The unit of work that completes the enable, or the reload's swap (`06` §6.6 step 5), clears `migrating`.
 - **Failure**: the failing step's unit of work is discarded.

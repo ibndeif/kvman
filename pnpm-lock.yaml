@@ -225,10 +225,23 @@ importers:
       '@kvman/protocol':
         specifier: workspace:*
         version: link:../protocol
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
 
   packages/shell: {}
 
-  packages/testkit: {}
+  packages/testkit:
+    dependencies:
+      '@kvman/kernel':
+        specifier: workspace:*
+        version: link:../kernel
+      '@kvman/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@kvman/sdk':
+        specifier: workspace:*
+        version: link:../sdk
 
   packages/widget-bridge: {}
 

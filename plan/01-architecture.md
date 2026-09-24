@@ -153,6 +153,8 @@ kvman/
 | `devtools` | `protocol`, `testkit` |
 | `extensions/*`, `examples/*` | `sdk`, `protocol`, their own declared dependencies. Never `kernel`, `shell`, or another extension. |
 
+Test files may also import JSON data from another package's `test/fixtures/` folder (never code), so one fixture serves every package that checks it (ADR 0049).
+
 ## 1.6 Runtime layout
 
 ```

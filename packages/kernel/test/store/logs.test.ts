@@ -35,4 +35,13 @@ describe('logs (plan 04 §4.3)', () => {
     expect(await pending.append('fresh')).toBe(11);
     expect(await pending.read()).toEqual([{ seq: 11, value: 'fresh' }]);
   });
+  it('M1.3-E15 a log family reference takes a key; a plain log does not', async () => {
+    const fixture = openStoreFixture();
+    const handler = handlerStore(fixture);
+    expect(await handler.store.log('history:*', 'abc').append('first')).toBe(1);
+    expect(handler.writes()).toEqual([{ kind: 'log.append', scope: 'workspace', log: 'history:abc', seq: 1, value: 'first' }]);
+    expect(() => handler.store.log('audit', 'x')).toThrow(expect.objectContaining({
+      problem: expect.objectContaining({ code: 'VALIDATION_FAILED', hint: 'only a log family such as "history:*" takes a key' }),
+    }));
+  });
 });

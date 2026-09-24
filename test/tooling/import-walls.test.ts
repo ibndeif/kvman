@@ -102,4 +102,9 @@ describe('import walls (plan 01 §1.5)', () => {
     await expectClean('imports-vitest.ts', 'packages/protocol/test/fixture.test.ts');
     await expectBlocked('imports-vitest.ts', 'packages/protocol/src/fixture.ts', /may import only zod/);
   });
+  it('M1.3-E24 tests may import JSON fixtures of other packages, never their code; sources may import neither', async () => {
+    await expectClean('imports-other-package-fixture.ts', 'packages/testkit/test/recording/fixture.test.ts');
+    await expectBlocked('imports-other-package-test-helper.ts', 'packages/testkit/test/recording/fixture.test.ts', /leaves packages\/testkit/);
+    await expectBlocked('imports-other-package-fixture.ts', 'packages/testkit/src/recording/fixture.ts', /leaves packages\/testkit/);
+  });
 });

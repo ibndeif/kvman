@@ -1,4 +1,5 @@
 import { jsonByteLength, type Json } from '@kvman/protocol';
+import type { Ctx, StepOptions } from '@kvman/sdk';
 import { kernelProblem, ProblemError } from '../problems.ts';
 import type { Connection } from '../storage/driver.ts';
 
@@ -64,9 +65,7 @@ export class StepJournal {
   }
 }
 
-export type StepOptions = { retrySafe?: boolean };
-
-export type StepFunction = <Result extends Json | undefined>(name: string, effect: () => Promise<Result>, options?: StepOptions) => Promise<Result>;
+export type StepFunction = Ctx['step'];
 
 export function createStepFunction(journal: StepJournal, messageId: string, correlationId: string): StepFunction {
   const used = new Set<string>();

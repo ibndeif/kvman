@@ -1,4 +1,5 @@
 import type { Filter, Json, JsonObject } from '@kvman/protocol';
+import type { CollectionRef, LogRef } from './references.ts';
 
 /** One kv entry returned by `kv.list`. */
 export type KvEntry<Value extends Json = Json> = { key: string; value: Value };
@@ -22,7 +23,7 @@ export type OrderBy = Array<[field: string, direction: 'asc' | 'desc']>;
 export type FindQuery = { where?: Filter; orderBy?: OrderBy; limit?: number };
 
 /** Typed documents with declared indexes, read with the filter language. */
-export interface Collection<Doc extends JsonObject = JsonObject> {
+export interface Collection<Doc extends object = JsonObject> {
   /** The document with this id, or `undefined`. */
   get(id: string): Promise<Doc | undefined>;
   /** Inserts or replaces the document when the handler commits. */
@@ -38,13 +39,13 @@ export interface Collection<Doc extends JsonObject = JsonObject> {
 }
 
 /** One log entry with its sequence number. */
-export type LogEntry<Value extends Json = Json> = { seq: number; value: Value };
+export type LogEntry<Value = Json> = { seq: number; value: Value };
 
 /** A range of a log: entries after or before a seq, and at most the last `last` of them. */
 export type LogRange = { after?: number; before?: number; last?: number };
 
 /** An append-only sequence numbered 1, 2, 3, … */
-export interface Log<Value extends Json = Json> {
+export interface Log<Value = Json> {
   /** Appends when the handler commits and returns the entry's seq now. */
   append(value: Value): Promise<number>;
   /** The entries in the range, oldest first. */
@@ -61,10 +62,16 @@ export interface Log<Value extends Json = Json> {
 export interface ScopedStore {
   /** Key-value entries. */
   readonly kv: KvStore;
+  /** A collection this extension registered, typed by its reference. */
+  collection<Doc extends object>(reference: CollectionRef<string, Doc>): Collection<Doc>;
   /** A collection this extension registered. */
-  collection<Doc extends JsonObject = JsonObject>(name: string): Collection<Doc>;
-  /** A log whose name matches a log family this extension registered. */
-  log<Value extends Json = Json>(name: string): Log<Value>;
+  collection<Doc extends object = JsonObject>(name: string): Collection<Doc>;
+  /** The log `<family>:<key>` of a log family this extension registered, typed by its reference. */
+  log<Entry>(family: LogRef<`${string}:*`, Entry>, key: string): Log<Entry>;
+  /** A log this extension registered, typed by its reference. */
+  log<Entry>(reference: LogRef<string, Entry>): Log<Entry>;
+  /** A log whose name matches a log this extension registered; with `key`, the log `<family>:<key>` of a family. */
+  log<Value = Json>(name: string, key?: string): Log<Value>;
 }
 
 /** The extension's storage in the invocation's workspace, with `global` for global scope. */

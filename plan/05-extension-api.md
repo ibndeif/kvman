@@ -30,7 +30,7 @@ An extension is an npm package:
 1. `setup` is synchronous and deterministic. It receives only `ext`: no storage, config, network, file, or clock access. Registrations cannot depend on runtime state.
 2. Every registration needs a `description` (and handlers SHOULD have `examples`). Missing descriptions fail validation (D52).
 3. `ext` is closed when `setup` returns; calling it later throws.
-4. At install, the kernel runs `setup` in a **sandboxed loader process** (read-only access to the staged package, no child processes, no native addons, deadline 10 s) with a recording `ext`. The recording, with functions replaced by references and schemas converted to JSON Schema, is the extension's static **manifest** (§5.12), stored in the snapshot. Functions are referenced by what registered them (`command:pdf.translate`, `subscription:agent.session.deleted`).
+4. The kernel implements `ext` (the SDK holds `defineExtension`, which returns a frozen `{ meta, setup }`, and the `Ext` types; ADR 0041). At install, the kernel runs `setup` in a **sandboxed loader process** (read-only access to the staged package, no child processes, no native addons, deadline 10 s) with a recording `ext`. The recording, with functions replaced by references and schemas converted to JSON Schema, is the extension's static **manifest** (§5.12), stored in the snapshot. Functions are referenced by what registered them (`command:pdf.translate`, `subscription:agent.session.deleted`).
 5. When a host loads the extension, it runs `setup` again to bind the functions. If the registrations differ from the recorded manifest, loading fails (`EXT_MANIFEST_INVALID`) and the extension is quarantined (`03` §3.6).
 
 **No in-memory listeners.** Registering does not create a listener object in the kernel. The kernel keeps only the manifest (names, schemas, function references) in its registry. When a message arrives, the kernel finds the registered handler in the registry, delivers the message to a host, and the host calls the function it bound at load. Hosts load extensions lazily on their first message and unload idle ones (`03` §3.5). Memory therefore grows with the number of *running* invocations, not with the number of registrations.
@@ -259,9 +259,11 @@ Name sets inside one extension:
 | `registerProvider(id, ProviderDef)` | an LLM provider implementation | `anthropic` | provider IDs are global names shown to users |
 | `registerModel(id, ModelDef)` | a model of one of its providers | `anthropic/claude-sonnet-5` | dynamic lists come from `ProviderDef.listModels` |
 
-Every `register*` call returns a typed reference that can be passed instead of the name (`ctx.store.collection(files)`, `ctx.publish(translated, …)`), so payloads are type-checked. Names work everywhere too. Other extensions' types are typed through `kvman ext types` (`12` §12.5), which writes declarations for every message type in a workspace.
+Every `register*` call returns a typed reference that can be passed instead of the name (`ctx.store.collection(files)`, `ctx.publish(translated, …)`), so payloads are type-checked. A reference is the registered name itself with a type-only brand (ADR 0044).
 
-**Schema helpers** (`z` from `@kvman/sdk` is Zod 4 plus):
+**Registration mistakes** are collected: the recorder builds the whole manifest, checks it (manifest schema, namespace of public names and error codes, name sets, migration steps, schemas that cannot become JSON Schema), and fails once with `EXT_MANIFEST_INVALID` listing every issue at its manifest path with a hint. A `setup` that returns a promise or throws fails the same way; calling `ext` after `setup` returns throws `EXT_MANIFEST_INVALID` at once (ADR 0042). Names work everywhere too. Other extensions' types are typed through `kvman ext types` (`12` §12.5), which writes declarations for every message type in a workspace.
+
+**Schema helpers** (`z` from `@kvman/sdk` is Zod 4 plus the helpers below; the SDK depends on `zod` at the exact version protocol uses, ADR 0043):
 
 | Helper | Meaning |
 |---|---|
@@ -325,6 +327,7 @@ interface Ctx {
 
 - `send`, `publish`, `reply`, `ui.*`, store writes, `blobs.keep`, `config.set`, and `secrets.set` are buffered in the unit of work, so a notification is shown only if the handler commits.
 - `command`, `query`, `llm.*`, `live`, `step`, `process`, `files`, and `blobs.put` happen immediately. Live events from an attempt that does not commit are reset by the kernel (`02` §2.3).
+- The SDK's `Ctx` type declares each member once the milestone that builds it is done (ADR 0050).
 - `ctx.ids.new()` and `ctx.now()` are recorded per invocation so a redelivered handler generates the same IDs and times for the same steps.
 
 ## 5.5 Handler definitions
@@ -551,7 +554,7 @@ ext.registerModel('claude-sonnet-5', {
 
 ## 5.12 The manifest
 
-The **manifest** is the static record of everything `setup` registered. The kernel builds it at install by running `setup` with a recording `ext` in the sandboxed loader (§5.1), validates it (`06` §6.3), and stores it as `snapshots/<digest>/manifest.json` and in `extension_versions.manifest`. Everything the kernel does with an extension (routing, validation, grants, the UI registry, the schema endpoint, the agent's tool list and guard detection, the LLM registry) reads the manifest, never live code. (The list of package files and hashes behind the digest is a different thing, the **file list**, `files.json`.)
+The **manifest** is the static record of everything `setup` registered. The kernel builds it at install by running `setup` with a recording `ext` in the sandboxed loader (§5.1), converting schemas with the `@kvman/protocol` helper around Zod 4's `z.toJSONSchema` (default options, ADR 0047), validates it (`06` §6.3), and stores it as `snapshots/<digest>/manifest.json` and in `extension_versions.manifest`. Everything the kernel does with an extension (routing, validation, grants, the UI registry, the schema endpoint, the agent's tool list and guard detection, the LLM registry) reads the manifest, never live code. (The list of package files and hashes behind the digest is a different thing, the **file list**, `files.json`.)
 
 ### Shape
 
