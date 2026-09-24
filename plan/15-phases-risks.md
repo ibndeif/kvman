@@ -89,7 +89,7 @@ Inside a phase, each milestone needs the one before it unless *Needs* says other
 
 #### M1.4 Router and admission — 2 days
 - **Read**: `02` §2.2–§2.7, §2.10, `03` §3.3.
-- **Build**: admission steps 1–7 of `03` §3.3 (Ajv validation compiled per type, lane templates of `02` §2.6); context inheritance (the locale default is `en` until M2.11); inbox rows inside the sender's unit or a standalone transaction; idempotency with request digests; `access` checks for every source type (`02` §2.4); the pending index.
+- **Build**: admission steps 1–7 of `03` §3.3 (Ajv validation compiled per type, lane templates of `02` §2.6); context inheritance (the locale default is `en` until M2.11); inbox rows inside the sender's unit or a standalone transaction; idempotency with request digests; `access` checks for every source type (`02` §2.4); the pending index. Step 2 is assigned in full here (priority defaults, inheritance, lowering; `notBefore`; explicit `deadlineAt`); M1.5 selects and fires timers, M1.7 inherits deadlines (ADR 0051).
 - **Done when**: each admission failure code (`VALIDATION_FAILED`, `TYPE_NOT_FOUND`, `HANDLER_UNAVAILABLE`, `CAPABILITY_DENIED`, `CALLER_NOT_ALLOWED`, `IDEMPOTENCY_MISMATCH`) has a test; the same idempotency key and digest returns the original message ID.
 
 #### M1.5 Scheduler — 1.5 days

@@ -1,12 +1,14 @@
 import type { Admission, CommitResult, CommitUnit } from './commit-unit.ts';
 import { correlationOf } from './commit-unit.ts';
 import { StorageFailure, type Connection } from './driver.ts';
+import type { PendingSink } from '../router/pending-index.ts';
 import { applyUnit, storageProblem } from './unit-application.ts';
 
 export type CommitPipelineOptions = {
   connection: Connection;
   admission: Admission;
   now: () => number;
+  pending?: PendingSink;
   maxBatchUnits?: number;
   maxBatchDelayMs?: number;
 };
@@ -17,6 +19,7 @@ export class CommitPipeline {
   readonly #connection: Connection;
   readonly #admission: Admission;
   readonly #now: () => number;
+  readonly #pending: PendingSink | undefined;
   readonly #maxBatchUnits: number;
   readonly #maxBatchDelayMs: number;
   #queue: QueuedUnit[] = [];
@@ -26,6 +29,7 @@ export class CommitPipeline {
     this.#connection = options.connection;
     this.#admission = options.admission;
     this.#now = options.now;
+    this.#pending = options.pending;
     this.#maxBatchUnits = options.maxBatchUnits ?? 64;
     this.#maxBatchDelayMs = options.maxBatchDelayMs ?? 2;
   }
@@ -50,6 +54,7 @@ export class CommitPipeline {
       this.#connection.exec('BEGIN IMMEDIATE');
       const outcomes = batch.map((queued) => ({ queued, result: applyUnit(this.#connection, queued.unit, this.#admission, now) }));
       this.#connection.exec('COMMIT');
+      for (const { result } of outcomes) if (result.committed) this.#pending?.add(result.inserted);
       for (const { queued, result } of outcomes) queued.resolve(result);
     } catch (error) {
       this.#endFailedBatch(batch, error);

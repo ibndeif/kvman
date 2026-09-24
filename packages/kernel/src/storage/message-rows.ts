@@ -1,6 +1,14 @@
-import type { Priority, ReplyPayload } from '@kvman/protocol';
+import type { Message, Priority, ReplyPayload } from '@kvman/protocol';
 import type { AdmittedMessage, InvocationOutcome, MessageState, StoredMessage } from './commit-unit.ts';
-import type { Connection } from './driver.ts';
+import { StorageFailure, type Connection } from './driver.ts';
+
+const messageStates: readonly MessageState[] = ['pending', 'running', 'awaiting', 'done', 'failed', 'dead', 'cancelled'];
+
+export function storedState(value: unknown): MessageState {
+  const state = messageStates.find((candidate) => candidate === value);
+  if (state === undefined) throw new StorageFailure('corrupt', `a stored message has the unknown state ${String(value)}`);
+  return state;
+}
 
 export const priorityCodes: Record<Priority, number> = { interactive: 0, normal: 1, background: 2 };
 
@@ -8,8 +16,14 @@ const insertSql = `INSERT INTO messages (id, kind, type, source, target, handler
   not_before, deadline_at, correlation_id, causation_id, on_reply, idempotency_source, idempotency_key, digest, result, created_at, updated_at)
   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
+// A lane belongs to the handling extension (02 §2.6), also for an event delivery, whose handler is
+// <extension>|subscription:<pattern> (ADR 0053).
+export function laneKeyOf(handler: string, lane: string): string {
+  return `${handler.split('|')[0] ?? handler}|${lane}`;
+}
+
 function storedLane(admitted: AdmittedMessage): string | null {
-  return admitted.message.lane === undefined ? null : `${admitted.handler}|${admitted.message.lane}`;
+  return admitted.message.lane === undefined ? null : laneKeyOf(admitted.handler, admitted.message.lane);
 }
 
 export function insertMessage(connection: Connection, admitted: AdmittedMessage, state: MessageState, result: ReplyPayload | undefined, now: number): StoredMessage {
@@ -34,4 +48,10 @@ export function markInvocation(connection: Connection, messageId: string, outcom
   connection
     .prepare('UPDATE messages SET state = ?, result = ?, updated_at = ? WHERE id = ?')
     .run(state, result === undefined ? null : JSON.stringify(result), now, messageId);
+}
+
+export function insertEvent(connection: Connection, event: Message, now: number): void {
+  connection
+    .prepare('INSERT INTO events (id, type, source, workspace_id, payload, correlation_id, causation_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(event.id, event.type, event.source, event.workspaceId ?? null, JSON.stringify(event.payload), event.correlationId, event.causationId ?? null, now);
 }

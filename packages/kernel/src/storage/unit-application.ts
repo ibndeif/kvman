@@ -1,9 +1,9 @@
-import { jsonByteLength, type OutboundSend, type Problem, type ReplyPayload } from '@kvman/protocol';
+import { jsonByteLength, type Message, type OnReply, type OutboundPublish, type OutboundSend, type Problem, type ReplyPayload } from '@kvman/protocol';
 import { kernelProblem } from '../problems.ts';
-import type { AdmissionRequest, Admission, CommitResult, CommitUnit, StoredMessage } from './commit-unit.ts';
-import { correlationOf } from './commit-unit.ts';
+import type { Admission, CommitResult, CommitUnit, OriginalMessage, SendAdmission, SendRequest, Sender, StoredMessage } from './commit-unit.ts';
+import { correlationOf, senderOf } from './commit-unit.ts';
 import { StorageFailure, type Connection } from './driver.ts';
-import { insertMessage, markInvocation } from './message-rows.ts';
+import { insertEvent, insertMessage, markInvocation } from './message-rows.ts';
 import { applyStoreWrite, InvalidWrite, VersionConflict, WorkspaceRequired } from './store-writes.ts';
 
 export const unitLimits = { messages: 1000, writeBytes: 8 * 1024 * 1024 } as const;
@@ -24,7 +24,7 @@ function writeBytes(unit: CommitUnit): number {
 
 function limitProblem(unit: CommitUnit): Problem | undefined {
   const correlationId = correlationOf(unit.origin);
-  if (unit.sends.length > unitLimits.messages) {
+  if (unit.sends.length + unit.publishes.length > unitLimits.messages) {
     return kernelProblem('PAYLOAD_TOO_LARGE', { correlationId, params: { limit: 'messages', max: unitLimits.messages }, hint: 'split the work into several units' });
   }
   if (writeBytes(unit) > unitLimits.writeBytes) {
@@ -33,25 +33,62 @@ function limitProblem(unit: CommitUnit): Problem | undefined {
   return undefined;
 }
 
-function continuationOf(failedId: string, send: OutboundSend, reply: ReplyPayload): OutboundSend | undefined {
-  if (send.onReply === undefined) return undefined;
-  const payload = send.onReply.context === undefined ? { reply } : { reply, context: send.onReply.context };
-  return { type: send.onReply.type, payload, idempotencyKey: `${failedId}:reply` };
+function continuationOf(failedId: string, onReply: OnReply, reply: ReplyPayload): OutboundSend {
+  const payload = onReply.context === undefined ? { reply } : { reply, context: onReply.context };
+  return { type: onReply.type, payload, idempotencyKey: `${failedId}:reply` };
 }
 
-function admitSend(connection: Connection, admission: Admission, request: AdmissionRequest, now: number): StoredMessage[] {
-  const result = admission.admit(request);
-  if (result.ok) return [insertMessage(connection, result.admitted, 'pending', undefined, now)];
+const kernelSender: Sender = { address: 'kernel' };
+
+type UnitScope = {
+  connection: Connection;
+  admission: Admission;
+  now: number;
+  sender: Sender;
+  cause: Message | undefined;
+  workspaceId: string | undefined;
+  applied: AppliedMessages;
+};
+
+type AppliedMessages = { inserted: StoredMessage[]; duplicates: OriginalMessage[]; announced: Message[] };
+
+function record(scope: UnitScope, result: SendAdmission): void {
+  if (result.outcome === 'admitted') scope.applied.inserted.push(insertMessage(scope.connection, result.admitted, 'pending', undefined, scope.now));
+  else if (result.outcome === 'duplicate') scope.applied.duplicates.push(result.original);
+  else throw new UnitRejected(result.problem);
+}
+
+// A send WITH onReply that fails admission is stored as a failed command, and its continuation carries the failure
+// to the sender (04 §4.2); a send without onReply, or one whose failure leaves no row to store, rejects the unit.
+function admitSend(scope: UnitScope, send: OutboundSend, index: number, id: string | undefined): void {
+  const request: SendRequest = { send, sender: scope.sender, cause: scope.cause, workspaceId: scope.workspaceId, index, ...(id === undefined ? {} : { id }) };
+  const result = scope.admission.admitSend(scope.connection, request);
+  if (result.outcome !== 'refused' || result.failed === undefined || send.onReply === undefined) {
+    record(scope, result);
+    return;
+  }
   const reply: ReplyPayload = { ok: false, problem: result.problem };
-  const continuation = continuationOf(result.admitted.message.id, request.send, reply);
-  if (continuation === undefined) throw new UnitRejected(result.problem);
-  const failed = insertMessage(connection, result.admitted, 'failed', reply, now);
-  const delivered = admission.admit({ send: continuation, sender: 'kernel', cause: failed.message, correlationId: request.correlationId });
-  if (!delivered.ok) throw new UnitRejected(delivered.problem);
-  return [failed, insertMessage(connection, delivered.admitted, 'pending', undefined, now)];
+  const failed = insertMessage(scope.connection, result.failed, 'failed', reply, scope.now);
+  scope.applied.inserted.push(failed);
+  const continuation = continuationOf(failed.message.id, send.onReply, reply);
+  record(scope, scope.admission.admitSend(scope.connection, { send: continuation, sender: kernelSender, cause: failed.message, workspaceId: scope.workspaceId, index: 0 }));
 }
 
-function applyContents(connection: Connection, unit: CommitUnit, admission: Admission, now: number): StoredMessage[] {
+function admitPublish(scope: UnitScope, publish: OutboundPublish): void {
+  const result = scope.admission.admitPublish(scope.connection, { publish, sender: scope.sender, cause: scope.cause, workspaceId: scope.workspaceId });
+  if (result.outcome === 'refused') throw new UnitRejected(result.problem);
+  if (result.event.delivery !== 'durable') {
+    scope.applied.announced.push(result.event);
+    return;
+  }
+  insertEvent(scope.connection, result.event, scope.now);
+  for (const delivery of result.deliveries) {
+    const reply: ReplyPayload | undefined = delivery.problem === undefined ? undefined : { ok: false, problem: delivery.problem };
+    scope.applied.inserted.push(insertMessage(scope.connection, delivery.admitted, reply === undefined ? 'pending' : 'failed', reply, scope.now));
+  }
+}
+
+function applyContents(connection: Connection, unit: CommitUnit, admission: Admission, now: number): AppliedMessages {
   const { origin } = unit;
   const owner = origin.kind === 'invocation'
     ? { owner: origin.invocation.extension, workspaceId: origin.invocation.message.workspaceId }
@@ -60,12 +97,16 @@ function applyContents(connection: Connection, unit: CommitUnit, admission: Admi
     if (owner === undefined) throw new InvalidWrite('a unit without an invocation cannot write storage');
     applyStoreWrite(connection, owner, write, now);
   }
-  const sender = origin.kind === 'invocation' ? (`ext:${origin.invocation.extension}` as const) : origin.sender;
-  const cause = origin.kind === 'invocation' ? origin.invocation.message : undefined;
-  const correlationId = correlationOf(origin);
-  const inserted = unit.sends.flatMap((send) => admitSend(connection, admission, { send, sender, cause, correlationId }, now));
+  const scope: UnitScope = {
+    connection, admission, now, sender: senderOf(origin),
+    cause: origin.kind === 'invocation' ? origin.invocation.message : undefined,
+    workspaceId: origin.kind === 'invocation' ? origin.invocation.message.workspaceId : origin.workspaceId,
+    applied: { inserted: [], duplicates: [], announced: [] },
+  };
+  unit.sends.forEach((send, index) => admitSend(scope, send, index, origin.kind === 'adapter' && index === 0 ? origin.messageId : undefined));
+  for (const publish of unit.publishes) admitPublish(scope, publish);
   if (origin.kind === 'invocation') markInvocation(connection, origin.invocation.message.id, origin.invocation.outcome, now);
-  return inserted;
+  return scope.applied;
 }
 
 export function storageProblem(failure: StorageFailure, correlationId: string): Problem {
@@ -87,9 +128,9 @@ export function applyUnit(connection: Connection, unit: CommitUnit, admission: A
   if (overLimit !== undefined) return { committed: false, problem: overLimit };
   connection.exec('SAVEPOINT unit');
   try {
-    const inserted = applyContents(connection, unit, admission, now);
+    const applied = applyContents(connection, unit, admission, now);
     connection.exec('RELEASE unit');
-    return { committed: true, inserted };
+    return { committed: true, ...applied };
   } catch (error) {
     connection.exec('ROLLBACK TO unit');
     connection.exec('RELEASE unit');

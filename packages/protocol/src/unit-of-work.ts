@@ -36,3 +36,6 @@ export const outboundSendSchema = z.strictObject({
   onReply: onReplySchema.exactOptional(),
 });
 export type OutboundSend = z.infer<typeof outboundSendSchema>;
+
+export const outboundPublishSchema = z.strictObject({ type: typeNameSchema, payload: jsonSchema });
+export type OutboundPublish = z.infer<typeof outboundPublishSchema>;

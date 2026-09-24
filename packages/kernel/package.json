@@ -20,6 +20,7 @@
   "dependencies": {
     "@kvman/protocol": "workspace:*",
     "@kvman/sdk": "workspace:*",
+    "ajv": "8.20.0",
     "better-sqlite3": "13.0.3"
   },
   "devDependencies": {

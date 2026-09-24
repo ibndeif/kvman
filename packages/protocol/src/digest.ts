@@ -20,9 +20,14 @@ export function digestOf(value: Json): Promise<string> {
 
 export type RequestDigestInput = { type: string; workspaceId?: string; lane?: string; payload: Json };
 
-export function requestDigest(input: RequestDigestInput): Promise<string> {
+// What an idempotency digest covers (02 §2.7); the kernel hashes the same canonical JSON synchronously.
+export function requestDigestFields(input: RequestDigestInput): JsonObject {
   const fields: JsonObject = { type: input.type, payload: input.payload };
   if (input.workspaceId !== undefined) fields['workspaceId'] = input.workspaceId;
   if (input.lane !== undefined) fields['lane'] = input.lane;
-  return digestOf(fields);
+  return fields;
+}
+
+export function requestDigest(input: RequestDigestInput): Promise<string> {
+  return digestOf(requestDigestFields(input));
 }

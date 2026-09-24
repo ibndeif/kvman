@@ -42,7 +42,7 @@ type Message = {
 type ReplyPayload = { ok: true; value: Json } | { ok: false; problem: Problem };   // a command's result (§2.3)
 ```
 
-Callers supply `type`, `payload`, and optionally `lane` (only when the handler does not declare one), `idempotencyKey`, `priority`, `deadlineAt`, `delayMs`, `context` additions, and `onReply`. Everything else is set by the kernel. `context` is inherited from the causing message; a handler may add keys but cannot remove kernel-set keys.
+Callers supply `type`, `payload`, and optionally `lane` (only when the handler does not declare one), `idempotencyKey`, `priority`, `deadlineAt`, `delayMs` or `at` (not both), `context` additions, and `onReply`. Everything else is set by the kernel. `context` is inherited from the causing message; a handler may add keys but cannot remove kernel-set keys. A caller lane for a handler with a lane template, a change to a kernel-set key, and both `delayMs` and `at` fail `VALIDATION_FAILED` (ADRs 0054, 0058).
 
 ## 2.3 The three kinds
 
@@ -157,7 +157,7 @@ Messages sent by a handler are part of its unit of work: they become visible onl
   lane: 'job:{{ $message.id }}'             // the message's own id (one lane per message)
   lane: 'section:{{ $message.source }}.{{ $payload.id }}:{{ $payload.sessionId }}'
   ```
-  A template is text with `{{ <path> }}` placeholders (spaces allowed inside the braces) and has at least one placeholder (ADR 0016). Allowed paths: `$payload.<field>[.<field>…]`, `$context.<key>`, `$message.id`, `$message.source`, `$message.workspaceId`. Values must be strings or numbers; a missing path renders as `-`, except when every path is missing, which fails admission with `VALIDATION_FAILED` (the handler would otherwise share one lane for everything by accident). `$payload` paths are checked against the input schema at install (`06` §6.3).
+  A template is text with `{{ <path> }}` placeholders (spaces allowed inside the braces) and has at least one placeholder (ADR 0016). Allowed paths: `$payload.<field>[.<field>…]`, `$context.<key>`, `$message.id`, `$message.source`, `$message.workspaceId`. Values must be strings or numbers (`null`, booleans, objects, and arrays fail `VALIDATION_FAILED`, ADR 0058); an absent path renders as `-`, except when every path is absent, which fails admission with `VALIDATION_FAILED` (for a subscription's lane only that delivery is stored `failed`, ADR 0053) (the handler would otherwise share one lane for everything by accident). `$payload` paths are checked against the input schema at install (`06` §6.3).
 - The scheduler runs at most one message per lane at a time, in `seq` order. Messages without a lane have no ordering and run as capacity allows.
 - There is **no global order**. Ordering across lanes or extensions is only by causation (a message is always created after its cause commits).
 - **Reentrancy:** if a handler holding lane L calls (`ctx.command`) a command whose lane is L, or whose lane is held by any ancestor in the current causation chain, the kernel fails the call immediately with `LANE_REENTRANT`. This prevents deadlocks. Use a continuation instead.
@@ -174,7 +174,7 @@ Messages sent by a handler are part of its unit of work: they become visible onl
 
 - `idempotencyKey` is required for commands sent by users, processes, and HTTP callers. Extensions MAY set one with `ctx.send(…, { idempotencyKey })` to deduplicate a command across invocations (e.g. one job result injected once); otherwise the kernel derives one.
 - Uniqueness: `(source, idempotencyKey)` within the message retention window (default 7 days).
-- Digest: SHA-256 of canonical JSON of `{type, workspaceId, lane, payload}`. Same key + same digest → returns the original message ID and, when available, its reply. Same key + different digest → `IDEMPOTENCY_MISMATCH`.
+- Digest: SHA-256 of canonical JSON of `{type, workspaceId, lane, payload}`. Same key + same digest → returns the original message ID and, when available, its reply. Same key + different digest → `IDEMPOTENCY_MISMATCH` (a send with `onReply` that fails this way is stored as a failed command without the key, ADR 0057).
 - Kernel-derived keys:
   - `ctx.command` inside a handler: `<invocationMessageId>:command:<stepName>`
   - send inside a unit of work: `<invocationMessageId>:send:<index>`
@@ -244,7 +244,7 @@ Two limits exist, and they are different things:
 
 ## 2.10 Correlation, causation, context
 
-- The first message from a user action gets a new `correlationId`. Every message produced while handling it inherits it; `causationId` points to the direct parent.
+- The first message from a user action gets a new `correlationId`: its own `id` (ADR 0058). Every message produced while handling it inherits it; `causationId` points to the direct parent.
 - The inspector reconstructs the full tree (who caused what) from these two fields.
 - `context` is small inherited baggage for cross-cutting identifiers. Example: the agent sets `sessionId` when it sends a tool command, so the `shell` extension knows which session an async job belongs to without a special API.
 - The kernel sets `locale` in the context of every message that does not inherit one (user actions, schedules, timers, kernel-originated messages) from the user's language preference at admission (`08` §8.16). Like every kernel-set key it is inherited and cannot be removed or changed, so a handler several steps down the chain still knows the language of the person who started it (`ctx.locale`). A language change affects new correlations only.
@@ -279,7 +279,7 @@ pending ─────────▶ (index) ───────▶ running 
 
 | Item | Default |
 |---|---|
-| Inline payload and command result | 256 KB (spill to blob up to 16 MB, else `PAYLOAD_TOO_LARGE`) |
+| Inline payload and command result | 256 KB (spill to blob up to 16 MB, else `PAYLOAD_TOO_LARGE` with `{ limit: 'payload', max: 16777216 }`; inline up to 16 MB until the blob store, ADR 0055) |
 | `context` map | 2 KB |
 | Live event payload | 16 KB; ring 1,000 per `<type>:<key>` |
 | Max attempts (crash, host loss, `HANDLER_TIMEOUT`, retryable problem) | 3, backoff 1 s → 5 s → 30 s; per-handler `maxAttempts` override |

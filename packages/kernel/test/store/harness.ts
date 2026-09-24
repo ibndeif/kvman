@@ -44,6 +44,7 @@ export async function commitWrites(fixture: StoreFixture, writes: StoreWrite[], 
     origin: { kind: 'invocation', invocation: { message, extension: owner, outcome: { ok: true, value: null } } },
     writes,
     sends: [],
+    publishes: [],
   });
 }
 

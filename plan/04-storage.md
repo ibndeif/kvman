@@ -18,7 +18,8 @@ CREATE TABLE messages (
   kind TEXT NOT NULL,                  -- command | event
   type TEXT NOT NULL,
   source TEXT NOT NULL, target TEXT,
-  handler TEXT NOT NULL,               -- extension (and subscription id for events); '' for a send that failed
+  handler TEXT NOT NULL,               -- extension; '<extension>|subscription:<pattern>' for event deliveries
+                                       -- (ADR 0053); '' for a send that failed
                                        -- admission because its type is unknown (ADR 0034)
   workspace_id TEXT, lane TEXT,        -- extension + '|' + rendered lane template
   payload TEXT, payload_ref TEXT,
@@ -130,7 +131,7 @@ queue ─(≤2 ms or 64 units)─▶ BEGIN IMMEDIATE
                    check invocation still live (not cancelled, invocation deadline not passed) else ROLLBACK TO u
                      and end it as 02 §2.9 says (HANDLER_TIMEOUT or DEADLINE_EXCEEDED)
                    apply writes with version checks        ─ conflict → ROLLBACK TO u, mark STORAGE_CONFLICT
-                   admit each send and publish (03 §3.3 steps 3–6):
+                   admit each send and publish (03 §3.3 steps 3–6; the unit's publishes are { type, payload }, ADR 0053):
                      a send WITH onReply that fails → insert it as a command already `failed` with that problem;
                                                        its continuation is delivered normally (the sender handles it)
                      any other failure → ROLLBACK TO u, fail the invocation with that problem (not retryable)

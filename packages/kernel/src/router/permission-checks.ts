@@ -1,0 +1,50 @@
+import { matchesTypePattern, type Access, type Capabilities, type TypeEntry } from '@kvman/protocol';
+import type { Sender } from '../storage/commit-unit.ts';
+import type { GrantsSource } from './grants.ts';
+import { Refusal } from './refusal.ts';
+
+function grantedCall(capabilities: Capabilities, entry: TypeEntry): boolean {
+  if (entry.kind === 'event') return false;
+  const patternReachable = entry.access !== 'internal' && entry.access !== 'user';
+  const byCalls = capabilities.requested.some((capability) => capability.name === 'calls'
+    && patternReachable && capability.types.some((pattern) => matchesTypePattern(pattern, entry.type)));
+  const byTools = entry.agentTool !== undefined && capabilities.requested.some((capability) => capability.name === 'tools');
+  return byCalls || byTools;
+}
+
+// 05 §5.7 for commands and queries: an extension (or its process) calls its own types freely; a foreign type needs
+// a `calls` pattern covering it (never a foreign internal or user type) or, for an agent tool, `tools`.
+export function checkCallCapability(grants: GrantsSource, sender: Sender, owner: string, entry: TypeEntry, workspaceId: string | undefined): void {
+  const acting = sender.extension;
+  if (acting === undefined || acting === owner) return;
+  const capabilities = grants.capabilities(acting, workspaceId);
+  if (capabilities !== undefined && grantedCall(capabilities, entry)) return;
+  throw new Refusal('CAPABILITY_DENIED', {
+    detail: `${acting} may not call "${entry.type}" of ${owner}`,
+    hint: `add ext.requestCapability('calls', { types: ['${entry.type}'] })`,
+  });
+}
+
+function accessAllows(access: Access, sender: Sender, owner: string): boolean {
+  const { address } = sender;
+  if (address === 'kernel' || access === 'all') return true;
+  if (access === 'user') return address.startsWith('user:');
+  if (access === 'extensions') return address.startsWith('ext:') || address.startsWith('proc:');
+  return address === `ext:${owner}`;
+}
+
+// 02 §2.4 against the kernel-assigned source; the kernel may call anything.
+export function checkAccess(sender: Sender, owner: string, entry: TypeEntry): void {
+  if (entry.kind === 'event' || accessAllows(entry.access, sender, owner)) return;
+  throw new Refusal('CALLER_NOT_ALLOWED', { detail: `"${entry.type}" has access "${entry.access}" and ${sender.address} may not send it` });
+}
+
+// 03 §3.3 step 4: an event is published only by the extension that registered it (or the kernel), and a live
+// event only with ctx.live.
+export function checkPublish(sender: Sender, owner: string, entry: TypeEntry): void {
+  if (entry.kind === 'event' && entry.delivery === 'live') {
+    throw new Refusal('CAPABILITY_DENIED', { detail: `"${entry.type}" is a live event`, hint: 'send live events with ctx.live' });
+  }
+  if (sender.address === 'kernel' || sender.address === `ext:${owner}`) return;
+  throw new Refusal('CAPABILITY_DENIED', { detail: `only ${owner} publishes "${entry.type}"` });
+}

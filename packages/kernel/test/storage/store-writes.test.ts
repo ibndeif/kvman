@@ -11,6 +11,7 @@ async function commitWrites(store: TestStore, writes: StoreWrite[], invocation?:
     origin: { kind: 'invocation', invocation: { message, extension, outcome: { ok: true, value: null } } },
     writes,
     sends: [],
+    publishes: [],
   });
 }
 

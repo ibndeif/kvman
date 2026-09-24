@@ -4,7 +4,7 @@ import path from 'node:path';
 import type { Address, Message, OutboundSend } from '@kvman/protocol';
 import {
   betterSqlite3Driver, CommitPipeline, createUlidGenerator, kernelProblem, openKernelDatabase, StorageFailure,
-  type Admission, type AdmissionRequest, type AdmissionResult, type CommitUnit, type Connection, type PreparedStatement,
+  type Admission, type CommitUnit, type PublishAdmission, type SendAdmission, type SendRequest, type Connection, type PreparedStatement,
   type SqlRow, type StorageDriver, type StorageFailureKind,
 } from '../../src/index.ts';
 
@@ -58,11 +58,11 @@ export function recordingDriver(): RecordingDriver {
 
 export type TestAdmissionOptions = { owners: Record<string, string>; invalidField?: string };
 
-function messageFor(request: AdmissionRequest): Message {
-  const { send, sender, cause, correlationId } = request;
+function messageFor(request: SendRequest, id: string): Message {
+  const { send, sender, cause } = request;
   return {
-    v: 1, id: ulids.next(), kind: 'command', type: send.type, source: sender, workspaceId: cause?.workspaceId ?? workspaceId,
-    ...(send.lane === undefined ? {} : { lane: send.lane }), payload: send.payload, correlationId,
+    v: 1, id, kind: 'command', type: send.type, source: sender.address, workspaceId: cause?.workspaceId ?? workspaceId,
+    ...(send.lane === undefined ? {} : { lane: send.lane }), payload: send.payload, correlationId: cause?.correlationId ?? id,
     ...(cause === undefined ? {} : { causationId: cause.id }), context: { locale: 'en', ...send.context },
     ...(send.onReply === undefined ? {} : { onReply: send.onReply }),
     ...(send.idempotencyKey === undefined ? {} : { idempotencyKey: send.idempotencyKey }),
@@ -70,19 +70,25 @@ function messageFor(request: AdmissionRequest): Message {
   };
 }
 
+// A small admission for the storage tests: it knows a fixed set of command types and no events (M1.4 builds the
+// real one).
 export function testAdmission(options: TestAdmissionOptions): Admission {
   return {
-    admit(request): AdmissionResult {
-      const message = messageFor(request);
+    admitSend(_connection, request): SendAdmission {
+      const message = messageFor(request, request.id ?? ulids.next());
       const owner = options.owners[request.send.type];
       if (owner === undefined) {
-        return { ok: false, problem: kernelProblem('TYPE_NOT_FOUND', { correlationId: request.correlationId, params: { type: request.send.type } }), admitted: { message, handler: '' } };
+        return { outcome: 'refused', problem: kernelProblem('TYPE_NOT_FOUND', { correlationId: message.correlationId, params: { type: request.send.type } }), failed: { message, handler: '' } };
       }
       const payload = request.send.payload;
       if (options.invalidField !== undefined && payload !== null && typeof payload === 'object' && !Array.isArray(payload) && options.invalidField in payload) {
-        return { ok: false, problem: kernelProblem('VALIDATION_FAILED', { correlationId: request.correlationId }), admitted: { message, handler: owner } };
+        return { outcome: 'refused', problem: kernelProblem('VALIDATION_FAILED', { correlationId: message.correlationId }), failed: { message, handler: owner } };
       }
-      return { ok: true, admitted: { message, handler: owner } };
+      return { outcome: 'admitted', admitted: { message, handler: owner } };
+    },
+    admitPublish(_connection, request): PublishAdmission {
+      const correlationId = request.cause?.correlationId ?? ulids.next();
+      return { outcome: 'refused', problem: kernelProblem('TYPE_NOT_FOUND', { correlationId, params: { type: request.publish.type } }) };
     },
   };
 }
@@ -97,8 +103,8 @@ export function openTestStore(owners: Record<string, string> = {}, invalidField?
   return { connection, pipeline: new CommitPipeline({ connection, admission, now }), driver, file };
 }
 
-export function adapterUnit(sends: OutboundSend[], sender: Address = 'user:local'): CommitUnit {
-  return { origin: { kind: 'adapter', sender, correlationId: ulids.next() }, writes: [], sends };
+export function adapterUnit(sends: OutboundSend[], address: Address = 'user:local'): CommitUnit {
+  return { origin: { kind: 'adapter', sender: { address }, messageId: ulids.next() }, writes: [], sends, publishes: [] };
 }
 
 export async function invocationMessage(store: TestStore, type = 'pdf.translate'): Promise<Message> {

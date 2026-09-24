@@ -13,6 +13,7 @@ async function unitSending(send: OutboundSend, owners: Record<string, string>, i
     origin: { kind: 'invocation', invocation: { message, extension: agent, outcome: { ok: true, value: null } } },
     writes: [{ kind: 'kv.set', scope: 'workspace', key: 'turn:s1', value: { status: 'awaiting-tools' } }],
     sends: [send],
+    publishes: [],
   };
   return { store, message, result: await store.pipeline.enqueue(unit) };
 }
