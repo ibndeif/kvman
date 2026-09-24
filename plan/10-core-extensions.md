@@ -18,7 +18,7 @@ Two packs:
 
 LLM access itself is a kernel service (`05` §5.11, `03` §3.12): the kernel owns the model registry, defaults, the call path, and usage. This extension only **implements providers** on top of it.
 
-- Package `@kvman/llm-providers`, namespace `llm-providers`. The only package that depends on pi-ai (package name and version pinned in ADR 0003, milestone M0.5).
+- Package `@kvman/llm-providers`, namespace `llm-providers`. The only package that depends on pi-ai (`@earendil-works/pi-ai`, pinned in ADR 0003).
 - Capabilities: `network`, own config and secrets. Derived: `provides-llm` for every provider it registers.
 - Registers with `ext.registerProvider` one provider per pi-ai provider (`anthropic`, `openai`, `google`, `openrouter`, …), each with `complete` (pi-ai streaming mapped to `ctx.delta`), `countTokens` where pi-ai has a tokenizer, and `status`. Known models are registered with `ext.registerModel` (window, max output, prices, capabilities).
 - Provider `openai-compatible`: the user configures endpoints (`{ name, baseUrl, apiKey (secret) }`) in this extension's config; `listModels` reads each endpoint's model list, with model IDs `<endpoint>/<model>`.

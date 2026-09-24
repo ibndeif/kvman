@@ -144,6 +144,6 @@ Decisions are numbered in reading order. Other files cite them as `D<n>`.
 | R-Q5 | Trusted native shell components | **Not in v2.** The built-in library grows through shell releases; extensions add composite components (declarative) and widget components (sandboxed) (D36). |
 | R-Q6 | Non-JS actors | **Not in v2** (D5). The protocol stays language-neutral. |
 | R-Q7 | Multiple users, remote access, authentication | **Not in v2** (D5). Single local user, localhost only; `user:<id>` addressing is ready for later. |
-| R-Q8 | LLM provider library | **pi-ai**, used only inside `llm-providers` (D49). Milestone M0.5 pins the exact npm package name and version and records them in ADR 0003; nothing outside `llm-providers` depends on it. |
+| R-Q8 | LLM provider library | **pi-ai** (`@earendil-works/pi-ai@0.87.1`, ADR 0003), used only inside `llm-providers` (D49); nothing outside `llm-providers` depends on it. |
 
 There are no open questions. Only private names and the internal module layout inside a package are left to the implementer. Anything else the plan does not specify (behavior, a public shape, a dependency, security, stored data), or two sections that seem to disagree, is asked of the product owner, never assumed; the answer is recorded as an ADR in `plan/adr/` and the plan is corrected before the code lands.
