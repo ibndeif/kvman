@@ -46,6 +46,13 @@ export class InvalidWrite extends Error {
   }
 }
 
+export class WorkspaceRequired extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'WorkspaceRequired';
+  }
+}
+
 function conflictUnlessChanged(changes: number, what: string): void {
   if (changes === 0) throw new VersionConflict(`${what} changed since it was read`);
 }
@@ -77,7 +84,7 @@ function deleteEntry(connection: Connection, table: KeyedTable, key: SqlValue[],
 
 function workspaceOf(write: StoreWrite, owner: WriteOwner): string {
   if (write.scope === 'global') return '';
-  if (owner.workspaceId === undefined) throw new InvalidWrite('a workspace-scope write needs an invocation in a workspace; use the global scope');
+  if (owner.workspaceId === undefined) throw new WorkspaceRequired('a workspace-scope write needs an invocation in a workspace');
   return owner.workspaceId;
 }
 

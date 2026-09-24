@@ -4,7 +4,7 @@ import type { AdmissionRequest, Admission, CommitResult, CommitUnit, StoredMessa
 import { correlationOf } from './commit-unit.ts';
 import { StorageFailure, type Connection } from './driver.ts';
 import { insertMessage, markInvocation } from './message-rows.ts';
-import { applyStoreWrite, InvalidWrite, VersionConflict } from './store-writes.ts';
+import { applyStoreWrite, InvalidWrite, VersionConflict, WorkspaceRequired } from './store-writes.ts';
 
 export const unitLimits = { messages: 1000, writeBytes: 8 * 1024 * 1024 } as const;
 
@@ -77,6 +77,7 @@ function problemOf(error: unknown, unit: CommitUnit): Problem {
   if (error instanceof VersionConflict) return kernelProblem('STORAGE_CONFLICT', { correlationId });
   if (error instanceof UnitRejected) return error.problem;
   if (error instanceof InvalidWrite) return kernelProblem('VALIDATION_FAILED', { correlationId, detail: error.message });
+  if (error instanceof WorkspaceRequired) return kernelProblem('WORKSPACE_INVALID', { correlationId, detail: error.message, hint: 'use ctx.store.global' });
   if (error instanceof StorageFailure) return storageProblem(error, correlationId);
   throw error;
 }

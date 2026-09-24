@@ -1,6 +1,10 @@
 import { defineConfig } from 'vitest/config';
 
+const sourceConditions = ['@kvman/source', 'module', 'node', 'default'];
+
 export default defineConfig({
+  resolve: { conditions: sourceConditions },
+  ssr: { resolve: { conditions: sourceConditions, externalConditions: ['@kvman/source'] } },
   test: {
     include: [
       'test/**/*.test.ts',

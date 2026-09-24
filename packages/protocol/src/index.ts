@@ -20,6 +20,7 @@ export * from './kernel-errors.ts';
 export * from './limits.ts';
 export * from './live-chunk.ts';
 export * from './llm.ts';
+export * from './merge-patch.ts';
 export * from './message.ts';
 export * from './naming/naming-grammar.ts';
 export * from './preset-secrets.ts';

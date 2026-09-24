@@ -163,7 +163,7 @@ ctx.store.blobs                    // bytes (files), stored once per content
 ctx.store.global                   // the same four, in global scope instead of the current workspace
 ```
 
-Every call is scoped to the invocation's workspace (a handler without a workspace, i.e. a `global`-scope type, may use only `ctx.store.global`). The owner is always the calling extension; an extension cannot name another extension's data. `collection(name)` must name a collection the extension registered, and `log(name)` must match a log prefix it registered (`registerLog('history:*')` covers `history:abc`); any other name throws `VALIDATION_FAILED` with a hint. kv keys need no registration.
+Every call is scoped to the invocation's workspace (a handler without a workspace, i.e. a `global`-scope type, may use only `ctx.store.global`; the workspace store throws `WORKSPACE_INVALID` there, ADR 0040). The owner is always the calling extension; an extension cannot name another extension's data. `collection(name)` must name a collection the extension registered, and `log(name)` must match a log prefix it registered (`registerLog('history:*')` covers `history:abc`); any other name throws `VALIDATION_FAILED` with a hint. kv keys need no registration.
 
 ### Key-value
 ```ts
@@ -172,7 +172,7 @@ ctx.store.kv.set(`turn:${sessionId}`, { ...turn, status: 'running' });  // buffe
 ctx.store.kv.delete(`turn:${sessionId}`);                                 // buffered
 const all = await ctx.store.kv.list('turn:');                             // Array<{ key, value }>, by key
 ```
-Keys are strings up to 512 characters; values are JSON up to 1 MB.
+Keys are strings up to 512 characters; values are JSON up to 1 MB (`kv.set` of a larger value throws `PAYLOAD_TOO_LARGE`, ADR 0039).
 
 ### Collections
 Registered in `setup` (the schema validates every write; `idField` names the id field, default `'id'`):
@@ -192,7 +192,8 @@ col.delete(id);                                            // buffered; no error
 const ready = await col.find({ where: { status: 'ready' }, orderBy: [['createdAt', 'desc']], limit: 50 });  // Doc[]
 const n     = await col.count({ where: { status: 'ready' } });                                               // number
 ```
-- `find` returns every matching document (after `orderBy`, up to `limit` when given). The hard cap is 5,000 documents or 16 MB per `find`: a result over the cap fails `STORE_RESULT_TOO_LARGE` (hint: add a filter or a `limit`), it is never silently cut. `limit` just takes the first N.
+- `find` returns every matching document (after `orderBy`, up to `limit` when given). Ascending order ranks missing or `null` < `false` < `true` < numbers < strings (by code point) < arrays and objects; `desc` reverses it; ties are ordered by id (ADR 0036).
+- `patch` applies a JSON Merge Patch (RFC 7396): nested objects merge, arrays are replaced, `null` removes a field (ADR 0037). The hard cap is 5,000 documents or 16 MB per `find`: a result over the cap fails `STORE_RESULT_TOO_LARGE` (hint: add a filter or a `limit`), it is never silently cut. `limit` just takes the first N.
 - Filter language (shared with UI conditions, `08` §8.7):
   ```ts
   where: { status: 'ready', size: { gt: 1000 }, name: { prefix: 'inv' }, tags: { in: ['a','b'] },
@@ -208,7 +209,7 @@ const n     = await col.count({ where: { status: 'ready' } });                  
   - `prefix`: the field is a string that starts with the operand (case-sensitive); anything else is false.
   - `exists: true`: the field is present and not `null`; `exists: false`: missing or `null`.
   - `$or`: an array of conditions, true when any matches; `[]` matches nothing; `$or` may nest.
-- Declared indexes become SQLite partial expression indexes (`WHERE owner = ? AND collection = ?`) created when the extension is enabled. An unindexed `find` works but scans at most 10,000 documents (`STORE_RESULT_TOO_LARGE` beyond) and logs a warning (kernel log, level `warn`, once per query type and hour).
+- Declared indexes become SQLite partial expression indexes (`WHERE owner = ? AND collection = ?`) created when the extension is enabled. An unindexed `find` works but scans at most 10,000 documents (`STORE_RESULT_TOO_LARGE` beyond) and logs a warning (kernel log, level `warn`, once per query type and hour). A `find` or `count` is indexed when a top-level `where` condition (outside `$or`) constrains the first field of a declared index, or when the first `orderBy` field is an index's first field and a `limit` is given (ADR 0038).
 
 ### Append-only logs
 ```ts
@@ -286,7 +287,7 @@ const text = await ctx.step('ocr', () => runOcr(blobId), { retrySafe: false });
 
 1. `step.begin(messageId, name)`: if a `done` row exists, return its recorded result without running `fn`.
 2. If a `started` row exists (a previous attempt crashed mid-step): if `retrySafe`, run again; otherwise throw `EFFECT_INDETERMINATE` (the handler may catch it and decide).
-3. Otherwise insert `started` (its own small transaction, committed immediately), run `fn`, then record `done` with its result (≤256 KB, larger results must be blobs).
+3. Otherwise insert `started` (its own small transaction, committed immediately), run `fn`, then record `done` with its result (≤256 KB, larger results must be blobs; a larger result throws `PAYLOAD_TOO_LARGE` and is not recorded, ADR 0039).
 
 `ctx.command` is implemented as a step. Step rows are deleted with their message at retention time.
 

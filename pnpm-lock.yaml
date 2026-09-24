@@ -203,6 +203,9 @@ importers:
       '@kvman/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@kvman/sdk':
+        specifier: workspace:*
+        version: link:../sdk
       better-sqlite3:
         specifier: 13.0.3
         version: 13.0.3
@@ -217,7 +220,11 @@ importers:
         specifier: 4.6.5
         version: 4.6.5
 
-  packages/sdk: {}
+  packages/sdk:
+    dependencies:
+      '@kvman/protocol':
+        specifier: workspace:*
+        version: link:../protocol
 
   packages/shell: {}
 
