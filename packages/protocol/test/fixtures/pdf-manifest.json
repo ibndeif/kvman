@@ -839,6 +839,659 @@
               }
             }
           ]
+        },
+        "props": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "file": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "blobId": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$",
+                  "format": "kvman-blob-id"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "importing",
+                    "ready",
+                    "translating",
+                    "translated",
+                    "failed"
+                  ]
+                },
+                "pages": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "translatedBlobId": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$",
+                  "format": "kvman-blob-id"
+                },
+                "createdAt": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "blobId",
+                "status",
+                "createdAt"
+              ],
+              "additionalProperties": false
+            },
+            "onOpen": {
+              "description": "Runs when Open is clicked",
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "command": {
+                      "type": "string",
+                      "pattern": "^(?=[a-z0-9-]{2,32}\\.)[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*)+$"
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "form": {
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "title": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "$t": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    }
+                                  },
+                                  "required": [
+                                    "$t"
+                                  ],
+                                  "additionalProperties": {
+                                    "$ref": "#/$defs/__schema0"
+                                  }
+                                }
+                              ]
+                            },
+                            "submitLabel": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "$t": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    }
+                                  },
+                                  "required": [
+                                    "$t"
+                                  ],
+                                  "additionalProperties": {
+                                    "$ref": "#/$defs/__schema0"
+                                  }
+                                }
+                              ]
+                            },
+                            "defaults": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {
+                                "$ref": "#/$defs/__schema0"
+                              }
+                            },
+                            "hidden": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1
+                              }
+                            },
+                            "fields": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {
+                                "type": "object",
+                                "properties": {
+                                  "label": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "$t": {
+                                            "type": "string",
+                                            "minLength": 1
+                                          }
+                                        },
+                                        "required": [
+                                          "$t"
+                                        ],
+                                        "additionalProperties": {
+                                          "$ref": "#/$defs/__schema0"
+                                        }
+                                      }
+                                    ]
+                                  },
+                                  "help": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "$t": {
+                                            "type": "string",
+                                            "minLength": 1
+                                          }
+                                        },
+                                        "required": [
+                                          "$t"
+                                        ],
+                                        "additionalProperties": {
+                                          "$ref": "#/$defs/__schema0"
+                                        }
+                                      }
+                                    ]
+                                  },
+                                  "placeholder": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "$t": {
+                                            "type": "string",
+                                            "minLength": 1
+                                          }
+                                        },
+                                        "required": [
+                                          "$t"
+                                        ],
+                                        "additionalProperties": {
+                                          "$ref": "#/$defs/__schema0"
+                                        }
+                                      }
+                                    ]
+                                  },
+                                  "order": {
+                                    "type": "number"
+                                  },
+                                  "group": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "$t": {
+                                            "type": "string",
+                                            "minLength": 1
+                                          }
+                                        },
+                                        "required": [
+                                          "$t"
+                                        ],
+                                        "additionalProperties": {
+                                          "$ref": "#/$defs/__schema0"
+                                        }
+                                      }
+                                    ]
+                                  },
+                                  "widget": {
+                                    "type": "string",
+                                    "enum": [
+                                      "text",
+                                      "textarea",
+                                      "number",
+                                      "select",
+                                      "checkbox",
+                                      "switch",
+                                      "date",
+                                      "secret",
+                                      "upload"
+                                    ]
+                                  },
+                                  "options": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        {
+                                          "$ref": "#/$defs/__schema0"
+                                        },
+                                        {
+                                          "anyOf": [
+                                            {
+                                              "type": "string"
+                                            },
+                                            {
+                                              "type": "object",
+                                              "properties": {
+                                                "$t": {
+                                                  "type": "string",
+                                                  "minLength": 1
+                                                }
+                                              },
+                                              "required": [
+                                                "$t"
+                                              ],
+                                              "additionalProperties": {
+                                                "$ref": "#/$defs/__schema0"
+                                              }
+                                            }
+                                          ]
+                                        }
+                                      ],
+                                      "items": false,
+                                      "minItems": 2,
+                                      "maxItems": 2
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
+                              }
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "confirm": {
+                      "type": "object",
+                      "properties": {
+                        "title": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "$t": {
+                                  "type": "string",
+                                  "minLength": 1
+                                }
+                              },
+                              "required": [
+                                "$t"
+                              ],
+                              "additionalProperties": {
+                                "$ref": "#/$defs/__schema0"
+                              }
+                            }
+                          ]
+                        },
+                        "body": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "$t": {
+                                  "type": "string",
+                                  "minLength": 1
+                                }
+                              },
+                              "required": [
+                                "$t"
+                              ],
+                              "additionalProperties": {
+                                "$ref": "#/$defs/__schema0"
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "title"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "busyLabel": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "$t": {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          },
+                          "required": [
+                            "$t"
+                          ],
+                          "additionalProperties": {
+                            "$ref": "#/$defs/__schema0"
+                          }
+                        }
+                      ]
+                    },
+                    "then": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "toast": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "$t": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      }
+                                    },
+                                    "required": [
+                                      "$t"
+                                    ],
+                                    "additionalProperties": {
+                                      "$ref": "#/$defs/__schema0"
+                                    }
+                                  }
+                                ]
+                              },
+                              "level": {
+                                "type": "string",
+                                "enum": [
+                                  "info",
+                                  "success",
+                                  "warning",
+                                  "error"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "toast"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "navigate": {
+                                "type": "string"
+                              },
+                              "pane": {
+                                "type": "string",
+                                "enum": [
+                                  "main",
+                                  "side"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "navigate"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "refresh": {
+                                "type": "string",
+                                "minLength": 1
+                              }
+                            },
+                            "required": [
+                              "refresh"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "set": {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string",
+                                  "pattern": "^\\$state\\.[A-Za-z0-9_-]+$"
+                                },
+                                "additionalProperties": {
+                                  "$ref": "#/$defs/__schema0"
+                                }
+                              }
+                            },
+                            "required": [
+                              "set"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "closeDialog": {
+                                "type": "boolean",
+                                "const": true
+                              }
+                            },
+                            "required": [
+                              "closeDialog"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "command"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "navigate": {
+                      "type": "string"
+                    },
+                    "pane": {
+                      "type": "string",
+                      "enum": [
+                        "main",
+                        "side"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "navigate"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "openDialog": {
+                      "type": "object",
+                      "properties": {
+                        "title": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "$t": {
+                                  "type": "string",
+                                  "minLength": 1
+                                }
+                              },
+                              "required": [
+                                "$t"
+                              ],
+                              "additionalProperties": {
+                                "$ref": "#/$defs/__schema0"
+                              }
+                            }
+                          ]
+                        },
+                        "view": {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          },
+                          "required": [
+                            "type"
+                          ],
+                          "additionalProperties": {}
+                        }
+                      },
+                      "required": [
+                        "title",
+                        "view"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "openDialog"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "openGrantDialog": {
+                      "type": "object",
+                      "properties": {
+                        "command": {
+                          "type": "string",
+                          "enum": [
+                            "kernel.trust.grant",
+                            "kernel.extension.enable",
+                            "kernel.extension.reload",
+                            "kernel.preset.import",
+                            "kernel.preset.apply",
+                            "kernel.preset.update"
+                          ]
+                        },
+                        "payload": {
+                          "$ref": "#/$defs/__schema0"
+                        }
+                      },
+                      "required": [
+                        "command",
+                        "payload"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "openGrantDialog"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "set": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string",
+                        "pattern": "^\\$state\\.[A-Za-z0-9_-]+$"
+                      },
+                      "additionalProperties": {
+                        "$ref": "#/$defs/__schema0"
+                      }
+                    }
+                  },
+                  "required": [
+                    "set"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "string",
+                  "pattern": "^\\$props\\.[A-Za-z0-9_-]+$"
+                }
+              ],
+              "format": "kvman-action"
+            }
+          },
+          "required": [
+            "file"
+          ],
+          "additionalProperties": false,
+          "$defs": {
+            "__schema0": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                },
+                {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                }
+              ]
+            }
+          }
         }
       },
       {

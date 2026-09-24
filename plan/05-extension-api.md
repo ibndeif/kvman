@@ -266,8 +266,8 @@ Every `register*` call returns a typed reference that can be passed instead of t
 | Helper | Meaning |
 |---|---|
 | `z.blobId()` | a blob ID field (lowercase SHA-256 hex; JSON Schema `{ type: 'string', format: 'kvman-blob-id', pattern: '^[0-9a-f]{64}$' }`, ADR 0018); handing it over grants read access to that blob (`04` §4.6) |
-| `z.text()` | a user-facing `Text` prop: a literal, a `$t` key, or a key with parameters (`08` §8.5) |
-| `z.action()` | an event prop of a composite component: the using view passes an `Action` (`08` §8.9) |
+| `z.text()` | a user-facing `Text` prop: a literal, a `$t` key, or a key with parameters (`08` §8.5); JSON Schema: the `Text` schema with `format: 'kvman-text'` (ADR 0023) |
+| `z.action()` | an event prop of a composite component: the using view passes an `Action` (`08` §8.9); JSON Schema: the `Action` schema with `format: 'kvman-action'` (ADR 0023) |
 
 Field labels for generated forms come from `.meta({ label, help })`, each a `Text` (`08` §8.12).
 

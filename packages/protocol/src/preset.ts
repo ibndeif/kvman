@@ -1,12 +1,14 @@
 import { z } from 'zod';
 import { capabilitiesSchema } from './extension/capabilities.ts';
-import { descriptionSchema, iconNameSchema, localeSchema, packageNameSchema, publicNameSchema } from './extension/grammar.ts';
+import { iconNameSchema, localeSchema, packageNameSchema, publicNameSchema } from './extension/grammar.ts';
 import { integrityProblem, sourceSchema } from './extension/source.ts';
 import { translationsSchema } from './extension/translations.ts';
 import { typeNameSchema } from './identifiers.ts';
 import { jsonSchema } from './json.ts';
 import { modelRefSchema } from './llm.ts';
 import { textSchema } from './text.ts';
+import { navGroupDefSchema, navItemDefSchema, pageDefSchema } from './ui/contributions.ts';
+import { withIdentity } from './ui/entries.ts';
 
 const presetExtensionSchema = z
   .strictObject({
@@ -23,7 +25,7 @@ const presetExtensionSchema = z
   });
 
 const presetContributionName = z.string().regex(/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/, 'expected a kebab-case name');
-const presetContributionSchema = z.looseObject({ name: presetContributionName, description: descriptionSchema });
+const presetEntries = (definition: z.ZodType) => z.array(withIdentity(definition, 'name', presetContributionName));
 
 const homeRouteSchema = z.string().regex(/^\/(?:[a-z0-9-]+(?:\/[a-z0-9-]+)*)?$/, 'app.home is the route of a page without :params');
 
@@ -55,9 +57,9 @@ export const presetSchema = z.strictObject({
     .optional(),
   hidden: z.array(publicNameSchema).optional(),
   labels: z.record(publicNameSchema, z.union([z.string(), z.record(localeSchema, z.string())])).optional(),
-  pages: z.array(presetContributionSchema).optional(),
-  navGroups: z.array(presetContributionSchema).optional(),
-  nav: z.array(presetContributionSchema).optional(),
+  pages: presetEntries(pageDefSchema).optional(),
+  navGroups: presetEntries(navGroupDefSchema).optional(),
+  nav: presetEntries(navItemDefSchema).optional(),
   translations: translationsSchema.optional(),
   config: z.record(packageNameSchema, jsonSchema).optional(),
   llm: z

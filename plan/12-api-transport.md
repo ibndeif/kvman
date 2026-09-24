@@ -51,7 +51,9 @@ Messages on the stream (`event:` name, then `data:` JSON):
 ```ts
 hello   { userId, cursor, protocolVersion, kernelVersion, subscriptions: string[] /* sids still registered */,
           notifications: { unread, attention } }
-event   { sid, seq, event }            // durable events also carry `id: <seq>` (the resume cursor)
+event   { sid, seq, event }            // durable events also carry `id: <seq>` (the resume cursor); event =
+                                        // { id, type, source, workspaceId?, payload, correlationId, causationId?,
+                                        //   createdAt }: the `events` table's fields, pushed or replayed (ADR 0027)
 live    { sid, type, key, run, n, chunk }  // a live event (02 §2.3); run = publishing message id; n counts per
                                         // <type>:<key>; a gap in n means "reset every run there and refetch"
 reply   { clientId, id, ok: true, data } | { clientId, id, ok: false, problem }   // a reply that missed its POST
@@ -140,7 +142,8 @@ Output: `{"ok":true,"data":…}` on stdout with exit 0; `{"ok":false,"problem":�
   errors: [{ code, owner, description, title, retryable, hint? }],
   contributions: [{ id, kind, owner, description, target? }],
   components: [{ name, owner: 'shell' | <extension>, form: 'builtin' | 'composite' | 'widget',
-                  description, props, examples, since? }],
+                  description, props, events, children, parents?, childCount?, examples, since? }],   // ADR 0025, 0029
+  frameSlots: [{ name, description, accepts, max? }],                                    // ADR 0025
   contracts: [{ name, major, types }]
 }
 ```
@@ -156,5 +159,5 @@ Filtered to what is enabled in the given workspace; `q` does a ranked text searc
 
 ## 12.9 Versioning
 
-- HTTP and the event stream are versioned by path (`/api/v1`). The protocol package carries `protocolVersion`; the shell refuses to run against an incompatible kernel and shows the recovery page instead.
+- HTTP and the event stream are versioned by path (`/api/v1`). The protocol package carries `protocolVersion`; the shell refuses to run against an incompatible kernel and shows the recovery page instead. `protocolVersion` is a positive integer (`1` in v2), raised on every breaking change to HTTP, the event stream, or the UI contract, and compared for equality (ADR 0030).
 - Message types are versioned through their owners' contracts, not through the transport.

@@ -11,6 +11,11 @@ import {
 import { llmManifestSchema } from './manifest-llm.ts';
 import { scheduleEntrySchema, subscriptionEntrySchema, typeEntrySchema } from './manifest-types.ts';
 import { translationsSchema } from './translations.ts';
+import {
+  actionDefSchema, navGroupDefSchema, navItemDefSchema, pageDefSchema, panelDefSchema, rendererDefSchema, rendererTargetDefSchema,
+  settingsSectionDefSchema, slotDefSchema, statusItemDefSchema, toolbarItemDefSchema,
+} from '../ui/contributions.ts';
+import { componentDefSchema, withIdentity } from '../ui/entries.ts';
 
 const metaSchema = z.strictObject({
   name: packageNameSchema,
@@ -70,22 +75,21 @@ const errorSchema = z.strictObject({
   hint: z.string().min(1).optional(),
 });
 
-const uiEntrySchema = z.looseObject({ id: publicNameSchema, description: descriptionSchema });
-const uiEntriesSchema = z.array(uiEntrySchema);
+const entries = (definition: z.ZodType) => z.array(withIdentity(definition, 'id', publicNameSchema));
 
 const uiSchema = z.strictObject({
-  pages: uiEntriesSchema,
-  navGroups: uiEntriesSchema,
-  navItems: uiEntriesSchema,
-  toolbarItems: uiEntriesSchema,
-  statusItems: uiEntriesSchema,
-  panels: uiEntriesSchema,
-  slots: uiEntriesSchema,
-  actions: uiEntriesSchema,
-  rendererTargets: uiEntriesSchema,
-  renderers: uiEntriesSchema,
-  components: uiEntriesSchema,
-  settingsSection: z.looseObject({ description: descriptionSchema }).nullable(),
+  pages: entries(pageDefSchema),
+  navGroups: entries(navGroupDefSchema),
+  navItems: entries(navItemDefSchema),
+  toolbarItems: entries(toolbarItemDefSchema),
+  statusItems: entries(statusItemDefSchema),
+  panels: entries(panelDefSchema),
+  slots: entries(slotDefSchema),
+  actions: entries(actionDefSchema),
+  rendererTargets: entries(rendererTargetDefSchema),
+  renderers: entries(rendererDefSchema),
+  components: entries(componentDefSchema),
+  settingsSection: settingsSectionDefSchema.nullable(),
 });
 
 export const manifestSchema = z.strictObject({
