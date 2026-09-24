@@ -128,7 +128,13 @@ Rules:
 - One name is never used for two kinds (e.g. a command and a query).
 - Component names (built-in and extension) follow the UI-kit camelCase convention of the component library (`liveText`, `pdf.fileCard`); kebab-case applies to message types.
 - Agent tools follow the same grammar as everything else: a read-only tool is a query and ends in a read verb (`fs.file.get`, `fs.dir.list`, `fs.files.search`); a tool that changes something is a command (`fs.write`, `fs.edit`).
-- `kernel.validate` checks the grammar. Violations are warnings for installed extensions and errors for builder-generated ones; each issue carries a hint (`event names end in a past participle: did you mean "pdf.file.translated"?`). Past participles are checked with a small built-in word list plus the `-ed` rule; an extension can declare exceptions with a reason.
+- `kernel.validate` checks the grammar. Violations are warnings for installed extensions and errors for builder-generated ones; each issue carries a hint (`event names end in a past participle: did you mean "pdf.file.translated"?`). Past participles are checked with a small built-in word list plus the `-ed` rule; an extension can declare exceptions with a reason (`namingException: '<reason>'` on the type's definition, reported as a warning that never becomes an error, ADR 0016).
+- **Exact checks** (ADR 0010):
+  - *Format* (always an error): at least two segments; every segment lowercase kebab-case (`[a-z][a-z0-9]*` words joined by `-`); the namespace is 2–32 characters.
+  - *Query*: the last segment is exactly a read verb (`get`, `list`, `search`, `count`, `preview`, `validate`). Hint: `query names end in a read verb (get, list, search, count, preview, validate)`.
+  - *Event* (every delivery class): the **last** word of the last segment is a past participle: it ends in `-ed` or is in the built-in list of irregular participles (`written`, `sent`, `forgotten`, `done`, …). Hint: `event names end in a past participle: did you mean "<suggestion>"?`.
+  - *Command*: the **first** word of the last segment (`set-model` → `set`) is neither a read verb nor a past participle. Words whose participle equals their base form (`set`, `read`, `run`, `put`, `cut`, `reset`, …) count as verbs, and words ending in `-eed` (`seed`, `feed`) and `embed`, `shred` do not count as `-ed` forms. Hint: `command names end in an imperative verb: did you mean "<suggestion>"?` (`pdf.translated` → `"pdf.translate"`).
+  - Suggestions use simple English inflection (`+d`, `+ed`, `-y` → `-ied`, and the reverse); they are exact for the plan's examples and best effort otherwise.
 
 ## 2.5 Durability and event delivery classes
 
@@ -151,7 +157,7 @@ Messages sent by a handler are part of its unit of work: they become visible onl
   lane: 'job:{{ $message.id }}'             // the message's own id (one lane per message)
   lane: 'section:{{ $message.source }}.{{ $payload.id }}:{{ $payload.sessionId }}'
   ```
-  Allowed paths: `$payload.<field>[.<field>…]`, `$context.<key>`, `$message.id`, `$message.source`, `$message.workspaceId`. Values must be strings or numbers; a missing path renders as `-`, except when every path is missing, which fails admission with `VALIDATION_FAILED` (the handler would otherwise share one lane for everything by accident). `$payload` paths are checked against the input schema at install (`06` §6.3).
+  A template is text with `{{ <path> }}` placeholders (spaces allowed inside the braces) and has at least one placeholder (ADR 0016). Allowed paths: `$payload.<field>[.<field>…]`, `$context.<key>`, `$message.id`, `$message.source`, `$message.workspaceId`. Values must be strings or numbers; a missing path renders as `-`, except when every path is missing, which fails admission with `VALIDATION_FAILED` (the handler would otherwise share one lane for everything by accident). `$payload` paths are checked against the input schema at install (`06` §6.3).
 - The scheduler runs at most one message per lane at a time, in `seq` order. Messages without a lane have no ordering and run as capacity allows.
 - There is **no global order**. Ordering across lanes or extensions is only by causation (a message is always created after its cause commits).
 - **Reentrancy:** if a handler holding lane L calls (`ctx.command`) a command whose lane is L, or whose lane is held by any ancestor in the current causation chain, the kernel fails the call immediately with `LANE_REENTRANT`. This prevents deadlocks. Use a continuation instead.

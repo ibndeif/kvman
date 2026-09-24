@@ -44,10 +44,15 @@ kernel.extension.stage {source}
      processes, no native addons, no kernel access, deadline 10 s) with a recording ext → the extension's **manifest** (05 §5.12)
      (a module that loads a native addon at its top level fails here, see "Native dependencies" below)
   5. validate the manifest (§6.3)
-  → reply { name, version, title, summary?, description, digest, integrity, namespace, requested and derived capabilities with reasons,
-            requested isolation, types summary, contributions summary, warnings (e.g. "uses native code"),
-            translations (the staged catalogs' entries for title, summary, and reasons, every shipped locale),
-            confirmationToken (10 min) }
+  → reply StageResult (ADR 0015):
+      { name, version, title, summary?, description, namespace, source, digest, integrity? (absent for dev:/local:),
+        capabilities: { requested: [{ name, reason, types? }], derived: { subscribes, providesLlm } },
+        isolation: { mode, reason } | null,
+        types: [{ type, kind, access?, agentTool }], contributions: [{ id, kind, slot?, target? }],
+        warnings: Issue[] (severity 'warning', e.g. code 'NATIVE_CODE': "uses native code"),
+        translations: { [locale]: { title?, summary?, reasons: { [capability]: text } } }
+          (the staged catalogs' entries for title, summary, and reasons, every shipped locale),
+        confirmationToken, expiresAt (10 min) }
 
 kernel.extension.install {confirmationToken}
   6. re-verify staged bytes against the digest (else CONFIRMATION_EXPIRED)

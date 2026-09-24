@@ -38,7 +38,8 @@ The builder must justify moving up a tier in the plan it shows the user.
 | command | `builder.approval.answer {approvalId, decision: 'approve' \| 'change' \| 'cancel', note?}` | access `user`: the person's answer to a plan or publish card |
 | query | `builder.approvals.list {sessionId?}` | open plan and publish cards (bound by the builder's panels) |
 | command (tool) | `builder.project.create {name, tier}` | creates a dev project (from a template for tier ② or a preset draft for ①) with `kernel.dev.project.create` |
-| command (tool) | `builder.file.read`, `builder.file.write`, `builder.dir.read` | edit files **inside the dev project only**, through `kernel.dev.file.*` (§11.5) |
+| query (tool) | `builder.file.get`, `builder.dir.list` | read files **inside the dev project only**, through `kernel.dev.file.get` and `kernel.dev.files.list` (§11.5) |
+| command (tool) | `builder.file.write` | edit files **inside the dev project only**, through `kernel.dev.file.write` (§11.5) |
 | command (tool) | `builder.preset.patch {ops}` | tier ① edits against a preset draft (JSON Patch) |
 | command (tool) | `builder.check` | `kernel.dev.build {project, test: false}`: type-check, bundle, and manifest recording and validation → structured issues with fix hints |
 | command (tool) | `builder.test` | `kernel.dev.build {project}`: the same plus the project's tests in the sandboxed test process (§11.5) → results; a clean run records a version |
@@ -52,7 +53,7 @@ The builder never gets shell access or write access to the person's files. It ma
 
 - Location: `~/.kvman/extensions/dev/<project>/` with the standard extension layout (`05` §5.1), created from a template that already contains a passing test (`node:test`) and `locales/en.json`. Extensions cannot write under `~/.kvman` with `ctx.files`, so the project is reached only through **kernel dev-project commands** (admin, `03` §3.8), jailed to that folder like `ctx.files` is jailed to a workspace:
   - `kernel.dev.project.create {name, template: 'extension' | 'preset'}`, `kernel.dev.project.delete {name}` (also forgets its preview workspace);
-  - `kernel.dev.file.read/write/list/delete {project, path, content?}` (paths relative to the project; `..`, absolute paths, and symlinks fail `WORKSPACE_ESCAPE`; files up to 1 MB);
+  - the queries `kernel.dev.file.get {project, path}` and `kernel.dev.files.list {project, path}`, and the commands `kernel.dev.file.write {project, path, content}` and `kernel.dev.file.delete {project, path}` (paths relative to the project; `..`, absolute paths, and symlinks fail `WORKSPACE_ESCAPE`; files up to 1 MB);
   - `kernel.dev.build {project, test?: boolean /* default true */}` → `{ ok, issues, tests?: { passed, failed, results }, versionId? }`.
 - **Build** (`kernel.dev.build`, deadline 120 s) runs three stages, each in its own child process that exits when done. The scripts and the toolchain (TypeScript and esbuild) ship in `@kvman/devtools`; the kernel starts them by path and never imports them.
   1. **Compile** (runs no project code): type-check `src/` and `test/` with the TypeScript compiler API using fixed options (strict, ESM, Node 24 target; the project's own `tsconfig.json` is ignored, so it cannot change them), then bundle with esbuild: `src/extension.ts` → `dist/extension.js` (`@kvman/sdk` external) and each `test/<name>.test.ts` → `dist/test/<name>.test.js` (`@kvman/sdk`, `@kvman/testkit`, and `node:*` external). esbuild runs its own native program as a child process, which the permission model would forbid; this stage needs no sandbox because nothing from the project runs in it.
@@ -129,7 +130,7 @@ builder.publish {projectId, versionId}
 | Generated code damages data | sandbox preview with separate storage; tests required; unit-of-work atomicity |
 | Generated code overreaches | declared capabilities, capability diff approval, sandboxed isolation enforced by the OS |
 | Runaway loops or resource use | per-extension concurrency and timeouts; quarantine after repeated crashes |
-| Builder edits outside its project | `builder.file.*` confined to the project directory; no shell tool in the Builder preset |
+| Builder edits outside its project | `builder.file.*` and `builder.dir.list` confined to the project directory; no shell tool in the Builder preset |
 | Bad publish | versions and one-click rollback; data schema compatibility checks |
 | Prompt injection through documents | plan and publish approvals are `access: 'user'` commands, and enabling with grants is confirmed only in the shell's grant dialog: the builder can prepare a publish but cannot confirm it or draw the confirmation |
 

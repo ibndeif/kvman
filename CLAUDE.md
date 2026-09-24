@@ -20,7 +20,7 @@ Milestones are in `plan/15-phases-risks.md` §15.4 (M0.1 … M7.3). Do them stri
    - **Happy path**: one Given/When/Then scenario per *Done when* bullet.
    - **Edge cases**: every failure, limit, race, crash point, and error code the read sections name.
    Each scenario has an id (`M2.4-H3`, `M2.4-E7`) and names the test file it will live in.
-3. **Implement** exactly the *Build* list. Nothing from a later milestone.
+3. **Implement** exactly the *Build* list. Nothing from a later milestone. You must swich to be an expert the will implement this milestone.
 4. **Write the tests** that match the scenarios one to one, each named with its scenario id. No scenario without a test and no test without a scenario. A scenario discovered while implementing is added to the file first (and asked about first if the plan does not cover the behavior).
 5. **Pass everything**: every test in the repository, not only the new ones, and the gates:
    `pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm bench:check`

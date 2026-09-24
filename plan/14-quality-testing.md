@@ -89,4 +89,4 @@ The reference machine is a 4-core laptop (x86-64 or Apple silicon) with 16 GB RA
 
 ## 14.7 Dependency policy
 
-Latest stable versions at M0.1 and M7.3 (`pnpm up --latest`), exact versions recorded in the root `package.json`, frozen lockfile in CI, a weekly scheduled job that opens one update PR and never fails ordinary CI. Holding an older major requires an ADR.
+Latest stable versions at M0.1 and M7.3 (`pnpm up --latest`), exact versions recorded in the root `package.json`, frozen lockfile in CI, a weekly scheduled job that opens one update PR and never fails ordinary CI. Holding an older major requires an ADR. CI is deferred (ADR 0007): until a CI system is chosen, the gates run locally, and the frozen-lockfile check and the weekly update job wait for it.

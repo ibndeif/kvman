@@ -1,0 +1,18 @@
+{
+  "name": "@kvman/testkit",
+  "version": "0.0.0",
+  "description": "Runs the real kvman kernel with in-memory SQLite for extension tests.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "@kvman/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}

@@ -116,7 +116,8 @@ kvman/
     protocol/        @kvman/protocol — Zod schemas only: envelope, kinds, manifest, capabilities,
                      view language, UI contract (frame slot catalog, component specs, UiRegistry), catalogs,
                      presets, problems, error codes, SSE messages, schema endpoint. Pure validators only
-                     (naming grammar, filter language, canonical JSON); no I/O.
+                     (naming grammar, filter language, canonical JSON, SHA-256 through Web Crypto, async,
+                     ADR 0009); no I/O.
     sdk/             @kvman/sdk — defineExtension, the ext registration API, ctx types, helpers (prompts, llmProblem,
                      z.blobId, z.text, z.action).
     kernel/          @kvman/kernel — the kernel; `kvman start` runs it as the daemon process.

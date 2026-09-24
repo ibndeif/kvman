@@ -12,11 +12,18 @@ type Problem = {
   hint?: string;           // what to do next
   params?: Record<string, Json>;   // values for the translated message (08 §8.16)
   retryable: boolean;
+  retryAfterMs?: number;   // when retrying makes sense only after a delay (HANDLER_UNAVAILABLE while reloading,
+                           // LLM_CALL_FAILED with the provider's retry-after); ADR 0011
   correlationId: string;
   messageId?: string;
-  issues?: Array<{ path: string; message: string; hint?: string;
-                   code?: string; params?: Json }>;   // validation only; code = Zod issue code, for translation
+  issues?: Issue[];         // validation only
 };
+
+type Issue = {
+  path: string; message: string; hint?: string;
+  code?: string; params?: Json;          // code = Zod issue code, for translation
+  severity?: 'error' | 'warning';        // absent = 'error'; kernel.validate's `ok` is false exactly when an
+};                                       // issue is an error (naming-grammar and literal-text warnings, ADR 0011)
 ```
 
 - Internal error text, stack traces, provider error bodies, and secrets never appear in a Problem. They go to the kernel log, redacted, keyed by `correlationId`.
@@ -26,44 +33,44 @@ type Problem = {
 
 ## 13.2 Kernel error catalog
 
-| Code | When | Retryable |
-|---|---|---|
-| `VALIDATION_FAILED` | envelope or payload fails its schema (`issues` set) | no |
-| `TYPE_NOT_FOUND` | unknown message type in this workspace | no |
-| `HANDLER_UNAVAILABLE` | owner disabled, not enabled in the workspace, quarantined, or reloading (queries only; commands wait, `06` §6.6) | yes (reloading, `retryAfterMs`) / no |
-| `NAMESPACE_CONFLICT` | enabling a second extension with the same namespace | no |
-| `CAPABILITY_DENIED` | caller lacks the capability or grant (including a `z.blobId()` field naming a blob the sender may not read) | no |
-| `CALLER_NOT_ALLOWED` | the source does not match the type's `access` (`02` §2.4): a non-user calling an `access: 'user'` type, a person calling an `access: 'extensions'` type, or anyone but the owner and the kernel calling an `internal` one; also a user sending `ui.*` | no |
-| `IDEMPOTENCY_MISMATCH` | same key, different request digest | no |
-| `LANE_REENTRANT` | `ctx.command` into its own lane or an ancestor's lane | no |
-| `DEADLINE_EXCEEDED` | the message's `deadlineAt` passed (while pending, awaiting, or running, `02` §2.9) | no |
-| `HANDLER_TIMEOUT` | one attempt ran longer than the handler's `timeoutMs` (`02` §2.9) | yes (counts as an attempt) |
-| `CANCELLED` | cancelled by `kernel.cancel` or shutdown | no |
-| `EFFECT_INDETERMINATE` | a non-retry-safe step started but did not record (side effects unknown) | no |
-| `MESSAGE_DEAD` | max attempts reached | no (inspector can retry) |
-| `STORAGE_CONFLICT` | optimistic version check failed, or a log seq was taken (normally retried internally) | yes |
-| `STORE_NOT_FOUND` | `patch` of a document that does not exist | no |
-| `STORE_RESULT_TOO_LARGE` | a `find`, `kv.list`, or `log.read` over 5,000 items or 16 MB, or an unindexed scan over 10,000 documents (`04` §4.3) | no |
-| `STEP_DUPLICATE` | `ctx.step` called twice with the same name in one handler run | no |
-| `STORAGE_UNAVAILABLE` / `STORAGE_FULL` | disk or database failure / out of space | yes / no |
-| `PAYLOAD_TOO_LARGE` | over 16 MB after spill | no |
-| `QUERY_TIMEOUT` | a query over its handler timeout | yes |
-| `REPLY_NOT_AWAITING` | `ctx.reply` for a command that already has a reply, was cancelled, or passed its deadline (e.g. a second answer to the same prompt) | no |
-| `BLOB_NOT_FOUND` / `BLOB_TOO_LARGE` / `BLOB_UNSAFE_TYPE` | blob errors | no |
-| `WORKSPACE_INVALID` / `WORKSPACE_ESCAPE` / `WORKSPACE_UNTRUSTED` | workspace path and trust errors | no |
-| `CONFIG_INVALID` / `CONFIG_STALE` | config schema or revision errors | no |
-| `PRESET_INVALID` / `PRESET_UNSHAREABLE` / `PRESET_STALE` / `PRESET_SECRET` / `PRESET_REFERENCE_MISSING` / `PRESET_REQUIRED` (enable in a workspace with no applied preset) / `PRESET_INTEGRITY_MISMATCH` (a downloaded package does not match the preset's `integrity`) / `PRESET_READONLY` | preset errors (`PRESET_READONLY`: deleting a built-in preset) | no |
-| `ROUTE_CONFLICT` | two active pages in a workspace have the same route (`06` §6.3) | no |
-| `LLM_NOT_CONFIGURED` / `LLM_MODEL_NOT_FOUND` / `LLM_THINKING_UNSUPPORTED` / `LLM_CONTEXT_OVERFLOW` | LLM service: no usable provider or model, unsupported thinking level, request too large for the model | no |
-| `LLM_CALL_FAILED` | the provider call failed (rate limit, network, provider error); carries `retryAfter` when known | yes |
-| `PROVIDER_CONFLICT` | enabling an extension whose LLM provider ID is already registered by another enabled extension | no |
-| `EXT_SOURCE_INVALID` / `EXT_INTEGRITY` / `EXT_MANIFEST_INVALID` (also: `setup` not deterministic, registers after returning, a schema JSON Schema cannot express, over 5 MB, an unknown `manifestVersion`, or manifest drift at load) / `EXT_REQUIRES_MISSING` (types or components) / `EXT_IN_USE` (uninstall while enabled, or disable while another enabled extension requires it) / `EXT_QUARANTINED` / `EXT_ROLLBACK_BLOCKED` / `EXT_GRANTS_REQUIRED` (a reload needs new grants, `06` §6.6) | extension lifecycle | no |
-| `SCHEMA_TOO_NEW` / `MIGRATION_FAILED` | persisted data versions | no |
-| `CONFIRMATION_EXPIRED` | preview token expired or staged bytes changed | yes (preview again) |
-| `DAEMON_CONFLICT` | another kernel owns the lock | no |
-| `HOME_INVALID` | the home folder holds other files but no `kvman.db` (`03` §3.9) | no |
-| `HOST_FORBIDDEN` | bad `Host` or `Origin` | no |
-| `INTERNAL` | unexpected error (details in the log) | yes |
+| Code | When | Title (ADR 0022) | Retryable |
+|---|---|---|---|
+| `VALIDATION_FAILED` | envelope or payload fails its schema (`issues` set) | The request does not match its schema | no |
+| `TYPE_NOT_FOUND` | unknown message type in this workspace | Unknown message type in this workspace | no |
+| `HANDLER_UNAVAILABLE` | owner disabled, not enabled in the workspace, quarantined, or reloading (queries only; commands wait, `06` §6.6) | The handling extension is not available | yes (reloading, `retryAfterMs`) / no |
+| `NAMESPACE_CONFLICT` | enabling a second extension with the same namespace | Another enabled extension owns this namespace | no |
+| `CAPABILITY_DENIED` | caller lacks the capability or grant (including a `z.blobId()` field naming a blob the sender may not read) | The caller lacks the capability or grant | no |
+| `CALLER_NOT_ALLOWED` | the source does not match the type's `access` (`02` §2.4): a non-user calling an `access: 'user'` type, a person calling an `access: 'extensions'` type, or anyone but the owner and the kernel calling an `internal` one; also a user sending `ui.*` | This caller may not send this type | no |
+| `IDEMPOTENCY_MISMATCH` | same key, different request digest | The idempotency key was used for a different request | no |
+| `LANE_REENTRANT` | `ctx.command` into its own lane or an ancestor's lane | The command would wait on a lane its own chain holds | no |
+| `DEADLINE_EXCEEDED` | the message's `deadlineAt` passed (while pending, awaiting, or running, `02` §2.9) | The message deadline passed | no |
+| `HANDLER_TIMEOUT` | one attempt ran longer than the handler's `timeoutMs` (`02` §2.9) | The handler ran longer than its timeout | yes (counts as an attempt) |
+| `CANCELLED` | cancelled by `kernel.cancel` or shutdown | The message was cancelled | no |
+| `EFFECT_INDETERMINATE` | a non-retry-safe step started but did not record (side effects unknown) | A side effect started but its outcome is unknown | no |
+| `MESSAGE_DEAD` | max attempts reached | The message failed after its maximum attempts | no (inspector can retry) |
+| `STORAGE_CONFLICT` | optimistic version check failed, or a log seq was taken (normally retried internally) | The data changed while the handler ran | yes |
+| `STORE_NOT_FOUND` | `patch` of a document that does not exist | The document does not exist | no |
+| `STORE_RESULT_TOO_LARGE` | a `find`, `kv.list`, or `log.read` over 5,000 items or 16 MB, or an unindexed scan over 10,000 documents (`04` §4.3) | The read returns more than the result cap | no |
+| `STEP_DUPLICATE` | `ctx.step` called twice with the same name in one handler run | A step name was used twice in one handler run | no |
+| `STORAGE_UNAVAILABLE` / `STORAGE_FULL` | disk or database failure / out of space | The database is unavailable / The disk is full | yes / no |
+| `PAYLOAD_TOO_LARGE` | over 16 MB after spill | The payload is over 16 MB | no |
+| `QUERY_TIMEOUT` | a query over its handler timeout | The query ran longer than its timeout | yes |
+| `REPLY_NOT_AWAITING` | `ctx.reply` for a command that already has a reply, was cancelled, or passed its deadline (e.g. a second answer to the same prompt) | The command is no longer waiting for a reply | no |
+| `BLOB_NOT_FOUND` / `BLOB_TOO_LARGE` / `BLOB_UNSAFE_TYPE` | blob errors | The blob does not exist / The blob is over the size limit / The blob type cannot be served inline | no |
+| `WORKSPACE_INVALID` / `WORKSPACE_ESCAPE` / `WORKSPACE_UNTRUSTED` | workspace path and trust errors | The workspace is not valid / The path leaves the workspace / The workspace files are not trusted | no |
+| `CONFIG_INVALID` / `CONFIG_STALE` | config schema or revision errors | The configuration does not match its schema / The configuration changed since it was read | no |
+| `PRESET_INVALID` / `PRESET_UNSHAREABLE` / `PRESET_STALE` / `PRESET_SECRET` / `PRESET_REFERENCE_MISSING` / `PRESET_REQUIRED` (enable in a workspace with no applied preset) / `PRESET_INTEGRITY_MISMATCH` (a downloaded package does not match the preset's `integrity`) / `PRESET_READONLY` | preset errors (`PRESET_READONLY`: deleting a built-in preset) | The preset is not valid / The preset cannot be shared / The preset changed since it was read / The preset contains a secret / The preset refers to something that does not exist / The workspace has no applied preset / A package does not match the preset integrity / Built-in presets cannot be changed | no |
+| `ROUTE_CONFLICT` | two active pages in a workspace have the same route (`06` §6.3) | Two active pages have the same route | no |
+| `LLM_NOT_CONFIGURED` / `LLM_MODEL_NOT_FOUND` / `LLM_THINKING_UNSUPPORTED` / `LLM_CONTEXT_OVERFLOW` | LLM service: no usable provider or model, unsupported thinking level, request too large for the model | No usable LLM provider is configured / The model does not exist / The model does not support this thinking level / The request is too large for the model | no |
+| `LLM_CALL_FAILED` | the provider call failed (rate limit, network, provider error); carries `retryAfterMs` when known | The LLM provider call failed | yes |
+| `PROVIDER_CONFLICT` | enabling an extension whose LLM provider ID is already registered by another enabled extension | Another enabled extension registers this LLM provider | no |
+| `EXT_SOURCE_INVALID` / `EXT_INTEGRITY` / `EXT_MANIFEST_INVALID` (also: `setup` not deterministic, registers after returning, a schema JSON Schema cannot express, over 5 MB, an unknown `manifestVersion`, or manifest drift at load) / `EXT_REQUIRES_MISSING` (types or components) / `EXT_IN_USE` (uninstall while enabled, or disable while another enabled extension requires it) / `EXT_QUARANTINED` / `EXT_ROLLBACK_BLOCKED` / `EXT_GRANTS_REQUIRED` (a reload needs new grants, `06` §6.6) | extension lifecycle | The extension source is not valid / The extension snapshot failed its integrity check / The extension manifest is not valid / Required types or components are missing / The extension is in use / The extension is quarantined / The data schema does not allow this rollback / The new version needs new grants | no |
+| `SCHEMA_TOO_NEW` / `MIGRATION_FAILED` | persisted data versions | The stored data is newer than this code / A data migration failed | no |
+| `CONFIRMATION_EXPIRED` | preview token expired or staged bytes changed | The confirmation expired or the staged content changed | yes (preview again) |
+| `DAEMON_CONFLICT` | another kernel owns the lock | Another kernel owns this home folder | no |
+| `HOME_INVALID` | the home folder holds other files but no `kvman.db` (`03` §3.9) | The home folder holds other files | no |
+| `HOST_FORBIDDEN` | bad `Host` or `Origin` | The request Host or Origin is not allowed | no |
+| `INTERNAL` | unexpected error (details in the log) | Unexpected error | yes |
 
 Extension codes used across the plan: `agent/SESSION_CLOSED`, `agent/CONTEXT_TOO_LARGE`, `agent/COMPACT_FAILED`, `agent/TOOL_DENIED`, `agent/UNKNOWN_TOOL`, `agent/REVIEW_REJECTED`, `agent/NOT_A_GUARD`, `agent/SECTION_LIMIT`, `agent/SESSION_NOT_FOUND`, `agent/DEPTH_EXCEEDED`, `shell/TIMEOUT`, `interviewer/BUSY`, `fs/NOT_FOUND`, `pdf/NOT_FOUND`.
 
@@ -124,4 +131,4 @@ Extension codes used across the plan: `agent/SESSION_CLOSED`, `agent/CONTEXT_TOO
 
 ## 13.8 Security tests (required, see `14`)
 
-XSS payload matrix for Markdown and all text components (scripts, event attributes, SVG/MathML, encoded `javascript:`, `data:` URLs, malformed tables, fenced HTML, external link `rel`); Host/Origin rejection including DNS-rebinding hosts; event stream cross-origin rejection (`Sec-Fetch-Site`, no CORS); widget isolation (no parent DOM access, no cross-extension calls, no network); capability denial for every `ctx` surface; `CALLER_NOT_ALLOWED` for user-only and internal commands from extensions, processes (job tokens), and widget bridges; cross-extension separation (views targeting foreign user-only types without `calls`, foreign events without a subscription grant, blobs without a ref or hand-over, admin-only kernel queries); grant dialog cannot be opened with a forged preview or confirmed without a click; contributions placed in slots that do not accept their kind, extension content in shell-only zones, and `frame.*` names are rejected; a public component with its own command action is rejected, and an action passed into a component is checked against the passing view's owner; bidirectional-override text in the grant dialog is neutralized; a preset that hides the Extensions page still shows it in the apply dialog and under "Show hidden pages"; a notification whose button targets a grant command, a foreign user-only or internal command, or a type outside the sender's own and granted `calls` is rejected, and one sent by an extension never shows as kvman; sandboxed install-time loader; sandbox OS denials; job-token scope (a delegated token reaches only `allowTypes` that the requesting agent may send); a dev version enabled in a preview workspace is never granted `process`, `network`, `kernel.admin`, or lower isolation; a reload that needs new capabilities fails `EXT_GRANTS_REQUIRED` unless confirmed in the grant dialog; the shell refuses to be framed by any origin but its own; trust gate change detection; secret redaction in logs, traces, presets, and exports; blob content-type spoofing; a guard extension enabled together with the agent holds every tool call until it registers (no call runs unguarded); `access: 'extensions'` types refuse people and views, and `access: 'user'` types refuse processes and widget bridges; `agent.send` from an extension fails `CALLER_NOT_ALLOWED`; a widget cannot subscribe to another extension's live events; `kernel.dev.file.*` refuses `..`, absolute paths, and symlinks, and `kernel.dev.build` cannot write outside `dist/`; a POST with a foreign `Origin` is refused while one without `Origin` is accepted; a crash while writing `secrets.json` leaves the old or the new file, never a partial one; a package whose tarball differs from the preset's `integrity` fails `PRESET_INTEGRITY_MISMATCH`; `local-guard` asks the person before `curl http://127.0.0.1:<port>/api/v1/commands/<type>` runs and allows an ordinary command at once; a sandboxed extension host, the install-time loader, and a builder test process cannot load `node:sqlite` (through `import`, `require`, or `process.getBuiltinModule`) and cannot open `kvman.db`; a builder project's test cannot write a file, start a process or worker, or load an addon, and the project's `tsconfig.json` cannot change the compiler options.
+XSS payload matrix for Markdown and all text components (scripts, event attributes, SVG/MathML, encoded `javascript:`, `data:` URLs, malformed tables, fenced HTML, external link `rel`); Host/Origin rejection including DNS-rebinding hosts; event stream cross-origin rejection (`Sec-Fetch-Site`, no CORS); widget isolation (no parent DOM access, no cross-extension calls, no network); capability denial for every `ctx` surface; `CALLER_NOT_ALLOWED` for user-only and internal commands from extensions, processes (job tokens), and widget bridges; cross-extension separation (views targeting foreign user-only types without `calls`, foreign events without a subscription grant, blobs without a ref or hand-over, admin-only kernel queries); grant dialog cannot be opened with a forged preview or confirmed without a click; contributions placed in slots that do not accept their kind, extension content in shell-only zones, and `frame.*` names are rejected; a public component with its own command action is rejected, and an action passed into a component is checked against the passing view's owner; bidirectional-override text in the grant dialog is neutralized; a preset that hides the Extensions page still shows it in the apply dialog and under "Show hidden pages"; a notification whose button targets a grant command, a foreign user-only or internal command, or a type outside the sender's own and granted `calls` is rejected, and one sent by an extension never shows as kvman; sandboxed install-time loader; sandbox OS denials; job-token scope (a delegated token reaches only `allowTypes` that the requesting agent may send); a dev version enabled in a preview workspace is never granted `process`, `network`, `kernel.admin`, or lower isolation; a reload that needs new capabilities fails `EXT_GRANTS_REQUIRED` unless confirmed in the grant dialog; the shell refuses to be framed by any origin but its own; trust gate change detection; secret redaction in logs, traces, presets, and exports; blob content-type spoofing; a guard extension enabled together with the agent holds every tool call until it registers (no call runs unguarded); `access: 'extensions'` types refuse people and views, and `access: 'user'` types refuse processes and widget bridges; `agent.send` from an extension fails `CALLER_NOT_ALLOWED`; a widget cannot subscribe to another extension's live events; `kernel.dev.file.*` and `kernel.dev.files.list` refuse `..`, absolute paths, and symlinks, and `kernel.dev.build` cannot write outside `dist/`; a POST with a foreign `Origin` is refused while one without `Origin` is accepted; a crash while writing `secrets.json` leaves the old or the new file, never a partial one; a package whose tarball differs from the preset's `integrity` fails `PRESET_INTEGRITY_MISMATCH`; `local-guard` asks the person before `curl http://127.0.0.1:<port>/api/v1/commands/<type>` runs and allows an ordinary command at once; a sandboxed extension host, the install-time loader, and a builder test process cannot load `node:sqlite` (through `import`, `require`, or `process.getBuiltinModule`) and cannot open `kvman.db`; a builder project's test cannot write a file, start a process or worker, or load an addon, and the project's `tsconfig.json` cannot change the compiler options.

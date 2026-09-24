@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "customConditions": ["@kvman/source"],
+    "lib": ["es2024", "dom", "dom.iterable"]
+  },
+  "include": ["src", "test"]
+}

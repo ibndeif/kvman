@@ -47,8 +47,8 @@ Inside a phase, each milestone needs the one before it unless *Needs* says other
 #### M0.1 Monorepo scaffold — 1.5 days
 - **Needs**: —
 - **Read**: `01` (all), `14` §14.1, §14.4, §14.7, `00` D55.
-- **Build**: pnpm workspace + Turborepo; `tsconfig.base.json` with the strict flags of `14` §14.1; ESLint flat config with the import walls (`no-restricted-imports`) and `max-lines: 300`; Vitest; Playwright installed; packages `protocol`, `sdk`, `kernel`, `testkit`, `shell`, `widget-bridge`, `cli`, `devtools` with empty entry points; scripts `typecheck`, `lint`, `test`, `build`, `bench:check` (a no-op until M1.9); CI workflow running them; changesets; `plan/adr/0000-template.md`; latest stable dependency versions pinned exactly.
-- **Done when**: every script passes on the empty packages in CI; a fixture file that imports across a wall fails lint; a 301-line fixture file fails lint.
+- **Build**: pnpm workspace + Turborepo; `tsconfig.base.json` with the strict flags of `14` §14.1; ESLint flat config with the import walls (`no-restricted-imports`) and `max-lines: 300`; Vitest; Playwright installed; packages `protocol`, `sdk`, `kernel`, `testkit`, `shell`, `widget-bridge`, `cli`, `devtools` with empty entry points; scripts `typecheck`, `lint`, `test`, `build`, `bench:check` (a no-op until M1.9); changesets; `plan/adr/0000-template.md`; latest stable dependency versions pinned exactly (TypeScript held at 6.x, ADR 0005). No CI workflow for now: the gates run locally (ADR 0007).
+- **Done when**: every script passes on the empty packages; a fixture file that imports across a wall fails lint; a 301-line fixture file fails lint.
 
 #### M0.2 Protocol: messaging core — 1.5 days
 - **Read**: `02` (all), `13` §13.1–§13.2, `04` §4.3 (filter language).
@@ -248,7 +248,7 @@ Inside a phase, each milestone needs the one before it unless *Needs* says other
 - **Needs**: M2.
 - **Read**: `10` §10.1, `05` §5.11.
 - **Build**: pi-ai providers with `registerProvider` / `registerModel`; OpenAI-compatible endpoints through `listModels`; error mapping to `LLM_*`; config and secrets; the provider panel for `settings.providers`; OAuth logins with the prompt pattern; `en` and `ar` catalogs.
-- **Done when**: an API-key provider completes and streams against a recorded HTTP fixture; a rate-limit response is retried with `retryAfter`; a pending login appears as a panel and is completed by `llm-providers.login.finish` from a user.
+- **Done when**: an API-key provider completes and streams against a recorded HTTP fixture; a rate-limit response is retried with `retryAfterMs`; a pending login appears as a panel and is completed by `llm-providers.login.finish` from a user.
 
 #### M4.2 Agent sessions, turns, prompt sections — 3.5 days
 - **Read**: `09` §9.1–§9.4, §9.6 (prompt order and sections), §9.8, §9.10, `10` (intro).
@@ -307,7 +307,7 @@ Inside a phase, each milestone needs the one before it unless *Needs* says other
 
 #### M6.1 `builder` core and dev-project kernel commands — 4 days
 - **Read**: `11` §11.4–§11.6, `03` §3.5, §3.8 (`kernel.dev.*`), `05` §5.10.
-- **Build**: `@kvman/devtools` (TypeScript, esbuild, and the build scripts); `kernel.dev.project.*`, `kernel.dev.file.*` jailed to the project, and `kernel.dev.build` in its three stages (compile without project code, record in the loader, tests in the sandboxed test process; record a `dev:` version); the testkit's remote mode; the dev-project import policy; dev projects from templates (with a passing `node:test` test and an `en` catalog); `builder.project.create`, `builder.file.*`, `builder.check`, `builder.test`.
+- **Build**: `@kvman/devtools` (TypeScript, esbuild, and the build scripts); `kernel.dev.project.*`, `kernel.dev.file.*` and `kernel.dev.files.list` jailed to the project, and `kernel.dev.build` in its three stages (compile without project code, record in the loader, tests in the sandboxed test process; record a `dev:` version); the testkit's remote mode; the dev-project import policy; dev projects from templates (with a passing `node:test` test and an `en` catalog); `builder.project.create`, `builder.file.*`, `builder.dir.list`, `builder.check`, `builder.test`.
 - **Done when**: a file path outside the project is refused with `WORKSPACE_ESCAPE`; a broken project returns issues with hints; an import of an npm package fails with a hint to export and publish; tests run in the sandboxed test process and report results; a test that writes a file, starts a process, or loads `node:sqlite` fails there; a project `tsconfig.json` cannot loosen the compiler options; a clean build records `dev:<project>@<n>` whose snapshot contains `dist/extension.js` and installs through the normal pipeline without network.
 
 #### M6.2 Preview workspace and pane — 2 days

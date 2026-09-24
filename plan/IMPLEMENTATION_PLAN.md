@@ -26,7 +26,7 @@ A local **actor runtime with a UI shell**. A small kernel routes typed messages 
 
 ## Stack
 
-Node 24 LTS · strict TypeScript · pnpm + Turborepo · Zod 4 · Ajv 8 · Fastify 5 (HTTP + SSE) · Pino · SQLite via `better-sqlite3` · Vue 3 + Vite + Tailwind + Reka UI · TanStack Virtual · lucide icons · `intl-messageformat` · markdown-it + DOMPurify + Shiki (class output) · Vitest + Playwright + fast-check · TypeScript + esbuild in `@kvman/devtools` for the builder (its projects' tests run with `node:test`). pi-ai only inside the `llm-providers` extension (D55).
+Node 24 LTS · strict TypeScript 6 (ADR 0005) · `typescript-eslint`, `@types/node` 24 (ADR 0006) · pnpm + Turborepo · Zod 4 · Ajv 8 · Fastify 5 (HTTP + SSE) · Pino · SQLite via `better-sqlite3` · Vue 3 + Vite + Tailwind + Reka UI · TanStack Virtual · lucide icons · `intl-messageformat` · markdown-it + DOMPurify + Shiki (class output) · Vitest + Playwright + fast-check · TypeScript + esbuild in `@kvman/devtools` for the builder (its projects' tests run with `node:test`). pi-ai only inside the `llm-providers` extension (D55).
 
 ## Packages
 

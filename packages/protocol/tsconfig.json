@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "customConditions": ["@kvman/source"],
+    "types": []
+  },
+  "include": ["src", "test"]
+}

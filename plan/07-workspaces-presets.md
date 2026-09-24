@@ -48,9 +48,10 @@ type Preset = {
   };
   extensions: Record<string, {           // keyed by package name
     source: string;                       // npm:@acme/pdf@1.4.2 | git:…#sha | builtin:@kvman/agent
-    integrity: string;                    // reproducible pin of the package itself (§7.4 "Versions"):
+    integrity?: string;                   // reproducible pin of the package itself (§7.4 "Versions"):
                                           //   npm: the registry's dist.integrity ('sha512-…'); git: 'git:<commit>';
-                                          //   builtin: 'builtin:<kvman version>'
+                                          //   builtin: 'builtin:<kvman version>'; absent for dev: and local:
+                                          //   sources, which have none (06 §6.1)
     digest?: string;                      // local only: the snapshot sha256 on this machine (applied copies);
                                           //   never part of shareable JSON
     enabled: boolean;
@@ -109,7 +110,9 @@ Example (a kiosk-style PDF app in Arabic and English):
 
 **Import** (inert):
 ```
-kernel.preset.import.preview {json}  (query) → validate structure; reject secrets, local paths, dev/local sources,
+kernel.preset.import.preview {json}  (query) → validate structure; reject secrets (a value at config.<ext>.<field> whose
+                                       field the extension's config schema marks secret: PRESET_SECRET at that path, ADR 0017),
+                                       local paths, dev/local sources,
                                        loose versions, missing integrity, trust records, local digests
                                        → summary (including "replaces <name>" when the id exists) + confirmationToken
 kernel.preset.import {confirmationToken}  (access: user) → add to catalog. Downloads nothing, runs nothing.

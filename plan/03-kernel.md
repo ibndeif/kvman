@@ -161,7 +161,7 @@ Preview tokens (`kernel.trust.preview`, `kernel.preset.import.preview`) are stat
 |---|---|---|---|
 | `kernel.health.get` | `{}` → `{ status: 'ok' \| 'degraded', version, instanceId, processStart, uptimeMs, port, home }` | any | also `GET /api/v1/health`; `port` and `home` (the home folder path) are used by `local-guard` (`10` §10.11) |
 | `kernel.schema.get` | `{ workspaceId?, q? }` → Schema (`12` §12.7) | any | internal types omitted |
-| `kernel.validate` | `{ workspaceId?, manifest? \| preset? \| page? \| catalog? }` → `{ ok, issues: Issue[] }` | any | structural checks, plus referential ones when `workspaceId` is given (`06` §6.3) |
+| `kernel.validate` | `{ workspaceId?, manifest? \| preset? \| page? \| catalog? }` → `{ ok, issues: Issue[] }` (`ok` is false exactly when an issue has severity `error`) | any | structural checks, plus referential ones when `workspaceId` is given (`06` §6.3) |
 | `kernel.extensions.list` | `{ workspaceId? }` → `[{ name, title, icon, description, version, namespace, activeDigest, status: 'active' \| 'quarantined' \| 'needs-approval', quarantineReason?, isolation per workspace, enabledIn: workspaceId[] }]` | any | `needs-approval`: an installed newer version waits for grants |
 | `kernel.extension.get` | `{ name }` → `{ versions: [{ digest, source, version, installedAt }], manifest, grants: Record<workspaceId, Capabilities> }` | any | |
 | `kernel.workspaces.list` | `{ includePreview? }` → `[{ id, path, name, kind: 'normal' \| 'preview', trusted, exists }]` (`exists: false` when the folder is gone: moved, renamed, or deleted, `07` §7.1) | any | preview workspaces only with `includePreview` |
@@ -189,6 +189,7 @@ Preview tokens (`kernel.trust.preview`, `kernel.preset.import.preview`) are stat
 | `kernel.user.preferences.get` | `{}` → `{ locale, theme, desktopAlerts }` | any | |
 | `kernel.notifications.list` | `{ workspaceId?, unreadOnly? }` → `{ items }` | admin | the tray holds every extension's messages; at most 200 per workspace are kept (`04` §4.9), so the list is always complete |
 | `kernel.notifications.count` | `{ workspaceId? }` → `{ unread, attention }` | any | |
+| `kernel.dev.file.get` / `kernel.dev.files.list` | `{ project, path }` → file content / `[{ path, size }]` | admin | builder projects (`11` §11.5); jailed to the project folder (ADR 0012) |
 
 ### Commands
 
@@ -219,7 +220,7 @@ Preview tokens (`kernel.trust.preview`, `kernel.preset.import.preview`) are stat
 | `kernel.cancel` | `{ messageId } \| { correlationId }` → `{ cancelled: number }` | any for its own messages; admin otherwise | `02` §2.9 |
 | `kernel.message.retry` / `kernel.message.discard` | `{ messageId }` → `{}` | admin | dead or pending messages |
 | `kernel.dev.project.create` / `.delete` | `{ name, template? }` / `{ name }` → `{}` | admin | builder projects under `~/.kvman/extensions/dev/` (`11` §11.5) |
-| `kernel.dev.file.read` / `.write` / `.list` / `.delete` | `{ project, path, content? }` → file content, `{}`, or `[{ path, size }]` | admin | jailed to the project folder |
+| `kernel.dev.file.write` / `.delete` | `{ project, path, content }` / `{ project, path }` → `{}` | admin | jailed to the project folder |
 | `kernel.dev.build` | `{ project, test? }` → `{ ok, issues, tests?, versionId? }` | admin | compile, record the manifest, and run the tests in a sandboxed test process; records a `dev:` version when clean (`11` §11.5) |
 | `kernel.dev.folder.stage` | `{ path }` → stage result (`06` §6.2) | user | used by `kvman ext dev` (`12` §12.5): stages a developer's folder (an absolute path outside the home folder) as a `dev:` source |
 | `kernel.shutdown` | `{}` → `{}` | user | |
@@ -303,6 +304,6 @@ The API extensions use is in `05` §5.11. Inside the kernel:
 - **Registry**: providers and static models come from manifests (`registerProvider`, `registerModel`). Dynamic models from `listModels` are stored in the `llm_models` table with their provider and refresh time. The combined list per workspace includes only providers whose extension is enabled there.
 - **Defaults**: per purpose (`chat`, `summary`, `extension`, `child`). Workspace defaults are stored in the applied preset (`llm.defaults`); global defaults in the `kernel_settings` row `llm.defaults` (`04` §4.1). Set with `kernel.llm.defaults.set` by the user or `kernel.admin`; publishes `kernel.llm.defaults.changed`. Resolution: explicit request model → workspace default for the purpose → global default for the purpose → `LLM_MODEL_NOT_FOUND`.
 - **Call path**: `kernel.llm.complete` is admitted like any command (capability `llm`, schema, idempotency). The kernel resolves the model, then invokes the provider's `complete` function in the provider extension's host with the caller's deadline and abort signal, counted against that extension's concurrency limits. `ctx.delta` text and thinking chunks from the provider are published as the caller's live events named in `live.text` and `live.thinking` (`05` §5.11), with `run` = the calling handler's message id; a provider attempt that fails is reset for that run before the retry (`02` §2.3). The provider's result becomes the command's reply.
-- **Retries**: `LLM_CALL_FAILED` with `retryable` goes back through the normal retry path with backoff and the provider's `retryAfter`; other LLM codes fail at once.
+- **Retries**: `LLM_CALL_FAILED` with `retryable` goes back through the normal retry path with backoff and the provider's `retryAfterMs`; other LLM codes fail at once.
 - **Usage**: one `llm_usage` row per call (workspace, caller extension, provider, model, tokens, cost, `correlationId`), written in the command's unit of work.
 - **No provider code**: the kernel depends on no provider SDK. With no provider enabled, calls fail `LLM_NOT_CONFIGURED`.

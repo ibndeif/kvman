@@ -187,6 +187,15 @@ const n     = await col.count({ where: { status: 'ready' } });                  
            $or: [ { owner: 'me' }, { shared: true } ] }
   // operators: eq (implicit), ne, gt, gte, lt, lte, in, prefix, exists
   ```
+  Semantics (ADR 0008), identical in SQL, in the read-your-writes overlay, and in UI conditions (`08` §8.7):
+  - Keys at one level are ANDed; `{}` matches everything. A key is a field name or a dotted path into nested objects and arrays (`meta.size`, `items.0.id`). A missing field and a JSON `null` are the same.
+  - A scalar value means `eq`. A plain object value is always an operator object (several operators are ANDed; an unknown operator is invalid). Operands are JSON scalars: `eq` on objects or arrays is not supported.
+  - `eq`: strict equality of JSON scalars; `eq: null` matches a missing or `null` field. `ne`: exactly the negation of `eq` (a missing field matches `ne: 'x'`).
+  - `gt`, `gte`, `lt`, `lte`: true only when the field and the operand are both numbers, or both strings compared by Unicode code point (the same order as SQLite's `BINARY` collation on UTF-8); any other combination is false.
+  - `in` (an array of scalars): a scalar field matches when it equals any element; an array field matches when any of its elements equals any element.
+  - `prefix`: the field is a string that starts with the operand (case-sensitive); anything else is false.
+  - `exists: true`: the field is present and not `null`; `exists: false`: missing or `null`.
+  - `$or`: an array of conditions, true when any matches; `[]` matches nothing; `$or` may nest.
 - Declared indexes become SQLite partial expression indexes (`WHERE owner = ? AND collection = ?`) created when the extension is enabled. An unindexed `find` works but scans at most 10,000 documents (`STORE_RESULT_TOO_LARGE` beyond) and logs a warning (kernel log, level `warn`, once per query type and hour).
 
 ### Append-only logs
@@ -271,6 +280,7 @@ const text = await ctx.step('ocr', () => runOcr(blobId), { retrySafe: false });
 
 ## 4.6 Blob lifecycle
 
+- **Blob ids** are the lowercase hex SHA-256 of the bytes (ADR 0018).
 - **Put**: the kernel writes the bytes to a temp file and hashes them (SHA-256). Then, in one synchronous step on the kernel main thread (the single writer), it inserts the `blobs` row if missing, adds the reference `pending:<messageId>` owned by the calling extension (expiring at the invocation deadline plus 1 h), and renames the temp file into `blobs/ab/cd/<sha256>` unless that file exists (identical content is stored once). At commit, the handler's pending references become normal references (`blob:<blobId>`) and are removed from the pending list; if the invocation ends without committing, its pending references are deleted.
 - **GC** is a kernel background job that runs in the same single-writer step form: it deletes the `blobs` rows that have no live reference (pending ones included) and were created more than 1 h ago, and unlinks their files in the same synchronous step. Because put and GC both run as uninterrupted synchronous steps on the main thread, a put can never link to a file that GC is deleting, and a blob in use by a running handler is never collected, however long the handler runs.
 - **Uploads** (`PUT /api/v1/blobs`) create a ref owned by the user with a 24 h expiry.
