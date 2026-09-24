@@ -48,6 +48,13 @@ function baseMessage(options: AdmissionOptions, request: SendRequest, id: string
   };
 }
 
+// ADR 0065: a handler's declared priority stands in for a request the sender did not make, capped the same way.
+function withHandlerPriority(resolved: Resolved, request: SendRequest, message: Message): Message {
+  const declared = resolved.entry.kind === 'command' ? resolved.entry.priority : undefined;
+  if (declared === undefined || request.send.priority !== undefined) return message;
+  return { ...message, priority: assignPriority(request.sender, request.cause, declared) };
+}
+
 function laneOf(resolved: Resolved, send: OutboundSend, message: Message): string | undefined {
   const template = resolved.entry.kind === 'command' ? resolved.entry.lane : undefined;
   if (template === undefined) return send.lane;
@@ -86,7 +93,7 @@ export function admitSend(options: AdmissionOptions, connection: Connection, req
     const resolved = resolveType(options, message.type, request.workspaceId, 'command');
     owner = resolved.owner;
     const { workspaceId: _requested, ...unscoped } = message;
-    message = resolved.workspaceId === undefined ? unscoped : { ...unscoped, workspaceId: resolved.workspaceId };
+    message = withHandlerPriority(resolved, request, resolved.workspaceId === undefined ? unscoped : { ...unscoped, workspaceId: resolved.workspaceId });
     checkCallCapability(options.grants, request.sender, owner, resolved.entry, resolved.workspaceId);
     checkAccess(request.sender, owner, resolved.entry);
     checkPayload(options, resolved.entry.kind === 'command' ? resolved.entry.input : undefined, message.payload);

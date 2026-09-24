@@ -1,4 +1,5 @@
 import { matchesTypePattern, type KernelErrorCode, type Manifest, type TypeEntry } from '@kvman/protocol';
+import { kernelOwner, kernelTypeEntries } from './kernel-types.ts';
 
 export type InstalledExtension = { manifest: Manifest; quarantined: boolean };
 
@@ -16,7 +17,11 @@ export type Subscriber = { extension: string; subscription: Manifest['subscripti
 
 export type RegistryBuild = { ok: true; registry: KernelRegistry } | { ok: false; failure: RegistryFailure };
 
-type Owner = { extension: InstalledExtension; entry: TypeEntry };
+// The kernel owns its own types: it has no manifest, is available in every workspace, and is never quarantined.
+type Owner = { name: string; extension: InstalledExtension | undefined; entry: TypeEntry };
+
+// A handler's scheduling settings as its definition declares them (05 §5.5); the scheduler applies the defaults.
+export type HandlerSettings = { concurrency?: number; maxAttempts?: number };
 
 function namespaceConflict(workspaceId: string, extensions: readonly InstalledExtension[]): RegistryFailure | undefined {
   const byNamespace = new Map<string, string>();
@@ -30,6 +35,13 @@ function namespaceConflict(workspaceId: string, extensions: readonly InstalledEx
   return undefined;
 }
 
+function settingsOf(definition: { concurrency?: number; maxAttempts?: number }): HandlerSettings {
+  return {
+    ...(definition.concurrency === undefined ? {} : { concurrency: definition.concurrency }),
+    ...(definition.maxAttempts === undefined ? {} : { maxAttempts: definition.maxAttempts }),
+  };
+}
+
 // Answers which extension handles a type in a workspace, and which extensions subscribe to an event (03 §3.3 step 3,
 // ADRs 0045, 0048). It holds manifests only; no extension code.
 export class KernelRegistry {
@@ -37,10 +49,14 @@ export class KernelRegistry {
   private readonly enabledIn = new Map<string, InstalledExtension[]>();
   private readonly enabledSomewhere = new Set<InstalledExtension>();
 
+  private readonly installed = new Map<string, InstalledExtension>();
+
   private constructor(input: RegistryInput) {
+    for (const entry of kernelTypeEntries()) this.owners.set(entry.type, [{ name: kernelOwner, extension: undefined, entry }]);
     for (const extension of input.extensions) {
+      this.installed.set(extension.manifest.meta.name, extension);
       for (const entry of extension.manifest.types) {
-        this.owners.set(entry.type, [...(this.owners.get(entry.type) ?? []), { extension, entry }]);
+        this.owners.set(entry.type, [...(this.owners.get(entry.type) ?? []), { name: extension.manifest.meta.name, extension, entry }]);
       }
     }
     for (const [workspaceId, names] of input.enabled) {
@@ -70,7 +86,7 @@ export class KernelRegistry {
       return this.failed('WORKSPACE_INVALID', `"${type}" needs a workspace and the message has none`, 'send it with a workspace id');
     }
     const enabled = this.enabledIn.get(workspaceId) ?? [];
-    const owner = owners.find((candidate) => enabled.includes(candidate.extension));
+    const owner = owners.find((candidate) => candidate.extension === undefined || enabled.includes(candidate.extension));
     if (owner === undefined) return this.failed('HANDLER_UNAVAILABLE', `no extension registering "${type}" is enabled in this workspace`);
     return this.resolved(owner, false, type);
   }
@@ -86,11 +102,21 @@ export class KernelRegistry {
         .map((subscription) => ({ extension: manifest.meta.name, subscription })));
   }
 
+  // The scheduling settings of a handler named by its function reference (`command:<type>`, `subscription:<event>`).
+  handler(extension: string, reference: string): HandlerSettings | undefined {
+    const manifest = this.installed.get(extension)?.manifest;
+    if (manifest === undefined) return undefined;
+    const subscription = manifest.subscriptions.find((candidate) => `subscription:${candidate.event}` === reference);
+    if (subscription !== undefined) return settingsOf(subscription);
+    const entry = manifest.types.find((candidate) => `${candidate.kind}:${candidate.type}` === reference);
+    return entry?.kind === 'command' ? settingsOf(entry) : undefined;
+  }
+
   private resolveGlobally(type: string, owners: readonly Owner[]): TypeLookup {
-    const enabled = owners.filter((owner) => this.enabledSomewhere.has(owner.extension));
+    const enabled = owners.filter((owner) => owner.extension === undefined || this.enabledSomewhere.has(owner.extension));
     const [first, second] = enabled;
     if (second !== undefined && first !== undefined) {
-      const names = `${first.extension.manifest.meta.name} and ${second.extension.manifest.meta.name}`;
+      const names = `${first.name} and ${second.name}`;
       return this.failed('NAMESPACE_CONFLICT', `${names} both register "${type}" and are each enabled in a workspace`);
     }
     if (first === undefined) return this.failed('HANDLER_UNAVAILABLE', `the extension registering "${type}" is not enabled in any workspace`);
@@ -98,8 +124,8 @@ export class KernelRegistry {
   }
 
   private resolved(owner: Owner, global: boolean, type: string): TypeLookup {
-    if (owner.extension.quarantined) return this.failed('HANDLER_UNAVAILABLE', `${owner.extension.manifest.meta.name}, which registers "${type}", is quarantined`);
-    return { ok: true, resolved: { extension: owner.extension.manifest.meta.name, entry: owner.entry, global } };
+    if (owner.extension?.quarantined === true) return this.failed('HANDLER_UNAVAILABLE', `${owner.name}, which registers "${type}", is quarantined`);
+    return { ok: true, resolved: { extension: owner.name, entry: owner.entry, global } };
   }
 
   private failed(code: KernelErrorCode, detail: string, hint?: string): TypeLookup {

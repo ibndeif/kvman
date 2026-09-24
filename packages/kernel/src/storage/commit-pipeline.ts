@@ -1,7 +1,7 @@
 import type { Admission, CommitResult, CommitUnit } from './commit-unit.ts';
 import { correlationOf } from './commit-unit.ts';
 import { StorageFailure, type Connection } from './driver.ts';
-import type { PendingSink } from '../router/pending-index.ts';
+import type { PendingSink } from '../scheduler/pending-index.ts';
 import { applyUnit, storageProblem } from './unit-application.ts';
 
 export type CommitPipelineOptions = {

@@ -9,7 +9,7 @@ The kernel delivers messages to handlers reliably and commits their effects atom
 3. **Execution hosts** — shared pool, dedicated workers, sandboxed processes, and their supervision.
 4. **Process supervisor** — `ctx.process` for OS processes.
 5. **Storage engine** — SQLite, unit-of-work commit, step journal, blobs, migrations (`04`).
-6. **Registry** — manifests, schemas, contributions, lookup of a type's owner and of an event's subscribers per workspace (ADR 0045), `kernel.schema.get`, `kernel.validate` (including the naming grammar, `02` §2.4), and the per-workspace **UI registry** computed from the applied preset and the enabled manifests (`08` §8.6). It validates UI against the frame slot catalog and component specs in `@kvman/protocol`; it contains no UI code.
+6. **Registry** — manifests, schemas, contributions, lookup of a type's owner and of an event's subscribers per workspace (ADR 0045), with the kernel as the always-available owner of the `kernel.*` types built so far (ADR 0061), `kernel.schema.get`, `kernel.validate` (including the naming grammar, `02` §2.4), and the per-workspace **UI registry** computed from the applied preset and the enabled manifests (`08` §8.6). It validates UI against the frame slot catalog and component specs in `@kvman/protocol`; it contains no UI code.
 7. **Extension loader** — snapshots, verification, enable per workspace, hot reload, rollback (`06`).
 8. **Workspaces and preferences** — identity, workspace file I/O, trust gate, applied presets and config (`07`); the user's language and theme (`08` §8.16), which are needed before any extension loads.
 9. **Capabilities** — grants and enforcement on every `ctx` call and at commit.
@@ -61,15 +61,16 @@ Every kind then follows the same path: registry lookup → host of the handler's
 ## 3.4 Scheduler
 
 - **Pending index**: in-memory queues keyed by lane, plus a keyless queue per handler and a timer wheel for `notBefore`. Rebuilt from SQLite at boot.
-- **Selection**: the next runnable message is chosen by priority class, then fair round-robin across workspaces, then across lanes, then by `seq`. `background` messages age upward after 30 s so they are never starved.
+- **Selection**: the next runnable message is chosen by priority class, then fair round-robin across workspaces, then across lanes, then by `seq`. `background` messages age upward after 30 s of being runnable so they are never starved. Messages without a workspace form one more participant of the workspace rotation; inside a workspace each lane queue (its head) and each handler's keyless queue (its highest class, then lowest `seq`) take turns, one message per turn (ADR 0064).
 - **Limits** (checked before dispatch):
   - one in-flight message per lane
   - per-handler `concurrency` (default 16)
   - per-extension `maxConcurrency` (default 64)
   - per-host in-flight cap (default 64 async invocations per worker)
-- **Queries** use a separate priority queue that bypasses lanes and command limits (they still count toward host capacity; a reserved slice of each host, default 25%, is kept for them).
+- **Queries** use a separate priority queue that bypasses lanes and command limits (they still count toward host capacity; a reserved slice of each host, default 25%, is kept for them: commands and event deliveries fill at most 75% of a host's cap, rounded down, ADR 0060). The scheduler reaches hosts through a dispatcher interface that names a message's host and reports its in-flight count and cap.
 - **Timers**: `ctx.send(type, payload, { delayMs | at })` sets `notBefore`. Declared `schedules` (`every: '1h'`, cron syntax) are materialized as timer messages by the kernel.
-- **Retries**: crash, host loss, or a retryable problem → `attempts+1`, back to `pending` with backoff. `STORAGE_CONFLICT` retries immediately (up to 5, not counted). Non-retryable problem → `failed`. `attempts == max` → `dead` and `MESSAGE_DEAD` to waiters; `kernel.message.dead-lettered` event.
+- **Retries**: crash, host loss, or a retryable problem → `attempts+1`, back to `pending` with backoff (retry *n* waits 1 s, 5 s, 30 s, then 30 s). `STORAGE_CONFLICT` retries immediately (up to 5 per attempt, not counted; the sixth is a counted retryable failure). Non-retryable problem → `failed`. `attempts == max` → `dead` with the stored reply `MESSAGE_DEAD` for waiters (its detail names the last attempt's code); `kernel.message.dead-lettered` event in the same transaction, in the dead message's workspace (ADRs 0059, 0061, 0062).
+- **Lanes and reentrancy**: only a `running` message holds its lane. The scheduler answers whether a lane is held by an invocation or a running ancestor in its causation chain; `ctx.command` fails `LANE_REENTRANT` with it (ADR 0063).
 - **Deadlines** (`02` §2.9): pending messages whose `deadlineAt` passes are failed from the timer wheel with `DEADLINE_EXCEEDED`, as are `awaiting` ones. At claim the scheduler computes the invocation deadline `min(deadlineAt, now + timeoutMs)`; a timer fires the abort signal then. The outcome is `DEADLINE_EXCEEDED` (final) if the message deadline was reached, else `HANDLER_TIMEOUT` (retryable). After a 2 s grace without settling, the host is treated as stuck (§3.6); a stuck invocation is charged one attempt and follows the same outcome rule.
 
 ## 3.5 Execution hosts
@@ -249,7 +250,7 @@ Every extension may subscribe to `kernel.*` events without a grant. All are dura
 | `kernel.config.changed` | `{ extension, scope, workspaceId?, revision }` | config set, preset apply |
 | `kernel.workspace.opened` / `.renamed` / `.forgotten` | `{ workspaceId }` | |
 | `kernel.trust.changed` | `{ workspaceId, trusted }` | grant, revoke, or a file change that closes the gate |
-| `kernel.message.dead-lettered` | `{ messageId, type, correlationId }` | §3.4 |
+| `kernel.message.dead-lettered` | `{ messageId, type, correlationId }` | §3.4; in the dead message's workspace (ADR 0061) |
 | `kernel.llm.models.changed` / `kernel.llm.defaults.changed` | `{ provider? }` / `{ workspaceId? }` | §3.12 |
 | `kernel.user.preferences.changed` | `{ locale, theme, desktopAlerts }` | preferences set |
 | `kernel.notifications.changed` (transient) | `{ workspaceId }` | any tray change |

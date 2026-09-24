@@ -158,16 +158,17 @@ Messages sent by a handler are part of its unit of work: they become visible onl
   lane: 'section:{{ $message.source }}.{{ $payload.id }}:{{ $payload.sessionId }}'
   ```
   A template is text with `{{ <path> }}` placeholders (spaces allowed inside the braces) and has at least one placeholder (ADR 0016). Allowed paths: `$payload.<field>[.<field>…]`, `$context.<key>`, `$message.id`, `$message.source`, `$message.workspaceId`. Values must be strings or numbers (`null`, booleans, objects, and arrays fail `VALIDATION_FAILED`, ADR 0058); an absent path renders as `-`, except when every path is absent, which fails admission with `VALIDATION_FAILED` (for a subscription's lane only that delivery is stored `failed`, ADR 0053) (the handler would otherwise share one lane for everything by accident). `$payload` paths are checked against the input schema at install (`06` §6.3).
-- The scheduler runs at most one message per lane at a time, in `seq` order. Messages without a lane have no ordering and run as capacity allows.
+- The scheduler runs at most one message per lane at a time, in `seq` order. Only a `running` message holds its lane; a deferred command in `awaiting` releases it (ADR 0063). Messages without a lane have no ordering and run as capacity allows.
 - There is **no global order**. Ordering across lanes or extensions is only by causation (a message is always created after its cause commits).
-- **Reentrancy:** if a handler holding lane L calls (`ctx.command`) a command whose lane is L, or whose lane is held by any ancestor in the current causation chain, the kernel fails the call immediately with `LANE_REENTRANT`. This prevents deadlocks. Use a continuation instead.
+- **Reentrancy:** if a handler holding lane L calls (`ctx.command`) a command whose lane is L, or whose lane is held by any running ancestor in the current causation chain, the kernel fails the call immediately with `LANE_REENTRANT`. This prevents deadlocks. Use a continuation instead.
 - **Control messages** (e.g. `agent.cancel`) declare no lane so they are not queued behind the work they control.
 
 ### Priority
 
-- Three classes, highest first: `interactive`, `normal`, `background`. The scheduler picks by class first (`03` §3.4); `background` messages waiting more than 30 s are treated as `normal`.
+- Three classes, highest first: `interactive`, `normal`, `background`. The scheduler picks by class first (`03` §3.4); `background` messages waiting more than 30 s are treated as `normal`. The wait starts when the message becomes runnable: at admission, when its timer comes due, or when its retry backoff ends (ADR 0064).
 - **Defaults at admission**: a message from a user (shell or CLI) is `interactive`; from a process token, `normal`; kernel housekeeping (retention, refresh jobs) is `background`; schedules and timers are `normal`.
 - **Inheritance**: a message created inside a handler inherits its parent's priority, so every step of a person's action (for example each `agent.step` of a chat turn) stays `interactive`.
+- **Handler default**: a command definition's `priority` is used as the request when the sender requests none, and is capped like any request (ADR 0065).
 - **Lowering only**: a sender may request a lower class than the inherited one (`priority: 'background'` for bulk work) but never a higher one. A request for a higher class is silently lowered to the inherited class. Only users can start an `interactive` chain.
 
 ## 2.7 Idempotency
@@ -209,7 +210,7 @@ return ctx.defer({ onAbort: 'interviewer.question.expire' });   // command stays
 ctx.reply(questionId, { answer });                               // completes interviewer.ask
 await ctx.store.collection('questions').patch(questionId, { status: 'answered' });
 ```
-- A deferred command stays in state `awaiting` until any handler of the same extension calls `ctx.reply(commandId, value | problem)` in a committed unit of work, or its deadline passes (`DEADLINE_EXCEEDED`), or it is cancelled (`CANCELLED`).
+- A deferred command stays in state `awaiting`, without holding its lane (ADR 0063), until any handler of the same extension calls `ctx.reply(commandId, value | problem)` in a committed unit of work, or its deadline passes (`DEADLINE_EXCEEDED`), or it is cancelled (`CANCELLED`).
 - `ctx.reply` on a command that is no longer awaiting fails `REPLY_NOT_AWAITING` and the unit of work rolls back. This is how "first answer wins" works when two tabs answer the same prompt.
 - `defer({ onAbort })` names an internal command the kernel sends to the owner when the deferred command ends **without** its reply (cancel or deadline), with payload `{ commandId, reason: 'cancelled' | 'deadline' }`, so the owner can close its pending UI. This is the standard **prompt pattern** (`08` §8.13).
 
@@ -282,8 +283,8 @@ pending ─────────▶ (index) ───────▶ running 
 | Inline payload and command result | 256 KB (spill to blob up to 16 MB, else `PAYLOAD_TOO_LARGE` with `{ limit: 'payload', max: 16777216 }`; inline up to 16 MB until the blob store, ADR 0055) |
 | `context` map | 2 KB |
 | Live event payload | 16 KB; ring 1,000 per `<type>:<key>` |
-| Max attempts (crash, host loss, `HANDLER_TIMEOUT`, retryable problem) | 3, backoff 1 s → 5 s → 30 s; per-handler `maxAttempts` override |
-| Storage conflict retries | 5, not counted as attempts |
+| Max attempts (crash, host loss, `HANDLER_TIMEOUT`, retryable problem) | 3 runs (`attempts == maxAttempts` → `dead`); retry *n* waits 1 s, 5 s, 30 s, then 30 s for every later retry; per-handler `maxAttempts` override (ADR 0059) |
+| Storage conflict retries | 5 immediate reruns per attempt, not counted; the sixth conflict is a counted, retryable failure (ADR 0059) |
 | Handler timeouts | command 60 s · query 5 s · event handler 30 s · max 24 h |
 | Message deadline | none unless set or inherited (§2.9) |
 | Retention of finished messages | 7 days (per-type override, e.g. `kernel.llm.complete` 1 h) |

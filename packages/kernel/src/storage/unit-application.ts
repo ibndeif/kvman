@@ -1,9 +1,9 @@
 import { jsonByteLength, type Message, type OnReply, type OutboundPublish, type OutboundSend, type Problem, type ReplyPayload } from '@kvman/protocol';
 import { kernelProblem } from '../problems.ts';
 import type { Admission, CommitResult, CommitUnit, OriginalMessage, SendAdmission, SendRequest, Sender, StoredMessage } from './commit-unit.ts';
-import { correlationOf, senderOf } from './commit-unit.ts';
+import { causeOf, correlationOf, senderOf } from './commit-unit.ts';
 import { StorageFailure, type Connection } from './driver.ts';
-import { insertEvent, insertMessage, markInvocation } from './message-rows.ts';
+import { insertEvent, insertMessage, markInvocation, markRetry } from './message-rows.ts';
 import { applyStoreWrite, InvalidWrite, VersionConflict, WorkspaceRequired } from './store-writes.ts';
 
 export const unitLimits = { messages: 1000, writeBytes: 8 * 1024 * 1024 } as const;
@@ -97,15 +97,16 @@ function applyContents(connection: Connection, unit: CommitUnit, admission: Admi
     if (owner === undefined) throw new InvalidWrite('a unit without an invocation cannot write storage');
     applyStoreWrite(connection, owner, write, now);
   }
+  const cause = causeOf(origin);
   const scope: UnitScope = {
-    connection, admission, now, sender: senderOf(origin),
-    cause: origin.kind === 'invocation' ? origin.invocation.message : undefined,
-    workspaceId: origin.kind === 'invocation' ? origin.invocation.message.workspaceId : origin.workspaceId,
+    connection, admission, now, sender: senderOf(origin), cause,
+    workspaceId: origin.kind === 'adapter' ? origin.workspaceId : cause?.workspaceId,
     applied: { inserted: [], duplicates: [], announced: [] },
   };
   unit.sends.forEach((send, index) => admitSend(scope, send, index, origin.kind === 'adapter' && index === 0 ? origin.messageId : undefined));
   for (const publish of unit.publishes) admitPublish(scope, publish);
   if (origin.kind === 'invocation') markInvocation(connection, origin.invocation.message.id, origin.invocation.outcome, now);
+  if (origin.kind === 'retry') markRetry(connection, origin.message.id, origin.attempts, origin.outcome, now);
   return scope.applied;
 }
 

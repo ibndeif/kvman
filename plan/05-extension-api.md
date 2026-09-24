@@ -337,7 +337,7 @@ type CommandDef = {
   description: string; input: ZodType; output?: ZodType; examples?: Json[];
   lane?: string;                                // lane template (02 §2.6), e.g. 'file:{{ $payload.fileId }}'
   concurrency?: number; timeoutMs?: number; maxAttempts?: number;
-  priority?: 'interactive' | 'normal' | 'background';
+  priority?: 'interactive' | 'normal' | 'background';   // used when the sender requests none; capped like a request (ADR 0065)
   retention?: string;                           // a duration: '30s', '1h', '7d' (ADR 0016)
   namingException?: string;                     // reason for a name outside the grammar (02 §2.4, ADR 0016)
   scope?: 'workspace' | 'global';

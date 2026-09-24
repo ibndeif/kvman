@@ -29,8 +29,9 @@ describe('the pending index (plan 03 §3.4, ADR 0051)', () => {
     const view = snapshot(fixture.pending);
     expect(view.lanes).toEqual({ '@acme/pdf|file:f1': [1, 3], '@acme/pdf|file:f2': [2] });
     expect(view.timers).toEqual([[6, 3000], [5, 9000]]);
-    expect(view.keyless['@acme/pdf']).toEqual([4]);
-    expect(view.keyless['@kvman/agent']).toEqual([7, 9]);
+    expect(view.keyless).toEqual({
+      '@acme/pdf|command:pdf.import': [4], '@kvman/agent|command:agent.run': [7], '@kvman/agent|command:agent.tool.record': [9],
+    });
     const failed = fixture.connection.prepare("SELECT seq FROM messages WHERE state = 'failed'").all();
     expect(failed).toEqual([{ seq: 8 }]);
   });
@@ -43,7 +44,8 @@ describe('the pending index (plan 03 §3.4, ADR 0051)', () => {
     const fed = snapshot(fixture.pending);
     // Seq 7 is the invocation whose unit sent seq 8 and 9; its handler finished it without a scheduler claiming it
     // (claims remove entries from M1.5 on), so only the rebuilt index knows it is done.
-    expect(rebuilt).toEqual({ ...fed, lanes: { '@acme/pdf|file:f1': [1, 3] }, keyless: { ...fed.keyless, '@kvman/agent': [9] } });
+    const { '@kvman/agent|command:agent.run': _finished, ...keyless } = fed.keyless;
+    expect(rebuilt).toEqual({ ...fed, lanes: { '@acme/pdf|file:f1': [1, 3] }, keyless });
     expect(PendingIndex.rebuild(fixture.connection, now).laneQueue('@acme/pdf|file:f1')[0]).toMatchObject({ handler: '@acme/pdf', priority: 'interactive' });
   });
 });

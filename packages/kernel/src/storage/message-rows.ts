@@ -1,5 +1,5 @@
 import type { Message, Priority, ReplyPayload } from '@kvman/protocol';
-import type { AdmittedMessage, InvocationOutcome, MessageState, StoredMessage } from './commit-unit.ts';
+import type { AdmittedMessage, InvocationOutcome, MessageState, RetryOutcome, StoredMessage } from './commit-unit.ts';
 import { StorageFailure, type Connection } from './driver.ts';
 
 const messageStates: readonly MessageState[] = ['pending', 'running', 'awaiting', 'done', 'failed', 'dead', 'cancelled'];
@@ -11,6 +11,14 @@ export function storedState(value: unknown): MessageState {
 }
 
 export const priorityCodes: Record<Priority, number> = { interactive: 0, normal: 1, background: 2 };
+
+const priorityOrder: readonly Priority[] = ['interactive', 'normal', 'background'];
+
+export function priorityOfCode(code: unknown): Priority {
+  const priority = priorityOrder.find((candidate) => priorityCodes[candidate] === code);
+  if (priority === undefined) throw new StorageFailure('corrupt', `a stored message has the unknown priority code ${String(code)}`);
+  return priority;
+}
 
 const insertSql = `INSERT INTO messages (id, kind, type, source, target, handler, workspace_id, lane, payload, context, state, priority,
   not_before, deadline_at, correlation_id, causation_id, on_reply, idempotency_source, idempotency_key, digest, result, created_at, updated_at)
@@ -48,6 +56,18 @@ export function markInvocation(connection: Connection, messageId: string, outcom
   connection
     .prepare('UPDATE messages SET state = ?, result = ?, updated_at = ? WHERE id = ?')
     .run(state, result === undefined ? null : JSON.stringify(result), now, messageId);
+}
+
+export function markRetry(connection: Connection, messageId: string, attempts: number, outcome: RetryOutcome, now: number): void {
+  if (outcome.state === 'pending') {
+    connection
+      .prepare("UPDATE messages SET state = 'pending', attempts = ?, not_before = ?, updated_at = ? WHERE id = ?")
+      .run(attempts, outcome.notBefore, now, messageId);
+    return;
+  }
+  connection
+    .prepare("UPDATE messages SET state = 'dead', attempts = ?, result = ?, updated_at = ? WHERE id = ?")
+    .run(attempts, JSON.stringify(outcome.reply), now, messageId);
 }
 
 export function insertEvent(connection: Connection, event: Message, now: number): void {

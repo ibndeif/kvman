@@ -95,7 +95,8 @@ Inside a phase, each milestone needs the one before it unless *Needs* says other
 #### M1.5 Scheduler — 1.5 days
 - **Read**: `03` §3.4, `02` §2.6.
 - **Build**: lanes, priority classes with defaults, inheritance, lowering-only and aging (`02` §2.6), fair round-robin across workspaces and lanes, concurrency limits, the query priority path with its reserved host share, timers (`notBefore`, `delayMs`, `at`), retries with backoff and max attempts, dead letters, `LANE_REENTRANT` detection.
-- **Done when**: one message per lane runs at a time in `seq` order; a flood in one workspace does not starve another; retries follow 1 s → 5 s → 30 s and end `dead` with `kernel.message.dead-lettered`; a `ctx.command` into an ancestor's lane fails at once; a message sent by a handler of a user command is `interactive`, and a request for a higher class is lowered.
+- **Split**: the scheduler reaches hosts through a dispatcher interface that M1.6 implements (ADR 0060); a dead message stores its `MESSAGE_DEAD` reply and M1.6 delivers stored replies to waiters (ADR 0062); M1.5 builds and tests the `LANE_REENTRANT` check, M1.6's `ctx.command` calls it and tests it end to end (ADR 0063).
+- **Done when**: one message per lane runs at a time in `seq` order; a flood in one workspace does not starve another; retries of a handler with `maxAttempts: 4` follow 1 s → 5 s → 30 s and end `dead` with `kernel.message.dead-lettered` (ADR 0059); a `ctx.command` into an ancestor's lane fails at once; a message sent by a handler of a user command is `interactive`, and a request for a higher class is lowered.
 
 #### M1.6 Shared hosts and `ctx` messaging — 2.5 days
 - **Read**: `03` §3.2, §3.5 (shared pool, host protocol, handler rules), `02` §2.3, §2.8, `05` §5.4 (messaging, store, step, ids, now, log), §5.9.
