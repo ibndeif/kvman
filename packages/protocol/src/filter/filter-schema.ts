@@ -10,15 +10,15 @@ const scalarSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]);
 const orderedSchema = z.union([z.number(), z.string()]);
 
 export const filterOperatorsSchema = z.strictObject({
-  eq: scalarSchema.optional(),
-  ne: scalarSchema.optional(),
-  gt: orderedSchema.optional(),
-  gte: orderedSchema.optional(),
-  lt: orderedSchema.optional(),
-  lte: orderedSchema.optional(),
-  in: z.array(scalarSchema).optional(),
-  prefix: z.string().optional(),
-  exists: z.boolean().optional(),
+  eq: scalarSchema.exactOptional(),
+  ne: scalarSchema.exactOptional(),
+  gt: orderedSchema.exactOptional(),
+  gte: orderedSchema.exactOptional(),
+  lt: orderedSchema.exactOptional(),
+  lte: orderedSchema.exactOptional(),
+  in: z.array(scalarSchema).exactOptional(),
+  prefix: z.string().exactOptional(),
+  exists: z.boolean().exactOptional(),
 });
 
 export type FilterOperators = z.infer<typeof filterOperatorsSchema>;
@@ -30,7 +30,7 @@ export type Filter = { $or?: Filter[] | undefined; [path: string]: FieldConditio
 export const filterSchema: z.ZodType<Filter> = z
   .object({
     get $or() {
-      return z.array(filterSchema).optional();
+      return z.array(filterSchema).exactOptional();
     },
   })
   .catchall(z.union([scalarSchema, filterOperatorsSchema]))

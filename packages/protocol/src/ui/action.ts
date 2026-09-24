@@ -18,8 +18,8 @@ const stateUpdatesSchema = z.record(
 );
 
 export const effectSchema = z.union([
-  z.strictObject({ toast: viewTextSchema, level: levelSchema.optional() }),
-  z.strictObject({ navigate: routeSchema, pane: paneSchema.optional() }),
+  z.strictObject({ toast: viewTextSchema, level: levelSchema.exactOptional() }),
+  z.strictObject({ navigate: routeSchema, pane: paneSchema.exactOptional() }),
   z.strictObject({ refresh: z.string().min(1) }),
   z.strictObject({ set: stateUpdatesSchema }),
   z.strictObject({ closeDialog: z.literal(true) }),
@@ -28,14 +28,14 @@ export type Effect = z.infer<typeof effectSchema>;
 
 export const commandActionSchema = z.strictObject({
   command: typeNameSchema,
-  payload: boundJsonSchema.optional(),
-  form: z.union([z.boolean(), formOverridesSchema]).optional(),
-  confirm: z.strictObject({ title: viewTextSchema, body: viewTextSchema.optional() }).optional(),
-  busyLabel: viewTextSchema.optional(),
-  then: z.array(effectSchema).optional(),
+  payload: boundJsonSchema.exactOptional(),
+  form: z.union([z.boolean(), formOverridesSchema]).exactOptional(),
+  confirm: z.strictObject({ title: viewTextSchema, body: viewTextSchema.exactOptional() }).exactOptional(),
+  busyLabel: viewTextSchema.exactOptional(),
+  then: z.array(effectSchema).exactOptional(),
 });
 
-export const navigateActionSchema = z.strictObject({ navigate: routeSchema, pane: paneSchema.optional() });
+export const navigateActionSchema = z.strictObject({ navigate: routeSchema, pane: paneSchema.exactOptional() });
 
 export const openDialogActionSchema = z.strictObject({
   openDialog: z.strictObject({ title: viewTextSchema, view: z.lazy(() => viewNodeSchema) }),

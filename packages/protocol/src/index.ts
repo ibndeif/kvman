@@ -45,3 +45,5 @@ export * from './ui/notifications.ts';
 export * from './ui/prop-schemas.ts';
 export * from './ui/ui-registry.ts';
 export * from './ui/view-node.ts';
+export * from './unicode.ts';
+export * from './unit-of-work.ts';

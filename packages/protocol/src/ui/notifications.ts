@@ -8,28 +8,28 @@ import { levelSchema } from './base-types.ts';
 
 export const noticeActionSchema = z.union([
   z.strictObject({ label: textSchema, navigate: z.string().startsWith('/') }),
-  z.strictObject({ label: textSchema, command: typeNameSchema, payload: jsonSchema.optional() }),
+  z.strictObject({ label: textSchema, command: typeNameSchema, payload: jsonSchema.exactOptional() }),
 ]);
 export type NoticeAction = z.infer<typeof noticeActionSchema>;
 
 export const toastSchema = z.strictObject({
-  text: textSchema, level: levelSchema.optional(), key: z.string().min(1).optional(), action: noticeActionSchema.optional(),
-  durationMs: z.number().int().positive().optional(),
+  text: textSchema, level: levelSchema.exactOptional(), key: z.string().min(1).exactOptional(), action: noticeActionSchema.exactOptional(),
+  durationMs: z.number().int().positive().exactOptional(),
 });
 export type Toast = z.infer<typeof toastSchema>;
 
 export const notificationSchema = z.strictObject({
   title: textSchema,
-  body: textSchema.optional(),
-  level: levelSchema.optional(),
-  key: z.string().min(1).optional(),
-  problem: problemSchema.optional(),
-  route: z.string().startsWith('/').optional(),
-  entity: z.strictObject({ type: publicNameSchema, id: z.string().min(1) }).optional(),
-  actions: z.array(noticeActionSchema).max(2).optional(),
-  attention: z.boolean().optional(),
-  expiresAt: epochMsSchema.optional(),
-  global: z.boolean().optional(),
+  body: textSchema.exactOptional(),
+  level: levelSchema.exactOptional(),
+  key: z.string().min(1).exactOptional(),
+  problem: problemSchema.exactOptional(),
+  route: z.string().startsWith('/').exactOptional(),
+  entity: z.strictObject({ type: publicNameSchema, id: z.string().min(1) }).exactOptional(),
+  actions: z.array(noticeActionSchema).max(2).exactOptional(),
+  attention: z.boolean().exactOptional(),
+  expiresAt: epochMsSchema.exactOptional(),
+  global: z.boolean().exactOptional(),
 });
 export type Notification = z.infer<typeof notificationSchema>;
 

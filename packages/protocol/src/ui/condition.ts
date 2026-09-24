@@ -6,15 +6,15 @@ const boundScalarSchema = z.union([boundStringSchema, z.number(), z.boolean(), z
 const boundOrderedSchema = z.union([z.number(), boundStringSchema]);
 
 export const conditionOperatorsSchema = z.strictObject({
-  eq: boundScalarSchema.optional(),
-  ne: boundScalarSchema.optional(),
-  gt: boundOrderedSchema.optional(),
-  gte: boundOrderedSchema.optional(),
-  lt: boundOrderedSchema.optional(),
-  lte: boundOrderedSchema.optional(),
-  in: z.array(boundScalarSchema).optional(),
-  prefix: boundStringSchema.optional(),
-  exists: z.boolean().optional(),
+  eq: boundScalarSchema.exactOptional(),
+  ne: boundScalarSchema.exactOptional(),
+  gt: boundOrderedSchema.exactOptional(),
+  gte: boundOrderedSchema.exactOptional(),
+  lt: boundOrderedSchema.exactOptional(),
+  lte: boundOrderedSchema.exactOptional(),
+  in: z.array(boundScalarSchema).exactOptional(),
+  prefix: boundStringSchema.exactOptional(),
+  exists: z.boolean().exactOptional(),
 });
 
 type ConditionScalar = string | number | boolean | null;

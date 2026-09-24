@@ -23,42 +23,42 @@ export const componentNameSchema = z.union([z.string().regex(builtinComponentNam
 
 export const pageQuerySchema = z.strictObject({
   query: typeNameSchema,
-  payload: z.record(z.string(), boundJsonSchema).optional(),
-  refreshOn: z.array(typePatternSchema).optional(),
+  payload: z.record(z.string(), boundJsonSchema).exactOptional(),
+  refreshOn: z.array(typePatternSchema).exactOptional(),
 });
 export type PageQuery = z.infer<typeof pageQuerySchema>;
 
 export const pageQueriesSchema = z.record(z.string().regex(/^[A-Za-z][A-Za-z0-9_-]*$/, 'query aliases are plain names'), pageQuerySchema);
 
 export const fieldOverrideSchema = z.strictObject({
-  label: viewTextSchema.optional(),
-  help: viewTextSchema.optional(),
-  placeholder: viewTextSchema.optional(),
-  order: z.number().optional(),
-  group: viewTextSchema.optional(),
-  widget: fieldWidgetSchema.optional(),
-  options: z.array(z.tuple([boundJsonSchema, viewTextSchema])).optional(),
+  label: viewTextSchema.exactOptional(),
+  help: viewTextSchema.exactOptional(),
+  placeholder: viewTextSchema.exactOptional(),
+  order: z.number().exactOptional(),
+  group: viewTextSchema.exactOptional(),
+  widget: fieldWidgetSchema.exactOptional(),
+  options: z.array(z.tuple([boundJsonSchema, viewTextSchema])).exactOptional(),
 });
 
 export const formOverrideFields = {
-  title: viewTextSchema.optional(),
-  submitLabel: viewTextSchema.optional(),
-  defaults: z.record(z.string(), boundJsonSchema).optional(),
-  hidden: z.array(z.string().min(1)).optional(),
-  fields: z.record(z.string(), fieldOverrideSchema).optional(),
+  title: viewTextSchema.exactOptional(),
+  submitLabel: viewTextSchema.exactOptional(),
+  defaults: z.record(z.string(), boundJsonSchema).exactOptional(),
+  hidden: z.array(z.string().min(1)).exactOptional(),
+  fields: z.record(z.string(), fieldOverrideSchema).exactOptional(),
 };
 
 export const formOverridesSchema = z.strictObject(formOverrideFields);
 export type FormOverrides = z.infer<typeof formOverridesSchema>;
 
 export const columnSchema = z.strictObject({
-  field: z.string().min(1).optional(),
+  field: z.string().min(1).exactOptional(),
   label: viewTextSchema,
-  format: formatSchema.optional(),
-  visibleIf: conditionSchema.optional(),
-  sortable: z.boolean().optional(),
-  as: z.union([z.enum(['text', 'badge', 'liveText', 'progress']), componentNameSchema]).optional(),
-  live: boundStringSchema.optional(),
-  width: z.enum(['auto', 'sm', 'md', 'lg']).optional(),
+  format: formatSchema.exactOptional(),
+  visibleIf: conditionSchema.exactOptional(),
+  sortable: z.boolean().exactOptional(),
+  as: z.union([z.enum(['text', 'badge', 'liveText', 'progress']), componentNameSchema]).exactOptional(),
+  live: boundStringSchema.exactOptional(),
+  width: z.enum(['auto', 'sm', 'md', 'lg']).exactOptional(),
 });
 export type Column = z.infer<typeof columnSchema>;

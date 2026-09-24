@@ -75,7 +75,7 @@ Inside a phase, each milestone needs the one before it unless *Needs* says other
 #### M1.1 Storage engine — 2 days
 - **Read**: `04` §4.1–§4.2, §4.8 (kernel part), `03` §3.11.
 - **Build**: the driver interface and the `better-sqlite3` adapter; database open with the pragmas of `04` §4.1 and mode 0600; the kernel migration runner and `schema_versions`; the full kernel DDL of `04` §4.1; the commit pipeline (queue, group commit every ≤2 ms or 64 units, one savepoint per unit, version checks, `STORAGE_CONFLICT`); the read-only connection factory. The commit rule for a failed send with `onReply` (inserted as a failed command whose continuation is delivered, `04` §4.2).
-- **Done when**: a unit is applied completely or not at all (tests inject failures mid-unit); a conflicting version rolls back only that unit; batching commits many units in one transaction; a database with a newer schema version refuses to open with `SCHEMA_TOO_NEW` and writes nothing. A send with `onReply` to an unknown type commits the sender's unit and delivers the failure to the continuation; one without `onReply` fails the unit.
+- **Done when**: a unit is applied completely or not at all (tests inject failures mid-unit); a conflicting version rolls back only that unit; batching commits many units in one transaction; a database with a newer schema version refuses to open with `SCHEMA_TOO_NEW` and writes no data (ADR 0035). A send with `onReply` to an unknown type commits the sender's unit and delivers the failure to the continuation; one without `onReply` fails the unit.
 
 #### M1.2 Store API and step journal — 2 days
 - **Read**: `04` §4.3–§4.5.

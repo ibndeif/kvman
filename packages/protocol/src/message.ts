@@ -21,7 +21,7 @@ export const messageContextSchema = z
   .record(z.string(), z.string())
   .refine((context) => jsonByteLength(context) <= limits.contextBytes, `context is over ${limits.contextBytes} bytes`);
 
-export const onReplySchema = z.strictObject({ type: typeNameSchema, context: jsonSchema.optional() });
+export const onReplySchema = z.strictObject({ type: typeNameSchema, context: jsonSchema.exactOptional() });
 export type OnReply = z.infer<typeof onReplySchema>;
 
 export const messageSchema = z
@@ -31,20 +31,20 @@ export const messageSchema = z
     kind: messageKindSchema,
     type: typeNameSchema,
     source: addressSchema,
-    target: addressSchema.optional(),
-    workspaceId: workspaceIdSchema.optional(),
-    lane: z.string().min(1).optional(),
+    target: addressSchema.exactOptional(),
+    workspaceId: workspaceIdSchema.exactOptional(),
+    lane: z.string().min(1).exactOptional(),
     payload: jsonSchema,
-    payloadRef: z.string().min(1).optional(),
+    payloadRef: z.string().min(1).exactOptional(),
     correlationId: ulidSchema,
-    causationId: ulidSchema.optional(),
+    causationId: ulidSchema.exactOptional(),
     context: messageContextSchema,
-    onReply: onReplySchema.optional(),
-    idempotencyKey: z.string().min(1).optional(),
+    onReply: onReplySchema.exactOptional(),
+    idempotencyKey: z.string().min(1).exactOptional(),
     priority: prioritySchema,
-    delivery: eventDeliverySchema.optional(),
-    deadlineAt: epochMsSchema.optional(),
-    notBefore: epochMsSchema.optional(),
+    delivery: eventDeliverySchema.exactOptional(),
+    deadlineAt: epochMsSchema.exactOptional(),
+    notBefore: epochMsSchema.exactOptional(),
     createdAt: epochMsSchema,
   })
   .superRefine((message, check) => {

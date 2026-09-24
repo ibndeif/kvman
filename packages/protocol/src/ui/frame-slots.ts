@@ -9,7 +9,7 @@ export const frameSlotSchema = z.strictObject({
   name: z.string().regex(/^frame\.[a-z]+(?:\.[a-z]+)?$/),
   description: z.string().min(1),
   accepts: z.array(contributionKindSchema).min(1),
-  max: z.number().int().positive().optional(),
+  max: z.number().int().positive().exactOptional(),
 });
 export type FrameSlot = z.infer<typeof frameSlotSchema>;
 

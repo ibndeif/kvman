@@ -7,7 +7,7 @@ import { jsonByteLength } from './unicode.ts';
 export const liveChunkSchema = z
   .union([
     z.strictObject({ text: z.string() }),
-    z.strictObject({ value: z.number().min(0).max(1), label: textSchema.optional() }),
+    z.strictObject({ value: z.number().min(0).max(1), label: textSchema.exactOptional() }),
     z.strictObject({ data: jsonSchema }),
     z.strictObject({ reset: z.literal(true) }),
   ])

@@ -9,8 +9,8 @@ import { dismissSchema, navigateSchema, notificationSchema, toastSchema } from '
 const countSchema = z.number().int().nonnegative();
 
 export const streamedEventSchema = z.strictObject({
-  id: ulidSchema, type: typeNameSchema, source: addressSchema, workspaceId: workspaceIdSchema.optional(), payload: jsonSchema,
-  correlationId: ulidSchema, causationId: ulidSchema.optional(), createdAt: epochMsSchema,
+  id: ulidSchema, type: typeNameSchema, source: addressSchema, workspaceId: workspaceIdSchema.exactOptional(), payload: jsonSchema,
+  correlationId: ulidSchema, causationId: ulidSchema.exactOptional(), createdAt: epochMsSchema,
 });
 
 export const sseMessageSchemas = {
@@ -27,10 +27,10 @@ export const sseMessageSchemas = {
     z.strictObject({ clientId: z.string().min(1), id: ulidSchema, ok: z.literal(false), problem: problemSchema }),
   ]),
   ui: z.union([
-    z.strictObject({ clientId: z.string().min(1).optional(), type: z.literal('ui.toast'), source: addressSchema, payload: toastSchema }),
-    z.strictObject({ clientId: z.string().min(1).optional(), type: z.literal('ui.notify'), source: addressSchema, payload: notificationSchema }),
-    z.strictObject({ clientId: z.string().min(1).optional(), type: z.literal('ui.dismiss'), source: addressSchema, payload: dismissSchema }),
-    z.strictObject({ clientId: z.string().min(1).optional(), type: z.literal('ui.navigate'), source: addressSchema, payload: navigateSchema }),
+    z.strictObject({ clientId: z.string().min(1).exactOptional(), type: z.literal('ui.toast'), source: addressSchema, payload: toastSchema }),
+    z.strictObject({ clientId: z.string().min(1).exactOptional(), type: z.literal('ui.notify'), source: addressSchema, payload: notificationSchema }),
+    z.strictObject({ clientId: z.string().min(1).exactOptional(), type: z.literal('ui.dismiss'), source: addressSchema, payload: dismissSchema }),
+    z.strictObject({ clientId: z.string().min(1).exactOptional(), type: z.literal('ui.navigate'), source: addressSchema, payload: navigateSchema }),
   ]),
   resync: z.strictObject({ reason: z.string().min(1) }),
   close: z.strictObject({ reason: z.enum(['slow-consumer', 'shutdown']) }),

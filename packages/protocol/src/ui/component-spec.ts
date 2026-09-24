@@ -25,22 +25,22 @@ export const eventProp = z.lazy(() => actionSchema);
 export const effectsProp = z.lazy(() => z.array(effectSchema));
 export const nestedViewProp = z.lazy(() => viewNodeSchema);
 
-const commonNodeShape = { id: z.string().min(1).optional(), visibleIf: conditionSchema.optional() };
+const commonNodeShape = { id: z.string().min(1).exactOptional(), visibleIf: conditionSchema.exactOptional() };
 
 export function nodeProps<Shape extends z.ZodRawShape>(shape: Shape) {
   return z.strictObject({ ...commonNodeShape, ...shape });
 }
 
 export function pressableProps<Shape extends z.ZodRawShape>(shape: Shape) {
-  return nodeProps({ disabledIf: conditionSchema.optional(), ...shape });
+  return nodeProps({ disabledIf: conditionSchema.exactOptional(), ...shape });
 }
 
 export function inputControlProps<Shape extends z.ZodRawShape>(shape: Shape) {
   return pressableProps({
-    label: viewTextSchema.optional(),
-    help: viewTextSchema.optional(),
-    required: z.boolean().optional(),
-    value: boundJsonSchema.optional(),
+    label: viewTextSchema.exactOptional(),
+    help: viewTextSchema.exactOptional(),
+    required: z.boolean().exactOptional(),
+    value: boundJsonSchema.exactOptional(),
     ...shape,
   });
 }

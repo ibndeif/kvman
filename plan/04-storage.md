@@ -2,7 +2,7 @@
 
 ## 4.1 Physical layout
 
-One SQLite database `~/.kvman/kvman.db` in WAL mode with `synchronous=FULL`, `foreign_keys=ON`, `busy_timeout` set. File mode 0600. Blobs live beside it as files. Secrets live in `~/.kvman/secrets.json` (0600) and never enter the database.
+One SQLite database `~/.kvman/kvman.db` in WAL mode with `synchronous=FULL`, `foreign_keys=ON`, `busy_timeout=5000` (ADR 0032). File mode 0600. Blobs live beside it as files. Secrets live in `~/.kvman/secrets.json` (0600) and never enter the database.
 
 Driver: `better-sqlite3` (R-Q1). The storage engine hides the driver behind one interface so it can be replaced (e.g. by `node:sqlite` once stable) with one adapter and an ADR.
 
@@ -18,12 +18,14 @@ CREATE TABLE messages (
   kind TEXT NOT NULL,                  -- command | event
   type TEXT NOT NULL,
   source TEXT NOT NULL, target TEXT,
-  handler TEXT NOT NULL,               -- extension (and subscription id for events)
+  handler TEXT NOT NULL,               -- extension (and subscription id for events); '' for a send that failed
+                                       -- admission because its type is unknown (ADR 0034)
   workspace_id TEXT, lane TEXT,        -- extension + '|' + rendered lane template
   payload TEXT, payload_ref TEXT,
   context TEXT NOT NULL,
   state TEXT NOT NULL,                 -- pending|running|awaiting|done|failed|dead|cancelled
-  priority INTEGER NOT NULL, attempts INTEGER NOT NULL DEFAULT 0,
+  priority INTEGER NOT NULL,           -- interactive 0, normal 1, background 2 (ADR 0032)
+  attempts INTEGER NOT NULL DEFAULT 0,
   not_before INTEGER, deadline_at INTEGER,
   correlation_id TEXT NOT NULL, causation_id TEXT,
   on_reply TEXT,                       -- continuation to send when this command's result is written
@@ -108,6 +110,16 @@ type UnitOfWork = {
   secrets: Array<{ name: string; value: string | null }>;        // ctx.secrets.set, applied after commit (§4.7)
   config: Array<{ scope: 'global' | 'workspace'; value: Json }>;  // ctx.config.set, applied in the commit (§4.7)
 };
+// the writes (ADR 0031); owner and workspace come from the invocation, never from the unit
+type KvWrite = { kind: 'kv.set'; scope: StoreScope; key: string; value: Json; expectedVersion?: number }
+             | { kind: 'kv.delete'; scope: StoreScope; key: string; expectedVersion?: number };
+type DocWrite = { kind: 'doc.put'; scope: StoreScope; collection: string; id: string; data: JsonObject; expectedVersion?: number }
+              | { kind: 'doc.delete'; scope: StoreScope; collection: string; id: string; expectedVersion?: number };
+type LogAppend = { kind: 'log.append'; scope: StoreScope; log: string; seq: number; value: Json };
+type LogTruncate = { kind: 'log.truncate-before'; scope: StoreScope; log: string; seq: number } | { kind: 'log.drop'; scope: StoreScope; log: string };
+type StoreScope = 'workspace' | 'global';   // ws = '' for global
+// expectedVersion: absent = blind write; 0 = the read found nothing (must still not exist); n = must still be n.
+// Versions start at 1, +1 per write; a delete removes the row; a mismatch or a taken log seq = STORAGE_CONFLICT.
 ```
 
 When the handler returns, the host sends `complete` with the unit of work. The kernel commit pipeline:
@@ -135,7 +147,7 @@ after commit: apply secrets (§4.7), resolve waiters, push events and replies to
 
 - **Read-your-writes**: inside the handler, every read sees the handler's own pending writes first (§4.3 "What reads see").
 - **Versions are automatic**: the SDK remembers the version of every kv entry and document the handler read. A later write to the same key carries that version, so the commit fails with `STORAGE_CONFLICT` if someone else changed it in between; a write to a key the handler never read is a plain overwrite. On conflict the whole unit is discarded and the handler runs again at once (up to 5 times, not counted as attempts). Lanes make conflicts rare.
-- **Limits** per unit of work: 8 MB of writes, 1,000 messages. Larger work must be split.
+- **Limits** per unit of work: 8 MB of writes, 1,000 messages. Larger work must be split; a unit over a limit fails with `PAYLOAD_TOO_LARGE` (params `{ limit, max }`, not retryable, ADR 0032).
 - **Queries** never produce a unit of work; their store handle is read-only (writes throw `CAPABILITY_DENIED`).
 - **Why a failed `send` with `onReply` does not fail the sender**: the sender already declared how it handles the result, so a target that is disabled or rejects the payload is just a failed result. This is how a tool whose extension was disabled mid-turn becomes a tool error in the agent's history instead of a stuck turn.
 
@@ -308,6 +320,7 @@ const text = await ctx.step('ocr', () => runOcr(blobId), { retrySafe: false });
 - **Crash during migration**: `migrating` still set at boot means a migration was interrupted. Boot resumes it from the stored version with `migrating.digest`'s code. If that digest is not the active one (an interrupted reload), boot then performs the swap itself (`06` §6.6 steps 5–6, writing `migrating.grants`). If it is the active one (an interrupted enable), boot only clears `migrating`; the enable command itself is redelivered by normal recovery, or the person enables again (`03` §3.9 step 5). A redelivered reload finds the swap already done and succeeds without changes.
 - **Config is migrated too**: `m.config.get(scope, workspaceId?)` and `m.config.set(scope, value, workspaceId?)` let a migration step rewrite stored config. After the migrations (or at once when there are none), enable and reload validate every stored config value of the extension (its `global_config` row and every `workspace_config` row) against the target version's config schema. An invalid value blocks the enable or reload with `CONFIG_INVALID`, listing the fields and workspaces; nothing is reset to defaults silently. (New optional fields simply take their defaults.)
 - A stored version newer than the code → `SCHEMA_TOO_NEW` (extension not enabled; nothing written).
+- The kernel's own check at boot opens the database read-only: a refusal leaves `kvman.db` byte-for-byte unchanged and `kvman.db-wal` empty; SQLite's `-shm` index may appear (ADR 0035).
 - Rollback to an older extension version is blocked if its registered storage version is below the stored one, unless the older version registers `compatibleWith` covering it (`EXT_ROLLBACK_BLOCKED`).
 
 ## 4.9 Retention and housekeeping

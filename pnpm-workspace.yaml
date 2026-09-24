@@ -2,3 +2,5 @@ packages:
   - packages/*
   - extensions/*
   - examples/*
+allowBuilds:
+  better-sqlite3: false

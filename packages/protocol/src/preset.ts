@@ -13,11 +13,11 @@ import { withIdentity } from './ui/entries.ts';
 const presetExtensionSchema = z
   .strictObject({
     source: sourceSchema,
-    integrity: z.string().min(1).optional(),
-    digest: z.string().regex(/^[0-9a-f]{64}$/, 'expected a snapshot digest (64 lowercase hex characters)').optional(),
+    integrity: z.string().min(1).exactOptional(),
+    digest: z.string().regex(/^[0-9a-f]{64}$/, 'expected a snapshot digest (64 lowercase hex characters)').exactOptional(),
     enabled: z.boolean(),
     grants: capabilitiesSchema,
-    disable: z.array(typeNameSchema).optional(),
+    disable: z.array(typeNameSchema).exactOptional(),
   })
   .superRefine((entry, check) => {
     const problem = integrityProblem(entry.source, entry.integrity);
@@ -33,46 +33,46 @@ export const presetSchema = z.strictObject({
   presetVersion: z.literal(1, 'requires a newer kvman'),
   id: z.string().regex(/^[a-z0-9-]{1,64}$/, 'preset ids match ^[a-z0-9-]{1,64}$'),
   name: z.string().min(1),
-  description: z.string().min(1).optional(),
-  icon: iconNameSchema.optional(),
+  description: z.string().min(1).exactOptional(),
+  icon: iconNameSchema.exactOptional(),
   revision: z.number().int().nonnegative(),
   app: z.strictObject({
     title: textSchema,
-    icon: iconNameSchema.optional(),
+    icon: iconNameSchema.exactOptional(),
     theme: z
       .strictObject({
-        accent: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'the accent is a color #RRGGBB').optional(),
-        mode: z.enum(['system', 'light', 'dark']).optional(),
+        accent: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'the accent is a color #RRGGBB').exactOptional(),
+        mode: z.enum(['system', 'light', 'dark']).exactOptional(),
       })
-      .optional(),
+      .exactOptional(),
     home: homeRouteSchema,
   }),
   extensions: z.record(packageNameSchema, presetExtensionSchema),
   layout: z
     .strictObject({
-      sidebar: z.enum(['expanded', 'collapsed', 'hidden']).optional(),
-      statusbar: z.enum(['shown', 'hidden']).optional(),
-      order: z.record(publicNameSchema, z.array(z.string().min(1))).optional(),
+      sidebar: z.enum(['expanded', 'collapsed', 'hidden']).exactOptional(),
+      statusbar: z.enum(['shown', 'hidden']).exactOptional(),
+      order: z.record(publicNameSchema, z.array(z.string().min(1))).exactOptional(),
     })
-    .optional(),
-  hidden: z.array(publicNameSchema).optional(),
-  labels: z.record(publicNameSchema, z.union([z.string(), z.record(localeSchema, z.string())])).optional(),
-  pages: presetEntries(pageDefSchema).optional(),
-  navGroups: presetEntries(navGroupDefSchema).optional(),
-  nav: presetEntries(navItemDefSchema).optional(),
-  translations: translationsSchema.optional(),
-  config: z.record(packageNameSchema, jsonSchema).optional(),
+    .exactOptional(),
+  hidden: z.array(publicNameSchema).exactOptional(),
+  labels: z.record(publicNameSchema, z.union([z.string(), z.record(localeSchema, z.string())])).exactOptional(),
+  pages: presetEntries(pageDefSchema).exactOptional(),
+  navGroups: presetEntries(navGroupDefSchema).exactOptional(),
+  nav: presetEntries(navItemDefSchema).exactOptional(),
+  translations: translationsSchema.exactOptional(),
+  config: z.record(packageNameSchema, jsonSchema).exactOptional(),
   llm: z
     .strictObject({
       defaults: z
         .strictObject({
-          chat: modelRefSchema.optional(),
-          summary: modelRefSchema.optional(),
-          extension: modelRefSchema.optional(),
-          child: modelRefSchema.optional(),
+          chat: modelRefSchema.exactOptional(),
+          summary: modelRefSchema.exactOptional(),
+          extension: modelRefSchema.exactOptional(),
+          child: modelRefSchema.exactOptional(),
         })
-        .optional(),
+        .exactOptional(),
     })
-    .optional(),
+    .exactOptional(),
 });
 export type Preset = z.infer<typeof presetSchema>;

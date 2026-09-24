@@ -15,41 +15,41 @@ const timeoutSchema = z.number().int().min(1).max(maxTimeoutMs);
 export const slashSchema = z.strictObject({
   name: z.string().regex(/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/, 'slash names are lowercase kebab-case'),
   description: textSchema,
-  arg: z.string().min(1).optional(),
+  arg: z.string().min(1).exactOptional(),
 });
 
 export const agentToolSchema = z.strictObject({
   title: z.string().min(1),
-  description: z.string().min(1).optional(),
-  resultLimit: positiveIntegerSchema.optional(),
-  hiddenFields: z.array(z.string().min(1)).optional(),
+  description: z.string().min(1).exactOptional(),
+  resultLimit: positiveIntegerSchema.exactOptional(),
+  hiddenFields: z.array(z.string().min(1)).exactOptional(),
 });
 
 export const commandAgentToolSchema = agentToolSchema.extend({
-  waitMs: positiveIntegerSchema.optional(),
-  dangerous: z.boolean().optional(),
-  interactive: z.boolean().optional(),
+  waitMs: positiveIntegerSchema.exactOptional(),
+  dangerous: z.boolean().exactOptional(),
+  interactive: z.boolean().exactOptional(),
 });
 
-const namingExceptionSchema = descriptionSchema.optional();
+const namingExceptionSchema = descriptionSchema.exactOptional();
 
 export const commandEntrySchema = z.strictObject({
   type: typeNameSchema,
   kind: z.literal('command'),
   description: descriptionSchema,
   input: jsonSchemaDocumentSchema,
-  output: jsonSchemaDocumentSchema.optional(),
-  examples: z.array(jsonSchema).optional(),
-  lane: laneTemplateSchema.optional(),
-  concurrency: positiveIntegerSchema.optional(),
-  timeoutMs: timeoutSchema.optional(),
-  maxAttempts: positiveIntegerSchema.optional(),
-  priority: prioritySchema.optional(),
-  retention: durationSchema.optional(),
-  scope: z.enum(['workspace', 'global']).optional(),
+  output: jsonSchemaDocumentSchema.exactOptional(),
+  examples: z.array(jsonSchema).exactOptional(),
+  lane: laneTemplateSchema.exactOptional(),
+  concurrency: positiveIntegerSchema.exactOptional(),
+  timeoutMs: timeoutSchema.exactOptional(),
+  maxAttempts: positiveIntegerSchema.exactOptional(),
+  priority: prioritySchema.exactOptional(),
+  retention: durationSchema.exactOptional(),
+  scope: z.enum(['workspace', 'global']).exactOptional(),
   access: accessSchema,
-  slash: slashSchema.optional(),
-  agentTool: commandAgentToolSchema.optional(),
+  slash: slashSchema.exactOptional(),
+  agentTool: commandAgentToolSchema.exactOptional(),
   namingException: namingExceptionSchema,
   handler: z.string(),
 });
@@ -60,10 +60,10 @@ export const queryEntrySchema = z.strictObject({
   description: descriptionSchema,
   input: jsonSchemaDocumentSchema,
   output: jsonSchemaDocumentSchema,
-  examples: z.array(jsonSchema).optional(),
-  timeoutMs: timeoutSchema.optional(),
+  examples: z.array(jsonSchema).exactOptional(),
+  timeoutMs: timeoutSchema.exactOptional(),
   access: accessSchema,
-  agentTool: agentToolSchema.optional(),
+  agentTool: agentToolSchema.exactOptional(),
   namingException: namingExceptionSchema,
   handler: z.string(),
 });
@@ -73,8 +73,8 @@ export const eventEntrySchema = z.strictObject({
   kind: z.literal('event'),
   description: descriptionSchema,
   delivery: eventDeliverySchema,
-  payload: jsonSchemaDocumentSchema.optional(),
-  chunk: z.enum(['text', 'value', 'data']).optional(),
+  payload: jsonSchemaDocumentSchema.exactOptional(),
+  chunk: z.enum(['text', 'value', 'data']).exactOptional(),
   namingException: namingExceptionSchema,
 });
 
@@ -97,9 +97,9 @@ export const subscriptionEntrySchema = z
   .strictObject({
     event: typePatternSchema,
     description: descriptionSchema,
-    lane: laneTemplateSchema.optional(),
-    concurrency: positiveIntegerSchema.optional(),
-    timeoutMs: timeoutSchema.optional(),
+    lane: laneTemplateSchema.exactOptional(),
+    concurrency: positiveIntegerSchema.exactOptional(),
+    timeoutMs: timeoutSchema.exactOptional(),
     handler: z.string(),
   })
   .superRefine((entry, check) => {
@@ -112,10 +112,10 @@ export const scheduleEntrySchema = z
   .strictObject({
     name: privateNameSchema,
     description: descriptionSchema,
-    every: durationSchema.optional(),
-    cron: z.string().min(1).optional(),
+    every: durationSchema.exactOptional(),
+    cron: z.string().min(1).exactOptional(),
     command: typeNameSchema,
-    payload: jsonSchema.optional(),
+    payload: jsonSchema.exactOptional(),
   })
   .superRefine((entry, check) => {
     if ((entry.every === undefined) === (entry.cron === undefined)) {

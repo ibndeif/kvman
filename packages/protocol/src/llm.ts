@@ -26,10 +26,10 @@ export const llmMessageSchema = z.discriminatedUnion('role', [
   z.strictObject({
     role: z.literal('assistant'),
     content: z.string(),
-    thinking: z.string().optional(),
-    toolCalls: z.array(toolCallSchema).optional(),
+    thinking: z.string().exactOptional(),
+    toolCalls: z.array(toolCallSchema).exactOptional(),
   }),
-  z.strictObject({ role: z.literal('tool'), toolCallId: z.string().min(1), content: z.string(), isError: z.boolean().optional() }),
+  z.strictObject({ role: z.literal('tool'), toolCallId: z.string().min(1), content: z.string(), isError: z.boolean().exactOptional() }),
 ]);
 export type LlmMessage = z.infer<typeof llmMessageSchema>;
 
@@ -41,13 +41,13 @@ export const llmToolSchema = z.strictObject({
 
 export const llmRequestSchema = z.strictObject({
   purpose: llmPurposeSchema,
-  model: modelRefSchema.optional(),
-  system: z.string().optional(),
+  model: modelRefSchema.exactOptional(),
+  system: z.string().exactOptional(),
   messages: z.array(llmMessageSchema),
-  tools: z.array(llmToolSchema).optional(),
-  thinking: z.enum(['off', ...thinkingLevelSchema.options]).optional(),
-  maxTokens: positiveIntegerSchema.optional(),
-  live: z.strictObject({ text: liveAddressSchema.optional(), thinking: liveAddressSchema.optional() }).optional(),
+  tools: z.array(llmToolSchema).exactOptional(),
+  thinking: z.enum(['off', ...thinkingLevelSchema.options]).exactOptional(),
+  maxTokens: positiveIntegerSchema.exactOptional(),
+  live: z.strictObject({ text: liveAddressSchema.exactOptional(), thinking: liveAddressSchema.exactOptional() }).exactOptional(),
 });
 export type LlmRequest = z.infer<typeof llmRequestSchema>;
 
@@ -55,15 +55,15 @@ const tokenCountSchema = z.number().int().nonnegative();
 
 export const llmResultSchema = z.strictObject({
   content: z.string(),
-  thinking: z.string().optional(),
-  toolCalls: z.array(toolCallSchema).optional(),
+  thinking: z.string().exactOptional(),
+  toolCalls: z.array(toolCallSchema).exactOptional(),
   usage: z.strictObject({
     input: tokenCountSchema,
     output: tokenCountSchema,
-    cacheRead: tokenCountSchema.optional(),
-    cacheWrite: tokenCountSchema.optional(),
+    cacheRead: tokenCountSchema.exactOptional(),
+    cacheWrite: tokenCountSchema.exactOptional(),
   }),
-  costUsd: z.number().nonnegative().optional(),
+  costUsd: z.number().nonnegative().exactOptional(),
   model: modelRefSchema,
   stopReason: z.enum(['end', 'tool-calls', 'max-tokens']),
 });
@@ -75,7 +75,7 @@ export const modelDefSchema = z.strictObject({
   description: descriptionSchema,
   contextWindow: positiveIntegerSchema,
   maxOutput: positiveIntegerSchema,
-  cost: z.strictObject({ inputPerMTok: z.number().nonnegative(), outputPerMTok: z.number().nonnegative() }).optional(),
+  cost: z.strictObject({ inputPerMTok: z.number().nonnegative(), outputPerMTok: z.number().nonnegative() }).exactOptional(),
   capabilities: z.strictObject({ tools: z.boolean(), vision: z.boolean(), thinking: z.array(thinkingLevelSchema) }),
 });
 export type ModelDef = z.infer<typeof modelDefSchema>;

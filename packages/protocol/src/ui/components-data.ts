@@ -5,7 +5,7 @@ import { columnSchema } from './base-types.ts';
 import { bindingSchema, boundStringSchema, viewTextSchema } from './bound-values.ts';
 import { eventProp, nestedViewProp, nodeProps, shellVersionOfLibrary as since, type ComponentSpec } from './component-spec.ts';
 
-const emptyStateProp = z.strictObject({ title: viewTextSchema, body: viewTextSchema.optional() });
+const emptyStateProp = z.strictObject({ title: viewTextSchema, body: viewTextSchema.exactOptional() });
 
 export const dataComponents: ComponentSpec[] = [
   {
@@ -16,9 +16,9 @@ export const dataComponents: ComponentSpec[] = [
     },
     description: 'A virtualized table of records with columns, row actions of its entity, and selection.',
     props: nodeProps({
-      data: bindingSchema, columns: z.array(columnSchema), entity: publicNameSchema.optional(),
-      rowActions: z.union([z.enum(['auto', 'none']), z.array(publicNameSchema)]).optional(), selectable: z.boolean().optional(),
-      emptyState: emptyStateProp.optional(), dense: z.boolean().optional(), onRowClick: eventProp.optional(), onSelect: eventProp.optional(),
+      data: bindingSchema, columns: z.array(columnSchema), entity: publicNameSchema.exactOptional(),
+      rowActions: z.union([z.enum(['auto', 'none']), z.array(publicNameSchema)]).exactOptional(), selectable: z.boolean().exactOptional(),
+      emptyState: emptyStateProp.exactOptional(), dense: z.boolean().exactOptional(), onRowClick: eventProp.exactOptional(), onSelect: eventProp.exactOptional(),
     }),
     examples: [{
       type: 'table', entity: 'pdf.file', data: '$query.files.items', rowActions: 'auto',
@@ -30,7 +30,7 @@ export const dataComponents: ComponentSpec[] = [
     name: 'list', since, children: 'none', events: { onItemClick: { description: 'An item was clicked; $item is its record.', value: jsonSchema } },
     description: 'A list that renders its item view once per element, with $item.',
     props: nodeProps({
-      data: bindingSchema, item: nestedViewProp, entity: publicNameSchema.optional(), emptyState: emptyStateProp.optional(), onItemClick: eventProp.optional(),
+      data: bindingSchema, item: nestedViewProp, entity: publicNameSchema.exactOptional(), emptyState: emptyStateProp.exactOptional(), onItemClick: eventProp.exactOptional(),
     }),
     examples: [{ type: 'list', data: '$query.files.items', item: { type: 'text', text: '$item.name' }, emptyState: { title: '$t.empty.title' } }],
   },
@@ -39,8 +39,8 @@ export const dataComponents: ComponentSpec[] = [
     description: 'A conversation of entries drawn by the renderers of a target, with the running step streamed live until its entry is committed.',
     props: nodeProps({
       data: bindingSchema, target: publicNameSchema,
-      live: z.strictObject({ text: boundStringSchema.optional(), thinking: boundStringSchema.optional() }).optional(),
-      runField: z.string().min(1).optional(), emptyState: emptyStateProp.optional(),
+      live: z.strictObject({ text: boundStringSchema.exactOptional(), thinking: boundStringSchema.exactOptional() }).exactOptional(),
+      runField: z.string().min(1).exactOptional(), emptyState: emptyStateProp.exactOptional(),
     }),
     examples: [{
       type: 'thread', data: '$query.history.entries', target: 'agent.entry',
@@ -50,7 +50,7 @@ export const dataComponents: ComponentSpec[] = [
   {
     name: 'settingsSections', since, children: 'none', events: {},
     description: 'Every settings section of the registry (or one, with filter): a generated form per scope or the section\'s own view.',
-    props: nodeProps({ filter: z.string().min(1).optional() }),
+    props: nodeProps({ filter: z.string().min(1).exactOptional() }),
     examples: [{ type: 'settingsSections', filter: 'settings.section.pdf' }],
   },
 ];

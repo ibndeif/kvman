@@ -22,8 +22,8 @@ const metaSchema = z.strictObject({
   version: semverSchema,
   namespace: namespaceSchema,
   title: textSchema,
-  summary: textSchema.optional(),
-  icon: iconNameSchema.optional(),
+  summary: textSchema.exactOptional(),
+  icon: iconNameSchema.exactOptional(),
   description: descriptionSchema,
   implements: z.array(contractSchema),
 });
@@ -51,7 +51,7 @@ const dataSchema = z.strictObject({
       description: descriptionSchema,
       schema: jsonSchemaDocumentSchema,
       idField: z.string().min(1),
-      indexes: z.array(z.array(z.string().min(1)).min(1)).optional(),
+      indexes: z.array(z.array(z.string().min(1)).min(1)).exactOptional(),
     }),
   ),
   logs: z.array(z.strictObject({ prefix: logFamilySchema, description: descriptionSchema, entry: jsonSchemaDocumentSchema })),
@@ -63,8 +63,8 @@ const entitySchema = z.strictObject({
   title: textSchema,
   schema: jsonSchemaDocumentSchema,
   idField: z.string().min(1),
-  display: z.strictObject({ title: textSchema, subtitle: textSchema.optional(), icon: iconNameSchema.optional() }),
-  route: z.string().startsWith('/').optional(),
+  display: z.strictObject({ title: textSchema, subtitle: textSchema.exactOptional(), icon: iconNameSchema.exactOptional() }),
+  route: z.string().startsWith('/').exactOptional(),
 });
 
 const errorSchema = z.strictObject({
@@ -72,7 +72,7 @@ const errorSchema = z.strictObject({
   description: descriptionSchema,
   title: z.string().min(1),
   retryable: z.boolean(),
-  hint: z.string().min(1).optional(),
+  hint: z.string().min(1).exactOptional(),
 });
 
 const entries = (definition: z.ZodType) => z.array(withIdentity(definition, 'id', publicNameSchema));
