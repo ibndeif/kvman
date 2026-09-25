@@ -4,47 +4,70 @@ import type { FinalReply } from '../storage/commit-unit.ts';
 import type { Connection } from '../storage/driver.ts';
 import { jsonOf } from '../store/json-order.ts';
 
-type Resolve = (reply: ReplyPayload) => void;
+// What a caller learns about a command it waits for: its stored reply, or that its handler deferred it.
+export type ReplyListener = { replied(reply: ReplyPayload): void; deferred?(): void };
 
 const finalStates = new Set(['done', 'failed', 'dead']);
 
 function stopping(messageId: string): ReplyPayload {
-  return { ok: false, problem: kernelProblem('INTERNAL', { correlationId: messageId, messageId, detail: 'the kernel is stopping' }) };
+  return { ok: false, problem: kernelProblem('KERNEL_STOPPING', { correlationId: messageId, messageId }) };
 }
 
-// Callers waiting for a command's stored reply (02 §2.3): resolved after the unit that stores it commits.
+// Callers waiting for a command's stored reply (02 §2.3): resolved after the unit that stores it commits. Listeners
+// are called synchronously, so an adapter decides in one step where a reply goes (12 §12.3).
 export class ReplyWaiters {
   readonly #connection: Connection;
-  readonly #waiting = new Map<string, Resolve[]>();
+  readonly #listening = new Map<string, Set<ReplyListener>>();
   #closed = false;
 
   constructor(connection: Connection) {
     this.#connection = connection;
   }
 
-  // The waiter is registered before the stored state is read, both on the main thread without a pause between them,
-  // so a reply committed at any point reaches it exactly once.
   wait(messageId: string): Promise<ReplyPayload> {
-    if (this.#closed) return Promise.resolve(stopping(messageId));
     return new Promise((resolve) => {
-      this.#waiting.set(messageId, [...(this.#waiting.get(messageId) ?? []), resolve]);
-      const stored = this.#storedReply(messageId);
-      if (stored !== undefined) this.resolve([{ messageId, reply: stored }]);
+      this.listen(messageId, { replied: resolve });
     });
+  }
+
+  // The listener is registered before the stored state is read, both on the main thread without a pause between
+  // them, so a reply committed at any point reaches it exactly once. The returned function stops listening.
+  listen(messageId: string, listener: ReplyListener): () => void {
+    if (this.#closed) {
+      listener.replied(stopping(messageId));
+      return () => undefined;
+    }
+    const listeners = this.#listening.get(messageId) ?? new Set<ReplyListener>();
+    listeners.add(listener);
+    this.#listening.set(messageId, listeners);
+    const stored = this.#storedReply(messageId);
+    if (stored !== undefined) this.resolve([{ messageId, reply: stored }]);
+    return () => this.#forget(messageId, listener);
   }
 
   resolve(replies: readonly FinalReply[]): void {
     for (const { messageId, reply } of replies) {
-      const waiting = this.#waiting.get(messageId) ?? [];
-      this.#waiting.delete(messageId);
-      for (const resolve of waiting) resolve(reply);
+      const listeners = this.#listening.get(messageId) ?? new Set<ReplyListener>();
+      this.#listening.delete(messageId);
+      for (const listener of listeners) listener.replied(reply);
     }
   }
 
-  // The kernel is stopping: every waiter is answered so no call keeps waiting on the database.
+  // A handler deferred its reply (02 §2.8): the command now waits in `awaiting`.
+  deferred(messageId: string): void {
+    for (const listener of this.#listening.get(messageId) ?? []) listener.deferred?.();
+  }
+
+  // The kernel is stopping: every listener is answered so no call keeps waiting on the database.
   close(): void {
     this.#closed = true;
-    this.resolve([...this.#waiting.keys()].map((messageId) => ({ messageId, reply: stopping(messageId) })));
+    this.resolve([...this.#listening.keys()].map((messageId) => ({ messageId, reply: stopping(messageId) })));
+  }
+
+  #forget(messageId: string, listener: ReplyListener): void {
+    const listeners = this.#listening.get(messageId);
+    listeners?.delete(listener);
+    if (listeners?.size === 0) this.#listening.delete(messageId);
   }
 
   #storedReply(messageId: string): ReplyPayload | undefined {

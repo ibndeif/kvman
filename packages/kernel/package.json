@@ -8,6 +8,11 @@
       "@kvman/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./daemon": {
+      "@kvman/source": "./src/daemon/daemon-main.ts",
+      "types": "./dist/daemon/daemon-main.d.ts",
+      "default": "./dist/daemon/daemon-main.js"
     }
   },
   "files": [
@@ -21,7 +26,9 @@
     "@kvman/protocol": "workspace:*",
     "@kvman/sdk": "workspace:*",
     "ajv": "8.20.0",
-    "better-sqlite3": "13.0.3"
+    "better-sqlite3": "13.0.3",
+    "fastify": "5.12.5",
+    "pino": "10.3.1"
   },
   "devDependencies": {
     "@types/better-sqlite3": "9.6.0"

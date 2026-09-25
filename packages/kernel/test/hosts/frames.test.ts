@@ -28,7 +28,8 @@ describe('host frames (ADR 0076)', () => {
     const lost: ActiveInvocation[] = [];
     const sink: InvocationSink = {
       called: async () => ({ ok: true }), completed: async () => undefined, refused: async () => undefined, loadFailed: async () => undefined,
-      timedOut: async () => undefined, aborted: () => undefined, collateral: async () => undefined, quarantine: async () => undefined,
+      timedOut: async () => undefined, aborted: () => undefined, collateral: async () => undefined, interrupted: async () => undefined,
+      quarantine: async () => undefined,
       kernelCommand: async () => undefined,
       lost: async (invocation) => {
         lost.push(invocation);

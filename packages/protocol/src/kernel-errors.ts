@@ -60,6 +60,9 @@ export const kernelErrors = {
   DAEMON_CONFLICT: { title: 'Another kernel owns this home folder', retryable: false },
   HOME_INVALID: { title: 'The home folder holds other files', retryable: false },
   HOST_FORBIDDEN: { title: 'The request Host or Origin is not allowed', retryable: false },
+  NOT_FOUND: { title: 'The resource does not exist', retryable: false },
+  PORT_UNAVAILABLE: { title: 'No port is free for the kernel', retryable: false },
+  KERNEL_STOPPING: { title: 'The kernel is shutting down', retryable: true },
   INTERNAL: { title: 'Unexpected error', retryable: true },
 } as const satisfies Record<string, KernelErrorDefinition>;
 

@@ -1,10 +1,10 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   betterSqlite3Driver, createUlidGenerator, KernelRuntime, openKernelDatabase, recordExtension,
-  type AdapterCommand, type Connection, type LiveFrame, type LogRecord, type RegistryInput, type SchedulerTimers, type TimerHandle,
+  type AdapterCommand, type Connection, type KernelIdentity, type LiveFrame, type LogRecord, type RegistryInput, type SchedulerTimers, type TimerHandle,
 } from '@kvman/kernel';
 import type { Capabilities, Json, JsonObject, Manifest, ReplyPayload } from '@kvman/protocol';
 import type { ExtensionDefinition } from '@kvman/sdk';
@@ -56,7 +56,7 @@ const fixtures: Record<string, Fixture> = {
   '@acme/drift': { definition: drift, file: 'drift.ts' },
 };
 
-function entryOf(extension: string): string {
+export function entryOf(extension: string): string {
   const fixture = fixtures[extension];
   if (fixture === undefined) throw new Error(`no fixture ${extension}`);
   return fileURLToPath(new URL(`./fixtures/extensions/${fixture.file}`, import.meta.url));
@@ -70,7 +70,7 @@ function manifestOf(extension: string): Manifest {
   return { ...manifest, types: manifest.types.map((entry) => ({ ...entry, description: 'Changed after recording.' })) };
 }
 
-const defaultGrants: Record<string, Capabilities> = {
+export const defaultGrants: Record<string, Capabilities> = {
   '@acme/notes': { isolation: 'shared', requested: [{ name: 'calls', types: ['counter.*'] }], derived: { subscribes: [], providesLlm: [] } },
   '@acme/audit': { isolation: 'shared', requested: [], derived: { subscribes: ['notes.added', 'notes.touched'], providesLlm: [] }, },
 };
@@ -83,10 +83,11 @@ export type HostFixture = {
   timers: ManualTimers;
   logged: LogRecord[];
   live: LiveFrame[];
+  shutdownRequests: { count: number };
   close(): Promise<void>;
 };
 
-function registryInput(): RegistryInput {
+export function registryInput(): RegistryInput {
   const names = Object.keys(fixtures);
   return {
     extensions: names.map((name) => ({ manifest: manifestOf(name), quarantined: false })),
@@ -94,19 +95,23 @@ function registryInput(): RegistryInput {
   };
 }
 
-type Shared = Pick<HostFixture, 'connection' | 'databaseFile' | 'grants' | 'timers' | 'logged' | 'live'> & { poolSize: number };
+type Shared = Pick<HostFixture, 'connection' | 'databaseFile' | 'grants' | 'timers' | 'logged' | 'live' | 'shutdownRequests'> & { poolSize: number };
 
-function startRuntime(shared: Shared): HostFixture {
+async function startRuntime(shared: Shared): Promise<HostFixture> {
   const ids = createUlidGenerator(Date.now);
-  const { connection, databaseFile, grants, timers, logged, live } = shared;
+  const { connection, databaseFile, grants, timers, logged, live, shutdownRequests } = shared;
   const runtime = new KernelRuntime({
     databaseFile, connection, extensions: registryInput(), ids, now: () => timers.time.value, timers, poolSize: shared.poolSize,
     grants: { capabilities: (extension) => grants[extension] }, modules: { entry: entryOf }, logger: { write: (record) => logged.push(record) },
-    defaultLocale: () => 'en',
+    defaultLocale: () => 'en', identity: fixtureIdentity(databaseFile, timers.time.value),
+    requestShutdown: () => {
+      shutdownRequests.count += 1;
+    },
   });
   runtime.live.subscribe((frame) => live.push(frame));
+  await runtime.start();
   return {
-    runtime, connection, databaseFile, grants, timers, logged, live,
+    runtime, connection, databaseFile, grants, timers, logged, live, shutdownRequests,
     close: async () => {
       await runtime.stop();
       connection.close();
@@ -114,14 +119,21 @@ function startRuntime(shared: Shared): HostFixture {
   };
 }
 
-export function openHostFixture(options: { poolSize?: number } = {}): HostFixture {
+// A runtime without a daemon still answers kernel.health.get; the daemon passes its lock's identity (ADR 0088).
+function fixtureIdentity(databaseFile: string, startedAt: number): KernelIdentity {
+  return { version: '0.0.0', instanceId: '0b5c7f2e-4a1d-4c3b-9e8f-1a2b3c4d5e6f', processStart: 'Thu Sep 25 10:00:00 2026', port: 4173, home: dirname(databaseFile), startedAt };
+}
+
+export function openHostFixture(options: { poolSize?: number } = {}): Promise<HostFixture> {
   const databaseFile = join(mkdtempSync(join(tmpdir(), 'kvman-hosts-')), 'kvman.db');
   const connection = openKernelDatabase(databaseFile, betterSqlite3Driver, createUlidGenerator(Date.now).next());
   connection.prepare('INSERT INTO workspaces (id, path, name, created_at) VALUES (?, ?, ?, ?)').run(workspaceA, '/w/a', 'A', 1);
-  return startRuntime({ connection, databaseFile, grants: { ...defaultGrants }, timers: new ManualTimers(), logged: [], live: [], poolSize: options.poolSize ?? 1 });
+  const shared = { connection, databaseFile, grants: { ...defaultGrants }, timers: new ManualTimers(), logged: [], live: [], shutdownRequests: { count: 0 } };
+  return startRuntime({ ...shared, poolSize: options.poolSize ?? 1 });
 }
 
 // A kernel restart on the same database and clock: the runtime stops, and a new one rebuilds from SQLite (03 §3.9).
+// Stopping without a drain leaves running rows as a crash does, so the new runtime recovers them (ADR 0091).
 export async function restartRuntime(fixture: HostFixture): Promise<HostFixture> {
   await fixture.runtime.stop();
   const timers = new ManualTimers();

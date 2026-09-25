@@ -25,10 +25,10 @@ export class QueryPath {
     return answered;
   }
 
-  // The kernel is stopping: every waiting query is answered with INTERNAL.
+  // The kernel is stopping: every waiting query is answered with KERNEL_STOPPING (ADR 0090).
   close(): void {
     for (const queryId of [...this.#waiting.keys()]) {
-      this.answer(queryId, { ok: false, problem: kernelProblem('INTERNAL', { correlationId: queryId, messageId: queryId, detail: 'the kernel is stopping' }) });
+      this.answer(queryId, { ok: false, problem: kernelProblem('KERNEL_STOPPING', { correlationId: queryId, messageId: queryId }) });
     }
   }
 

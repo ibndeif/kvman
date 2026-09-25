@@ -97,6 +97,8 @@ export class KernelRegistry {
     const globalCommands = owners.filter((owner) => owner.entry.kind === 'command' && owner.entry.scope === 'global');
     if (globalCommands.length > 0) return this.resolveGlobally(type, globalCommands);
     if (workspaceId === undefined) {
+      const kernel = owners.find((owner) => owner.extension === undefined);
+      if (kernel !== undefined) return this.resolved(kernel, true, type);
       const events = owners.filter((owner) => owner.entry.kind === 'event');
       if (events.length > 0) return this.resolveGlobally(type, events);
       return this.failed('WORKSPACE_INVALID', `"${type}" needs a workspace and the message has none`, 'send it with a workspace id');

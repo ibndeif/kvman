@@ -32,6 +32,7 @@ export interface InvocationSink {
   timedOut(invocation: ActiveInvocation, reason: 'deadline' | 'timeout'): Promise<void>;
   aborted(invocation: ActiveInvocation): void;
   collateral(invocation: ActiveInvocation): Promise<void>;
+  interrupted(invocation: ActiveInvocation): Promise<void>;
   quarantine(extension: string, reason: QuarantineReason): Promise<void>;
   kernelCommand(claim: Claim): Promise<void>;
 }
@@ -72,6 +73,7 @@ export class HostManager implements Dispatcher {
   readonly #aborted = new Map<string, Aborted>();
   readonly #work = new Set<Promise<unknown>>();
   #sink: InvocationSink | undefined;
+  #idle: (() => void) | undefined;
   #stopping = false;
 
   constructor(options: HostManagerOptions) {
@@ -126,6 +128,27 @@ export class HostManager implements Dispatcher {
     }
   }
 
+  // 03 §3.9: shutdown lets running invocations finish for up to the grace, then interrupts the rest (ADR 0091); it
+  // resolves once their redelivery has committed.
+  drain(graceMs: number): Promise<void> {
+    return new Promise((resolve) => {
+      const finish = (): void => {
+        grace.cancel();
+        this.#idle = undefined;
+        const interrupted = [...this.#active.values()].map((invocation) => {
+          this.#end(invocation);
+          const settled = this.#connected().interrupted(invocation);
+          this.#track(settled);
+          return settled;
+        });
+        void Promise.allSettled(interrupted).then(() => resolve());
+      };
+      const grace = this.#options.timers.set(graceMs, finish);
+      this.#idle = finish;
+      if (this.#active.size === 0) finish();
+    });
+  }
+
   // Workers stopped here end with the kernel: nothing more is dispatched, their frames and invocations are dropped
   // (recovery redelivers them, 03 §3.9), and the settlements and calls already started finish first.
   async stop(): Promise<void> {
@@ -165,6 +188,7 @@ export class HostManager implements Dispatcher {
     this.#active.delete(invocation.id);
     this.#deadlines.get(invocation.id)?.cancel();
     this.#deadlines.delete(invocation.id);
+    if (this.#active.size === 0) this.#idle?.();
   }
 
   // 03 §3.6: the stuck invocation's extension is charged; the rest of the worker returns without penalty.

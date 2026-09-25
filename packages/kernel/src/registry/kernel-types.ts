@@ -1,6 +1,7 @@
 import {
-  cancelRequestSchema, cancelResultSchema, extensionQuarantinedSchema, messageDeadLetteredSchema, toJsonSchemaDocument,
-  type JsonObject, type SchemaView, type TypeEntry,
+  cancelRequestSchema, cancelResultSchema, extensionQuarantinedSchema, healthRequestSchema, healthResultSchema, kernelStartedSchema,
+  messageDeadLetteredSchema, shutdownRequestSchema, shutdownResultSchema, toJsonSchemaDocument, type JsonObject, type SchemaView,
+  type TypeEntry,
 } from '@kvman/protocol';
 
 export const kernelOwner = 'kernel';
@@ -28,6 +29,21 @@ export function kernelTypeEntries(): TypeEntry[] {
       type: 'kernel.cancel', kind: 'command', access: 'all', handler: 'command:kernel.cancel',
       description: 'Cancels a message and everything it caused, or every unfinished message of a correlation.',
       input: jsonDocument(cancelRequestSchema, 'input'), output: jsonDocument(cancelResultSchema, 'output'),
+    },
+    {
+      type: 'kernel.shutdown', kind: 'command', access: 'user', handler: 'command:kernel.shutdown',
+      description: 'Shuts the kernel down: running handlers get 10 s to finish, and the rest run again at the next start.',
+      input: jsonDocument(shutdownRequestSchema, 'input'), output: jsonDocument(shutdownResultSchema, 'output'),
+    },
+    {
+      type: 'kernel.health.get', kind: 'query', access: 'all', handler: 'query:kernel.health.get',
+      description: 'Whether the kernel runs, its version and instance, its port, and its home folder.',
+      input: jsonDocument(healthRequestSchema, 'input'), output: jsonDocument(healthResultSchema, 'output'),
+    },
+    {
+      type: 'kernel.started', kind: 'event', delivery: 'transient',
+      description: 'The kernel finished booting.',
+      payload: jsonDocument(kernelStartedSchema, 'input'),
     },
   ];
 }

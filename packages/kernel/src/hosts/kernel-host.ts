@@ -1,4 +1,4 @@
-import { cancelRequestSchema, type Problem } from '@kvman/protocol';
+import { cancelRequestSchema, type HealthResult, type Json, type Problem } from '@kvman/protocol';
 import { kernelProblem } from '../problems.ts';
 import type { GrantsSource } from '../router/grants.ts';
 import type { Claim } from '../scheduler/dispatcher.ts';
@@ -7,6 +7,7 @@ import type { CommitPipeline } from '../storage/commit-pipeline.ts';
 import type { CommitResult, CommitUnit } from '../storage/commit-unit.ts';
 import type { Connection } from '../storage/driver.ts';
 import { cancelScope, mayCancel } from './cancel-scope.ts';
+import type { QueryPath } from './query-path.ts';
 import type { ReplyWaiters } from './reply-waiters.ts';
 
 export type KernelHostDeps = {
@@ -15,7 +16,11 @@ export type KernelHostDeps = {
   scheduler: Scheduler;
   waiters: ReplyWaiters;
   grants: GrantsSource;
+  queries: QueryPath;
   abortMessages: (messageIds: ReadonlySet<string>) => void;
+  health: () => HealthResult;
+  // Called once kernel.shutdown's unit committed; the shutdown runs on its own, never inside this invocation.
+  requestShutdown: () => void;
 };
 
 // ADR 0078: kernel commands run here, on the main thread, as kernel code; each commits its unit like any handler.
@@ -27,8 +32,35 @@ export class KernelHost {
   }
 
   async run(claim: Claim): Promise<void> {
-    if (claim.message.type === 'kernel.cancel') return this.#cancel(claim);
-    return this.#fail(claim, kernelProblem('INTERNAL', { correlationId: claim.message.correlationId, messageId: claim.message.id, detail: `the kernel has no handler for ${claim.message.type}` }));
+    const { message } = claim;
+    if (message.kind === 'query') {
+      this.#answer(claim);
+      return;
+    }
+    if (message.type === 'kernel.cancel') return this.#cancel(claim);
+    if (message.type === 'kernel.shutdown') return this.#shutdown(claim);
+    return this.#fail(claim, this.#unknown(claim));
+  }
+
+  // Kernel queries are answered in memory, like every query (02 §2.3).
+  #answer(claim: Claim): void {
+    const { message } = claim;
+    const answer = message.type === 'kernel.health.get'
+      ? { ok: true as const, value: this.#deps.health() satisfies Json }
+      : { ok: false as const, problem: this.#unknown(claim) };
+    this.#deps.queries.answer(message.id, answer);
+  }
+
+  // ADR 0090: the reply {} commits first, then the kernel shuts down.
+  async #shutdown(claim: Claim): Promise<void> {
+    const invocation = { message: claim.message, extension: claim.extension, outcome: { ok: true, value: {} } as const, stored: true };
+    const result = await this.#commit({ origin: { kind: 'invocation', invocation }, writes: [], sends: [], publishes: [], replies: [] }, claim);
+    if (result.committed) this.#deps.requestShutdown();
+  }
+
+  #unknown(claim: Claim): Problem {
+    const { message } = claim;
+    return kernelProblem('INTERNAL', { correlationId: message.correlationId, messageId: message.id, detail: `the kernel has no handler for ${message.type}` });
   }
 
   // 02 §2.9, ADRs 0079 and 0083.

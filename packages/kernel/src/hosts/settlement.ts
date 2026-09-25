@@ -53,6 +53,7 @@ export class Settlement {
       this.#deps.waiters.resolve(result.replies);
       const { deadlineAt } = claim.message;
       if ('deferred' in outcome && claim.stored && deadlineAt !== undefined) this.#deps.scheduler.watchAwaiting(claim.message.id, deadlineAt);
+      if ('deferred' in outcome) this.#deps.waiters.deferred(claim.message.id);
       return;
     }
     if (!result.stale) await this.#notCommitted(run, result.problem, frame.recorded);
@@ -82,6 +83,17 @@ export class Settlement {
     const { message, extension } = run.claim;
     if (message.kind === 'query') {
       this.#deps.scheduler.submitQuery({ message, handler: extension });
+      return;
+    }
+    await this.#deps.scheduler.redeliver(message.id);
+  }
+
+  // 03 §3.9, ADR 0091: shutdown ended the attempt; it returns to pending without an attempt and runs at the next boot.
+  async interrupted(run: Run): Promise<void> {
+    this.#reset(run);
+    const { message } = run.claim;
+    if (message.kind === 'query') {
+      this.#deps.queries.answer(message.id, { ok: false, problem: kernelProblem('KERNEL_STOPPING', { correlationId: message.correlationId, messageId: message.id }) });
       return;
     }
     await this.#deps.scheduler.redeliver(message.id);

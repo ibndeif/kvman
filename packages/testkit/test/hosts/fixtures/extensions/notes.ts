@@ -1,4 +1,5 @@
 import { defineExtension, z } from '@kvman/sdk';
+import { registerAdapters } from './notes-adapters.ts';
 import { registerBasics } from './notes-basics.ts';
 import { registerCalls } from './notes-calls.ts';
 import { registerDeferred } from './notes-deferred.ts';
@@ -22,4 +23,5 @@ export default defineExtension({ name: '@acme/notes', namespace: 'notes', title:
   registerLive(ext);
   registerQueries(ext);
   registerSupervision(ext);
+  registerAdapters(ext);
 });

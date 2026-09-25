@@ -75,7 +75,7 @@ export function admitPublish(scope: UnitScope, publish: OutboundPublish): void {
     }
     return;
   }
-  insertEvent(scope.connection, result.event, scope.now);
+  scope.applied.logged.push({ seq: insertEvent(scope.connection, result.event), event: result.event });
   for (const delivery of result.deliveries) {
     const reply: ReplyPayload | undefined = delivery.problem === undefined ? undefined : { ok: false, problem: delivery.problem };
     scope.applied.inserted.push(insertMessage(scope.connection, delivery.admitted, reply === undefined ? 'pending' : 'failed', reply, scope.now));

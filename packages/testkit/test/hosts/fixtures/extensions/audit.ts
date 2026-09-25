@@ -13,6 +13,14 @@ export default defineExtension({ name: '@acme/audit', namespace: 'audit', title:
       }
     },
   });
+  ext.subscribe('kernel.started', {
+    description: 'Records each boot of the kernel.',
+    handle: async (payload, ctx) => {
+      const { instanceId } = z.object({ instanceId: z.string() }).parse(payload);
+      const boots = (await ctx.store.global.kv.get<string[]>('boots')) ?? [];
+      ctx.store.global.kv.set('boots', [...boots, instanceId]);
+    },
+  });
   ext.subscribe('notes.added', {
     description: 'Records added notes.',
     handle: async (payload, ctx) => {

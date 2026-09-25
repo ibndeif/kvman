@@ -25,7 +25,8 @@ export type UnitOrigin =
   | { kind: 'call'; sender: Sender; cause: Message; messageId: string }
   | { kind: 'cancel'; invocation: CommitInvocation; messageIds: readonly string[]; unstored: number }
   | { kind: 'expire'; messageIds: readonly string[]; correlationId: string }
-  | { kind: 'quarantine'; extension: string; reason: QuarantineReason; correlationId: string };
+  | { kind: 'quarantine'; extension: string; reason: QuarantineReason; correlationId: string }
+  | { kind: 'announce'; correlationId: string };
 
 export type CommitUnit = {
   origin: UnitOrigin;
@@ -79,9 +80,13 @@ export type FinalReply = { messageId: string; reply: ReplyPayload };
 // A message this unit ended by cancel or deadline, with the state it had (ADRs 0083, 0084).
 export type EndedMessage = { messageId: string; previous: MessageState; handler: string };
 
+// A durable event with its events-table seq, the resume cursor of the event stream (12 §12.3).
+export type LoggedEvent = { seq: number; event: Message };
+
 export type AppliedMessages = {
   inserted: StoredMessage[];
   duplicates: OriginalMessage[];
+  logged: LoggedEvent[];
   announced: Message[];
   unstored: UnstoredDelivery[];
   replies: FinalReply[];
@@ -96,7 +101,7 @@ export type CommitResult = ({ committed: true } & AppliedMessages) | { committed
 
 export function correlationOf(origin: UnitOrigin): string {
   if (origin.kind === 'invocation' || origin.kind === 'cancel') return origin.invocation.message.correlationId;
-  if (origin.kind === 'expire' || origin.kind === 'quarantine') return origin.correlationId;
+  if (origin.kind === 'expire' || origin.kind === 'quarantine' || origin.kind === 'announce') return origin.correlationId;
   if (origin.kind === 'call') return origin.cause.correlationId;
   return origin.kind === 'retry' ? origin.message.correlationId : origin.messageId;
 }

@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { openHostFixture, rows, run, send, type HostFixture, workerTests } from '../hosts/harness.ts';
 
 let fixture: HostFixture;
-beforeEach(() => {
-  fixture = openHostFixture();
+beforeEach(async () => {
+  fixture = await openHostFixture();
 });
 afterEach(() => fixture.close());
 

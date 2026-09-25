@@ -69,14 +69,17 @@ type Issue = {
 | `CONFIRMATION_EXPIRED` | preview token expired or staged bytes changed | The confirmation expired or the staged content changed | yes (preview again) |
 | `DAEMON_CONFLICT` | another kernel owns the lock | Another kernel owns this home folder | no |
 | `HOME_INVALID` | the home folder holds other files but no `kvman.db` (`03` §3.9) | The home folder holds other files | no |
-| `HOST_FORBIDDEN` | bad `Host` or `Origin` | The request Host or Origin is not allowed | no |
+| `HOST_FORBIDDEN` | bad `Host` or `Origin`, or a refused `Sec-Fetch-Site` | The request Host or Origin is not allowed | no |
+| `NOT_FOUND` | an unknown message id or route, or a subscription for a stream with no open connection (ADR 0095) | The resource does not exist | no |
+| `PORT_UNAVAILABLE` | no free port in 4173–4199 (`{ from, to }`), or the `--port` given is taken (`{ port }`) (ADR 0095) | No port is free for the kernel | no |
+| `KERNEL_STOPPING` | a request that arrives during shutdown (ADR 0090) | The kernel is shutting down | yes |
 | `INTERNAL` | unexpected error (details in the log) | Unexpected error | yes |
 
 Extension codes used across the plan: `agent/SESSION_CLOSED`, `agent/CONTEXT_TOO_LARGE`, `agent/COMPACT_FAILED`, `agent/TOOL_DENIED`, `agent/UNKNOWN_TOOL`, `agent/REVIEW_REJECTED`, `agent/NOT_A_GUARD`, `agent/SECTION_LIMIT`, `agent/SESSION_NOT_FOUND`, `agent/DEPTH_EXCEEDED`, `shell/TIMEOUT`, `interviewer/BUSY`, `fs/NOT_FOUND`, `pdf/NOT_FOUND`.
 
 ## 13.3 Logging
 
-- Pino JSON to `~/.kvman/logs/kernel.log`, rotated daily and at 50 MB, 14 files kept.
+- Pino JSON to `~/.kvman/logs/kernel.log`, rotated daily and at 50 MB, 14 files kept, by the kernel's own rotating stream (`kernel.<yyyy-mm-dd>.<n>.log`, ADR 0093). HTTP requests are logged as method, route pattern, status, and duration only.
 - Every line has `correlationId`, and where relevant `messageId`, `type`, `extension`, `workspaceId`, `lane`, `attempt`, `durationMs`.
 - **Never logged**: message payloads, config values, secrets, authorization data, request bodies, raw provider errors. Extension `ctx.log` output goes through the same redaction (known secret fields, bearer tokens, URLs with credentials); the kernel attaches `correlationId`, `messageId`, `type`, `extension`, `workspaceId`, and `attempt` to each line (ADR 0073).
 - Process output lives only in job logs (sensitive, capped, readable through `shell.job.log.get`), never in the kernel log.

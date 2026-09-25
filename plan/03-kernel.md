@@ -148,7 +148,7 @@ const result = await p.wait();   // { exitCode, signal, logBlobId, tail, truncat
 
 ## 3.8 Kernel API (`kernel.*`)
 
-The kernel exposes itself through the same message model and follows the naming grammar (`02` §2.4). All payload and result schemas live in `@kvman/protocol`. Kernel commands take the one dispatch path: an inbox row, the scheduler, and an in-process kernel host on the main thread that runs kernel code and commits its unit (ADR 0078).
+The kernel exposes itself through the same message model and follows the naming grammar (`02` §2.4). All payload and result schemas live in `@kvman/protocol`. The kernel is available in every workspace: a `kernel.*` command or query sent without a workspace runs without one, and one sent with a workspace keeps it (ADR 0099). Kernel commands take the one dispatch path: an inbox row, the scheduler, and an in-process kernel host on the main thread that runs kernel code and commits its unit (ADR 0078).
 
 **Who may send** (the "Who" column below):
 
@@ -165,7 +165,7 @@ Preview tokens (`kernel.trust.preview`, `kernel.preset.import.preview`) are stat
 
 | Type | Payload → result | Who | Notes |
 |---|---|---|---|
-| `kernel.health.get` | `{}` → `{ status: 'ok' \| 'degraded', version, instanceId, processStart, uptimeMs, port, home }` | any | also `GET /api/v1/health`; `port` and `home` (the home folder path) are used by `local-guard` (`10` §10.11) |
+| `kernel.health.get` | `{}` → `{ status: 'ok' \| 'degraded', version, instanceId, processStart, uptimeMs, port, home }` | any | also `GET /api/v1/health`; `port` and `home` (the home folder path) are used by `local-guard` (`10` §10.11); `degraded` while an extension is quarantined (ADR 0092); `version` is the kernel package version and `instanceId` the lock nonce (ADRs 0088, 0089) |
 | `kernel.schema.get` | `{ workspaceId?, q? }` → Schema (`12` §12.7) | any | internal types omitted |
 | `kernel.validate` | `{ workspaceId?, manifest? \| preset? \| page? \| catalog? }` → `{ ok, issues: Issue[] }` (`ok` is false exactly when an issue has severity `error`) | any | structural checks, plus referential ones when `workspaceId` is given (`06` §6.3) |
 | `kernel.extensions.list` | `{ workspaceId? }` → `[{ name, title, icon, description, version, namespace, activeDigest, status: 'active' \| 'quarantined' \| 'needs-approval', quarantineReason?, isolation per workspace, enabledIn: workspaceId[] }]` | any | `needs-approval`: an installed newer version waits for grants |
@@ -229,7 +229,7 @@ Preview tokens (`kernel.trust.preview`, `kernel.preset.import.preview`) are stat
 | `kernel.dev.file.write` / `.delete` | `{ project, path, content }` / `{ project, path }` → `{}` | admin | jailed to the project folder |
 | `kernel.dev.build` | `{ project, test? }` → `{ ok, issues, tests?, versionId? }` | admin | compile, record the manifest, and run the tests in a sandboxed test process; records a `dev:` version when clean (`11` §11.5) |
 | `kernel.dev.folder.stage` | `{ path }` → stage result (`06` §6.2) | user | used by `kvman ext dev` (`12` §12.5): stages a developer's folder (an absolute path outside the home folder) as a `dev:` source |
-| `kernel.shutdown` | `{}` → `{}` | user | |
+| `kernel.shutdown` | `{}` → `{}` | user | shutdown starts once its unit commits; `kvman stop` sends it (ADR 0090) |
 | `kernel.llm.complete` | `LlmRequest` → `LlmResult` | capability `llm` | §3.12 |
 | `kernel.llm.models.refresh` | `{ provider? }` → `{}` | admin | |
 | `kernel.llm.defaults.set` | `{ workspaceId?, purpose, model: ModelRef \| null }` → `{}` | admin | no `workspaceId` = global default |
@@ -270,13 +270,13 @@ Kernel handlers run on the main thread, are short, and use the same unit-of-work
 
 **Boot**
 0. Resolve the home folder (`--home`, else `KVMAN_HOME`, else `~/.kvman`). If it holds anything other than `daemon.lock` and `logs/` but has no `kvman.db`, refuse to start with `HOME_INVALID` (R-Q4); an empty or missing folder is created (0700).
-1. Acquire `daemon.lock` (§3.10).
+1. Bind the port, then acquire `daemon.lock` with it (§3.10, ADR 0088). HTTP requests, `/health` included, wait until step 8 finishes.
 2. Open SQLite; run kernel migrations. A newer schema → refuse to start with `SCHEMA_TOO_NEW`.
 3. Load secrets.
 4. Verify every snapshot referenced by an enabled extension (rehash, `06` §6.5). On a mismatch the extension is quarantined with reason `EXT_INTEGRITY` (no retry, §3.6); its recovery page entry offers Rollback to another verified snapshot, or Disable.
 5. Load manifests into the registry. Then finish interrupted data migrations: for every extension whose `extensions.migrating` is set, the kernel starts that extension's host early (migrations are extension code), resumes the migration from the stored data version, and completes the interrupted swap exactly as `04` §4.8 "Crash during migration" says. Failures follow `04` §4.8 (quarantine with `MIGRATION_FAILED`); boot continues either way. Hosts started here stay up until the normal idle unload.
 6. **Recover**:
-   - inbox rows `running` → `pending` (attempt+1);
+   - inbox rows `running` were interrupted by a crash: attempts + 1, then `pending`, or `dead` with `MESSAGE_DEAD` and `kernel.message.dead-lettered` when that reaches `maxAttempts` (ADR 0091);
    - step journal rows `started` → left as-is; the handler sees them on redelivery;
    - processes: reconcile and kill as in §3.7 (detached ones get their `onExit`);
    - trust records with mode `once` are cleared (`07` §7.2);
@@ -287,12 +287,14 @@ Kernel handlers run on the main thread, are short, and use the same unit-of-work
 
 First run (no `kvman.db` before step 2): after step 5 the kernel installs every builtin extension from the self-contained builtin tarballs in the kernel package, without network (`06` §6.2, §6.9), seeds the built-in presets into the catalog (`kernel.preset.catalog.changed {cause: 'seed'}`), and creates and opens the Home workspace `~/kvman`. The shell's first-run screen then applies the chosen preset (`08` §8.3). On an upgrade (a newer kvman version than the one recorded in `kernel_settings` under `kvman.version`), steps 4–5 also install newer builtin tarballs as new versions, reload them where enabled, and re-seed built-in presets (never overwriting applied copies). Every boot ends by recording the running kvman version as `kvman.version`.
 
-**Shutdown** (SIGTERM, `kernel.shutdown`): stop admitting new adapter messages → let in-flight invocations finish for up to 10 s → abort the rest (they redeliver on next boot) → kill process groups → flush the commit pipeline → close SQLite → release the lock. Shutdown is idempotent across repeated signals.
+**Shutdown** (SIGTERM, SIGINT, `kernel.shutdown`): stop admitting new adapter messages → let in-flight invocations finish for up to 10 s → abort the rest: their live events are reset and their rows return to `pending` without counting an attempt, so they redeliver on next boot (ADR 0091) → kill process groups → flush the commit pipeline → close SQLite → release the lock. Shutdown is idempotent across repeated signals. From its start a command, query, or subscription request gets 503 `KERNEL_STOPPING` while `GET /health` still answers (the listener stays open until the end), a request still waiting for a reply answers `202 { id, state }`, and every event stream gets `close { reason: 'shutdown' }` (ADR 0090).
+
+M1.8 builds steps 0–2, 6 (without trust and processes), 7, 8, and the `kvman.version` record; the other steps land with their mechanisms (ADR 0089).
 
 ## 3.10 Daemon lock and identity
 
-- `daemon.lock` is created exclusively (0600) with `{pid, processStart, nonce, port, startedAt}`; `port` is the port actually bound (4173, else the first free one in 4174–4199, `12` §12.5), and every client finds the kernel through it.
-- On collision: read the record; if its PID is alive with the same process start time **and** `GET /health` on its port returns the same `instanceId` (nonce) and `processStart`, another kernel is running → `DAEMON_CONFLICT` (the CLI opens the existing one). Otherwise take over the stale lock and retry exclusive creation.
+- `daemon.lock` is created exclusively (0600, written to a temporary file and hard-linked into place) with `{pid, processStart, nonce, port, startedAt}` (`daemonLockSchema`); `port` is the port bound just before (4173, else the first free one in 4174–4199, or exactly `--port`, `12` §12.5; `PORT_UNAVAILABLE` when none is free), and every client finds the kernel through it. `processStart` is the opaque `ps -o lstart= -p <pid>` string read with `LC_ALL=C`; `nonce` is a UUID v4 and is the `instanceId` (ADR 0088).
+- On collision: read the record; if its PID is alive with the same process start time, another kernel owns the home folder → `DAEMON_CONFLICT` (its `/health` only identifies the running instance). Otherwise (a dead PID, another start time, or a record that does not parse) take over the stale lock: rename it away, check that it is the record that was read, delete it, and retry exclusive creation.
 - Release only removes the lock if the nonce still matches.
 
 ## 3.11 Performance design

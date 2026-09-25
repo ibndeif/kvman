@@ -16,14 +16,14 @@ async function counterRefusal(): Promise<unknown> {
 
 describe('quarantine (plan 03 §3.6, ADRs 0080, 0081, 0086)', workerTests, () => {
   it('M1.7-H4 three crashes in 10 minutes quarantine the extension with HOST_FAILURES', async () => {
-    fixture = openHostFixture();
+    fixture = await openHostFixture();
     await crashCounterThreeTimes();
     expect(rows(fixture, "SELECT payload FROM events WHERE type = 'kernel.extension.quarantined'")).toEqual([{ payload: JSON.stringify({ name: '@acme/counter', reason: 'HOST_FAILURES' }) }]);
     expect(await counterRefusal()).toBe('HANDLER_UNAVAILABLE');
   });
 
   it('M1.7-E15 a quarantine is kept across a restart, and queued messages wait', async () => {
-    fixture = openHostFixture();
+    fixture = await openHostFixture();
     const queued = await send(fixture, 'counter.increment', {}, { delayMs: 1_000 });
     await crashCounterThreeTimes();
     fixture.timers.advance(1_000);
@@ -36,7 +36,7 @@ describe('quarantine (plan 03 §3.6, ADRs 0080, 0081, 0086)', workerTests, () =>
   });
 
   it('M1.7-E16 manifest drift quarantines with EXT_MANIFEST_INVALID', async () => {
-    fixture = openHostFixture();
+    fixture = await openHostFixture();
     expect(await run(fixture, 'drift.run')).toMatchObject({ ok: false, problem: { code: 'EXT_MANIFEST_INVALID', retryable: false } });
     await eventually(() => expect(rows(fixture, 'SELECT name, quarantine_reason FROM extensions')).toEqual([{ name: '@acme/drift', quarantine_reason: 'EXT_MANIFEST_INVALID' }]));
   });

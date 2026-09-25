@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { KernelRegistry } from '../../src/index.ts';
+import { KernelRegistry, kernelTypeEntries } from '../../src/index.ts';
 import { handlerPublish } from '../router/outcomes.ts';
 import { openRouterFixture, ulids } from '../router/harness.ts';
 import { command, manifest, workspaceA, workspaceB } from './manifests.ts';
@@ -22,5 +22,13 @@ describe('kernel types in the registry (ADR 0061)', () => {
     const fixture = openRouterFixture();
     const payload = { messageId: ulids.next(), type: 'pdf.translate', correlationId: ulids.next() };
     expect(await handlerPublish(fixture, '@acme/pdf', { type: 'kernel.message.dead-lettered', payload })).toBe('CAPABILITY_DENIED');
+  });
+
+  it('M1.8-E67 the new kernel types are registered', () => {
+    const entries = new Map(kernelTypeEntries().map((entry) => [entry.type, entry]));
+    expect(entries.get('kernel.health.get')).toMatchObject({ kind: 'query', access: 'all', handler: 'query:kernel.health.get', input: { type: 'object' }, output: { type: 'object' } });
+    expect(entries.get('kernel.shutdown')).toMatchObject({ kind: 'command', access: 'user', handler: 'command:kernel.shutdown', input: { type: 'object' }, output: { type: 'object' } });
+    expect(entries.get('kernel.started')).toMatchObject({ kind: 'event', delivery: 'transient', payload: { type: 'object', required: ['version', 'instanceId'] } });
+    expect(registry(new Map()).lookup('kernel.health.get', undefined)).toMatchObject({ ok: true, resolved: { extension: 'kernel', global: true } });
   });
 });

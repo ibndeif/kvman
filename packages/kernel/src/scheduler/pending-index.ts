@@ -55,8 +55,11 @@ function entryOf({ message, handler }: AdmittedMessage, seq: number, now: number
   };
 }
 
-const rebuildSql = `SELECT id, seq, kind, type, handler, workspace_id, lane, priority, not_before, deadline_at, attempts, updated_at
-  FROM messages WHERE state = 'pending' ORDER BY seq`;
+const entryColumns = 'id, seq, kind, type, handler, workspace_id, lane, priority, not_before, deadline_at, attempts, updated_at';
+
+const rebuildSql = `SELECT ${entryColumns} FROM messages WHERE state = 'pending' ORDER BY seq`;
+
+const storedSql = `SELECT ${entryColumns} FROM messages WHERE id = ? AND state = 'pending'`;
 
 // ADR 0084: an awaiting command's deadline is watched too; after a restart its timer is rebuilt (03 §3.9).
 const awaitingDeadlinesSql = "SELECT id, deadline_at FROM messages WHERE state = 'awaiting' AND deadline_at IS NOT NULL";
@@ -81,6 +84,15 @@ export class PendingIndex implements PendingSink {
     for (const row of connection.prepare(rebuildSql).all()) index.place(entryOfRow(row));
     for (const row of connection.prepare(awaitingDeadlinesSql).all()) index.deadlines.watch(String(row['id']), Number(row['deadline_at']));
     return index;
+  }
+
+  // Messages the kernel set back to pending itself (boot recovery, ADR 0091) join the index from their rows.
+  placeStored(connection: Connection, messageIds: readonly string[]): void {
+    for (const messageId of messageIds) {
+      const row = connection.prepare(storedSql).get(messageId);
+      if (row !== undefined) this.place(entryOfRow(row));
+    }
+    this.#notify();
   }
 
   onAdded(listener: () => void): void {

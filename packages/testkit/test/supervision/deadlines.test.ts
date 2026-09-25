@@ -3,8 +3,8 @@ import {
   eventually, kv, objectOf, openHostFixture, pendingWithAttempts, restartRuntime, row, rows, send, value, workspaceA, type HostFixture, workerTests } from '../hosts/harness.ts';
 
 let fixture: HostFixture;
-beforeEach(() => {
-  fixture = openHostFixture();
+beforeEach(async () => {
+  fixture = await openHostFixture();
 });
 afterEach(() => fixture.close());
 

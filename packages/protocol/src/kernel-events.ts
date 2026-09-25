@@ -14,3 +14,8 @@ export type QuarantineReason = z.infer<typeof quarantineReasonSchema>;
 export const extensionQuarantinedSchema = z.strictObject({ name: z.string().min(1), reason: quarantineReasonSchema });
 
 export type ExtensionQuarantined = z.infer<typeof extensionQuarantinedSchema>;
+
+// 03 §3.9 step 8: boot finished; transient.
+export const kernelStartedSchema = z.strictObject({ version: z.string().min(1), instanceId: z.uuidv4() });
+
+export type KernelStarted = z.infer<typeof kernelStartedSchema>;

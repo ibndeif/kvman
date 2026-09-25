@@ -56,6 +56,7 @@ export class Scheduler {
   readonly #queries = new QueryQueue();
   #pumpRequested = false;
   #stopped = false;
+  #started = false;
   #wake: { at: number; handle: TimerHandle } | undefined;
 
   constructor(options: SchedulerOptions) {
@@ -64,7 +65,9 @@ export class Scheduler {
   }
 
   // At boot, a lane whose message waits for its retry stays held so the rest of the lane stays behind it.
+  // Nothing is claimed before start: boot recovery commits first, so a recovered message heads its lane (ADR 0091).
   start(): void {
+    this.#started = true;
     for (const entry of this.#options.index.timerWheel()) {
       if (entry.laneKey !== undefined && entry.attempts > 0) this.#inFlight.holdLane(entry.laneKey, entry.id);
     }
@@ -85,7 +88,7 @@ export class Scheduler {
 
   pump(): void {
     this.#pumpRequested = false;
-    if (this.#stopped) return;
+    if (this.#stopped || !this.#started) return;
     const now = this.#options.now();
     this.#options.index.promoteDue(now);
     const expired = this.#options.index.deadlines.due(now);

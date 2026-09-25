@@ -80,8 +80,10 @@ export function markRetry(connection: Connection, messageId: string, attempts: n
     .run(attempts, JSON.stringify(outcome.reply), now, messageId);
 }
 
-export function insertEvent(connection: Connection, event: Message, now: number): void {
-  connection
+// The row keeps the event's own createdAt, so a replay on the event stream equals the live push (ADR 0027).
+export function insertEvent(connection: Connection, event: Message): number {
+  return connection
     .prepare('INSERT INTO events (id, type, source, workspace_id, payload, correlation_id, causation_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-    .run(event.id, event.type, event.source, event.workspaceId ?? null, JSON.stringify(event.payload), event.correlationId, event.causationId ?? null, now);
+    .run(event.id, event.type, event.source, event.workspaceId ?? null, JSON.stringify(event.payload), event.correlationId, event.causationId ?? null, event.createdAt)
+    .lastInsertRowid;
 }

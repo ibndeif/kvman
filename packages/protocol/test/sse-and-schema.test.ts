@@ -35,7 +35,7 @@ describe('SSE messages and the schema endpoint (plan 12 §12.3, §12.7, ADRs 002
     expectRoundTrip(sseMessageSchemas.reply, { clientId: 'tab-1', id, ok: false, problem: { code: 'CANCELLED', title: 'The message was cancelled', retryable: false, correlationId: id } });
     expectRoundTrip(sseMessageSchemas.ui, { clientId: 'tab-1', type: 'ui.toast', source: 'ext:@acme/pdf', payload: { text: '$t.toast.imported' } });
     expectRoundTrip(sseMessageSchemas.ui, { type: 'ui.navigate', source: 'ext:@acme/pdf', payload: { route: '/files/f1' } });
-    expectRoundTrip(sseMessageSchemas.resync, { reason: 'cursor too old' });
+    expectRoundTrip(sseMessageSchemas.resync, { reason: 'cursor-expired' });
     expectRoundTrip(sseMessageSchemas.close, { reason: 'slow-consumer' });
     expect(issuePaths(sseMessageSchemas.close, { reason: 'bored' })).toEqual(['reason']);
     expect(issuePaths(sseMessageSchemas.live, { sid: 'q2', type: 'pdf.progress.updated', key: 'f1', run: id, n: -1, chunk: { text: '' } })).toEqual(['n']);

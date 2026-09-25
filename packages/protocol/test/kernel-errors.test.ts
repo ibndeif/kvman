@@ -13,18 +13,18 @@ const catalogOfPlan = [
   'LLM_CALL_FAILED', 'PROVIDER_CONFLICT', 'EXT_SOURCE_INVALID', 'EXT_INTEGRITY', 'EXT_MANIFEST_INVALID',
   'EXT_REQUIRES_MISSING', 'EXT_IN_USE', 'EXT_QUARANTINED', 'EXT_ROLLBACK_BLOCKED', 'EXT_GRANTS_REQUIRED',
   'SCHEMA_TOO_NEW', 'MIGRATION_FAILED', 'CONFIRMATION_EXPIRED', 'DAEMON_CONFLICT', 'HOME_INVALID', 'HOST_FORBIDDEN',
-  'INTERNAL',
+  'NOT_FOUND', 'PORT_UNAVAILABLE', 'KERNEL_STOPPING', 'INTERNAL',
 ];
 
 const retryableByDefault = [
   'HANDLER_TIMEOUT', 'STORAGE_CONFLICT', 'STORAGE_UNAVAILABLE', 'QUERY_TIMEOUT', 'LLM_CALL_FAILED',
-  'CONFIRMATION_EXPIRED', 'INTERNAL',
+  'CONFIRMATION_EXPIRED', 'KERNEL_STOPPING', 'INTERNAL',
 ];
 
 describe('kernel error catalog (plan 13 §13.2)', () => {
-  it('M0.2-E14 the constants hold exactly the 60 codes, each with a title', () => {
+  it('M0.2-E14 the constants hold exactly the 63 codes (ADRs 0090, 0095), each with a title', () => {
     expect(Object.keys(kernelErrors).sort()).toEqual([...catalogOfPlan].sort());
-    expect(catalogOfPlan).toHaveLength(60);
+    expect(catalogOfPlan).toHaveLength(63);
     for (const definition of Object.values(kernelErrors)) expect(definition.title.length).toBeGreaterThan(0);
   });
 

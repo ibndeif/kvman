@@ -17,8 +17,8 @@ All adapters are thin: they authenticate the caller, turn a request into a messa
 | Method | Path | Body | Response |
 |---|---|---|---|
 | GET | `/health` | — | the `kernel.health.get` result (`03` §3.8): `{ status, version, instanceId, processStart, uptimeMs, port, home }` |
-| POST | `/commands/:type` | `{ payload, workspaceId?, lane?, idempotencyKey, priority?, wait?: ms }` | `200 { id, reply }`: the handler's result, in the same response. `202 { id, state }` only if the handler deferred its reply, if `wait` (default and maximum 60 s) passed first, or if the caller sent `wait: 0` |
-| GET | `/messages/:id` | — | `{ id, type, state, reply?, problem? }` |
+| POST | `/commands/:type` | `{ payload, workspaceId?, lane?, idempotencyKey, priority?, wait?: ms }` | `200 { id, reply }`: the handler's result value, in the same response; a failed reply answers its Problem (ADR 0094). `202 { id, state }` only if the handler deferred its reply, if `wait` (default and maximum 60 s) passed first, or if the caller sent `wait: 0` |
+| GET | `/messages/:id` | — | `{ id, type, state, reply?, problem? }`: `reply` is a successful reply's value, `problem` a failed one's Problem; an unknown id is 404 `NOT_FOUND` |
 | POST | `/queries/:type` | `{ payload, workspaceId? }` | `200 { data }` |
 | GET | `/schema?workspaceId=&q=` | — | registry (§12.7) |
 | GET | `/ui?workspaceId=` | — | the workspace's UI registry (`08` §8.6); `ETag`, `304` on `If-None-Match` |
@@ -31,7 +31,18 @@ All adapters are thin: they authenticate the caller, turn a request into a messa
 | DELETE | `/subscriptions/:sid?stream=` | — | `204` |
 
 - All bodies are JSON (`Content-Type: application/json` required on POST), validated by Zod, with a Problem envelope on errors (`13` §13.1).
-- Status codes: 304 not modified (the `/ui` routes), 400 validation, 403 capability/host, 404 type or message not found, 409 idempotency or revision conflict, 413 payload too large, 422 domain problem, 503 unavailable. A command still running when its request ends answers `202` (not an error).
+- Status codes: 304 not modified (the `/ui` routes), 400 validation, 403 capability/host, 404 type or message not found, 409 idempotency or revision conflict, 413 payload too large, 422 domain problem, 500 internal, 503 unavailable. A command still running when its request ends answers `202` (not an error). Admission refusals, edge refusals, and failed replies all use one table (ADR 0094):
+
+  | Status | Codes |
+  |---|---|
+  | 400 | `VALIDATION_FAILED` (also a missing JSON `Content-Type`, an unparsable body, or a bad header) |
+  | 403 | `CAPABILITY_DENIED`, `CALLER_NOT_ALLOWED`, `HOST_FORBIDDEN` (also a refused `Sec-Fetch-Site`) |
+  | 404 | `TYPE_NOT_FOUND`, `NOT_FOUND` (unknown message or route) |
+  | 409 | `IDEMPOTENCY_MISMATCH`, `STORAGE_CONFLICT`, every `*_STALE`, every `*_CONFLICT` |
+  | 413 | `PAYLOAD_TOO_LARGE`, `BLOB_TOO_LARGE` |
+  | 500 | `INTERNAL` |
+  | 503 | `HANDLER_UNAVAILABLE`, `STORAGE_UNAVAILABLE`, `KERNEL_STOPPING` |
+  | 422 | every other code: extension codes, `DEADLINE_EXCEEDED`, `CANCELLED`, `MESSAGE_DEAD`, `HANDLER_TIMEOUT`, `QUERY_TIMEOUT`, `LANE_REENTRANT`, … |
 - Commands and queries answer in the same response: the adapter holds the request open while the kernel calls the registered handler and returns its result (`02` §2.3). Handlers are short by design (long work uses continuations, deferred replies, and live events), so requests stay short.
 - Shell requests add `X-Kvman-Stream` and `X-Kvman-Client` headers so late replies and `ui.navigate` reach the right tab (§12.3).
 - No feature-specific routes exist. "List sessions" is `POST /api/v1/queries/agent.sessions.list`; "translate" is `POST /api/v1/commands/pdf.translate`. Commands and queries both carry their type in the path, so logs and `curl` read the same way. The `/ui` routes are GET forms of the kernel queries `kernel.ui.get`, `kernel.ui.page.get`, and `kernel.ui.translations.get`, so browsers can cache them with ETags.
@@ -51,7 +62,8 @@ Messages on the stream (`event:` name, then `data:` JSON):
 ```ts
 hello   { userId, cursor, protocolVersion, kernelVersion, subscriptions: string[] /* sids still registered */,
           notifications: { unread, attention } }
-event   { sid, seq, event }            // durable events also carry `id: <seq>` (the resume cursor); event =
+event   { sid, seq, event }            // durable events also carry `id: <seq>` (the resume cursor); a transient
+                                        // event's seq is the cursor when it is sent, with no `id:` (ADR 0098); event =
                                         // { id, type, source, workspaceId?, payload, correlationId, causationId?,
                                         //   createdAt }: the `events` table's fields, pushed or replayed (ADR 0027)
 live    { sid, type, key, run, n, chunk }  // a live event (02 §2.3); run = publishing message id; n counts per
@@ -66,6 +78,8 @@ close   { reason: 'slow-consumer' | 'shutdown' }
 - **Ordering across the two channels is not guaranteed.** An event caused by a command can arrive before that command's POST response. The shell keys pending and optimistic state by the client-generated `idempotencyKey`, never by the kernel's message ID.
 - **Resume**: durable events carry `id: <seq>`, so `EventSource` reconnects with `Last-Event-ID` by itself (a new stream holder passes `?lastEventId=` instead). Subscriptions live in memory per stream and survive a reconnect for 5 minutes; the kernel replays matching `events` rows after the cursor. `hello.subscriptions` lists the sids still registered; the shell re-subscribes the rest with `since: <cursor>` (after a kernel restart, all of them). A cursor older than retention gets `resync`. After a reconnect the shell checks commands still waiting for a reply with `GET /messages/:id`.
 - **One stream per browser.** Browsers allow only 6 HTTP/1.1 connections per host, and plain localhost HTTP never uses HTTP/2, so one long-lived stream per tab would stall requests once 6 tabs are open. The shell opens the stream in a `SharedWorker` and routes messages to tabs by `sid` and `clientId`. Where `SharedWorker` is unavailable, the tab holding the Web Lock `kvman-stream` opens it and relays over `BroadcastChannel`; when that tab closes, another tab takes the lock and reconnects with the last cursor. Widget origins are separate hosts and do not share this limit (widgets use the bridge anyway).
+- **Scope and connections** (ADR 0098): a subscription with `workspaceId` receives that workspace's events and global ones; without it, every event; live events follow the same rule, and a new live subscription first receives the address's ring (`02` §2.5). A new connection for a stream id replaces the open one (the old response ends with no message). `POST /subscriptions` for a stream with no open connection answers 404 `NOT_FOUND`; `DELETE` of an unknown sid answers 204. A late reply for a stream that is not connected is dropped (the shell checks `GET /messages/:id` after reconnecting).
+- **Resync** (ADR 0098): `cursor-expired` when `Last-Event-ID` or `since` is older than the oldest kept event row, `cursor-unknown` when it is ahead of the newest seq. The kernel drops the stream's subscriptions, sends `resync`, and keeps the connection; the client refetches and re-subscribes.
 - **Backpressure**: each stream has a 1 MB send buffer (`writableLength`). Over the limit, the kernel first drops `live` messages (the client resets and refetches on the gap in `n`), then sends `close { reason: 'slow-consumer' }` and ends the response; `EventSource` reconnects with its cursor.
 - **Security**: `GET /events` requires a valid `Host`, and rejects `Sec-Fetch-Site` values other than `same-origin` when the header is present (browsers always send it; the CLI does not). There are no CORS headers, so another origin can never read the stream. Subscription POST/DELETE go through the normal Origin check (§12.8).
 - **Prompts** need no messages of their own: they are data that tabs read with queries and live events, and answers are ordinary `POST /commands/:type` calls to `access: 'user'` types (`08` §8.13).
@@ -98,10 +112,11 @@ kvman backup <file> · kvman restore <file> · kvman doctor
 every command: [--home <dir>]      # else KVMAN_HOME, else ~/.kvman
 ```
 
-- **Start**: `kvman start` starts the daemon as a background process (detached, output in `logs/kernel.log`) and returns once `GET /health` answers; `--foreground` keeps it attached to the terminal (tests, service managers). Commands that need a running kernel start it the same way.
+- **Start**: `kvman start` starts the daemon as a background process (detached, output in `logs/kernel.log`) and returns once `GET /health` answers; `--foreground` keeps it attached to the terminal (tests, service managers) and also writes the log lines to stdout. Commands that need a running kernel start it the same way. The CLI spawns the kernel's daemon script (`@kvman/kernel/daemon`, found by path, never imported) with `--home <absolute path>`, and the daemon reports `{ ok: true, port }` or `{ ok: false, problem }` once over the IPC channel (ADR 0087).
+- **Output** of `start`, `stop`, and `status` (ADR 0096): `start` prints `kvman is running at http://127.0.0.1:<port> (home <path>)`; `status` prints the `/health` JSON, or `kvman is not running` with exit 1; `stop` sends `kernel.shutdown`, waits for the lock to be released, and prints `kvman stopped` (or `kvman is not running`, exit 0). Problems go to stderr as `CODE: title` (and the hint) with exit 1.
 - **Home**: every command takes `--home <dir>`, else `KVMAN_HOME`, else `~/.kvman`, and finds the kernel through that home's `daemon.lock`. A home folder that holds other files but no `kvman.db` is refused (`HOME_INVALID`, `03` §3.9).
 - **npm registry**: `KVMAN_NPM_REGISTRY`, read when the kernel starts (default `https://registry.npmjs.org/`), is the registry the bundled pnpm uses for `npm:` sources (`06` §6.2). Tests point it at a local registry.
-- **Port**: `kvman start` binds 4173, else the first free port in 4174–4199, and records it in `daemon.lock` (`03` §3.10). Every other CLI command, `kvman open`, and the `kv` shim find the kernel through the lock, never by assuming 4173. `--port <n>` binds exactly `n` and fails with a clear message if it is taken.
+- **Port**: `kvman start` binds 4173, else the first free port in 4174–4199, and records it in `daemon.lock` (`03` §3.10). Every other CLI command, `kvman open`, and the `kv` shim find the kernel through the lock, never by assuming 4173. `--port <n>` binds exactly `n` and fails with `PORT_UNAVAILABLE` if it is taken (ADR 0097).
 - **Workspace**: every workspace-scoped command (`send`, `query`, `events`, `ext enable/disable/dev`, `preset apply/export`) takes `--workspace <path>`. Without it, the CLI uses the opened workspace whose folder contains the current directory (the deepest one), else Home, and prints which one it used on stderr.
 - **`kvman ext new <dir>`** creates a ready-to-run extension project from the same template the builder uses (`11` §11.5): `package.json` (with `peerDependencies['@kvman/sdk']` set to the running version), `src/extension.ts` with one command, one query, one event, and one page, `locales/en.json` and `locales/ar.json`, a passing test, `tsconfig.json`, and a README with the next steps (`kvman ext dev . --watch`, `npm test`, `npm publish`). The namespace defaults to the folder name.
 - **`kvman ext install <source>`** stages the source, prints the same preview the grant dialog shows, asks `y/N` (`--yes` skips it), and installs; installing never enables (`06` §6.2).
@@ -151,7 +166,7 @@ Filtered to what is enabled in the given workspace; `q` does a ranked text searc
 
 ## 12.8 Browser security at the edge
 
-- Bind to `127.0.0.1` by default. Binding elsewhere requires `--unsafe-bind` and prints a warning (no auth in v2).
+- Bind to `127.0.0.1`. Binding elsewhere (`--unsafe-bind`) is in the post-v2 backlog until the `Host` values a non-loopback bind accepts are decided (ADR 0097).
 - **Host check**: every HTTP request, including the event stream, must have `Host` equal to `127.0.0.1:<port>`, `localhost:<port>`, or a widget origin (for widget files only). This blocks DNS-rebinding attacks.
 - **Origin check** on every non-GET request: a request **with** an `Origin` header must name the served origin (`http://127.0.0.1:<port>` or `http://localhost:<port>`), else `HOST_FORBIDDEN`; a request **without** `Origin` is accepted, because it comes from a non-browser client (the CLI, a script), which is the stated localhost boundary (`13` §13.6). Browsers always send `Origin` on cross-origin requests and on every POST, so a page on another site is always refused. Any request carrying `Sec-Fetch-Site` must have `same-origin` (or `none`, a typed URL, for GET only). `GET /events` follows the same rules (§12.3). Widget origins can only fetch their own static files.
 - JSON-only request bodies, no cookies, no CORS allowances.

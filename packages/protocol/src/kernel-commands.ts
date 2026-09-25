@@ -11,3 +11,12 @@ export type CancelRequest = z.infer<typeof cancelRequestSchema>;
 export const cancelResultSchema = z.strictObject({ cancelled: z.number().int().nonnegative() });
 
 export type CancelResult = z.infer<typeof cancelResultSchema>;
+
+// 03 §3.8, ADR 0090: shutdown starts once the command's unit commits.
+export const shutdownRequestSchema = z.strictObject({});
+
+export type ShutdownRequest = z.infer<typeof shutdownRequestSchema>;
+
+export const shutdownResultSchema = z.strictObject({});
+
+export type ShutdownResult = z.infer<typeof shutdownResultSchema>;

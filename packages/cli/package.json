@@ -3,6 +3,9 @@
   "version": "0.0.0",
   "description": "The kvman command and the kv shim.",
   "type": "module",
+  "bin": {
+    "kvman": "./dist/main.js"
+  },
   "exports": {
     ".": {
       "@kvman/source": "./src/index.ts",
@@ -10,9 +13,15 @@
       "default": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@kvman/kernel": "workspace:*",
+    "@kvman/protocol": "workspace:*"
   }
 }

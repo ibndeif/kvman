@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { eventually, openHostFixture, pendingWithAttempts, replyOf, row, send, type HostFixture, workerTests } from './harness.ts';
 
 let fixture: HostFixture;
-beforeEach(() => {
-  fixture = openHostFixture();
+beforeEach(async () => {
+  fixture = await openHostFixture();
 });
 afterEach(() => fixture.close());
 

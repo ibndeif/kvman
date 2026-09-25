@@ -99,7 +99,7 @@ function applyContents(connection: Connection, unit: CommitUnit, admission: Admi
   const scope: UnitScope = {
     connection, admission, now, sender: senderOf(origin), cause, correlationId: correlationOf(origin),
     workspaceId: origin.kind === 'adapter' ? origin.workspaceId : cause?.workspaceId,
-    applied: { inserted: [], duplicates: [], announced: [], unstored: [], replies: [], ended: [] },
+    applied: { inserted: [], duplicates: [], logged: [], announced: [], unstored: [], replies: [], ended: [] },
   };
   unit.sends.forEach((send, index) => admitSend(scope, send, index, index === 0 ? firstSendId(unit) : undefined));
   for (const publish of unit.publishes) admitPublish(scope, publish);

@@ -1,4 +1,4 @@
-import type { ReplyPayload } from '@kvman/protocol';
+import type { HealthResult, MessageStatus, ReplyPayload } from '@kvman/protocol';
 import { CallDepths } from '../hosts/call-depths.ts';
 import { HostFailures } from '../hosts/host-failures.ts';
 import { HostManager, type ExtensionModules } from '../hosts/host-manager.ts';
@@ -9,7 +9,7 @@ import { LiveBus } from '../hosts/live-bus.ts';
 import { Quarantines } from '../hosts/quarantines.ts';
 import { QueryPath, type QueryAnswer } from '../hosts/query-path.ts';
 import { RecordedValueStore } from '../hosts/recorded-value-store.ts';
-import { ReplyWaiters } from '../hosts/reply-waiters.ts';
+import { ReplyWaiters, type ReplyListener } from '../hosts/reply-waiters.ts';
 import { RpcService } from '../hosts/rpc-service.ts';
 import { Settlement } from '../hosts/settlement.ts';
 import type { RegistryInput } from '../registry/kernel-registry.ts';
@@ -23,9 +23,12 @@ import { PendingIndex } from '../scheduler/pending-index.ts';
 import { Scheduler } from '../scheduler/scheduler.ts';
 import type { SchedulerTimers } from '../scheduler/timers.ts';
 import { CommitPipeline } from '../storage/commit-pipeline.ts';
+import { readMessageStatus } from '../storage/message-status.ts';
 import type { Connection } from '../storage/driver.ts';
 import { StepJournal } from '../store/step-journal.ts';
 import type { UlidGenerator } from '../ulid.ts';
+import { recoverInterrupted } from './crash-recovery.ts';
+import { healthOf, type KernelIdentity } from './health.ts';
 
 export type KernelRuntimeOptions = {
   databaseFile: string;
@@ -39,11 +42,18 @@ export type KernelRuntimeOptions = {
   timers: SchedulerTimers;
   poolSize: number;
   defaultLocale: () => string;
+  identity: KernelIdentity;
+  // kernel.shutdown committed (ADR 0090): the daemon runs its shutdown.
+  requestShutdown: () => void;
   startThread?: StartHostThread;
 };
 
+// 03 §3.9: in-flight invocations get this long to finish at shutdown.
+export const shutdownGraceMs = 10_000;
+
 // The kernel's message path in one process (03 §3.2): router, commit pipeline, pending index, scheduler, the shared
 // pool with its supervision, the kernel host, and the live bus, wired so every kind is delivered the same way.
+// Nothing is claimed until start() has recovered what a crash interrupted.
 export class KernelRuntime {
   readonly router: Router;
   readonly pipeline: CommitPipeline;
@@ -55,9 +65,11 @@ export class KernelRuntime {
   readonly #adapter: AdapterPath;
   readonly #waiters: ReplyWaiters;
   readonly #queries: QueryPath;
+  readonly #options: KernelRuntimeOptions;
 
   constructor(options: KernelRuntimeOptions) {
     const { connection, ids, now, timers } = options;
+    this.#options = options;
     this.registry = new RegistryState(options.extensions, connection);
     const registry = () => this.registry.current();
     this.index = PendingIndex.rebuild(connection, now);
@@ -78,6 +90,13 @@ export class KernelRuntime {
     this.#adapter = new AdapterPath(this.pipeline, ids);
     this.#queries = new QueryPath(this.router, this.scheduler);
     this.#connectHosts(options, values);
+  }
+
+  // 03 §3.9 step 6, ADR 0091: rows a crash left running are recovered before the scheduler claims anything.
+  async start(): Promise<void> {
+    const { connection, now } = this.#options;
+    const recovered = await recoverInterrupted({ connection, pipeline: this.pipeline, registry: () => this.registry.current(), now });
+    this.index.placeStored(connection, recovered);
     this.scheduler.start();
   }
 
@@ -89,12 +108,31 @@ export class KernelRuntime {
     return this.#waiters.wait(messageId);
   }
 
+  listenForReply(messageId: string, listener: ReplyListener): () => void {
+    return this.#waiters.listen(messageId, listener);
+  }
+
+  messageStatus(messageId: string): MessageStatus | undefined {
+    return readMessageStatus(this.#options.connection, messageId);
+  }
+
+  health(): HealthResult {
+    return healthOf(this.#options.connection, this.#options.identity, this.#options.now());
+  }
+
   query(request: QueryRequest): Promise<QueryAnswer> {
     return this.#queries.ask(request);
   }
 
+  // Shutdown (03 §3.9, ADR 0091): nothing new is claimed, and running invocations get the grace to finish; the rest
+  // return to pending without an attempt.
+  async drain(graceMs = shutdownGraceMs): Promise<void> {
+    this.scheduler.stop();
+    await this.hosts.drain(graceMs);
+  }
+
   // Nothing new is claimed or dispatched, workers end, and every caller still waiting is answered, so the work
-  // already started can finish before the database closes.
+  // already started can finish before the database closes. Without drain() first, this is how a crash leaves rows.
   stop(): Promise<void> {
     this.scheduler.stop();
     const stopped = this.hosts.stop();
@@ -115,8 +153,8 @@ export class KernelRuntime {
       pipeline: this.pipeline, scheduler: this.scheduler, waiters: this.#waiters, queries: this.#queries, live: this.live, values, quarantines,
     });
     const kernel = new KernelHost({
-      connection, pipeline: this.pipeline, scheduler: this.scheduler, waiters: this.#waiters, grants: options.grants,
-      abortMessages: (messageIds) => this.hosts.abortMessages(messageIds),
+      connection, pipeline: this.pipeline, scheduler: this.scheduler, waiters: this.#waiters, grants: options.grants, queries: this.#queries,
+      abortMessages: (messageIds) => this.hosts.abortMessages(messageIds), health: () => this.health(), requestShutdown: options.requestShutdown,
     });
     this.hosts.connect({
       called: (invocation, call) => rpc.handle(invocation, call),
@@ -127,6 +165,7 @@ export class KernelRuntime {
       timedOut: (invocation, reason) => settlement.timedOut(invocation, reason),
       aborted: (invocation) => settlement.aborted(invocation),
       collateral: (invocation) => settlement.collateral(invocation),
+      interrupted: (invocation) => settlement.interrupted(invocation),
       quarantine: (extension, reason) => quarantines.quarantine(extension, reason),
       kernelCommand: (claim) => kernel.run(claim),
     });

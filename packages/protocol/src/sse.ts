@@ -32,8 +32,10 @@ export const sseMessageSchemas = {
     z.strictObject({ clientId: z.string().min(1).exactOptional(), type: z.literal('ui.dismiss'), source: addressSchema, payload: dismissSchema }),
     z.strictObject({ clientId: z.string().min(1).exactOptional(), type: z.literal('ui.navigate'), source: addressSchema, payload: navigateSchema }),
   ]),
-  resync: z.strictObject({ reason: z.string().min(1) }),
+  resync: z.strictObject({ reason: z.enum(['cursor-expired', 'cursor-unknown']) }),
   close: z.strictObject({ reason: z.enum(['slow-consumer', 'shutdown']) }),
 } as const;
 
 export type SseMessageName = keyof typeof sseMessageSchemas;
+
+export type SseMessage<Name extends SseMessageName> = z.infer<(typeof sseMessageSchemas)[Name]>;

@@ -1,4 +1,4 @@
-import type { Admission, CommitResult, CommitUnit } from './commit-unit.ts';
+import type { Admission, AppliedMessages, CommitResult, CommitUnit } from './commit-unit.ts';
 import { correlationOf } from './commit-unit.ts';
 import { StorageFailure, type Connection } from './driver.ts';
 import type { PendingSink } from '../scheduler/pending-index.ts';
@@ -15,6 +15,9 @@ export type CommitPipelineOptions = {
 
 type QueuedUnit = { unit: CommitUnit; resolve: (result: CommitResult) => void; reject: (error: unknown) => void };
 
+// Told about every unit that commits, after the transaction and before its sender learns the result.
+export type CommitListener = (applied: AppliedMessages) => void;
+
 export class CommitPipeline {
   readonly #connection: Connection;
   readonly #admission: Admission;
@@ -22,6 +25,7 @@ export class CommitPipeline {
   readonly #pending: PendingSink | undefined;
   readonly #maxBatchUnits: number;
   readonly #maxBatchDelayMs: number;
+  readonly #listeners = new Set<CommitListener>();
   #queue: QueuedUnit[] = [];
   #timer: ReturnType<typeof setTimeout> | undefined;
 
@@ -32,6 +36,11 @@ export class CommitPipeline {
     this.#pending = options.pending;
     this.#maxBatchUnits = options.maxBatchUnits ?? 64;
     this.#maxBatchDelayMs = options.maxBatchDelayMs ?? 2;
+  }
+
+  observe(listener: CommitListener): () => void {
+    this.#listeners.add(listener);
+    return () => this.#listeners.delete(listener);
   }
 
   enqueue(unit: CommitUnit): Promise<CommitResult> {
@@ -49,19 +58,27 @@ export class CommitPipeline {
   }
 
   #commitBatch(batch: QueuedUnit[]): void {
+    const outcomes = this.#applyBatch(batch);
+    if (outcomes === undefined) return;
+    for (const { result } of outcomes) {
+      if (!result.committed) continue;
+      this.#pending?.add(result.inserted);
+      if (result.unstored.length > 0) this.#pending?.addUnstored(result.unstored);
+      for (const listener of this.#listeners) listener(result);
+    }
+    for (const { queued, result } of outcomes) queued.resolve(result);
+  }
+
+  #applyBatch(batch: QueuedUnit[]): Array<{ queued: QueuedUnit; result: CommitResult }> | undefined {
     const now = this.#now();
     try {
       this.#connection.exec('BEGIN IMMEDIATE');
       const outcomes = batch.map((queued) => ({ queued, result: applyUnit(this.#connection, queued.unit, this.#admission, now) }));
       this.#connection.exec('COMMIT');
-      for (const { result } of outcomes) {
-        if (!result.committed) continue;
-        this.#pending?.add(result.inserted);
-        if (result.unstored.length > 0) this.#pending?.addUnstored(result.unstored);
-      }
-      for (const { queued, result } of outcomes) queued.resolve(result);
+      return outcomes;
     } catch (error) {
       this.#endFailedBatch(batch, error);
+      return undefined;
     }
   }
 
