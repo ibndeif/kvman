@@ -11,7 +11,8 @@
     "lint": "eslint . --max-warnings=0",
     "test": "vitest run",
     "build": "turbo run build",
-    "bench:check": "node scripts/bench-check.ts",
+    "bench:check": "node --conditions=@kvman/source packages/testkit/bench/main.ts check",
+    "bench:record": "node --conditions=@kvman/source packages/testkit/bench/main.ts record",
     "changeset": "changeset"
   },
   "devDependencies": {

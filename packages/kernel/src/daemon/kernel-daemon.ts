@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { kernelPorts, type KernelStarted } from '@kvman/protocol';
 import { EventHub } from '../adapters/events/event-hub.ts';
 import { HttpAdapter } from '../adapters/http/http-adapter.ts';
+import type { FaultPoints } from '../faults/fault-points.ts';
 import type { ExtensionModules } from '../hosts/host-manager.ts';
 import type { StartHostThread } from '../hosts/host-thread.ts';
 import type { KernelLogger } from '../hosts/kernel-logger.ts';
@@ -37,6 +38,7 @@ export type BootOptions = {
   openLogger: (home: string) => DaemonLogger;
   defaultLocale: () => string;
   startThread?: StartHostThread;
+  faults?: FaultPoints;
 };
 
 // The kvman version is the kernel package's version (ADR 0089).
@@ -67,6 +69,7 @@ export class Kernel {
       logger: resources.logger, ids: options.ids, now: options.now, timers: options.timers, poolSize: options.poolSize,
       defaultLocale: options.defaultLocale, identity, requestShutdown: () => void this.shutdown(),
       ...(options.startThread === undefined ? {} : { startThread: options.startThread }),
+      ...(options.faults === undefined ? {} : { faults: options.faults }),
     });
     this.#hub = new EventHub({ connection, pipeline: this.runtime.pipeline, live: this.runtime.live, timers: options.timers, version: identity.version });
   }

@@ -100,7 +100,8 @@ export function openRouterFixture(): RouterFixture {
   const validators = new PayloadValidators();
   const pending = new PendingIndex(now);
   const router = new Router({ registry: () => build.registry, grants, validators, ids: ulids, now, defaultLocale: () => 'en' });
-  const pipeline = new CommitPipeline({ connection, admission: router, now, pending });
+  const pipeline = new CommitPipeline({ connection, admission: router, now });
+  pipeline.attach(pending);
   return { connection, router, pipeline, adapter: new AdapterPath(pipeline, ulids), grants, pending, validators };
 }
 

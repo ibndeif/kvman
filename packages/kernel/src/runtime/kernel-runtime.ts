@@ -1,4 +1,5 @@
 import type { HealthResult, MessageStatus, ReplyPayload } from '@kvman/protocol';
+import { inertFaults, type FaultPoints } from '../faults/fault-points.ts';
 import { CallDepths } from '../hosts/call-depths.ts';
 import { HostFailures } from '../hosts/host-failures.ts';
 import { HostManager, type ExtensionModules } from '../hosts/host-manager.ts';
@@ -46,6 +47,8 @@ export type KernelRuntimeOptions = {
   // kernel.shutdown committed (ADR 0090): the daemon runs its shutdown.
   requestShutdown: () => void;
   startThread?: StartHostThread;
+  // ADR 0100: the fault points of a test run; inert unless given.
+  faults?: FaultPoints;
 };
 
 // 03 §3.9: in-flight invocations get this long to finish at shutdown.
@@ -69,20 +72,21 @@ export class KernelRuntime {
 
   constructor(options: KernelRuntimeOptions) {
     const { connection, ids, now, timers } = options;
+    const faults = options.faults ?? inertFaults;
     this.#options = options;
     this.registry = new RegistryState(options.extensions, connection);
     const registry = () => this.registry.current();
     this.index = PendingIndex.rebuild(connection, now);
     this.router = new Router({ registry, grants: options.grants, validators: new PayloadValidators(), ids, now, defaultLocale: options.defaultLocale });
-    this.pipeline = new CommitPipeline({ connection, admission: this.router, now, pending: this.index });
+    this.pipeline = new CommitPipeline({ connection, admission: this.router, now, faults });
     this.#waiters = new ReplyWaiters(connection);
     const values = new RecordedValueStore(connection);
     this.hosts = new HostManager({
       connection, registry, modules: options.modules, values, logger: options.logger, ids, poolSize: options.poolSize, timers, now,
-      startThread: options.startThread ?? workerThreadStarter(options.databaseFile), failures: new HostFailures(),
+      startThread: options.startThread ?? workerThreadStarter(options.databaseFile), failures: new HostFailures(), faults,
     });
     this.scheduler = new Scheduler({
-      connection, pipeline: this.pipeline, index: this.index, registry, dispatcher: this.hosts, now, timers,
+      connection, pipeline: this.pipeline, index: this.index, registry, dispatcher: this.hosts, now, timers, faults,
       onCommitted: (result) => {
         if (result.committed) this.#waiters.resolve(result.replies);
       },
@@ -147,6 +151,7 @@ export class KernelRuntime {
     const rpc = new RpcService({
       connection, router: this.router, pipeline: this.pipeline, scheduler: this.scheduler, waiters: this.#waiters, values, ids, registry,
       queries: this.#queries, live: this.live, journal: new StepJournal(connection, options.now), logger: options.logger, depths: new CallDepths(),
+      faults: options.faults ?? inertFaults,
     });
     const quarantines = new Quarantines(this.pipeline, this.registry, ids);
     const settlement = new Settlement({

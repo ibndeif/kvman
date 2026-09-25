@@ -69,7 +69,7 @@ function assemble({ connection, time, index }: Shared): SchedulerFixture {
   grants.grant('@acme/pdf', workspaceA, { requested: [{ name: 'calls', types: ['agent.*'] }] });
   const router = new Router({ registry: () => built, grants, validators: new PayloadValidators(), ids: ulids, now, defaultLocale: () => 'en' });
   const pending = index ?? new PendingIndex(now);
-  const pipeline = new CommitPipeline({ connection, admission: router, now, pending });
+  const pipeline = new CommitPipeline({ connection, admission: router, now });
   const timers = new ManualTimers(time);
   const dispatcher = new TestDispatcher();
   const scheduler = new Scheduler({ connection, pipeline, index: pending, registry: () => built, dispatcher, now, timers, onCommitted: () => undefined });

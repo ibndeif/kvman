@@ -2,6 +2,7 @@ import { availableParallelism } from 'node:os';
 import { isAbsolute, join } from 'node:path';
 import { parseArgs } from 'node:util';
 import type { DaemonStartReport, Problem } from '@kvman/protocol';
+import { faultPointsOf } from '../faults/fault-points.ts';
 import { kernelProblem, ProblemError } from '../problems.ts';
 import { systemTimers } from '../scheduler/timers.ts';
 import { createUlidGenerator } from '../ulid.ts';
@@ -42,11 +43,12 @@ async function main(): Promise<void> {
   if (home === undefined || !isAbsolute(home)) return refuseArguments('--home must be an absolute path');
   if (port !== undefined && !/^\d{1,5}$/.test(port)) return refuseArguments('--port must be a port number');
   try {
+    const faults = faultPointsOf(process.env['KVMAN_FAULTS'], ids.next());
     const kernel = await Kernel.boot({
       home, ...(port === undefined ? {} : { port: Number(port) }), extensions: { extensions: [], enabled: new Map() },
       grants: { capabilities: () => undefined }, modules: { entry: (extension) => { throw new Error(`no installed snapshot of ${extension}`); } },
       poolSize: Math.max(1, Math.min(4, availableParallelism() - 1)), ids, now: Date.now, timers: systemTimers,
-      openLogger: (folder) => openLogger(folder, foreground === true), defaultLocale: () => 'en',
+      openLogger: (folder) => openLogger(folder, foreground === true), defaultLocale: () => 'en', faults,
     });
     process.on('SIGTERM', () => void kernel.shutdown());
     process.on('SIGINT', () => void kernel.shutdown());

@@ -2,6 +2,7 @@ export * from './address.ts';
 export * from './blob-id.ts';
 export * from './canonical-json.ts';
 export * from './daemon.ts';
+export * from './faults.ts';
 export * from './digest.ts';
 export * from './extension/capabilities.ts';
 export * from './extension/config-meta.ts';

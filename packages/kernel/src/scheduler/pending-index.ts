@@ -1,16 +1,12 @@
 import type { MessageKind } from '@kvman/protocol';
-import type { AdmittedMessage, StoredMessage, UnstoredDelivery } from '../storage/commit-unit.ts';
+import type { PendingSink } from '../storage/commit-pipeline.ts';
+import type { AdmittedMessage, AppliedMessages, StoredMessage, UnstoredDelivery } from '../storage/commit-unit.ts';
 import { StorageFailure, type Connection, type SqlRow } from '../storage/driver.ts';
 import { laneKeyOf, priorityOfCode } from '../storage/message-rows.ts';
 import { DeadlineWheel } from './deadline-wheel.ts';
 import { KeylessQueue, LaneQueue, participantOf, type Candidate, type PendingEntry, type RunQueue, type UnstoredEntry } from './run-queues.ts';
 
 export type { Candidate, PendingEntry } from './run-queues.ts';
-
-export interface PendingSink {
-  add(messages: readonly StoredMessage[]): void;
-  addUnstored(deliveries: readonly UnstoredDelivery[]): void;
-}
 
 // A command's handler column is its extension; an event delivery's is <extension>|subscription:<pattern> (ADR 0053).
 // The handler key names one handler function, which is what concurrency limits and keyless queues count.
@@ -74,6 +70,7 @@ export class PendingIndex implements PendingSink {
   readonly #listeners: Array<() => void> = [];
   readonly deadlines = new DeadlineWheel();
   #lastSeq = 0;
+  #staged: AppliedMessages[] = [];
 
   constructor(now: () => number) {
     this.#now = now;
@@ -93,6 +90,33 @@ export class PendingIndex implements PendingSink {
       if (row !== undefined) this.place(entryOfRow(row));
     }
     this.#notify();
+  }
+
+  // Without a scheduler the index is the pipeline's sink: a batch's messages join it once the batch commits.
+  enterBatch(applied: readonly AppliedMessages[]): void {
+    this.#staged.push(...applied);
+  }
+
+  batchCommitted(): void {
+    for (const applied of this.#staged.splice(0)) {
+      this.add(applied.inserted);
+      if (applied.unstored.length > 0) this.addUnstored(applied.unstored);
+    }
+  }
+
+  batchRolledBack(): void {
+    this.#staged = [];
+  }
+
+  // Entries of a batch that rolled back after they joined the index (ADR 0105), and queued unstored deliveries a
+  // cancel ended (ADR 0083); stored rows a cancel ended are skipped at claim instead.
+  remove(ids: ReadonlySet<string>): void {
+    for (const queue of [...this.#lanes.values(), ...this.#keyless.values()]) {
+      for (const entry of queue.entries().filter((candidate) => ids.has(candidate.id))) queue.take(entry);
+      if (queue.isEmpty()) this.#forget(queue);
+    }
+    for (let index = this.#timers.length - 1; index >= 0; index -= 1) if (ids.has(this.#timers[index]?.id ?? '')) this.#timers.splice(index, 1);
+    for (const id of ids) this.deadlines.forget(id);
   }
 
   onAdded(listener: () => void): void {
@@ -133,16 +157,6 @@ export class PendingIndex implements PendingSink {
 
   queuedUnstored(): PendingEntry[] {
     return [...this.#lanes.values(), ...this.#keyless.values()].flatMap((queue) => queue.entries()).filter((entry) => entry.unstored !== undefined);
-  }
-
-  // A queued unstored delivery that was cancelled (ADR 0083); stored rows are skipped at claim instead.
-  removeUnstored(id: string): void {
-    for (const queue of [...this.#lanes.values(), ...this.#keyless.values()]) {
-      const entry = queue.entries().find((candidate) => candidate.id === id);
-      if (entry === undefined) continue;
-      queue.take(entry);
-      if (queue.isEmpty()) this.#forget(queue);
-    }
   }
 
   // A timer that comes due becomes runnable at its notBefore (ADR 0064).

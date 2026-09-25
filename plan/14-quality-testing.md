@@ -31,11 +31,11 @@
 
 ## 14.3 Fault points
 
-The kernel exposes named fault points, active only when `KVMAN_FAULTS` is set (test builds):
+The kernel exposes named fault points. They are compiled into every build and do nothing unless `KVMAN_FAULTS=<point>[@<hit>]` is set when the daemon starts; the kernel then sends itself `SIGKILL` the `<hit>`-th time (default the first) it reaches that point, and an unknown point fails the start with `VALIDATION_FAILED` (ADR 0100, which also places each point M1 reaches):
 
 `admit.before-commit`, `admit.after-commit`, `claim.after`, `invoke.before`, `step.after-begin`, `step.before-record`, `command.after-send`, `uow.before-commit`, `uow.after-commit-before-notify`, `defer.before-reply`, `process.after-spawn-before-release`, `process.after-release`, `process.after-exit-before-onexit`, `reload.after-drain`, `reload.after-migrate-before-swap`, `preset.apply.after-stage`, `preset.apply.after-version-switch`, `migration.mid`, `live.after-publish-before-commit`, `blob.put.after-file-before-ref`, `secrets.after-commit-before-file`, `workspace.forget.after-cancel`, `guard.after-created-before-review`, `dev.build.after-bundle`.
 
-**Invariants checked after every crash + restart:**
+**Invariants checked after every crash + restart** (M1.9 checks 1, 2, 3, 4, 6, and 8; the milestones that build the other mechanisms add theirs):
 1. No committed storage effect is lost or applied twice.
 2. Every command ends in exactly one terminal state with at most one reply.
 3. No message emitted by a handler is duplicated (derived idempotency keys).
@@ -43,7 +43,7 @@ The kernel exposes named fault points, active only when `KVMAN_FAULTS` is set (t
 5. Every process started before the crash is either still tracked or killed and marked, and every detached one that ended receives exactly one `onExit` (`03` §3.7).
 6. Steps that started without recording surface `EFFECT_INDETERMINATE` unless retry-safe.
 7. The agent history has no duplicated or orphaned tool call/result entries.
-8. Every live-event run published by an attempt that did not commit has received `{ reset: true }` (`02` §2.3).
+8. Every live-event run published by an attempt that did not commit has received `{ reset: true }` (`02` §2.3). After a kernel crash the restart is the reset: live rings and counters are memory only, so none of the dead attempt's chunks survive, and `hello` lists no subscription (ADR 0101).
 9. No committed blob reference points to a missing file, and no `pending:` reference survives its invocation's deadline plus 1 h (`04` §4.6).
 10. `secrets.json` parses and equals either the value before or after the interrupted write (`04` §4.7).
 11. No tool command exists for a call that a covering guard (or a `'<ns>'` placeholder) has not allowed (`09` §9.5).
@@ -58,7 +58,7 @@ The kernel exposes named fault points, active only when `KVMAN_FAULTS` is set (t
 - **3. Tests match the scenarios**: one test per scenario, named with its id; no scenario without a test and no test without a scenario. A scenario found missing during implementation is added to the file first (and asked about first if it changes behavior the plan does not specify).
 - **4. Everything passes**: all tests of the repository, not only the new ones, plus the gates below; only then the next milestone starts.
 - **Ask, don't assume.** When the plan does not specify something that affects behavior, a public shape, a dependency, security, or stored data, or two sections seem to disagree, stop and ask the product owner. Never invent an answer. Each answer is recorded as an ADR in `plan/adr/` (and the plan is corrected) before the code lands. Only private names and the internal layout inside a package are the implementer's choice.
-- Gates for every milestone: `pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm bench:check`, all green before the next milestone starts. Until M1.9 creates the benchmark baseline, `bench:check` passes and prints "no baseline yet"; from then on, a benchmark without a stored baseline fails.
+- Gates for every milestone: `pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm bench:check`, all green before the next milestone starts. Until M1.9 creates the benchmark baseline, `bench:check` passes and prints "no baseline yet"; from then on, a benchmark without a stored baseline fails (ADR 0103).
 - Each milestone updates the root README (status, how to run).
 
 ## 14.5 Documentation as a deliverable
@@ -85,7 +85,9 @@ The reference machine is a 4-core laptop (x86-64 or Apple silicon) with 16 GB RA
 | Shell first meaningful paint (warm cache) | ≤ 1 s |
 | Chat thread with 2,000 entries (the `historyWindow` default) scrolls | 60 fps on the reference machine |
 
-`pnpm bench:check` fails CI on a regression of more than 20% against the stored baseline.
+`pnpm bench:check` fails on a regression of more than 20% against the stored baseline, on a missed target, and on a metric without a baseline value. The baseline is the committed `bench/baseline.json`, recorded on the product owner's machine with `pnpm bench:record` (which refuses to write when a target is missed); each metric is the median of 5 rounds after a warm-up (ADR 0103).
+
+M1.9 measures the first four rows, with the kernel in a child process and the load over real HTTP and SSE from the parent; the live-event target applies at p99. Until M7.2 re-measures on the reference machine, `bench:check` enforces a round-trip p50 of ≤ 10 ms and ≥ 1,000 sustained commands/s, set from the M1.9 measurements (ADR 0105); the table above stays the goal. Idle memory and cold boot are measured in M7.2, once core extensions exist (ADR 0104).
 
 ## 14.7 Dependency policy
 

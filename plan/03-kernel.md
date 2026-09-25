@@ -38,7 +38,7 @@ hosts (worker threads / child processes)
   read-only SQLite connection (not in sandboxed hosts) · ctx RPC client
 ```
 
-The main thread performs only routing, scheduling, commit batching, and I/O multiplexing. It never runs extension code. If the M1.9 benchmarks show commit work affecting HTTP latency, the writer moves to a dedicated storage thread behind the same interface (ADR).
+The main thread performs only routing, scheduling, commit batching, and I/O multiplexing. It never runs extension code. If the M1.9 benchmarks show commit work affecting HTTP latency, the writer moves to a dedicated storage thread behind the same interface (ADR). M1.9 measured it (ADR 0105): the writer stays on the main thread, and M7.2 re-measures on the reference machine.
 
 ## 3.3 Router: admission
 
@@ -299,7 +299,8 @@ M1.8 builds steps 0–2, 6 (without trust and processes), 7, 8, and the `kvman.v
 
 ## 3.11 Performance design
 
-- Group commit: units of work are batched every ≤2 ms or 64 items, one fsync per batch.
+- Group commit: units of work are batched until the end of the event-loop turn or 64 items (≤2 ms while the thread is free), one fsync per batch; the scheduler claims runnable messages inside each batch's transaction, so storing a message and claiming it share that fsync (ADR 0105).
+- Each connection caches its 500 most recently used prepared statements (ADR 0105).
 - Queries read through per-host read-only connections, or the read pool for sandboxed hosts (WAL readers never block the writer).
 - Live and transient events never touch SQLite.
 - The pending index lives in memory; SQLite is only read at boot.

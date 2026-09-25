@@ -50,7 +50,7 @@ export class RpcService {
       case 'query':
         return this.#deps.queries.ask({ sender: extensionSender(invocation), type: call.type, payload: call.payload, cause: message, workspaceId: message.workspaceId });
       case 'live':
-        return publishLive(this.#deps.registry(), this.#deps.live, invocation, call);
+        return this.#publishLive(invocation, call);
       case 'step.begin':
         return this.#beginStep(invocation, call);
       case 'step.end':
@@ -66,7 +66,10 @@ export class RpcService {
     try {
       this.#deps.values.append(message.id, call.recorded);
       const start = this.#deps.journal.begin({ messageId: message.id, name: call.step, correlationId: message.correlationId }, call.retrySafe);
-      if (start.status === 'run') return { ok: true, value: { status: 'run' } };
+      if (start.status === 'run') {
+        this.#deps.faults.reach('step.after-begin');
+        return { ok: true, value: { status: 'run' } };
+      }
       return { ok: true, value: start.result === undefined ? { status: 'recorded' } : { status: 'recorded', result: start.result } };
     } catch (error) {
       return problemResult(error);
@@ -76,11 +79,18 @@ export class RpcService {
   #endStep(invocation: ActiveInvocation, call: Extract<RpcCall, { name: 'step.end' }>): RpcResult {
     const { message } = invocation.claim;
     try {
+      this.#deps.faults.reach('step.before-record');
       this.#deps.journal.record({ messageId: message.id, name: call.step, correlationId: message.correlationId }, call.result);
       return { ok: true };
     } catch (error) {
       return problemResult(error);
     }
+  }
+
+  #publishLive(invocation: ActiveInvocation, call: Extract<RpcCall, { name: 'live' }>): RpcResult {
+    const result = publishLive(this.#deps.registry(), this.#deps.live, invocation, call);
+    if (result.ok) this.#deps.faults.reach('live.after-publish-before-commit');
+    return result;
   }
 
   #queryDenied(invocation: ActiveInvocation, name: RpcCall['name']): Problem {

@@ -1,4 +1,5 @@
 import type { OutboundSend, Problem, RpcCall, RpcResult } from '@kvman/protocol';
+import type { FaultPoints } from '../faults/fault-points.ts';
 import { kernelProblem, ProblemError } from '../problems.ts';
 import type { Router } from '../router/router.ts';
 import type { Scheduler } from '../scheduler/scheduler.ts';
@@ -23,6 +24,7 @@ export type CommandCallDeps = {
   values: RecordedValueStore;
   ids: UlidGenerator;
   depths: CallDepths;
+  faults: FaultPoints;
 };
 
 // 02 §2.6: the target lane is known only once admission renders it, so the send is admitted once without storing it
@@ -61,6 +63,7 @@ export async function callCommand(deps: CommandCallDeps, invocation: ActiveInvoc
   if (target === undefined) {
     throw new ProblemError(kernelProblem('INTERNAL', { correlationId: message.correlationId, detail: 'a committed command call stored no message' }));
   }
+  deps.faults.reach('command.after-send');
   deps.depths.waiting(target, message.id);
   const reply = await deps.waiters.wait(target);
   deps.depths.answered(target);

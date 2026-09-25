@@ -1,11 +1,14 @@
 import type { Message, Problem } from '@kvman/protocol';
+import { inertFaults, type FaultPoints } from '../faults/fault-points.ts';
 import { kernelProblem } from '../problems.ts';
 import type { HandlerSettings, KernelRegistry } from '../registry/kernel-registry.ts';
 import type { CommitPipeline } from '../storage/commit-pipeline.ts';
 import type { AdmittedMessage, CommitResult } from '../storage/commit-unit.ts';
 import type { Connection } from '../storage/driver.ts';
-import { claimMessage } from './claims.ts';
-import { commandSlots, type Claim, type Dispatcher } from './dispatcher.ts';
+import { inWriteTransaction } from '../storage/write-transaction.ts';
+import { BatchClaims } from './batch-claims.ts';
+import { claimRunnable } from './claim-pass.ts';
+import type { Claim, Dispatcher } from './dispatcher.ts';
 import { InFlight, type RunningInvocation } from './in-flight.ts';
 import { expiryUnit, redeliveryUnit } from './expiry.ts';
 import { invocationDeadline } from './invocation-deadline.ts';
@@ -14,7 +17,7 @@ import type { PendingIndex } from './pending-index.ts';
 import { QueryQueue } from './query-queue.ts';
 import { retryOutcome, retryUnit, schedulerDefaults } from './retry-policy.ts';
 import { Rotation } from './rotation.ts';
-import type { Candidate, PendingEntry } from './run-queues.ts';
+import type { PendingEntry } from './run-queues.ts';
 import type { SchedulerTimers, TimerHandle } from './timers.ts';
 
 export type SchedulerOptions = {
@@ -27,6 +30,7 @@ export type SchedulerOptions = {
   timers: SchedulerTimers;
   // Units the scheduler commits on its own (deadline expiry, redelivery), for the reply waiters.
   onCommitted: (result: CommitResult) => void;
+  faults?: FaultPoints;
 };
 
 export type ConflictOutcome = { rerun: true } | { rerun: false; result: CommitResult };
@@ -54,6 +58,8 @@ export class Scheduler {
   readonly #inFlight = new InFlight();
   readonly #rotation = new Rotation();
   readonly #queries = new QueryQueue();
+  readonly #faults: FaultPoints;
+  readonly #batches: BatchClaims;
   #pumpRequested = false;
   #stopped = false;
   #started = false;
@@ -61,7 +67,13 @@ export class Scheduler {
 
   constructor(options: SchedulerOptions) {
     this.#options = options;
+    this.#faults = options.faults ?? inertFaults;
     options.index.onAdded(() => this.#requestPump());
+    this.#batches = new BatchClaims({
+      index: options.index, inFlight: this.#inFlight, claiming: () => this.#started && !this.#stopped,
+      claimInto: (claimed) => this.#claimInto(claimed, options.now()), dispatch: (claimed) => this.#dispatchClaimed(claimed),
+    });
+    options.pipeline.attach(this.#batches);
   }
 
   // At boot, a lane whose message waits for its retry stays held so the rest of the lane stays behind it.
@@ -167,10 +179,9 @@ export class Scheduler {
   }
 
   dropUnstored(ids: Iterable<string>): void {
-    for (const id of ids) {
-      this.#options.index.removeUnstored(id);
-      this.#inFlight.finish(id, false);
-    }
+    const dropped = new Set(ids);
+    this.#options.index.remove(dropped);
+    for (const id of dropped) this.#inFlight.finish(id, false);
     this.#requestPump();
   }
 
@@ -210,29 +221,30 @@ export class Scheduler {
     if (result.committed) this.forget(result.ended.map((ended) => ended.messageId));
   }
 
+  // A pass on its own (timers, settled invocations) claims in its own transaction.
   #dispatchPending(now: number): void {
-    const { index } = this.#options;
-    const eligible = (entry: PendingEntry): boolean => this.#eligible(entry, now);
-    let candidates = index.candidates(now, eligible);
-    for (let chosen = this.#rotation.choose(candidates); chosen !== undefined; chosen = this.#rotation.choose(candidates)) {
-      const current: Candidate = chosen;
-      candidates = candidates.filter((candidate) => candidate !== current);
-      if (!eligible(current.entry) || !this.#hostHasRoom(current.entry)) continue;
-      index.take(current);
-      this.#rotation.served(current);
-      this.#claim(current.entry, now);
-      const next = current.queue.candidate(now, eligible);
-      if (next !== undefined) candidates.push(next);
-    }
+    const claimed: RunningInvocation[] = [];
+    inWriteTransaction(this.#options.connection, () => this.#claimInto(claimed, now));
+    this.#dispatchClaimed(claimed);
   }
 
-  #claim(entry: PendingEntry, now: number): void {
-    const result = entry.unstored === undefined ? claimMessage(this.#options.connection, entry, now) : { claimed: true, message: entry.unstored.message } as const;
-    if (!result.claimed) return;
-    const deadlineAt = invocationDeadline(result.message, this.#settings(entry).timeoutMs, now);
-    const invocation: RunningInvocation = { entry, message: result.message, attempt: entry.attempts + 1, conflicts: 0, deadlineAt };
-    this.#inFlight.start(invocation);
-    this.#options.dispatcher.dispatch(claimOf(invocation));
+  #claimInto(claimed: RunningInvocation[], now: number): void {
+    const eligible = (entry: PendingEntry): boolean => this.#eligible(entry, now);
+    const candidates = this.#options.index.candidates(now, eligible);
+    if (candidates.length === 0) return;
+    const { connection, index, dispatcher } = this.#options;
+    const passDeps = {
+      connection, index, dispatcher, rotation: this.#rotation, inFlight: this.#inFlight, eligible, undispatched: this.#batches.undispatched(),
+      timeoutMs: (entry: PendingEntry) => this.#settings(entry).timeoutMs,
+    };
+    claimRunnable(passDeps, now, candidates, claimed);
+  }
+
+  #dispatchClaimed(claimed: readonly RunningInvocation[]): void {
+    for (const invocation of claimed) {
+      if (invocation.entry.unstored === undefined) this.#faults.reach('claim.after');
+      this.#options.dispatcher.dispatch(claimOf(invocation));
+    }
   }
 
   // A message whose deadline passed is left for expiry (ADR 0084); a quarantined extension's wait (ADR 0086).
@@ -243,11 +255,6 @@ export class Scheduler {
       && this.#inFlight.laneFreeFor(entry)
       && this.#inFlight.handlerCount(entry.handlerKey) < concurrency
       && this.#inFlight.extensionCount(entry.extension) < schedulerDefaults.extensionConcurrency;
-  }
-
-  #hostHasRoom(entry: PendingEntry): boolean {
-    const load = this.#options.dispatcher.load({ extension: entry.extension, workspaceId: entry.workspaceId, kind: entry.kind });
-    return load.inFlight < commandSlots(load.cap);
   }
 
   #settings(entry: PendingEntry): HandlerSettings {

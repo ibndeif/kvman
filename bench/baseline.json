@@ -1,0 +1,27 @@
+{
+  "recordedAt": "2026-09-25T23:24:28.008Z",
+  "machine": {
+    "cpu": "AMD Ryzen 7 5800H with Radeon Graphics",
+    "cores": 16,
+    "memoryGb": 27,
+    "os": "linux 7.0.0-34-generic",
+    "node": "v24.21.0"
+  },
+  "benchmarks": {
+    "command.round-trip": {
+      "p50Ms": 7.977545000001555,
+      "p99Ms": 12.725602999999865
+    },
+    "command.sustained": {
+      "perSecond": 1346.862038498714
+    },
+    "query.indexed": {
+      "p50Ms": 5.453250999999,
+      "p99Ms": 7.8695000000006985
+    },
+    "live.latency": {
+      "p50Ms": 0.197265625,
+      "p99Ms": 0.61083984375
+    }
+  }
+}

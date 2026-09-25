@@ -10,6 +10,7 @@ import type { SchedulerTimers, TimerHandle } from '../scheduler/timers.ts';
 import type { Connection } from '../storage/driver.ts';
 import type { UlidGenerator } from '../ulid.ts';
 import type { ActiveInvocation } from './active-invocation.ts';
+import type { FaultPoints } from '../faults/fault-points.ts';
 import type { HostFailures } from './host-failures.ts';
 import type { StartHostThread } from './host-thread.ts';
 import type { KernelLogger } from './kernel-logger.ts';
@@ -49,6 +50,7 @@ export type HostManagerOptions = {
   timers: SchedulerTimers;
   now: () => number;
   failures: HostFailures;
+  faults: FaultPoints;
 };
 
 // 03 §3.4: an invocation that has not settled 2 s after its abort makes its host stuck.
@@ -113,6 +115,7 @@ export class HostManager implements Dispatcher {
     this.#active.set(invocation.id, invocation);
     const delay = Math.max(0, claim.deadlineAt - this.#options.now());
     this.#deadlines.set(invocation.id, this.#options.timers.set(delay, () => this.#deadlineReached(invocation)));
+    this.#options.faults.reach('invoke.before');
     this.#pool.post(worker, {
       frame: 'invoke', invocationId: invocation.id, extension: claim.extension, handler: claim.handler, kind: message.kind, message,
       readOnly: message.kind === 'query', deadlineAt: claim.deadlineAt, recorded: claim.stored ? this.#options.values.load(message.id) : noRecordedValues,

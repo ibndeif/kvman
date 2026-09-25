@@ -132,7 +132,7 @@ type StoreScope = 'workspace' | 'global';   // ws = '' for global
 When the handler returns, the host sends `complete` with the unit of work. The kernel commit pipeline:
 
 ```
-queue ─(≤2 ms or 64 units)─▶ BEGIN IMMEDIATE
+queue ─(end of the event-loop turn, or 64 units; ADR 0105)─▶ BEGIN IMMEDIATE
    for each unit:  SAVEPOINT u
                    check invocation still live (not cancelled, invocation deadline not passed) else ROLLBACK TO u
                      and end it as 02 §2.9 says (HANDLER_TIMEOUT or DEADLINE_EXCEEDED)
@@ -147,7 +147,8 @@ queue ─(≤2 ms or 64 units)─▶ BEGIN IMMEDIATE
                      revision and publishes kernel.config.changed); delete this invocation's pending blob refs (§4.6)
                    mark the invocation's message done|failed|awaiting (+ result)
                    RELEASE u
-COMMIT (one fsync)
+the batch's messages join the pending index; the scheduler claims the runnable ones (ADR 0105)
+COMMIT (one fsync; the claims are dispatched after it)
 after commit: apply secrets (§4.7), resolve waiters, push events and replies to the live bus, add new messages
               to the pending index
 ```

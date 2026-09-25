@@ -34,10 +34,31 @@ function statementOf(statement: Database.Statement<SqlValue[], SqlRow>): Prepare
   };
 }
 
+// Preparing is a large share of a command's CPU, so each connection keeps its most recently used statements; SQL
+// built from filters varies by shape, so the cache is bounded. SQLite re-prepares a statement after a schema change.
+export const statementCacheSize = 500;
+
+function statementCache(database: Database.Database): (sql: string) => PreparedStatement {
+  const cached = new Map<string, PreparedStatement>();
+  return (sql) => {
+    const found = cached.get(sql);
+    if (found !== undefined) {
+      cached.delete(sql);
+      cached.set(sql, found);
+      return found;
+    }
+    const statement = statementOf(database.prepare<SqlValue[], SqlRow>(sql));
+    cached.set(sql, statement);
+    if (cached.size > statementCacheSize) cached.delete(cached.keys().next().value ?? sql);
+    return statement;
+  };
+}
+
 function connectionOf(database: Database.Database): Connection {
+  const prepared = statementCache(database);
   return {
     exec: (sql) => translated(() => void database.exec(sql)),
-    prepare: (sql) => translated(() => statementOf(database.prepare<SqlValue[], SqlRow>(sql))),
+    prepare: (sql) => translated(() => prepared(sql)),
     pragma: (statement) => translated(() => asSqlValue(database.pragma(statement, { simple: true }))),
     inTransaction: () => database.inTransaction,
     close: () => translated(() => void database.close()),

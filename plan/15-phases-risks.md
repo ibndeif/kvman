@@ -118,7 +118,7 @@ Inside a phase, each milestone needs the one before it unless *Needs* says other
 
 #### M1.9 Fault injection, model tests, benchmarks — 1.5 days
 - **Read**: `14` §14.2–§14.3, §14.6.
-- **Build**: the named fault points; a child-process kernel harness that kills at each point and restarts; checks for the invariants of `14` §14.3 that apply; a fast-check model of lanes and replies; the benchmark runner with a stored baseline and `bench:check`. The fault points and invariants of `14` §14.3 that M1 code reaches (the rest are added by the milestones that build their mechanisms: secrets and forget M2.3, blobs M2.5, processes M2.6, reload and migration M2.7, preset apply M2.8, guards M4.3, dev build M6.1); the first benchmark baseline.
+- **Build**: the named fault points; a child-process kernel harness that kills at each point and restarts; checks for the invariants of `14` §14.3 that apply; a fast-check model of lanes and replies; the benchmark runner with a stored baseline, `bench:check`, and `bench:record` (ADRs 0100–0104). The fault points and invariants of `14` §14.3 that M1 code reaches (the rest are added by the milestones that build their mechanisms: secrets and forget M2.3, blobs M2.5, processes M2.6, reload and migration M2.7, preset apply M2.8, guards M4.3, dev build M6.1); the first benchmark baseline.
 - **Done when**: every fault point passes all invariants; the model test runs 1,000 sequences clean; the targets of `14` §14.6 that apply to the kernel are met or adjusted by ADR.
 
 ### M2 — Extension system and platform services

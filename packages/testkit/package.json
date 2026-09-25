@@ -21,5 +21,8 @@
     "@kvman/kernel": "workspace:*",
     "@kvman/protocol": "workspace:*",
     "@kvman/sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "zod": "4.6.5"
   }
 }
