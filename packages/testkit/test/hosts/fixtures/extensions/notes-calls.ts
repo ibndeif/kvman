@@ -34,9 +34,10 @@ export function registerCalls(ext: Ext): void {
     },
   });
   ext.registerCommand('notes.archive', {
-    description: 'Sends with a continuation.', input: empty,
-    handle: async (_input, ctx) => {
-      ctx.send('counter.increment', { by: 1 }, { onReply: { type: 'notes.archive.record', context: { note: 'n1' } } });
+    description: 'Sends with a continuation.', input: z.object({ deadlineAt: z.number().optional() }),
+    handle: async ({ deadlineAt }, ctx) => {
+      const deadline = deadlineAt === undefined ? {} : { deadlineAt };
+      ctx.send('counter.increment', { by: 1 }, { onReply: { type: 'notes.archive.record', context: { note: 'n1' } }, ...deadline });
       return {};
     },
   });

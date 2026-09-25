@@ -1,7 +1,7 @@
 import type { Message } from '@kvman/protocol';
 import type { PendingEntry } from './run-queues.ts';
 
-export type RunningInvocation = { entry: PendingEntry; message: Message; attempt: number; conflicts: number };
+export type RunningInvocation = { entry: PendingEntry; message: Message; attempt: number; conflicts: number; deadlineAt: number };
 
 function change(counts: Map<string, number>, key: string, by: number): void {
   const next = (counts.get(key) ?? 0) + by;
@@ -37,6 +37,15 @@ export class InFlight {
     change(this.#handlers, entry.handlerKey, -1);
     change(this.#extensions, entry.extension, -1);
     if (!keepLane && entry.laneKey !== undefined && this.#laneHolders.get(entry.laneKey) === messageId) this.#laneHolders.delete(entry.laneKey);
+  }
+
+  // A message that ended while it waited for its retry, or while it ran, no longer holds its lane (ADR 0083).
+  releaseLane(messageId: string): void {
+    for (const [laneKey, holder] of this.#laneHolders) if (holder === messageId) this.#laneHolders.delete(laneKey);
+  }
+
+  runningUnstored(): RunningInvocation[] {
+    return [...this.#running.values()].filter((invocation) => invocation.entry.unstored !== undefined);
   }
 
   holdLane(laneKey: string, messageId: string): void {

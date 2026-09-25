@@ -1,7 +1,7 @@
 import type { Message } from '@kvman/protocol';
 import { describe, expect, it } from 'vitest';
 import {
-  betterSqlite3Driver, HostManager, KernelRegistry, openKernelDatabase, RecordedValueStore,
+  betterSqlite3Driver, HostFailures, HostManager, KernelRegistry, openKernelDatabase, RecordedValueStore,
   type ActiveInvocation, type Claim, type InvocationSink, type LogRecord,
 } from '../../src/index.ts';
 import { command, manifest, workspaceA } from '../registry/manifests.ts';
@@ -15,7 +15,7 @@ function claimFor(id: string): Claim {
     v: 1, id, kind: 'command', type: 'notes.add', source: 'user:local', workspaceId: workspaceA, payload: { secret: 'x' },
     correlationId: id, context: { locale: 'en' }, priority: 'interactive', createdAt: 1,
   };
-  return { message, extension: '@acme/notes', handler: 'command:notes.add', attempt: 1, stored: true };
+  return { message, extension: '@acme/notes', handler: 'command:notes.add', attempt: 1, stored: true, deadlineAt: 60_001 };
 }
 
 describe('host frames (ADR 0076)', () => {
@@ -27,7 +27,9 @@ describe('host frames (ADR 0076)', () => {
     const logged: LogRecord[] = [];
     const lost: ActiveInvocation[] = [];
     const sink: InvocationSink = {
-      called: async () => ({ ok: true }), completed: async () => undefined, refused: async () => undefined,
+      called: async () => ({ ok: true }), completed: async () => undefined, refused: async () => undefined, loadFailed: async () => undefined,
+      timedOut: async () => undefined, aborted: () => undefined, collateral: async () => undefined, quarantine: async () => undefined,
+      kernelCommand: async () => undefined,
       lost: async (invocation) => {
         lost.push(invocation);
       },
@@ -36,6 +38,7 @@ describe('host frames (ADR 0076)', () => {
     const hosts = new HostManager({
       connection, registry: () => build.registry, modules: { entry: () => '/x/notes.ts' }, values: new RecordedValueStore(connection),
       logger: { write: (record) => logged.push(record) }, ids: ulids, poolSize: 1, startThread: start,
+      timers: { set: () => ({ cancel: () => undefined }) }, now: () => 1, failures: new HostFailures(),
     });
     hosts.connect(sink);
     const first = ulids.next();

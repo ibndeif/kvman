@@ -1,10 +1,13 @@
-import { messageDeadLetteredSchema, toJsonSchemaDocument, type JsonObject, type TypeEntry } from '@kvman/protocol';
+import {
+  cancelRequestSchema, cancelResultSchema, extensionQuarantinedSchema, messageDeadLetteredSchema, toJsonSchemaDocument,
+  type JsonObject, type SchemaView, type TypeEntry,
+} from '@kvman/protocol';
 
 export const kernelOwner = 'kernel';
 
-function payloadDocument(schema: Parameters<typeof toJsonSchemaDocument>[0]): JsonObject {
-  const conversion = toJsonSchemaDocument(schema);
-  if (!conversion.ok) throw new Error(`a kernel payload schema does not convert to JSON Schema: ${conversion.message}`);
+function jsonDocument(schema: Parameters<typeof toJsonSchemaDocument>[0], view: SchemaView): JsonObject {
+  const conversion = toJsonSchemaDocument(schema, view);
+  if (!conversion.ok) throw new Error(`a kernel schema does not convert to JSON Schema: ${conversion.message}`);
   return conversion.document;
 }
 
@@ -14,7 +17,17 @@ export function kernelTypeEntries(): TypeEntry[] {
     {
       type: 'kernel.message.dead-lettered', kind: 'event', delivery: 'durable',
       description: 'A message failed after its maximum attempts and is dead.',
-      payload: payloadDocument(messageDeadLetteredSchema),
+      payload: jsonDocument(messageDeadLetteredSchema, 'input'),
+    },
+    {
+      type: 'kernel.extension.quarantined', kind: 'event', delivery: 'durable',
+      description: 'An extension was quarantined and is unavailable in every workspace.',
+      payload: jsonDocument(extensionQuarantinedSchema, 'input'),
+    },
+    {
+      type: 'kernel.cancel', kind: 'command', access: 'all', handler: 'command:kernel.cancel',
+      description: 'Cancels a message and everything it caused, or every unfinished message of a correlation.',
+      input: jsonDocument(cancelRequestSchema, 'input'), output: jsonDocument(cancelResultSchema, 'output'),
     },
   ];
 }

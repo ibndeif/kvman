@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { openHostFixture, row, send, value, workspaceA, type HostFixture } from './harness.ts';
+import { openHostFixture, row, send, value, workspaceA, type HostFixture, workerTests } from './harness.ts';
 
 let fixture: HostFixture;
 beforeEach(() => {
@@ -7,7 +7,7 @@ beforeEach(() => {
 });
 afterEach(() => fixture.close());
 
-describe('loading extensions in a worker (plan 05 §5.1, ADR 0071)', () => {
+describe('loading extensions in a worker (plan 05 §5.1, ADR 0071)', workerTests, () => {
   it('M1.6-E30 setup that records something other than the installed manifest fails loading', async () => {
     const id = await send(fixture, 'drift.run');
     expect(await fixture.runtime.awaitReply(id)).toMatchObject({

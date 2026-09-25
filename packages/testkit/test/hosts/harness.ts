@@ -3,8 +3,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  betterSqlite3Driver, createUlidGenerator, KernelRegistry, KernelRuntime, openKernelDatabase, recordExtension,
-  type AdapterCommand, type Connection, type LiveFrame, type LogRecord, type SchedulerTimers, type TimerHandle,
+  betterSqlite3Driver, createUlidGenerator, KernelRuntime, openKernelDatabase, recordExtension,
+  type AdapterCommand, type Connection, type LiveFrame, type LogRecord, type RegistryInput, type SchedulerTimers, type TimerHandle,
 } from '@kvman/kernel';
 import type { Capabilities, Json, JsonObject, Manifest, ReplyPayload } from '@kvman/protocol';
 import type { ExtensionDefinition } from '@kvman/sdk';
@@ -17,6 +17,9 @@ import notes from './fixtures/extensions/notes.ts';
 export const workspaceA = 'a'.repeat(64);
 export const workspaceB = 'b'.repeat(64);
 export const correlationId = '01JAZ3K4M5N6P7Q8R9S0T1V2W3';
+
+// Tests with real worker threads pay for thread start and module load, which a loaded machine slows down.
+export const workerTests = { timeout: 30_000 } as const;
 
 // Scheduler wake-ups the test fires by moving the kernel's clock (retry backoffs); handlers keep real time.
 export class ManualTimers implements SchedulerTimers {
@@ -67,7 +70,7 @@ function manifestOf(extension: string): Manifest {
   return { ...manifest, types: manifest.types.map((entry) => ({ ...entry, description: 'Changed after recording.' })) };
 }
 
-const grants: Record<string, Capabilities> = {
+const defaultGrants: Record<string, Capabilities> = {
   '@acme/notes': { isolation: 'shared', requested: [{ name: 'calls', types: ['counter.*'] }], derived: { subscribes: [], providesLlm: [] } },
   '@acme/audit': { isolation: 'shared', requested: [], derived: { subscribes: ['notes.added', 'notes.touched'], providesLlm: [] }, },
 };
@@ -75,39 +78,55 @@ const grants: Record<string, Capabilities> = {
 export type HostFixture = {
   runtime: KernelRuntime;
   connection: Connection;
+  databaseFile: string;
+  grants: Record<string, Capabilities>;
   timers: ManualTimers;
   logged: LogRecord[];
   live: LiveFrame[];
   close(): Promise<void>;
 };
 
-export function openHostFixture(options: { poolSize?: number } = {}): HostFixture {
-  const databaseFile = join(mkdtempSync(join(tmpdir(), 'kvman-hosts-')), 'kvman.db');
-  const ids = createUlidGenerator(Date.now);
-  const connection = openKernelDatabase(databaseFile, betterSqlite3Driver, ids.next());
-  connection.prepare('INSERT INTO workspaces (id, path, name, created_at) VALUES (?, ?, ?, ?)').run(workspaceA, '/w/a', 'A', 1);
+function registryInput(): RegistryInput {
   const names = Object.keys(fixtures);
-  const build = KernelRegistry.build({
+  return {
     extensions: names.map((name) => ({ manifest: manifestOf(name), quarantined: false })),
     enabled: new Map([[workspaceA, names], [workspaceB, names]]),
-  });
-  if (!build.ok) throw new Error(build.failure.detail);
-  const timers = new ManualTimers();
-  const logged: LogRecord[] = [];
+  };
+}
+
+type Shared = Pick<HostFixture, 'connection' | 'databaseFile' | 'grants' | 'timers' | 'logged' | 'live'> & { poolSize: number };
+
+function startRuntime(shared: Shared): HostFixture {
+  const ids = createUlidGenerator(Date.now);
+  const { connection, databaseFile, grants, timers, logged, live } = shared;
   const runtime = new KernelRuntime({
-    databaseFile, connection, registry: () => build.registry, ids, now: () => timers.time.value, timers, poolSize: options.poolSize ?? 1,
+    databaseFile, connection, extensions: registryInput(), ids, now: () => timers.time.value, timers, poolSize: shared.poolSize,
     grants: { capabilities: (extension) => grants[extension] }, modules: { entry: entryOf }, logger: { write: (record) => logged.push(record) },
     defaultLocale: () => 'en',
   });
-  const live: LiveFrame[] = [];
   runtime.live.subscribe((frame) => live.push(frame));
   return {
-    runtime, connection, timers, logged, live,
+    runtime, connection, databaseFile, grants, timers, logged, live,
     close: async () => {
       await runtime.stop();
       connection.close();
     },
   };
+}
+
+export function openHostFixture(options: { poolSize?: number } = {}): HostFixture {
+  const databaseFile = join(mkdtempSync(join(tmpdir(), 'kvman-hosts-')), 'kvman.db');
+  const connection = openKernelDatabase(databaseFile, betterSqlite3Driver, createUlidGenerator(Date.now).next());
+  connection.prepare('INSERT INTO workspaces (id, path, name, created_at) VALUES (?, ?, ?, ?)').run(workspaceA, '/w/a', 'A', 1);
+  return startRuntime({ connection, databaseFile, grants: { ...defaultGrants }, timers: new ManualTimers(), logged: [], live: [], poolSize: options.poolSize ?? 1 });
+}
+
+// A kernel restart on the same database and clock: the runtime stops, and a new one rebuilds from SQLite (03 §3.9).
+export async function restartRuntime(fixture: HostFixture): Promise<HostFixture> {
+  await fixture.runtime.stop();
+  const timers = new ManualTimers();
+  timers.time.value = fixture.timers.time.value;
+  return startRuntime({ ...fixture, timers, poolSize: 1 });
 }
 
 let keys = 0;

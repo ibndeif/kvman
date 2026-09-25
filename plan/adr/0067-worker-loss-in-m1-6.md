@@ -23,7 +23,7 @@ Option 2, with lazy replacement:
 - When a shared worker exits, each attempt running on it has its live events reset (`02` §2.3) and then fails as a retryable `INTERNAL` problem, counted as an attempt (retries and dead letters of `03` §3.4). Queries waiting on it fail `INTERNAL`; `ctx.command` and `ctx.query` calls it made are abandoned.
 - The pool drops the worker and starts a new one on the next dispatch that needs it, up to the pool size.
 - An uncaught exception in a handler is also a crash of that attempt: `INTERNAL`, retryable, with its live events reset.
-- M1.7 adds redelivery without penalty for collateral work, restart backoff, stuck detection, and quarantine.
+- M1.7 adds redelivery without penalty for collateral work, stuck detection, and quarantine. (A "restart backoff" was named here first; the plan has none, and ADR 0082 keeps lazy replacement without one.)
 
 ## Consequences
 

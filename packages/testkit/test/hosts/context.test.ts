@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { openHostFixture, row, send, value, workspaceA, workspaceB, type HostFixture } from './harness.ts';
+import { openHostFixture, row, send, value, workspaceA, workspaceB, type HostFixture, workerTests } from './harness.ts';
 
 let fixture: HostFixture;
 beforeEach(() => {
@@ -7,7 +7,7 @@ beforeEach(() => {
 });
 afterEach(() => fixture.close());
 
-describe('the invocation context (plan 05 §5.4, ADRs 0066, 0073, 0075)', () => {
+describe('the invocation context (plan 05 §5.4, ADRs 0066, 0073, 0075)', workerTests, () => {
   it('M1.6-E36 ctx.message, ctx.context, and ctx.workspace', async () => {
     const id = await send(fixture, 'notes.describe');
     const workspace = { id: workspaceA, path: '/w/a', name: 'A' };

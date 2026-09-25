@@ -5,9 +5,9 @@ export type DispatchTarget = { extension: string; workspaceId: string | undefine
 // A host's current load as its host manager reports it (ADR 0060).
 export type HostLoad = { host: string; inFlight: number; cap: number };
 
-// One run of a handler: the message, the extension and handler function that run it, and the run number. A query
-// and a transient event's delivery have no row (`stored: false`).
-export type Claim = { message: Message; extension: string; handler: string; attempt: number; stored: boolean };
+// One run of a handler: the message, the extension and handler function that run it, the run number, and its
+// invocation deadline (ADR 0084). A query and a transient event's delivery have no row (`stored: false`).
+export type Claim = { message: Message; extension: string; handler: string; attempt: number; stored: boolean; deadlineAt: number };
 
 // How the scheduler reaches execution hosts (ADR 0060). The host manager counts its own in-flight invocations; the
 // scheduler keeps the share reserved for queries and hands over claimed messages.

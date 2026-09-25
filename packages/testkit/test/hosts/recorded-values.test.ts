@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { eventually, openHostFixture, pendingWithAttempts, row, rows, send, type HostFixture } from './harness.ts';
+import { eventually, openHostFixture, pendingWithAttempts, row, rows, send, type HostFixture, workerTests } from './harness.ts';
 
 let fixture: HostFixture;
 beforeEach(() => {
@@ -11,7 +11,7 @@ function recorded(messageId: string): Array<Record<string, unknown>> {
   return rows(fixture, 'SELECT kind, n, value FROM recorded_values WHERE message_id = ? ORDER BY kind, n', messageId);
 }
 
-describe('recorded ids, times, and steps (plan 05 §5.4, ADR 0070)', () => {
+describe('recorded ids, times, and steps (plan 05 §5.4, ADR 0070)', workerTests, () => {
   it('M1.6-H9 ctx.ids.new() and ctx.now() repeat on redelivery', async () => {
     const id = await send(fixture, 'notes.stamp');
     await pendingWithAttempts(fixture, id, 1);

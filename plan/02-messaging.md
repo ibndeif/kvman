@@ -236,11 +236,11 @@ Two limits exist, and they are different things:
   - A deferred command keeps its own `deadlineAt`; `ctx.defer()` does not change it. While `awaiting` no handler runs, so only the message deadline can end it.
 - **Queries** have no retry: reaching the handler timeout ends them with `QUERY_TIMEOUT`.
 - `kernel.cancel { messageId } | { correlationId }` selects a scope:
-  - `{ messageId }`: that message and every unfinished message it caused, directly or indirectly (its causation descendants: called and sent commands, continuations, deferred commands);
+  - `{ messageId }`: that message and every unfinished message it caused, directly or indirectly (its causation descendants: called and sent commands, continuations, deferred commands); the walk passes through finished messages, so a finished message's unfinished descendants are cancelled too (ADR 0083);
   - `{ correlationId }`: every unfinished message of that correlation.
 
   For each message in scope the kernel aborts the running invocation (its signal fires), kills processes it started, replies `CANCELLED` to its waiters (a deferred command also triggers its `onAbort`), and marks it `cancelled` if it was still `pending` or `awaiting`. Finished messages are untouched, so cancelling something that already completed is a no-op that returns `{ cancelled: 0 }`.
-- Who may cancel: the user, `kernel.admin`, and any actor for messages it sent itself or whose correlation it started.
+- Who may cancel: the user, `kernel.admin`, and any actor for messages it sent itself or whose correlation it started; anyone else fails `CAPABILITY_DENIED` and cancels nothing (ADR 0079). A running message is marked `cancelled` in the cancel's unit, and its later result is discarded (ADR 0083).
 - After cancellation or deadline, any further RPC from that invocation is rejected and any unit of work it returns is discarded.
 
 ## 2.10 Correlation, causation, context
@@ -288,4 +288,4 @@ pending ─────────▶ (index) ───────▶ running 
 | Handler timeouts | command 60 s · query 5 s · event handler 30 s · max 24 h |
 | Message deadline | none unless set or inherited (§2.9) |
 | Retention of finished messages | 7 days (per-type override, e.g. `kernel.llm.complete` 1 h) |
-| Nested `ctx.command` depth | 8 |
+| Nested `ctx.command` depth | 8 (a deeper call fails `VALIDATION_FAILED`, `params { limit: 'depth', max: 8 }`, ADR 0085) |

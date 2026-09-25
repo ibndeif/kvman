@@ -33,7 +33,7 @@ function continuationOf(commandId: string, onReply: OnReply, reply: ReplyPayload
   return { type: onReply.type, payload, idempotencyKey: `${commandId}:reply` };
 }
 
-function record(scope: UnitScope, result: SendAdmission): void {
+export function recordSend(scope: UnitScope, result: SendAdmission): void {
   if (result.outcome === 'admitted') scope.applied.inserted.push(insertMessage(scope.connection, result.admitted, 'pending', undefined, scope.now));
   else if (result.outcome === 'duplicate') scope.applied.duplicates.push(result.original);
   else throw new UnitRejected(result.problem);
@@ -45,7 +45,7 @@ export function finalReply(scope: UnitScope, command: Message, reply: ReplyPaylo
   scope.applied.replies.push({ messageId: command.id, reply });
   if (command.onReply === undefined) return;
   const send = continuationOf(command.id, command.onReply, reply);
-  record(scope, scope.admission.admitSend(scope.connection, { send, sender: kernelSender, cause: command, workspaceId: command.workspaceId, index: 0 }));
+  recordSend(scope, scope.admission.admitSend(scope.connection, { send, sender: kernelSender, cause: command, workspaceId: command.workspaceId, index: 0 }));
 }
 
 // A send WITH onReply that fails admission is stored as a failed command, and its continuation carries the failure
@@ -54,7 +54,7 @@ export function admitSend(scope: UnitScope, send: OutboundSend, index: number, i
   const request: SendRequest = { send, sender: scope.sender, cause: scope.cause, workspaceId: scope.workspaceId, index, ...(id === undefined ? {} : { id }) };
   const result = scope.admission.admitSend(scope.connection, request);
   if (result.outcome !== 'refused' || result.failed === undefined || send.onReply === undefined) {
-    record(scope, result);
+    recordSend(scope, result);
     return;
   }
   const reply: ReplyPayload = { ok: false, problem: result.problem };
@@ -70,7 +70,9 @@ export function admitPublish(scope: UnitScope, publish: OutboundPublish): void {
   if (result.outcome === 'refused') throw new UnitRejected(result.problem);
   if (result.event.delivery !== 'durable') {
     scope.applied.announced.push(result.event);
-    for (const delivery of result.deliveries) if (delivery.problem === undefined) scope.applied.unstored.push(delivery.admitted);
+    for (const delivery of result.deliveries) {
+      if (delivery.problem === undefined) scope.applied.unstored.push({ admitted: delivery.admitted, publisher: result.event.causationId });
+    }
     return;
   }
   insertEvent(scope.connection, result.event, scope.now);

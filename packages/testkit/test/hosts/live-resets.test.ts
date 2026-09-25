@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { kv, openHostFixture, pendingWithAttempts, row, send, type HostFixture } from './harness.ts';
+import { kv, openHostFixture, pendingWithAttempts, row, send, type HostFixture, workerTests } from './harness.ts';
 
 let fixture: HostFixture;
 beforeEach(() => {
@@ -7,7 +7,7 @@ beforeEach(() => {
 });
 afterEach(() => fixture.close());
 
-describe('live resets (plan 02 §2.3, ADR 0067)', () => {
+describe('live resets (plan 02 §2.3, ADR 0067)', workerTests, () => {
   it('M1.6-H12 a crashed attempt\'s live events are reset before the retry publishes again', async () => {
     const id = await send(fixture, 'notes.stream');
     await pendingWithAttempts(fixture, id, 1);

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { eventually, openHostFixture, run, send, value, type HostFixture } from './harness.ts';
+import { eventually, openHostFixture, run, send, value, type HostFixture, workerTests } from './harness.ts';
 
 let fixture: HostFixture;
 beforeEach(() => {
@@ -7,7 +7,7 @@ beforeEach(() => {
 });
 afterEach(() => fixture.close());
 
-describe('live events (plan 02 §2.3, §2.5, ADR 0074)', () => {
+describe('live events (plan 02 §2.3, §2.5, ADR 0074)', workerTests, () => {
   it('M1.6-H10 a live event of another extension cannot be published', async () => {
     expect(await value(fixture, 'notes.live.foreign')).toEqual({ code: 'CAPABILITY_DENIED' });
     expect(fixture.live).toEqual([]);

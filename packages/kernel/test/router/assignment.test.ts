@@ -46,8 +46,8 @@ describe('envelope and assignment (plan 02 §2.2, §2.6, §2.10)', () => {
 
   it('M1.4-E3 context additions may add and change keys, never a kernel-set one', async () => {
     const fixture = openRouterFixture();
-    const cause = { ...(await causeMessage(fixture, 'agent.run')), context: { locale: 'ar', sessionId: 's1' } };
     const outcome = async (context: Record<string, string>) => {
+      const cause = { ...(await causeMessage(fixture, 'agent.run')), context: { locale: 'ar', sessionId: 's1' } };
       const result = await handlerUnit(fixture, cause, '@kvman/agent', { sends: [{ ...run, context }] });
       return result.committed ? 'committed' : result.problem.code;
     };

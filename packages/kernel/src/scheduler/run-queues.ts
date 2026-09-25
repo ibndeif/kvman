@@ -16,9 +16,11 @@ export type PendingEntry = {
   deadlineAt: number | undefined;
   attempts: number;
   runnableSince: number;
-  // A transient event's delivery has no row: the index keeps its message (ADR 0069).
-  unstored: Message | undefined;
+  // A transient event's delivery has no row: the index keeps its message and the event's publisher (ADRs 0069, 0083).
+  unstored: UnstoredEntry | undefined;
 };
+
+export type UnstoredEntry = { message: Message; publisher: string | undefined };
 
 export const agingMs = 30_000;
 
@@ -83,8 +85,8 @@ export class LaneQueue implements RunQueue {
     this.key = `lane:${laneKey}`;
   }
 
-  place(entry: PendingEntry): void {
-    if (entry.attempts > 0) this.#entries.unshift(entry);
+  place(entry: PendingEntry, front = entry.attempts > 0): void {
+    if (front) this.#entries.unshift(entry);
     else this.#entries.push(entry);
   }
 

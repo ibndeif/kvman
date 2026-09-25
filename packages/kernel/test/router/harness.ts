@@ -4,7 +4,7 @@ import {
   type AdapterCommand, type CommitResult, type Connection, type GrantsSource, type Sender, type Submission,
 } from '../../src/index.ts';
 import { command, event, manifest, query, subscription, workspaceA, workspaceB } from '../registry/manifests.ts';
-import { now, temporaryDatabaseFile, ulids } from '../storage/harness.ts';
+import { claimForTest, now, temporaryDatabaseFile, ulids } from '../storage/harness.ts';
 
 export { workspaceA, workspaceB };
 
@@ -120,6 +120,7 @@ export async function causeMessage(fixture: RouterFixture, type: string, sender:
 }
 
 export function handlerUnit(fixture: RouterFixture, cause: Message, extension: string, contents: { sends?: OutboundSend[]; publishes?: OutboundPublish[] }): Promise<CommitResult> {
+  claimForTest(fixture.connection, cause.id);
   return fixture.pipeline.enqueue({
     origin: { kind: 'invocation', invocation: { message: cause, extension, outcome: { ok: true, value: null }, stored: true } },
     writes: [], sends: contents.sends ?? [], publishes: contents.publishes ?? [], replies: [],

@@ -1,14 +1,15 @@
 import type { MessageKind } from '@kvman/protocol';
-import type { AdmittedMessage, StoredMessage } from '../storage/commit-unit.ts';
+import type { AdmittedMessage, StoredMessage, UnstoredDelivery } from '../storage/commit-unit.ts';
 import { StorageFailure, type Connection, type SqlRow } from '../storage/driver.ts';
 import { laneKeyOf, priorityOfCode } from '../storage/message-rows.ts';
-import { KeylessQueue, LaneQueue, participantOf, type Candidate, type PendingEntry, type RunQueue } from './run-queues.ts';
+import { DeadlineWheel } from './deadline-wheel.ts';
+import { KeylessQueue, LaneQueue, participantOf, type Candidate, type PendingEntry, type RunQueue, type UnstoredEntry } from './run-queues.ts';
 
 export type { Candidate, PendingEntry } from './run-queues.ts';
 
 export interface PendingSink {
   add(messages: readonly StoredMessage[]): void;
-  addUnstored(deliveries: readonly AdmittedMessage[]): void;
+  addUnstored(deliveries: readonly UnstoredDelivery[]): void;
 }
 
 // A command's handler column is its extension; an event delivery's is <extension>|subscription:<pattern> (ADR 0053).
@@ -44,18 +45,21 @@ function entryOfRow(row: SqlRow): PendingEntry {
   };
 }
 
-function entryOf({ message, handler }: AdmittedMessage, seq: number, now: number, unstored: boolean): PendingEntry {
+function entryOf({ message, handler }: AdmittedMessage, seq: number, now: number, unstored: UnstoredEntry | undefined): PendingEntry {
   return {
     id: message.id, seq, kind: message.kind, type: message.type, handler,
     handlerKey: handlerKeyOf(handler, message.type), extension: extensionOf(handler), workspaceId: message.workspaceId,
     laneKey: message.lane === undefined ? undefined : laneKeyOf(handler, message.lane), priority: message.priority,
     notBefore: message.notBefore, deadlineAt: message.deadlineAt, attempts: 0,
-    runnableSince: Math.max(now, message.notBefore ?? 0), unstored: unstored ? message : undefined,
+    runnableSince: Math.max(now, message.notBefore ?? 0), unstored,
   };
 }
 
 const rebuildSql = `SELECT id, seq, kind, type, handler, workspace_id, lane, priority, not_before, deadline_at, attempts, updated_at
   FROM messages WHERE state = 'pending' ORDER BY seq`;
+
+// ADR 0084: an awaiting command's deadline is watched too; after a restart its timer is rebuilt (03 §3.9).
+const awaitingDeadlinesSql = "SELECT id, deadline_at FROM messages WHERE state = 'awaiting' AND deadline_at IS NOT NULL";
 
 // The pending messages the scheduler picks from (03 §3.4): per-lane queues, a keyless queue per handler and
 // workspace, and a timer wheel of messages whose notBefore is still ahead. Fed after each commit; rebuilt at boot.
@@ -65,6 +69,7 @@ export class PendingIndex implements PendingSink {
   readonly #keyless = new Map<string, KeylessQueue>();
   readonly #timers: PendingEntry[] = [];
   readonly #listeners: Array<() => void> = [];
+  readonly deadlines = new DeadlineWheel();
   #lastSeq = 0;
 
   constructor(now: () => number) {
@@ -74,6 +79,7 @@ export class PendingIndex implements PendingSink {
   static rebuild(connection: Connection, now: () => number): PendingIndex {
     const index = new PendingIndex(now);
     for (const row of connection.prepare(rebuildSql).all()) index.place(entryOfRow(row));
+    for (const row of connection.prepare(awaitingDeadlinesSql).all()) index.deadlines.watch(String(row['id']), Number(row['deadline_at']));
     return index;
   }
 
@@ -83,22 +89,48 @@ export class PendingIndex implements PendingSink {
 
   add(messages: readonly StoredMessage[]): void {
     const now = this.#now();
-    for (const stored of messages) if (stored.state === 'pending') this.place(entryOf(stored, stored.seq, now, false));
+    for (const stored of messages) if (stored.state === 'pending') this.place(entryOf(stored, stored.seq, now, undefined));
     this.#notify();
   }
 
   // An unstored delivery has no seq of its own: it takes the last seq seen, so it runs after every message stored
   // before it and, on a tie, after the entries already queued (ADR 0069).
-  addUnstored(deliveries: readonly AdmittedMessage[]): void {
+  addUnstored(deliveries: readonly UnstoredDelivery[]): void {
     const now = this.#now();
-    for (const delivery of deliveries) this.place(entryOf(delivery, this.#lastSeq, now, true));
+    for (const { admitted, publisher } of deliveries) this.place(entryOf(admitted, this.#lastSeq, now, { message: admitted.message, publisher }));
     this.#notify();
   }
 
   place(entry: PendingEntry): void {
     this.#lastSeq = Math.max(this.#lastSeq, entry.seq);
+    if (entry.deadlineAt !== undefined && entry.unstored === undefined) this.deadlines.watch(entry.id, entry.deadlineAt);
     if (entry.notBefore !== undefined && entry.notBefore > this.#now()) this.#addTimer(entry);
     else this.#placeRunnable(entry);
+  }
+
+  // 03 §3.6: an invocation redelivered without penalty takes its old place, the front of its lane.
+  placeAtFront(entry: PendingEntry): void {
+    if (entry.laneKey === undefined) {
+      this.place(entry);
+      return;
+    }
+    const lane = this.#lanes.get(entry.laneKey) ?? new LaneQueue(entry.laneKey);
+    this.#lanes.set(entry.laneKey, lane);
+    lane.place(entry, true);
+  }
+
+  queuedUnstored(): PendingEntry[] {
+    return [...this.#lanes.values(), ...this.#keyless.values()].flatMap((queue) => queue.entries()).filter((entry) => entry.unstored !== undefined);
+  }
+
+  // A queued unstored delivery that was cancelled (ADR 0083); stored rows are skipped at claim instead.
+  removeUnstored(id: string): void {
+    for (const queue of [...this.#lanes.values(), ...this.#keyless.values()]) {
+      const entry = queue.entries().find((candidate) => candidate.id === id);
+      if (entry === undefined) continue;
+      queue.take(entry);
+      if (queue.isEmpty()) this.#forget(queue);
+    }
   }
 
   // A timer that comes due becomes runnable at its notBefore (ADR 0064).

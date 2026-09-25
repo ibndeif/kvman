@@ -36,7 +36,7 @@ describe('failed sends (plan 04 §4.2, ADR 0034)', () => {
     const { store, message, result } = await unitSending({ type: 'shell.exec', payload: { command: 'ls' } }, {});
     expect(result).toMatchObject({ committed: false, problem: { code: 'TYPE_NOT_FOUND', retryable: false } });
     expect(rows(store.connection, 'SELECT count(*) AS n FROM kv')).toEqual([{ n: 0 }]);
-    expect(rows(store.connection, 'SELECT type, state FROM messages')).toEqual([{ type: 'agent.step', state: 'pending' }]);
+    expect(rows(store.connection, 'SELECT type, state FROM messages')).toEqual([{ type: 'agent.step', state: 'running' }]);
     expect(message.type).toBe('agent.step');
   });
 

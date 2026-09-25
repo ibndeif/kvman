@@ -18,6 +18,7 @@ export * from './host-frames.ts';
 export * from './http-bodies.ts';
 export * from './identifiers.ts';
 export * from './json.ts';
+export * from './kernel-commands.ts';
 export * from './kernel-errors.ts';
 export * from './kernel-events.ts';
 export * from './limits.ts';

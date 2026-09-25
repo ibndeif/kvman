@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { eventually, kv, objectOf, openHostFixture, rows, value, type HostFixture } from './harness.ts';
+import { eventually, kv, objectOf, openHostFixture, rows, value, type HostFixture, workerTests } from './harness.ts';
 
 let fixture: HostFixture;
 beforeEach(() => {
@@ -11,7 +11,7 @@ function touchPhases(id: string): unknown[] {
   return fixture.live.filter((frame) => frame.type === 'audit.touch.noted' && frame.key === id).map((frame) => frame.chunk);
 }
 
-describe('events in shared hosts (plan 02 §2.3, §2.5, ADR 0069)', () => {
+describe('events in shared hosts (plan 02 §2.3, §2.5, ADR 0069)', workerTests, () => {
   it('M1.6-H3 a durable event reaches its subscriber through an inbox row', async () => {
     const id = String(objectOf(await value(fixture, 'notes.add', { text: 'hi' }))['id']);
     expect(rows(fixture, "SELECT type FROM events WHERE type = 'notes.added'")).toHaveLength(1);

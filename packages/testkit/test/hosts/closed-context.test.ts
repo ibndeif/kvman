@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { eventually, openHostFixture, rows, value, workspaceA, type HostFixture } from './harness.ts';
+import { eventually, openHostFixture, rows, value, workspaceA, type HostFixture, workerTests } from './harness.ts';
 
 let fixture: HostFixture;
 beforeEach(() => {
@@ -7,7 +7,7 @@ beforeEach(() => {
 });
 afterEach(() => fixture.close());
 
-describe('a closed ctx (ADR 0076)', () => {
+describe('a closed ctx (ADR 0076)', workerTests, () => {
   it('M1.6-E35 ctx calls after the handler settled throw INTERNAL and store nothing', async () => {
     await value(fixture, 'notes.late');
     await eventually(async () => {

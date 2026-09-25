@@ -1,4 +1,4 @@
-import { kernelToHostFrameSchema, type CompleteFrame, type HostToKernelFrame, type InvokeFrame } from '@kvman/protocol';
+import { kernelToHostFrameSchema, type AbortReason, type CompleteFrame, type HostToKernelFrame, type InvokeFrame, type LoadFailedFrame } from '@kvman/protocol';
 import { kernelProblem } from '../../problems.ts';
 import { betterSqlite3Driver } from '../../storage/better-sqlite3-driver.ts';
 import { openReadConnection } from '../../storage/database.ts';
@@ -6,6 +6,7 @@ import { UnindexedScanThrottle } from '../../store/store-context.ts';
 import { StoreReader } from '../../store/store-reader.ts';
 import { createUlidGenerator } from '../../ulid.ts';
 import { loadExtension, type ModuleLoad } from './extension-module.ts';
+import { InvocationState } from './invocation-state.ts';
 import { runInvocation } from './invocation-run.ts';
 import { RpcClient } from './rpc-client.ts';
 
@@ -18,6 +19,7 @@ export class WorkerRuntime {
   readonly #throttle = new UnindexedScanThrottle(Date.now);
   readonly #ids = createUlidGenerator(Date.now);
   readonly #modules = new Map<string, Promise<ModuleLoad>>();
+  readonly #running = new Map<string, InvocationState>();
 
   constructor(post: (frame: HostToKernelFrame) => void, databaseFile: string) {
     this.#post = post;
@@ -29,24 +31,35 @@ export class WorkerRuntime {
   receive(value: unknown): void {
     const frame = kernelToHostFrameSchema.parse(value);
     if (frame.frame === 'rpcResult') this.#client.answered(frame);
+    else if (frame.frame === 'abort') this.#abort(frame.invocationId, frame.reason);
     else void this.#invoke(frame);
   }
 
-  async #invoke(invoke: InvokeFrame): Promise<void> {
-    const load = await this.#load(invoke);
-    this.#post(load.ok ? await this.#run(invoke, load) : this.#failed(invoke, load));
+  #abort(invocationId: string, reason: AbortReason): void {
+    const state = this.#running.get(invocationId);
+    state?.abort(reason);
+    const problem = state?.abortProblem?.problem;
+    if (problem !== undefined) this.#client.abandon(invocationId, problem);
   }
 
-  #run(invoke: InvokeFrame, load: Extract<ModuleLoad, { ok: true }>): Promise<CompleteFrame> {
+  async #invoke(invoke: InvokeFrame): Promise<void> {
+    const state = new InvocationState(invoke);
+    this.#running.set(invoke.invocationId, state);
+    const load = await this.#load(invoke);
+    this.#post(load.ok ? await this.#run(invoke, state, load) : this.#failed(invoke, load));
+    this.#running.delete(invoke.invocationId);
+  }
+
+  #run(invoke: InvokeFrame, state: InvocationState, load: Extract<ModuleLoad, { ok: true }>): Promise<CompleteFrame> {
     return runInvocation({
-      invoke, extension: load.extension, client: this.#client, reader: this.#reader, throttle: this.#throttle,
+      invoke, state, extension: load.extension, client: this.#client, reader: this.#reader, throttle: this.#throttle,
       newId: () => this.#ids.next(), clock: Date.now,
     });
   }
 
-  #failed(invoke: InvokeFrame, load: Extract<ModuleLoad, { ok: false }>): CompleteFrame {
+  #failed(invoke: InvokeFrame, load: Extract<ModuleLoad, { ok: false }>): LoadFailedFrame {
     const problem = { ...load.problem, correlationId: invoke.message.correlationId, messageId: invoke.message.id };
-    return { frame: 'complete', invocationId: invoke.invocationId, outcome: { ok: false, problem }, unitOfWork: { writes: [], sends: [], publishes: [], replies: [] }, recorded: { id: [], now: [] } };
+    return { frame: 'loadFailed', invocationId: invoke.invocationId, problem };
   }
 
   #load(invoke: InvokeFrame): Promise<ModuleLoad> {

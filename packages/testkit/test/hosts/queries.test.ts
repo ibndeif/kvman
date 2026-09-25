@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { kv, objectOf, openHostFixture, rows, run, value, workspaceA, type HostFixture } from './harness.ts';
+import { kv, objectOf, openHostFixture, rows, run, value, workspaceA, type HostFixture, workerTests } from './harness.ts';
 
 let fixture: HostFixture;
 beforeEach(() => {
@@ -11,7 +11,7 @@ function ask(type: string, payload: Record<string, string> = {}): ReturnType<Hos
   return fixture.runtime.query({ sender: { address: 'user:local' }, type, payload, cause: undefined, workspaceId: workspaceA });
 }
 
-describe('queries in shared hosts (plan 02 §2.3, ADR 0074)', () => {
+describe('queries in shared hosts (plan 02 §2.3, ADR 0074)', workerTests, () => {
   it('M1.6-H2 a query answers with data and stores nothing', async () => {
     const added = objectOf(await value(fixture, 'notes.add', { text: 'hi' }));
     const before = rows(fixture, 'SELECT id FROM messages').length;

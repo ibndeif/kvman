@@ -1,5 +1,6 @@
 import { matchesTypePattern, type Access, type Capabilities, type TypeEntry } from '@kvman/protocol';
 import type { Sender } from '../storage/commit-unit.ts';
+import { kernelOwner } from '../registry/kernel-types.ts';
 import type { GrantsSource } from './grants.ts';
 import { Refusal } from './refusal.ts';
 
@@ -13,10 +14,11 @@ function grantedCall(capabilities: Capabilities, entry: TypeEntry): boolean {
 }
 
 // 05 §5.7 for commands and queries: an extension (or its process) calls its own types freely; a foreign type needs
-// a `calls` pattern covering it (never a foreign internal or user type) or, for an agent tool, `tools`.
+// a `calls` pattern covering it (never a foreign internal or user type) or, for an agent tool, `tools`. kernel.* types
+// apply their own Who rule instead (03 §3.8, ADR 0079).
 export function checkCallCapability(grants: GrantsSource, sender: Sender, owner: string, entry: TypeEntry, workspaceId: string | undefined): void {
   const acting = sender.extension;
-  if (acting === undefined || acting === owner) return;
+  if (acting === undefined || acting === owner || owner === kernelOwner) return;
   const capabilities = grants.capabilities(acting, workspaceId);
   if (capabilities !== undefined && grantedCall(capabilities, entry)) return;
   throw new Refusal('CAPABILITY_DENIED', {

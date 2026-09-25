@@ -21,7 +21,7 @@ export type RegistryBuild = { ok: true; registry: KernelRegistry } | { ok: false
 type Owner = { name: string; extension: InstalledExtension | undefined; entry: TypeEntry };
 
 // A handler's scheduling settings as its definition declares them (05 §5.5); the scheduler applies the defaults.
-export type HandlerSettings = { concurrency?: number; maxAttempts?: number };
+export type HandlerSettings = { concurrency?: number; maxAttempts?: number; timeoutMs?: number };
 
 function namespaceConflict(workspaceId: string, extensions: readonly InstalledExtension[]): RegistryFailure | undefined {
   const byNamespace = new Map<string, string>();
@@ -35,10 +35,11 @@ function namespaceConflict(workspaceId: string, extensions: readonly InstalledEx
   return undefined;
 }
 
-function settingsOf(definition: { concurrency?: number; maxAttempts?: number }): HandlerSettings {
+function settingsOf(definition: { concurrency?: number; maxAttempts?: number; timeoutMs?: number }): HandlerSettings {
   return {
     ...(definition.concurrency === undefined ? {} : { concurrency: definition.concurrency }),
     ...(definition.maxAttempts === undefined ? {} : { maxAttempts: definition.maxAttempts }),
+    ...(definition.timeoutMs === undefined ? {} : { timeoutMs: definition.timeoutMs }),
   };
 }
 
@@ -129,7 +130,13 @@ export class KernelRegistry {
     const subscription = manifest.subscriptions.find((candidate) => `subscription:${candidate.event}` === reference);
     if (subscription !== undefined) return settingsOf(subscription);
     const entry = manifest.types.find((candidate) => `${candidate.kind}:${candidate.type}` === reference);
-    return entry?.kind === 'command' ? settingsOf(entry) : undefined;
+    if (entry?.kind === 'command') return settingsOf(entry);
+    return entry?.kind === 'query' ? settingsOf({ ...(entry.timeoutMs === undefined ? {} : { timeoutMs: entry.timeoutMs }) }) : undefined;
+  }
+
+  // ADR 0086: a quarantined extension's pending messages wait; nothing of it is dispatched.
+  isQuarantined(extension: string): boolean {
+    return this.installed.get(extension)?.quarantined === true;
   }
 
   private resolveGlobally(type: string, owners: readonly Owner[]): TypeLookup {

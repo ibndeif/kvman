@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { eventually, kv, objectOf, openHostFixture, row, rows, run, send, value, type HostFixture } from './harness.ts';
+import { eventually, kv, objectOf, openHostFixture, row, rows, run, send, value, type HostFixture, workerTests } from './harness.ts';
 
 let fixture: HostFixture;
 beforeEach(() => {
@@ -11,7 +11,7 @@ async function awaiting(id: string): Promise<void> {
   await eventually(() => expect(row(fixture, id)['state']).toBe('awaiting'));
 }
 
-describe('deferred replies (plan 02 §2.8, ADRs 0066, 0074)', () => {
+describe('deferred replies (plan 02 §2.8, ADRs 0066, 0074)', workerTests, () => {
   it('M1.6-H7 a deferred reply completes a command; a second reply fails REPLY_NOT_AWAITING', async () => {
     const askId = await send(fixture, 'notes.ask', { id: 'q1' });
     await awaiting(askId);

@@ -8,7 +8,7 @@ const noValues = { id: [], now: [] };
 
 const invoke = {
   frame: 'invoke', invocationId: 'i-1', extension: '@acme/pdf', handler: 'command:pdf.translate', kind: 'command',
-  message: commandMessage, readOnly: false, workspace: { id: workspaceId, path: '/w/a', name: 'A' },
+  message: commandMessage, readOnly: false, deadlineAt: 1_790_000_060_000, workspace: { id: workspaceId, path: '/w/a', name: 'A' },
   recorded: { id: [messageId], now: [1_790_000_000_000] },
   module: { entry: '/x/extension.ts', manifest: manifestSchema.parse(pdfManifestFixture) },
 };
@@ -43,7 +43,9 @@ describe('host frames', () => {
     }
     expect(hostToKernelFrameSchema.parse(complete)).toEqual(complete);
 
-    expect(kernelToHostFrameSchema.safeParse({ ...invoke, deadlineAt: 1 }).success).toBe(false);
+    expect(kernelToHostFrameSchema.safeParse({ ...invoke, timeoutMs: 1 }).success).toBe(false);
+    const { deadlineAt: _deadline, ...withoutDeadline } = invoke;
+    expect(kernelToHostFrameSchema.safeParse(withoutDeadline).success).toBe(false);
     expect(hostToKernelFrameSchema.safeParse({ ...complete, unitOfWork: { ...complete.unitOfWork, blobRefs: [] } }).success).toBe(false);
     const mixed = copyOf(rpcCalls[3]);
     expect(hostToKernelFrameSchema.safeParse({ frame: 'rpc', invocationId: 'i-1', callId: 3, call: { ...mixed, name: 'step.end' } }).success).toBe(false);

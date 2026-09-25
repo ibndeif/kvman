@@ -44,6 +44,26 @@ export default defineExtension({ name: '@acme/counter', namespace: 'counter', ti
       throw new TypeError('boom');
     },
   });
+  ext.registerCommand('counter.slow.once', {
+    description: 'Waits for its signal on its first attempt.', input: z.object({}), timeoutMs: 1000,
+    handle: async (_input, ctx) => {
+      let first = false;
+      await ctx.step('first', async () => {
+        first = true;
+        return null;
+      });
+      if (first) await new Promise((resolve) => ctx.signal.addEventListener('abort', resolve));
+      return { ok: true };
+    },
+  });
+  ext.registerCommand('counter.hang', {
+    description: 'Never returns and ignores its signal.', input: z.object({}), timeoutMs: 1000, maxAttempts: 1,
+    handle: async () => new Promise<never>(() => undefined),
+  });
+  ext.registerCommand('counter.crash', {
+    description: 'Ends its worker.', input: z.object({}),
+    handle: async () => process.exit(1),
+  });
   ext.registerCommand('counter.wait', { description: 'Waits for a reply.', input: z.object({}), handle: async (_input, ctx) => ctx.defer() });
   ext.registerCommand('counter.secret', { description: 'Internal.', input: z.object({}), access: 'internal', handle: async () => ({}) });
   ext.registerCommand('counter.reset', { description: 'Internal reset.', input: z.object({}), access: 'internal', handle: async () => ({}) });

@@ -1,5 +1,6 @@
-import type { DeferredReply, InvokeFrame, OutboundPublish, OutboundSend } from '@kvman/protocol';
+import type { AbortReason, DeferredReply, InvokeFrame, KernelErrorCode, OutboundPublish, OutboundSend } from '@kvman/protocol';
 import type { Deferred } from '@kvman/sdk';
+import { kernelProblem, ProblemError } from '../../problems.ts';
 import { hostProblem } from './host-problems.ts';
 
 export type Deferral = { marker: Deferred; onAbort: string | undefined };
@@ -11,6 +12,8 @@ export class InvocationState {
   readonly publishes: OutboundPublish[] = [];
   readonly replies: DeferredReply[] = [];
   deferral: Deferral | undefined;
+  readonly #controller = new AbortController();
+  #aborted: ProblemError | undefined;
   #commandCalls = 0;
   #closed = false;
 
@@ -18,7 +21,24 @@ export class InvocationState {
     this.invoke = invoke;
   }
 
+  get abortProblem(): ProblemError | undefined {
+    return this.#aborted;
+  }
+
+  get signal(): AbortSignal {
+    return this.#controller.signal;
+  }
+
+  // ADR 0084: an abort fires ctx.signal with the problem that ended the invocation; every later ctx call throws it.
+  abort(reason: AbortReason): void {
+    const { message, readOnly } = this.invoke;
+    const codes: Record<AbortReason, KernelErrorCode> = { cancelled: 'CANCELLED', deadline: 'DEADLINE_EXCEEDED', timeout: readOnly ? 'QUERY_TIMEOUT' : 'HANDLER_TIMEOUT' };
+    this.#aborted = new ProblemError(kernelProblem(codes[reason], { correlationId: message.correlationId, messageId: message.id }));
+    this.#controller.abort(this.#aborted);
+  }
+
   open(): void {
+    if (this.#aborted !== undefined) throw this.#aborted;
     if (this.#closed) throw hostProblem(this.invoke.message, 'INTERNAL', 'the invocation has ended');
   }
 

@@ -47,7 +47,7 @@ For every incoming message (from an adapter, a host, or the kernel):
 1. **Validate the envelope** against `@kvman/protocol`.
 2. **Assign** `id`, `source`, `createdAt`, inherited `correlationId`/`causationId`/`context`, the priority (defaults and inheritance in `02` §2.6: user-originated `interactive`, inherited from the parent inside handlers, only ever lowered by the sender), and the inherited `deadlineAt` (`02` §2.9). If the context has no `locale`, set it from the user's language preference (`02` §2.10).
 3. **Resolve the type** in the registry for the message's workspace: owner extension, handler definition, lane template, schema. Unknown → `TYPE_NOT_FOUND`. Owner not enabled in the workspace or quarantined → `HANDLER_UNAVAILABLE`. A message without a workspace may target only `global`-scope types (`WORKSPACE_INVALID` otherwise); a `global`-scope type (and an event type without a workspace) is resolved as global even when the message carries a workspace, and admission stores it without one; two extensions of one namespace that both resolve it fail `NAMESPACE_CONFLICT` (ADR 0048). Their owner must be enabled in at least one workspace, and the invocation runs with the intersection of the owner's grants across those workspaces (`06` §6.4).
-4. **Check capabilities and access**: the source may send this kind and type (`05` §5.7, against the grants source of ADR 0052), otherwise `CAPABILITY_DENIED`. Then the command's or query's `access` (`02` §2.4): `user` requires a `user:*` source; `extensions` requires an `ext:*` or `proc:*` source; `internal` requires the owning extension's own handlers (never a process) or the kernel; `all` accepts every source. The kernel is always accepted. Otherwise `CALLER_NOT_ALLOWED`. Widgets send as their extension (`ext:*`). The check uses the kernel-assigned source, so it cannot be forged by extensions, processes, or widgets. An event may be published only by the extension that registered it (or the kernel), with `ctx.publish` for durable and transient events and `ctx.live` for live ones.
+4. **Check capabilities and access**: the source may send this kind and type (`05` §5.7, against the grants source of ADR 0052), otherwise `CAPABILITY_DENIED`. Then the command's or query's `access` (`02` §2.4): `user` requires a `user:*` source; `extensions` requires an `ext:*` or `proc:*` source; `internal` requires the owning extension's own handlers (never a process) or the kernel; `all` accepts every source. The kernel is always accepted. Otherwise `CALLER_NOT_ALLOWED`. `kernel.*` types skip the `calls` check and apply their own Who rule (§3.8, ADR 0079). Widgets send as their extension (`ext:*`). The check uses the kernel-assigned source, so it cannot be forged by extensions, processes, or widgets. An event may be published only by the extension that registered it (or the kernel), with `ctx.publish` for durable and transient events and `ctx.live` for live ones.
 5. **Validate the payload** against the type's input JSON Schema from the manifest (Ajv, compiled once per type at load; draft 2020-12, `strict: false` so annotations are ignored, the kvman formats registered, ADR 0056) → `VALIDATION_FAILED` with issues. A message whose kind differs from its type's kind fails `TYPE_NOT_FOUND`; an `onReply.type` that is not the sender's own internal command fails `VALIDATION_FAILED` (ADR 0058). Render the lane from the handler's lane template (`02` §2.6). The host checks the full Zod schema again (including refinements and defaults) before the handler runs, and a command's result against its `output` schema after it returns; either failure is `VALIDATION_FAILED`, not retried (`05` §5.12, ADR 0074).
 6. **Idempotency**: look up `(source, idempotencyKey)`; return the original on a digest match, `IDEMPOTENCY_MISMATCH` otherwise.
 7. **Route by kind**:
@@ -71,7 +71,7 @@ Every kind then follows the same path: registry lookup → host of the handler's
 - **Timers**: `ctx.send(type, payload, { delayMs | at })` sets `notBefore`. Declared `schedules` (`every: '1h'`, cron syntax) are materialized as timer messages by the kernel.
 - **Retries**: crash, host loss, or a retryable problem → `attempts+1`, back to `pending` with backoff (retry *n* waits 1 s, 5 s, 30 s, then 30 s). `STORAGE_CONFLICT` retries immediately (up to 5 per attempt, not counted; the sixth is a counted retryable failure). Non-retryable problem → `failed`. `attempts == max` → `dead` with the stored reply `MESSAGE_DEAD` for waiters (its detail names the last attempt's code); `kernel.message.dead-lettered` event in the same transaction, in the dead message's workspace (ADRs 0059, 0061, 0062).
 - **Lanes and reentrancy**: only a `running` message holds its lane. The scheduler answers whether a lane is held by an invocation or a running ancestor in its causation chain; `ctx.command` fails `LANE_REENTRANT` with it (ADR 0063).
-- **Deadlines** (`02` §2.9): pending messages whose `deadlineAt` passes are failed from the timer wheel with `DEADLINE_EXCEEDED`, as are `awaiting` ones. At claim the scheduler computes the invocation deadline `min(deadlineAt, now + timeoutMs)`; a timer fires the abort signal then. The outcome is `DEADLINE_EXCEEDED` (final) if the message deadline was reached, else `HANDLER_TIMEOUT` (retryable). After a 2 s grace without settling, the host is treated as stuck (§3.6); a stuck invocation is charged one attempt and follows the same outcome rule.
+- **Deadlines** (`02` §2.9): pending messages whose `deadlineAt` passes are failed from the timer wheel with `DEADLINE_EXCEEDED`, as are `awaiting` ones. At claim the scheduler computes the invocation deadline `min(deadlineAt, now + timeoutMs)`; a timer fires the abort signal then and ends the attempt at once, discarding what the handler returns later (ADR 0084). The outcome is `DEADLINE_EXCEEDED` (final) if the message deadline was reached, else `HANDLER_TIMEOUT` (retryable; `QUERY_TIMEOUT` for a query). After a 2 s grace without settling, the host is treated as stuck (§3.6); a stuck invocation is charged one attempt and follows the same outcome rule.
 
 ## 3.5 Execution hosts
 
@@ -90,7 +90,7 @@ host → kernel   rpc      {invocationId, call: command|query|live|delta|step.be
 kernel → host   rpcResult{invocationId, callId, ok, value|problem}
 host → kernel   complete {invocationId, outcome: {ok, value}|{problem}|{deferred:true},
                           unitOfWork: {writes, sends, publishes, replies, blobRefs}}
-kernel → host   abort    {invocationId, reason}
+kernel → host   abort    {invocationId, reason: cancelled|deadline|timeout}   (ADR 0084)
 ```
 
 The frames are Zod schemas in `@kvman/protocol`; M1.6 adds `workspace`, `recorded` (ids and times to replay, ADR 0070), and `module` (entry and manifest on a worker's first invocation of an extension) to `invoke`, and `recorded` to `complete`; `blobRefs`, `abort`, and `store.read` arrive with the milestones that build them. A frame that fails validation is treated as the loss of that worker (ADR 0067), and a `ctx` call after the handler settled fails `INTERNAL` (ADR 0076).
@@ -111,17 +111,18 @@ Every `rpc` is checked against the invocation's capabilities and liveness (not c
 
 ## 3.6 Supervision
 
-- **Host crash** (worker `error`/`exit`, process exit): all in-flight invocations on it are released back to `pending` (attempt+1). The host restarts immediately.
+- **Host crash** (worker `error`/`exit`, process exit): all in-flight invocations on it are released back to `pending` (attempt+1), and each extension running on it is charged one host failure. A new host starts on the next dispatch that needs one (ADR 0082).
 - **Stuck host** (an invocation past deadline + grace): a shared or dedicated worker is terminated; a sandboxed process is killed. Collateral in-flight invocations on a shared worker are redelivered without an attempt penalty; the offending one is charged.
-- **Quarantine**: an extension gets status `quarantined` for one of three reasons: `HOST_FAILURES` (charged with 3 host crashes or stuck invocations within 10 minutes), `EXT_INTEGRITY` (snapshot rehash mismatch, `06` §6.5), or `MIGRATION_FAILED` (a data migration failed part-way, `04` §4.8). It gets status `quarantined` and `quarantine_reason` in the `extensions` table and a `kernel.extension.quarantined {name, reason}` event. Presets are not edited: the extension stays listed as enabled, but the router treats it as unavailable in every workspace (`HANDLER_UNAVAILABLE`) and the UI registry drops its contributions. The kernel sends an error notification (`08` §8.11) and the risk banner names it. The recovery page offers actions by reason:
+- **Quarantine**: an extension gets status `quarantined` for one of three reasons: `HOST_FAILURES` (charged with 3 host crashes or stuck invocations within 10 minutes), `EXT_INTEGRITY` (snapshot rehash mismatch, `06` §6.5), or `MIGRATION_FAILED` (a data migration failed part-way, `04` §4.8). It gets status `quarantined` and `quarantine_reason` in the `extensions` table and a `kernel.extension.quarantined {name, reason}` event. Presets are not edited: the extension stays listed as enabled, but the router treats it as unavailable in every workspace (`HANDLER_UNAVAILABLE`); its pending messages stay pending and are not run until the quarantine is lifted (ADR 0086) and the UI registry drops its contributions. The kernel sends an error notification (`08` §8.11) and the risk banner names it. The recovery page offers actions by reason:
 
   | Reason | Actions offered |
   |---|---|
   | `HOST_FAILURES` | Re-enable (`kernel.extension.unquarantine`), Rollback, Disable |
   | `EXT_INTEGRITY` | Rollback to another verified snapshot, Disable |
   | `MIGRATION_FAILED` | Retry upgrade (`kernel.extension.reload {name, digest: migrating.digest}`), Disable |
+  | `EXT_MANIFEST_INVALID` | Rollback, Disable (manifest drift, ADR 0081) |
 
-  `kernel.extension.unquarantine` is accepted only for `HOST_FAILURES`; for the other reasons it fails `EXT_QUARANTINED`, because the code or data is still unusable. A successful rollback (integrity) or retried upgrade (migration) clears the quarantine. Disable in every workspace also clears it.
+  `kernel.extension.unquarantine` is accepted only for `HOST_FAILURES`; until install (M2.2), a quarantine upserts the `extensions` row (ADR 0080); for the other reasons it fails `EXT_QUARANTINED`, because the code or data is still unusable. A successful rollback (integrity) or retried upgrade (migration) clears the quarantine. Disable in every workspace also clears it.
 - **Manifest drift**: a module whose `setup` registers something different from its recorded manifest fails to load (`EXT_MANIFEST_INVALID`) and is quarantined.
 
 ## 3.7 Process supervisor (`ctx.process`)
@@ -147,7 +148,7 @@ const result = await p.wait();   // { exitCode, signal, logBlobId, tail, truncat
 
 ## 3.8 Kernel API (`kernel.*`)
 
-The kernel exposes itself through the same message model and follows the naming grammar (`02` §2.4). All payload and result schemas live in `@kvman/protocol`.
+The kernel exposes itself through the same message model and follows the naming grammar (`02` §2.4). All payload and result schemas live in `@kvman/protocol`. Kernel commands take the one dispatch path: an inbox row, the scheduler, and an in-process kernel host on the main thread that runs kernel code and commits its unit (ADR 0078).
 
 **Who may send** (the "Who" column below):
 

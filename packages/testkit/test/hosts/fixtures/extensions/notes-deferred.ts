@@ -11,7 +11,10 @@ export function registerDeferred(ext: Ext): void {
   });
   ext.registerCommand('notes.question.expire', {
     description: 'Closes an unanswered question.', input: z.object({ commandId: z.string(), reason: z.string() }), access: 'internal',
-    handle: async () => ({}),
+    handle: async ({ commandId, reason }, ctx) => {
+      ctx.store.kv.set(`expired:${commandId}`, { reason, source: ctx.message.source });
+      return {};
+    },
   });
   ext.registerCommand('notes.question.answer', {
     description: 'Answers a question.', input: z.object({ askId: z.string(), answer: z.string() }), access: 'user',

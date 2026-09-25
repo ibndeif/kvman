@@ -1,12 +1,13 @@
-import type { Address, DeferredReply, Json, Message, OutboundPublish, OutboundSend, Problem, ReplyPayload, StoreWrite } from '@kvman/protocol';
+import type { Address, DeferredReply, Json, Message, OutboundPublish, OutboundSend, Problem, QuarantineReason, ReplyPayload, StoreWrite } from '@kvman/protocol';
 import type { Connection } from './driver.ts';
 
 export type MessageState = 'pending' | 'running' | 'awaiting' | 'done' | 'failed' | 'dead' | 'cancelled';
 
 export type InvocationOutcome = { ok: true; value: Json } | { ok: false; problem: Problem } | { deferred: true; onAbort?: string };
 
-// An unstored invocation is a transient event's delivery (ADR 0069): it has no row to mark.
-export type CommitInvocation = { message: Message; extension: string; outcome: InvocationOutcome; stored: boolean };
+// An unstored invocation is a transient event's delivery (ADR 0069): it has no row to mark. `deadlineAt` is the
+// invocation deadline: a unit that reaches commit after it is refused (04 §4.2, ADR 0084).
+export type CommitInvocation = { message: Message; extension: string; outcome: InvocationOutcome; stored: boolean; deadlineAt?: number };
 
 // Who sends: the kernel-assigned address, and for ext:* and proc:* sources the extension whose grants apply.
 export type Sender = { address: Address; extension?: string };
@@ -21,7 +22,10 @@ export type UnitOrigin =
   | { kind: 'invocation'; invocation: CommitInvocation }
   | { kind: 'adapter'; sender: Sender; workspaceId?: string; messageId: string }
   | { kind: 'retry'; message: Message; attempts: number; outcome: RetryOutcome }
-  | { kind: 'call'; sender: Sender; cause: Message; messageId: string };
+  | { kind: 'call'; sender: Sender; cause: Message; messageId: string }
+  | { kind: 'cancel'; invocation: CommitInvocation; messageIds: readonly string[]; unstored: number }
+  | { kind: 'expire'; messageIds: readonly string[]; correlationId: string }
+  | { kind: 'quarantine'; extension: string; reason: QuarantineReason; correlationId: string };
 
 export type CommitUnit = {
   origin: UnitOrigin;
@@ -72,30 +76,39 @@ export type StoredMessage = AdmittedMessage & { seq: number; state: MessageState
 // A message whose result this unit stored, for its waiters (02 §2.3).
 export type FinalReply = { messageId: string; reply: ReplyPayload };
 
+// A message this unit ended by cancel or deadline, with the state it had (ADRs 0083, 0084).
+export type EndedMessage = { messageId: string; previous: MessageState; handler: string };
+
 export type AppliedMessages = {
   inserted: StoredMessage[];
   duplicates: OriginalMessage[];
   announced: Message[];
-  unstored: AdmittedMessage[];
+  unstored: UnstoredDelivery[];
   replies: FinalReply[];
+  ended: EndedMessage[];
 };
 
-export type CommitResult = ({ committed: true } & AppliedMessages) | { committed: false; problem: Problem };
+// A transient event's delivery, with the message that published the event (for cancel scopes, ADR 0083).
+export type UnstoredDelivery = { admitted: AdmittedMessage; publisher: string | undefined };
+
+// A stale unit belongs to an invocation that already ended (cancelled, timed out): it is discarded.
+export type CommitResult = ({ committed: true } & AppliedMessages) | { committed: false; problem: Problem; stale: boolean };
 
 export function correlationOf(origin: UnitOrigin): string {
-  if (origin.kind === 'invocation') return origin.invocation.message.correlationId;
+  if (origin.kind === 'invocation' || origin.kind === 'cancel') return origin.invocation.message.correlationId;
+  if (origin.kind === 'expire' || origin.kind === 'quarantine') return origin.correlationId;
   if (origin.kind === 'call') return origin.cause.correlationId;
   return origin.kind === 'retry' ? origin.message.correlationId : origin.messageId;
 }
 
 export function senderOf(origin: UnitOrigin): Sender {
   if (origin.kind === 'invocation') return { address: `ext:${origin.invocation.extension}`, extension: origin.invocation.extension };
-  return origin.kind === 'retry' ? { address: 'kernel' } : origin.sender;
+  return origin.kind === 'adapter' || origin.kind === 'call' ? origin.sender : { address: 'kernel' };
 }
 
 // The message a unit acts for: its sends and publishes are caused by it and run in its workspace.
 export function causeOf(origin: UnitOrigin): Message | undefined {
-  if (origin.kind === 'invocation') return origin.invocation.message;
+  if (origin.kind === 'invocation' || origin.kind === 'cancel') return origin.invocation.message;
   if (origin.kind === 'call') return origin.cause;
   return origin.kind === 'retry' ? origin.message : undefined;
 }

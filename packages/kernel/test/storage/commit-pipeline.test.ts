@@ -37,15 +37,15 @@ describe('commit pipeline (plan 04 §4.2)', () => {
 
   it('M1.1-H2 a conflicting version rolls back only that unit', async () => {
     const store = openTestStore(owners);
-    const message = await invocationMessage(store);
-    await store.pipeline.enqueue(unitOf(message, [{ kind: 'doc.put', scope: 'workspace', collection: 'files', id: 'shared', data: { n: 1 } }]));
+    await store.pipeline.enqueue(unitOf(await invocationMessage(store), [{ kind: 'doc.put', scope: 'workspace', collection: 'files', id: 'shared', data: { n: 1 } }]));
+    const [one, two, three] = [await invocationMessage(store), await invocationMessage(store), await invocationMessage(store)];
     const [first, second, third] = await Promise.all([
-      store.pipeline.enqueue(unitOf(message, [{ kind: 'kv.set', scope: 'workspace', key: 'first', value: 1 }])),
-      store.pipeline.enqueue(unitOf(message, [
+      store.pipeline.enqueue(unitOf(one, [{ kind: 'kv.set', scope: 'workspace', key: 'first', value: 1 }])),
+      store.pipeline.enqueue(unitOf(two, [
         { kind: 'kv.set', scope: 'workspace', key: 'second', value: 1 },
         { kind: 'doc.put', scope: 'workspace', collection: 'files', id: 'shared', data: { n: 9 }, expectedVersion: 5 },
       ])),
-      store.pipeline.enqueue(unitOf(message, [{ kind: 'kv.set', scope: 'workspace', key: 'third', value: 1 }])),
+      store.pipeline.enqueue(unitOf(three, [{ kind: 'kv.set', scope: 'workspace', key: 'third', value: 1 }])),
     ]);
     expect([first?.committed, second, third?.committed]).toEqual([true, expect.objectContaining({ committed: false, problem: expect.objectContaining({ code: 'STORAGE_CONFLICT' }) }), true]);
     expect(rows(store.connection, 'SELECT key FROM kv ORDER BY key')).toEqual([{ key: 'first' }, { key: 'third' }]);
@@ -53,17 +53,22 @@ describe('commit pipeline (plan 04 §4.2)', () => {
 
   it('M1.1-H3 batching commits many units in one transaction', async () => {
     const store = openTestStore(owners);
-    const message = await invocationMessage(store);
-    const units = (count: number) => Array.from({ length: count }, (_, index) => unitOf(message, [{ kind: 'kv.set', scope: 'workspace', key: `k${count}-${index}`, value: index }]));
+    const units = async (count: number) => {
+      const messages = await Promise.all(Array.from({ length: count }, () => invocationMessage(store)));
+      return messages.map((message, index) => unitOf(message, [{ kind: 'kv.set', scope: 'workspace', key: `k${count}-${index}`, value: index }]));
+    };
     const measure = async (count: number): Promise<number> => {
+      const prepared = await units(count);
       const before = store.driver.transactions;
-      await Promise.all(units(count).map((unit) => store.pipeline.enqueue(unit)));
+      const results = await Promise.all(prepared.map((unit) => store.pipeline.enqueue(unit)));
+      expect(results.every((result) => result.committed)).toBe(true);
       return store.driver.transactions - before;
     };
     expect(await measure(64)).toBe(1);
     expect(await measure(65)).toBe(2);
+    const prepared = await units(3);
     const before = store.driver.transactions;
-    const pending = units(3).map((unit) => store.pipeline.enqueue(unit));
+    const pending = prepared.map((unit) => store.pipeline.enqueue(unit));
     expect(store.driver.transactions).toBe(before);
     await Promise.all(pending);
     expect(store.driver.transactions - before).toBe(1);

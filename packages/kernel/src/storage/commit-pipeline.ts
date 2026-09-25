@@ -70,7 +70,7 @@ export class CommitPipeline {
   #endFailedBatch(batch: QueuedUnit[], error: unknown): void {
     if (this.#connection.inTransaction()) this.#connection.exec('ROLLBACK');
     for (const { unit, resolve, reject } of batch) {
-      if (error instanceof StorageFailure) resolve({ committed: false, problem: storageProblem(error, correlationOf(unit.origin)) });
+      if (error instanceof StorageFailure) resolve({ committed: false, problem: storageProblem(error, correlationOf(unit.origin)), stale: false });
       else reject(error);
     }
   }

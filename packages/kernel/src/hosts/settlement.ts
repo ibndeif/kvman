@@ -6,6 +6,7 @@ import type { CommitPipeline } from '../storage/commit-pipeline.ts';
 import type { CommitResult, CommitUnit } from '../storage/commit-unit.ts';
 import type { LiveAddress, LiveBus } from './live-bus.ts';
 import type { QueryPath } from './query-path.ts';
+import type { Quarantines } from './quarantines.ts';
 import type { RecordedValueStore } from './recorded-value-store.ts';
 import type { ReplyWaiters } from './reply-waiters.ts';
 
@@ -16,6 +17,7 @@ export type SettlementDeps = {
   queries: QueryPath;
   live: LiveBus;
   values: RecordedValueStore;
+  quarantines: Quarantines;
 };
 
 type Run = { claim: Claim; live: ReadonlyMap<string, LiveAddress> };
@@ -45,13 +47,52 @@ export class Settlement {
       await this.#failed(run, outcome.problem, frame.recorded);
       return;
     }
-    const result = await this.#commit(claim, outcome, frame.unitOfWork);
+    const result = await this.#commit(claim, outcome, frame.unitOfWork, true);
     if (result.committed) {
       this.#deps.scheduler.settled(claim.message.id);
       this.#deps.waiters.resolve(result.replies);
+      const { deadlineAt } = claim.message;
+      if ('deferred' in outcome && claim.stored && deadlineAt !== undefined) this.#deps.scheduler.watchAwaiting(claim.message.id, deadlineAt);
       return;
     }
-    await this.#notCommitted(run, result.problem, frame.recorded);
+    if (!result.stale) await this.#notCommitted(run, result.problem, frame.recorded);
+  }
+
+  // ADR 0084: the invocation deadline ended the attempt; the handler's later result is discarded by the host manager.
+  async timedOut(run: Run, reason: 'deadline' | 'timeout'): Promise<void> {
+    const { message } = run.claim;
+    const code = reason === 'deadline' ? 'DEADLINE_EXCEEDED' : message.kind === 'query' ? 'QUERY_TIMEOUT' : 'HANDLER_TIMEOUT';
+    const problem = kernelProblem(code, { correlationId: message.correlationId, messageId: message.id });
+    if (message.kind === 'query') {
+      this.#reset(run);
+      this.#deps.queries.answer(message.id, { ok: false, problem });
+      return;
+    }
+    await this.#failed(run, problem, noNewValues);
+  }
+
+  // A cancel already ended the message in its own unit (ADR 0083); only the preview is withdrawn.
+  aborted(run: Run): void {
+    this.#reset(run);
+  }
+
+  // 03 §3.6: caught on a stuck host through no fault of its own, it returns without an attempt penalty.
+  async collateral(run: Run): Promise<void> {
+    this.#reset(run);
+    const { message, extension } = run.claim;
+    if (message.kind === 'query') {
+      this.#deps.scheduler.submitQuery({ message, handler: extension });
+      return;
+    }
+    await this.#deps.scheduler.redeliver(message.id);
+  }
+
+  // ADRs 0071, 0081: the extension could not be loaded; drift quarantines it.
+  async loadFailed(run: Run, problem: Problem): Promise<void> {
+    const { message, extension } = run.claim;
+    if (message.kind === 'query') this.#deps.queries.answer(message.id, { ok: false, problem });
+    else await this.#failed(run, { ...problem, retryable: false }, noNewValues);
+    if (problem.code === 'EXT_MANIFEST_INVALID') await this.#deps.quarantines.quarantine(extension, 'EXT_MANIFEST_INVALID');
   }
 
   // A host lost with the invocation in it (ADR 0067): a retryable INTERNAL.
@@ -83,8 +124,9 @@ export class Settlement {
     this.#deps.queries.answer(claim.message.id, outcome.ok ? { ok: true, value: outcome.value } : { ok: false, problem: outcome.problem });
   }
 
-  #commit(claim: Claim, outcome: HostOutcome, contents: EmptyContents): Promise<CommitResult> {
-    const invocation = { message: claim.message, extension: claim.extension, outcome, stored: claim.stored };
+  // The handler's own unit is checked against its invocation deadline (04 §4.2); a failure the kernel records is not.
+  #commit(claim: Claim, outcome: HostOutcome, contents: EmptyContents, handlerUnit: boolean): Promise<CommitResult> {
+    const invocation = { message: claim.message, extension: claim.extension, outcome, stored: claim.stored, ...(handlerUnit ? { deadlineAt: claim.deadlineAt } : {}) };
     return this.#deps.pipeline.enqueue({ origin: { kind: 'invocation', invocation }, ...contents });
   }
 
@@ -118,7 +160,8 @@ export class Settlement {
   }
 
   async #failFinal(run: Run, problem: Problem): Promise<void> {
-    const result = await this.#commit(run.claim, { ok: false, problem }, emptyContents);
+    const result = await this.#commit(run.claim, { ok: false, problem }, emptyContents, false);
+    if (!result.committed && result.stale) return;
     this.#deps.scheduler.settled(run.claim.message.id);
     this.#resolveWaiters(result);
   }

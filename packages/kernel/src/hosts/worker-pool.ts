@@ -53,12 +53,15 @@ export class WorkerPool {
     if (this.#workers.includes(worker)) worker.thread.post(frame);
   }
 
+  // A stopped worker leaves the pool at once, so nothing more is sent to it; its exit is not reported.
   stop(worker: PoolWorker): void {
+    const position = this.#workers.indexOf(worker);
+    if (position !== -1) this.#workers.splice(position, 1);
     worker.thread.terminate();
   }
 
   stopAll(): void {
-    for (const worker of this.#workers) worker.thread.terminate();
+    for (const worker of [...this.#workers]) this.stop(worker);
   }
 
   workers(): readonly PoolWorker[] {

@@ -38,6 +38,7 @@ export const invokeFrameSchema = z.strictObject({
   kind: messageKindSchema,
   message: messageSchema,
   readOnly: z.boolean(),
+  deadlineAt: epochMsSchema,
   workspace: hostWorkspaceSchema.exactOptional(),
   recorded: recordedValuesSchema,
   module: z.strictObject({ entry: z.string().min(1), manifest: manifestSchema }).exactOptional(),
@@ -100,8 +101,19 @@ export const completeFrameSchema = z.strictObject({
 });
 export type CompleteFrame = z.infer<typeof completeFrameSchema>;
 
-export const kernelToHostFrameSchema = z.discriminatedUnion('frame', [invokeFrameSchema, rpcResultFrameSchema]);
+// ADR 0084: the invocation ended by cancel, its message deadline, or its handler timeout.
+export const abortReasonSchema = z.enum(['cancelled', 'deadline', 'timeout']);
+export type AbortReason = z.infer<typeof abortReasonSchema>;
+
+export const abortFrameSchema = z.strictObject({ frame: z.literal('abort'), invocationId: invocationIdSchema, reason: abortReasonSchema });
+export type AbortFrame = z.infer<typeof abortFrameSchema>;
+
+// The extension could not be loaded for this invocation (ADRs 0071, 0081).
+export const loadFailedFrameSchema = z.strictObject({ frame: z.literal('loadFailed'), invocationId: invocationIdSchema, problem: problemSchema });
+export type LoadFailedFrame = z.infer<typeof loadFailedFrameSchema>;
+
+export const kernelToHostFrameSchema = z.discriminatedUnion('frame', [invokeFrameSchema, rpcResultFrameSchema, abortFrameSchema]);
 export type KernelToHostFrame = z.infer<typeof kernelToHostFrameSchema>;
 
-export const hostToKernelFrameSchema = z.discriminatedUnion('frame', [rpcFrameSchema, completeFrameSchema]);
+export const hostToKernelFrameSchema = z.discriminatedUnion('frame', [rpcFrameSchema, completeFrameSchema, loadFailedFrameSchema]);
 export type HostToKernelFrame = z.infer<typeof hostToKernelFrameSchema>;

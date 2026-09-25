@@ -72,7 +72,7 @@ function assemble({ connection, time, index }: Shared): SchedulerFixture {
   const pipeline = new CommitPipeline({ connection, admission: router, now, pending });
   const timers = new ManualTimers(time);
   const dispatcher = new TestDispatcher();
-  const scheduler = new Scheduler({ connection, pipeline, index: pending, registry: () => built, dispatcher, now, timers });
+  const scheduler = new Scheduler({ connection, pipeline, index: pending, registry: () => built, dispatcher, now, timers, onCommitted: () => undefined });
   return { connection, time, timers, dispatcher, router, pipeline, adapter: new AdapterPath(pipeline, ulids), index: pending, scheduler };
 }
 

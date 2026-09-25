@@ -4,6 +4,7 @@ import { registerCalls } from './notes-calls.ts';
 import { registerDeferred } from './notes-deferred.ts';
 import { registerLive } from './notes-live.ts';
 import { registerQueries } from './notes-queries.ts';
+import { registerSupervision } from './notes-supervision.ts';
 import { workerState } from './notes-state.ts';
 
 // The main fixture of the host conformance suite: every kind, the three request/reply patterns, and ctx misuse.
@@ -20,4 +21,5 @@ export default defineExtension({ name: '@acme/notes', namespace: 'notes', title:
   registerDeferred(ext);
   registerLive(ext);
   registerQueries(ext);
+  registerSupervision(ext);
 });

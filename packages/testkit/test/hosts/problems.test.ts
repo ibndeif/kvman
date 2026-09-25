@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { eventually, openHostFixture, pendingWithAttempts, replyOf, row, send, type HostFixture } from './harness.ts';
+import { eventually, openHostFixture, pendingWithAttempts, replyOf, row, send, type HostFixture, workerTests } from './harness.ts';
 
 let fixture: HostFixture;
 beforeEach(() => {
@@ -7,7 +7,7 @@ beforeEach(() => {
 });
 afterEach(() => fixture.close());
 
-describe('problems thrown by handlers (plan 13 §13.1, ADR 0074)', () => {
+describe('problems thrown by handlers (plan 13 §13.1, ADR 0074)', workerTests, () => {
   it('M1.6-E3 a registered problem takes its definition', async () => {
     const id = await send(fixture, 'counter.fail');
     expect(await fixture.runtime.awaitReply(id)).toEqual({

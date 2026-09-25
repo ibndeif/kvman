@@ -1,7 +1,7 @@
 import type { Ctx } from '@kvman/sdk';
 
 // Per-worker observations the host tests read back through queries.
-export const workerState = { setupRuns: 0, fetchRuns: 0, late: [] as string[] };
+export const workerState = { setupRuns: 0, fetchRuns: 0, late: [] as string[], probe: [] as string[] };
 
 export function codeOf(error: unknown): string {
   if (typeof error === 'object' && error !== null && 'problem' in error) {

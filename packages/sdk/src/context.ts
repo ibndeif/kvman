@@ -67,6 +67,10 @@ export interface Ctx {
   readonly message: Message;
   /** The context inherited along the chain, such as `locale` or a `sessionId`. */
   readonly context: Readonly<Record<string, string>>;
+  /** Fires when the invocation is cancelled or reaches its deadline; its reason is the ProblemError that ended it. */
+  readonly signal: AbortSignal;
+  /** The invocation deadline in epoch milliseconds: the message deadline or this attempt's timeout, whichever is first. */
+  readonly deadlineAt: number;
   /** The invocation's workspace; absent for global-scope handlers. */
   readonly workspace?: Workspace;
   /** Ids that repeat when the message is redelivered. */

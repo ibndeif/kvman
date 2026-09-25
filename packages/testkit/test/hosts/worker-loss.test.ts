@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { eventually, openHostFixture, pendingWithAttempts, row, send, workspaceA, type HostFixture } from './harness.ts';
+import { eventually, openHostFixture, pendingWithAttempts, rows, send, workspaceA, type HostFixture, workerTests } from './harness.ts';
 
 let fixture: HostFixture;
 beforeEach(() => {
@@ -7,10 +7,10 @@ beforeEach(() => {
 });
 afterEach(() => fixture.close());
 
-describe('a worker that exits (ADR 0067)', () => {
+describe('a worker that exits (ADR 0067)', workerTests, () => {
   it('M1.6-E29 its running attempts fail INTERNAL and retry on a new worker; its query answers INTERNAL', async () => {
     const waiting = await send(fixture, 'notes.crash.once', { mode: 'wait' });
-    await eventually(() => expect(row(fixture, waiting)['state']).toBe('running'));
+    await eventually(() => expect(rows(fixture, "SELECT state FROM steps WHERE message_id = ? AND name = 'first'", waiting)).toEqual([{ state: 'done' }]));
     const query = fixture.runtime.query({ sender: { address: 'user:local' }, type: 'notes.slow.get', payload: {}, cause: undefined, workspaceId: workspaceA });
     await eventually(() => expect(fixture.runtime.hosts.workers()[0]?.inFlight).toBe(2));
     const exiting = await send(fixture, 'notes.crash.once', { mode: 'exit' });

@@ -113,7 +113,14 @@ export function adapterUnit(sends: OutboundSend[], address: Address = 'user:loca
 export async function invocationMessage(store: TestStore, type = 'pdf.translate'): Promise<Message> {
   const result = await store.pipeline.enqueue(adapterUnit([{ type, payload: {} }]));
   if (!result.committed || result.inserted[0] === undefined) throw new Error('the invocation message was not stored');
-  return result.inserted[0].message;
+  const { message } = result.inserted[0];
+  claimForTest(store.connection, message.id);
+  return message;
+}
+
+// What the scheduler's claim does before a handler runs: its unit commits only while the message is running (04 §4.2).
+export function claimForTest(connection: Connection, messageId: string): void {
+  connection.prepare("UPDATE messages SET state = 'running' WHERE id = ? AND state = 'pending'").run(messageId);
 }
 
 export function rows(connection: Connection, sql: string, ...values: (string | number)[]): SqlRow[] {

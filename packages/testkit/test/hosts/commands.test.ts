@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { kv, objectOf, openHostFixture, replyOf, row, rows, run, send, value, type HostFixture } from './harness.ts';
+import { kv, objectOf, openHostFixture, replyOf, row, rows, run, send, value, type HostFixture, workerTests } from './harness.ts';
 
 let fixture: HostFixture;
 beforeEach(() => {
@@ -7,7 +7,7 @@ beforeEach(() => {
 });
 afterEach(() => fixture.close());
 
-describe('commands in shared hosts (plan 02 §2.3, 03 §3.5)', () => {
+describe('commands in shared hosts (plan 02 §2.3, 03 §3.5)', workerTests, () => {
   it('M1.6-H1 a command runs in a shared worker and its reply is stored', async () => {
     const id = await send(fixture, 'notes.add', { text: 'hi' });
     const reply = await fixture.runtime.awaitReply(id);

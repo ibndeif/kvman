@@ -14,6 +14,8 @@ export function createContext(parts: ContextParts): Ctx {
   return {
     message,
     context: message.context,
+    signal: state.signal,
+    deadlineAt: invoke.deadlineAt,
     ...(invoke.workspace === undefined ? {} : { workspace: invoke.workspace }),
     ids: {
       new: () => {

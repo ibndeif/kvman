@@ -7,12 +7,13 @@ import type { UnindexedScanThrottle } from '../../store/store-context.ts';
 import type { StoreReader } from '../../store/store-reader.ts';
 import { createContext } from './handler-context.ts';
 import { hostProblem, problemOfThrown } from './host-problems.ts';
-import { InvocationState } from './invocation-state.ts';
+import type { InvocationState } from './invocation-state.ts';
 import { InvocationValues } from './invocation-values.ts';
 import type { RpcClient } from './rpc-client.ts';
 
 export type RunParts = {
   invoke: InvokeFrame;
+  state: InvocationState;
   extension: ExtensionRecording;
   client: RpcClient;
   reader: StoreReader;
@@ -81,8 +82,7 @@ function completeFrame(invoke: InvokeFrame, outcome: HostOutcome, unitOfWork: Ho
 // One invocation in a host: parse, call the bound function, check the result, and hand back the unit of work. A
 // failure discards the unit and carries the values generated since the last journaled write (ADR 0070).
 export async function runInvocation(parts: RunParts): Promise<CompleteFrame> {
-  const { invoke, extension, client } = parts;
-  const state = new InvocationState(invoke);
+  const { invoke, extension, client, state } = parts;
   const values = new InvocationValues(invoke.recorded, parts.newId, parts.clock, !invoke.readOnly);
   const store = handlerStore(parts);
   try {
