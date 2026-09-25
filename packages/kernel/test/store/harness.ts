@@ -1,6 +1,6 @@
 import type { Issue, JsonObject, Message, StoreWrite } from '@kvman/protocol';
 import {
-  createCollectionIndexes, createHandlerStore, openReadConnection, betterSqlite3Driver, StoreReader, UnindexedScanWarnings,
+  createCollectionIndexes, createHandlerStore, openReadConnection, betterSqlite3Driver, StoreReader, UnindexedScanThrottle, UnindexedScanWarnings,
   type CommitResult, type DataDeclarations, type HandlerStore, type UnindexedScan,
 } from '../../src/index.ts';
 import { invocationMessage, now, openTestStore, ulids, workspaceId, type TestStore } from '../storage/harness.ts';
@@ -25,7 +25,7 @@ export function openStoreFixture(): StoreFixture {
   const store = openTestStore({ 'pdf.translate': owner });
   for (const collection of declarations.collections) createCollectionIndexes(store.connection, owner, collection);
   const warnings: UnindexedScan[] = [];
-  return { ...store, reader: new StoreReader(openReadConnection(store.file, betterSqlite3Driver)), warnings, scans: new UnindexedScanWarnings(now, (scan) => warnings.push(scan)) };
+  return { ...store, reader: new StoreReader(openReadConnection(store.file, betterSqlite3Driver)), warnings, scans: new UnindexedScanWarnings(new UnindexedScanThrottle(now), (scan) => warnings.push(scan)) };
 }
 
 export type HandlerOptions = { workspace?: string | null; readOnly?: boolean };
@@ -41,10 +41,11 @@ export function handlerStore(fixture: StoreFixture, options: HandlerOptions = {}
 export async function commitWrites(fixture: StoreFixture, writes: StoreWrite[], invocation?: Message): Promise<CommitResult> {
   const message = invocation ?? (await invocationMessage(fixture));
   return fixture.pipeline.enqueue({
-    origin: { kind: 'invocation', invocation: { message, extension: owner, outcome: { ok: true, value: null } } },
+    origin: { kind: 'invocation', invocation: { message, extension: owner, outcome: { ok: true, value: null }, stored: true } },
     writes,
     sends: [],
     publishes: [],
+    replies: [],
   });
 }
 

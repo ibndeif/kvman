@@ -14,7 +14,7 @@ function insertedMessage(result: CommitResult, index = 0) {
 async function rootMessage(fixture: RouterFixture, sender: Sender, extra: object = {}) {
   return insertedMessage(await fixture.pipeline.enqueue({
     origin: { kind: 'adapter', sender, workspaceId: workspaceA, messageId: '01JAZ3K4M5N6P7Q8R9S0T1V2W3' },
-    writes: [], sends: [{ ...run, ...(sender.address === 'kernel' ? {} : { idempotencyKey: `key-${sender.address}` }), ...extra }], publishes: [],
+    writes: [], sends: [{ ...run, ...(sender.address === 'kernel' ? {} : { idempotencyKey: `key-${sender.address}` }), ...extra }], publishes: [], replies: [],
   }));
 }
 

@@ -53,7 +53,6 @@ export function admitPublish(options: AdmissionOptions, request: PublishRequest)
       context: assignContext(cause, undefined, options.defaultLocale()), priority: assignPriority(sender, cause, undefined),
       delivery: deliveryClass, createdAt: options.now(),
     };
-    if (deliveryClass !== 'durable') return { outcome: 'admitted', event, deliveries: [] };
     const subscribers = options.registry().subscribers(type, event.workspaceId).filter((subscriber) => granted(options, resolved.owner, event, subscriber));
     return { outcome: 'admitted', event, deliveries: subscribers.map((subscriber) => delivery(options, event, subscriber)) };
   } catch (error) {

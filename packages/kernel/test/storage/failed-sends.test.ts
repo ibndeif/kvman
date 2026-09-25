@@ -10,10 +10,11 @@ async function unitSending(send: OutboundSend, owners: Record<string, string>, i
   const store = openTestStore({ 'agent.step': agent, 'agent.tool.record': agent, ...owners }, invalidField);
   const message = await invocationMessage(store, 'agent.step');
   const unit: CommitUnit = {
-    origin: { kind: 'invocation', invocation: { message, extension: agent, outcome: { ok: true, value: null } } },
+    origin: { kind: 'invocation', invocation: { message, extension: agent, outcome: { ok: true, value: null }, stored: true } },
     writes: [{ kind: 'kv.set', scope: 'workspace', key: 'turn:s1', value: { status: 'awaiting-tools' } }],
     sends: [send],
     publishes: [],
+    replies: [],
   };
   return { store, message, result: await store.pipeline.enqueue(unit) };
 }

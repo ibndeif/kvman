@@ -6,6 +6,8 @@ import { issuePaths, record, recordingProblem } from './harness.ts';
 const input = z.object({});
 const schema = z.object({ id: z.string() });
 const objectDocument = { $schema: 'https://json-schema.org/draft/2020-12/schema', type: 'object', properties: {}, additionalProperties: false };
+// Inputs and event payloads are recorded in Zod's input view, where a plain object accepts unknown fields (ADR 0077).
+const inputDocument = { $schema: 'https://json-schema.org/draft/2020-12/schema', type: 'object', properties: {} };
 const handle = async (): Promise<null> => null;
 const up = async (): Promise<void> => undefined;
 
@@ -19,7 +21,7 @@ describe('manifest entries (plan 05 §5.12, ADRs 0013, 0046, 0047)', () => {
       ext.registerEntity('pdf.file', { description: 'A file.', title: 'File', schema, display: { title: '$item.id' } });
     });
     expect(manifest.types).toEqual([
-      { type: 'pdf.run', kind: 'command', description: 'Runs.', input: objectDocument, access: 'all', handler: 'command:pdf.run' },
+      { type: 'pdf.run', kind: 'command', description: 'Runs.', input: inputDocument, access: 'all', handler: 'command:pdf.run' },
       { type: 'pdf.ran', kind: 'event', description: 'Ran.', delivery: 'durable' },
     ]);
     expect(manifest.errors).toEqual([{ code: 'pdf/FAILED', description: 'Failed.', title: 'Failed', retryable: false }]);
@@ -64,7 +66,8 @@ describe('manifest entries (plan 05 §5.12, ADRs 0013, 0046, 0047)', () => {
     expect(manifest.types.map((entry) => entry.type)).toEqual(['pdf.run', 'pdf.runs.list', 'pdf.run.started']);
     expect(manifest.types[0]).toMatchObject({ retention: '7d', scope: 'global', access: 'user', slash: { name: 'run' }, agentTool: { dangerous: true }, namingException: 'Legacy name.' });
     expect(manifest.types[1]).toMatchObject({ access: 'extensions', timeoutMs: 500, agentTool: { title: 'List runs' } });
-    expect(manifest.types[2]).toMatchObject({ delivery: 'transient', payload: objectDocument });
+    expect(manifest.types[2]).toMatchObject({ delivery: 'transient', payload: inputDocument });
+    expect(manifest.types[0]).toMatchObject({ input: inputDocument, output: objectDocument });
     expect(manifest.subscriptions).toEqual([{ event: 'fs.*', description: 'Watches files.', lane: 'file:{{ $payload.path }}', concurrency: 1, timeoutMs: 2000, handler: 'subscription:fs.*' }]);
     expect(manifest.schedules).toEqual([{ name: 'nightly', description: 'Nightly.', cron: '0 3 * * *', command: 'pdf.run', payload: { id: 'all' } }]);
     expect(manifest.errors[0]).toEqual({ code: 'pdf/BUSY', description: 'Busy.', title: 'Busy', retryable: true, hint: 'Try again.' });

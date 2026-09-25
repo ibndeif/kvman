@@ -112,7 +112,7 @@ export function personCommand(fixture: RouterFixture, command: Omit<AdapterComma
 export async function causeMessage(fixture: RouterFixture, type: string, sender: Sender = person, payload: JsonObject = {}): Promise<Message> {
   const result = await fixture.pipeline.enqueue({
     origin: { kind: 'adapter', sender, workspaceId: workspaceA, messageId: ulids.next() },
-    writes: [], sends: [{ type, payload, ...(sender.address === 'kernel' ? {} : { idempotencyKey: ulids.next() }) }], publishes: [],
+    writes: [], sends: [{ type, payload, ...(sender.address === 'kernel' ? {} : { idempotencyKey: ulids.next() }) }], publishes: [], replies: [],
   });
   const stored = result.committed ? result.inserted[0] : undefined;
   if (stored === undefined) throw new Error(`the cause ${type} was not stored: ${JSON.stringify(result)}`);
@@ -121,8 +121,8 @@ export async function causeMessage(fixture: RouterFixture, type: string, sender:
 
 export function handlerUnit(fixture: RouterFixture, cause: Message, extension: string, contents: { sends?: OutboundSend[]; publishes?: OutboundPublish[] }): Promise<CommitResult> {
   return fixture.pipeline.enqueue({
-    origin: { kind: 'invocation', invocation: { message: cause, extension, outcome: { ok: true, value: null } } },
-    writes: [], sends: contents.sends ?? [], publishes: contents.publishes ?? [],
+    origin: { kind: 'invocation', invocation: { message: cause, extension, outcome: { ok: true, value: null }, stored: true } },
+    writes: [], sends: contents.sends ?? [], publishes: contents.publishes ?? [], replies: [],
   });
 }
 

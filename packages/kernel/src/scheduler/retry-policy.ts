@@ -25,7 +25,7 @@ export function retryOutcome(message: Message, attempts: number, maxAttempts: nu
 export function retryUnit(message: Message, attempts: number, outcome: RetryOutcome): CommitUnit {
   const deadLettered: MessageDeadLettered = { messageId: message.id, type: message.type, correlationId: message.correlationId };
   return {
-    origin: { kind: 'retry', message, attempts, outcome }, writes: [], sends: [],
+    origin: { kind: 'retry', message, attempts, outcome }, writes: [], sends: [], replies: [],
     publishes: outcome.state === 'dead' ? [{ type: 'kernel.message.dead-lettered', payload: deadLettered }] : [],
   };
 }

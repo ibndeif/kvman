@@ -3,13 +3,18 @@ import type { ExtensionDefinition } from '@kvman/sdk';
 import { kernelProblem, ProblemError } from '../problems.ts';
 import { firstDifference } from './first-difference.ts';
 import { manifestCandidate } from './manifest-candidate.ts';
-import { Recording, type RegisteredFunction } from './recording.ts';
+import { Recording, type HandlerDefinition, type RecordedSchemas, type RegisteredFunction } from './recording.ts';
 import { createRecordingExt } from './recording-ext.ts';
 import { registrationIssues } from './registration-rules.ts';
 
 export type RecordOptions = { version: string; correlationId: string };
 
-export type ExtensionRecording = { manifest: Manifest; functions: ReadonlyMap<string, RegisteredFunction> };
+export type ExtensionRecording = {
+  manifest: Manifest;
+  functions: ReadonlyMap<string, RegisteredFunction>;
+  handlers: ReadonlyMap<string, HandlerDefinition>;
+  schemas: RecordedSchemas;
+};
 
 function manifestInvalid(options: RecordOptions, context: { detail?: string; issues?: Issue[] }): ProblemError {
   return new ProblemError(kernelProblem('EXT_MANIFEST_INVALID', { correlationId: options.correlationId, ...context }));
@@ -51,5 +56,5 @@ export function recordExtension(definition: ExtensionDefinition, options: Record
     ? []
     : parsed.error.issues.map((issue) => ({ path: issue.path.join('.'), message: issue.message })).filter((issue) => !reported.has(issue.path));
   if (!parsed.success || issues.length > 0) throw manifestInvalid(options, { issues: [...issues, ...schemaIssues] });
-  return { manifest: parsed.data, functions: first.functions };
+  return { manifest: parsed.data, functions: first.functions, handlers: first.handlers, schemas: first.schemas };
 }

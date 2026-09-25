@@ -54,7 +54,11 @@ export class CommitPipeline {
       this.#connection.exec('BEGIN IMMEDIATE');
       const outcomes = batch.map((queued) => ({ queued, result: applyUnit(this.#connection, queued.unit, this.#admission, now) }));
       this.#connection.exec('COMMIT');
-      for (const { result } of outcomes) if (result.committed) this.#pending?.add(result.inserted);
+      for (const { result } of outcomes) {
+        if (!result.committed) continue;
+        this.#pending?.add(result.inserted);
+        if (result.unstored.length > 0) this.#pending?.addUnstored(result.unstored);
+      }
       for (const { queued, result } of outcomes) queued.resolve(result);
     } catch (error) {
       this.#endFailedBatch(batch, error);

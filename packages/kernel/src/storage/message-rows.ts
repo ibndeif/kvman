@@ -46,16 +46,26 @@ export function insertMessage(connection: Connection, admitted: AdmittedMessage,
   return { ...admitted, seq: inserted.lastInsertRowid, state };
 }
 
-function stateOf(outcome: InvocationOutcome): { state: MessageState; result: ReplyPayload | undefined } {
-  if ('deferred' in outcome) return { state: 'awaiting', result: undefined };
-  return outcome.ok ? { state: 'done', result: outcome } : { state: 'failed', result: outcome };
+export type FinalOutcome = Exclude<InvocationOutcome, { deferred: true }>;
+
+export function replyOf(outcome: FinalOutcome): ReplyPayload {
+  return outcome.ok ? { ok: true, value: outcome.value } : { ok: false, problem: outcome.problem };
 }
 
+// A deferred command waits in `awaiting` with its onAbort (02 §2.8); any other outcome is its reply.
 export function markInvocation(connection: Connection, messageId: string, outcome: InvocationOutcome, now: number): void {
-  const { state, result } = stateOf(outcome);
-  connection
-    .prepare('UPDATE messages SET state = ?, result = ?, updated_at = ? WHERE id = ?')
-    .run(state, result === undefined ? null : JSON.stringify(result), now, messageId);
+  if ('deferred' in outcome) {
+    connection
+      .prepare("UPDATE messages SET state = 'awaiting', on_abort = ?, updated_at = ? WHERE id = ?")
+      .run(outcome.onAbort ?? null, now, messageId);
+    return;
+  }
+  markReplied(connection, messageId, replyOf(outcome), now);
+}
+
+export function markReplied(connection: Connection, messageId: string, reply: ReplyPayload, now: number): void {
+  const state: MessageState = reply.ok ? 'done' : 'failed';
+  connection.prepare('UPDATE messages SET state = ?, result = ?, updated_at = ? WHERE id = ?').run(state, JSON.stringify(reply), now, messageId);
 }
 
 export function markRetry(connection: Connection, messageId: string, attempts: number, outcome: RetryOutcome, now: number): void {

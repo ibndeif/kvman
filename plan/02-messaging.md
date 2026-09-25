@@ -143,7 +143,7 @@ Commands are always durable; queries are never stored. An event's delivery class
 | Class | Applies to | When it is sent | Storage | Guarantee | Receivers | Examples |
 |---|---|---|---|---|---|---|
 | `durable` | commands (always), their replies, events | at commit | inbox row per receiver, in the same transaction as the sender's unit of work; events also in the published-events log | at-least-once delivery, effectively-once storage effects | subscribers (handlers) and SSE clients (resumable with `Last-Event-ID`) | `pdf.translated`, `agent.turn.completed` |
-| `transient` | events | at commit | memory only | at-most-once; may drop under backpressure | subscribers and SSE clients | `agent.entry.appended` (UI refresh) |
+| `transient` | events | at commit | memory only | at-most-once; may drop under backpressure; a subscriber's delivery runs like a durable one (lane, limits) but is never retried and is lost on restart (ADR 0069) | subscribers and SSE clients | `agent.entry.appended` (UI refresh) |
 | `live` | events | **immediately**, not at commit | memory ring of 1,000 per `<type>:<key>` | best effort; in order per `<type>:<key>`; may drop; reset by the kernel if the sender does not commit (§2.3) | SSE clients only | `agent.tokens.generated`, `shell.output.written` |
 
 Messages sent by a handler are part of its unit of work: they become visible only when the handler commits. This prevents "phantom" messages from handlers that later fail. Live events are the only exception: they are published immediately (a token stream must not wait for commit), which is why the kernel resets them when the attempt does not commit.

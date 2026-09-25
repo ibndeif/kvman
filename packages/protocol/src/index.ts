@@ -14,6 +14,7 @@ export * from './extension/source.ts';
 export * from './extension/translations.ts';
 export * from './filter/filter-evaluator.ts';
 export * from './filter/filter-schema.ts';
+export * from './host-frames.ts';
 export * from './http-bodies.ts';
 export * from './identifiers.ts';
 export * from './json.ts';

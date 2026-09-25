@@ -40,7 +40,7 @@ function referenceOf(entry: PendingEntry): string {
 }
 
 function claimOf({ entry, message, attempt }: RunningInvocation): Claim {
-  return { message, extension: entry.extension, handler: referenceOf(entry), attempt };
+  return { message, extension: entry.extension, handler: referenceOf(entry), attempt, stored: entry.unstored === undefined };
 }
 
 // 03 §3.4: picks runnable messages by class, workspace, and lane; enforces the limits; claims and dispatches them;
@@ -51,6 +51,7 @@ export class Scheduler {
   readonly #rotation = new Rotation();
   readonly #queries = new QueryQueue();
   #pumpRequested = false;
+  #stopped = false;
   #wake: { at: number; handle: TimerHandle } | undefined;
 
   constructor(options: SchedulerOptions) {
@@ -71,8 +72,16 @@ export class Scheduler {
     this.#requestPump();
   }
 
+  // A stopped scheduler claims nothing more; running invocations may still settle.
+  stop(): void {
+    this.#stopped = true;
+    this.#wake?.handle.cancel();
+    this.#wake = undefined;
+  }
+
   pump(): void {
     this.#pumpRequested = false;
+    if (this.#stopped) return;
     const now = this.#options.now();
     this.#options.index.promoteDue(now);
     this.#queries.drain((query) => this.#dispatchQuery(query));
@@ -100,6 +109,13 @@ export class Scheduler {
     }
     this.#requestPump();
     return result;
+  }
+
+  // A transient event's delivery that does not commit is dropped, never retried (ADR 0069).
+  dropped(messageId: string): void {
+    this.#running(messageId);
+    this.#inFlight.finish(messageId, false);
+    this.#requestPump();
   }
 
   // STORAGE_CONFLICT reruns the handler at once, 5 times per attempt; the sixth is a counted failure (ADR 0059).
@@ -135,7 +151,7 @@ export class Scheduler {
     const { message, handler } = query;
     const load = this.#options.dispatcher.load({ extension: handler, workspaceId: message.workspaceId, kind: 'query' });
     if (load.inFlight >= load.cap) return false;
-    this.#options.dispatcher.dispatch({ message, extension: handler, handler: `query:${message.type}`, attempt: 1 });
+    this.#options.dispatcher.dispatch({ message, extension: handler, handler: `query:${message.type}`, attempt: 1, stored: false });
     return true;
   }
 
@@ -156,7 +172,7 @@ export class Scheduler {
   }
 
   #claim(entry: PendingEntry, now: number): void {
-    const result = claimMessage(this.#options.connection, entry, now);
+    const result = entry.unstored === undefined ? claimMessage(this.#options.connection, entry, now) : { claimed: true, message: entry.unstored } as const;
     if (!result.claimed) return;
     const invocation: RunningInvocation = { entry, message: result.message, attempt: entry.attempts + 1, conflicts: 0 };
     this.#inFlight.start(invocation);

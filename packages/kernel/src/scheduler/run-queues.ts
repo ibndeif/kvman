@@ -1,4 +1,4 @@
-import type { MessageKind, Priority } from '@kvman/protocol';
+import type { Message, MessageKind, Priority } from '@kvman/protocol';
 import { priorityCodes } from '../storage/message-rows.ts';
 
 export type PendingEntry = {
@@ -16,6 +16,8 @@ export type PendingEntry = {
   deadlineAt: number | undefined;
   attempts: number;
   runnableSince: number;
+  // A transient event's delivery has no row: the index keeps its message (ADR 0069).
+  unstored: Message | undefined;
 };
 
 export const agingMs = 30_000;

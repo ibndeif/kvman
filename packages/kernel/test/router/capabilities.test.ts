@@ -42,7 +42,7 @@ describe('capabilities (plan 05 §5.7, ADR 0052)', () => {
     for (const sender of [person, { address: 'proc:job-2' as const, extension: '@acme/pdf' }]) {
       const result = await fixture.pipeline.enqueue({
         origin: { kind: 'adapter', sender, workspaceId: workspaceA, messageId: '01JAZ3K4M5N6P7Q8R9S0T1V2W5' },
-        writes: [], sends: [], publishes: [imported],
+        writes: [], sends: [], publishes: [imported], replies: [],
       });
       expect(result).toMatchObject({ committed: false, problem: { code: 'CAPABILITY_DENIED' } });
     }

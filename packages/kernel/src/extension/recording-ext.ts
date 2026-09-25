@@ -40,7 +40,7 @@ export function createRecordingExt(recording: Recording, closedError: () => Erro
       recording.typeNames.push({ name, kind: 'command' });
       recording.types.push(compact({
         type: name, kind: 'command', description: definition.description,
-        input: recording.jsonSchema(`${path}.input`, definition.input),
+        input: recording.jsonSchema(`${path}.input`, definition.input, 'input'),
         output: definition.output === undefined ? undefined : recording.jsonSchema(`${path}.output`, definition.output),
         examples: definition.examples, lane: definition.lane, concurrency: definition.concurrency, timeoutMs: definition.timeoutMs,
         maxAttempts: definition.maxAttempts, priority: definition.priority, retention: definition.retention, scope: definition.scope,
@@ -48,6 +48,8 @@ export function createRecordingExt(recording: Recording, closedError: () => Erro
         namingException: definition.namingException, handler: `command:${name}`,
       }));
       recording.bind(`command:${name}`, `${path}.handler`, definition.handle);
+      recording.bindHandler(`command:${name}`, definition);
+      recording.schemas.handlers.set(`command:${name}`, { input: definition.input, output: definition.output });
       return reference(name);
     },
     registerQuery(name, definition) {
@@ -56,12 +58,14 @@ export function createRecordingExt(recording: Recording, closedError: () => Erro
       recording.typeNames.push({ name, kind: 'query' });
       recording.types.push(compact({
         type: name, kind: 'query', description: definition.description,
-        input: recording.jsonSchema(`${path}.input`, definition.input),
+        input: recording.jsonSchema(`${path}.input`, definition.input, 'input'),
         output: recording.jsonSchema(`${path}.output`, definition.output),
         examples: definition.examples, timeoutMs: definition.timeoutMs, access: definition.access ?? 'all',
         agentTool: definition.agentTool, namingException: definition.namingException, handler: `query:${name}`,
       }));
       recording.bind(`query:${name}`, `${path}.handler`, definition.handle);
+      recording.bindHandler(`query:${name}`, definition);
+      recording.schemas.handlers.set(`query:${name}`, { input: definition.input, output: definition.output });
       return reference(name);
     },
     registerEvent(name, definition) {
@@ -70,9 +74,10 @@ export function createRecordingExt(recording: Recording, closedError: () => Erro
       recording.typeNames.push({ name, kind: 'event' });
       recording.types.push(compact({
         type: name, kind: 'event', description: definition.description, delivery: definition.delivery ?? 'durable',
-        payload: definition.payload === undefined ? undefined : recording.jsonSchema(`${path}.payload`, definition.payload),
+        payload: definition.payload === undefined ? undefined : recording.jsonSchema(`${path}.payload`, definition.payload, 'input'),
         chunk: definition.chunk, namingException: definition.namingException,
       }));
+      if (definition.payload !== undefined) recording.schemas.events.set(name, definition.payload);
       return reference(name);
     },
     subscribe(event: string, definition: SubscriptionDef) {
@@ -84,6 +89,7 @@ export function createRecordingExt(recording: Recording, closedError: () => Erro
         timeoutMs: definition.timeoutMs, handler: `subscription:${event}`,
       }));
       recording.bind(`subscription:${event}`, `${path}.handler`, definition.handle);
+      recording.bindHandler(`subscription:${event}`, definition);
     },
     registerSchedule(name, definition) {
       open();
@@ -122,6 +128,7 @@ export function createRecordingExt(recording: Recording, closedError: () => Erro
         name, description: definition.description, schema: recording.jsonSchema(`${path}.schema`, definition.schema),
         idField: definition.idField ?? 'id', indexes: definition.indexes,
       }));
+      recording.schemas.collections.set(name, definition.schema);
       return reference(name);
     },
     registerLog(name, definition) {

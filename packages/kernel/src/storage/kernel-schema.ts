@@ -50,3 +50,10 @@ export const kernelSchemaVersion1 = [
     input INTEGER, output INTEGER, cache_read INTEGER, cache_write INTEGER,
     cost_usd REAL, correlation_id TEXT, at INTEGER)`,
 ];
+
+// ADR 0070: a deferred command's onAbort, and ctx.ids.new() / ctx.now() values replayed on redelivery.
+export const kernelSchemaVersion2 = [
+  'ALTER TABLE messages ADD COLUMN on_abort TEXT',
+  `CREATE TABLE recorded_values (message_id TEXT NOT NULL, kind TEXT NOT NULL, n INTEGER NOT NULL, value TEXT NOT NULL,
+    PRIMARY KEY(message_id, kind, n))`,
+];

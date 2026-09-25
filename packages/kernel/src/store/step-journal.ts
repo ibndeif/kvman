@@ -2,16 +2,23 @@ import { jsonByteLength, type Json } from '@kvman/protocol';
 import type { Ctx, StepOptions } from '@kvman/sdk';
 import { kernelProblem, ProblemError } from '../problems.ts';
 import type { Connection } from '../storage/driver.ts';
+import { inWriteTransaction } from '../storage/write-transaction.ts';
 
 export const maxStepResultBytes = 256 * 1024;
 
 export type StepStart = { status: 'recorded'; result: Json | undefined } | { status: 'run' };
 
-type StepRef = { messageId: string; name: string; correlationId: string };
+export type StepRef = { messageId: string; name: string; correlationId: string };
+
+// Where a handler's steps are journaled: the kernel's journal, or a host's calls to it (03 §3.5).
+export interface StepRecorder {
+  begin(step: StepRef, retrySafe: boolean): StepStart | Promise<StepStart>;
+  record(step: StepRef, result: Json | undefined): void | Promise<void>;
+}
 
 // A step row is committed on its own before the effect runs, so a crash between begin and record leaves it
 // `started` and the redelivered handler learns that the effect may have happened.
-export class StepJournal {
+export class StepJournal implements StepRecorder {
   readonly #connection: Connection;
   readonly #now: () => number;
 
@@ -54,20 +61,13 @@ export class StepJournal {
   }
 
   #inTransaction(write: () => void): void {
-    this.#connection.exec('BEGIN IMMEDIATE');
-    try {
-      write();
-      this.#connection.exec('COMMIT');
-    } catch (error) {
-      this.#connection.exec('ROLLBACK');
-      throw error;
-    }
+    inWriteTransaction(this.#connection, write);
   }
 }
 
 export type StepFunction = Ctx['step'];
 
-export function createStepFunction(journal: StepJournal, messageId: string, correlationId: string): StepFunction {
+export function createStepFunction(journal: StepRecorder, messageId: string, correlationId: string): StepFunction {
   const used = new Set<string>();
   return async <Result extends Json | undefined>(name: string, effect: () => Promise<Result>, options: StepOptions = {}) => {
     if (used.has(name)) {
@@ -75,10 +75,10 @@ export function createStepFunction(journal: StepJournal, messageId: string, corr
     }
     used.add(name);
     const step = { messageId, name, correlationId };
-    const start = journal.begin(step, options.retrySafe ?? false);
+    const start = await journal.begin(step, options.retrySafe ?? false);
     if (start.status === 'recorded') return start.result as Result;
     const result = await effect();
-    journal.record(step, result);
+    await journal.record(step, result);
     return result;
   };
 }

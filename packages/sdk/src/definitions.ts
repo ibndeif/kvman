@@ -2,7 +2,7 @@ import type {
   Access, EventDelivery, Json, Priority, Text, agentToolSchema, commandAgentToolSchema, configScopeSchema, slashSchema,
 } from '@kvman/protocol';
 import type { output as Output, input as Input, ZodType } from 'zod';
-import type { Ctx, MigrationContext } from './context.ts';
+import type { Ctx, Deferred, MigrationContext } from './context.ts';
 
 /** A composer slash command of a command. */
 export type SlashDef = Output<typeof slashSchema>;
@@ -30,7 +30,7 @@ export interface CommandDef<InputSchema extends ZodType = ZodType, OutputSchema 
   access?: Access;
   slash?: SlashDef;
   agentTool?: CommandAgentToolDef;
-  handle(input: Output<InputSchema>, ctx: Ctx): Promise<Input<OutputSchema>>;
+  handle(input: Output<InputSchema>, ctx: Ctx): Promise<Input<OutputSchema> | Deferred>;
 }
 
 /** A query: one read-only handler, never queued. */

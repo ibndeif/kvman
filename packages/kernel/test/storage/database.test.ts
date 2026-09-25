@@ -2,12 +2,12 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import Database from 'better-sqlite3';
 import { describe, expect, it } from 'vitest';
-import { betterSqlite3Driver, openKernelDatabase, openReadConnection, ProblemError, StorageFailure } from '../../src/index.ts';
+import { betterSqlite3Driver, latestKernelSchemaVersion, openKernelDatabase, openReadConnection, ProblemError, StorageFailure } from '../../src/index.ts';
 import { rows, temporaryDatabaseFile, ulids } from './harness.ts';
 
 const kernelTables = [
   'blob_refs', 'blobs', 'docs', 'events', 'extension_versions', 'extensions', 'global_config', 'kernel_settings', 'kv', 'llm_models',
-  'llm_usage', 'logs', 'messages', 'notifications', 'presets', 'processes', 'schema_versions', 'steps', 'user_preferences',
+  'llm_usage', 'logs', 'messages', 'notifications', 'presets', 'processes', 'recorded_values', 'schema_versions', 'steps', 'user_preferences',
   'workspace_config', 'workspace_presets', 'workspaces',
 ];
 
@@ -34,7 +34,7 @@ describe('opening the kernel database (plan 04 §4.1, §4.8)', () => {
       refusal = error;
     }
     expect(refusal).toBeInstanceOf(ProblemError);
-    expect(refusal instanceof ProblemError ? refusal.problem : undefined).toMatchObject({ code: 'SCHEMA_TOO_NEW', params: { stored: 99, supported: 1 } });
+    expect(refusal instanceof ProblemError ? refusal.problem : undefined).toMatchObject({ code: 'SCHEMA_TOO_NEW', params: { stored: 99, supported: latestKernelSchemaVersion } });
     expect(sha256Of(file)).toBe(before);
     expect(existsSync(`${file}-wal`) ? statSync(`${file}-wal`).size : 0).toBe(0);
   });
@@ -43,7 +43,7 @@ describe('opening the kernel database (plan 04 §4.1, §4.8)', () => {
     const file = temporaryDatabaseFile();
     const connection = openKernelDatabase(file, betterSqlite3Driver, ulids.next());
     expect(modeOf(file)).toBe(0o600);
-    expect(rows(connection, 'SELECT owner, version FROM schema_versions')).toEqual([{ owner: 'kernel', version: 1 }]);
+    expect(rows(connection, 'SELECT owner, version FROM schema_versions')).toEqual([{ owner: 'kernel', version: latestKernelSchemaVersion }]);
     connection.close();
   });
 
@@ -76,7 +76,7 @@ describe('opening the kernel database (plan 04 §4.1, §4.8)', () => {
     first.close();
     const second = openKernelDatabase(file, betterSqlite3Driver, ulids.next());
     expect(rows(second, 'SELECT key FROM kernel_settings')).toEqual([{ key: 'kvman.version' }]);
-    expect(rows(second, 'SELECT version FROM schema_versions')).toEqual([{ version: 1 }]);
+    expect(rows(second, 'SELECT version FROM schema_versions')).toEqual([{ version: latestKernelSchemaVersion }]);
     second.close();
   });
 

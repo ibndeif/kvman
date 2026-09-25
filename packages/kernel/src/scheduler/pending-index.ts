@@ -1,5 +1,5 @@
 import type { MessageKind } from '@kvman/protocol';
-import type { StoredMessage } from '../storage/commit-unit.ts';
+import type { AdmittedMessage, StoredMessage } from '../storage/commit-unit.ts';
 import { StorageFailure, type Connection, type SqlRow } from '../storage/driver.ts';
 import { laneKeyOf, priorityOfCode } from '../storage/message-rows.ts';
 import { KeylessQueue, LaneQueue, participantOf, type Candidate, type PendingEntry, type RunQueue } from './run-queues.ts';
@@ -8,6 +8,7 @@ export type { Candidate, PendingEntry } from './run-queues.ts';
 
 export interface PendingSink {
   add(messages: readonly StoredMessage[]): void;
+  addUnstored(deliveries: readonly AdmittedMessage[]): void;
 }
 
 // A command's handler column is its extension; an event delivery's is <extension>|subscription:<pattern> (ADR 0053).
@@ -39,17 +40,17 @@ function entryOfRow(row: SqlRow): PendingEntry {
     workspaceId: row['workspace_id'] === null ? undefined : String(row['workspace_id']),
     laneKey: row['lane'] === null ? undefined : String(row['lane']), priority: priorityOfCode(row['priority']),
     notBefore, deadlineAt: optionalNumber(row['deadline_at']), attempts: Number(row['attempts']),
-    runnableSince: Math.max(Number(row['updated_at']), notBefore ?? 0),
+    runnableSince: Math.max(Number(row['updated_at']), notBefore ?? 0), unstored: undefined,
   };
 }
 
-function entryOf({ message, handler, seq }: StoredMessage, now: number): PendingEntry {
+function entryOf({ message, handler }: AdmittedMessage, seq: number, now: number, unstored: boolean): PendingEntry {
   return {
     id: message.id, seq, kind: message.kind, type: message.type, handler,
     handlerKey: handlerKeyOf(handler, message.type), extension: extensionOf(handler), workspaceId: message.workspaceId,
     laneKey: message.lane === undefined ? undefined : laneKeyOf(handler, message.lane), priority: message.priority,
     notBefore: message.notBefore, deadlineAt: message.deadlineAt, attempts: 0,
-    runnableSince: Math.max(now, message.notBefore ?? 0),
+    runnableSince: Math.max(now, message.notBefore ?? 0), unstored: unstored ? message : undefined,
   };
 }
 
@@ -64,6 +65,7 @@ export class PendingIndex implements PendingSink {
   readonly #keyless = new Map<string, KeylessQueue>();
   readonly #timers: PendingEntry[] = [];
   readonly #listeners: Array<() => void> = [];
+  #lastSeq = 0;
 
   constructor(now: () => number) {
     this.#now = now;
@@ -81,11 +83,20 @@ export class PendingIndex implements PendingSink {
 
   add(messages: readonly StoredMessage[]): void {
     const now = this.#now();
-    for (const stored of messages) if (stored.state === 'pending') this.place(entryOf(stored, now));
-    for (const listener of this.#listeners) listener();
+    for (const stored of messages) if (stored.state === 'pending') this.place(entryOf(stored, stored.seq, now, false));
+    this.#notify();
+  }
+
+  // An unstored delivery has no seq of its own: it takes the last seq seen, so it runs after every message stored
+  // before it and, on a tie, after the entries already queued (ADR 0069).
+  addUnstored(deliveries: readonly AdmittedMessage[]): void {
+    const now = this.#now();
+    for (const delivery of deliveries) this.place(entryOf(delivery, this.#lastSeq, now, true));
+    this.#notify();
   }
 
   place(entry: PendingEntry): void {
+    this.#lastSeq = Math.max(this.#lastSeq, entry.seq);
     if (entry.notBefore !== undefined && entry.notBefore > this.#now()) this.#addTimer(entry);
     else this.#placeRunnable(entry);
   }
@@ -156,6 +167,10 @@ export class PendingIndex implements PendingSink {
     const queue = this.#keyless.get(key) ?? new KeylessQueue(participantOf(entry), entry.handlerKey);
     this.#keyless.set(key, queue);
     queue.place(entry);
+  }
+
+  #notify(): void {
+    for (const listener of this.#listeners) listener();
   }
 
   #forget(queue: RunQueue): void {

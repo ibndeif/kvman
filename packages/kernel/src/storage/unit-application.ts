@@ -1,22 +1,13 @@
-import { jsonByteLength, type Message, type OnReply, type OutboundPublish, type OutboundSend, type Problem, type ReplyPayload } from '@kvman/protocol';
+import { jsonByteLength, type Problem } from '@kvman/protocol';
 import { kernelProblem } from '../problems.ts';
-import type { Admission, CommitResult, CommitUnit, OriginalMessage, SendAdmission, SendRequest, Sender, StoredMessage } from './commit-unit.ts';
+import type { Admission, AppliedMessages, CommitResult, CommitUnit } from './commit-unit.ts';
 import { causeOf, correlationOf, senderOf } from './commit-unit.ts';
 import { StorageFailure, type Connection } from './driver.ts';
-import { insertEvent, insertMessage, markInvocation, markRetry } from './message-rows.ts';
+import { markInvocation, markRetry, replyOf } from './message-rows.ts';
 import { applyStoreWrite, InvalidWrite, VersionConflict, WorkspaceRequired } from './store-writes.ts';
+import { admitPublish, admitSend, applyDeferredReply, finalReply, UnitRejected, type UnitScope } from './unit-contents.ts';
 
 export const unitLimits = { messages: 1000, writeBytes: 8 * 1024 * 1024 } as const;
-
-class UnitRejected extends Error {
-  readonly problem: Problem;
-
-  constructor(problem: Problem) {
-    super(problem.title);
-    this.name = 'UnitRejected';
-    this.problem = problem;
-  }
-}
 
 function writeBytes(unit: CommitUnit): number {
   return unit.writes.reduce((total, write) => total + jsonByteLength(write), 0);
@@ -33,80 +24,51 @@ function limitProblem(unit: CommitUnit): Problem | undefined {
   return undefined;
 }
 
-function continuationOf(failedId: string, onReply: OnReply, reply: ReplyPayload): OutboundSend {
-  const payload = onReply.context === undefined ? { reply } : { reply, context: onReply.context };
-  return { type: onReply.type, payload, idempotencyKey: `${failedId}:reply` };
+// Only an invocation writes storage and replies to deferred commands; the owner and workspace come from it.
+function invokingExtension(unit: CommitUnit): string | undefined {
+  const { origin } = unit;
+  if (origin.kind === 'invocation') return origin.invocation.extension;
+  if (unit.writes.length > 0) throw new InvalidWrite('a unit without an invocation cannot write storage');
+  if (unit.replies.length > 0) throw new InvalidWrite('a unit without an invocation cannot reply');
+  return undefined;
 }
 
-const kernelSender: Sender = { address: 'kernel' };
-
-type UnitScope = {
-  connection: Connection;
-  admission: Admission;
-  now: number;
-  sender: Sender;
-  cause: Message | undefined;
-  workspaceId: string | undefined;
-  applied: AppliedMessages;
-};
-
-type AppliedMessages = { inserted: StoredMessage[]; duplicates: OriginalMessage[]; announced: Message[] };
-
-function record(scope: UnitScope, result: SendAdmission): void {
-  if (result.outcome === 'admitted') scope.applied.inserted.push(insertMessage(scope.connection, result.admitted, 'pending', undefined, scope.now));
-  else if (result.outcome === 'duplicate') scope.applied.duplicates.push(result.original);
-  else throw new UnitRejected(result.problem);
+// The unit's own message moves on last: marked done, failed, awaiting, pending again, or dead, with its reply.
+function settleOrigin(scope: UnitScope, unit: CommitUnit): void {
+  const { origin } = unit;
+  if (origin.kind === 'invocation') {
+    const { invocation } = origin;
+    if (!invocation.stored) return;
+    markInvocation(scope.connection, invocation.message.id, invocation.outcome, scope.now);
+    if (!('deferred' in invocation.outcome)) finalReply(scope, invocation.message, replyOf(invocation.outcome));
+  }
+  if (origin.kind === 'retry') {
+    markRetry(scope.connection, origin.message.id, origin.attempts, origin.outcome, scope.now);
+    if (origin.outcome.state === 'dead') finalReply(scope, origin.message, origin.outcome.reply);
+  }
 }
 
-// A send WITH onReply that fails admission is stored as a failed command, and its continuation carries the failure
-// to the sender (04 §4.2); a send without onReply, or one whose failure leaves no row to store, rejects the unit.
-function admitSend(scope: UnitScope, send: OutboundSend, index: number, id: string | undefined): void {
-  const request: SendRequest = { send, sender: scope.sender, cause: scope.cause, workspaceId: scope.workspaceId, index, ...(id === undefined ? {} : { id }) };
-  const result = scope.admission.admitSend(scope.connection, request);
-  if (result.outcome !== 'refused' || result.failed === undefined || send.onReply === undefined) {
-    record(scope, result);
-    return;
-  }
-  const reply: ReplyPayload = { ok: false, problem: result.problem };
-  const failed = insertMessage(scope.connection, result.failed, 'failed', reply, scope.now);
-  scope.applied.inserted.push(failed);
-  const continuation = continuationOf(failed.message.id, send.onReply, reply);
-  record(scope, scope.admission.admitSend(scope.connection, { send: continuation, sender: kernelSender, cause: failed.message, workspaceId: scope.workspaceId, index: 0 }));
-}
-
-function admitPublish(scope: UnitScope, publish: OutboundPublish): void {
-  const result = scope.admission.admitPublish(scope.connection, { publish, sender: scope.sender, cause: scope.cause, workspaceId: scope.workspaceId });
-  if (result.outcome === 'refused') throw new UnitRejected(result.problem);
-  if (result.event.delivery !== 'durable') {
-    scope.applied.announced.push(result.event);
-    return;
-  }
-  insertEvent(scope.connection, result.event, scope.now);
-  for (const delivery of result.deliveries) {
-    const reply: ReplyPayload | undefined = delivery.problem === undefined ? undefined : { ok: false, problem: delivery.problem };
-    scope.applied.inserted.push(insertMessage(scope.connection, delivery.admitted, reply === undefined ? 'pending' : 'failed', reply, scope.now));
-  }
+function firstSendId(unit: CommitUnit): string | undefined {
+  const { origin } = unit;
+  return origin.kind === 'adapter' || origin.kind === 'call' ? origin.messageId : undefined;
 }
 
 function applyContents(connection: Connection, unit: CommitUnit, admission: Admission, now: number): AppliedMessages {
   const { origin } = unit;
-  const owner = origin.kind === 'invocation'
-    ? { owner: origin.invocation.extension, workspaceId: origin.invocation.message.workspaceId }
-    : undefined;
-  for (const write of unit.writes) {
-    if (owner === undefined) throw new InvalidWrite('a unit without an invocation cannot write storage');
-    applyStoreWrite(connection, owner, write, now);
-  }
+  const extension = invokingExtension(unit);
   const cause = causeOf(origin);
+  if (extension !== undefined) {
+    for (const write of unit.writes) applyStoreWrite(connection, { owner: extension, workspaceId: cause?.workspaceId }, write, now);
+  }
   const scope: UnitScope = {
-    connection, admission, now, sender: senderOf(origin), cause,
+    connection, admission, now, sender: senderOf(origin), cause, correlationId: correlationOf(origin),
     workspaceId: origin.kind === 'adapter' ? origin.workspaceId : cause?.workspaceId,
-    applied: { inserted: [], duplicates: [], announced: [] },
+    applied: { inserted: [], duplicates: [], announced: [], unstored: [], replies: [] },
   };
-  unit.sends.forEach((send, index) => admitSend(scope, send, index, origin.kind === 'adapter' && index === 0 ? origin.messageId : undefined));
+  unit.sends.forEach((send, index) => admitSend(scope, send, index, index === 0 ? firstSendId(unit) : undefined));
   for (const publish of unit.publishes) admitPublish(scope, publish);
-  if (origin.kind === 'invocation') markInvocation(connection, origin.invocation.message.id, origin.invocation.outcome, now);
-  if (origin.kind === 'retry') markRetry(connection, origin.message.id, origin.attempts, origin.outcome, now);
+  if (extension !== undefined) for (const reply of unit.replies) applyDeferredReply(scope, extension, reply);
+  settleOrigin(scope, unit);
   return scope.applied;
 }
 

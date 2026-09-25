@@ -1,6 +1,6 @@
 # ADR 0047 — Converting Zod schemas to JSON Schema
 
-- **Status**: accepted
+- **Status**: accepted; amended by ADR 0077 (inputs in the input view)
 - **Date**: 2026-09-24
 - **Milestone**: M1.3
 - **Decided by**: the product owner

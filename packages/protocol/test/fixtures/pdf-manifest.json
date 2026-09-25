@@ -41,8 +41,7 @@
         },
         "required": [
           "fileId"
-        ],
-        "additionalProperties": false
+        ]
       }
     },
     {
@@ -66,8 +65,7 @@
         "required": [
           "fileId",
           "blobId"
-        ],
-        "additionalProperties": false
+        ]
       }
     },
     {
@@ -93,8 +91,7 @@
         },
         "required": [
           "blobId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -137,8 +134,7 @@
         "required": [
           "fileId",
           "lang"
-        ],
-        "additionalProperties": false
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -171,8 +167,7 @@
       "input": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
-        "properties": {},
-        "additionalProperties": false
+        "properties": {}
       },
       "access": "internal",
       "handler": "command:pdf.files.prune"
@@ -195,8 +190,7 @@
               "failed"
             ]
           }
-        },
-        "additionalProperties": false
+        }
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -279,8 +273,7 @@
               "failed"
             ]
           }
-        },
-        "additionalProperties": false
+        }
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -314,8 +307,7 @@
         },
         "required": [
           "fileId"
-        ],
-        "additionalProperties": false
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",

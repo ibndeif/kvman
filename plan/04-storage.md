@@ -30,6 +30,8 @@ CREATE TABLE messages (
   not_before INTEGER, deadline_at INTEGER,
   correlation_id TEXT NOT NULL, causation_id TEXT,
   on_reply TEXT,                       -- continuation to send when this command's result is written
+  on_abort TEXT,                       -- defer({ onAbort }): internal command sent if it ends without a reply
+                                       -- (kernel schema 2, ADR 0070)
   idempotency_source TEXT, idempotency_key TEXT, digest TEXT,
   result TEXT, result_ref TEXT,        -- ReplyPayload for commands; over 256 KB it spills to a blob (result_ref)
   created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, retain_until INTEGER
@@ -44,6 +46,10 @@ CREATE TABLE events (seq INTEGER PRIMARY KEY, id TEXT UNIQUE, type TEXT, source 
 
 CREATE TABLE steps (message_id TEXT, name TEXT, state TEXT, result TEXT,
   retry_safe INTEGER, started_at INTEGER, finished_at INTEGER, PRIMARY KEY(message_id, name));
+
+-- ctx.ids.new() and ctx.now() values in call order, replayed on redelivery (kernel schema 2, ADR 0070)
+CREATE TABLE recorded_values (message_id TEXT, kind TEXT /* 'id' | 'now' */, n INTEGER, value TEXT,
+  PRIMARY KEY(message_id, kind, n));
 
 CREATE TABLE processes (id TEXT PRIMARY KEY, message_id TEXT, extension TEXT, pid INTEGER,
   pgid INTEGER, process_start TEXT, state TEXT, log_path TEXT, log_blob TEXT, exit_code INTEGER,

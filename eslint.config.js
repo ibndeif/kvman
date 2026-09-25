@@ -53,7 +53,7 @@ export default defineConfig(
     },
   },
   {
-    files: ['extensions/*/src/**', 'examples/*/src/**'],
+    files: ['extensions/*/src/**', 'examples/*/src/**', 'packages/*/test/**/fixtures/extensions/**'],
     rules: { 'no-restricted-syntax': ['error', onlyDefineExtensionDefault, noDefaultExportSpecifier] },
   },
   {

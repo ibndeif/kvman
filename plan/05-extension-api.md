@@ -231,7 +231,7 @@ Name sets inside one extension:
 | `registerCommand(name, CommandDef)` | a command (§5.5) | `pdf.translate` | exactly one handler; `access` says who may call it (`02` §2.4); may be an agent tool or a slash command |
 | `registerQuery(name, QueryDef)` | a read-only query | `pdf.files.list` | never queued; read-only store; `access` like commands; may be an agent tool |
 | `registerEvent(name, EventDef)` | an event type this extension publishes, with its delivery class (`02` §2.5) | `pdf.translated`, `pdf.progress.updated` | `EventDef = { description, delivery?: 'durable' (default) \| 'transient' \| 'live', payload?: ZodType, chunk?: 'text' \| 'value' \| 'data', namingException?: string }`: `payload` for durable and transient events; `chunk` (the `LiveChunk` shape, `02` §2.3) for live events. Only registered events can be published |
-| `subscribe(eventType, SubscriptionDef)` | a handler for a durable or transient event (own, `kernel.*`, or another extension's) | `subscription:<eventType>` | wildcards allowed (`pdf.*`; they never match live events); foreign events need a grant (§5.7); subscribing to a live event fails validation |
+| `subscribe(eventType, SubscriptionDef)` | a handler for a durable or transient event (own, `kernel.*`, or another extension's) | `subscription:<eventType>` | wildcards allowed (`pdf.*`; they never match live events); foreign events need a grant (§5.7); subscribing to a live event fails validation (`EXT_MANIFEST_INVALID` when recording for its own, when building the registry for another's, ADR 0068) |
 | `registerSchedule(name, { description, every \| cron, command, payload? })` | a timer that sends one of its own commands | `prune` (private) | the command is usually `internal` |
 | `registerPrompt(name, PromptDef)` | a question or approval a person answers (§5.5) | `interviewer.question` | registers the prompt's collection, list query, `answer` / `reject` (access `user`) and `expire` (internal) commands, and `asked` / `closed` events; returns a handle whose `open(ctx, data)` stores the prompt and defers the reply |
 | `registerError(code, { description, title, retryable?, hint? })` | an error its handlers throw with `ctx.problem` (§5.4) | `pdf/NOT_FOUND` | `title` and `hint` are the English fallback; people see `problems.<CODE>` from its catalog (`08` §8.16); listed in `/schema` |
@@ -286,7 +286,8 @@ interface Ctx {
   i18n: { t(key: string, params?: Record<string, Json>): string };   // own catalog in ctx.locale, for text leaving kvman
 
   // messaging
-  command<T>(type, payload, opts?): Promise<T>;   // run a command and wait for its result: immediate, journaled,
+  command<T>(type, payload, opts?: { lane?, priority?, deadlineAt?, context?, idempotencyKey? }): Promise<T>;
+                                                   // run a command and wait for its result: immediate, journaled,
                                                    // deadline-bounded
   send(type, payload, opts?: { lane?, delayMs?, at?, priority?, deadlineAt?, onReply?, context?, idempotencyKey? }): void;
                                                    // start a command without waiting (in UoW); idempotencyKey dedupes
@@ -321,14 +322,18 @@ interface Ctx {
   store: Store;                                    // 04 §4.3: kv, collection(), log(), blobs, global; read-only in queries
   config: { get(): Promise<Config>; set(scope, value): void };
   secrets: { get(name): Promise<string | undefined>; set(name, value): void };   // set: applied after commit (04 §4.7)
-  log: Logger;                                     // structured, redacted, correlation attached
+  log: Logger;                                     // debug|info|warn|error(message, fields?): structured, redacted,
+                                                   // correlation attached (ADR 0073)
 }
 ```
 
 - `send`, `publish`, `reply`, `ui.*`, store writes, `blobs.keep`, `config.set`, and `secrets.set` are buffered in the unit of work, so a notification is shown only if the handler commits.
 - `command`, `query`, `llm.*`, `live`, `step`, `process`, `files`, and `blobs.put` happen immediately. Live events from an attempt that does not commit are reset by the kernel (`02` §2.3).
 - The SDK's `Ctx` type declares each member once the milestone that builds it is done (ADR 0050).
-- `ctx.ids.new()` and `ctx.now()` are recorded per invocation so a redelivered handler generates the same IDs and times for the same steps.
+- `ctx.ids.new()` and `ctx.now()` are recorded per invocation so a redelivered handler generates the same IDs and times for the same steps: values are numbered per message and stored with the next journaled write (a step begin, a `ctx.command` send, or a failed attempt's end); a redelivery replays them in order (ADR 0070).
+- `ctx.command`'s derived key uses the call's 1-based ordinal among the invocation's `ctx.command` calls (`<id>:command:1`); an explicit `idempotencyKey` replaces it. It resolves with the reply's value and rejects with a `ProblemError` carrying the reply's problem (ADR 0072).
+- Misuse codes (ADR 0074): in a query, `send`, `publish`, `command`, `live`, `defer`, `reply`, and `step` throw `CAPABILITY_DENIED` (`query` is allowed); `live` of anything but an own live event is `CAPABILITY_DENIED`, a chunk of the wrong shape `VALIDATION_FAILED`; `defer` outside a command handler, or an `onAbort` that is not an own internal command, is `VALIDATION_FAILED`; at commit, `reply` to another extension's command is `CAPABILITY_DENIED` and to one that is not `awaiting` is `REPLY_NOT_AWAITING`. A thrown `ProblemError` passes through; anything else thrown is `INTERNAL`. `ctx.problem` with an unregistered code of its namespace is delivered with `title` = code and `retryable: false`, and logged as a warning.
+- `ctx.workspace` comes from the `workspaces` row; a message whose workspace has no row fails `WORKSPACE_INVALID` (ADR 0075).
 
 ## 5.5 Handler definitions
 
@@ -614,8 +619,8 @@ The **manifest** is the static record of everything `setup` registered. The kern
 
 - **Recording** (ADR 0013): a UI entry is `{ "id": "<ns>.<name>", ...definition }` (the definition's own fields, its `description` included); `config`, `translations`, `ui.settingsSection`, and `permissions.isolation` are `null` when their call is never made, and every list section is `[]` when empty; `requireTypes` entries are `{ types, reason }` and `requireComponents` entries `{ components, reason }`, one per call; defaults are written explicitly (`access: "all"`, an error's `retryable: false`, `idField: "id"`, an event's `delivery: "durable"`, `data.version: 1`, `data.compatibleWith: []`), and every other optional field is left out when not given.
 - **Function references** name what registered the function: `command:<type>`, `query:<type>`, `subscription:<event type>`, `migration:<to>`, `provider:<id>.<complete | status | listModels | countTokens>`. A host binds each reference when it runs `setup` at load; a reference without a bound function, or a bound function without a reference, is manifest drift (`EXT_MANIFEST_INVALID`, quarantine, `03` §3.6).
-- **Nothing in the manifest is code.** Lanes are templates (`02` §2.6); conditions, bindings, and views are data (`08`); schemas are JSON Schema.
-- **Schemas are checked twice.** The kernel validates every payload at admission against the JSON Schema with Ajv (`03` §3.3 step 5). The host validates it again with the full Zod schema, including refinements (`.refine`, `.superRefine`), before calling the handler, and validates the handler's output against the output schema before commit. Both failures are `VALIDATION_FAILED` with issues. Transforms, preprocess, pipes, and custom types are rejected at install, because the kernel could not enforce them.
+- **Nothing in the manifest is code.** Lanes are templates (`02` §2.6); conditions, bindings, and views are data (`08`); schemas are JSON Schema: a command's or query's `input` and an event's `payload` in Zod's input view (a defaulted field is optional), every other schema in its output view (ADR 0077).
+- **Schemas are checked twice.** The kernel validates every payload at admission against the JSON Schema with Ajv (`03` §3.3 step 5). The host validates it again with the full Zod schema, including refinements (`.refine`, `.superRefine`), before calling the handler (for event deliveries, only of its own events, whose Zod schema it holds, ADR 0076), and validates the handler's output against the output schema before commit. Both failures are `VALIDATION_FAILED` with issues. Transforms, preprocess, pipes, and custom types are rejected at install, because the kernel could not enforce them.
 - **Determinism**: running `setup` twice must produce the same manifest, byte for byte after canonical JSON (sorted keys). The loader checks this at install, and every host checks it at load.
 - **Derived data is not stored**: derived capabilities (`subscribes` to foreign events, `provides-llm`) are computed from `subscriptions` and `llm.providers` when needed, so they can never disagree with the registrations.
 - **Size**: at most 5 MB of canonical JSON, catalogs and page views included (`EXT_MANIFEST_INVALID` beyond).

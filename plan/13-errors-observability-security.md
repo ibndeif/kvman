@@ -78,7 +78,7 @@ Extension codes used across the plan: `agent/SESSION_CLOSED`, `agent/CONTEXT_TOO
 
 - Pino JSON to `~/.kvman/logs/kernel.log`, rotated daily and at 50 MB, 14 files kept.
 - Every line has `correlationId`, and where relevant `messageId`, `type`, `extension`, `workspaceId`, `lane`, `attempt`, `durationMs`.
-- **Never logged**: message payloads, config values, secrets, authorization data, request bodies, raw provider errors. Extension `ctx.log` output goes through the same redaction (known secret fields, bearer tokens, URLs with credentials).
+- **Never logged**: message payloads, config values, secrets, authorization data, request bodies, raw provider errors. Extension `ctx.log` output goes through the same redaction (known secret fields, bearer tokens, URLs with credentials); the kernel attaches `correlationId`, `messageId`, `type`, `extension`, `workspaceId`, and `attempt` to each line (ADR 0073).
 - Process output lives only in job logs (sensitive, capped, readable through `shell.job.log.get`), never in the kernel log.
 
 ## 13.4 Tracing and the inspector

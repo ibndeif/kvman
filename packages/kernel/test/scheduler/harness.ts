@@ -128,8 +128,8 @@ export async function complete(
 ): Promise<CommitResult> {
   const message = claimOf(fixture, messageId);
   const result = await fixture.pipeline.enqueue({
-    origin: { kind: 'invocation', invocation: { message, extension: extensionOfClaim(fixture, messageId), outcome } },
-    writes: [], sends: contents.sends ?? [], publishes: contents.publishes ?? [],
+    origin: { kind: 'invocation', invocation: { message, extension: extensionOfClaim(fixture, messageId), outcome, stored: true } },
+    writes: [], sends: contents.sends ?? [], publishes: contents.publishes ?? [], replies: [],
   });
   if (!result.committed) throw new Error(`the unit of ${messageId} did not commit: ${result.problem.code}`);
   fixture.dispatcher.end(messageId);

@@ -15,22 +15,40 @@ export type DataDeclarations = { collections: readonly CollectionDeclaration[]; 
 
 export type UnindexedScan = { owner: string; collection: string; shape: string };
 
-export class UnindexedScanWarnings {
+// Where a store notes a scan without a matching index.
+export interface ScanNotes {
+  note(scan: UnindexedScan): void;
+}
+
+// At most one warning per owner, collection, and query shape per hour, however many invocations scan.
+export class UnindexedScanThrottle {
   readonly #lastWarned = new Map<string, number>();
   readonly #now: () => number;
+
+  constructor(now: () => number) {
+    this.#now = now;
+  }
+
+  due(scan: UnindexedScan): boolean {
+    const key = JSON.stringify([scan.owner, scan.collection, scan.shape]);
+    const last = this.#lastWarned.get(key);
+    if (last !== undefined && this.#now() - last < 3_600_000) return false;
+    this.#lastWarned.set(key, this.#now());
+    return true;
+  }
+}
+
+export class UnindexedScanWarnings implements ScanNotes {
+  readonly #throttle: UnindexedScanThrottle;
   readonly #report: (scan: UnindexedScan) => void;
 
-  constructor(now: () => number, report: (scan: UnindexedScan) => void) {
-    this.#now = now;
+  constructor(throttle: UnindexedScanThrottle, report: (scan: UnindexedScan) => void) {
+    this.#throttle = throttle;
     this.#report = report;
   }
 
   note(scan: UnindexedScan): void {
-    const key = JSON.stringify([scan.owner, scan.collection, scan.shape]);
-    const last = this.#lastWarned.get(key);
-    if (last !== undefined && this.#now() - last < 3_600_000) return;
-    this.#lastWarned.set(key, this.#now());
-    this.#report(scan);
+    if (this.#throttle.due(scan)) this.#report(scan);
   }
 }
 
@@ -43,7 +61,7 @@ export type StoreContext = {
   validateDocument: (collection: string, document: JsonObject) => Issue[];
   correlationId: string;
   readOnly: boolean;
-  unindexedScans: UnindexedScanWarnings;
+  unindexedScans: ScanNotes;
 };
 
 export type ScopeBinding = { context: StoreContext; scope: StoreScope; ws: string };

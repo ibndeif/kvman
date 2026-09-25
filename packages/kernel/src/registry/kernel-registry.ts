@@ -42,6 +42,19 @@ function settingsOf(definition: { concurrency?: number; maxAttempts?: number }):
   };
 }
 
+// ADR 0068: an exact subscription to another extension's live event is refused when the registry is built.
+function liveSubscription(owners: ReadonlyMap<string, Owner[]>, extensions: readonly InstalledExtension[]): RegistryFailure | undefined {
+  for (const { manifest } of extensions) {
+    for (const { event } of manifest.subscriptions) {
+      const live = owners.get(event)?.find((owner) => owner.entry.kind === 'event' && owner.entry.delivery === 'live');
+      if (live !== undefined) {
+        return { code: 'EXT_MANIFEST_INVALID', detail: `${manifest.meta.name} subscribes to "${event}", a live event of ${live.name}; live events reach only screens` };
+      }
+    }
+  }
+  return undefined;
+}
+
 // Answers which extension handles a type in a workspace, and which extensions subscribe to an event (03 §3.3 step 3,
 // ADRs 0045, 0048). It holds manifests only; no extension code.
 export class KernelRegistry {
@@ -68,6 +81,8 @@ export class KernelRegistry {
 
   static build(input: RegistryInput): RegistryBuild {
     const registry = new KernelRegistry(input);
+    const live = liveSubscription(registry.owners, input.extensions);
+    if (live !== undefined) return { ok: false, failure: live };
     for (const [workspaceId, extensions] of registry.enabledIn) {
       const failure = namespaceConflict(workspaceId, extensions);
       if (failure !== undefined) return { ok: false, failure };
@@ -100,6 +115,11 @@ export class KernelRegistry {
       .flatMap(({ manifest }) => manifest.subscriptions
         .filter((subscription) => matchesTypePattern(subscription.event, eventType))
         .map((subscription) => ({ extension: manifest.meta.name, subscription })));
+  }
+
+  // An installed extension's manifest, which a host checks its setup against when it loads it (ADR 0071).
+  manifestOf(extension: string): Manifest | undefined {
+    return this.installed.get(extension)?.manifest;
   }
 
   // The scheduling settings of a handler named by its function reference (`command:<type>`, `subscription:<event>`).

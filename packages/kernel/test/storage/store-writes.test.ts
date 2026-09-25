@@ -8,10 +8,11 @@ const extension = '@acme/pdf';
 async function commitWrites(store: TestStore, writes: StoreWrite[], invocation?: Message): Promise<CommitResult> {
   const message = invocation ?? (await invocationMessage(store));
   return store.pipeline.enqueue({
-    origin: { kind: 'invocation', invocation: { message, extension, outcome: { ok: true, value: null } } },
+    origin: { kind: 'invocation', invocation: { message, extension, outcome: { ok: true, value: null }, stored: true } },
     writes,
     sends: [],
     publishes: [],
+    replies: [],
   });
 }
 

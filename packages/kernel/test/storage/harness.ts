@@ -86,6 +86,9 @@ export function testAdmission(options: TestAdmissionOptions): Admission {
       }
       return { outcome: 'admitted', admitted: { message, handler: owner } };
     },
+    checkReply() {
+      return undefined;
+    },
     admitPublish(_connection, request): PublishAdmission {
       const correlationId = request.cause?.correlationId ?? ulids.next();
       return { outcome: 'refused', problem: kernelProblem('TYPE_NOT_FOUND', { correlationId, params: { type: request.publish.type } }) };
@@ -104,7 +107,7 @@ export function openTestStore(owners: Record<string, string> = {}, invalidField?
 }
 
 export function adapterUnit(sends: OutboundSend[], address: Address = 'user:local'): CommitUnit {
-  return { origin: { kind: 'adapter', sender: { address }, messageId: ulids.next() }, writes: [], sends, publishes: [] };
+  return { origin: { kind: 'adapter', sender: { address }, messageId: ulids.next() }, writes: [], sends, publishes: [], replies: [] };
 }
 
 export async function invocationMessage(store: TestStore, type = 'pdf.translate'): Promise<Message> {

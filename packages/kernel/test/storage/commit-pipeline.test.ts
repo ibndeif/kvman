@@ -7,7 +7,7 @@ const extension = '@acme/pdf';
 const owners = { 'pdf.translate': extension, 'pdf.import': extension };
 
 function unitOf(message: Message, writes: StoreWrite[], outcome: InvocationOutcome = { ok: true, value: null }): CommitUnit {
-  return { origin: { kind: 'invocation', invocation: { message, extension, outcome } }, writes, sends: [], publishes: [] };
+  return { origin: { kind: 'invocation', invocation: { message, extension, outcome, stored: true } }, writes, sends: [], publishes: [], replies: [] };
 }
 
 const fullUnitWrites: StoreWrite[] = [

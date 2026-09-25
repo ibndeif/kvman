@@ -55,6 +55,14 @@ function dataVersionIssues({ version, compatibleWith, steps }: DataVersion): Iss
   return issues;
 }
 
+// 05 §5.3: live events go only to screens, so an extension cannot subscribe to its own (ADR 0068).
+function liveSubscriptionIssues(recording: Recording): Issue[] {
+  const live = new Set(recording.types.filter((entry) => entry['kind'] === 'event' && entry['delivery'] === 'live').map((entry) => entry['type']));
+  return recording.subscriptionEvents.flatMap((event, index) => (live.has(event)
+    ? [{ path: `subscriptions.${index}.event`, message: `"${event}" is a live event; live events reach only screens`, hint: 'subscribe to a durable or transient event instead' }]
+    : []));
+}
+
 // The rules of 05 §5.3 the protocol schema cannot see: public names carry the extension's namespace, each name set
 // has no duplicates, and migrations cover every version step (ADR 0046).
 export function registrationIssues(namespace: string, recording: Recording): Issue[] {
@@ -72,6 +80,7 @@ export function registrationIssues(namespace: string, recording: Recording): Iss
     ...duplicateIssues(recording.errorCodes, (index) => `errors.${index}.code`, already),
     ...duplicateIssues(recording.subscriptionEvents, (index) => `subscriptions.${index}.event`, already),
     ...duplicateIssues(recording.capabilityNames, (index) => `permissions.capabilities.${index}.name`, already),
+    ...liveSubscriptionIssues(recording),
     ...(recording.dataVersion === undefined ? [] : dataVersionIssues(recording.dataVersion)),
   ];
 }

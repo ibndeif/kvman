@@ -35,7 +35,7 @@ export class AdapterPath {
     const messageId = this.#ids.next();
     const result = await this.#pipeline.enqueue({
       origin: { kind: 'adapter', sender, messageId, ...(workspaceId === undefined ? {} : { workspaceId }) },
-      writes: [], sends: [send], publishes: [],
+      writes: [], sends: [send], publishes: [], replies: [],
     });
     if (!result.committed) return { ok: false, problem: result.problem };
     const [original] = result.duplicates;
