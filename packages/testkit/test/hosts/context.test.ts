@@ -21,7 +21,9 @@ describe('the invocation context (plan 05 §5.4, ADRs 0066, 0073, 0075)', worker
   });
 
   it('M1.6-E37 a message whose workspace has no row fails WORKSPACE_INVALID', async () => {
-    const id = await send(fixture, 'notes.add', { text: 'hi' }, { workspaceId: workspaceB });
+    const id = await send(fixture, 'notes.add', { text: 'hi' }, { workspaceId: workspaceB, delayMs: 1_000 });
+    fixture.connection.prepare('DELETE FROM workspaces WHERE id = ?').run(workspaceB);
+    fixture.timers.advance(1_000);
     expect(await fixture.runtime.awaitReply(id)).toMatchObject({ ok: false, problem: { code: 'WORKSPACE_INVALID', retryable: false } });
     expect(row(fixture, id)).toMatchObject({ state: 'failed', attempts: 0 });
   });

@@ -1,6 +1,7 @@
 export * from './address.ts';
 export * from './blob-id.ts';
 export * from './canonical-json.ts';
+export * from './config-values.ts';
 export * from './daemon.ts';
 export * from './faults.ts';
 export * from './digest.ts';
@@ -59,3 +60,4 @@ export * from './ui/ui-registry.ts';
 export * from './ui/view-node.ts';
 export * from './unicode.ts';
 export * from './unit-of-work.ts';
+export * from './workspaces.ts';

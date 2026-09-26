@@ -1,6 +1,7 @@
 import type { Ctx, Store } from '@kvman/sdk';
 import { createStepFunction } from '../../store/step-journal.ts';
 import { createMessaging, type MessagingParts } from './context-messaging.ts';
+import { createSettings } from './context-settings.ts';
 import { stepRecorder } from './step-recorder.ts';
 
 export type ContextParts = MessagingParts & { store: Store };
@@ -28,6 +29,7 @@ export function createContext(parts: ContextParts): Ctx {
       return values.now();
     },
     ...createMessaging(parts),
+    ...createSettings(parts),
     get store() {
       state.open();
       return store;

@@ -110,7 +110,6 @@ describe('the event stream (plan 12 §12.3, ADRs 0027, 0098)', workerTests, () =
   });
 
   it("M1.8-E53 a subscription's workspace selects its events and global ones", async () => {
-    fixture.kernel.connection.prepare('INSERT INTO workspaces (id, path, name, created_at) VALUES (?, ?, ?, ?)').run(workspaceB, '/w/b', 'B', 1);
     const scoped = await connect('S');
     const everything = await connect('T');
     for (const subscription of [{ sid: 'ns', events: ['notes.*'] }, { sid: 'ks', events: ['kernel.*'] }, { sid: 'dup', events: ['notes.added'] }]) {

@@ -4,7 +4,7 @@ import {
   PendingIndex, Router, Scheduler, type AdapterCommand, type CommitResult, type Connection, type InvocationOutcome, type Sender,
 } from '../../src/index.ts';
 import { event, manifest, query, subscription, workspaceA, workspaceB } from '../registry/manifests.ts';
-import { MapGrants } from '../router/harness.ts';
+import { MapGrants, openWorkspaces } from '../router/harness.ts';
 import { temporaryDatabaseFile, ulids } from '../storage/harness.ts';
 import { ManualTimers, startTime, TestDispatcher, type TestTime } from './doubles.ts';
 
@@ -67,7 +67,7 @@ function assemble({ connection, time, index }: Shared): SchedulerFixture {
   const grants = new MapGrants();
   grants.grant('@acme/audit', workspaceA, { derived: { subscribes: ['pdf.imported'], providesLlm: [] } });
   grants.grant('@acme/pdf', workspaceA, { requested: [{ name: 'calls', types: ['agent.*'] }] });
-  const router = new Router({ registry: () => built, grants, validators: new PayloadValidators(), ids: ulids, now, defaultLocale: () => 'en' });
+  const router = new Router({ registry: () => built, grants, workspaces: openWorkspaces, validators: new PayloadValidators(), ids: ulids, now, defaultLocale: () => 'en' });
   const pending = index ?? new PendingIndex(now);
   const pipeline = new CommitPipeline({ connection, admission: router, now });
   const timers = new ManualTimers(time);

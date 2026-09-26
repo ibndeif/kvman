@@ -1,6 +1,6 @@
 # ADR 0052 — Capability checks with grants as data
 
-- **Status**: accepted
+- **Status**: accepted; the grants source over the database moved to M2.3 (ADR 0123)
 - **Date**: 2026-09-25
 - **Milestone**: M1.4
 - **Decided by**: the product owner

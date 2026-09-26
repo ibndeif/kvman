@@ -9,7 +9,9 @@ import type { Scheduler } from '../scheduler/scheduler.ts';
 import type { Connection } from '../storage/driver.ts';
 import type { ExtensionVersion } from '../storage/extension-changes.ts';
 import { isAdministrator } from './administrators.ts';
+import { parsed } from './command-payloads.ts';
 import type { KernelCommits } from './kernel-commits.ts';
+import type { SerialChanges } from './serial-changes.ts';
 
 export type ExtensionCommandsDeps = {
   connection: Connection;
@@ -18,6 +20,7 @@ export type ExtensionCommandsDeps = {
   grants: GrantsSource;
   registry: RegistryState;
   install: InstallService;
+  serial: SerialChanges;
   abortMessages: (messageIds: ReadonlySet<string>) => void;
 };
 
@@ -27,16 +30,6 @@ export class KernelStopping extends Error {
     super('the kernel is stopping');
     this.name = 'KernelStopping';
   }
-}
-
-type PayloadSchema<T> = { safeParse(value: unknown): { success: true; data: T } | { success: false; error: { issues: ReadonlyArray<{ path: PropertyKey[]; message: string }> } } };
-
-// A payload JSON Schema admitted can still fail a refinement, like a source's form (02 §2.6, M2.1-H3).
-function parsed<T>(schema: PayloadSchema<T>, message: Message): { ok: true; value: T } | { ok: false; problem: Problem } {
-  const result = schema.safeParse(message.payload);
-  if (result.success) return { ok: true, value: result.data };
-  const issues = result.error.issues.map((issue) => ({ path: issue.path.map(String).join('.'), message: issue.message }));
-  return { ok: false, problem: kernelProblem('VALIDATION_FAILED', { correlationId: message.correlationId, messageId: message.id, detail: issues[0]?.message ?? 'the payload is not valid', issues }) };
 }
 
 function problemOf(error: unknown, message: Message): Problem {
@@ -85,11 +78,17 @@ export class ExtensionCommands {
       return this.#deps.commits.fail(claim, problemOf(error, message));
     }
     const change = { kind: 'install', version } as const;
-    const result = await this.#deps.commits.commit({ origin: { kind: 'extensions', change, command: message, correlationId: message.correlationId }, writes: [], sends: [], publishes: [], replies: [] }, claim);
-    if (result.committed) this.#deps.registry.refresh();
+    await this.#deps.serial.run(async () => {
+      const result = await this.#deps.commits.commit({ origin: { kind: 'change', change, command: message, correlationId: message.correlationId }, writes: [], sends: [], publishes: [], replies: [] }, claim);
+      if (result.committed) this.#deps.registry.refresh();
+    });
   }
 
-  async uninstall(claim: Claim): Promise<void> {
+  uninstall(claim: Claim): Promise<void> {
+    return this.#deps.serial.run(() => this.#uninstall(claim));
+  }
+
+  async #uninstall(claim: Claim): Promise<void> {
     const { message } = claim;
     const request = parsed(uninstallRequestSchema, message);
     if (!request.ok) return this.#deps.commits.fail(claim, request.problem);
@@ -102,7 +101,7 @@ export class ExtensionCommands {
       return this.#deps.commits.fail(claim, problem);
     }
     const change = { kind: 'uninstall', name, deleteData: deleteData === true } as const;
-    const result = await this.#deps.commits.commit({ origin: { kind: 'extensions', change, command: message, correlationId: message.correlationId }, writes: [], sends: [], publishes: [], replies: [] }, claim);
+    const result = await this.#deps.commits.commit({ origin: { kind: 'change', change, command: message, correlationId: message.correlationId }, writes: [], sends: [], publishes: [], replies: [] }, claim);
     if (!result.committed) return;
     this.#deps.registry.refresh();
     const ended = new Set(result.ended.map((entry) => entry.messageId));

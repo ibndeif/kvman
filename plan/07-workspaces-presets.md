@@ -4,8 +4,8 @@
 
 - A workspace is a folder. Its ID is the SHA-256 (lowercase hex) of the UTF-8 canonical path, where the canonical path is `fs.realpath.native(path)` (symlinks resolved, and the real letter case on case-insensitive file systems); the same folder reached through two paths is one workspace.
 - **A moved or renamed folder is a new workspace** (its path, and so its ID, changed). The old record stays in the switcher, marked "folder not found", until the person forgets it (`kernel.workspace.forget`), which deletes its data.
-- `kernel.workspace.open {path}` validates the path (exists, is a directory, not inside `~/.kvman`), creates the `workspaces` row if new, and publishes `kernel.workspace.opened`.
-- **Home workspace**: `~/kvman` is created and opened on first run so users who do not think in folders always have a place to work.
+- `kernel.workspace.open {path}` validates the path (absolute, exists, is a directory, not inside `~/.kvman`), creates the `workspaces` row if new (named after the folder's basename), and publishes `kernel.workspace.opened` (global, every time). Names are 1–100 characters (ADR 0127).
+- **Home workspace**: `~/kvman` is created and opened on first run so users who do not think in folders always have a place to work. It is an ordinary workspace: it can be forgotten and is not recreated; first run fails if it cannot be created (ADR 0127).
 - Every message from the shell carries the workspace the user is currently in. Messages without a workspace are global and can only target global-scope types.
 - `kernel.workspace.forget` removes the workspace record and all its scoped data (with confirmation); the folder itself is never touched.
 - Each browser tab has one current workspace, shown in the switcher and sent with every request. Switching loads that workspace's UI registry (`08` §8.14); tabs in different workspaces work independently. A workspace with no applied preset (opened but never set up) shows the first-run question for that workspace.
@@ -170,11 +170,11 @@ kernel.preset.apply {confirmationToken}  (access: user — Confirm in the shell'
 ## 7.5 Config values
 
 - Storage (`04` §4.7): global values in `global_config`, workspace values in `workspace_config` (one row per workspace and extension, each with its own revision). The applied preset holds no config; applying a preset writes its `config` into these rows.
-- Resolution order for extension X in workspace W: schema defaults < global value < W's `workspace_config` row for X.
+- Resolution order for extension X in workspace W: schema defaults < global value < W's `workspace_config` row for X, merged by top-level field; a write validates the merged value of its scope, and a missing row reads as `{ value: {}, revision: 0 }` (ADR 0125).
 - Writes: `kernel.config.set {extension, scope, workspaceId?, value, revision}` (the revision of that row) from the settings UI, or `ctx.config.set` by X itself, applied in its unit of work (`04` §4.2). Foreign writes are impossible through the SDK and rejected at the kernel (`CAPABILITY_DENIED`).
 - Reads by other extensions: `ctx.query('kernel.config.get', {extension})` returns values with secrets redacted.
 - Every write validates against the schema (`CONFIG_INVALID`), bumps that row's revision (a stale one fails `CONFIG_STALE`), and publishes `kernel.config.changed`. A config write never changes the applied preset's revision, so it does not refresh the UI registry (`08` §8.6).
-- Secrets are set with `kernel.secret.set {extension, name, value}` and cleared with `kernel.secret.clear`. A blank masked field in a form keeps the existing value; clearing requires an explicit action.
+- Secrets are set with `kernel.secret.set {extension, name, value}` and cleared with `kernel.secret.clear`; `name` is one of the extension's declared secret field paths (ADR 0126). A blank masked field in a form keeps the existing value; clearing requires an explicit action.
 
 ## 7.6 Presets shipped with kvman
 

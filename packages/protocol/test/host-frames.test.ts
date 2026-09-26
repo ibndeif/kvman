@@ -22,6 +22,8 @@ const rpcCalls = [
   { name: 'step.begin', step: 'fetch', retrySafe: false, recorded: noValues },
   { name: 'step.end', step: 'fetch', result: { ok: 1 } },
   { name: 'log', level: 'info', message: 'fetched', fields: { count: 2 } },
+  { name: 'config.get', pending: { workspace: { limit: 3 } } },
+  { name: 'secret.get', secret: 'apiKey' },
 ];
 
 const complete = {
@@ -29,6 +31,7 @@ const complete = {
   unitOfWork: {
     writes: [{ kind: 'kv.set', scope: 'workspace', key: 'k', value: 1 }], sends: [{ type: 'ocr.extract', payload: {} }],
     publishes: [{ type: 'pdf.translated', payload: {} }], replies: [{ commandId: messageId, payload: { ok: true, value: null } }],
+    config: [{ scope: 'workspace', value: { limit: 3 } }], secrets: [{ name: 'apiKey', value: 'sk-1' }, { name: 'oauth.token', value: null }],
   },
   recorded: noValues,
 };

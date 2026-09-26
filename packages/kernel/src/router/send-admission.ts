@@ -1,7 +1,7 @@
 import { outboundSendSchema, type Message, type OutboundSend } from '@kvman/protocol';
 import type { SendAdmission, SendRequest } from '../storage/commit-unit.ts';
 import type { Connection } from '../storage/driver.ts';
-import { checkPayload, refusalOf, resolveType, type AdmissionOptions, type Resolved } from './admission-context.ts';
+import { checkPayload, checkWorkspace, refusalOf, resolveType, type AdmissionOptions, type Resolved } from './admission-context.ts';
 import { findKeyedMessage, requestDigestNow } from './idempotency.ts';
 import { renderLane } from './lane-rendering.ts';
 import { assignContext, assignNotBefore, assignPriority } from './message-assignment.ts';
@@ -83,6 +83,7 @@ export function admitSend(options: AdmissionOptions, connection: Connection, req
   let message: Message;
   try {
     checkEnvelope(request);
+    checkWorkspace(options, request.workspaceId, request.sender);
     checkContinuation(options, request);
     message = baseMessage(options, request, id);
   } catch (error) {

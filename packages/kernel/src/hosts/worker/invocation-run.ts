@@ -22,7 +22,7 @@ export type RunParts = {
   clock: () => number;
 };
 
-const nothing: HostUnitOfWork = { writes: [], sends: [], publishes: [], replies: [] };
+const nothing: HostUnitOfWork = { writes: [], sends: [], publishes: [], replies: [], config: [], secrets: [] };
 const noNewValues: NewRecordedValues = { id: [], now: [] };
 
 function issuesOf(error: { issues: ReadonlyArray<{ path: PropertyKey[]; message: string }> }): Issue[] {
@@ -91,7 +91,7 @@ export async function runInvocation(parts: RunParts): Promise<CompleteFrame> {
     const result = await definition.handle(inputOf(invoke, extension), createContext({ state, client, values, extension, store: store.store }));
     state.close();
     const outcome = outcomeOf(invoke, extension, state, result);
-    return completeFrame(invoke, outcome, { writes: store.writes(), sends: state.sends, publishes: state.publishes, replies: state.replies }, noNewValues);
+    return completeFrame(invoke, outcome, { writes: store.writes(), sends: state.sends, publishes: state.publishes, replies: state.replies, config: state.config, secrets: state.secrets }, noNewValues);
   } catch (error) {
     state.close();
     if (!(error instanceof ProblemError)) {

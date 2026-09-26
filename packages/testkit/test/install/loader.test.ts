@@ -3,7 +3,8 @@ import { join } from 'node:path';
 import type { Problem, ReplyPayload } from '@kvman/protocol';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { eventually, workspaceA } from '../hosts/harness.ts';
-import { command, installed, installTests, openInstallFixture, problemOf, sharedGrants, stagingTrees, type InstallFixture } from './harness.ts';
+import { emptyGrant } from './fixture-presets.ts';
+import { command, installed, installTests, openInstallFixture, problemOf, stagingTrees, type InstallFixture } from './harness.ts';
 import { extensionSource, packPackage, samplePackage, writePackage } from './packages.ts';
 import { startRegistry, type LocalRegistry } from './registries.ts';
 
@@ -99,9 +100,9 @@ describe('the install-time loader (plan 03 §3.5, 05 §5.1, ADR 0118)', installT
 
   it("M2.2-E30 the snapshot holds no @kvman/sdk; the loader and the host use the kernel's copy", async () => {
     await registry.publish(await packPackage(writePackage(samplePackage())));
-    fixture = await openInstallFixture({ registry: registry.url, enabled: [[workspaceA, ['@acme/sample']]] });
-    fixture.grants['@acme/sample'] = sharedGrants;
+    fixture = await openInstallFixture({ registry: registry.url });
     const { digest } = await installed(fixture, 'npm:@acme/sample@1.0.0');
+    fixture.enable(workspaceA, '@acme/sample', emptyGrant);
     expect(existsSync(join(fixture.home, 'extensions', 'snapshots', digest, 'node_modules', '@kvman'))).toBe(false);
     expect(await command(fixture, 'sample.echo', { text: 'sdk' }, undefined, workspaceA)).toEqual({ ok: true, value: { text: 'sdk' } });
   });

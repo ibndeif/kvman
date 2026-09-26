@@ -1,6 +1,5 @@
-import { join } from 'node:path';
-import { createUlidGenerator, Kernel, packBuiltins, type EnabledExtensions } from '@kvman/kernel';
-import type { Capabilities } from '@kvman/protocol';
+import { dirname, join } from 'node:path';
+import { createUlidGenerator, Kernel, packBuiltins } from '@kvman/kernel';
 import { ManualTimers } from '../hosts/harness.ts';
 import { closedRegistry, noBuiltins } from '../install/fixture-snapshots.ts';
 import { extensionSource, temporary, writePackage } from '../install/packages.ts';
@@ -19,18 +18,19 @@ export async function packedBuiltins(): Promise<string> {
   return builtin;
 }
 
-export const sharedGrants: Capabilities = { isolation: 'shared', requested: [], derived: { subscribes: [], providesLlm: [] } };
-
 export type BootedHome = { kernel: Kernel; timers: ManualTimers; close(): Promise<void> };
 
-// A daemon booted in this process on `home`, as 03 §3.9 boots it.
-export async function bootHome(home: string, options: { enabled?: EnabledExtensions; builtin?: string; registry?: string } = {}): Promise<BootedHome> {
+// The Home workspace a test daemon's first run opens: beside its home folder, never the real ~/kvman (ADR 0127).
+export function testHomeWorkspace(home: string): string {
+  return join(dirname(home), 'kvman');
+}
+
+// A daemon booted in this process on `home`, as 03 §3.9 boots it; what it enables is in its applied presets.
+export async function bootHome(home: string, options: { builtin?: string; registry?: string; homeWorkspace?: string } = {}): Promise<BootedHome> {
   const timers = new ManualTimers();
-  const enabled = options.enabled ?? new Map();
-  const names = new Set([...enabled.values()].flat());
   const kernel = await Kernel.boot({
-    home, enabled, builtin: options.builtin ?? noBuiltins(home), npmRegistry: options.registry ?? closedRegistry, environment: process.env,
-    grants: { capabilities: (extension) => (names.has(extension) ? sharedGrants : undefined) }, poolSize: 1, ids: createUlidGenerator(Date.now),
+    home, builtin: options.builtin ?? noBuiltins(home), homeWorkspace: options.homeWorkspace ?? testHomeWorkspace(home), npmRegistry: options.registry ?? closedRegistry,
+    environment: process.env, poolSize: 1, ids: createUlidGenerator(Date.now),
     now: () => timers.time.value, timers, openLogger: () => ({ write: () => undefined, close: () => undefined }), defaultLocale: () => 'en',
   });
   return {

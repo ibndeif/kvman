@@ -4,7 +4,7 @@ import { kernelOwner, kernelTypeEntries } from './kernel-types.ts';
 export type InstalledExtension = { manifest: Manifest; quarantined: boolean };
 
 // The registry's inputs: every installed manifest (read from the database, ADR 0114), and the names of the
-// extensions each workspace enables (data until M2.3).
+// extensions each workspace's applied preset enables (ADR 0123).
 export type RegistryInput = { extensions: readonly InstalledExtension[]; enabled: ReadonlyMap<string, readonly string[]> };
 
 export type RegistryFailure = { code: KernelErrorCode; detail: string; hint?: string };
@@ -118,6 +118,20 @@ export class KernelRegistry {
       .flatMap(({ manifest }) => manifest.subscriptions
         .filter((subscription) => matchesTypePattern(subscription.event, eventType))
         .map((subscription) => ({ extension: manifest.meta.name, subscription })));
+  }
+
+  // 06 §6.4: a handler runs only while its extension is enabled where its message is, and a global one while the
+  // extension is enabled somewhere; the kernel's own handlers always run.
+  isEnabled(extension: string, workspaceId: string | undefined): boolean {
+    if (extension === kernelOwner) return true;
+    const installed = this.installed.get(extension);
+    if (installed === undefined) return false;
+    return workspaceId === undefined ? this.enabledSomewhere.has(installed) : (this.enabledIn.get(workspaceId) ?? []).includes(installed);
+  }
+
+  // The manifests a workspace enables, quarantined ones included (enable's namespace and requireTypes checks).
+  manifestsEnabledIn(workspaceId: string): Manifest[] {
+    return (this.enabledIn.get(workspaceId) ?? []).map((extension) => extension.manifest);
   }
 
   // An installed extension's manifest, which a host checks its setup against when it loads it (ADR 0071).

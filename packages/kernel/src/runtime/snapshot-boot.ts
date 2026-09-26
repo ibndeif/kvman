@@ -22,7 +22,7 @@ export async function installBuiltins(runtime: KernelRuntime, correlationId: str
     try {
       const staged = await runtime.install.stage(`builtin:${name}`, correlationId, signal);
       const version = await runtime.install.confirm(staged.confirmationToken);
-      const result = await runtime.pipeline.enqueue({ origin: { kind: 'extensions', change: { kind: 'install', version }, correlationId }, writes: [], sends: [], publishes: [], replies: [] });
+      const result = await runtime.pipeline.enqueue({ origin: { kind: 'change', change: { kind: 'install', version }, correlationId }, writes: [], sends: [], publishes: [], replies: [] });
       if (!result.committed) throw new ProblemError(result.problem);
     } catch (error) {
       if (error instanceof InstallFailure) throw new ProblemError(error.problem(correlationId));

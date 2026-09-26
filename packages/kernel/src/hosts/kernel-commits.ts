@@ -31,6 +31,13 @@ export class KernelCommits {
     return result;
   }
 
+  // A kernel unit that settles no claim of its own, such as a forget's cancel: what it ends is answered.
+  async commitUnclaimed(unit: CommitUnit): Promise<CommitResult> {
+    const result = await this.#pipeline.enqueue(unit);
+    if (result.committed) this.#waiters.resolve(result.replies);
+    return result;
+  }
+
   reply(claim: Claim, value: Json): Promise<CommitResult> {
     const invocation = { message: claim.message, extension: claim.extension, outcome: { ok: true, value } as const, stored: true };
     return this.commit({ origin: { kind: 'invocation', invocation }, writes: [], sends: [], publishes: [], replies: [] }, claim);

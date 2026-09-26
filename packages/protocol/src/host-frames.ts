@@ -6,7 +6,8 @@ import { liveChunkSchema } from './live-chunk.ts';
 import { messageKindSchema, messageSchema } from './message.ts';
 import { problemSchema } from './problem.ts';
 import { replyPayloadSchema } from './reply.ts';
-import { outboundPublishSchema, outboundSendSchema, storeWriteSchema } from './unit-of-work.ts';
+import { configWriteSchema, outboundPublishSchema, outboundSendSchema, secretWriteSchema, storeWriteSchema } from './unit-of-work.ts';
+import { secretNameSchema } from './config-values.ts';
 
 // 03 §3.5 and ADR 0076: the frames between the kernel and an execution host.
 
@@ -54,6 +55,9 @@ export const rpcCallSchema = z.discriminatedUnion('name', [
   z.strictObject({ name: z.literal('live'), type: typeNameSchema, key: z.string().min(1), chunk: liveChunkSchema }),
   z.strictObject({ name: z.literal('step.begin'), step: z.string().min(1), retrySafe: z.boolean(), recorded: newRecordedValuesSchema }),
   z.strictObject({ name: z.literal('step.end'), step: z.string().min(1), result: jsonSchema.exactOptional() }),
+  // ADRs 0125, 0126: the merged config with the handler's own pending values, and one secret of its extension.
+  z.strictObject({ name: z.literal('config.get'), pending: z.strictObject({ global: jsonObjectSchema.exactOptional(), workspace: jsonObjectSchema.exactOptional() }) }),
+  z.strictObject({ name: z.literal('secret.get'), secret: secretNameSchema }),
   z.strictObject({
     name: z.literal('log'), level: z.enum(['debug', 'info', 'warn', 'error']), message: z.string(), fields: jsonObjectSchema.exactOptional(),
   }),
@@ -89,6 +93,8 @@ export const hostUnitOfWorkSchema = z.strictObject({
   sends: z.array(outboundSendSchema),
   publishes: z.array(outboundPublishSchema),
   replies: z.array(deferredReplySchema),
+  config: z.array(configWriteSchema),
+  secrets: z.array(secretWriteSchema),
 });
 export type HostUnitOfWork = z.infer<typeof hostUnitOfWorkSchema>;
 

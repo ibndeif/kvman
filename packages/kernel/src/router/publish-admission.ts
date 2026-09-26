@@ -1,7 +1,7 @@
 import { outboundPublishSchema, type Message } from '@kvman/protocol';
 import type { EventDelivery, PublishAdmission, PublishRequest } from '../storage/commit-unit.ts';
 import type { Subscriber } from '../registry/kernel-registry.ts';
-import { checkPayload, refusalOf, resolveType, type AdmissionOptions } from './admission-context.ts';
+import { checkPayload, checkWorkspace, refusalOf, resolveType, type AdmissionOptions } from './admission-context.ts';
 import { requestDigestNow } from './idempotency.ts';
 import { renderLane } from './lane-rendering.ts';
 import { assignContext, assignPriority } from './message-assignment.ts';
@@ -42,6 +42,7 @@ export function admitPublish(options: AdmissionOptions, request: PublishRequest)
       throw new Refusal('VALIDATION_FAILED', { issues: parsed.error.issues.map((issue) => ({ path: issue.path.join('.'), message: issue.message })) });
     }
     const { type, payload } = parsed.data;
+    checkWorkspace(options, request.workspaceId, sender);
     const resolved = resolveType(options, type, request.workspaceId, 'event');
     checkPublish(sender, resolved.owner, resolved.entry);
     const deliveryClass = resolved.entry.kind === 'event' ? resolved.entry.delivery : 'durable';

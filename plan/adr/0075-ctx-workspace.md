@@ -1,6 +1,6 @@
 # ADR 0075 — `ctx.workspace` before workspaces are created
 
-- **Status**: accepted
+- **Status**: accepted; from M2.3 admission refuses unknown workspaces and this check covers the forget race (ADR 0122)
 - **Date**: 2026-09-25
 - **Milestone**: M1.6
 - **Decided by**: the product owner

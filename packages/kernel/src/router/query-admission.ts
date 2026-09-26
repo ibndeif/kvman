@@ -1,6 +1,6 @@
 import { jsonSchema, typeNameSchema, type Json, type Message, type Problem } from '@kvman/protocol';
 import type { AdmittedMessage, Sender } from '../storage/commit-unit.ts';
-import { checkPayload, refusalOf, resolveType, type AdmissionOptions } from './admission-context.ts';
+import { checkPayload, checkWorkspace, refusalOf, resolveType, type AdmissionOptions } from './admission-context.ts';
 import { assignContext, assignPriority } from './message-assignment.ts';
 import { checkAccess, checkCallCapability } from './permission-checks.ts';
 import { invalid } from './refusal.ts';
@@ -17,6 +17,7 @@ export function admitQuery(options: AdmissionOptions, request: QueryRequest): Qu
   try {
     if (!typeNameSchema.safeParse(request.type).success) throw invalid('type', 'expected a message type such as "pdf.files.list"');
     if (!jsonSchema.safeParse(request.payload).success) throw invalid('payload', 'expected JSON');
+    checkWorkspace(options, request.workspaceId, sender);
     const resolved = resolveType(options, request.type, request.workspaceId, 'query');
     checkCallCapability(options.grants, sender, resolved.owner, resolved.entry, resolved.workspaceId);
     checkAccess(sender, resolved.owner, resolved.entry);

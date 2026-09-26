@@ -178,6 +178,12 @@ export class Scheduler {
       .map((entry) => entry.id);
   }
 
+  // Unstored deliveries (queued or running) in a workspace being forgotten (04 §4.4).
+  unstoredInWorkspace(workspaceId: string): string[] {
+    const running = this.#inFlight.runningUnstored().map((invocation) => invocation.entry);
+    return [...this.#options.index.queuedUnstored(), ...running].filter((entry) => entry.unstored !== undefined && entry.workspaceId === workspaceId).map((entry) => entry.id);
+  }
+
   dropUnstored(ids: Iterable<string>): void {
     const dropped = new Set(ids);
     this.#options.index.remove(dropped);
@@ -247,11 +253,14 @@ export class Scheduler {
     }
   }
 
-  // A message whose deadline passed is left for expiry (ADR 0084); a quarantined extension's wait (ADR 0086).
+  // A message whose deadline passed is left for expiry (ADR 0084); a quarantined extension's wait (ADR 0086), and so
+  // do a disabled extension's until it is enabled again (06 §6.4).
   #eligible(entry: PendingEntry, now: number): boolean {
     const concurrency = this.#settings(entry).concurrency ?? schedulerDefaults.handlerConcurrency;
+    const registry = this.#options.registry();
     return (entry.deadlineAt === undefined || entry.deadlineAt > now)
-      && !this.#options.registry().isQuarantined(entry.extension)
+      && !registry.isQuarantined(entry.extension)
+      && registry.isEnabled(entry.extension, entry.workspaceId)
       && this.#inFlight.laneFreeFor(entry)
       && this.#inFlight.handlerCount(entry.handlerKey) < concurrency
       && this.#inFlight.extensionCount(entry.extension) < schedulerDefaults.extensionConcurrency;

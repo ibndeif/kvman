@@ -110,6 +110,26 @@ export interface Ctx {
   readonly store: Store;
   /** Runs an external effect once per message and records its result; a redelivery returns the recorded result. */
   step<Result extends Json | undefined>(name: string, effect: () => Promise<Result>, options?: StepOptions): Promise<Result>;
+  /** The extension's config: its merged value, and writes applied when the handler commits. */
+  readonly config: ConfigAccess;
+  /** The extension's secrets, kept outside the database; reads and writes are the extension's own. */
+  readonly secrets: SecretAccess;
+}
+
+/** `ctx.config` (05 §5.8). */
+export interface ConfigAccess {
+  /** Schema defaults, then the global value, then the workspace's, by top-level field, with this handler's own sets applied; never secret fields. */
+  get<Config extends JsonObject = JsonObject>(): Promise<Config>;
+  /** Replaces the stored value of `scope` when the handler commits; the value is checked against the config schema then. */
+  set(scope: ConfigScope, value: JsonObject): void;
+}
+
+/** `ctx.secrets` (05 §5.8): a secret config field's name is its dotted path. */
+export interface SecretAccess {
+  /** A secret's value, with this handler's own pending set first, or `undefined`. */
+  get(name: string): Promise<string | undefined>;
+  /** Sets a secret, or clears it with `null`, after the handler commits. */
+  set(name: string, value: string | null): void;
 }
 
 /** Where a stored config value lives. */

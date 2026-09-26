@@ -32,9 +32,9 @@ const sandboxed: Capabilities = { isolation: 'sandboxed', requested: [], derived
 
 describe('kernel.extensions.list and kernel.extension.get (plan 03 §3.8, ADR 0119)', installTests, () => {
   it('M2.2-E47 the installed extensions with their status, enabled workspaces, and isolation', async () => {
-    fixture = await openInstallFixture({ registry: registry.url, enabled: [[workspaceA, ['@acme/alpha']]] });
-    fixture.grants['@acme/alpha'] = sandboxed;
+    fixture = await openInstallFixture({ registry: registry.url });
     const alpha = await installed(fixture, 'npm:@acme/alpha@1.0.0');
+    fixture.enable(workspaceA, '@acme/alpha', sandboxed);
     const beta = await installed(fixture, 'npm:@acme/beta@1.0.0');
     const gamma = await installed(fixture, 'npm:@acme/gamma@1.0.0');
     fixture.connection.prepare("UPDATE extensions SET status = 'quarantined', quarantine_reason = 'HOST_FAILURES' WHERE name = '@acme/beta'").run();
@@ -53,9 +53,9 @@ describe('kernel.extensions.list and kernel.extension.get (plan 03 §3.8, ADR 01
   });
 
   it('M2.2-E48 one extension: its versions newest first, its active manifest, and its grants', async () => {
-    fixture = await openInstallFixture({ registry: registry.url, enabled: [[workspaceA, ['@acme/alpha']]] });
-    fixture.grants['@acme/alpha'] = sandboxed;
+    fixture = await openInstallFixture({ registry: registry.url });
     const first = await installed(fixture, 'npm:@acme/alpha@1.0.0');
+    fixture.enable(workspaceA, '@acme/alpha', sandboxed);
     fixture.timers.advance(1_000);
     const second = await installed(fixture, 'npm:@acme/alpha@1.1.0');
     const answer = await query(fixture, 'kernel.extension.get', { name: '@acme/alpha' });

@@ -1,10 +1,12 @@
 import { mkdirSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import {
-  betterSqlite3Driver, createUlidGenerator, KernelRuntime, openKernelDatabase, verifyEnabledSnapshots, type Connection, type LiveFrame, type Sender,
+  betterSqlite3Driver, createUlidGenerator, KernelRuntime, openKernelDatabase, readAppliedPreset, SecretStore, verifyEnabledSnapshots, type Connection, type LiveFrame, type LogRecord,
+  type Sender,
 } from '@kvman/kernel';
 import { stageResultSchema, type Capabilities, type Json, type Problem, type ReplyPayload, type StageResult } from '@kvman/protocol';
 import { ManualTimers, workspaceA, workspaceB } from '../hosts/harness.ts';
+import { applyTestPreset, enableInPreset } from './fixture-presets.ts';
 import { closedRegistry, noBuiltins } from './fixture-snapshots.ts';
 import { temporary } from './packages.ts';
 
@@ -16,14 +18,14 @@ export type InstallFixture = {
   connection: Connection;
   home: string;
   timers: ManualTimers;
-  grants: Record<string, Capabilities>;
   live: LiveFrame[];
+  logged: LogRecord[];
+  // Enables (or re-grants) an installed extension in a workspace's applied preset through the test helper (ADR 0124).
+  enable(workspaceId: string, name: string, grants: Capabilities): void;
   close(): Promise<void>;
 };
 
-export type InstallFixtureOptions = { registry?: string; builtin?: string; enabled?: ReadonlyArray<readonly [string, readonly string[]]>; home?: string };
-
-export const sharedGrants: Capabilities = { isolation: 'shared', requested: [], derived: { subscribes: [], providesLlm: [] } };
+export type InstallFixtureOptions = { registry?: string; builtin?: string; home?: string };
 
 // A runtime on a real home folder, with workspaces A and B, the manual kernel clock (the fetch limit and the loader
 // deadline fire only when a test moves it), and the path and proxies of this process for pnpm and git.
@@ -32,16 +34,17 @@ export async function openInstallFixture(options: InstallFixtureOptions = {}): P
   mkdirSync(home, { recursive: true, mode: 0o700 });
   const databaseFile = join(home, 'kvman.db');
   const connection = openKernelDatabase(databaseFile, betterSqlite3Driver, createUlidGenerator(Date.now).next());
-  const insert = connection.prepare('INSERT OR IGNORE INTO workspaces (id, path, name, created_at) VALUES (?, ?, ?, ?)');
-  insert.run(workspaceA, '/w/a', 'A', 1);
-  insert.run(workspaceB, '/w/b', 'B', 1);
+  for (const folder of [{ workspaceId: workspaceA, path: '/w/a', name: 'A' }, { workspaceId: workspaceB, path: '/w/b', name: 'B' }]) {
+    if (readAppliedPreset({ connection }, folder.workspaceId) === undefined) applyTestPreset(connection, folder);
+  }
   const timers = new ManualTimers();
-  const grants: Record<string, Capabilities> = {};
   const live: LiveFrame[] = [];
+  const logged: LogRecord[] = [];
+  const ids = createUlidGenerator(Date.now);
   const runtime = new KernelRuntime({
-    databaseFile, connection, enabled: new Map(options.enabled ?? []), grants: { capabilities: (extension, workspaceId) => (workspaceId === undefined ? undefined : grants[extension]) },
+    databaseFile, connection, secrets: SecretStore.load(home, ids.next()),
     install: { home, builtin: options.builtin ?? noBuiltins(home), registry: options.registry ?? closedRegistry, environment: process.env },
-    ids: createUlidGenerator(Date.now), now: () => timers.time.value, timers, poolSize: 1, logger: { write: () => undefined }, defaultLocale: () => 'en',
+    ids, now: () => timers.time.value, timers, poolSize: 1, logger: { write: (record) => logged.push(record) }, defaultLocale: () => 'en',
     identity: { version: '0.0.0', instanceId: '0b5c7f2e-4a1d-4c3b-9e8f-1a2b3c4d5e6f', processStart: 'Thu Sep 25 10:00:00 2026', port: 4173, home, startedAt: timers.time.value },
     requestShutdown: () => undefined,
   });
@@ -50,7 +53,11 @@ export async function openInstallFixture(options: InstallFixtureOptions = {}): P
   await verifyEnabledSnapshots(runtime);
   await runtime.start();
   return {
-    runtime, connection, home, timers, grants, live,
+    runtime, connection, home, timers, live, logged,
+    enable: (workspaceId, name, grants) => {
+      enableInPreset(connection, workspaceId, name, grants);
+      runtime.registry.refresh();
+    },
     close: async () => {
       await runtime.stop();
       connection.close();

@@ -62,3 +62,13 @@ export const extensionGetResultSchema = z.strictObject({
   grants: z.record(workspaceIdSchema, capabilitiesSchema),
 });
 export type ExtensionGetResult = z.infer<typeof extensionGetResultSchema>;
+
+// 06 §6.4, ADR 0123: enable records the grants in the workspace's applied preset; both reply with its revision.
+export const extensionEnableRequestSchema = z.strictObject({ workspaceId: workspaceIdSchema, name: packageNameSchema, grants: capabilitiesSchema });
+export type ExtensionEnableRequest = z.infer<typeof extensionEnableRequestSchema>;
+
+export const extensionDisableRequestSchema = z.strictObject({ workspaceId: workspaceIdSchema, name: packageNameSchema });
+export type ExtensionDisableRequest = z.infer<typeof extensionDisableRequestSchema>;
+
+export const presetRevisionResultSchema = z.strictObject({ revision: z.number().int().positive() });
+export type PresetRevisionResult = z.infer<typeof presetRevisionResultSchema>;

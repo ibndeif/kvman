@@ -40,3 +40,4 @@ The drift is not caused by M2.2. Both builds ran from worktrees on tmpfs, one ri
 - **Machine:** AMD Ryzen 7 5800H, 16 threads, 27 GB, Linux 7.0.0-34, Node 24.21.0.
 - **Load:** other workloads on the machine (a QEMU VM and test runs outside kvman) kept the load average between 2 and 19 during these runs.
 - **Recording:** the baseline was recorded at a load average of about 2.4. The checks right after it failed on a different metric each time: `live.latency` at +40%, then `command.sustained` at −35%, while the load average was about 5.5.
+- **Check at M2.3:** `pnpm bench:check` passed against this baseline with M2.3 on top of M2.2, at a load average of about 6: command p50 2.63 ms (+11.9%), sustained 2,503 per second (+1.7%), indexed query p50 7.31 ms (−2%) and p99 12.25 ms, live p50 0.30 ms and p99 0.68 ms.

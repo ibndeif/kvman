@@ -1,6 +1,9 @@
-import type { Problem, RpcCall, RpcResult } from '@kvman/protocol';
+import type { JsonObject, Problem, RpcCall, RpcResult } from '@kvman/protocol';
+import { mergedConfig } from '../config/config-values.ts';
 import { kernelProblem, ProblemError } from '../problems.ts';
 import type { KernelRegistry } from '../registry/kernel-registry.ts';
+import type { SecretStore } from '../secrets/secret-store.ts';
+import { readConfigRow } from '../storage/config-rows.ts';
 import type { StepJournal } from '../store/step-journal.ts';
 import { extensionSender, type ActiveInvocation } from './active-invocation.ts';
 import { callCommand, type CommandCallDeps } from './command-calls.ts';
@@ -15,10 +18,11 @@ export type RpcServiceDeps = CommandCallDeps & {
   live: LiveBus;
   journal: StepJournal;
   logger: KernelLogger;
+  secrets: SecretStore;
 };
 
 // A query reads and may query; everything else a handler can do is refused to it (ADR 0074).
-const queryAllowed = new Set<RpcCall['name']>(['query', 'log']);
+const queryAllowed = new Set<RpcCall['name']>(['query', 'log', 'config.get', 'secret.get']);
 
 export function attributesOf(invocation: ActiveInvocation): LogAttributes {
   const { message, extension, attempt } = invocation.claim;
@@ -55,10 +59,26 @@ export class RpcService {
         return this.#beginStep(invocation, call);
       case 'step.end':
         return this.#endStep(invocation, call);
+      case 'config.get':
+        return { ok: true, value: this.#config(invocation, call) };
+      case 'secret.get': {
+        const value = this.#deps.secrets.get(invocation.claim.extension, call.secret);
+        return value === undefined ? { ok: true } : { ok: true, value };
+      }
       case 'log':
         this.#deps.logger.write({ level: call.level, message: redactText(call.message), fields: redactFields(call.fields ?? {}), attributes: attributesOf(invocation) });
         return { ok: true };
     }
+  }
+
+  // ADR 0125: the extension's own config, its handler's pending values over the stored rows; rows hold no secrets.
+  #config(invocation: ActiveInvocation, call: Extract<RpcCall, { name: 'config.get' }>): JsonObject {
+    const { extension, message } = invocation.claim;
+    const schema = this.#deps.registry().manifestOf(extension)?.config?.schema ?? {};
+    const { connection } = this.#deps;
+    const global = call.pending.global ?? readConfigRow(connection, extension, undefined).value;
+    const workspace = message.workspaceId === undefined ? undefined : call.pending.workspace ?? readConfigRow(connection, extension, message.workspaceId).value;
+    return mergedConfig(schema, global, workspace);
   }
 
   #beginStep(invocation: ActiveInvocation, call: Extract<RpcCall, { name: 'step.begin' }>): RpcResult {

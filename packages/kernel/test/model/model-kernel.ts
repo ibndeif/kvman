@@ -1,10 +1,13 @@
+import { dirname } from 'node:path';
 import type { CompleteFrame, HostOutcome, HostUnitOfWork, Json } from '@kvman/protocol';
 import {
-  AdapterPath, betterSqlite3Driver, CommitPipeline, ExtensionQueries, insertVersionRows, KernelCommits, KernelHost, kernelOwner, kernelProblem, KernelQueries,
+  AdapterPath, betterSqlite3Driver, CommitPipeline, ExtensionQueries, insertVersionRows, insertWorkspace, KernelCommits, KernelHost, kernelOwner, KernelQueries,
   KernelRegistry, LiveBus, openKernelDatabase, PayloadValidators, PendingIndex, Quarantines, QueryPath, recoverInterrupted, RecordedValueStore, RegistryState,
-  ReplyWaiters, Router, Scheduler, Settlement, type Claim, type Connection, type Dispatcher, type ExtensionLifecycle, type HostLoad,
+  ReplyWaiters, Router, Scheduler, SecretStore, Settlement, WorkspaceDirectory, WorkspaceQueries, writeAppliedPreset, type Claim, type Connection, type Dispatcher,
+  type HostLoad,
 } from '../../src/index.ts';
 import { manifest, workspaceA } from '../registry/manifests.ts';
+import { appliedPreset } from '../registry/presets.ts';
 import { MapGrants } from '../router/harness.ts';
 import { ulids } from '../storage/harness.ts';
 import { ManualTimers, startTime, type TestTime } from '../scheduler/doubles.ts';
@@ -64,15 +67,13 @@ export type ModelKernel = {
   adapter: AdapterPath;
 };
 
-// ADR 0114: the model extension is installed as its rows; the dispatcher double never loads its code.
+// ADRs 0114, 0124: the model extension is installed and enabled in workspace A as rows; the dispatcher double never
+// loads its code.
 function installModel(connection: Connection): void {
-  insertVersionRows(connection, { name: modelExtension, digest: 'a'.repeat(64), source: `local:${'a'.repeat(64)}`, manifest: model, installedAt: startTime });
-}
-
-// The model has no install pipeline: its lifecycle commands fail.
-function noLifecycle(commits: KernelCommits): ExtensionLifecycle {
-  const refuse = (claim: Claim): Promise<void> => commits.fail(claim, kernelProblem('INTERNAL', { correlationId: claim.message.correlationId, detail: 'the model kernel installs nothing' }));
-  return { stage: refuse, install: refuse, uninstall: refuse };
+  const digest = 'a'.repeat(64);
+  insertVersionRows(connection, { name: modelExtension, digest, source: `local:${digest}`, manifest: model, installedAt: startTime });
+  insertWorkspace(connection, { workspaceId: workspaceA, path: '/w/a', name: 'A' }, startTime);
+  writeAppliedPreset(connection, workspaceA, appliedPreset({ [modelExtension]: { digest } }), startTime);
 }
 
 // Every commit is applied as it is enqueued (one unit per batch), so nothing waits on a real timer.
@@ -80,11 +81,11 @@ export async function bootModelKernel(file: string, time: TestTime = { value: st
   const connection = openKernelDatabase(file, betterSqlite3Driver, ulids.next());
   const now = (): number => time.value;
   installModel(connection);
-  const registry = new RegistryState(new Map([[workspaceA, [modelExtension]]]), connection);
+  const registry = new RegistryState(connection);
   const current = (): KernelRegistry => registry.current();
   const grants = new MapGrants();
   grants.grant(modelExtension, workspaceA, {});
-  const router = new Router({ registry: current, grants, validators: new PayloadValidators(), ids: ulids, now, defaultLocale: () => 'en' });
+  const router = new Router({ registry: current, grants, workspaces: new WorkspaceDirectory(connection), validators: new PayloadValidators(), ids: ulids, now, defaultLocale: () => 'en' });
   const index = PendingIndex.rebuild(connection, now);
   const pipeline = new CommitPipeline({ connection, admission: router, now, maxBatchUnits: 1 });
   const waiters = new ReplyWaiters(connection);
@@ -102,10 +103,11 @@ export async function bootModelKernel(file: string, time: TestTime = { value: st
   });
   const commits = new KernelCommits(pipeline, scheduler, waiters);
   dispatcher.kernel = new KernelHost({
-    connection, commits, scheduler, grants, queries, abortMessages: (ids) => dispatcher.abort(ids), extensions: noLifecycle(commits),
+    connection, commits, scheduler, grants, queries, abortMessages: (ids) => dispatcher.abort(ids), commands: new Map(),
     requestShutdown: () => undefined,
     kernelQueries: new KernelQueries({
       connection, registry: current, version: '0.0.0', extensions: new ExtensionQueries(connection, registry, grants),
+      workspaces: new WorkspaceQueries(connection, registry, SecretStore.load(dirname(file), ulids.next())),
       health: () => ({ status: 'ok', version: '0.0.0', instanceId: '0b5c7f2e-4a1d-4c3b-9e8f-1a2b3c4d5e6f', processStart: 'x', uptimeMs: 0, port: 4173, home: '/h' }),
     }),
   });
@@ -128,7 +130,7 @@ export async function crash(kernel: ModelKernel): Promise<ModelKernel> {
   return bootModelKernel(kernel.file, kernel.time);
 }
 
-const emptyUnit: HostUnitOfWork = { writes: [], sends: [], publishes: [], replies: [] };
+const emptyUnit: HostUnitOfWork = { writes: [], sends: [], publishes: [], replies: [], config: [], secrets: [] };
 
 // Ends a running invocation as its host would report it.
 export async function end(kernel: ModelKernel, messageId: string, outcome: HostOutcome, unit: Partial<HostUnitOfWork> = {}): Promise<void> {

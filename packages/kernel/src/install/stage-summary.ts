@@ -1,4 +1,5 @@
 import type { Catalog, Issue, Manifest, StageResult, Text } from '@kvman/protocol';
+import { derivedCapabilities } from '../registry/grant-validity.ts';
 
 // What a stage produced before it is confirmed (06 §6.2): the tree to install, its file list and digest, and the
 // validated manifest.
@@ -77,10 +78,7 @@ export function stageSummary(staged: StagedVersion): Omit<StageResult, 'confirma
     name: meta.name, version: meta.version, title: meta.title, ...(meta.summary === undefined ? {} : { summary: meta.summary }),
     description: meta.description, namespace: meta.namespace, source: staged.source, digest: staged.digest,
     ...(staged.integrity === undefined ? {} : { integrity: staged.integrity }),
-    capabilities: {
-      requested: permissions.capabilities,
-      derived: { subscribes: manifest.subscriptions.map((subscription) => subscription.event), providesLlm: manifest.llm.providers.map((provider) => provider.id) },
-    },
+    capabilities: { requested: permissions.capabilities, derived: derivedCapabilities(manifest).derived },
     isolation: permissions.isolation, types: typesOf(manifest), contributions: contributionsOf(manifest), warnings: staged.warnings,
     translations: translationsOf(manifest),
   };

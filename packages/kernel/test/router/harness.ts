@@ -1,7 +1,7 @@
 import type { Capabilities, JsonObject, Manifest, Message, OutboundPublish, OutboundSend } from '@kvman/protocol';
 import {
   AdapterPath, betterSqlite3Driver, CommitPipeline, KernelRegistry, openKernelDatabase, PayloadValidators, PendingIndex, Router,
-  type AdapterCommand, type CommitResult, type Connection, type GrantsSource, type Sender, type Submission,
+  type AdapterCommand, type CommitResult, type Connection, type GrantsSource, type Sender, type Submission, type WorkspaceStates,
 } from '../../src/index.ts';
 import { command, event, manifest, query, subscription, workspaceA, workspaceB } from '../registry/manifests.ts';
 import { claimForTest, now, temporaryDatabaseFile, ulids } from '../storage/harness.ts';
@@ -89,6 +89,9 @@ export type RouterFixture = {
   validators: PayloadValidators;
 };
 
+// Every workspace has a row: admission's workspace check (ADR 0122) has its own tests in the testkit.
+export const openWorkspaces: WorkspaceStates = { stateOf: () => 'open' };
+
 export function openRouterFixture(): RouterFixture {
   const connection = openKernelDatabase(temporaryDatabaseFile(), betterSqlite3Driver, ulids.next());
   const build = KernelRegistry.build({
@@ -99,7 +102,7 @@ export function openRouterFixture(): RouterFixture {
   const grants = new MapGrants();
   const validators = new PayloadValidators();
   const pending = new PendingIndex(now);
-  const router = new Router({ registry: () => build.registry, grants, validators, ids: ulids, now, defaultLocale: () => 'en' });
+  const router = new Router({ registry: () => build.registry, grants, workspaces: openWorkspaces, validators, ids: ulids, now, defaultLocale: () => 'en' });
   const pipeline = new CommitPipeline({ connection, admission: router, now });
   pipeline.attach(pending);
   return { connection, router, pipeline, adapter: new AdapterPath(pipeline, ulids), grants, pending, validators };

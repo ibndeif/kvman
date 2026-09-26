@@ -3,8 +3,8 @@ import { stageSummary } from '../../src/index.ts';
 import { describe, expect, it } from 'vitest';
 import pdf from '../../../protocol/test/fixtures/pdf-manifest.json' with { type: 'json' };
 
-// The pdf fixture (M0.3) with every UI kind it lacks, a calls request, an isolation request, a subscription, and a
-// provider: the SDK registers UI and providers only from M2.9 and M2.10, so the manifest is written as JSON.
+// The pdf fixture (M0.3) with every UI kind it lacks, a calls request, an isolation request, a kernel and a foreign
+// subscription (only the foreign one is a derived capability, 05 §5.7), and a provider: the SDK registers UI and providers only from M2.9 and M2.10, so the manifest is written as JSON.
 const manifest = manifestSchema.parse({
   ...pdf,
   permissions: {
@@ -12,7 +12,10 @@ const manifest = manifestSchema.parse({
     capabilities: [...pdf.permissions.capabilities, { name: 'calls', reason: 'Asks the agent to translate.', types: ['agent.*'] }],
     isolation: { mode: 'dedicated', reason: 'Runs a heavy converter.' },
   },
-  subscriptions: [{ event: 'kernel.extension.installed', description: 'Notices installs.', handler: 'subscription:kernel.extension.installed' }],
+  subscriptions: [
+    { event: 'kernel.extension.installed', description: 'Notices installs.', handler: 'subscription:kernel.extension.installed' },
+    { event: 'agent.session.deleted', description: 'Forgets translations of deleted sessions.', handler: 'subscription:agent.session.deleted' },
+  ],
   llm: { providers: [{ id: 'pdf-local', title: 'Local', description: 'A local model.', auth: 'none', functions: ['provider:pdf-local.complete', 'provider:pdf-local.status'] }], models: [] },
   ui: {
     ...pdf.ui,
@@ -31,7 +34,7 @@ describe('the stage reply (plan 06 §6.2, ADRs 0015, 0118)', () => {
     expect(summary).toMatchObject({ name: '@acme/pdf', version: '1.2.0', title: '$t.meta.title', summary: '$t.meta.summary', namespace: 'pdf', integrity: 'sha512-AAAA', warnings: [warning] });
     expect(summary.capabilities).toEqual({
       requested: manifest.permissions.capabilities,
-      derived: { subscribes: ['kernel.extension.installed'], providesLlm: ['pdf-local'] },
+      derived: { subscribes: ['agent.session.deleted'], providesLlm: ['pdf-local'] },
     });
     expect(summary.isolation).toEqual({ mode: 'dedicated', reason: 'Runs a heavy converter.' });
     expect(summary.types).toContainEqual({ type: 'pdf.translate', kind: 'command', access: 'all', agentTool: true });

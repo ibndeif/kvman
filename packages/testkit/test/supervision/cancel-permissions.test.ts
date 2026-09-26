@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { eventually, openHostFixture, row, rows, send, value, workspaceA, type HostFixture, workerTests } from '../hosts/harness.ts';
+import { eventually, grantInWorkspaces, openHostFixture, row, rows, send, value, workspaceA, type HostFixture, workerTests } from '../hosts/harness.ts';
 
 let fixture: HostFixture;
 beforeEach(async () => {
@@ -22,7 +22,7 @@ describe('who may cancel, and the kernel host (ADRs 0078, 0079)', workerTests, (
     expect(row(fixture, byPerson)['state']).toBe('awaiting');
     expect(await value(fixture, 'notes.cancel.call', { messageId: byNotes })).toEqual({ result: { cancelled: 1 } });
 
-    fixture.grants['@acme/audit'] = { isolation: 'shared', requested: [{ name: 'kernel.admin' }], derived: { subscribes: [], providesLlm: [] } };
+    grantInWorkspaces(fixture.runtime, fixture.connection, '@acme/audit', { isolation: 'shared', requested: [{ name: 'kernel.admin' }], derived: { subscribes: [], providesLlm: [] } });
     expect(await value(fixture, 'audit.cancel', { messageId: byPerson })).toEqual({ result: { cancelled: 1 } });
   });
 

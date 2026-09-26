@@ -1,4 +1,4 @@
-import type { AbortReason, DeferredReply, InvokeFrame, KernelErrorCode, OutboundPublish, OutboundSend } from '@kvman/protocol';
+import type { AbortReason, ConfigWrite, DeferredReply, InvokeFrame, KernelErrorCode, OutboundPublish, OutboundSend, SecretWrite } from '@kvman/protocol';
 import type { Deferred } from '@kvman/sdk';
 import { kernelProblem, ProblemError } from '../../problems.ts';
 import { hostProblem } from './host-problems.ts';
@@ -11,6 +11,8 @@ export class InvocationState {
   readonly sends: OutboundSend[] = [];
   readonly publishes: OutboundPublish[] = [];
   readonly replies: DeferredReply[] = [];
+  readonly config: ConfigWrite[] = [];
+  readonly secrets: SecretWrite[] = [];
   deferral: Deferral | undefined;
   readonly #controller = new AbortController();
   #aborted: ProblemError | undefined;

@@ -10,12 +10,8 @@ import type { KernelCommits } from './kernel-commits.ts';
 import type { KernelQueries } from './kernel-queries.ts';
 import type { QueryPath } from './query-path.ts';
 
-// The extension lifecycle commands (ExtensionCommands in the kernel).
-export interface ExtensionLifecycle {
-  stage(claim: Claim, signal: AbortSignal): Promise<void>;
-  install(claim: Claim): Promise<void>;
-  uninstall(claim: Claim): Promise<void>;
-}
+// A kernel command other than cancel and shutdown, run on the main thread; `signal` fires at shutdown.
+export type KernelCommand = (claim: Claim, signal: AbortSignal) => Promise<void>;
 
 export type KernelHostDeps = {
   connection: Connection;
@@ -25,7 +21,8 @@ export type KernelHostDeps = {
   queries: QueryPath;
   abortMessages: (messageIds: ReadonlySet<string>) => void;
   kernelQueries: KernelQueries;
-  extensions: ExtensionLifecycle;
+  // The handlers of the other kernel commands by type (03 §3.8).
+  commands: ReadonlyMap<string, KernelCommand>;
   // Called once kernel.shutdown's unit committed; the shutdown runs on its own, never inside this invocation.
   requestShutdown: () => void;
 };
@@ -61,15 +58,11 @@ export class KernelHost {
   }
 
   #command(claim: Claim): Promise<void> {
-    const { extensions } = this.#deps;
-    switch (claim.message.type) {
-      case 'kernel.cancel': return this.#cancel(claim);
-      case 'kernel.shutdown': return this.#shutdown(claim);
-      case 'kernel.extension.stage': return extensions.stage(claim, this.#running.signal);
-      case 'kernel.extension.install': return extensions.install(claim);
-      case 'kernel.extension.uninstall': return extensions.uninstall(claim);
-      default: return this.#deps.commits.fail(claim, this.#unknown(claim));
-    }
+    const { type } = claim.message;
+    if (type === 'kernel.cancel') return this.#cancel(claim);
+    if (type === 'kernel.shutdown') return this.#shutdown(claim);
+    const command = this.#deps.commands.get(type);
+    return command === undefined ? this.#deps.commits.fail(claim, this.#unknown(claim)) : command(claim, this.#running.signal);
   }
 
   // ADR 0090: the reply {} commits first, then the kernel shuts down.

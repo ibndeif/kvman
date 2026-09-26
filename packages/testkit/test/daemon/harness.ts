@@ -2,8 +2,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createUlidGenerator, Kernel, type DaemonLogger, type LogRecord } from '@kvman/kernel';
-import type { Capabilities } from '@kvman/protocol';
-import { defaultGrants, enabledWorkspaces, installHostFixtures, ManualTimers, workspaceA } from '../hosts/harness.ts';
+import { enableHostFixtures, installHostFixtures, ManualTimers } from '../hosts/harness.ts';
 import { closedRegistry, noBuiltins, prepareHome } from '../install/fixture-snapshots.ts';
 
 // A booted kernel in its own home folder (03 §3.9): the fixture extensions on real worker threads, the manual kernel
@@ -14,7 +13,6 @@ export type DaemonFixture = {
   port: number;
   timers: ManualTimers;
   logged: LogRecord[];
-  grants: Record<string, Capabilities>;
   // Shuts down, first passing the 10 s grace on the kernel clock so a handler still running cannot hold it.
   close(): Promise<void>;
 };
@@ -27,19 +25,20 @@ export function temporaryHome(): string {
 
 export async function bootFixture(options: BootFixtureOptions = {}): Promise<DaemonFixture> {
   const home = options.home ?? temporaryHome();
-  await prepareHome(home, installHostFixtures);
+  await prepareHome(home, async (connection, folder) => {
+    await installHostFixtures(connection, folder);
+    enableHostFixtures(connection);
+  });
   const timers = options.timers ?? new ManualTimers();
   const logged = options.logged ?? [];
-  const grants = { ...defaultGrants };
   const kernel = await Kernel.boot({
-    home, ...(options.port === undefined ? {} : { port: options.port }), enabled: enabledWorkspaces(), grants: { capabilities: (extension) => grants[extension] },
+    home, ...(options.port === undefined ? {} : { port: options.port }),
     builtin: noBuiltins(home), npmRegistry: closedRegistry, environment: {}, poolSize: 1,
     ids: createUlidGenerator(Date.now), now: () => timers.time.value, timers,
     openLogger: options.openLogger ?? (() => ({ write: (record) => logged.push(record), close: () => undefined })), defaultLocale: () => 'en',
   });
-  kernel.connection.prepare('INSERT OR IGNORE INTO workspaces (id, path, name, created_at) VALUES (?, ?, ?, ?)').run(workspaceA, '/w/a', 'A', 1);
   return {
-    kernel, home, port: kernel.identity.port, timers, logged, grants,
+    kernel, home, port: kernel.identity.port, timers, logged,
     close: async () => {
       const stopped = kernel.shutdown();
       timers.advance(10_000);

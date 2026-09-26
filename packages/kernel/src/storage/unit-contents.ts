@@ -105,3 +105,8 @@ export function applyDeferredReply(scope: UnitScope, extension: string, { comman
   markReplied(scope.connection, commandId, payload, scope.now);
   finalReply(scope, found.target.message, payload);
 }
+
+// A kernel event a unit causes, in the given workspace or none (kernel events of 03 §3.8).
+export function publishKernelEvent(scope: UnitScope, workspaceId: string | undefined, publish: OutboundPublish): void {
+  admitPublish({ ...scope, sender: kernelSender, workspaceId }, publish);
+}

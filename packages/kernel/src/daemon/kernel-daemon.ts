@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { existsSync, readFileSync, rmSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { kernelPorts, type KernelStarted } from '@kvman/protocol';
@@ -9,12 +10,12 @@ import type { FaultPoints } from '../faults/fault-points.ts';
 import type { StartHostThread } from '../hosts/host-thread.ts';
 import type { KernelLogger } from '../hosts/kernel-logger.ts';
 import { kernelProblem, ProblemError } from '../problems.ts';
-import type { EnabledExtensions } from '../registry/registry-state.ts';
-import type { GrantsSource } from '../router/grants.ts';
 import type { KernelIdentity } from '../runtime/health.ts';
 import { KernelRuntime } from '../runtime/kernel-runtime.ts';
+import { openHomeWorkspace } from '../runtime/home-workspace.ts';
 import { installBuiltins, verifyEnabledSnapshots } from '../runtime/snapshot-boot.ts';
 import type { SchedulerTimers } from '../scheduler/timers.ts';
+import { SecretStore } from '../secrets/secret-store.ts';
 import { betterSqlite3Driver } from '../storage/better-sqlite3-driver.ts';
 import { openKernelDatabase } from '../storage/database.ts';
 import type { Connection } from '../storage/driver.ts';
@@ -25,15 +26,15 @@ import { processStartOf } from './process-identity.ts';
 
 export type DaemonLogger = KernelLogger & { close(): void };
 
-// Installed extensions come from the database (ADR 0114); the workspaces that enable them and their grants are data
-// until M2.3 and M2.4. `builtin` is the folder of the builtin tarballs (the kernel package's by default, ADR 0115),
-// `npmRegistry` the value of KVMAN_NPM_REGISTRY, and `environment` the variables pnpm and git inherit (path, proxies).
+// Installed extensions come from the database (ADR 0114), and what each workspace enables from its applied preset
+// (ADR 0123). `builtin` is the folder of the builtin tarballs (the kernel package's by default, ADR 0115),
+// `homeWorkspace` the folder first run opens (~/kvman by default, ADR 0127), `npmRegistry` the value of
+// KVMAN_NPM_REGISTRY, and `environment` the variables pnpm and git inherit (path, proxies).
 export type BootOptions = {
   home: string;
   port?: number;
-  enabled: EnabledExtensions;
-  grants: GrantsSource;
   builtin?: string;
+  homeWorkspace?: string;
   npmRegistry: string;
   environment: NodeJS.ProcessEnv;
   poolSize: number;
@@ -63,7 +64,14 @@ export function kernelVersion(): string {
   throw new Error('the kernel package.json has no version');
 }
 
-type Resources = { options: BootOptions; logger: DaemonLogger; adapter: HttpAdapter; identity: KernelIdentity; connection: Connection; firstRun: boolean };
+type Resources = {
+  options: BootOptions; logger: DaemonLogger; adapter: HttpAdapter; identity: KernelIdentity; connection: Connection; secrets: SecretStore; firstRun: boolean;
+};
+
+// 07 §7.1: the Home workspace users who do not think in folders always have.
+export function defaultHomeWorkspace(): string {
+  return join(homedir(), 'kvman');
+}
 
 // The daemon's kernel (03 §3.9–§3.10): booted in the order of 03 §3.9 and shut down once, however often it is asked.
 export class Kernel {
@@ -75,12 +83,12 @@ export class Kernel {
   #shutdown: Promise<void> | undefined;
 
   private constructor(resources: Resources) {
-    const { options, identity, connection } = resources;
+    const { options, identity, connection, secrets } = resources;
     this.#resources = resources;
     this.identity = identity;
     this.connection = connection;
     this.runtime = new KernelRuntime({
-      databaseFile: join(options.home, 'kvman.db'), connection, enabled: options.enabled, grants: options.grants,
+      databaseFile: join(options.home, 'kvman.db'), connection, secrets,
       install: { home: options.home, builtin: options.builtin ?? kernelBuiltinFolder(), registry: options.npmRegistry, environment: options.environment },
       logger: resources.logger, ids: options.ids, now: options.now, timers: options.timers, poolSize: options.poolSize,
       defaultLocale: options.defaultLocale, identity, requestShutdown: () => void this.shutdown(),
@@ -108,7 +116,8 @@ export class Kernel {
       acquireDaemonLock(home, { pid: process.pid, processStart, nonce: identity.instanceId, port, startedAt: identity.startedAt }, correlationId);
       nonce = identity.instanceId;
       connection = openKernelDatabase(join(home, 'kvman.db'), betterSqlite3Driver, correlationId);
-      kernel = new Kernel({ options, logger, adapter, identity, connection, firstRun });
+      const secrets = SecretStore.load(home, correlationId);
+      kernel = new Kernel({ options, logger, adapter, identity, connection, secrets, firstRun });
       await kernel.#start();
       return kernel;
     } catch (error) {
@@ -134,7 +143,11 @@ export class Kernel {
     const { adapter, identity, logger, options, firstRun } = this.#resources;
     await this.runtime.install.clearStaging();
     await verifyEnabledSnapshots(this.runtime);
-    if (firstRun) await installBuiltins(this.runtime, options.ids.next());
+    if (firstRun) {
+      const correlationId = options.ids.next();
+      await installBuiltins(this.runtime, correlationId);
+      await openHomeWorkspace(this.runtime, options.homeWorkspace ?? defaultHomeWorkspace(), options.home, correlationId);
+    }
     await this.runtime.start();
     adapter.open({ runtime: this.runtime, hub: this.#hub });
     const started: KernelStarted = { version: identity.version, instanceId: identity.instanceId };

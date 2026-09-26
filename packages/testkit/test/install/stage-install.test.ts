@@ -2,8 +2,9 @@ import { appendFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { bootFixture, temporaryHome } from '../daemon/harness.ts';
-import { installHostFixtures, workspaceA } from '../hosts/harness.ts';
-import { prepareHome } from './fixture-snapshots.ts';
+import { fixtureFolder, installHostFixtures, workspaceA } from '../hosts/harness.ts';
+import audit from '../hosts/fixtures/extensions/audit.ts';
+import { installFixture, prepareHome } from './fixture-snapshots.ts';
 import { command, extensionActor, installTests, openInstallFixture, problemOf, sendAs, staged, stagingTrees, type InstallFixture } from './harness.ts';
 import { packPackage, samplePackage, writePackage } from './packages.ts';
 import { startRegistry, type LocalRegistry } from './registries.ts';
@@ -80,8 +81,9 @@ describe('stage and install (plan 06 §6.2, ADR 0118)', installTests, () => {
   it('M2.2-E36 stage and install are admin; uninstall is for people', async () => {
     fixture = await openInstallFixture({ registry: registry.url });
     const plain = extensionActor('@acme/plain');
-    const admin = extensionActor('@acme/admin');
-    fixture.grants['@acme/admin'] = { isolation: 'shared', requested: [{ name: 'kernel.admin' }], derived: { subscribes: [], providesLlm: [] } };
+    const admin = extensionActor('@acme/audit');
+    await installFixture(fixture.connection, fixture.home, { definition: audit, folder: fixtureFolder, entry: 'audit.ts' });
+    fixture.enable(workspaceA, '@acme/audit', { isolation: 'shared', requested: [{ name: 'kernel.admin' }], derived: { subscribes: [], providesLlm: [] } });
     const source = { source: 'npm:@acme/sample@1.0.0' };
     expect(problemOf(await command(fixture, 'kernel.extension.stage', source, plain, workspaceA))).toMatchObject({ code: 'CAPABILITY_DENIED' });
     expect(problemOf(await command(fixture, 'kernel.extension.install', { confirmationToken: 'x' }, plain, workspaceA))).toMatchObject({ code: 'CAPABILITY_DENIED' });

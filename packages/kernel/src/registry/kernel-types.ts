@@ -2,17 +2,13 @@ import {
   cancelRequestSchema, cancelResultSchema, extensionGetRequestSchema, extensionGetResultSchema, extensionInstalledSchema, extensionQuarantinedSchema,
   extensionsListRequestSchema, extensionsListResultSchema, extensionUninstalledSchema, healthRequestSchema, healthResultSchema, installRequestSchema,
   installResultSchema, kernelStartedSchema, messageDeadLetteredSchema, presetChangedSchema, schemaDocumentSchema, schemaGetRequestSchema,
-  shutdownRequestSchema, shutdownResultSchema, stageRequestSchema, stageResultSchema, toJsonSchemaDocument, uninstallRequestSchema,
-  uninstallResultSchema, validateRequestSchema, validateResultSchema, type JsonObject, type SchemaView, type TypeEntry,
+  shutdownRequestSchema, shutdownResultSchema, stageRequestSchema, stageResultSchema, uninstallRequestSchema,
+  uninstallResultSchema, validateRequestSchema, validateResultSchema, type JsonObject, type TypeEntry,
 } from '@kvman/protocol';
+import { jsonDocument } from './kernel-json-schemas.ts';
+import { workspaceEntries } from './kernel-workspace-types.ts';
 
 export const kernelOwner = 'kernel';
-
-function jsonDocument(schema: Parameters<typeof toJsonSchemaDocument>[0], view: SchemaView): JsonObject {
-  const conversion = toJsonSchemaDocument(schema, view);
-  if (!conversion.ok) throw new Error(`a kernel schema does not convert to JSON Schema: ${conversion.message}`);
-  return conversion.document;
-}
 
 // The kernel.* types of the milestones built so far (ADR 0061); each later milestone adds its own.
 export function kernelTypeEntries(): TypeEntry[] {
@@ -53,6 +49,7 @@ export function kernelTypeEntries(): TypeEntry[] {
       input: jsonDocument(validateRequestSchema, 'input'), output: jsonDocument(validateResultSchema, 'output'),
     },
     ...extensionLifecycleEntries(),
+    ...workspaceEntries(),
     {
       type: 'kernel.started', kind: 'event', delivery: 'transient',
       description: 'The kernel finished booting.',

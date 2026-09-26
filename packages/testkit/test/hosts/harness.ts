@@ -3,11 +3,12 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  betterSqlite3Driver, createUlidGenerator, KernelRuntime, openKernelDatabase, verifyEnabledSnapshots,
-  type AdapterCommand, type Connection, type EnabledExtensions, type KernelIdentity, type LiveFrame, type LogRecord, type SchedulerTimers, type TimerHandle,
+  betterSqlite3Driver, createUlidGenerator, KernelRuntime, openKernelDatabase, SecretStore, verifyEnabledSnapshots,
+  type AdapterCommand, type Connection, type KernelIdentity, type LiveFrame, type LogRecord, type SchedulerTimers, type TimerHandle,
 } from '@kvman/kernel';
 import type { Capabilities, Json, JsonObject, Manifest, ReplyPayload } from '@kvman/protocol';
 import type { ExtensionDefinition } from '@kvman/sdk';
+import { applyTestPreset, emptyGrant, enableInPreset } from '../install/fixture-presets.ts';
 import { closedRegistry, installFixture, noBuiltins } from '../install/fixture-snapshots.ts';
 import { expect, vi } from 'vitest';
 import audit from './fixtures/extensions/audit.ts';
@@ -76,21 +77,30 @@ export async function installHostFixtures(connection: Connection, home: string):
   }
 }
 
-export function enabledWorkspaces(): EnabledExtensions {
-  const names = Object.keys(fixtures);
-  return new Map([[workspaceA, names], [workspaceB, names]]);
-}
-
 export const defaultGrants: Record<string, Capabilities> = {
   '@acme/notes': { isolation: 'shared', requested: [{ name: 'calls', types: ['counter.*'] }], derived: { subscribes: [], providesLlm: [] } },
-  '@acme/audit': { isolation: 'shared', requested: [], derived: { subscribes: ['notes.added', 'notes.touched'], providesLlm: [] }, },
+  '@acme/counter': emptyGrant,
+  '@acme/audit': { isolation: 'shared', requested: [], derived: { subscribes: ['notes.added', 'notes.touched'], providesLlm: [] } },
+  '@acme/drift': emptyGrant,
 };
+
+export const hostWorkspaces = [{ workspaceId: workspaceA, path: '/w/a', name: 'A' }, { workspaceId: workspaceB, path: '/w/b', name: 'B' }] as const;
+
+// ADR 0124: workspaces A and B, each with an applied preset enabling every host fixture with its default grant.
+export function enableHostFixtures(connection: Connection): void {
+  for (const folder of hostWorkspaces) applyTestPreset(connection, folder, defaultGrants);
+}
+
+// A grant changed in both workspaces' presets, as enable would record it; the registry reads it at once.
+export function grantInWorkspaces(runtime: KernelRuntime, connection: Connection, name: string, grants: Capabilities): void {
+  for (const { workspaceId } of hostWorkspaces) enableInPreset(connection, workspaceId, name, grants);
+  runtime.registry.refresh();
+}
 
 export type HostFixture = {
   runtime: KernelRuntime;
   connection: Connection;
   databaseFile: string;
-  grants: Record<string, Capabilities>;
   timers: ManualTimers;
   logged: LogRecord[];
   live: LiveFrame[];
@@ -98,14 +108,14 @@ export type HostFixture = {
   close(): Promise<void>;
 };
 
-type Shared = Pick<HostFixture, 'connection' | 'databaseFile' | 'grants' | 'timers' | 'logged' | 'live' | 'shutdownRequests'> & { poolSize: number };
+type Shared = Pick<HostFixture, 'connection' | 'databaseFile' | 'timers' | 'logged' | 'live' | 'shutdownRequests'> & { poolSize: number };
 
 async function startRuntime(shared: Shared): Promise<HostFixture> {
   const ids = createUlidGenerator(Date.now);
-  const { connection, databaseFile, grants, timers, logged, live, shutdownRequests } = shared;
+  const { connection, databaseFile, timers, logged, live, shutdownRequests } = shared;
   const runtime = new KernelRuntime({
-    databaseFile, connection, enabled: enabledWorkspaces(), ids, now: () => timers.time.value, timers, poolSize: shared.poolSize,
-    grants: { capabilities: (extension) => grants[extension] }, logger: { write: (record) => logged.push(record) },
+    databaseFile, connection, ids, now: () => timers.time.value, timers, poolSize: shared.poolSize,
+    secrets: SecretStore.load(dirname(databaseFile), ids.next()), logger: { write: (record) => logged.push(record) },
     install: { home: dirname(databaseFile), builtin: noBuiltins(dirname(databaseFile)), registry: closedRegistry, environment: {} },
     defaultLocale: () => 'en', identity: fixtureIdentity(databaseFile, timers.time.value),
     requestShutdown: () => {
@@ -116,7 +126,7 @@ async function startRuntime(shared: Shared): Promise<HostFixture> {
   await verifyEnabledSnapshots(runtime);
   await runtime.start();
   return {
-    runtime, connection, databaseFile, grants, timers, logged, live, shutdownRequests,
+    runtime, connection, databaseFile, timers, logged, live, shutdownRequests,
     close: async () => {
       await runtime.stop();
       connection.close();
@@ -132,9 +142,9 @@ function fixtureIdentity(databaseFile: string, startedAt: number): KernelIdentit
 export async function openHostFixture(options: { poolSize?: number } = {}): Promise<HostFixture> {
   const databaseFile = join(mkdtempSync(join(tmpdir(), 'kvman-hosts-')), 'kvman.db');
   const connection = openKernelDatabase(databaseFile, betterSqlite3Driver, createUlidGenerator(Date.now).next());
-  connection.prepare('INSERT INTO workspaces (id, path, name, created_at) VALUES (?, ?, ?, ?)').run(workspaceA, '/w/a', 'A', 1);
   await installHostFixtures(connection, dirname(databaseFile));
-  const shared = { connection, databaseFile, grants: { ...defaultGrants }, timers: new ManualTimers(), logged: [], live: [], shutdownRequests: { count: 0 } };
+  enableHostFixtures(connection);
+  const shared = { connection, databaseFile, timers: new ManualTimers(), logged: [], live: [], shutdownRequests: { count: 0 } };
   return startRuntime({ ...shared, poolSize: options.poolSize ?? 1 });
 }
 

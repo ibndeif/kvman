@@ -7,12 +7,14 @@ import { schemaDocument } from '../registry/schema-document.ts';
 import type { Connection } from '../storage/driver.ts';
 import { validateRequest } from '../validation/kernel-validate.ts';
 import type { ExtensionQueries, ExtensionQueryAnswer } from './extension-queries.ts';
+import type { WorkspaceQueries } from './workspace-queries.ts';
 import type { QueryAnswer } from './query-path.ts';
 import { readWorkspace } from './workspace-rows.ts';
 
 export type KernelQueriesDeps = {
   connection: Connection;
   extensions: ExtensionQueries;
+  workspaces: WorkspaceQueries;
   registry: () => KernelRegistry;
   health: () => HealthResult;
   version: string;
@@ -35,6 +37,9 @@ export class KernelQueries {
     if (message.type === 'kernel.validate') return this.#validate(message);
     if (message.type === 'kernel.extensions.list') return this.#extensionAnswer(message, this.#deps.extensions.list(message.payload));
     if (message.type === 'kernel.extension.get') return this.#extensionAnswer(message, this.#deps.extensions.get(message.payload));
+    if (message.type === 'kernel.workspaces.list') return this.#extensionAnswer(message, this.#deps.workspaces.list(message.payload));
+    if (message.type === 'kernel.workspace.get') return this.#extensionAnswer(message, this.#deps.workspaces.get(message.payload));
+    if (message.type === 'kernel.config.get') return this.#extensionAnswer(message, this.#deps.workspaces.config(message.payload));
     return this.#refused(message, 'INTERNAL', `the kernel has no handler for ${message.type}`);
   }
 

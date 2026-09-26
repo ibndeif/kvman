@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { epochMsSchema, typeNameSchema } from './identifiers.ts';
 import { jsonObjectSchema, jsonSchema } from './json.ts';
+import { configWriteScopeSchema, secretNameSchema, secretValueSchema } from './config-values.ts';
 import { onReplySchema, prioritySchema } from './message.ts';
 
 export const storeScopeSchema = z.enum(['workspace', 'global']);
@@ -39,3 +40,10 @@ export type OutboundSend = z.infer<typeof outboundSendSchema>;
 
 export const outboundPublishSchema = z.strictObject({ type: typeNameSchema, payload: jsonSchema });
 export type OutboundPublish = z.infer<typeof outboundPublishSchema>;
+
+// 04 §4.2: ctx.config.set, applied in the commit; ctx.secrets.set, applied after it (null clears).
+export const configWriteSchema = z.strictObject({ scope: configWriteScopeSchema, value: jsonObjectSchema });
+export type ConfigWrite = z.infer<typeof configWriteSchema>;
+
+export const secretWriteSchema = z.strictObject({ name: secretNameSchema, value: secretValueSchema.nullable() });
+export type SecretWrite = z.infer<typeof secretWriteSchema>;

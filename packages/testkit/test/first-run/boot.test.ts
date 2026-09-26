@@ -3,9 +3,10 @@ import { join } from 'node:path';
 import { betterSqlite3Driver, createUlidGenerator, openKernelDatabase, ProblemError } from '@kvman/kernel';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { temporaryHome } from '../daemon/harness.ts';
-import { enabledWorkspaces, eventually, installHostFixtures, workspaceA } from '../hosts/harness.ts';
+import { enableHostFixtures, eventually, installHostFixtures, workspaceA } from '../hosts/harness.ts';
+import { applyTestPreset, emptyGrant, withHomeDatabase } from '../install/fixture-presets.ts';
 import { prepareHome } from '../install/fixture-snapshots.ts';
-import { command, installed, installTests, openInstallFixture, person, problemOf, sharedGrants as installGrants } from '../install/harness.ts';
+import { command, installed, installTests, openInstallFixture, person, problemOf } from '../install/harness.ts';
 import { packPackage, samplePackage, writePackage } from '../install/packages.ts';
 import { startRegistry, type LocalRegistry } from '../install/registries.ts';
 import { bootHome, builtinNames, packedBuiltins } from './builtins.ts';
@@ -38,14 +39,16 @@ function tamper(home: string, name: string, file: string): void {
 describe('snapshots at boot (plan 03 §3.9 steps 4–5, 06 §6.5, 06 §6.9)', installTests, () => {
   it('M2.2-H3 a tampered snapshot is quarantined', async () => {
     const home = temporaryHome();
-    await prepareHome(home, installHostFixtures);
+    await prepareHome(home, async (connection, folder) => {
+      await installHostFixtures(connection, folder);
+      enableHostFixtures(connection);
+    });
     tamper(home, '@acme/counter', 'counter.js');
-    const booted = await bootHome(home, { enabled: enabledWorkspaces() });
+    const booted = await bootHome(home);
     try {
       expect(booted.kernel.connection.prepare("SELECT name, quarantine_reason FROM extensions WHERE status = 'quarantined'").all()).toEqual([{ name: '@acme/counter', quarantine_reason: 'EXT_INTEGRITY' }]);
       expect(booted.kernel.connection.prepare("SELECT payload FROM events WHERE type = 'kernel.extension.quarantined'").all()).toEqual([{ payload: JSON.stringify({ name: '@acme/counter', reason: 'EXT_INTEGRITY' }) }]);
       expect(booted.kernel.runtime.health().status).toBe('degraded');
-      booted.kernel.connection.prepare('INSERT INTO workspaces (id, path, name, created_at) VALUES (?, ?, ?, ?)').run(workspaceA, '/w/a', 'A', 1);
       const submission = await booted.kernel.runtime.submitCommand({ sender: person, idempotencyKey: 'h3', type: 'counter.increment', payload: {}, workspaceId: workspaceA });
       expect(submission.ok ? 'admitted' : submission.problem.code).toBe('HANDLER_UNAVAILABLE');
       expect(booted.kernel.runtime.hosts.workers().some((worker) => worker.loaded.has('@acme/counter'))).toBe(false);
@@ -55,10 +58,10 @@ describe('snapshots at boot (plan 03 §3.9 steps 4–5, 06 §6.5, 06 §6.9)', in
   });
 
   it('M2.2-E42 a snapshot tampered with before its first load fails that message and quarantines the extension', async () => {
-    const fixture = await openInstallFixture({ registry: registry.url, enabled: [[workspaceA, ['@acme/sample']]] });
-    fixture.grants['@acme/sample'] = installGrants;
+    const fixture = await openInstallFixture({ registry: registry.url });
     try {
       const { digest } = await installed(fixture, 'npm:@acme/sample@1.0.0');
+      fixture.enable(workspaceA, '@acme/sample', emptyGrant);
       appendFileSync(join(fixture.home, 'extensions', 'snapshots', digest, 'node_modules', '@acme', 'sample', 'dist', 'extension.js'), ' ');
       expect(problemOf(await command(fixture, 'sample.echo', { text: 'x' }, person, workspaceA))).toMatchObject({ code: 'EXT_INTEGRITY' });
       await eventually(() => expect(fixture.connection.prepare("SELECT status, quarantine_reason FROM extensions WHERE name = '@acme/sample'").get()).toEqual({ status: 'quarantined', quarantine_reason: 'EXT_INTEGRITY' }));
@@ -69,9 +72,12 @@ describe('snapshots at boot (plan 03 §3.9 steps 4–5, 06 §6.5, 06 §6.9)', in
 
   it('M2.2-E43 boot does not rehash an extension that is not enabled', async () => {
     const home = temporaryHome();
-    await prepareHome(home, installHostFixtures);
+    await prepareHome(home, async (connection, folder) => {
+      await installHostFixtures(connection, folder);
+      applyTestPreset(connection, { workspaceId: workspaceA, path: '/w/a', name: 'A' }, { '@acme/notes': emptyGrant, '@acme/counter': emptyGrant });
+    });
     tamper(home, '@acme/audit', 'audit.js');
-    const booted = await bootHome(home, { enabled: new Map([[workspaceA, ['@acme/notes', '@acme/counter']]]) });
+    const booted = await bootHome(home);
     try {
       expect(booted.kernel.connection.prepare("SELECT name FROM extensions WHERE status = 'quarantined'").all()).toEqual([]);
     } finally {
@@ -84,7 +90,8 @@ describe('snapshots at boot (plan 03 §3.9 steps 4–5, 06 §6.5, 06 §6.9)', in
     const fixture = await openInstallFixture({ registry: registry.url, home });
     await installed(fixture, 'npm:@acme/sample@1.0.0');
     await fixture.close();
-    const booted = await bootHome(home, { enabled: new Map([[workspaceA, ['@acme/sample']]]) });
+    withHomeDatabase(home, (connection) => applyTestPreset(connection, { workspaceId: workspaceA, path: '/w/a', name: 'A' }, { '@acme/sample': emptyGrant }));
+    const booted = await bootHome(home);
     try {
       const submission = await booted.kernel.runtime.submitCommand({ sender: person, idempotencyKey: 'e44', type: 'sample.echo', payload: { text: 'again' }, workspaceId: workspaceA });
       if (!submission.ok) throw new Error(submission.problem.code);

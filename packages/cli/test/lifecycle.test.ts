@@ -35,7 +35,7 @@ function freePort(): Promise<number> {
 async function post(port: number, type: string, payload: unknown, headers: Record<string, string> = {}): Promise<Response> {
   return fetch(`http://127.0.0.1:${port}/api/v1/commands/${type}`, {
     method: 'POST', headers: { 'content-type': 'application/json', ...headers },
-    body: JSON.stringify({ payload, idempotencyKey: crypto.randomUUID(), workspaceId: 'a'.repeat(64) }),
+    body: JSON.stringify({ payload, idempotencyKey: crypto.randomUUID() }),
   });
 }
 

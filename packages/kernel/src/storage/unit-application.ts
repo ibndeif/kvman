@@ -3,7 +3,8 @@ import { kernelProblem } from '../problems.ts';
 import type { Admission, AppliedMessages, CommitInvocation, CommitResult, CommitUnit } from './commit-unit.ts';
 import { causeOf, correlationOf, senderOf } from './commit-unit.ts';
 import { StorageFailure, type Connection } from './driver.ts';
-import { applyExtensionChange, type ExtensionChange } from './extension-changes.ts';
+import { writeConfig } from './config-rows.ts';
+import { applyKernelChange, type KernelChange } from './kernel-changes.ts';
 import { cancelMessages, expireMessages } from './message-ending.ts';
 import { markInvocation, markRetry, replyOf } from './message-rows.ts';
 import { readMessage } from './stored-message.ts';
@@ -33,6 +34,7 @@ function invokingExtension(unit: CommitUnit): string | undefined {
   if (origin.kind === 'invocation') return origin.invocation.extension;
   if (unit.writes.length > 0) throw new InvalidWrite('a unit without an invocation cannot write storage');
   if (unit.replies.length > 0) throw new InvalidWrite('a unit without an invocation cannot reply');
+  if ((unit.config?.length ?? 0) > 0 || (unit.secrets?.length ?? 0) > 0) throw new InvalidWrite('a unit without an invocation cannot set config or secrets');
   return undefined;
 }
 
@@ -82,15 +84,23 @@ function settleOrigin(scope: UnitScope, unit: CommitUnit): void {
   }
   if (origin.kind === 'expire') expireMessages(scope, origin.messageIds);
   if (origin.kind === 'quarantine') upsertQuarantine(scope.connection, origin.extension, origin.reason);
-  if (origin.kind === 'extensions') settleExtensionChange(scope, origin.change, origin.command);
+  if (origin.kind === 'change') settleKernelChange(scope, origin.change, origin.command);
 }
 
-function settleExtensionChange(scope: UnitScope, change: ExtensionChange, command: Message | undefined): void {
-  const value = applyExtensionChange(scope, change);
+function settleKernelChange(scope: UnitScope, change: KernelChange, command: Message | undefined): void {
+  const value = applyKernelChange(scope, change);
   if (command === undefined) return;
   const outcome = { ok: true, value } as const;
   markInvocation(scope.connection, command.id, outcome, scope.now);
   finalReply(scope, command, replyOf(outcome));
+}
+
+// 04 §4.2: an invocation's config writes are checked and stored in the commit; its secrets wait for the file.
+function applySettings(scope: UnitScope, unit: CommitUnit, extension: string): void {
+  for (const write of unit.config ?? []) writeConfig(scope, { extension, scope: write.scope, workspaceId: scope.cause?.workspaceId, value: write.value });
+  for (const write of unit.secrets ?? []) {
+    scope.applied.secrets.push(write.value === null ? { kind: 'clear', extension, name: write.name } : { kind: 'set', extension, name: write.name, value: write.value });
+  }
 }
 
 function firstSendId(unit: CommitUnit): string | undefined {
@@ -101,7 +111,7 @@ function firstSendId(unit: CommitUnit): string | undefined {
 function applyContents(connection: Connection, unit: CommitUnit, admission: Admission, now: number): AppliedMessages {
   const { origin } = unit;
   if (origin.kind === 'invocation' || origin.kind === 'cancel') checkLive(connection, origin.invocation, now);
-  if (origin.kind === 'extensions' && origin.command !== undefined) checkLive(connection, { message: origin.command, stored: true }, now);
+  if (origin.kind === 'change' && origin.command !== undefined) checkLive(connection, { message: origin.command, stored: true }, now);
   const extension = invokingExtension(unit);
   const cause = causeOf(origin);
   if (extension !== undefined) {
@@ -110,11 +120,14 @@ function applyContents(connection: Connection, unit: CommitUnit, admission: Admi
   const scope: UnitScope = {
     connection, admission, now, sender: senderOf(origin), cause, correlationId: correlationOf(origin),
     workspaceId: origin.kind === 'adapter' ? origin.workspaceId : cause?.workspaceId,
-    applied: { inserted: [], duplicates: [], logged: [], announced: [], unstored: [], replies: [], ended: [] },
+    applied: { inserted: [], duplicates: [], logged: [], announced: [], unstored: [], replies: [], ended: [], secrets: [], correlationId: correlationOf(origin) },
   };
   unit.sends.forEach((send, index) => admitSend(scope, send, index, index === 0 ? firstSendId(unit) : undefined));
   for (const publish of unit.publishes) admitPublish(scope, publish);
-  if (extension !== undefined) for (const reply of unit.replies) applyDeferredReply(scope, extension, reply);
+  if (extension !== undefined) {
+    for (const reply of unit.replies) applyDeferredReply(scope, extension, reply);
+    applySettings(scope, unit, extension);
+  }
   settleOrigin(scope, unit);
   return scope.applied;
 }

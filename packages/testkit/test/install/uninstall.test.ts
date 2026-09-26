@@ -5,6 +5,7 @@ import { jsonObjectSchema, type Message } from '@kvman/protocol';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import kiosk from '../../../protocol/test/fixtures/kiosk-preset.json' with { type: 'json' };
 import { eventually, workspaceA, workspaceB } from '../hosts/harness.ts';
+import { emptyGrant } from './fixture-presets.ts';
 import { command, installed, installTests, openInstallFixture, problemOf, staged, type InstallFixture } from './harness.ts';
 import { extensionSource, packPackage, writePackage } from './packages.ts';
 import { startRegistry, type LocalRegistry } from './registries.ts';
@@ -70,7 +71,7 @@ describe('uninstall (plan 06 §6.8, ADR 0120)', installTests, () => {
     const drop = await installed(fixture, 'npm:@acme/drop@1.0.0');
     for (const name of ['@acme/keep', '@acme/drop']) seedData(fixture.connection, name);
     const preset = { ...kiosk, revision: 3, extensions: { '@acme/keep': presetEntry('@acme/keep'), '@acme/drop': presetEntry('@acme/drop') } };
-    fixture.connection.prepare('INSERT INTO workspace_presets (workspace_id, preset, revision, applied_at) VALUES (?, ?, 3, 1)').run(workspaceA, JSON.stringify(preset));
+    fixture.connection.prepare('INSERT OR REPLACE INTO workspace_presets (workspace_id, preset, revision, applied_at) VALUES (?, ?, 3, 1)').run(workspaceA, JSON.stringify(preset));
     expect(await command(fixture, 'kernel.extension.uninstall', { name: '@acme/keep' })).toEqual({ ok: true, value: {} });
     expect(await command(fixture, 'kernel.extension.uninstall', { name: '@acme/drop', deleteData: true })).toEqual({ ok: true, value: {} });
     for (const { stage, name } of [{ stage: keep, name: '@acme/keep' }, { stage: drop, name: '@acme/drop' }]) {
@@ -88,8 +89,9 @@ describe('uninstall (plan 06 §6.8, ADR 0120)', installTests, () => {
   });
 
   it('M2.2-E38 an extension enabled somewhere cannot be uninstalled', async () => {
-    fixture = await openInstallFixture({ registry: registry.url, enabled: [[workspaceA, ['@acme/keep']], [workspaceB, ['@acme/keep']]] });
+    fixture = await openInstallFixture({ registry: registry.url });
     await installed(fixture, 'npm:@acme/keep@1.0.0');
+    for (const workspaceId of [workspaceA, workspaceB]) fixture.enable(workspaceId, '@acme/keep', emptyGrant);
     expect(problemOf(await command(fixture, 'kernel.extension.uninstall', { name: '@acme/keep' }))).toMatchObject({ code: 'EXT_IN_USE', params: { workspaces: [workspaceA, workspaceB] } });
     expect(fixture.connection.prepare('SELECT name FROM extension_versions').all()).toEqual([{ name: '@acme/keep' }]);
   });

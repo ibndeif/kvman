@@ -46,7 +46,7 @@ async function main(): Promise<void> {
   try {
     const faults = faultPointsOf(process.env['KVMAN_FAULTS'], ids.next());
     const kernel = await Kernel.boot({
-      home, ...(port === undefined ? {} : { port: Number(port) }), enabled: new Map(), grants: { capabilities: () => undefined },
+      home, ...(port === undefined ? {} : { port: Number(port) }),
       npmRegistry: npmRegistryFrom(process.env), environment: process.env,
       poolSize: Math.max(1, Math.min(4, availableParallelism() - 1)), ids, now: Date.now, timers: systemTimers,
       openLogger: (folder) => openLogger(folder, foreground === true), defaultLocale: () => 'en', faults,

@@ -454,7 +454,7 @@ A preset records the **granted** set per extension, isolation included; an exten
 
 - `ext.registerConfig({ scope, schema })`: a Zod schema with `.describe()` on every field (for developers and LLMs), `.meta({ label, help })` for the translated form label (`08` §8.12), and optional `.meta({ ui: { widget, group, order } })` for form hints. `scope` is `global`, `workspace`, or `both`.
 - Fields marked `.meta({ secret: true })` are stored in the secrets store.
-- `ctx.config.get()` returns the merged typed value: schema defaults < global < workspace.
+- `ctx.config.get()` returns the merged typed value: schema defaults < global < workspace, by top-level field, with the handler's own pending `ctx.config.set` applied and without secret fields (ADR 0125). `ctx.secrets.get(name)` reads a secret (its own pending set first); names match `^[A-Za-z0-9._-]{1,128}$` and values are strings up to 64 KB (ADR 0126).
 - A `kernel.config.changed` event is published after every change.
 
 ## 5.9 Rules for handler code

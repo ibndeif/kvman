@@ -276,9 +276,9 @@ handle: async (_, ctx) => ({ items: await ctx.store.collection(files).find({ ord
 
 - **Scopes**: `workspace` (default) and `global` (`ctx.store.global`).
 - **Forgetting a workspace** (`kernel.workspace.forget`) happens in this order:
-  1. Stop admitting messages for the workspace (`WORKSPACE_INVALID`).
-  2. Cancel every unfinished message of the workspace (`kernel.cancel` semantics, `02` §2.9: running invocations are aborted, deferred commands end with `CANCELLED` and their `onAbort` runs, timers are dropped) and kill its processes (`03` §3.7). Wait for these to settle (at most 10 s, then abort).
-  3. In one transaction, delete every row with its `ws` for every owner (kv, docs, logs, blob refs), its messages, events, and steps, its `llm_usage` rows, its applied preset, its `workspace_config` rows, and its notifications; then its `workspaces` row. Publish `kernel.workspace.forgotten`.
+  1. Stop admitting messages for the workspace (`WORKSPACE_INVALID`), except the `onAbort` commands the kernel sends in step 2 (ADR 0122).
+  2. Cancel every unfinished message of the workspace (`kernel.cancel` semantics, `02` §2.9: running invocations are aborted, deferred commands end with `CANCELLED` and their `onAbort` runs, timers are dropped) and kill its processes (`03` §3.7, from M2.6). Wait for these, the `onAbort` commands included, to settle (at most 10 s, then abort).
+  3. In one transaction, delete every row with its `ws` for every owner (kv, docs, logs, blob refs), its messages, events, steps, and recorded values, its `llm_usage` rows, its applied preset, its `workspace_config` rows, and its notifications; then its `workspaces` row. Publish `kernel.workspace.forgotten` without a workspace (ADR 0122).
   4. Blobs left without references are collected by the normal GC (§4.6). The folder is never touched (a preview workspace's folder is deleted, `07` §7.1).
 - **Ownership**: an extension reads and writes only rows where `owner` is its name. To read another extension's data it calls that extension's queries.
 - **Alternatives**: two extensions implementing the same namespace keep separate data; switching the enabled one does not share or migrate data unless the contract defines an export/import command.
@@ -313,7 +313,7 @@ const text = await ctx.step('ocr', () => runOcr(blobId), { retrySafe: false });
 
 - **Global config** for extension X: `global_config` row, revisioned.
 - **Workspace config** for extension X: the `workspace_config` row (workspace, X), revisioned on its own. The applied preset row holds no config: applying a preset writes these rows from the preset's `config`, and `kernel.preset.current.get`, save-as, and export rebuild the preset's `config` from them (`07` §7.4). So a config change never changes the applied preset's revision or the UI registry (`08` §8.6).
-- **Secrets**: `secrets.json`, keyed by `extension/name`. Config schema fields marked `secret` are stored here, never in config rows or presets. Reads by other extensions or the UI are redacted (`••••1234`).
+- **Secrets**: `secrets.json`, keyed by `extension/name`. Config schema fields marked `secret` are stored here under their dotted path, never in config rows or presets; a config write carrying one fails `CONFIG_INVALID`. Reads by other extensions or the UI are redacted: `••••` plus the last 4 characters for secrets of 12 or more characters, else `••••` (ADR 0126). Boot step 3 loads the file; one that does not parse refuses to start with `INTERNAL`.
 - **Writing secrets**: the file is outside the database transaction. Secret writes (from `kernel.secret.set/clear` and from `ctx.secrets.set` in a unit of work) are applied **after** the database commit, in commit order, by writing a new file (0600), fsyncing it, and renaming it over the old one, so the file is always either the old or the new version. If that write fails, the old value stays, the kernel logs the failure, and it sends an error notification naming the extension and the secret name (never the value); the command that set it has already succeeded.
 - Writes go through `kernel.config.set` and `kernel.secret.set` (user or `kernel.admin`), or `ctx.config.set` / `ctx.secrets.set` by the owner itself.
 

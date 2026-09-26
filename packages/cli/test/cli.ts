@@ -14,9 +14,17 @@ export type Run = { code: number; stdout: string; stderr: string };
 
 export type Invocation = { env?: NodeJS.ProcessEnv; cwd?: string };
 
+export function temporaryFolder(): string {
+  return mkdtempSync(join(tmpdir(), 'kvman-cli-'));
+}
+
+// The daemons these tests start run their first run in their own user folder, so the Home workspace (~/kvman,
+// ADR 0127) is never created in the real one.
+const userFolder = temporaryFolder();
+
 function environment(extra: NodeJS.ProcessEnv | undefined): NodeJS.ProcessEnv {
   const { KVMAN_HOME: _inherited, ...rest } = process.env;
-  return { ...rest, ...extra };
+  return { ...rest, HOME: userFolder, ...extra };
 }
 
 export function kvman(args: readonly string[], invocation: Invocation = {}): Promise<Run> {
@@ -30,10 +38,6 @@ export function kvman(args: readonly string[], invocation: Invocation = {}): Pro
 
 export function spawnKvman(args: readonly string[]): ChildProcess {
   return spawn(process.execPath, ['--conditions=@kvman/source', main, ...args], { env: environment(undefined), stdio: ['ignore', 'pipe', 'pipe'] });
-}
-
-export function temporaryFolder(): string {
-  return mkdtempSync(join(tmpdir(), 'kvman-cli-'));
 }
 
 export function lockOf(home: string): DaemonLock {

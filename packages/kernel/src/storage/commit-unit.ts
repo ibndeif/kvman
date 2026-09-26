@@ -1,6 +1,10 @@
-import type { Address, DeferredReply, Json, Message, OutboundPublish, OutboundSend, Problem, QuarantineReason, ReplyPayload, StoreWrite } from '@kvman/protocol';
+import type {
+  Address, ConfigWrite, ConfigWriteScope, DeferredReply, Json, JsonObject, Message, OutboundPublish, OutboundSend, Problem, QuarantineReason, ReplyPayload,
+  SecretWrite, StoreWrite,
+} from '@kvman/protocol';
+import type { SecretChange } from '../secrets/secret-store.ts';
 import type { Connection } from './driver.ts';
-import type { ExtensionChange } from './extension-changes.ts';
+import type { KernelChange } from './kernel-changes.ts';
 
 export type MessageState = 'pending' | 'running' | 'awaiting' | 'done' | 'failed' | 'dead' | 'cancelled';
 
@@ -27,9 +31,9 @@ export type UnitOrigin =
   | { kind: 'cancel'; invocation: CommitInvocation; messageIds: readonly string[]; unstored: number }
   | { kind: 'expire'; messageIds: readonly string[]; correlationId: string }
   | { kind: 'quarantine'; extension: string; reason: QuarantineReason; correlationId: string }
-  // A change to the extension catalog (06 §6.2, §6.8), by a kernel command, which it replies to, or by the kernel
-  // itself at first run.
-  | { kind: 'extensions'; change: ExtensionChange; command?: Message; correlationId: string }
+  // A change to the extension catalog, a workspace, an applied preset, config, or secrets, by a kernel command, which
+  // it replies to, or by the kernel itself at first run.
+  | { kind: 'change'; change: KernelChange; command?: Message; correlationId: string }
   | { kind: 'announce'; correlationId: string };
 
 export type CommitUnit = {
@@ -38,6 +42,9 @@ export type CommitUnit = {
   sends: OutboundSend[];
   publishes: OutboundPublish[];
   replies: DeferredReply[];
+  // An invocation's ctx.config.set, applied in the commit, and ctx.secrets.set, applied after it (04 §4.2, §4.7).
+  config?: ConfigWrite[];
+  secrets?: SecretWrite[];
 };
 
 export type AdmittedMessage = { message: Message; handler: string; digest?: string };
@@ -70,10 +77,15 @@ export type PublishAdmission =
 // A deferred reply checked against its command's output schema (ADR 0074).
 export type ReplyCheck = { command: Message; payload: ReplyPayload };
 
+// A config write checked against its extension's config (ADR 0125): `global` is the stored global value, which a
+// workspace value is merged over.
+export type ConfigCheck = { extension: string; scope: ConfigWriteScope; value: JsonObject; global: JsonObject; correlationId: string };
+
 export interface Admission {
   admitSend(connection: Connection, request: SendRequest): SendAdmission;
   admitPublish(connection: Connection, request: PublishRequest): PublishAdmission;
   checkReply(check: ReplyCheck): Problem | undefined;
+  checkConfig(check: ConfigCheck): Problem | undefined;
 }
 
 export type StoredMessage = AdmittedMessage & { seq: number; state: MessageState };
@@ -95,6 +107,9 @@ export type AppliedMessages = {
   unstored: UnstoredDelivery[];
   replies: FinalReply[];
   ended: EndedMessage[];
+  // Applied to secrets.json after the commit, in commit order (04 §4.7).
+  secrets: SecretChange[];
+  correlationId: string;
 };
 
 // A transient event's delivery, with the message that published the event (for cancel scopes, ADR 0083).
@@ -105,7 +120,7 @@ export type CommitResult = ({ committed: true } & AppliedMessages) | { committed
 
 export function correlationOf(origin: UnitOrigin): string {
   if (origin.kind === 'invocation' || origin.kind === 'cancel') return origin.invocation.message.correlationId;
-  if (origin.kind === 'expire' || origin.kind === 'quarantine' || origin.kind === 'announce' || origin.kind === 'extensions') return origin.correlationId;
+  if (origin.kind === 'expire' || origin.kind === 'quarantine' || origin.kind === 'announce' || origin.kind === 'change') return origin.correlationId;
   if (origin.kind === 'call') return origin.cause.correlationId;
   return origin.kind === 'retry' ? origin.message.correlationId : origin.messageId;
 }
@@ -119,6 +134,6 @@ export function senderOf(origin: UnitOrigin): Sender {
 export function causeOf(origin: UnitOrigin): Message | undefined {
   if (origin.kind === 'invocation' || origin.kind === 'cancel') return origin.invocation.message;
   if (origin.kind === 'call') return origin.cause;
-  if (origin.kind === 'extensions') return origin.command;
+  if (origin.kind === 'change') return origin.command;
   return origin.kind === 'retry' ? origin.message : undefined;
 }

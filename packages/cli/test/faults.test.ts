@@ -9,7 +9,7 @@ import { daemonTests, kvman, temporaryFolder } from './cli.ts';
 // The report the daemon sends the CLI, read directly: the CLI prints only its code, title, and hint.
 function startReport(home: string, faults: string): Promise<DaemonStartReport> {
   const script = fileURLToPath(import.meta.resolve('@kvman/kernel/daemon'));
-  const child = fork(script, ['--home', home], { execArgv: ['--conditions=@kvman/source'], env: { ...process.env, KVMAN_FAULTS: faults }, stdio: 'ignore' });
+  const child = fork(script, ['--home', home], { execArgv: ['--conditions=@kvman/source'], env: { ...process.env, HOME: temporaryFolder(), KVMAN_FAULTS: faults }, stdio: 'ignore' });
   return new Promise((resolve) => child.once('message', (message) => resolve(daemonStartReportSchema.parse(message))));
 }
 

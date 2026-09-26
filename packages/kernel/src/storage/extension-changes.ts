@@ -76,12 +76,15 @@ function deleteData(scope: UnitScope, name: string): void {
 }
 
 // 06 §6.8, ADR 0120: its unfinished messages are cancelled without onAbort (the owner is gone), its rows go, and
-// with deleteData every row it owns.
+// with deleteData every row it owns and, after the commit, its secrets.
 function uninstall(scope: UnitScope, name: string, withData: boolean): Json {
   cancelMessages(scope, unfinishedMessages(scope, name), { sendAbort: false });
   scope.connection.prepare('DELETE FROM extension_versions WHERE name = ?').run(name);
   scope.connection.prepare('DELETE FROM extensions WHERE name = ?').run(name);
-  if (withData) deleteData(scope, name);
+  if (withData) {
+    deleteData(scope, name);
+    scope.applied.secrets.push({ kind: 'clear-extension', extension: name });
+  }
   const payload: ExtensionUninstalled = { name };
   admitPublish(scope, { type: 'kernel.extension.uninstalled', payload });
   return {};

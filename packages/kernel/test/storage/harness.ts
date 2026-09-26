@@ -89,6 +89,9 @@ export function testAdmission(options: TestAdmissionOptions): Admission {
     checkReply() {
       return undefined;
     },
+    checkConfig() {
+      return undefined;
+    },
     admitPublish(_connection, request): PublishAdmission {
       const correlationId = request.cause?.correlationId ?? ulids.next();
       return { outcome: 'refused', problem: kernelProblem('TYPE_NOT_FOUND', { correlationId, params: { type: request.publish.type } }) };

@@ -37,3 +37,13 @@ export const presetChangedSchema = z.strictObject({
 });
 
 export type PresetChanged = z.infer<typeof presetChangedSchema>;
+
+// 03 §3.8: an extension was enabled (including a grant change) or disabled in a workspace.
+export const extensionEnabledSchema = z.strictObject({ workspaceId: workspaceIdSchema, name: z.string().min(1) });
+
+export type ExtensionEnabled = z.infer<typeof extensionEnabledSchema>;
+
+// 03 §3.6: a quarantine was lifted.
+export const extensionUnquarantinedSchema = z.strictObject({ name: z.string().min(1) });
+
+export type ExtensionUnquarantined = z.infer<typeof extensionUnquarantinedSchema>;

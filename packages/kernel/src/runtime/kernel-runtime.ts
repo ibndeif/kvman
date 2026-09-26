@@ -5,10 +5,16 @@ import { HostFailures } from '../hosts/host-failures.ts';
 import { HostManager } from '../hosts/host-manager.ts';
 import { workerThreadStarter, type StartHostThread } from '../hosts/host-thread.ts';
 import type { KernelLogger } from '../hosts/kernel-logger.ts';
+import { EnableCommands } from '../hosts/enable-commands.ts';
 import { ExtensionCommands } from '../hosts/extension-commands.ts';
 import { ExtensionQueries } from '../hosts/extension-queries.ts';
 import { KernelCommits } from '../hosts/kernel-commits.ts';
-import { KernelHost } from '../hosts/kernel-host.ts';
+import { KernelHost, type KernelCommand } from '../hosts/kernel-host.ts';
+import { SerialChanges } from '../hosts/serial-changes.ts';
+import { SettingCommands } from '../hosts/setting-commands.ts';
+import { WorkspaceCommands } from '../hosts/workspace-commands.ts';
+import { WorkspaceForgetting } from '../hosts/workspace-forgetting.ts';
+import { WorkspaceQueries } from '../hosts/workspace-queries.ts';
 import { hostPlatform, pnpmExecutable } from '../install/bundled-tools.ts';
 import { InstallService } from '../install/install-service.ts';
 import { installPaths } from '../install/install-paths.ts';
@@ -25,14 +31,17 @@ import { RecordedValueStore } from '../hosts/recorded-value-store.ts';
 import { ReplyWaiters, type ReplyListener } from '../hosts/reply-waiters.ts';
 import { RpcService } from '../hosts/rpc-service.ts';
 import { Settlement } from '../hosts/settlement.ts';
-import { RegistryState, type EnabledExtensions } from '../registry/registry-state.ts';
+import { ConfigChecker } from '../config/config-values.ts';
+import { RegistryState } from '../registry/registry-state.ts';
+import { WorkspaceDirectory } from '../registry/workspace-directory.ts';
 import { AdapterPath, type AdapterCommand, type Submission } from '../router/adapter-path.ts';
-import type { GrantsSource } from '../router/grants.ts';
 import { PayloadValidators } from '../router/payload-validators.ts';
 import type { QueryRequest } from '../router/query-admission.ts';
 import { Router } from '../router/router.ts';
 import { PendingIndex } from '../scheduler/pending-index.ts';
 import { Scheduler } from '../scheduler/scheduler.ts';
+import type { SecretStore } from '../secrets/secret-store.ts';
+import { writeCommittedSecrets } from '../secrets/secret-writes.ts';
 import type { SchedulerTimers } from '../scheduler/timers.ts';
 import { CommitPipeline } from '../storage/commit-pipeline.ts';
 import { readMessageStatus } from '../storage/message-status.ts';
@@ -45,10 +54,9 @@ import { healthOf, type KernelIdentity } from './health.ts';
 export type KernelRuntimeOptions = {
   databaseFile: string;
   connection: Connection;
-  // ADR 0114: the workspaces that enable each extension, and their grants, as data until M2.3 and M2.4.
-  enabled: EnabledExtensions;
-  grants: GrantsSource;
   install: InstallSettings;
+  // secrets.json, loaded at boot step 3 (ADR 0126).
+  secrets: SecretStore;
   logger: KernelLogger;
   ids: UlidGenerator;
   now: () => number;
@@ -88,6 +96,7 @@ export class KernelRuntime {
   readonly scheduler: Scheduler;
   readonly hosts: HostManager;
   readonly registry: RegistryState;
+  readonly workspaces: WorkspaceDirectory;
   readonly install: InstallService;
   readonly snapshots: SnapshotStore;
   readonly live = new LiveBus();
@@ -102,13 +111,15 @@ export class KernelRuntime {
     const { connection, ids, now, timers } = options;
     const faults = options.faults ?? inertFaults;
     this.#options = options;
-    this.registry = new RegistryState(options.enabled, connection);
+    this.registry = new RegistryState(connection);
+    this.workspaces = new WorkspaceDirectory(connection);
     const registry = () => this.registry.current();
     this.install = installService(options);
     this.snapshots = new SnapshotStore(this.install.paths, (extension) => this.registry.digestOf(extension));
     this.index = PendingIndex.rebuild(connection, now);
-    this.router = new Router({ registry, grants: options.grants, validators: new PayloadValidators(), ids, now, defaultLocale: options.defaultLocale });
+    this.router = new Router({ registry, grants: this.registry, workspaces: this.workspaces, validators: new PayloadValidators(), ids, now, defaultLocale: options.defaultLocale });
     this.pipeline = new CommitPipeline({ connection, admission: this.router, now, faults });
+    writeCommittedSecrets(this.pipeline, options.secrets, options.logger, faults);
     this.#waiters = new ReplyWaiters(connection);
     const values = new RecordedValueStore(connection);
     this.hosts = new HostManager({
@@ -182,13 +193,43 @@ export class KernelRuntime {
     return stopped;
   }
 
+  // The kernel commands that change extensions, workspaces, presets, config, and secrets (03 §3.8).
+  #kernelCommands(commits: KernelCommits, abortMessages: (messageIds: ReadonlySet<string>) => void): Map<string, KernelCommand> {
+    const { connection, timers } = this.#options;
+    const serial = new SerialChanges();
+    const { scheduler, registry } = this;
+    const extensions = new ExtensionCommands({ connection, commits, scheduler, grants: registry, registry, install: this.install, serial, abortMessages });
+    const enabling = new EnableCommands({
+      connection, commits, scheduler, registry, snapshots: this.snapshots, config: new ConfigChecker(new PayloadValidators()), serial,
+      quarantine: (extension, reason) => this.#quarantines.quarantine(extension, reason),
+    });
+    const workspaces = new WorkspaceCommands({ connection, commits, registry, home: this.#options.install.home });
+    const forgetting = new WorkspaceForgetting({
+      connection, pipeline: this.pipeline, commits, scheduler, registry, directory: this.workspaces, serial, timers, faults: this.#options.faults ?? inertFaults, abortMessages,
+    });
+    const settings = new SettingCommands({ connection, commits, registry });
+    return new Map<string, KernelCommand>([
+      ['kernel.extension.stage', (claim, signal) => extensions.stage(claim, signal)],
+      ['kernel.extension.install', (claim) => extensions.install(claim)],
+      ['kernel.extension.uninstall', (claim) => extensions.uninstall(claim)],
+      ['kernel.extension.enable', (claim) => enabling.enable(claim)],
+      ['kernel.extension.disable', (claim) => enabling.disable(claim)],
+      ['kernel.workspace.open', (claim) => workspaces.open(claim)],
+      ['kernel.workspace.rename', (claim) => workspaces.rename(claim)],
+      ['kernel.workspace.forget', (claim, signal) => forgetting.forget(claim, signal)],
+      ['kernel.config.set', (claim) => settings.setConfig(claim)],
+      ['kernel.secret.set', (claim) => settings.setSecret(claim)],
+      ['kernel.secret.clear', (claim) => settings.clearSecret(claim)],
+    ]);
+  }
+
   #connectHosts(options: KernelRuntimeOptions, values: RecordedValueStore): void {
     const { connection, ids } = options;
     const registry = () => this.registry.current();
     const rpc = new RpcService({
       connection, router: this.router, pipeline: this.pipeline, scheduler: this.scheduler, waiters: this.#waiters, values, ids, registry,
       queries: this.#queries, live: this.live, journal: new StepJournal(connection, options.now), logger: options.logger, depths: new CallDepths(),
-      faults: options.faults ?? inertFaults,
+      faults: options.faults ?? inertFaults, secrets: options.secrets,
     });
     const quarantines = this.#quarantines;
     const settlement = new Settlement({
@@ -196,13 +237,12 @@ export class KernelRuntime {
     });
     const commits = new KernelCommits(this.pipeline, this.scheduler, this.#waiters);
     const abortMessages = (messageIds: ReadonlySet<string>): void => this.hosts.abortMessages(messageIds);
-    const extensions = new ExtensionCommands({ connection, commits, scheduler: this.scheduler, grants: options.grants, registry: this.registry, install: this.install, abortMessages });
     const kernel = new KernelHost({
-      connection, commits, scheduler: this.scheduler, grants: options.grants, queries: this.#queries, abortMessages, extensions,
+      connection, commits, scheduler: this.scheduler, grants: this.registry, queries: this.#queries, abortMessages, commands: this.#kernelCommands(commits, abortMessages),
       requestShutdown: options.requestShutdown,
       kernelQueries: new KernelQueries({
         connection, registry, health: () => this.health(), version: options.identity.version,
-        extensions: new ExtensionQueries(connection, this.registry, options.grants),
+        extensions: new ExtensionQueries(connection, this.registry, this.registry), workspaces: new WorkspaceQueries(connection, this.registry, options.secrets),
       }),
     });
     this.#kernelHost = kernel;

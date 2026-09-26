@@ -12,7 +12,7 @@ export type ExtensionQueryAnswer<T> = { ok: true; value: T } | { ok: false; code
 type ExtensionRow = { name: string; digest: string; status: string; reason: unknown; pending: boolean };
 
 // kernel.extensions.list and kernel.extension.get (03 §3.8, ADR 0119): installed state from the database, enabled
-// workspaces and grants from the runtime's inputs until M2.3 and M2.4.
+// workspaces and grants from the applied presets (ADR 0123).
 export class ExtensionQueries {
   readonly #connection: Connection;
   readonly #registry: RegistryState;
