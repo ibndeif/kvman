@@ -6,7 +6,7 @@ afterEach(() => fixture.close());
 
 async function crashCounterThreeTimes(): Promise<void> {
   for (let crash = 0; crash < 3; crash += 1) await pendingWithAttempts(fixture, await send(fixture, 'counter.crash'), 1);
-  await eventually(() => expect(rows(fixture, 'SELECT name, status, quarantine_reason FROM extensions')).toEqual([{ name: '@acme/counter', status: 'quarantined', quarantine_reason: 'HOST_FAILURES' }]));
+  await eventually(() => expect(rows(fixture, "SELECT name, status, quarantine_reason FROM extensions WHERE status = 'quarantined'")).toEqual([{ name: '@acme/counter', status: 'quarantined', quarantine_reason: 'HOST_FAILURES' }]));
 }
 
 async function counterRefusal(): Promise<unknown> {
@@ -38,6 +38,6 @@ describe('quarantine (plan 03 §3.6, ADRs 0080, 0081, 0086)', workerTests, () =>
   it('M1.7-E16 manifest drift quarantines with EXT_MANIFEST_INVALID', async () => {
     fixture = await openHostFixture();
     expect(await run(fixture, 'drift.run')).toMatchObject({ ok: false, problem: { code: 'EXT_MANIFEST_INVALID', retryable: false } });
-    await eventually(() => expect(rows(fixture, 'SELECT name, quarantine_reason FROM extensions')).toEqual([{ name: '@acme/drift', quarantine_reason: 'EXT_MANIFEST_INVALID' }]));
+    await eventually(() => expect(rows(fixture, "SELECT name, quarantine_reason FROM extensions WHERE status = 'quarantined'")).toEqual([{ name: '@acme/drift', quarantine_reason: 'EXT_MANIFEST_INVALID' }]));
   });
 });

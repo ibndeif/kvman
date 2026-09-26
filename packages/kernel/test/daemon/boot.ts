@@ -1,4 +1,4 @@
-import { mkdtempSync } from 'node:fs';
+import { mkdirSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createUlidGenerator, Kernel, type LogRecord } from '../../src/index.ts';
@@ -9,11 +9,18 @@ export function temporaryFolder(): string {
   return mkdtempSync(join(tmpdir(), 'kvman-daemon-'));
 }
 
-// A kernel with only its own types, as a daemon runs before M2.2 installs extensions (ADR 0089).
+// An empty builtin folder: the kernel installs nothing at its first run (ADR 0115).
+function emptyBuiltinFolder(): string {
+  const folder = join(temporaryFolder(), 'builtin');
+  mkdirSync(folder);
+  return folder;
+}
+
+// A kernel with only its own types: nothing installed, no builtins, and an npm registry nothing listens on.
 export function bootEmptyKernel(home: string, logged: LogRecord[] = []): Promise<Kernel> {
   return Kernel.boot({
-    home, extensions: { extensions: [], enabled: new Map() }, grants: { capabilities: () => undefined },
-    modules: { entry: (extension) => { throw new Error(`no module for ${extension}`); } }, poolSize: 1, ids, now: Date.now,
+    home, enabled: new Map(), grants: { capabilities: () => undefined }, builtin: emptyBuiltinFolder(), npmRegistry: 'http://127.0.0.1:9/',
+    environment: {}, poolSize: 1, ids, now: Date.now,
     timers: { set: (delayMs, fire) => { const timer = setTimeout(fire, delayMs); return { cancel: () => clearTimeout(timer) }; } },
     openLogger: () => ({ write: (record) => logged.push(record), close: () => undefined }), defaultLocale: () => 'en',
   });

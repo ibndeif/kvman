@@ -3,8 +3,8 @@ import { kernelOwner, kernelTypeEntries } from './kernel-types.ts';
 
 export type InstalledExtension = { manifest: Manifest; quarantined: boolean };
 
-// The registry's inputs as data until install and enable read them from the database (M2.2, M2.3): every
-// installed manifest, and the names of the extensions each workspace enables.
+// The registry's inputs: every installed manifest (read from the database, ADR 0114), and the names of the
+// extensions each workspace enables (data until M2.3).
 export type RegistryInput = { extensions: readonly InstalledExtension[]; enabled: ReadonlyMap<string, readonly string[]> };
 
 export type RegistryFailure = { code: KernelErrorCode; detail: string; hint?: string };

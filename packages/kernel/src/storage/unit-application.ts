@@ -1,8 +1,9 @@
-import { jsonByteLength, type Problem } from '@kvman/protocol';
+import { jsonByteLength, type Message, type Problem } from '@kvman/protocol';
 import { kernelProblem } from '../problems.ts';
 import type { Admission, AppliedMessages, CommitInvocation, CommitResult, CommitUnit } from './commit-unit.ts';
 import { causeOf, correlationOf, senderOf } from './commit-unit.ts';
 import { StorageFailure, type Connection } from './driver.ts';
+import { applyExtensionChange, type ExtensionChange } from './extension-changes.ts';
 import { cancelMessages, expireMessages } from './message-ending.ts';
 import { markInvocation, markRetry, replyOf } from './message-rows.ts';
 import { readMessage } from './stored-message.ts';
@@ -44,7 +45,7 @@ class StaleInvocation extends Error {
 
 // 04 §4.2: a unit commits only while its invocation is live: its message still running, its invocation deadline not
 // passed (ADR 0084). A message already ended by cancel or deadline makes the unit stale.
-function checkLive(connection: Connection, invocation: CommitInvocation, now: number): void {
+function checkLive(connection: Connection, invocation: Pick<CommitInvocation, 'message' | 'stored' | 'deadlineAt'>, now: number): void {
   if (!invocation.stored) return;
   const { message } = invocation;
   if (readMessage(connection, message.id)?.state !== 'running') throw new StaleInvocation(message.id);
@@ -81,6 +82,15 @@ function settleOrigin(scope: UnitScope, unit: CommitUnit): void {
   }
   if (origin.kind === 'expire') expireMessages(scope, origin.messageIds);
   if (origin.kind === 'quarantine') upsertQuarantine(scope.connection, origin.extension, origin.reason);
+  if (origin.kind === 'extensions') settleExtensionChange(scope, origin.change, origin.command);
+}
+
+function settleExtensionChange(scope: UnitScope, change: ExtensionChange, command: Message | undefined): void {
+  const value = applyExtensionChange(scope, change);
+  if (command === undefined) return;
+  const outcome = { ok: true, value } as const;
+  markInvocation(scope.connection, command.id, outcome, scope.now);
+  finalReply(scope, command, replyOf(outcome));
 }
 
 function firstSendId(unit: CommitUnit): string | undefined {
@@ -91,6 +101,7 @@ function firstSendId(unit: CommitUnit): string | undefined {
 function applyContents(connection: Connection, unit: CommitUnit, admission: Admission, now: number): AppliedMessages {
   const { origin } = unit;
   if (origin.kind === 'invocation' || origin.kind === 'cancel') checkLive(connection, origin.invocation, now);
+  if (origin.kind === 'extensions' && origin.command !== undefined) checkLive(connection, { message: origin.command, stored: true }, now);
   const extension = invokingExtension(unit);
   const cause = causeOf(origin);
   if (extension !== undefined) {

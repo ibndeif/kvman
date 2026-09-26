@@ -1,7 +1,9 @@
 import {
-  cancelRequestSchema, cancelResultSchema, extensionQuarantinedSchema, healthRequestSchema, healthResultSchema, kernelStartedSchema,
-  messageDeadLetteredSchema, schemaDocumentSchema, schemaGetRequestSchema, shutdownRequestSchema, shutdownResultSchema, toJsonSchemaDocument,
-  validateRequestSchema, validateResultSchema, type JsonObject, type SchemaView, type TypeEntry,
+  cancelRequestSchema, cancelResultSchema, extensionGetRequestSchema, extensionGetResultSchema, extensionInstalledSchema, extensionQuarantinedSchema,
+  extensionsListRequestSchema, extensionsListResultSchema, extensionUninstalledSchema, healthRequestSchema, healthResultSchema, installRequestSchema,
+  installResultSchema, kernelStartedSchema, messageDeadLetteredSchema, presetChangedSchema, schemaDocumentSchema, schemaGetRequestSchema,
+  shutdownRequestSchema, shutdownResultSchema, stageRequestSchema, stageResultSchema, toJsonSchemaDocument, uninstallRequestSchema,
+  uninstallResultSchema, validateRequestSchema, validateResultSchema, type JsonObject, type SchemaView, type TypeEntry,
 } from '@kvman/protocol';
 
 export const kernelOwner = 'kernel';
@@ -50,10 +52,57 @@ export function kernelTypeEntries(): TypeEntry[] {
       description: 'Checks a manifest, preset, or page against the structural rules and returns every issue with its hint.',
       input: jsonDocument(validateRequestSchema, 'input'), output: jsonDocument(validateResultSchema, 'output'),
     },
+    ...extensionLifecycleEntries(),
     {
       type: 'kernel.started', kind: 'event', delivery: 'transient',
       description: 'The kernel finished booting.',
       payload: jsonDocument(kernelStartedSchema, 'input'),
+    },
+  ];
+}
+
+// 03 §3.8, 06 §6.2, §6.8 (M2.2, ADRs 0118–0120).
+function extensionLifecycleEntries(): TypeEntry[] {
+  return [
+    {
+      type: 'kernel.extension.stage', kind: 'command', access: 'all', handler: 'command:kernel.extension.stage',
+      description: 'Downloads and checks an extension from a source, records its setup in the sandboxed loader, and returns what the grant dialog shows with a confirmation token. Admin only.',
+      input: jsonDocument(stageRequestSchema, 'input'), output: jsonDocument(stageResultSchema, 'output'),
+    },
+    {
+      type: 'kernel.extension.install', kind: 'command', access: 'all', handler: 'command:kernel.extension.install',
+      description: 'Installs a staged extension by its confirmation token as an immutable snapshot; installing never enables. Admin only.',
+      input: jsonDocument(installRequestSchema, 'input'), output: jsonDocument(installResultSchema, 'output'),
+    },
+    {
+      type: 'kernel.extension.uninstall', kind: 'command', access: 'user', handler: 'command:kernel.extension.uninstall',
+      description: 'Uninstalls an extension disabled in every workspace, keeping its data unless deleteData is set.',
+      input: jsonDocument(uninstallRequestSchema, 'input'), output: jsonDocument(uninstallResultSchema, 'output'),
+    },
+    {
+      type: 'kernel.extensions.list', kind: 'query', access: 'all', handler: 'query:kernel.extensions.list',
+      description: 'The installed extensions with their status, active digest, and the workspaces that enable them.',
+      input: jsonDocument(extensionsListRequestSchema, 'input'), output: jsonDocument(extensionsListResultSchema, 'output'),
+    },
+    {
+      type: 'kernel.extension.get', kind: 'query', access: 'all', handler: 'query:kernel.extension.get',
+      description: 'One installed extension: its versions, its active manifest, and its grants by workspace.',
+      input: jsonDocument(extensionGetRequestSchema, 'input'), output: jsonDocument(extensionGetResultSchema, 'output'),
+    },
+    {
+      type: 'kernel.extension.installed', kind: 'event', delivery: 'durable',
+      description: 'A new version of an extension was installed.',
+      payload: jsonDocument(extensionInstalledSchema, 'input'),
+    },
+    {
+      type: 'kernel.extension.uninstalled', kind: 'event', delivery: 'durable',
+      description: 'An extension was uninstalled.',
+      payload: jsonDocument(extensionUninstalledSchema, 'input'),
+    },
+    {
+      type: 'kernel.preset.changed', kind: 'event', delivery: 'durable',
+      description: "A workspace's applied preset was written: applied, updated, or changed by enable, disable, or uninstall.",
+      payload: jsonDocument(presetChangedSchema, 'input'),
     },
   ];
 }

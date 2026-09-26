@@ -19,10 +19,17 @@ Loose ranges, tags, branches, bare names, and `file:` paths in presets are rejec
 ```
 kernel.extension.stage {source}
   1. resolve into extensions/staging/<uuid>/ with install scripts disabled:
-     npm and git: the kernel's bundled pnpm (a dependency of @kvman/kernel, run with the kernel's own Node;
-       never a global pnpm or corepack): pnpm add --ignore-scripts --prod, node-linker=hoisted,
-       so the snapshot owns every byte (needs the network); npm packages come from the registry named by
-       KVMAN_NPM_REGISTRY at kernel start (default https://registry.npmjs.org/; tests use a local registry)
+     npm and git: the kernel's bundled pnpm executable (pnpm 12's native binary from the @pnpm/exe.<platform>
+       package installed with @kvman/kernel; never downloaded, never a global pnpm or corepack; ADR 0113):
+       pnpm add --ignore-scripts --prod, node-linker=hoisted, package-import-method=copy, store and cache inside
+       the staging tree, so the snapshot owns every byte (needs the network); npm packages come from the registry
+       named by KVMAN_NPM_REGISTRY at kernel start (default https://registry.npmjs.org/; tests use a local registry).
+       Every such source becomes one package tarball that pnpm installs (ADR 0116): npm downloads dist.tarball and
+       checks it against dist.integrity; git clones (flags of §6.1), checks out the exact commit, verifies HEAD, and
+       packs the checkout with pnpm pack (scripts disabled); a dev folder is packed the same way. Resolution is
+       killed after 5 minutes (EXT_SOURCE_INVALID, ADR 0118). pnpm's bookkeeping (store, cache, lockfile,
+       node_modules/.pnpm, .modules.yaml, .bin folders, the root package.json) is removed, so the snapshot is
+       node_modules/<name>/ plus its hoisted dependencies, and the entry is node_modules/<name>/<main>
      builtin: the release tarball already contains the package and all its dependencies (packed at release
        build time), so it is only unpacked and checked against the digest list shipped with the release; no
        network, no pnpm
@@ -35,10 +42,12 @@ kernel.extension.stage {source}
        @kvman/sdk to the kernel's own copy, so the snapshot never contains one (pnpm runs with auto-install-peers=false)
      - a `main` file that does not exist: kvman never runs build scripts, so the package must contain its
        built JavaScript (EXT_SOURCE_INVALID "publish or commit the built files")
-     - undeclared imports: every .js/.mjs/.cjs file is scanned with es-module-lexer; each static import and
-       each dynamic import with a literal specifier must name a Node built-in (node:*), a relative file inside
-       the tree, or a package in dependencies / peerDependencies (EXT_SOURCE_INVALID, naming file and
-       specifier); a dynamic import with a computed specifier is a warning
+     - @kvman/sdk listed in dependencies (EXT_SOURCE_INVALID "declare @kvman/sdk in peerDependencies", ADR 0117)
+     - undeclared imports: every .js/.mjs/.cjs file of the extension package (not its dependencies) is scanned
+       with es-module-lexer; each static import and each dynamic import with a literal specifier must name a Node
+       built-in (with or without node:), a relative path inside the package folder, or a package in dependencies /
+       peerDependencies (EXT_SOURCE_INVALID, naming file and specifier; self-reference, # imports, absolute paths,
+       and URLs fail too); a dynamic import with a computed specifier is a warning (code DYNAMIC_IMPORT, ADR 0117)
   3. build the canonical **file list** (every file's path, size, sha256) → snapshot digest
   4. run setup in the sandboxed loader process (read-only access to the staged tree, no child
      processes, no native addons, no kernel access, deadline 10 s) with a recording ext → the extension's **manifest** (05 §5.12)
@@ -48,8 +57,11 @@ kernel.extension.stage {source}
       { name, version, title, summary?, description, namespace, source, digest, integrity? (absent for dev:/local:),
         capabilities: { requested: [{ name, reason, types? }], derived: { subscribes, providesLlm } },
         isolation: { mode, reason } | null,
-        types: [{ type, kind, access?, agentTool }], contributions: [{ id, kind, slot?, target? }],
-        warnings: Issue[] (severity 'warning', e.g. code 'NATIVE_CODE': "uses native code"),
+        types: [{ type, kind, access?, agentTool }], contributions: [{ id, kind, slot?, target? }]
+          (kind is the register call's noun: page, navGroup, navItem, toolbarItem, statusItem, panel, slot, action,
+          rendererTarget, renderer, component, settingsSection; ADR 0118),
+        warnings: Issue[] (severity 'warning': code 'NATIVE_CODE' "uses native code" when the snapshot holds a
+          .node file, 'DYNAMIC_IMPORT', and the manifest's validation warnings; ADR 0118),
         translations: { [locale]: { title?, summary?, reasons: { [capability]: text } } }
           (the staged catalogs' entries for title, summary, and reasons, every shipped locale),
         confirmationToken, expiresAt (10 min) }
@@ -58,7 +70,8 @@ kernel.extension.install {confirmationToken}
   6. re-verify staged bytes against the digest (else CONFIRMATION_EXPIRED)
   7. atomically move to extensions/snapshots/<digest>/ (+ manifest.json and files.json, the file list)
   8. record extension_versions row (with integrity); set active_digest if this is the first version
-  → event kernel.extension.installed
+  → event kernel.extension.installed (an already installed digest replies { name, digest } with no row and no
+    event; ADR 0118)
 ```
 
 Installing never enables. Enabling happens through a workspace preset (§6.4). Interrupted staging trees are deleted at boot.
@@ -150,7 +163,7 @@ Failure at any step leaves the previous version active.
 
 ## 6.9 Builtin extensions and first run
 
-- The kernel package ships core extensions as self-contained tarballs (each includes its dependencies) plus a digest list, so first run and upgrades work offline. `pnpm build` produces them: `scripts/pack-builtins` packs every `extensions/*` package into `packages/kernel/builtin/<name>.tgz` and writes `digests.json`, so development builds and tests install core extensions exactly as a release does. On first run (and on upgrade), the kernel installs them through the same pipeline with source `builtin:<name>`, so they are snapshotted, verified, and versioned like any other extension; core extensions never bypass the install pipeline.
+- The kernel package ships core extensions as self-contained tarballs (each includes its dependencies) plus a digest list, so first run and upgrades work offline. `pnpm build` produces them: `scripts/pack-builtins` packs every `extensions/*` package into `packages/kernel/builtin/<name>.tgz` (the package name without `@` and with `/` replaced by `-`; the tarball holds the tree a staging install produces) and writes `digests.json` (`{ [name]: { file, digest } }`, the snapshot digest of the unpacked tree; ADR 0115), so development builds and tests install core extensions exactly as a release does. On first run (and on upgrade), the kernel installs them through the same pipeline with source `builtin:<name>`, so they are snapshotted, verified, and versioned like any other extension; core extensions never bypass the install pipeline.
 - First run also seeds the built-in presets and creates the Home workspace (`03` §3.9). No preset is applied until the person chooses one on the shell's first-run screen (`08` §8.3, `07` §7.6).
 
 ## 6.10 Capability grant flow

@@ -1,4 +1,5 @@
 import { parentPort, workerData } from 'node:worker_threads';
+import { resolveSdkToKernel } from './sdk-resolution.ts';
 import { WorkerRuntime } from './worker-runtime.ts';
 
 function databaseFileOf(data: unknown): string {
@@ -7,6 +8,7 @@ function databaseFileOf(data: unknown): string {
 }
 
 if (parentPort === null) throw new Error('the host worker runs only as a worker thread');
+resolveSdkToKernel();
 const port = parentPort;
 const runtime = new WorkerRuntime((frame) => port.postMessage(frame), databaseFileOf(workerData));
 port.on('message', (value: unknown) => runtime.receive(value));

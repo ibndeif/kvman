@@ -7,6 +7,7 @@ import { kernelProblem, ProblemError } from '../problems.ts';
 import { systemTimers } from '../scheduler/timers.ts';
 import { createUlidGenerator } from '../ulid.ts';
 import { Kernel, type DaemonLogger } from './kernel-daemon.ts';
+import { npmRegistryFrom } from './npm-registry.ts';
 import { RotatingLogFile } from './log-file.ts';
 import { pinoKernelLogger, teeDestination } from './pino-logger.ts';
 
@@ -45,8 +46,8 @@ async function main(): Promise<void> {
   try {
     const faults = faultPointsOf(process.env['KVMAN_FAULTS'], ids.next());
     const kernel = await Kernel.boot({
-      home, ...(port === undefined ? {} : { port: Number(port) }), extensions: { extensions: [], enabled: new Map() },
-      grants: { capabilities: () => undefined }, modules: { entry: (extension) => { throw new Error(`no installed snapshot of ${extension}`); } },
+      home, ...(port === undefined ? {} : { port: Number(port) }), enabled: new Map(), grants: { capabilities: () => undefined },
+      npmRegistry: npmRegistryFrom(process.env), environment: process.env,
       poolSize: Math.max(1, Math.min(4, availableParallelism() - 1)), ids, now: Date.now, timers: systemTimers,
       openLogger: (folder) => openLogger(folder, foreground === true), defaultLocale: () => 'en', faults,
     });

@@ -33,7 +33,7 @@ describe('health (plan 03 §3.8, ADRs 0092, 0099)', workerTests, () => {
 
   it('M1.8-E29 health is degraded while an extension is quarantined', async () => {
     expect((await health()).status).toBe('ok');
-    fixture.kernel.connection.prepare("INSERT INTO extensions (name, status, quarantine_reason) VALUES ('@acme/counter', 'quarantined', 'HOST_FAILURES')").run();
+    fixture.kernel.connection.prepare("UPDATE extensions SET status = 'quarantined', quarantine_reason = 'HOST_FAILURES' WHERE name = '@acme/counter'").run();
     expect((await health()).status).toBe('degraded');
   });
 

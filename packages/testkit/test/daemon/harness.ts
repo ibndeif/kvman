@@ -3,7 +3,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createUlidGenerator, Kernel, type DaemonLogger, type LogRecord } from '@kvman/kernel';
 import type { Capabilities } from '@kvman/protocol';
-import { defaultGrants, entryOf, ManualTimers, registryInput, workspaceA } from '../hosts/harness.ts';
+import { defaultGrants, enabledWorkspaces, installHostFixtures, ManualTimers, workspaceA } from '../hosts/harness.ts';
+import { closedRegistry, noBuiltins, prepareHome } from '../install/fixture-snapshots.ts';
 
 // A booted kernel in its own home folder (03 §3.9): the fixture extensions on real worker threads, the manual kernel
 // clock for every kernel timer (waits, pings, the shutdown grace), and a real HTTP listener.
@@ -26,11 +27,13 @@ export function temporaryHome(): string {
 
 export async function bootFixture(options: BootFixtureOptions = {}): Promise<DaemonFixture> {
   const home = options.home ?? temporaryHome();
+  await prepareHome(home, installHostFixtures);
   const timers = options.timers ?? new ManualTimers();
   const logged = options.logged ?? [];
   const grants = { ...defaultGrants };
   const kernel = await Kernel.boot({
-    home, ...(options.port === undefined ? {} : { port: options.port }), extensions: registryInput(), grants: { capabilities: (extension) => grants[extension] }, modules: { entry: entryOf }, poolSize: 1,
+    home, ...(options.port === undefined ? {} : { port: options.port }), enabled: enabledWorkspaces(), grants: { capabilities: (extension) => grants[extension] },
+    builtin: noBuiltins(home), npmRegistry: closedRegistry, environment: {}, poolSize: 1,
     ids: createUlidGenerator(Date.now), now: () => timers.time.value, timers,
     openLogger: options.openLogger ?? (() => ({ write: (record) => logged.push(record), close: () => undefined })), defaultLocale: () => 'en',
   });

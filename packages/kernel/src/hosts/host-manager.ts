@@ -1,6 +1,5 @@
 import {
-  hostToKernelFrameSchema, type AbortReason, type CompleteFrame, type KernelErrorCode, type KernelToHostFrame, type Problem,
-  type QuarantineReason, type RpcCall, type RpcResult,
+  hostToKernelFrameSchema, type AbortReason, type CompleteFrame, type KernelToHostFrame, type Problem, type QuarantineReason, type RpcCall, type RpcResult,
 } from '@kvman/protocol';
 import { kernelProblem } from '../problems.ts';
 import type { KernelRegistry } from '../registry/kernel-registry.ts';
@@ -10,18 +9,15 @@ import type { SchedulerTimers, TimerHandle } from '../scheduler/timers.ts';
 import type { Connection } from '../storage/driver.ts';
 import type { UlidGenerator } from '../ulid.ts';
 import type { ActiveInvocation } from './active-invocation.ts';
+import { abortProblem, stuckGraceMs, type Aborted } from './aborted-invocations.ts';
 import type { FaultPoints } from '../faults/fault-points.ts';
 import type { HostFailures } from './host-failures.ts';
 import type { StartHostThread } from './host-thread.ts';
 import type { KernelLogger } from './kernel-logger.ts';
 import { noRecordedValues, type RecordedValueStore } from './recorded-value-store.ts';
+import { SnapshotGate, type ExtensionSnapshots } from './snapshot-gate.ts';
 import { WorkerPool, type PoolWorker } from './worker-pool.ts';
 import { readWorkspace } from './workspace-rows.ts';
-
-// Each extension's entry module; given as data until M2.2's snapshots provide it (ADR 0071).
-export interface ExtensionModules {
-  entry(extension: string): string;
-}
 
 // Where host events go: the RPC service, the settlement of invocations, quarantine, and the kernel host.
 export interface InvocationSink {
@@ -33,15 +29,16 @@ export interface InvocationSink {
   timedOut(invocation: ActiveInvocation, reason: 'deadline' | 'timeout'): Promise<void>;
   aborted(invocation: ActiveInvocation): void;
   collateral(invocation: ActiveInvocation): Promise<void>;
-  interrupted(invocation: ActiveInvocation): Promise<void>;
+  interrupted(run: Pick<ActiveInvocation, 'claim' | 'live'>): Promise<void>;
   quarantine(extension: string, reason: QuarantineReason): Promise<void>;
   kernelCommand(claim: Claim): Promise<void>;
+  integrityFailed(claim: Claim): Promise<void>;
 }
 
 export type HostManagerOptions = {
   connection: Connection;
   registry: () => KernelRegistry;
-  modules: ExtensionModules;
+  snapshots: ExtensionSnapshots;
   values: RecordedValueStore;
   logger: KernelLogger;
   ids: UlidGenerator;
@@ -53,23 +50,13 @@ export type HostManagerOptions = {
   faults: FaultPoints;
 };
 
-// 03 §3.4: an invocation that has not settled 2 s after its abort makes its host stuck.
-export const stuckGraceMs = 2_000;
-
-type Aborted = { invocation: ActiveInvocation; reason: AbortReason; grace: TimerHandle };
-
-function abortProblem({ invocation, reason }: Aborted): Problem {
-  const { message } = invocation.claim;
-  const codes: Record<AbortReason, KernelErrorCode> = { cancelled: 'CANCELLED', deadline: 'DEADLINE_EXCEEDED', timeout: message.kind === 'query' ? 'QUERY_TIMEOUT' : 'HANDLER_TIMEOUT' };
-  return kernelProblem(codes[reason], { correlationId: message.correlationId, messageId: message.id });
-}
-
 // The shared pool behind the scheduler's dispatcher interface (ADRs 0060, 0071), with the supervision of 03 §3.6:
 // invocation deadlines, aborts, stuck hosts, crashes and their charges (ADRs 0082, 0084). Kernel commands go to the
 // kernel host (ADR 0078).
 export class HostManager implements Dispatcher {
   readonly #options: HostManagerOptions;
   readonly #pool: WorkerPool;
+  readonly #gate: SnapshotGate;
   readonly #active = new Map<string, ActiveInvocation>();
   readonly #deadlines = new Map<string, TimerHandle>();
   readonly #aborted = new Map<string, Aborted>();
@@ -80,6 +67,7 @@ export class HostManager implements Dispatcher {
 
   constructor(options: HostManagerOptions) {
     this.#options = options;
+    this.#gate = new SnapshotGate(options.snapshots);
     this.#pool = new WorkerPool(options.poolSize, options.startThread, {
       frame: (worker, value) => this.#frame(worker, value),
       failed: (worker, error) => this.#log(`host thread ${worker.id} failed`, { error: error instanceof Error ? error.name : 'unknown' }),
@@ -103,6 +91,11 @@ export class HostManager implements Dispatcher {
       this.#track(sink.kernelCommand(claim));
       return;
     }
+    const entry = this.#gate.entry(claim.extension);
+    if (entry === undefined) {
+      this.#track(this.#verifyThenDispatch(claim));
+      return;
+    }
     const { message } = claim;
     const workspace = message.workspaceId === undefined ? undefined : readWorkspace(this.#options.connection, message.workspaceId);
     if (message.workspaceId !== undefined && workspace === undefined) {
@@ -119,12 +112,22 @@ export class HostManager implements Dispatcher {
     this.#pool.post(worker, {
       frame: 'invoke', invocationId: invocation.id, extension: claim.extension, handler: claim.handler, kind: message.kind, message,
       readOnly: message.kind === 'query', deadlineAt: claim.deadlineAt, recorded: claim.stored ? this.#options.values.load(message.id) : noRecordedValues,
-      ...(workspace === undefined ? {} : { workspace }), ...this.#moduleFor(worker, claim.extension),
+      ...(workspace === undefined ? {} : { workspace }), ...this.#moduleFor(worker, claim.extension, entry),
     });
+  }
+
+  // 06 §6.5: the first load of an extension in this process waits for its snapshot's rehash; a mismatch fails the
+  // message and quarantines the extension with EXT_INTEGRITY.
+  async #verifyThenDispatch(claim: Claim): Promise<void> {
+    const outcome = await this.#gate.admit(claim);
+    if (outcome === 'dropped' || this.#stopping) return;
+    if (outcome === 'verified') this.dispatch(claim);
+    else await this.#connected().integrityFailed(claim);
   }
 
   // ADR 0083: the running invocations of cancelled messages are aborted; their live events are reset.
   abortMessages(messageIds: ReadonlySet<string>): void {
+    this.#gate.drop(messageIds);
     for (const invocation of [...this.#active.values()].filter((candidate) => messageIds.has(candidate.claim.message.id))) {
       this.#abort(invocation, 'cancelled');
       this.#connected().aborted(invocation);
@@ -138,9 +141,12 @@ export class HostManager implements Dispatcher {
       const finish = (): void => {
         grace.cancel();
         this.#idle = undefined;
-        const interrupted = [...this.#active.values()].map((invocation) => {
+        const waiting = this.#gate.takeAll().map((claim) => ({ claim, live: new Map() }));
+        const interrupted = [...[...this.#active.values()].map((invocation) => {
           this.#end(invocation);
-          const settled = this.#connected().interrupted(invocation);
+          return invocation;
+        }), ...waiting].map((run) => {
+          const settled = this.#connected().interrupted(run);
           this.#track(settled);
           return settled;
         });
@@ -165,12 +171,12 @@ export class HostManager implements Dispatcher {
     return this.#pool.workers();
   }
 
-  #moduleFor(worker: PoolWorker, extension: string): Pick<Extract<KernelToHostFrame, { frame: 'invoke' }>, 'module'> {
+  #moduleFor(worker: PoolWorker, extension: string, entry: string): Pick<Extract<KernelToHostFrame, { frame: 'invoke' }>, 'module'> {
     if (worker.loaded.has(extension)) return {};
     const manifest = this.#options.registry().manifestOf(extension);
     if (manifest === undefined) throw new Error(`no installed manifest for ${extension}`);
     worker.loaded.add(extension);
-    return { module: { entry: this.#options.modules.entry(extension), manifest } };
+    return { module: { entry, manifest } };
   }
 
   #deadlineReached(invocation: ActiveInvocation): void {

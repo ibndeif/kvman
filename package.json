@@ -10,13 +10,14 @@
     "typecheck": "turbo run typecheck && tsc -p tsconfig.json",
     "lint": "eslint . --max-warnings=0",
     "test": "vitest run",
-    "build": "turbo run build",
+    "build": "turbo run build && node --conditions=@kvman/source scripts/pack-builtins.ts",
     "bench:check": "node --conditions=@kvman/source packages/testkit/bench/main.ts check",
     "bench:record": "node --conditions=@kvman/source packages/testkit/bench/main.ts record",
     "changeset": "changeset"
   },
   "devDependencies": {
     "@changesets/cli": "3.0.3",
+    "@kvman/kernel": "workspace:*",
     "@playwright/test": "1.63.0",
     "@types/node": "24.13.6",
     "eslint": "10.11.0",

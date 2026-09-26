@@ -61,7 +61,7 @@ export const kernelErrors = {
   DAEMON_CONFLICT: { title: 'Another kernel owns this home folder', description: 'Another kernel owns the lock of this home folder.', retryable: false },
   HOME_INVALID: { title: 'The home folder holds other files', description: 'The home folder holds other files but no kvman.db.', retryable: false },
   HOST_FORBIDDEN: { title: 'The request Host or Origin is not allowed', description: 'A bad Host or Origin, or a refused Sec-Fetch-Site.', retryable: false },
-  NOT_FOUND: { title: 'The resource does not exist', description: 'An unknown message id or route, or a subscription for a stream with no open connection.', retryable: false },
+  NOT_FOUND: { title: 'The resource does not exist', description: 'An unknown message id, route, or extension, or a subscription for a stream with no open connection.', retryable: false },
   PORT_UNAVAILABLE: { title: 'No port is free for the kernel', description: 'No port is free in 4173–4199, or the --port given is taken.', retryable: false },
   KERNEL_STOPPING: { title: 'The kernel is shutting down', description: 'A request arrived during shutdown.', retryable: true },
   INTERNAL: { title: 'Unexpected error', description: 'An unexpected error; the details are in the log.', retryable: true },

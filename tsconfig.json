@@ -2,8 +2,20 @@
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
-    "types": ["node"]
+    "types": [
+      "node"
+    ],
+    "customConditions": [
+      "@kvman/source"
+    ]
   },
-  "include": ["test", "scripts", "eslint", "vitest.config.ts"],
-  "exclude": ["test/fixtures"]
+  "include": [
+    "test",
+    "scripts",
+    "eslint",
+    "vitest.config.ts"
+  ],
+  "exclude": [
+    "test/fixtures"
+  ]
 }

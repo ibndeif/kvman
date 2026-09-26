@@ -1,5 +1,6 @@
 import type { Address, DeferredReply, Json, Message, OutboundPublish, OutboundSend, Problem, QuarantineReason, ReplyPayload, StoreWrite } from '@kvman/protocol';
 import type { Connection } from './driver.ts';
+import type { ExtensionChange } from './extension-changes.ts';
 
 export type MessageState = 'pending' | 'running' | 'awaiting' | 'done' | 'failed' | 'dead' | 'cancelled';
 
@@ -26,6 +27,9 @@ export type UnitOrigin =
   | { kind: 'cancel'; invocation: CommitInvocation; messageIds: readonly string[]; unstored: number }
   | { kind: 'expire'; messageIds: readonly string[]; correlationId: string }
   | { kind: 'quarantine'; extension: string; reason: QuarantineReason; correlationId: string }
+  // A change to the extension catalog (06 §6.2, §6.8), by a kernel command, which it replies to, or by the kernel
+  // itself at first run.
+  | { kind: 'extensions'; change: ExtensionChange; command?: Message; correlationId: string }
   | { kind: 'announce'; correlationId: string };
 
 export type CommitUnit = {
@@ -101,7 +105,7 @@ export type CommitResult = ({ committed: true } & AppliedMessages) | { committed
 
 export function correlationOf(origin: UnitOrigin): string {
   if (origin.kind === 'invocation' || origin.kind === 'cancel') return origin.invocation.message.correlationId;
-  if (origin.kind === 'expire' || origin.kind === 'quarantine' || origin.kind === 'announce') return origin.correlationId;
+  if (origin.kind === 'expire' || origin.kind === 'quarantine' || origin.kind === 'announce' || origin.kind === 'extensions') return origin.correlationId;
   if (origin.kind === 'call') return origin.cause.correlationId;
   return origin.kind === 'retry' ? origin.message.correlationId : origin.messageId;
 }
@@ -115,5 +119,6 @@ export function senderOf(origin: UnitOrigin): Sender {
 export function causeOf(origin: UnitOrigin): Message | undefined {
   if (origin.kind === 'invocation' || origin.kind === 'cancel') return origin.invocation.message;
   if (origin.kind === 'call') return origin.cause;
+  if (origin.kind === 'extensions') return origin.command;
   return origin.kind === 'retry' ? origin.message : undefined;
 }

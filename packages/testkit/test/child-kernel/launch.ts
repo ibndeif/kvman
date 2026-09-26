@@ -9,7 +9,7 @@ export type Exit = { code: number | null; signal: NodeJS.Signals | null };
 
 export type ChildKernel = { port: number; pid: number; exited: Promise<Exit>; stop(): Promise<Exit> };
 
-export type LaunchOptions = { home: string; fixture: 'ledger' | 'bench'; faults?: string };
+export type LaunchOptions = { home: string; fixture: 'ledger' | 'bench' | 'first-run'; faults?: string; builtin?: string; environment?: NodeJS.ProcessEnv };
 
 const entry = fileURLToPath(new URL('./child-kernel.ts', import.meta.url));
 
@@ -20,9 +20,10 @@ export function temporaryHome(parent = tmpdir()): string {
 
 function forkKernel(options: LaunchOptions): { child: ChildProcess; exited: Promise<Exit> } {
   const { KVMAN_FAULTS: _inherited, ...environment } = process.env;
-  const child = fork(entry, ['--home', options.home, '--fixture', options.fixture], {
+  const builtin = options.builtin === undefined ? [] : ['--builtin', options.builtin];
+  const child = fork(entry, ['--home', options.home, '--fixture', options.fixture, ...builtin], {
     execArgv: ['--conditions=@kvman/source'], stdio: ['ignore', 'ignore', 'inherit', 'ipc'],
-    env: options.faults === undefined ? environment : { ...environment, KVMAN_FAULTS: options.faults },
+    env: { ...environment, ...options.environment, ...(options.faults === undefined ? {} : { KVMAN_FAULTS: options.faults }) },
   });
   const exited = new Promise<Exit>((resolve) => child.once('exit', (code, signal) => resolve({ code, signal })));
   return { child, exited };

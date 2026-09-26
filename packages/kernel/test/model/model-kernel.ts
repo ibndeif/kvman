@@ -1,8 +1,8 @@
 import type { CompleteFrame, HostOutcome, HostUnitOfWork, Json } from '@kvman/protocol';
 import {
-  AdapterPath, betterSqlite3Driver, CommitPipeline, KernelHost, kernelOwner, KernelQueries, KernelRegistry, LiveBus, openKernelDatabase, PayloadValidators, PendingIndex,
-  Quarantines, QueryPath, recoverInterrupted, RecordedValueStore, RegistryState, ReplyWaiters, Router, Scheduler, Settlement,
-  type Claim, type Connection, type Dispatcher, type HostLoad, type RegistryInput,
+  AdapterPath, betterSqlite3Driver, CommitPipeline, ExtensionQueries, insertVersionRows, KernelCommits, KernelHost, kernelOwner, kernelProblem, KernelQueries,
+  KernelRegistry, LiveBus, openKernelDatabase, PayloadValidators, PendingIndex, Quarantines, QueryPath, recoverInterrupted, RecordedValueStore, RegistryState,
+  ReplyWaiters, Router, Scheduler, Settlement, type Claim, type Connection, type Dispatcher, type ExtensionLifecycle, type HostLoad,
 } from '../../src/index.ts';
 import { manifest, workspaceA } from '../registry/manifests.ts';
 import { MapGrants } from '../router/harness.ts';
@@ -64,15 +64,23 @@ export type ModelKernel = {
   adapter: AdapterPath;
 };
 
-function registryInput(): RegistryInput {
-  return { extensions: [{ manifest: model, quarantined: false }], enabled: new Map([[workspaceA, [modelExtension]]]) };
+// ADR 0114: the model extension is installed as its rows; the dispatcher double never loads its code.
+function installModel(connection: Connection): void {
+  insertVersionRows(connection, { name: modelExtension, digest: 'a'.repeat(64), source: `local:${'a'.repeat(64)}`, manifest: model, installedAt: startTime });
+}
+
+// The model has no install pipeline: its lifecycle commands fail.
+function noLifecycle(commits: KernelCommits): ExtensionLifecycle {
+  const refuse = (claim: Claim): Promise<void> => commits.fail(claim, kernelProblem('INTERNAL', { correlationId: claim.message.correlationId, detail: 'the model kernel installs nothing' }));
+  return { stage: refuse, install: refuse, uninstall: refuse };
 }
 
 // Every commit is applied as it is enqueued (one unit per batch), so nothing waits on a real timer.
 export async function bootModelKernel(file: string, time: TestTime = { value: startTime }): Promise<ModelKernel> {
   const connection = openKernelDatabase(file, betterSqlite3Driver, ulids.next());
   const now = (): number => time.value;
-  const registry = new RegistryState(registryInput(), connection);
+  installModel(connection);
+  const registry = new RegistryState(new Map([[workspaceA, [modelExtension]]]), connection);
   const current = (): KernelRegistry => registry.current();
   const grants = new MapGrants();
   grants.grant(modelExtension, workspaceA, {});
@@ -92,11 +100,12 @@ export async function bootModelKernel(file: string, time: TestTime = { value: st
   const settlement = new Settlement({
     pipeline, scheduler, waiters, queries, live: new LiveBus(), values: new RecordedValueStore(connection), quarantines: new Quarantines(pipeline, registry, ulids),
   });
+  const commits = new KernelCommits(pipeline, scheduler, waiters);
   dispatcher.kernel = new KernelHost({
-    connection, pipeline, scheduler, waiters, grants, queries, abortMessages: (ids) => dispatcher.abort(ids),
+    connection, commits, scheduler, grants, queries, abortMessages: (ids) => dispatcher.abort(ids), extensions: noLifecycle(commits),
     requestShutdown: () => undefined,
     kernelQueries: new KernelQueries({
-      connection, registry: current, version: '0.0.0',
+      connection, registry: current, version: '0.0.0', extensions: new ExtensionQueries(connection, registry, grants),
       health: () => ({ status: 'ok', version: '0.0.0', instanceId: '0b5c7f2e-4a1d-4c3b-9e8f-1a2b3c4d5e6f', processStart: 'x', uptimeMs: 0, port: 4173, home: '/h' }),
     }),
   });

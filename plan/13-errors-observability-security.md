@@ -70,7 +70,7 @@ type Issue = {
 | `DAEMON_CONFLICT` | another kernel owns the lock | Another kernel owns this home folder | no |
 | `HOME_INVALID` | the home folder holds other files but no `kvman.db` (`03` §3.9) | The home folder holds other files | no |
 | `HOST_FORBIDDEN` | bad `Host` or `Origin`, or a refused `Sec-Fetch-Site` | The request Host or Origin is not allowed | no |
-| `NOT_FOUND` | an unknown message id or route, or a subscription for a stream with no open connection (ADR 0095) | The resource does not exist | no |
+| `NOT_FOUND` | an unknown message id, route, or extension, or a subscription for a stream with no open connection (ADRs 0095, 0119) | The resource does not exist | no |
 | `PORT_UNAVAILABLE` | no free port in 4173–4199 (`{ from, to }`), or the `--port` given is taken (`{ port }`) (ADR 0095) | No port is free for the kernel | no |
 | `KERNEL_STOPPING` | a request that arrives during shutdown (ADR 0090) | The kernel is shutting down | yes |
 | `INTERNAL` | unexpected error (details in the log) | Unexpected error | yes |

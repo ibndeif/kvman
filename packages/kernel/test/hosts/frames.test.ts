@@ -30,14 +30,14 @@ describe('host frames (ADR 0076)', () => {
       called: async () => ({ ok: true }), completed: async () => undefined, refused: async () => undefined, loadFailed: async () => undefined,
       timedOut: async () => undefined, aborted: () => undefined, collateral: async () => undefined, interrupted: async () => undefined,
       quarantine: async () => undefined,
-      kernelCommand: async () => undefined,
+      kernelCommand: async () => undefined, integrityFailed: async () => undefined,
       lost: async (invocation) => {
         lost.push(invocation);
       },
     };
     const { start, started } = fakeThreads();
     const hosts = new HostManager({
-      connection, registry: () => build.registry, modules: { entry: () => '/x/notes.ts' }, values: new RecordedValueStore(connection),
+      connection, registry: () => build.registry, snapshots: { verifiedEntry: () => '/x/notes.ts', verify: async () => true }, values: new RecordedValueStore(connection),
       logger: { write: (record) => logged.push(record) }, ids: ulids, poolSize: 1, startThread: start,
       timers: { set: () => ({ cancel: () => undefined }) }, now: () => 1, failures: new HostFailures(), faults: inertFaults,
     });

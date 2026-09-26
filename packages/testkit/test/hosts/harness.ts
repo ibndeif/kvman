@@ -3,11 +3,12 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  betterSqlite3Driver, createUlidGenerator, KernelRuntime, openKernelDatabase, recordExtension,
-  type AdapterCommand, type Connection, type KernelIdentity, type LiveFrame, type LogRecord, type RegistryInput, type SchedulerTimers, type TimerHandle,
+  betterSqlite3Driver, createUlidGenerator, KernelRuntime, openKernelDatabase, verifyEnabledSnapshots,
+  type AdapterCommand, type Connection, type EnabledExtensions, type KernelIdentity, type LiveFrame, type LogRecord, type SchedulerTimers, type TimerHandle,
 } from '@kvman/kernel';
 import type { Capabilities, Json, JsonObject, Manifest, ReplyPayload } from '@kvman/protocol';
 import type { ExtensionDefinition } from '@kvman/sdk';
+import { closedRegistry, installFixture, noBuiltins } from '../install/fixture-snapshots.ts';
 import { expect, vi } from 'vitest';
 import audit from './fixtures/extensions/audit.ts';
 import counter from './fixtures/extensions/counter.ts';
@@ -24,10 +25,10 @@ export const workerTests = { timeout: 30_000 } as const;
 // Scheduler wake-ups the test fires by moving the kernel's clock (retry backoffs); handlers keep real time.
 export class ManualTimers implements SchedulerTimers {
   readonly time = { value: 1_790_000_000_000 };
-  readonly #timers: Array<{ at: number; fire: () => void; cancelled: boolean }> = [];
+  readonly #timers: Array<{ at: number; delayMs: number; fire: () => void; cancelled: boolean }> = [];
 
   set(delayMs: number, fire: () => void): TimerHandle {
-    const timer = { at: this.time.value + delayMs, fire, cancelled: false };
+    const timer = { at: this.time.value + delayMs, delayMs, fire, cancelled: false };
     this.#timers.push(timer);
     return { cancel: () => { timer.cancelled = true; } };
   }
@@ -42,7 +43,12 @@ export class ManualTimers implements SchedulerTimers {
     this.time.value = target;
   }
 
-  #next(target: number): { at: number; fire: () => void; cancelled: boolean } | undefined {
+  // The delays of the timers still waiting, so a test can move the clock once a timer it expects is set.
+  pendingDelays(): number[] {
+    return this.#timers.filter((timer) => !timer.cancelled).map((timer) => timer.delayMs);
+  }
+
+  #next(target: number): { at: number; delayMs: number; fire: () => void; cancelled: boolean } | undefined {
     return this.#timers.filter((timer) => !timer.cancelled && timer.at <= target).sort((left, right) => left.at - right.at)[0];
   }
 }
@@ -56,18 +62,23 @@ const fixtures: Record<string, Fixture> = {
   '@acme/drift': { definition: drift, file: 'drift.ts' },
 };
 
-export function entryOf(extension: string): string {
-  const fixture = fixtures[extension];
-  if (fixture === undefined) throw new Error(`no fixture ${extension}`);
-  return fileURLToPath(new URL(`./fixtures/extensions/${fixture.file}`, import.meta.url));
+export const fixtureFolder = fileURLToPath(new URL('./fixtures/extensions/', import.meta.url));
+
+// @acme/drift's stored manifest differs from what its setup records, so loading it fails (ADR 0081).
+function drifted(manifest: Manifest): Manifest {
+  return { ...manifest, types: manifest.types.map((entry) => ({ ...entry, description: 'Changed after recording.' })) };
 }
 
-function manifestOf(extension: string): Manifest {
-  const fixture = fixtures[extension];
-  if (fixture === undefined) throw new Error(`no fixture ${extension}`);
-  const { manifest } = recordExtension(fixture.definition, { packageName: fixture.definition.meta.name, version: '1.0.0', correlationId });
-  if (extension !== '@acme/drift') return manifest;
-  return { ...manifest, types: manifest.types.map((entry) => ({ ...entry, description: 'Changed after recording.' })) };
+// ADR 0114: the host fixtures, installed as snapshots in the home folder.
+export async function installHostFixtures(connection: Connection, home: string): Promise<void> {
+  for (const [name, fixture] of Object.entries(fixtures)) {
+    await installFixture(connection, home, { definition: fixture.definition, folder: fixtureFolder, entry: fixture.file, ...(name === '@acme/drift' ? { manifest: drifted } : {}) });
+  }
+}
+
+export function enabledWorkspaces(): EnabledExtensions {
+  const names = Object.keys(fixtures);
+  return new Map([[workspaceA, names], [workspaceB, names]]);
 }
 
 export const defaultGrants: Record<string, Capabilities> = {
@@ -87,28 +98,22 @@ export type HostFixture = {
   close(): Promise<void>;
 };
 
-export function registryInput(): RegistryInput {
-  const names = Object.keys(fixtures);
-  return {
-    extensions: names.map((name) => ({ manifest: manifestOf(name), quarantined: false })),
-    enabled: new Map([[workspaceA, names], [workspaceB, names]]),
-  };
-}
-
 type Shared = Pick<HostFixture, 'connection' | 'databaseFile' | 'grants' | 'timers' | 'logged' | 'live' | 'shutdownRequests'> & { poolSize: number };
 
 async function startRuntime(shared: Shared): Promise<HostFixture> {
   const ids = createUlidGenerator(Date.now);
   const { connection, databaseFile, grants, timers, logged, live, shutdownRequests } = shared;
   const runtime = new KernelRuntime({
-    databaseFile, connection, extensions: registryInput(), ids, now: () => timers.time.value, timers, poolSize: shared.poolSize,
-    grants: { capabilities: (extension) => grants[extension] }, modules: { entry: entryOf }, logger: { write: (record) => logged.push(record) },
+    databaseFile, connection, enabled: enabledWorkspaces(), ids, now: () => timers.time.value, timers, poolSize: shared.poolSize,
+    grants: { capabilities: (extension) => grants[extension] }, logger: { write: (record) => logged.push(record) },
+    install: { home: dirname(databaseFile), builtin: noBuiltins(dirname(databaseFile)), registry: closedRegistry, environment: {} },
     defaultLocale: () => 'en', identity: fixtureIdentity(databaseFile, timers.time.value),
     requestShutdown: () => {
       shutdownRequests.count += 1;
     },
   });
   runtime.live.subscribe((frame) => live.push(frame));
+  await verifyEnabledSnapshots(runtime);
   await runtime.start();
   return {
     runtime, connection, databaseFile, grants, timers, logged, live, shutdownRequests,
@@ -124,10 +129,11 @@ function fixtureIdentity(databaseFile: string, startedAt: number): KernelIdentit
   return { version: '0.0.0', instanceId: '0b5c7f2e-4a1d-4c3b-9e8f-1a2b3c4d5e6f', processStart: 'Thu Sep 25 10:00:00 2026', port: 4173, home: dirname(databaseFile), startedAt };
 }
 
-export function openHostFixture(options: { poolSize?: number } = {}): Promise<HostFixture> {
+export async function openHostFixture(options: { poolSize?: number } = {}): Promise<HostFixture> {
   const databaseFile = join(mkdtempSync(join(tmpdir(), 'kvman-hosts-')), 'kvman.db');
   const connection = openKernelDatabase(databaseFile, betterSqlite3Driver, createUlidGenerator(Date.now).next());
   connection.prepare('INSERT INTO workspaces (id, path, name, created_at) VALUES (?, ?, ?, ?)').run(workspaceA, '/w/a', 'A', 1);
+  await installHostFixtures(connection, dirname(databaseFile));
   const shared = { connection, databaseFile, grants: { ...defaultGrants }, timers: new ManualTimers(), logged: [], live: [], shutdownRequests: { count: 0 } };
   return startRuntime({ ...shared, poolSize: options.poolSize ?? 1 });
 }

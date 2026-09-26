@@ -1,18 +1,19 @@
 import { randomUUID } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { kernelPorts, type KernelStarted } from '@kvman/protocol';
 import { EventHub } from '../adapters/events/event-hub.ts';
 import { HttpAdapter } from '../adapters/http/http-adapter.ts';
 import type { FaultPoints } from '../faults/fault-points.ts';
-import type { ExtensionModules } from '../hosts/host-manager.ts';
 import type { StartHostThread } from '../hosts/host-thread.ts';
 import type { KernelLogger } from '../hosts/kernel-logger.ts';
 import { kernelProblem, ProblemError } from '../problems.ts';
-import type { RegistryInput } from '../registry/kernel-registry.ts';
+import type { EnabledExtensions } from '../registry/registry-state.ts';
 import type { GrantsSource } from '../router/grants.ts';
 import type { KernelIdentity } from '../runtime/health.ts';
 import { KernelRuntime } from '../runtime/kernel-runtime.ts';
+import { installBuiltins, verifyEnabledSnapshots } from '../runtime/snapshot-boot.ts';
 import type { SchedulerTimers } from '../scheduler/timers.ts';
 import { betterSqlite3Driver } from '../storage/better-sqlite3-driver.ts';
 import { openKernelDatabase } from '../storage/database.ts';
@@ -24,13 +25,17 @@ import { processStartOf } from './process-identity.ts';
 
 export type DaemonLogger = KernelLogger & { close(): void };
 
-// Until M2.2 installs extensions, their manifests, grants, and entry modules are given as data (ADR 0089).
+// Installed extensions come from the database (ADR 0114); the workspaces that enable them and their grants are data
+// until M2.3 and M2.4. `builtin` is the folder of the builtin tarballs (the kernel package's by default, ADR 0115),
+// `npmRegistry` the value of KVMAN_NPM_REGISTRY, and `environment` the variables pnpm and git inherit (path, proxies).
 export type BootOptions = {
   home: string;
   port?: number;
-  extensions: RegistryInput;
+  enabled: EnabledExtensions;
   grants: GrantsSource;
-  modules: ExtensionModules;
+  builtin?: string;
+  npmRegistry: string;
+  environment: NodeJS.ProcessEnv;
   poolSize: number;
   ids: UlidGenerator;
   now: () => number;
@@ -41,6 +46,16 @@ export type BootOptions = {
   faults?: FaultPoints;
 };
 
+// ADR 0115: the builtin tarballs and digests.json that `pnpm build` puts in the kernel package.
+export function kernelBuiltinFolder(): string {
+  return fileURLToPath(new URL('../../builtin', import.meta.url));
+}
+
+// A first run that failed leaves no database, so the next start is a first run again (ADR 0115).
+function removeDatabase(home: string): void {
+  for (const suffix of ['', '-wal', '-shm']) rmSync(join(home, `kvman.db${suffix}`), { force: true });
+}
+
 // The kvman version is the kernel package's version (ADR 0089).
 export function kernelVersion(): string {
   const manifest: unknown = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
@@ -48,7 +63,7 @@ export function kernelVersion(): string {
   throw new Error('the kernel package.json has no version');
 }
 
-type Resources = { options: BootOptions; logger: DaemonLogger; adapter: HttpAdapter; identity: KernelIdentity; connection: Connection };
+type Resources = { options: BootOptions; logger: DaemonLogger; adapter: HttpAdapter; identity: KernelIdentity; connection: Connection; firstRun: boolean };
 
 // The daemon's kernel (03 §3.9–§3.10): booted in the order of 03 §3.9 and shut down once, however often it is asked.
 export class Kernel {
@@ -65,7 +80,8 @@ export class Kernel {
     this.identity = identity;
     this.connection = connection;
     this.runtime = new KernelRuntime({
-      databaseFile: join(options.home, 'kvman.db'), connection, extensions: options.extensions, grants: options.grants, modules: options.modules,
+      databaseFile: join(options.home, 'kvman.db'), connection, enabled: options.enabled, grants: options.grants,
+      install: { home: options.home, builtin: options.builtin ?? kernelBuiltinFolder(), registry: options.npmRegistry, environment: options.environment },
       logger: resources.logger, ids: options.ids, now: options.now, timers: options.timers, poolSize: options.poolSize,
       defaultLocale: options.defaultLocale, identity, requestShutdown: () => void this.shutdown(),
       ...(options.startThread === undefined ? {} : { startThread: options.startThread }),
@@ -82,6 +98,7 @@ export class Kernel {
     const adapter = new HttpAdapter({ ids, timers: options.timers, logger });
     let nonce: string | undefined;
     let connection: Connection | undefined;
+    const firstRun = !existsSync(join(home, 'kvman.db'));
     let kernel: Kernel | undefined;
     try {
       const port = await adapter.bind(options.port === undefined ? kernelPorts : { port: options.port }, correlationId);
@@ -91,13 +108,14 @@ export class Kernel {
       acquireDaemonLock(home, { pid: process.pid, processStart, nonce: identity.instanceId, port, startedAt: identity.startedAt }, correlationId);
       nonce = identity.instanceId;
       connection = openKernelDatabase(join(home, 'kvman.db'), betterSqlite3Driver, correlationId);
-      kernel = new Kernel({ options, logger, adapter, identity, connection });
+      kernel = new Kernel({ options, logger, adapter, identity, connection, firstRun });
       await kernel.#start();
       return kernel;
     } catch (error) {
       logger.write({ level: 'error', message: 'the kernel did not start', fields: { error: error instanceof Error ? error.message : 'unknown' }, attributes: { correlationId } });
       await kernel?.runtime.stop();
       connection?.close();
+      if (firstRun && connection !== undefined) removeDatabase(home);
       if (nonce !== undefined) releaseDaemonLock(home, nonce);
       await adapter.close();
       logger.close();
@@ -113,7 +131,10 @@ export class Kernel {
   }
 
   async #start(): Promise<void> {
-    const { adapter, identity, logger, options } = this.#resources;
+    const { adapter, identity, logger, options, firstRun } = this.#resources;
+    await this.runtime.install.clearStaging();
+    await verifyEnabledSnapshots(this.runtime);
+    if (firstRun) await installBuiltins(this.runtime, options.ids.next());
     await this.runtime.start();
     adapter.open({ runtime: this.runtime, hub: this.#hub });
     const started: KernelStarted = { version: identity.version, instanceId: identity.instanceId };

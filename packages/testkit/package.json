@@ -23,6 +23,7 @@
     "@kvman/sdk": "workspace:*"
   },
   "devDependencies": {
+    "verdaccio": "6.10.4",
     "zod": "4.6.5"
   }
 }
