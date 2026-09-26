@@ -6,6 +6,7 @@ import { HostManager, type ExtensionModules } from '../hosts/host-manager.ts';
 import { workerThreadStarter, type StartHostThread } from '../hosts/host-thread.ts';
 import type { KernelLogger } from '../hosts/kernel-logger.ts';
 import { KernelHost } from '../hosts/kernel-host.ts';
+import { KernelQueries } from '../hosts/kernel-queries.ts';
 import { LiveBus } from '../hosts/live-bus.ts';
 import { Quarantines } from '../hosts/quarantines.ts';
 import { QueryPath, type QueryAnswer } from '../hosts/query-path.ts';
@@ -159,7 +160,8 @@ export class KernelRuntime {
     });
     const kernel = new KernelHost({
       connection, pipeline: this.pipeline, scheduler: this.scheduler, waiters: this.#waiters, grants: options.grants, queries: this.#queries,
-      abortMessages: (messageIds) => this.hosts.abortMessages(messageIds), health: () => this.health(), requestShutdown: options.requestShutdown,
+      abortMessages: (messageIds) => this.hosts.abortMessages(messageIds), requestShutdown: options.requestShutdown,
+      kernelQueries: new KernelQueries({ connection, registry, health: () => this.health(), version: options.identity.version }),
     });
     this.hosts.connect({
       called: (invocation, call) => rpc.handle(invocation, call),

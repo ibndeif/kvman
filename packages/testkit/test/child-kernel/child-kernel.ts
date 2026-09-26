@@ -47,7 +47,7 @@ async function main(): Promise<void> {
   const fixture = fixtures[values.fixture ?? ''];
   const home = values.home;
   if (fixture === undefined || home === undefined) throw new Error('usage: child-kernel.ts --home <folder> --fixture ledger|bench');
-  const { manifest } = recordExtension(fixture.definition, { version: '1.0.0', correlationId: ids.next() });
+  const { manifest } = recordExtension(fixture.definition, { packageName: fixture.definition.meta.name, version: '1.0.0', correlationId: ids.next() });
   const entry = fileURLToPath(new URL(`./fixtures/extensions/${fixture.file}`, import.meta.url));
   try {
     const kernel = await Kernel.boot({

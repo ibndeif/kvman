@@ -162,7 +162,7 @@ Output: `{"ok":true,"data":â€¦}` on stdout with exit 0; `{"ok":false,"problem":â
   contracts: [{ name, major, types }]
 }
 ```
-Filtered to what is enabled in the given workspace; `q` does a ranked text search over names and descriptions (used by the builder). The shell renders from the UI registry (`/ui`), not from `/schema`; `/schema` is the reference for developers, LLMs, and the builder, and it also lists the frame slots with their `accepts` and every component spec with its `events` and `children`.
+Filtered to what is enabled in the given workspace (without one: every installed extension that is not quarantined), quarantined extensions left out; `q` does a ranked text search over names and descriptions (used by the builder): every word of `q` must appear in an entry's name or description, and entries are ranked by an exact name, a name prefix, words in the name, then words in the description (ADR 0112). `kernelVersion` and `shellVersion` are the kvman version; an event's payload is its `input`; kernel types have scope `global`; `errors` includes the kernel's codes with owner `kernel`; `contributions` and `contracts` stay empty until UI recording and contracts exist (ADR 0111). The shell renders from the UI registry (`/ui`), not from `/schema`; `/schema` is the reference for developers, LLMs, and the builder, and it also lists the frame slots with their `accepts` and every component spec with its `events` and `children`.
 
 ## 12.8 Browser security at the edge
 

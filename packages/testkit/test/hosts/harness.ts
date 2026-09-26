@@ -65,7 +65,7 @@ export function entryOf(extension: string): string {
 function manifestOf(extension: string): Manifest {
   const fixture = fixtures[extension];
   if (fixture === undefined) throw new Error(`no fixture ${extension}`);
-  const { manifest } = recordExtension(fixture.definition, { version: '1.0.0', correlationId });
+  const { manifest } = recordExtension(fixture.definition, { packageName: fixture.definition.meta.name, version: '1.0.0', correlationId });
   if (extension !== '@acme/drift') return manifest;
   return { ...manifest, types: manifest.types.map((entry) => ({ ...entry, description: 'Changed after recording.' })) };
 }

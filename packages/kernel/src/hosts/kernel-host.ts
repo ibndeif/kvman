@@ -1,4 +1,4 @@
-import { cancelRequestSchema, type HealthResult, type Json, type Problem } from '@kvman/protocol';
+import { cancelRequestSchema, type Problem } from '@kvman/protocol';
 import { kernelProblem } from '../problems.ts';
 import type { GrantsSource } from '../router/grants.ts';
 import type { Claim } from '../scheduler/dispatcher.ts';
@@ -7,6 +7,7 @@ import type { CommitPipeline } from '../storage/commit-pipeline.ts';
 import type { CommitResult, CommitUnit } from '../storage/commit-unit.ts';
 import type { Connection } from '../storage/driver.ts';
 import { cancelScope, mayCancel } from './cancel-scope.ts';
+import type { KernelQueries } from './kernel-queries.ts';
 import type { QueryPath } from './query-path.ts';
 import type { ReplyWaiters } from './reply-waiters.ts';
 
@@ -18,7 +19,7 @@ export type KernelHostDeps = {
   grants: GrantsSource;
   queries: QueryPath;
   abortMessages: (messageIds: ReadonlySet<string>) => void;
-  health: () => HealthResult;
+  kernelQueries: KernelQueries;
   // Called once kernel.shutdown's unit committed; the shutdown runs on its own, never inside this invocation.
   requestShutdown: () => void;
 };
@@ -44,11 +45,7 @@ export class KernelHost {
 
   // Kernel queries are answered in memory, like every query (02 §2.3).
   #answer(claim: Claim): void {
-    const { message } = claim;
-    const answer = message.type === 'kernel.health.get'
-      ? { ok: true as const, value: this.#deps.health() satisfies Json }
-      : { ok: false as const, problem: this.#unknown(claim) };
-    this.#deps.queries.answer(message.id, answer);
+    this.#deps.queries.answer(claim.message.id, this.#deps.kernelQueries.answer(claim.message));
   }
 
   // ADR 0090: the reply {} commits first, then the kernel shuts down.

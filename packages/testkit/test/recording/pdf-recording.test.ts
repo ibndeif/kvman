@@ -12,7 +12,7 @@ const emptyUi = {
 
 describe('recording the pdf example (plan 05 §5.2, §5.12)', () => {
   it('M1.3-H1 the non-UI calls produce the M0.3 fixture', () => {
-    const { manifest, functions } = recordExtension(pdf, { version: '1.2.0', correlationId });
+    const { manifest, functions } = recordExtension(pdf, { packageName: '@acme/pdf', version: '1.2.0', correlationId });
     const expected: Json = { ...fixture, ui: emptyUi, translations: null };
     expect(canonicalJson(jsonSchema.parse(manifest))).toBe(canonicalJson(expected));
     expect([...functions.keys()]).toEqual([

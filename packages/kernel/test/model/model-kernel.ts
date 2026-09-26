@@ -1,6 +1,6 @@
 import type { CompleteFrame, HostOutcome, HostUnitOfWork, Json } from '@kvman/protocol';
 import {
-  AdapterPath, betterSqlite3Driver, CommitPipeline, KernelHost, kernelOwner, KernelRegistry, LiveBus, openKernelDatabase, PayloadValidators, PendingIndex,
+  AdapterPath, betterSqlite3Driver, CommitPipeline, KernelHost, kernelOwner, KernelQueries, KernelRegistry, LiveBus, openKernelDatabase, PayloadValidators, PendingIndex,
   Quarantines, QueryPath, recoverInterrupted, RecordedValueStore, RegistryState, ReplyWaiters, Router, Scheduler, Settlement,
   type Claim, type Connection, type Dispatcher, type HostLoad, type RegistryInput,
 } from '../../src/index.ts';
@@ -94,8 +94,11 @@ export async function bootModelKernel(file: string, time: TestTime = { value: st
   });
   dispatcher.kernel = new KernelHost({
     connection, pipeline, scheduler, waiters, grants, queries, abortMessages: (ids) => dispatcher.abort(ids),
-    health: () => ({ status: 'ok', version: '0.0.0', instanceId: '0b5c7f2e-4a1d-4c3b-9e8f-1a2b3c4d5e6f', processStart: 'x', uptimeMs: 0, port: 4173, home: '/h' }),
     requestShutdown: () => undefined,
+    kernelQueries: new KernelQueries({
+      connection, registry: current, version: '0.0.0',
+      health: () => ({ status: 'ok', version: '0.0.0', instanceId: '0b5c7f2e-4a1d-4c3b-9e8f-1a2b3c4d5e6f', processStart: 'x', uptimeMs: 0, port: 4173, home: '/h' }),
+    }),
   });
   const recovered = await recoverInterrupted({ connection, pipeline, registry: current, now });
   index.placeStored(connection, recovered);

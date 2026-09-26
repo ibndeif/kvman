@@ -367,7 +367,7 @@ type SubscriptionDef = { description; lane?: string /* template over the event: 
 - `access` (`02` §2.4): `all` people and extensions (default), `user` only people, `extensions` only extensions and their processes, `internal` only this extension and the kernel.
 - `agentTool` makes a command or a query an agent tool. A tool that only reads is a query; a tool that changes something is a command. It must have access `all` or `extensions` (the agent calls tools).
 - `slash` is allowed only with access `all` or `user`. `name` is the word typed after `/` (lowercase, kebab-case). `arg` names one string field of the input that receives the text typed after the name. The composer fills `workspaceId` from the tab and the fields named in its `slash.fill` (the agent's composer fills `sessionId`, `08` §8.8); if other required fields remain, it opens the generated form (`08` §8.12), else it sends at once.
-- `internal` types are hidden from `/schema` for other extensions, the UI, `kv help`, and the agent's tool list.
+- `internal` types are hidden from `/schema` (for every caller, ADR 0111), the UI, `kv help`, and the agent's tool list.
 - An `access: 'user'` command can be triggered from declarative views (actions, forms, buttons) but never from a widget: the widget bridge sends as the extension (`08` §8.15). An `access: 'extensions'` command can be sent from a widget or a handler, never from a declarative view.
 - One `subscribe` per event type (or pattern) per extension. A subscription with a `lane` runs in that lane, like a command.
 

@@ -15,8 +15,11 @@ describe('setup rules (plan 05 §5.1, ADR 0042)', () => {
       ext.registerCommand('pdf.run', { description: `Run number ${run}.`, input, handle: async () => null });
     });
     expect(problem).toMatchObject({ code: 'EXT_MANIFEST_INVALID', correlationId });
-    expect(problem.issues).toEqual([{ path: 'types.0.description', message: 'setup recorded something different on its second run; setup must be deterministic' }]);
-    const options = { version: '1.2.0', correlationId };
+    expect(problem.issues).toEqual([{
+      path: 'types.0.description', message: 'setup recorded something different on its second run; setup must be deterministic',
+      hint: 'register the same things on every run; setup reads no clock, random numbers, or state',
+    }]);
+    const options = { packageName: '@acme/pdf', version: '1.2.0', correlationId };
     const canonicalManifest = () => canonicalJson(jsonSchema.parse(recordExtension(pdf, options).manifest));
     expect(canonicalManifest()).toBe(canonicalManifest());
   });

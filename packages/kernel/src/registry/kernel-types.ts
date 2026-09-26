@@ -1,7 +1,7 @@
 import {
   cancelRequestSchema, cancelResultSchema, extensionQuarantinedSchema, healthRequestSchema, healthResultSchema, kernelStartedSchema,
-  messageDeadLetteredSchema, shutdownRequestSchema, shutdownResultSchema, toJsonSchemaDocument, type JsonObject, type SchemaView,
-  type TypeEntry,
+  messageDeadLetteredSchema, schemaDocumentSchema, schemaGetRequestSchema, shutdownRequestSchema, shutdownResultSchema, toJsonSchemaDocument,
+  validateRequestSchema, validateResultSchema, type JsonObject, type SchemaView, type TypeEntry,
 } from '@kvman/protocol';
 
 export const kernelOwner = 'kernel';
@@ -41,9 +41,24 @@ export function kernelTypeEntries(): TypeEntry[] {
       input: jsonDocument(healthRequestSchema, 'input'), output: jsonDocument(healthResultSchema, 'output'),
     },
     {
+      type: 'kernel.schema.get', kind: 'query', access: 'all', handler: 'query:kernel.schema.get',
+      description: 'The registry for developers, LLMs, and the builder: types, entities, errors, components, and frame slots, searchable with q.',
+      input: jsonDocument(schemaGetRequestSchema, 'input'), output: jsonDocument(schemaDocumentSchema, 'output'),
+    },
+    {
+      type: 'kernel.validate', kind: 'query', access: 'all', handler: 'query:kernel.validate',
+      description: 'Checks a manifest, preset, or page against the structural rules and returns every issue with its hint.',
+      input: jsonDocument(validateRequestSchema, 'input'), output: jsonDocument(validateResultSchema, 'output'),
+    },
+    {
       type: 'kernel.started', kind: 'event', delivery: 'transient',
       description: 'The kernel finished booting.',
       payload: jsonDocument(kernelStartedSchema, 'input'),
     },
   ];
+}
+
+// The kernel's events with their payload schemas, which a subscription lane may read (ADR 0109).
+export function kernelEventPayloads(): Map<string, JsonObject | undefined> {
+  return new Map(kernelTypeEntries().flatMap((entry) => (entry.kind === 'event' ? [[entry.type, entry.payload]] : [])));
 }

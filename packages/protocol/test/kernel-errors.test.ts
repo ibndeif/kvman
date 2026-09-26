@@ -32,4 +32,10 @@ describe('kernel error catalog (plan 13 §13.2)', () => {
     const retryable = Object.entries(kernelErrors).filter(([, definition]) => definition.retryable).map(([code]) => code);
     expect(retryable.sort()).toEqual([...retryableByDefault].sort());
   });
+
+  it('M2.1-E44 every code has a description from the "When" column of the plan (ADR 0111)', () => {
+    for (const definition of Object.values(kernelErrors)) expect(definition.description).toMatch(/^[A-Zc].*\.$/);
+    expect(kernelErrors.IDEMPOTENCY_MISMATCH.description).toBe('The idempotency key was used before with a different request digest.');
+    expect(kernelErrors.HOME_INVALID.description).toBe('The home folder holds other files but no kvman.db.');
+  });
 });

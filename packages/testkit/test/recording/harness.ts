@@ -6,7 +6,7 @@ export const correlationId = '01JAZ3K4M5N6P7Q8R9S0T1V2W3';
 
 export function record(setup: (ext: Ext) => void, namespace = 'pdf'): ExtensionRecording {
   const definition = defineExtension({ name: `@acme/${namespace}`, namespace, title: 'Test', description: 'A test extension.' }, setup);
-  return recordExtension(definition, { version: '1.0.0', correlationId });
+  return recordExtension(definition, { packageName: definition.meta.name, version: '1.0.0', correlationId });
 }
 
 export function recordingProblem(setup: (ext: Ext) => void, namespace = 'pdf'): Problem {

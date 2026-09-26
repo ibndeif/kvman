@@ -18,7 +18,6 @@ export function createRecordingExt(recording: Recording, closedError: () => Erro
   const ext: Ext = {
     requestCapability(name: string, options: { reason: Text; types?: string[] }) {
       open();
-      recording.capabilityNames.push(name);
       recording.capabilities.push(compact({ name, types: options.types, reason: options.reason }));
     },
     requestIsolation(mode, { reason }) {
@@ -37,7 +36,6 @@ export function createRecordingExt(recording: Recording, closedError: () => Erro
     registerCommand(name, definition) {
       open();
       const path = `types.${recording.types.length}`;
-      recording.typeNames.push({ name, kind: 'command' });
       recording.types.push(compact({
         type: name, kind: 'command', description: definition.description,
         input: recording.jsonSchema(`${path}.input`, definition.input, 'input'),
@@ -55,7 +53,6 @@ export function createRecordingExt(recording: Recording, closedError: () => Erro
     registerQuery(name, definition) {
       open();
       const path = `types.${recording.types.length}`;
-      recording.typeNames.push({ name, kind: 'query' });
       recording.types.push(compact({
         type: name, kind: 'query', description: definition.description,
         input: recording.jsonSchema(`${path}.input`, definition.input, 'input'),
@@ -71,7 +68,6 @@ export function createRecordingExt(recording: Recording, closedError: () => Erro
     registerEvent(name, definition) {
       open();
       const path = `types.${recording.types.length}`;
-      recording.typeNames.push({ name, kind: 'event' });
       recording.types.push(compact({
         type: name, kind: 'event', description: definition.description, delivery: definition.delivery ?? 'durable',
         payload: definition.payload === undefined ? undefined : recording.jsonSchema(`${path}.payload`, definition.payload, 'input'),
@@ -83,7 +79,6 @@ export function createRecordingExt(recording: Recording, closedError: () => Erro
     subscribe(event: string, definition: SubscriptionDef) {
       open();
       const path = `subscriptions.${recording.subscriptions.length}`;
-      recording.subscriptionEvents.push(event);
       recording.subscriptions.push(compact({
         event, description: definition.description, lane: definition.lane, concurrency: definition.concurrency,
         timeoutMs: definition.timeoutMs, handler: `subscription:${event}`,
@@ -93,7 +88,6 @@ export function createRecordingExt(recording: Recording, closedError: () => Erro
     },
     registerSchedule(name, definition) {
       open();
-      recording.scheduleNames.push(name);
       recording.schedules.push(compact({
         name, description: definition.description, every: definition.every, cron: definition.cron,
         command: definition.command, payload: definition.payload,
@@ -102,7 +96,6 @@ export function createRecordingExt(recording: Recording, closedError: () => Erro
     },
     registerError(code, definition) {
       open();
-      recording.errorCodes.push(code);
       recording.errors.push(compact({
         code, description: definition.description, title: definition.title, retryable: definition.retryable ?? false, hint: definition.hint,
       }));
@@ -113,7 +106,7 @@ export function createRecordingExt(recording: Recording, closedError: () => Erro
       open();
       if (!recording.firstCall('registerDataVersion', 'data.version')) return;
       const migrations = definition.migrations ?? [];
-      recording.dataVersion = { version, compatibleWith: definition.compatibleWith ?? [], steps: migrations.map((migration) => migration.to) };
+      recording.dataVersion = { version, compatibleWith: definition.compatibleWith ?? [] };
       for (const migration of migrations) {
         const path = `data.migrations.${recording.migrations.length}`;
         recording.migrations.push({ to: migration.to, handler: `migration:${migration.to}` });
@@ -123,7 +116,6 @@ export function createRecordingExt(recording: Recording, closedError: () => Erro
     registerCollection(name, definition) {
       open();
       const path = `data.collections.${recording.collections.length}`;
-      recording.collectionNames.push(name);
       recording.collections.push(compact({
         name, description: definition.description, schema: recording.jsonSchema(`${path}.schema`, definition.schema),
         idField: definition.idField ?? 'id', indexes: definition.indexes,
@@ -134,7 +126,6 @@ export function createRecordingExt(recording: Recording, closedError: () => Erro
     registerLog(name, definition) {
       open();
       const path = `data.logs.${recording.logs.length}`;
-      recording.logNames.push(name);
       recording.logs.push(compact({
         prefix: name, description: definition.description, entry: recording.jsonSchema(`${path}.entry`, definition.entry),
       }));
@@ -144,7 +135,6 @@ export function createRecordingExt(recording: Recording, closedError: () => Erro
       open();
       const path = `entities.${recording.entities.length}`;
       const { display } = definition;
-      recording.entityNames.push(name);
       recording.entities.push(compact({
         name, description: definition.description, title: definition.title,
         schema: recording.jsonSchema(`${path}.schema`, definition.schema), idField: definition.idField ?? 'id',

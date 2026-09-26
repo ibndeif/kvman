@@ -1,4 +1,4 @@
-import { matchesTypePattern, type KernelErrorCode, type Manifest, type TypeEntry } from '@kvman/protocol';
+import { matchesTypePattern, type JsonObject, type KernelErrorCode, type Manifest, type TypeEntry } from '@kvman/protocol';
 import { kernelOwner, kernelTypeEntries } from './kernel-types.ts';
 
 export type InstalledExtension = { manifest: Manifest; quarantined: boolean };
@@ -134,6 +134,18 @@ export class KernelRegistry {
     const entry = manifest.types.find((candidate) => `${candidate.kind}:${candidate.type}` === reference);
     if (entry?.kind === 'command') return settingsOf(entry);
     return entry?.kind === 'query' ? settingsOf({ ...(entry.timeoutMs === undefined ? {} : { timeoutMs: entry.timeoutMs }) }) : undefined;
+  }
+
+  // ADR 0111: what `/schema` lists: without a workspace every installed extension, with one those it enables; never
+  // a quarantined one.
+  listed(workspaceId: string | undefined): Manifest[] {
+    const extensions = workspaceId === undefined ? [...this.installed.values()] : (this.enabledIn.get(workspaceId) ?? []);
+    return extensions.filter((extension) => !extension.quarantined).map((extension) => extension.manifest);
+  }
+
+  // The config schemas of the installed extensions, which the preset secret check reads (ADR 0017).
+  configSchemas(): Record<string, JsonObject> {
+    return Object.fromEntries([...this.installed.values()].flatMap(({ manifest }) => (manifest.config === null ? [] : [[manifest.meta.name, manifest.config.schema]])));
   }
 
   // ADR 0086: a quarantined extension's pending messages wait; nothing of it is dispatched.

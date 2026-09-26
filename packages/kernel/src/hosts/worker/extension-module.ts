@@ -30,7 +30,7 @@ export async function loadExtension(entry: string, manifest: Manifest, correlati
   if (!isExtensionDefinition(definition)) return invalid(correlationId, 'the module does not export defineExtension(...) as its default');
   let recording: ExtensionRecording;
   try {
-    recording = recordExtension(definition, { version: manifest.meta.version, correlationId });
+    recording = recordExtension(definition, { packageName: manifest.meta.name, version: manifest.meta.version, correlationId });
   } catch (error) {
     if (error instanceof ProblemError) return { ok: false, problem: error.problem };
     throw error;

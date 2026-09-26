@@ -125,7 +125,7 @@ Inside a phase, each milestone needs the one before it unless *Needs* says other
 
 #### M2.1 Structural validation and schema endpoint — 2 days
 - **Read**: `06` §6.3 (structural, non-UI), `02` §2.4, §2.6, `05` §5.1 (setup rules), §5.12, `12` §12.7.
-- **Build**: structural validation with issues and hints (manifest schema, `manifestVersion`, the 5 MB limit, namespace rules and reserved names, descriptions, lossless JSON Schema conversion, lane templates against input schemas, name sets, naming-grammar severities); `kernel.validate`; `kernel.schema.get` and `GET /schema` for types, entities, and errors, with the ranked text search `q`.
+- **Build**: structural validation with issues and hints (manifest schema, `manifestVersion`, the 5 MB limit, namespace rules and reserved names, descriptions, lossless JSON Schema conversion, lane templates against input schemas, name sets, naming-grammar severities); `kernel.validate`; `kernel.schema.get` and `GET /schema` for types, entities, and errors, with the ranked text search `q` (ADRs 0106–0112: config field descriptions, required types covered by capabilities, grammar warnings until the builder, lane paths, what `kernel.validate` accepts, the schema endpoint's contents and search).
 - **Done when**: each structural rule has a failing fixture with its hint (including a `.transform()` schema and a lane template naming a missing field); `/schema` omits `internal` types and filters by workspace; a `.refine()` rule rejects a payload in the host with `VALIDATION_FAILED` although the kernel's JSON Schema check passed.
 
 #### M2.2 Install pipeline — 3 days

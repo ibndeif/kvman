@@ -38,6 +38,7 @@ describe('names and name sets (plan 05 §5.3, ADR 0042)', () => {
     expect(issuePaths(problem).sort()).toEqual(['entities.0.name', 'errors.0.code', 'types.0.type']);
     expect(() => record((ext) => {
       ext.subscribe('agent.session.deleted', { description: 'Cleans up.', handle: async () => undefined });
+      ext.requestCapability('calls', { reason, types: ['fs.file.get'] });
       ext.requireTypes(['fs.file.get'], { reason });
     })).not.toThrow();
   });
@@ -64,8 +65,8 @@ describe('names and name sets (plan 05 §5.3, ADR 0042)', () => {
       'permissions.capabilities.1.name', 'permissions.isolation', 'schedules.1.name', 'subscriptions.1.event',
     ]);
     expect(problem.issues).toEqual(expect.arrayContaining([
-      { path: 'data.collections.1.name', message: '"files" is already registered' },
-      { path: 'config', message: 'registerConfig is already called; it is called at most once' },
+      { path: 'data.collections.1.name', message: '"files" is already registered', hint: 'rename one of them' },
+      { path: 'config', message: 'registerConfig is already called; it is called at most once', hint: 'call registerConfig once' },
     ]));
   });
 

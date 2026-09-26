@@ -41,8 +41,8 @@ describe('manifest entries (plan 05 §5.12, ADRs 0013, 0046, 0047)', () => {
       ext.requireTypes(['fs.file.get'], { reason: 'Reads files.' });
       ext.requireComponents(['fs.picker'], { reason: 'Picks files.' });
       ext.registerCommand('pdf.run', {
-        description: 'Runs.', input, output: input, examples: [{}], lane: 'run:{{ $payload.id }}', concurrency: 2, timeoutMs: 1000,
-        maxAttempts: 5, priority: 'background', retention: '7d', scope: 'global', access: 'user', namingException: 'Legacy name.',
+        description: 'Runs.', input, output: input, examples: [{}], lane: 'run:{{ $message.id }}', concurrency: 2, timeoutMs: 1000,
+        maxAttempts: 5, priority: 'background', retention: '7d', scope: 'global', access: 'all', namingException: 'Legacy name.',
         slash: { name: 'run', description: 'Run it' }, agentTool: { title: 'Run', dangerous: true }, handle: async () => ({}),
       });
       ext.registerQuery('pdf.runs.list', { description: 'Lists.', input, output: input, examples: [{}], timeoutMs: 500, access: 'extensions', agentTool: { title: 'List runs' }, handle: async () => ({}) });
@@ -54,7 +54,7 @@ describe('manifest entries (plan 05 §5.12, ADRs 0013, 0046, 0047)', () => {
       ext.registerEntity('pdf.file', {
         description: 'A file.', title: 'File', schema, idField: 'id', display: { title: '$item.id', subtitle: '$item.id', icon: 'file' }, route: '/files/{{ $item.id }}',
       });
-      ext.registerConfig({ scope: 'both', schema: z.object({ language: z.string() }) });
+      ext.registerConfig({ scope: 'both', schema: z.object({ language: z.string().describe('The language code.') }) });
     });
     expect(manifestSchema.parse(manifest)).toEqual(manifest);
     expect(manifest.permissions).toEqual({
@@ -64,7 +64,7 @@ describe('manifest entries (plan 05 §5.12, ADRs 0013, 0046, 0047)', () => {
       requireComponents: [{ components: ['fs.picker'], reason: 'Picks files.' }],
     });
     expect(manifest.types.map((entry) => entry.type)).toEqual(['pdf.run', 'pdf.runs.list', 'pdf.run.started']);
-    expect(manifest.types[0]).toMatchObject({ retention: '7d', scope: 'global', access: 'user', slash: { name: 'run' }, agentTool: { dangerous: true }, namingException: 'Legacy name.' });
+    expect(manifest.types[0]).toMatchObject({ retention: '7d', scope: 'global', access: 'all', slash: { name: 'run' }, agentTool: { dangerous: true }, namingException: 'Legacy name.' });
     expect(manifest.types[1]).toMatchObject({ access: 'extensions', timeoutMs: 500, agentTool: { title: 'List runs' } });
     expect(manifest.types[2]).toMatchObject({ delivery: 'transient', payload: inputDocument });
     expect(manifest.types[0]).toMatchObject({ input: inputDocument, output: objectDocument });
@@ -87,7 +87,7 @@ describe('manifest entries (plan 05 §5.12, ADRs 0013, 0046, 0047)', () => {
     const problem = recordingProblem((ext) => {
       Reflect.apply(ext.registerCommand, ext, ['pdf.run', { description: 'Runs.', input, handle: notAFunction }]);
     });
-    expect(problem.issues).toEqual([{ path: 'types.0.handler', message: 'expected a function' }]);
+    expect(problem.issues).toEqual([{ path: 'types.0.handler', message: 'expected a function', hint: 'pass an async function as handle' }]);
   });
 
   it('M1.3-E6 migrations cover every version step once; compatible versions are lower', () => {

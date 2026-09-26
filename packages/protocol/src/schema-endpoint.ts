@@ -4,7 +4,7 @@ import { agentToolSchema, commandAgentToolSchema, slashSchema } from './extensio
 import { typeNameSchema } from './identifiers.ts';
 import { jsonSchema } from './json.ts';
 import { eventDeliverySchema, messageKindSchema } from './message.ts';
-import { errorCodePattern } from './naming/name-patterns.ts';
+import { problemCodePattern } from './naming/name-patterns.ts';
 import { textSchema } from './text.ts';
 import { contributionKindSchema, frameSlotSchema } from './ui/frame-slots.ts';
 
@@ -31,7 +31,7 @@ export const schemaDocumentSchema = z.strictObject({
     display: z.strictObject({ title: textSchema, subtitle: textSchema.exactOptional(), icon: iconNameSchema.exactOptional() }),
   })),
   errors: z.array(z.strictObject({
-    code: z.string().regex(errorCodePattern), owner: ownerSchema, description: descriptionSchema, title: z.string().min(1),
+    code: z.string().regex(problemCodePattern), owner: ownerSchema, description: descriptionSchema, title: z.string().min(1),
     retryable: z.boolean(), hint: z.string().min(1).exactOptional(),
   })),
   contributions: z.array(z.strictObject({
