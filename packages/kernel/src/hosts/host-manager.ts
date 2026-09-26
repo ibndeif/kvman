@@ -1,4 +1,5 @@
 import { hostToKernelFrameSchema, type AbortReason, type KernelToHostFrame, type RpcCall, type RpcResult, type StoreRead } from '@kvman/protocol';
+import { receivedWith } from '../blobs/received-blobs.ts';
 import type { FaultPoints } from '../faults/fault-points.ts';
 import { kernelProblem } from '../problems.ts';
 import type { KernelRegistry } from '../registry/kernel-registry.ts';
@@ -99,7 +100,8 @@ export class HostManager implements Dispatcher {
       return;
     }
     const worker = this.#hosts.acquire(claim.extension, message.workspaceId);
-    const invocation: ActiveInvocation = { id: this.#options.ids.next(), claim, worker, live: new Map() };
+    const received = receivedWith(this.#options.registry(), this.#options.connection, message);
+    const invocation: ActiveInvocation = { id: this.#options.ids.next(), claim, worker, live: new Map(), received };
     this.#running.start(invocation, Math.max(0, claim.deadlineAt - this.#options.now()), () => this.#deadlineReached(invocation));
     this.#options.faults.reach('invoke.before');
     this.#hosts.post(worker, {
@@ -123,7 +125,7 @@ export class HostManager implements Dispatcher {
     this.#gate.drop(messageIds);
     for (const invocation of this.#running.all().filter((candidate) => messageIds.has(candidate.claim.message.id))) {
       this.#abort(invocation, 'cancelled');
-      this.#connected().aborted(invocation);
+      this.#track(this.#connected().aborted(invocation));
     }
   }
 
@@ -186,16 +188,12 @@ export class HostManager implements Dispatcher {
 
   #abort(invocation: ActiveInvocation, reason: AbortReason): void {
     this.#running.abort(invocation, reason, () => this.#stuck(invocation));
-    this.#afterEnd();
+    if (this.#running.size === 0) this.#idle?.();
     this.#hosts.post(invocation.worker, { frame: 'abort', invocationId: invocation.id, reason });
   }
 
   #end(invocation: ActiveInvocation): void {
     this.#running.end(invocation);
-    this.#afterEnd();
-  }
-
-  #afterEnd(): void {
     if (this.#running.size === 0) this.#idle?.();
   }
 

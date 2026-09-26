@@ -1,7 +1,7 @@
 import { replyPayloadSchema, type ReplyPayload } from '@kvman/protocol';
 import { kernelProblem } from '../problems.ts';
 import type { FinalReply } from '../storage/commit-unit.ts';
-import type { Connection } from '../storage/driver.ts';
+import { storedReplyText, type RowReader } from '../storage/stored-message.ts';
 import { jsonOf } from '../store/json-order.ts';
 
 // What a caller learns about a command it waits for: its stored reply, or that its handler deferred it.
@@ -16,12 +16,12 @@ function stopping(messageId: string): ReplyPayload {
 // Callers waiting for a command's stored reply (02 §2.3): resolved after the unit that stores it commits. Listeners
 // are called synchronously, so an adapter decides in one step where a reply goes (12 §12.3).
 export class ReplyWaiters {
-  readonly #connection: Connection;
+  readonly #rows: RowReader;
   readonly #listening = new Map<string, Set<ReplyListener>>();
   #closed = false;
 
-  constructor(connection: Connection) {
-    this.#connection = connection;
+  constructor(rows: RowReader) {
+    this.#rows = rows;
   }
 
   wait(messageId: string): Promise<ReplyPayload> {
@@ -71,8 +71,9 @@ export class ReplyWaiters {
   }
 
   #storedReply(messageId: string): ReplyPayload | undefined {
-    const row = this.#connection.prepare('SELECT state, result FROM messages WHERE id = ?').get(messageId);
-    if (row === undefined || !finalStates.has(String(row['state'])) || row['result'] === null) return undefined;
-    return replyPayloadSchema.parse(jsonOf(row['result']));
+    const row = this.#rows.connection.prepare('SELECT state, result, result_ref FROM messages WHERE id = ?').get(messageId);
+    const text = row === undefined ? undefined : storedReplyText(this.#rows.files, row);
+    if (row === undefined || !finalStates.has(String(row['state'])) || text === undefined) return undefined;
+    return replyPayloadSchema.parse(jsonOf(text));
   }
 }

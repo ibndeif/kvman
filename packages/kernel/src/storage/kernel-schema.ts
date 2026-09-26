@@ -57,3 +57,12 @@ export const kernelSchemaVersion2 = [
   `CREATE TABLE recorded_values (message_id TEXT NOT NULL, kind TEXT NOT NULL, n INTEGER NOT NULL, value TEXT NOT NULL,
     PRIMARY KEY(message_id, kind, n))`,
 ];
+
+// ADRs 0134, 0135: the first put's file name, spilled event payloads, and the lookups GC and read rights make.
+export const kernelSchemaVersion3 = [
+  'ALTER TABLE blobs ADD COLUMN name TEXT',
+  'ALTER TABLE events ADD COLUMN payload_ref TEXT',
+  'CREATE INDEX blob_refs_owner ON blob_refs(owner, blob_id)',
+  'CREATE INDEX blob_refs_ref ON blob_refs(ref)',
+  'CREATE INDEX blob_refs_expiry ON blob_refs(expires_at) WHERE expires_at IS NOT NULL',
+];

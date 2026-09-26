@@ -1,5 +1,6 @@
 import type { Issue, JsonObject, KernelErrorCode, StoreScope } from '@kvman/protocol';
 import { kernelProblem, ProblemError, type ProblemContext } from '../problems.ts';
+import type { BlobChannel } from './blob-api.ts';
 import type { CollectionDeclaration } from './collection-indexes.ts';
 import type { PendingState } from './pending-state.ts';
 import type { ReadScope, StoreReads } from './store-reads.ts';
@@ -54,6 +55,7 @@ export class UnindexedScanWarnings implements ScanNotes {
 
 export type StoreContext = {
   reader: StoreReads;
+  blobs: BlobChannel;
   pending: PendingState;
   owner: string;
   workspaceId: string | undefined;

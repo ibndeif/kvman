@@ -2,6 +2,7 @@ import { jsonSchema, type CompleteFrame, type HostOutcome, type HostUnitOfWork, 
 import type { ExtensionRecording } from '../../extension/record-extension.ts';
 import type { Schema } from '../../extension/recording.ts';
 import { ProblemError } from '../../problems.ts';
+import type { BlobChannel } from '../../store/blob-api.ts';
 import { createHandlerStore, type HandlerStore } from '../../store/store-api.ts';
 import type { UnindexedScanThrottle } from '../../store/store-context.ts';
 import type { StoreReads } from '../../store/store-reads.ts';
@@ -22,7 +23,7 @@ export type RunParts = {
   clock: () => number;
 };
 
-const nothing: HostUnitOfWork = { writes: [], sends: [], publishes: [], replies: [], config: [], secrets: [] };
+const nothing: HostUnitOfWork = { writes: [], sends: [], publishes: [], replies: [], config: [], secrets: [], blobRefs: [] };
 const noNewValues: NewRecordedValues = { id: [], now: [] };
 
 function issuesOf(error: { issues: ReadonlyArray<{ path: PropertyKey[]; message: string }> }): Issue[] {
@@ -55,11 +56,21 @@ function outcomeOf(invoke: InvokeFrame, extension: ExtensionRecording, state: In
   return { ok: true, value: json.data };
 }
 
+function blobChannel(client: RpcClient, invocationId: string): BlobChannel {
+  return {
+    call: async (call) => {
+      const result = await client.call(invocationId, call);
+      if (!result.ok) throw new ProblemError(result.problem);
+      return result.value;
+    },
+  };
+}
+
 function handlerStore(parts: RunParts): HandlerStore {
   const { invoke, extension, client, reader, throttle } = parts;
   const { manifest, schemas } = extension;
   return createHandlerStore({
-    reader, owner: invoke.extension, workspaceId: invoke.message.workspaceId, correlationId: invoke.message.correlationId, readOnly: invoke.readOnly,
+    reader, blobs: blobChannel(client, invoke.invocationId), owner: invoke.extension, workspaceId: invoke.message.workspaceId, correlationId: invoke.message.correlationId, readOnly: invoke.readOnly,
     data: { collections: manifest.data.collections.map(({ name, idField, indexes }) => ({ name, idField, indexes: indexes ?? [] })), logs: manifest.data.logs.map((log) => log.prefix) },
     validateDocument: (collection, document) => {
       const schema = schemas.collections.get(collection);
@@ -91,7 +102,10 @@ export async function runInvocation(parts: RunParts): Promise<CompleteFrame> {
     const result = await definition.handle(inputOf(invoke, extension), createContext({ state, client, values, extension, store: store.store }));
     state.close();
     const outcome = outcomeOf(invoke, extension, state, result);
-    return completeFrame(invoke, outcome, { writes: store.writes(), sends: state.sends, publishes: state.publishes, replies: state.replies, config: state.config, secrets: state.secrets }, noNewValues);
+    return completeFrame(invoke, outcome, {
+      writes: store.writes(), sends: state.sends, publishes: state.publishes, replies: state.replies, config: state.config, secrets: state.secrets,
+      blobRefs: store.blobRefs(),
+    }, noNewValues);
   } catch (error) {
     state.close();
     if (!(error instanceof ProblemError)) {

@@ -3,6 +3,7 @@ import { kernelProblem } from '../problems.ts';
 import type { Admission, AppliedMessages, SendAdmission, SendRequest, Sender } from './commit-unit.ts';
 import type { Connection } from './driver.ts';
 import { insertEvent, insertMessage, markReplied } from './message-rows.ts';
+import type { SpillFiles } from './spill.ts';
 import { readMessage, type MessageRecord } from './stored-message.ts';
 
 export class UnitRejected extends Error {
@@ -17,9 +18,12 @@ export class UnitRejected extends Error {
 
 export type UnitScope = {
   connection: Connection;
+  files: SpillFiles;
   admission: Admission;
   now: number;
   sender: Sender;
+  // The blob IDs the unit's invocation received (ADR 0134), which its sends and publishes may name.
+  received: ReadonlySet<string>;
   cause: Message | undefined;
   workspaceId: string | undefined;
   correlationId: string;
@@ -34,7 +38,7 @@ function continuationOf(commandId: string, onReply: OnReply, reply: ReplyPayload
 }
 
 export function recordSend(scope: UnitScope, result: SendAdmission): void {
-  if (result.outcome === 'admitted') scope.applied.inserted.push(insertMessage(scope.connection, result.admitted, 'pending', undefined, scope.now));
+  if (result.outcome === 'admitted') scope.applied.inserted.push(insertMessage(scope, result.admitted, 'pending', undefined));
   else if (result.outcome === 'duplicate') scope.applied.duplicates.push(result.original);
   else throw new UnitRejected(result.problem);
 }
@@ -45,20 +49,22 @@ export function finalReply(scope: UnitScope, command: Message, reply: ReplyPaylo
   scope.applied.replies.push({ messageId: command.id, reply });
   if (command.onReply === undefined) return;
   const send = continuationOf(command.id, command.onReply, reply);
-  recordSend(scope, scope.admission.admitSend(scope.connection, { send, sender: kernelSender, cause: command, workspaceId: command.workspaceId, index: 0 }));
+  recordSend(scope, scope.admission.admitSend(scope.connection, { send, sender: kernelSender, cause: command, workspaceId: command.workspaceId, index: 0, received: new Set() }));
 }
 
 // A send WITH onReply that fails admission is stored as a failed command, and its continuation carries the failure
 // to the sender (04 §4.2); a send without onReply, or one whose failure leaves no row to store, rejects the unit.
 export function admitSend(scope: UnitScope, send: OutboundSend, index: number, id: string | undefined): void {
-  const request: SendRequest = { send, sender: scope.sender, cause: scope.cause, workspaceId: scope.workspaceId, index, ...(id === undefined ? {} : { id }) };
+  const request: SendRequest = {
+    send, sender: scope.sender, cause: scope.cause, workspaceId: scope.workspaceId, index, received: scope.received, ...(id === undefined ? {} : { id }),
+  };
   const result = scope.admission.admitSend(scope.connection, request);
   if (result.outcome !== 'refused' || result.failed === undefined || send.onReply === undefined) {
     recordSend(scope, result);
     return;
   }
   const reply: ReplyPayload = { ok: false, problem: result.problem };
-  const failed = insertMessage(scope.connection, result.failed, 'failed', reply, scope.now);
+  const failed = insertMessage(scope, result.failed, 'failed', reply);
   scope.applied.inserted.push(failed);
   finalReply(scope, failed.message, reply);
 }
@@ -66,7 +72,7 @@ export function admitSend(scope: UnitScope, send: OutboundSend, index: number, i
 // Durable events get a log row and a delivery row per subscriber; a transient event's deliveries are handed to the
 // scheduler after commit without rows (ADR 0069).
 export function admitPublish(scope: UnitScope, publish: OutboundPublish): void {
-  const result = scope.admission.admitPublish(scope.connection, { publish, sender: scope.sender, cause: scope.cause, workspaceId: scope.workspaceId });
+  const result = scope.admission.admitPublish(scope.connection, { publish, sender: scope.sender, cause: scope.cause, workspaceId: scope.workspaceId, received: scope.received });
   if (result.outcome === 'refused') throw new UnitRejected(result.problem);
   if (result.event.delivery !== 'durable') {
     scope.applied.announced.push(result.event);
@@ -75,10 +81,10 @@ export function admitPublish(scope: UnitScope, publish: OutboundPublish): void {
     }
     return;
   }
-  scope.applied.logged.push({ seq: insertEvent(scope.connection, result.event), event: result.event });
+  scope.applied.logged.push({ seq: insertEvent(scope, result.event), event: result.event });
   for (const delivery of result.deliveries) {
     const reply: ReplyPayload | undefined = delivery.problem === undefined ? undefined : { ok: false, problem: delivery.problem };
-    scope.applied.inserted.push(insertMessage(scope.connection, delivery.admitted, reply === undefined ? 'pending' : 'failed', reply, scope.now));
+    scope.applied.inserted.push(insertMessage(scope, delivery.admitted, reply === undefined ? 'pending' : 'failed', reply));
   }
 }
 
@@ -88,7 +94,7 @@ function replyTarget(scope: UnitScope, extension: string, commandId: string): Re
   const refused = (code: 'REPLY_NOT_AWAITING' | 'CAPABILITY_DENIED', detail: string): ReplyTarget => ({
     ok: false, problem: kernelProblem(code, { correlationId: scope.correlationId, detail }),
   });
-  const target = readMessage(scope.connection, commandId);
+  const target = readMessage(scope, commandId);
   if (target === undefined || target.message.kind !== 'command') return refused('REPLY_NOT_AWAITING', `no command ${commandId} waits for a reply`);
   if (target.handler !== extension) return refused('CAPABILITY_DENIED', `${extension} may reply only to its own commands`);
   if (target.state !== 'awaiting') return refused('REPLY_NOT_AWAITING', `the command ${commandId} is ${target.state}`);
@@ -100,13 +106,13 @@ function replyTarget(scope: UnitScope, extension: string, commandId: string): Re
 export function applyDeferredReply(scope: UnitScope, extension: string, { commandId, payload }: DeferredReply): void {
   const found = replyTarget(scope, extension, commandId);
   if (!found.ok) throw new UnitRejected(found.problem);
-  const problem = scope.admission.checkReply({ command: found.target.message, payload });
+  const problem = scope.admission.checkReply({ command: found.target.message, payload, replier: extension, received: scope.received });
   if (problem !== undefined) throw new UnitRejected(problem);
-  markReplied(scope.connection, commandId, payload, scope.now);
+  markReplied(scope, found.target.message, payload);
   finalReply(scope, found.target.message, payload);
 }
 
 // A kernel event a unit causes, in the given workspace or none (kernel events of 03 §3.8).
 export function publishKernelEvent(scope: UnitScope, workspaceId: string | undefined, publish: OutboundPublish): void {
-  admitPublish({ ...scope, sender: kernelSender, workspaceId }, publish);
+  admitPublish({ ...scope, sender: kernelSender, workspaceId, received: new Set() }, publish);
 }

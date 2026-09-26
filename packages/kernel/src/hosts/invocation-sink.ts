@@ -13,7 +13,7 @@ export interface InvocationSink {
   lost(invocation: ActiveInvocation): Promise<void>;
   refused(claim: Claim, problem: Problem): Promise<void>;
   timedOut(invocation: ActiveInvocation, reason: 'deadline' | 'timeout'): Promise<void>;
-  aborted(invocation: ActiveInvocation): void;
+  aborted(invocation: ActiveInvocation): Promise<void>;
   collateral(invocation: ActiveInvocation): Promise<void>;
   interrupted(run: Pick<ActiveInvocation, 'claim' | 'live'>): Promise<void>;
   quarantine(extension: string, reason: QuarantineReason): Promise<void>;

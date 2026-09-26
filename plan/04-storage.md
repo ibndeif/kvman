@@ -42,7 +42,8 @@ CREATE INDEX messages_correlation ON messages(correlation_id);
 
 -- log of published durable events (client resume, inspector)
 CREATE TABLE events (seq INTEGER PRIMARY KEY, id TEXT UNIQUE, type TEXT, source TEXT,
-  workspace_id TEXT, payload TEXT, correlation_id TEXT, causation_id TEXT, created_at INTEGER);
+  workspace_id TEXT, payload TEXT, correlation_id TEXT, causation_id TEXT, created_at INTEGER,
+  payload_ref TEXT);                   -- a payload over 256 KB spills to a blob (kernel schema 3, ADR 0135)
 
 CREATE TABLE steps (message_id TEXT, name TEXT, state TEXT, result TEXT,
   retry_safe INTEGER, started_at INTEGER, finished_at INTEGER, PRIMARY KEY(message_id, name));
@@ -62,7 +63,8 @@ CREATE TABLE docs (owner TEXT, ws TEXT, collection TEXT, id TEXT, data TEXT, ver
                    created_at INTEGER, updated_at INTEGER, PRIMARY KEY(owner, ws, collection, id));
 CREATE TABLE logs (owner TEXT, ws TEXT, log TEXT, seq INTEGER, data TEXT, at INTEGER,
                    PRIMARY KEY(owner, ws, log, seq));
-CREATE TABLE blobs (id TEXT PRIMARY KEY, size INTEGER, mime TEXT, created_at INTEGER);
+CREATE TABLE blobs (id TEXT PRIMARY KEY, size INTEGER, mime TEXT, created_at INTEGER,
+                   name TEXT);         -- mime and name of the first put (kernel schema 3, ADR 0134)
 CREATE TABLE blob_refs (blob_id TEXT, owner TEXT, ws TEXT, ref TEXT, expires_at INTEGER,  -- ref 'pending:<messageId>' while
                    PRIMARY KEY(blob_id, owner, ws, ref));                                  -- a handler that put it runs (§4.6)
 
@@ -113,7 +115,7 @@ type UnitOfWork = {
   sends: OutboundMessage[];      // commands (incl. continuations), delayed sends
   publishes: OutboundEvent[];    // durable + transient events
   replies: Array<{ commandId: string; payload: ReplyPayload }>; // ctx.reply for deferred commands
-  blobRefs: Array<{ blobId: string; ref: string; op: 'add' | 'remove' }>;
+  blobRefs: Array<{ blobId: string; scope: StoreScope; op: 'keep' | 'release' }>;   // ref and owner from the invocation (ADR 0134)
   secrets: Array<{ name: string; value: string | null }>;        // ctx.secrets.set, applied after commit (§4.7)
   config: Array<{ scope: 'global' | 'workspace'; value: Json }>;  // ctx.config.set, applied in the commit (§4.7)
 };
@@ -240,7 +242,7 @@ const s     = await ctx.store.blobs.stream(blobId);      // ReadableStream, any 
 const info  = await ctx.store.blobs.stat(blobId);        // { size, mime, name? } | undefined
 ctx.store.blobs.keep(blobId);   ctx.store.blobs.release(blobId);   // buffered: add / remove this extension's reference
 ```
-A blob put by a handler is kept automatically when the handler commits (its pending reference becomes a normal one, §4.6); `keep` is for blobs received from others.
+A blob put by a handler is kept automatically when the handler commits (its pending reference becomes a normal one, §4.6); `keep` is for blobs received from others. A put without `mime` stores `text/plain` for a string and `application/octet-stream` otherwise; a put of bytes already stored answers the stored mime and name. `text` and `bytes` of a blob over 16 MB fail `BLOB_TOO_LARGE { max: 16777216 }` (use `stream`); a put over 100 MB fails `BLOB_TOO_LARGE { max: 104857600 }`; `put({ workspacePath })` reads through `ctx.files` and needs `files.read` (ADRs 0134, 0136).
 
 ### What is immediate, what is buffered
 
@@ -303,9 +305,11 @@ const text = await ctx.step('ocr', () => runOcr(blobId), { retrySafe: false });
 
 - **Blob ids** are the lowercase hex SHA-256 of the bytes (ADR 0018).
 - **Put**: the kernel writes the bytes to a temp file and hashes them (SHA-256). Then, in one synchronous step on the kernel main thread (the single writer), it inserts the `blobs` row if missing, adds the reference `pending:<messageId>` owned by the calling extension (expiring at the invocation deadline plus 1 h), and renames the temp file into `blobs/ab/cd/<sha256>` unless that file exists (identical content is stored once). At commit, the handler's pending references become normal references (`blob:<blobId>`) and are removed from the pending list; if the invocation ends without committing, its pending references are deleted.
-- **GC** is a kernel background job that runs in the same single-writer step form: it deletes the `blobs` rows that have no live reference (pending ones included) and were created more than 1 h ago, and unlinks their files in the same synchronous step. Because put and GC both run as uninterrupted synchronous steps on the main thread, a put can never link to a file that GC is deleting, and a blob in use by a running handler is never collected, however long the handler runs.
+- **GC** is a kernel background job (at boot, then every 10 minutes, in bounded batches; ADR 0134) that runs in the same single-writer step form. It first deletes expired refs (uploads, and pending refs past their invocation deadline plus 1 h); then it deletes the `blobs` rows that have no live reference (pending ones included) and were created more than 1 h ago, and unlinks their files in the same synchronous step. Because put and GC both run as uninterrupted synchronous steps on the main thread, a put can never link to a file that GC is deleting, and a blob in use by a running handler is never collected, however long the handler runs.
 - **Uploads** (`PUT /api/v1/blobs`) create a ref owned by the user with a 24 h expiry.
-- **Reading**: an extension may read a blob only if it holds a ref to it, or if the blob arrived in a field typed `z.blobId()` of the message it is handling (payload or reply). At admission the kernel checks that the sender may read every such blob, so a blob ID cannot be used to reach someone else's file. A handler that wants to keep a received blob calls `ctx.store.blobs.keep(blobId)`, which adds its own ref in the unit of work.
+- **Metadata**: the `blobs` row keeps the mime and name of the first put of those bytes (ADR 0134).
+- **Spill**: payloads, command results, and durable event payloads over 256 KB are kernel-owned blobs with the refs `payload:<messageId>`, `result:<messageId>`, and `event:<eventId>`, added and deleted with their rows (ADR 0135).
+- **Reading**: an extension may read a blob only if it holds a ref to it in any scope (its own pending refs included), or if the blob arrived during the invocation in a field typed `z.blobId()` of the message it is handling, of a `ctx.command` reply, or of a `ctx.query` result (ADR 0134). At admission the kernel checks that the sender may read every such blob, and a command result, a deferred `ctx.reply`, or a query result is checked the same way against its handler (`CAPABILITY_DENIED`, not retryable), so a blob ID cannot be used to reach someone else's file. For an extension, a blob that does not exist is refused like one it may not read. A handler that wants to keep a received blob calls `ctx.store.blobs.keep(blobId)`, which adds its own ref in the unit of work.
 - Blob IDs are visible in events and payloads, but knowing an ID grants nothing. The user can read every blob (it is their data).
 - **Serving to browsers**: `12` §12.2 and `13` §13.7.
 

@@ -1,4 +1,6 @@
 import { jsonByteLength, type Message, type Problem } from '@kvman/protocol';
+import { applyBlobRefChanges } from '../blobs/blob-ref-changes.ts';
+import { settlePendingRefs } from '../blobs/blob-rows.ts';
 import { kernelProblem } from '../problems.ts';
 import type { Admission, AppliedMessages, CommitInvocation, CommitResult, CommitUnit } from './commit-unit.ts';
 import { causeOf, correlationOf, senderOf } from './commit-unit.ts';
@@ -7,7 +9,8 @@ import { writeConfig } from './config-rows.ts';
 import { applyKernelChange, type KernelChange } from './kernel-changes.ts';
 import { cancelMessages, expireMessages } from './message-ending.ts';
 import { markInvocation, markRetry, replyOf } from './message-rows.ts';
-import { readMessage } from './stored-message.ts';
+import type { SpillFiles } from './spill.ts';
+import { readMessageState } from './stored-message.ts';
 import { applyStoreWrite, InvalidWrite, VersionConflict, WorkspaceRequired } from './store-writes.ts';
 import { admitPublish, admitSend, applyDeferredReply, finalReply, UnitRejected, type UnitScope } from './unit-contents.ts';
 
@@ -35,6 +38,7 @@ function invokingExtension(unit: CommitUnit): string | undefined {
   if (unit.writes.length > 0) throw new InvalidWrite('a unit without an invocation cannot write storage');
   if (unit.replies.length > 0) throw new InvalidWrite('a unit without an invocation cannot reply');
   if ((unit.config?.length ?? 0) > 0 || (unit.secrets?.length ?? 0) > 0) throw new InvalidWrite('a unit without an invocation cannot set config or secrets');
+  if ((unit.blobRefs?.length ?? 0) > 0) throw new InvalidWrite('a unit without an invocation cannot keep or release blobs');
   return undefined;
 }
 
@@ -50,7 +54,7 @@ class StaleInvocation extends Error {
 function checkLive(connection: Connection, invocation: Pick<CommitInvocation, 'message' | 'stored' | 'deadlineAt'>, now: number): void {
   if (!invocation.stored) return;
   const { message } = invocation;
-  if (readMessage(connection, message.id)?.state !== 'running') throw new StaleInvocation(message.id);
+  if (readMessageState(connection, message.id) !== 'running') throw new StaleInvocation(message.id);
   if (invocation.deadlineAt === undefined || now < invocation.deadlineAt) return;
   const reached = message.deadlineAt !== undefined && now >= message.deadlineAt;
   throw new UnitRejected(kernelProblem(reached ? 'DEADLINE_EXCEEDED' : 'HANDLER_TIMEOUT', { correlationId: message.correlationId, messageId: message.id }));
@@ -63,23 +67,34 @@ function upsertQuarantine(connection: Connection, extension: string, reason: str
     .run(extension, reason);
 }
 
-// The unit's own message moves on last: marked done, failed, awaiting, pending again, or dead, with its reply.
+// ADR 0134: a handler's result may name only blobs the handler may read.
+function checkResult(scope: UnitScope, invocation: CommitInvocation): void {
+  const { outcome, message, extension } = invocation;
+  if (!('ok' in outcome) || !outcome.ok || message.kind !== 'command') return;
+  const problem = scope.admission.checkResult({ message, value: outcome.value, extension, received: scope.received });
+  if (problem !== undefined) throw new UnitRejected(problem);
+}
+
+// The unit's own message moves on last: marked done, failed, awaiting, pending again, or dead, with its reply. A
+// handler's pending blob references become its own when it commits a result or a deferral (04 §4.6).
 function settleOrigin(scope: UnitScope, unit: CommitUnit): void {
   const { origin } = unit;
   if (origin.kind === 'invocation') {
     const { invocation } = origin;
+    checkResult(scope, invocation);
+    settlePendingRefs(scope.connection, invocation.message.id, !('ok' in invocation.outcome) || invocation.outcome.ok);
     if (!invocation.stored) return;
-    markInvocation(scope.connection, invocation.message.id, invocation.outcome, scope.now);
+    markInvocation(scope, invocation.message, invocation.outcome);
     if (!('deferred' in invocation.outcome)) finalReply(scope, invocation.message, replyOf(invocation.outcome));
   }
   if (origin.kind === 'retry') {
-    markRetry(scope.connection, origin.message.id, origin.attempts, origin.outcome, scope.now);
+    markRetry(scope, origin.message, origin.attempts, origin.outcome);
     if (origin.outcome.state === 'dead') finalReply(scope, origin.message, origin.outcome.reply);
   }
   if (origin.kind === 'cancel') {
     const cancelled = cancelMessages(scope, origin.messageIds) + origin.unstored;
     const outcome = { ok: true, value: { cancelled } } as const;
-    markInvocation(scope.connection, origin.invocation.message.id, outcome, scope.now);
+    markInvocation(scope, origin.invocation.message, outcome);
     finalReply(scope, origin.invocation.message, replyOf(outcome));
   }
   if (origin.kind === 'expire') expireMessages(scope, origin.messageIds);
@@ -91,12 +106,14 @@ function settleKernelChange(scope: UnitScope, change: KernelChange, command: Mes
   const value = applyKernelChange(scope, change);
   if (command === undefined) return;
   const outcome = { ok: true, value } as const;
-  markInvocation(scope.connection, command.id, outcome, scope.now);
+  markInvocation(scope, command, outcome);
   finalReply(scope, command, replyOf(outcome));
 }
 
-// 04 §4.2: an invocation's config writes are checked and stored in the commit; its secrets wait for the file.
+// 04 §4.2: an invocation's config writes are checked and stored in the commit; its secrets wait for the file; its
+// keeps and releases change its blob references.
 function applySettings(scope: UnitScope, unit: CommitUnit, extension: string): void {
+  applyBlobRefChanges(scope, extension, unit.blobRefs ?? []);
   for (const write of unit.config ?? []) writeConfig(scope, { extension, scope: write.scope, workspaceId: scope.cause?.workspaceId, value: write.value });
   for (const write of unit.secrets ?? []) {
     scope.applied.secrets.push(write.value === null ? { kind: 'clear', extension, name: write.name } : { kind: 'set', extension, name: write.name, value: write.value });
@@ -108,7 +125,16 @@ function firstSendId(unit: CommitUnit): string | undefined {
   return origin.kind === 'adapter' || origin.kind === 'call' ? origin.messageId : undefined;
 }
 
-function applyContents(connection: Connection, unit: CommitUnit, admission: Admission, now: number): AppliedMessages {
+// The blob IDs a unit's sends and publishes may name besides the sender's own references (ADR 0134).
+function receivedOf(origin: CommitUnit['origin']): ReadonlySet<string> {
+  if (origin.kind === 'invocation') return origin.invocation.received ?? new Set();
+  return origin.kind === 'call' ? origin.received : new Set();
+}
+
+export type UnitStorage = { connection: Connection; files: SpillFiles };
+
+function applyContents(storage: UnitStorage, unit: CommitUnit, admission: Admission, now: number): AppliedMessages {
+  const { connection } = storage;
   const { origin } = unit;
   if (origin.kind === 'invocation' || origin.kind === 'cancel') checkLive(connection, origin.invocation, now);
   if (origin.kind === 'change' && origin.command !== undefined) checkLive(connection, { message: origin.command, stored: true }, now);
@@ -118,7 +144,7 @@ function applyContents(connection: Connection, unit: CommitUnit, admission: Admi
     for (const write of unit.writes) applyStoreWrite(connection, { owner: extension, workspaceId: cause?.workspaceId }, write, now);
   }
   const scope: UnitScope = {
-    connection, admission, now, sender: senderOf(origin), cause, correlationId: correlationOf(origin),
+    connection, files: storage.files, admission, now, sender: senderOf(origin), cause, correlationId: correlationOf(origin), received: receivedOf(origin),
     workspaceId: origin.kind === 'adapter' ? origin.workspaceId : cause?.workspaceId,
     applied: { inserted: [], duplicates: [], logged: [], announced: [], unstored: [], replies: [], ended: [], secrets: [], correlationId: correlationOf(origin) },
   };
@@ -146,12 +172,13 @@ function problemOf(error: unknown, unit: CommitUnit): Problem {
   throw error;
 }
 
-export function applyUnit(connection: Connection, unit: CommitUnit, admission: Admission, now: number): CommitResult {
+export function applyUnit(storage: UnitStorage, unit: CommitUnit, admission: Admission, now: number): CommitResult {
   const overLimit = limitProblem(unit);
   if (overLimit !== undefined) return { committed: false, problem: overLimit, stale: false };
+  const { connection } = storage;
   connection.exec('SAVEPOINT unit');
   try {
-    const applied = applyContents(connection, unit, admission, now);
+    const applied = applyContents(storage, unit, admission, now);
     connection.exec('RELEASE unit');
     return { committed: true, ...applied };
   } catch (error) {

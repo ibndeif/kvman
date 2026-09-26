@@ -1,6 +1,6 @@
-import type { Issue, Problem } from '@kvman/protocol';
+import type { Issue, KernelErrorCode, Problem } from '@kvman/protocol';
 import type { FastifyReply } from 'fastify';
-import { kernelProblem } from '../../problems.ts';
+import { kernelProblem, type ProblemContext } from '../../problems.ts';
 import type { UlidGenerator } from '../../ulid.ts';
 import { statusOf } from './problem-status.ts';
 
@@ -29,6 +29,10 @@ export class EdgeProblems {
 
   refused(code: 'HOST_FORBIDDEN' | 'NOT_FOUND' | 'KERNEL_STOPPING' | 'INTERNAL', detail?: string): Problem {
     return kernelProblem(code, { correlationId: this.#ids.next(), ...(detail === undefined ? {} : { detail }) });
+  }
+
+  coded(code: KernelErrorCode, context: Omit<ProblemContext, 'correlationId'>): Problem {
+    return kernelProblem(code, { correlationId: this.#ids.next(), ...context });
   }
 
   tooLarge(max: number): Problem {

@@ -24,7 +24,7 @@ function workerWith(thread: Partial<HostThread>): PoolWorker {
 }
 
 function invocationOf(message: Message, worker: PoolWorker): ActiveInvocation {
-  return { id: 'invocation', worker, live: new Map(), claim: { message, extension: '@acme/a', handler: 'command:a.run', attempt: 1, stored: true, deadlineAt: Number.MAX_SAFE_INTEGER } };
+  return { id: 'invocation', worker, live: new Map(), received: new Set(), claim: { message, extension: '@acme/a', handler: 'command:a.run', attempt: 1, stored: true, deadlineAt: Number.MAX_SAFE_INTEGER } };
 }
 
 function valueOf(outcome: StoreReadOutcome): unknown {

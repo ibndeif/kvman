@@ -32,6 +32,7 @@ const complete = {
     writes: [{ kind: 'kv.set', scope: 'workspace', key: 'k', value: 1 }], sends: [{ type: 'ocr.extract', payload: {} }],
     publishes: [{ type: 'pdf.translated', payload: {} }], replies: [{ commandId: messageId, payload: { ok: true, value: null } }],
     config: [{ scope: 'workspace', value: { limit: 3 } }], secrets: [{ name: 'apiKey', value: 'sk-1' }, { name: 'oauth.token', value: null }],
+    blobRefs: [{ blobId: 'b'.repeat(64), scope: 'workspace', op: 'keep' }],
   },
   recorded: noValues,
 };
@@ -49,7 +50,7 @@ describe('host frames', () => {
     expect(kernelToHostFrameSchema.safeParse({ ...invoke, timeoutMs: 1 }).success).toBe(false);
     const { deadlineAt: _deadline, ...withoutDeadline } = invoke;
     expect(kernelToHostFrameSchema.safeParse(withoutDeadline).success).toBe(false);
-    expect(hostToKernelFrameSchema.safeParse({ ...complete, unitOfWork: { ...complete.unitOfWork, blobRefs: [] } }).success).toBe(false);
+    expect(hostToKernelFrameSchema.safeParse({ ...complete, unitOfWork: { ...complete.unitOfWork, processes: [] } }).success).toBe(false);
     const mixed = copyOf(rpcCalls[3]);
     expect(hostToKernelFrameSchema.safeParse({ frame: 'rpc', invocationId: 'i-1', callId: 3, call: { ...mixed, name: 'step.end' } }).success).toBe(false);
     expect(hostToKernelFrameSchema.safeParse({ frame: 'rpc', invocationId: 'i-1', callId: 3, call: { name: 'query', type: 'ocr.jobs.list', payload: {}, ordinal: 1 } }).success).toBe(false);

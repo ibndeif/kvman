@@ -12,6 +12,7 @@ import bench from './fixtures/extensions/bench.ts';
 import ledger from './fixtures/extensions/ledger.ts';
 import desk from '../workspaces/fixtures/extensions/desk.ts';
 import probe from '../isolation/fixtures/extensions/probe.ts';
+import keeper from '../blobs/fixtures/extensions/keeper.ts';
 import { applyTestPreset, emptyGrant } from '../install/fixture-presets.ts';
 import { closedRegistry, installFixture, noBuiltins, prepareHome } from '../install/fixture-snapshots.ts';
 import { fixtureFolder } from './workspace.ts';
@@ -24,7 +25,8 @@ type Fixture = { name: string; definition: ExtensionDefinition; folder: string; 
 const childFixtures = fileURLToPath(new URL('./fixtures/extensions/', import.meta.url));
 
 // The desk of the workspace tests: a secret config field and a deferred command, for the M2.3 crash points. The probe of
-// the isolation tests runs sandboxed, for the M2.4 host crash point.
+// the isolation tests runs sandboxed, for the M2.4 host crash point. The keeper of the blob tests puts blobs, for the M2.5
+// blob crash point and the boot that clears `once` trust.
 const fixtures: Record<string, Fixture> = {
   ledger: { name: '@acme/ledger', definition: ledger, folder: childFixtures, file: 'ledger.ts', poolSize: 1 },
   bench: { name: '@acme/bench', definition: bench, folder: childFixtures, file: 'bench.ts', poolSize: Math.max(1, Math.min(4, availableParallelism() - 1)) },
@@ -33,6 +35,7 @@ const fixtures: Record<string, Fixture> = {
     name: '@acme/probe', definition: probe, folder: fileURLToPath(new URL('../isolation/fixtures/extensions/', import.meta.url)), file: 'probe.ts', poolSize: 1,
     grant: { ...emptyGrant, isolation: 'sandboxed' },
   },
+  keeper: { name: '@acme/keeper', definition: keeper, folder: fileURLToPath(new URL('../blobs/fixtures/extensions/', import.meta.url)), file: 'keeper.ts', poolSize: 1 },
 };
 
 const { values } = parseArgs({ options: { home: { type: 'string' }, fixture: { type: 'string' }, builtin: { type: 'string' } }, strict: true });
@@ -87,7 +90,7 @@ async function main(): Promise<void> {
   }
   const fixture = fixtures[values.fixture ?? ''];
   const home = values.home;
-  if (fixture === undefined || home === undefined) throw new Error('usage: child-kernel.ts --home <folder> --fixture ledger|bench|desk|probe|first-run [--builtin <folder>]');
+  if (fixture === undefined || home === undefined) throw new Error('usage: child-kernel.ts --home <folder> --fixture ledger|bench|desk|probe|keeper|first-run [--builtin <folder>]');
   try {
     await prepareHome(home, async (connection) => {
       await installFixture(connection, home, { definition: fixture.definition, folder: fixture.folder, entry: fixture.file });

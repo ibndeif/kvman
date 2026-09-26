@@ -1,5 +1,7 @@
 import { streamedEventSchema, type Message, type SseMessage } from '@kvman/protocol';
-import type { Connection, SqlRow } from '../../storage/driver.ts';
+import type { SqlRow } from '../../storage/driver.ts';
+import { storedJsonText, type SpillFiles } from '../../storage/spill.ts';
+import type { RowReader } from '../../storage/stored-message.ts';
 import { jsonOf } from '../../store/json-order.ts';
 import type { StreamedEvent } from './subscriptions.ts';
 
@@ -16,22 +18,24 @@ export function streamedEventOf(message: Message): StreamedEvent {
   };
 }
 
-function eventOfRow(row: SqlRow): StreamedEvent {
+function eventOfRow(files: SpillFiles, row: SqlRow): StreamedEvent {
   const optional = (value: unknown): string | undefined => (value === null || value === undefined ? undefined : String(value));
   const workspaceId = optional(row['workspace_id']);
   const causationId = optional(row['causation_id']);
   return streamedEventSchema.parse({
-    id: row['id'], type: row['type'], source: row['source'], payload: jsonOf(row['payload']), correlationId: row['correlation_id'],
+    id: row['id'], type: row['type'], source: row['source'], payload: jsonOf(storedJsonText(files, row['payload'], row['payload_ref'])), correlationId: row['correlation_id'],
     createdAt: row['created_at'], ...(workspaceId === undefined ? {} : { workspaceId }), ...(causationId === undefined ? {} : { causationId }),
   });
 }
 
 // The durable events a stream resumes from (12 §12.3): each has its seq, the stream's cursor.
 export class EventLog {
-  readonly #connection: Connection;
+  readonly #connection: RowReader['connection'];
+  readonly #files: SpillFiles;
 
-  constructor(connection: Connection) {
-    this.#connection = connection;
+  constructor(rows: RowReader) {
+    this.#connection = rows.connection;
+    this.#files = rows.files;
   }
 
   newest(): number {
@@ -39,7 +43,7 @@ export class EventLog {
   }
 
   after(seq: number): LoggedStreamEvent[] {
-    return this.#connection.prepare('SELECT * FROM events WHERE seq > ? ORDER BY seq').all(seq).map((row) => ({ seq: Number(row['seq']), event: eventOfRow(row) }));
+    return this.#connection.prepare('SELECT * FROM events WHERE seq > ? ORDER BY seq').all(seq).map((row) => ({ seq: Number(row['seq']), event: eventOfRow(this.#files, row) }));
   }
 
   // ADR 0098: a cursor ahead of the newest seq is unknown; one whose following events are no longer kept is expired.

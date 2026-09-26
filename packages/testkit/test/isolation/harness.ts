@@ -91,7 +91,7 @@ export async function serveHttp(fixture: InstallFixture): Promise<ServedFixture>
   const ids = createUlidGenerator(Date.now);
   const adapter = new HttpAdapter({ ids, timers: fixture.timers, logger: { write: (record) => fixture.logged.push(record) } });
   const port = await adapter.bind(kernelPorts, ids.next());
-  const hub = new EventHub({ connection: fixture.connection, pipeline: fixture.runtime.pipeline, live: fixture.runtime.live, timers: fixture.timers, version: '0.0.0' });
+  const hub = new EventHub({ connection: fixture.connection, files: fixture.runtime.files.files, pipeline: fixture.runtime.pipeline, live: fixture.runtime.live, timers: fixture.timers, version: '0.0.0' });
   adapter.open({ runtime: fixture.runtime, hub });
   return {
     port,

@@ -5,10 +5,12 @@ import { retryOutcome, retryUnit, schedulerDefaults } from '../scheduler/retry-p
 import type { CommitPipeline } from '../storage/commit-pipeline.ts';
 import type { RetryOutcome } from '../storage/commit-unit.ts';
 import type { Connection } from '../storage/driver.ts';
+import type { SpillFiles } from '../storage/spill.ts';
 import { readMessage } from '../storage/stored-message.ts';
 
 export type CrashRecoveryDeps = {
   connection: Connection;
+  files: SpillFiles;
   pipeline: CommitPipeline;
   registry: () => KernelRegistry;
   now: () => number;
@@ -31,7 +33,7 @@ export async function recoverInterrupted(deps: CrashRecoveryDeps): Promise<strin
   const { connection, pipeline, now } = deps;
   const recovered: Array<Promise<string | undefined>> = [];
   for (const row of connection.prepare(interruptedSql).all()) {
-    const record = readMessage(connection, String(row['id']));
+    const record = readMessage({ connection, files: deps.files }, String(row['id']));
     if (record === undefined) continue;
     const { message } = record;
     const attempts = Number(row['attempts']) + 1;

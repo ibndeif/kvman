@@ -2,10 +2,13 @@ import { inertFaults, type FaultPoints } from '../faults/fault-points.ts';
 import type { Admission, AppliedMessages, CommitResult, CommitUnit } from './commit-unit.ts';
 import { correlationOf } from './commit-unit.ts';
 import { StorageFailure, type Connection } from './driver.ts';
-import { applyUnit, storageProblem } from './unit-application.ts';
+import type { SpillFiles } from './spill.ts';
+import { applyUnit, storageProblem, type UnitStorage } from './unit-application.ts';
 
 export type CommitPipelineOptions = {
   connection: Connection;
+  // Where payloads and results over 256 KB spill (ADR 0135).
+  files: SpillFiles;
   admission: Admission;
   now: () => number;
   maxBatchUnits?: number;
@@ -29,6 +32,7 @@ export type CommitListener = (applied: AppliedMessages) => void;
 // and commit in one transaction with one savepoint each; while a commit blocks the thread, the next batch gathers.
 export class CommitPipeline {
   readonly #connection: Connection;
+  readonly #storage: UnitStorage;
   readonly #admission: Admission;
   readonly #now: () => number;
   readonly #maxBatchUnits: number;
@@ -40,6 +44,7 @@ export class CommitPipeline {
 
   constructor(options: CommitPipelineOptions) {
     this.#connection = options.connection;
+    this.#storage = { connection: options.connection, files: options.files };
     this.#admission = options.admission;
     this.#now = options.now;
     this.#maxBatchUnits = options.maxBatchUnits ?? 64;
@@ -84,7 +89,7 @@ export class CommitPipeline {
     const now = this.#now();
     try {
       this.#connection.exec('BEGIN IMMEDIATE');
-      const outcomes = batch.map((queued) => ({ queued, result: applyUnit(this.#connection, queued.unit, this.#admission, now) }));
+      const outcomes = batch.map((queued) => ({ queued, result: applyUnit(this.#storage, queued.unit, this.#admission, now) }));
       const applied = outcomes.flatMap(({ queued, result }) => (result.committed ? [{ unit: queued.unit, result }] : []));
       for (const { unit } of applied) this.#reachApplied(unit);
       this.#sink?.enterBatch(applied.map(({ result }) => result));

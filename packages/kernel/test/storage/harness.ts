@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { Address, Message, OutboundSend } from '@kvman/protocol';
 import {
-  betterSqlite3Driver, CommitPipeline, createUlidGenerator, kernelProblem, openKernelDatabase, StorageFailure,
+  betterSqlite3Driver, BlobFiles, BlobRights, CommitPipeline, createUlidGenerator, kernelProblem, openKernelDatabase, StorageFailure,
   type Admission, type CommitUnit, type PublishAdmission, type SendAdmission, type SendRequest, type Connection, type PreparedStatement,
   type SqlRow, type StorageDriver, type StorageFailureKind,
 } from '../../src/index.ts';
@@ -14,6 +14,15 @@ export const ulids = createUlidGenerator(() => Date.now());
 
 export function temporaryDatabaseFile(): string {
   return path.join(mkdtempSync(path.join(tmpdir(), 'kvman-storage-')), 'kvman.db');
+}
+
+// Blob files in a folder of their own, for pipelines whose payloads may spill (ADR 0135).
+export function temporaryBlobFiles(): BlobFiles {
+  return new BlobFiles(mkdtempSync(path.join(tmpdir(), 'kvman-blobs-')));
+}
+
+export function blobRightsOf(connection: Connection): BlobRights {
+  return new BlobRights(connection, now);
 }
 
 export type Fault = { sql: RegExp; kind: StorageFailureKind; armed: boolean };
@@ -89,6 +98,9 @@ export function testAdmission(options: TestAdmissionOptions): Admission {
     checkReply() {
       return undefined;
     },
+    checkResult() {
+      return undefined;
+    },
     checkConfig() {
       return undefined;
     },
@@ -106,7 +118,7 @@ export function openTestStore(owners: Record<string, string> = {}, invalidField?
   const driver = recordingDriver();
   const connection = openKernelDatabase(file, driver, ulids.next());
   const admission = testAdmission(invalidField === undefined ? { owners } : { owners, invalidField });
-  return { connection, pipeline: new CommitPipeline({ connection, admission, now }), driver, file };
+  return { connection, pipeline: new CommitPipeline({ connection, files: temporaryBlobFiles(), admission, now }), driver, file };
 }
 
 export function adapterUnit(sends: OutboundSend[], address: Address = 'user:local'): CommitUnit {

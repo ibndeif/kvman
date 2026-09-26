@@ -1,5 +1,6 @@
 import type { Ctx, Store } from '@kvman/sdk';
 import { createStepFunction } from '../../store/step-journal.ts';
+import { createFiles } from './context-files.ts';
 import { createMessaging, type MessagingParts } from './context-messaging.ts';
 import { createSettings } from './context-settings.ts';
 import { stepRecorder } from './step-recorder.ts';
@@ -30,6 +31,7 @@ export function createContext(parts: ContextParts): Ctx {
     },
     ...createMessaging(parts),
     ...createSettings(parts),
+    files: createFiles(parts),
     get store() {
       state.open();
       return store;

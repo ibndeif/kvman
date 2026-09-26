@@ -25,7 +25,7 @@ type Message = {
   target?: Address;              // ui.* commands only
   workspaceId?: string;          // absent = global scope
   lane?: string;                 // rendered lane template; the scheduler's lane is (handling extension, lane)
-  payload: Json;                 // ≤256 KB inline; larger spills to a blob (payloadRef)
+  payload: Json;                 // ≤256 KB inline; larger spills to a kernel-owned blob (payload_ref, ADR 0135)
   payloadRef?: string;
   correlationId: string;         // root of the trace tree; inherited
   causationId?: string;          // id of the message whose handler produced this one
@@ -280,7 +280,7 @@ pending ─────────▶ (index) ───────▶ running 
 
 | Item | Default |
 |---|---|
-| Inline payload and command result | 256 KB (spill to blob up to 16 MB, else `PAYLOAD_TOO_LARGE` with `{ limit: 'payload', max: 16777216 }`; inline up to 16 MB until the blob store, ADR 0055) |
+| Inline payload and command result | 256 KB (spill to a blob up to 16 MB, else `PAYLOAD_TOO_LARGE` with `{ limit: 'payload', max: 16777216 }`; durable event payloads spill the same way, ADRs 0055, 0135) |
 | `context` map | 2 KB |
 | Live event payload | 16 KB; ring 1,000 per `<type>:<key>` |
 | Max attempts (crash, host loss, `HANDLER_TIMEOUT`, retryable problem) | 3 runs (`attempts == maxAttempts` → `dead`); retry *n* waits 1 s, 5 s, 30 s, then 30 s for every later retry; per-handler `maxAttempts` override (ADR 0059) |

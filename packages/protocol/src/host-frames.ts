@@ -9,6 +9,10 @@ import { replyPayloadSchema } from './reply.ts';
 import { configWriteSchema, outboundPublishSchema, outboundSendSchema, secretWriteSchema, storeWriteSchema } from './unit-of-work.ts';
 import { secretNameSchema } from './config-values.ts';
 import { storeReadSchema } from './store-reads.ts';
+import { base64Schema, blobLimits, blobNameSchema, blobRefChangeSchema, mimeTypeSchema } from './blobs.ts';
+import { blobIdSchema } from './blob-id.ts';
+import { fileContentSchema, workspacePathSchema } from './workspace-files.ts';
+import { storeScopeSchema } from './unit-of-work.ts';
 
 // 03 §3.5 and ADR 0076: the frames between the kernel and an execution host.
 
@@ -47,6 +51,31 @@ export const invokeFrameSchema = z.strictObject({
 });
 export type InvokeFrame = z.infer<typeof invokeFrameSchema>;
 
+const uploadIdSchema = z.number().int().positive();
+// `name` names the call, so a blob's name travels as `fileName`.
+const putMetaSchema = { scope: storeScopeSchema, mime: mimeTypeSchema.exactOptional(), fileName: blobNameSchema.exactOptional() };
+
+// 04 §4.3, §4.6, ADR 0134: a put streams its bytes into an upload the kernel opened; reads come in chunks.
+const blobCalls = [
+  z.strictObject({ name: z.literal('blobs.put.open') }),
+  z.strictObject({ name: z.literal('blobs.put.write'), upload: uploadIdSchema, bytes: base64Schema }),
+  z.strictObject({ name: z.literal('blobs.put.close'), upload: uploadIdSchema, ...putMetaSchema }),
+  z.strictObject({ name: z.literal('blobs.put.file'), path: workspacePathSchema, ...putMetaSchema }),
+  z.strictObject({ name: z.literal('blobs.stat'), blobId: blobIdSchema }),
+  z.strictObject({ name: z.literal('blobs.read'), blobId: blobIdSchema, offset: z.number().int().nonnegative(), length: z.number().int().positive().max(blobLimits.chunkBytes) }),
+] as const;
+
+// 07 §7.2, ADR 0136: ctx.files, served by the kernel's workspace I/O edge.
+const workspaceCalls = [
+  z.strictObject({ name: z.literal('workspace.read'), path: workspacePathSchema }),
+  z.strictObject({ name: z.literal('workspace.write'), path: workspacePathSchema, content: fileContentSchema }),
+  z.strictObject({ name: z.literal('workspace.list'), path: workspacePathSchema }),
+  z.strictObject({ name: z.literal('workspace.stat'), path: workspacePathSchema }),
+  z.strictObject({ name: z.literal('workspace.mkdir'), path: workspacePathSchema }),
+  z.strictObject({ name: z.literal('workspace.rm'), path: workspacePathSchema, recursive: z.boolean() }),
+  z.strictObject({ name: z.literal('workspace.glob'), pattern: z.string().min(1).max(4096) }),
+] as const;
+
 export const rpcCallSchema = z.discriminatedUnion('name', [
   z.strictObject({
     name: z.literal('command'), type: typeNameSchema, payload: jsonSchema, options: commandOptionsSchema, ordinal: callNumberSchema,
@@ -61,6 +90,8 @@ export const rpcCallSchema = z.discriminatedUnion('name', [
   z.strictObject({ name: z.literal('secret.get'), secret: secretNameSchema }),
   // ADR 0131: a sandboxed host's read, served by the read pool.
   z.strictObject({ name: z.literal('store.read'), read: storeReadSchema }),
+  ...blobCalls,
+  ...workspaceCalls,
   z.strictObject({
     name: z.literal('log'), level: z.enum(['debug', 'info', 'warn', 'error']), message: z.string(), fields: jsonObjectSchema.exactOptional(),
   }),
@@ -98,6 +129,7 @@ export const hostUnitOfWorkSchema = z.strictObject({
   replies: z.array(deferredReplySchema),
   config: z.array(configWriteSchema),
   secrets: z.array(secretWriteSchema),
+  blobRefs: z.array(blobRefChangeSchema),
 });
 export type HostUnitOfWork = z.infer<typeof hostUnitOfWorkSchema>;
 

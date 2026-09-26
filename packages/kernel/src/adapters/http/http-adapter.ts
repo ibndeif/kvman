@@ -6,6 +6,7 @@ import type { SchedulerTimers } from '../../scheduler/timers.ts';
 import type { UlidGenerator } from '../../ulid.ts';
 import { bindPort, type PortChoice } from '../../daemon/port-binding.ts';
 import type { EventHub } from '../events/event-hub.ts';
+import { registerBlobRoutes } from './blob-routes.ts';
 import { registerCommandRoutes, type WaitingCommand } from './command-routes.ts';
 import { edgeRefusal } from './edge-checks.ts';
 import { EdgeProblems, sendProblem } from './problem-replies.ts';
@@ -63,6 +64,7 @@ export class HttpAdapter {
     registerCommandRoutes(this.#app, context);
     registerReadRoutes(this.#app, context);
     registerStreamRoutes(this.#app, context);
+    registerBlobRoutes(this.#app, context);
   }
 
   get port(): number {

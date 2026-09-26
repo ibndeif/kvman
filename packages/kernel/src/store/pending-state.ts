@@ -1,4 +1,4 @@
-import type { Json, JsonObject, StoreScope, StoreWrite } from '@kvman/protocol';
+import type { BlobRefChange, Json, JsonObject, StoreScope, StoreWrite } from '@kvman/protocol';
 
 export type PendingValue<Value> = { deleted: false; value: Value } | { deleted: true };
 
@@ -16,6 +16,8 @@ export class PendingState {
   readonly #logs = new Map<string, LogPending>();
   readonly #logWrites: StoreWrite[] = [];
   readonly #versions = new Map<string, number>();
+  // ctx.store.blobs.keep and release, in call order (04 §4.2).
+  readonly blobRefs: BlobRefChange[] = [];
 
   noteKvVersion(scope: StoreScope, key: string, version: number): void {
     const name = entryKey('kv', scope, key);

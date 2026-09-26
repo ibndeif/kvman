@@ -7,6 +7,7 @@ import type { RegistryState } from '../registry/registry-state.ts';
 import type { SecretStore } from '../secrets/secret-store.ts';
 import { readConfigRow } from '../storage/config-rows.ts';
 import type { Connection } from '../storage/driver.ts';
+import { readTrust } from '../storage/trust-changes.ts';
 import { folderExists } from '../workspaces/workspace-paths.ts';
 import type { ExtensionQueryAnswer } from './extension-queries.ts';
 
@@ -32,13 +33,13 @@ export class WorkspaceQueries {
     this.#secrets = secrets;
   }
 
-  // Sorted by name, ties by path; `exists` from a stat now; trust arrives in M2.5.
+  // Sorted by name, ties by path; `exists` from a stat now; `trusted` when a trust record is stored (ADR 0137).
   list(payload: unknown): ExtensionQueryAnswer<WorkspaceListing[]> {
     const { includePreview } = workspacesListRequestSchema.parse(payload);
     const listings = this.#rows()
       .filter((row) => includePreview === true || row.kind === 'normal')
       .sort((left, right) => compareByCodePoint(left.name, right.name) || compareByCodePoint(left.path, right.path))
-      .map((row) => ({ ...row, trusted: false, exists: folderExists(row.path) }));
+      .map((row) => ({ ...row, trusted: readTrust(this.#connection, row.id) !== undefined, exists: folderExists(row.path) }));
     return { ok: true, value: listings };
   }
 
@@ -46,7 +47,7 @@ export class WorkspaceQueries {
     const { workspaceId } = workspaceGetRequestSchema.parse(payload);
     const row = this.#rows().find((candidate) => candidate.id === workspaceId);
     if (row === undefined) return { ok: false, code: 'WORKSPACE_INVALID', detail: `no workspace ${workspaceId} exists` };
-    return { ok: true, value: { ...row, trust: null } };
+    return { ok: true, value: { ...row, trust: readTrust(this.#connection, workspaceId) ?? null } };
   }
 
   // Each scope's row and the merged value, with every secret that is set shown redacted, never its value.

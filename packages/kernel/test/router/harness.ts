@@ -1,10 +1,10 @@
 import type { Capabilities, JsonObject, Manifest, Message, OutboundPublish, OutboundSend } from '@kvman/protocol';
 import {
-  AdapterPath, betterSqlite3Driver, CommitPipeline, KernelRegistry, openKernelDatabase, PayloadValidators, PendingIndex, Router,
+  AdapterPath, addBlobRef, betterSqlite3Driver, CommitPipeline, insertBlob, KernelRegistry, receivedWith, openKernelDatabase, PayloadValidators, PendingIndex, Router,
   type AdapterCommand, type CommitResult, type Connection, type GrantsSource, type Sender, type Submission, type WorkspaceStates,
 } from '../../src/index.ts';
 import { command, event, manifest, query, subscription, workspaceA, workspaceB } from '../registry/manifests.ts';
-import { claimForTest, now, temporaryDatabaseFile, ulids } from '../storage/harness.ts';
+import { blobRightsOf, claimForTest, now, temporaryBlobFiles, temporaryDatabaseFile, ulids } from '../storage/harness.ts';
 
 export { workspaceA, workspaceB };
 
@@ -84,6 +84,7 @@ export class MapGrants implements GrantsSource {
 }
 
 export type RouterFixture = {
+  registry: KernelRegistry;
   connection: Connection;
   router: Router;
   pipeline: CommitPipeline;
@@ -106,10 +107,11 @@ export function openRouterFixture(): RouterFixture {
   const grants = new MapGrants();
   const validators = new PayloadValidators();
   const pending = new PendingIndex(now);
-  const router = new Router({ registry: () => build.registry, grants, workspaces: openWorkspaces, validators, ids: ulids, now, defaultLocale: () => 'en' });
-  const pipeline = new CommitPipeline({ connection, admission: router, now });
+  const files = temporaryBlobFiles();
+  const router = new Router({ registry: () => build.registry, grants, workspaces: openWorkspaces, validators, ids: ulids, now, defaultLocale: () => 'en', blobs: blobRightsOf(connection), files });
+  const pipeline = new CommitPipeline({ connection, files, admission: router, now });
   pipeline.attach(pending);
-  return { connection, router, pipeline, adapter: new AdapterPath(pipeline, ulids), grants, pending, validators };
+  return { registry: build.registry, connection, router, pipeline, adapter: new AdapterPath(pipeline, ulids), grants, pending, validators };
 }
 
 export function personCommand(fixture: RouterFixture, command: Omit<AdapterCommand, 'sender'>, sender: Sender = person): Promise<Submission> {
@@ -130,9 +132,18 @@ export async function causeMessage(fixture: RouterFixture, type: string, sender:
 export function handlerUnit(fixture: RouterFixture, cause: Message, extension: string, contents: { sends?: OutboundSend[]; publishes?: OutboundPublish[] }): Promise<CommitResult> {
   claimForTest(fixture.connection, cause.id);
   return fixture.pipeline.enqueue({
-    origin: { kind: 'invocation', invocation: { message: cause, extension, outcome: { ok: true, value: null }, stored: true } },
+    origin: {
+      kind: 'invocation',
+      invocation: { message: cause, extension, outcome: { ok: true, value: null }, stored: true, received: receivedWith(fixture.registry, fixture.connection, cause) },
+    },
     writes: [], sends: contents.sends ?? [], publishes: contents.publishes ?? [], replies: [],
   });
+}
+
+// A blob the extension holds a reference to, so it may name it in a z.blobId() field (ADR 0134).
+export function holdBlob(fixture: RouterFixture, extension: string, blobId: string): void {
+  insertBlob(fixture.connection, { blobId, size: 1, mime: 'application/octet-stream' }, now());
+  addBlobRef(fixture.connection, blobId, { owner: extension, ws: workspaceA, ref: `blob:${blobId}`, expiresAt: null });
 }
 
 export function problemCode(result: CommitResult | Submission): string | undefined {

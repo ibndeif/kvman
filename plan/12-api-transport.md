@@ -24,8 +24,8 @@ All adapters are thin: they authenticate the caller, turn a request into a messa
 | GET | `/ui?workspaceId=` | — | the workspace's UI registry (`08` §8.6); `ETag`, `304` on `If-None-Match` |
 | GET | `/ui/pages/:pageId?workspaceId=` | — | `{ page, components }`: a page view and the composite components it uses; same `ETag` |
 | GET | `/ui/translations?workspaceId=` | — | translation catalogs of the enabled extensions and the preset for the saved language and its fallbacks (never named in the URL, `08` §8.16); `ETag` |
-| PUT | `/blobs` | raw bytes; headers `Content-Type`, `X-Kvman-Filename`, `X-Kvman-Workspace` | `{ blobId, size, mime, name }` (upload ref, 24 h) |
-| GET | `/blobs/:id?download=1` | — | bytes with the serving policy of `13` §13.7 |
+| PUT | `/blobs` | raw bytes; headers `Content-Type` (default `application/octet-stream`), `X-Kvman-Filename` (optional, percent-encoded UTF-8, 1–255 characters), `X-Kvman-Workspace` (optional; the upload ref is global without it) | `{ blobId, size, mime, name? }` (upload ref, 24 h; ADR 0138) |
+| GET | `/blobs/:id?download=1` | — | bytes with the serving policy of `13` §13.7; an unknown blob is 404 `BLOB_NOT_FOUND` |
 | GET | `/events?stream=&lastEventId=` | — | `text/event-stream` (§12.3) |
 | POST | `/subscriptions` | `{ stream, sid, events?, live?, workspaceId?, since? }` (`events`: type patterns of durable and transient events; `live`: `<type>:<key>` addresses of live events) | `201 { sid }` |
 | DELETE | `/subscriptions/:sid?stream=` | — | `204` |
@@ -37,7 +37,7 @@ All adapters are thin: they authenticate the caller, turn a request into a messa
   |---|---|
   | 400 | `VALIDATION_FAILED` (also a missing JSON `Content-Type`, an unparsable body, or a bad header) |
   | 403 | `CAPABILITY_DENIED`, `CALLER_NOT_ALLOWED`, `HOST_FORBIDDEN` (also a refused `Sec-Fetch-Site`) |
-  | 404 | `TYPE_NOT_FOUND`, `NOT_FOUND` (unknown message or route) |
+  | 404 | `TYPE_NOT_FOUND`, `NOT_FOUND` (unknown message or route), `BLOB_NOT_FOUND` (ADR 0138) |
   | 409 | `IDEMPOTENCY_MISMATCH`, `STORAGE_CONFLICT`, every `*_STALE`, every `*_CONFLICT` |
   | 413 | `PAYLOAD_TOO_LARGE`, `BLOB_TOO_LARGE` |
   | 500 | `INTERNAL` |

@@ -56,7 +56,7 @@ type Issue = {
 | `PAYLOAD_TOO_LARGE` | over 16 MB after spill | The payload is over 16 MB | no |
 | `QUERY_TIMEOUT` | a query over its handler timeout | The query ran longer than its timeout | yes |
 | `REPLY_NOT_AWAITING` | `ctx.reply` for a command that already has a reply, was cancelled, or passed its deadline (e.g. a second answer to the same prompt) | The command is no longer waiting for a reply | no |
-| `BLOB_NOT_FOUND` / `BLOB_TOO_LARGE` / `BLOB_UNSAFE_TYPE` | blob errors | The blob does not exist / The blob is over the size limit / The blob type cannot be served inline | no |
+| `BLOB_NOT_FOUND` / `BLOB_TOO_LARGE` / `BLOB_UNSAFE_TYPE` | blob errors (`BLOB_TOO_LARGE` carries `{ max }`: 104857600 for a put, 16777216 for `text`/`bytes`, ADR 0134) | The blob does not exist / The blob is over the size limit / The blob type cannot be served inline | no |
 | `WORKSPACE_INVALID` / `WORKSPACE_ESCAPE` / `WORKSPACE_UNTRUSTED` | workspace path and trust errors | The workspace is not valid / The path leaves the workspace / The workspace files are not trusted | no |
 | `CONFIG_INVALID` / `CONFIG_STALE` | config schema or revision errors | The configuration does not match its schema / The configuration changed since it was read | no |
 | `PRESET_INVALID` / `PRESET_UNSHAREABLE` / `PRESET_STALE` / `PRESET_SECRET` / `PRESET_REFERENCE_MISSING` / `PRESET_REQUIRED` (enable in a workspace with no applied preset) / `PRESET_INTEGRITY_MISMATCH` (a downloaded package does not match the preset's `integrity`) / `PRESET_READONLY` | preset errors (`PRESET_READONLY`: deleting a built-in preset) | The preset is not valid / The preset cannot be shared / The preset changed since it was read / The preset contains a secret / The preset refers to something that does not exist / The workspace has no applied preset / A package does not match the preset integrity / Built-in presets cannot be changed | no |
@@ -70,7 +70,7 @@ type Issue = {
 | `DAEMON_CONFLICT` | another kernel owns the lock | Another kernel owns this home folder | no |
 | `HOME_INVALID` | the home folder holds other files but no `kvman.db` (`03` §3.9) | The home folder holds other files | no |
 | `HOST_FORBIDDEN` | bad `Host` or `Origin`, or a refused `Sec-Fetch-Site` | The request Host or Origin is not allowed | no |
-| `NOT_FOUND` | an unknown message id, route, or extension, or a subscription for a stream with no open connection (ADRs 0095, 0119) | The resource does not exist | no |
+| `NOT_FOUND` | an unknown message id, route, or extension, a subscription for a stream with no open connection, or a missing workspace file in `ctx.files` (ADRs 0095, 0119, 0136) | The resource does not exist | no |
 | `PORT_UNAVAILABLE` | no free port in 4173–4199 (`{ from, to }`), or the `--port` given is taken (`{ port }`) (ADR 0095) | No port is free for the kernel | no |
 | `KERNEL_STOPPING` | a request that arrives during shutdown (ADR 0090) | The kernel is shutting down | yes |
 | `INTERNAL` | unexpected error (details in the log) | Unexpected error | yes |
@@ -129,7 +129,7 @@ Extension codes used across the plan: `agent/SESSION_CLOSED`, `agent/CONTEXT_TOO
 ## 13.7 Blob serving policy
 
 - `GET /api/v1/blobs/:id` always sends `X-Content-Type-Options: nosniff` and `Content-Security-Policy: sandbox; default-src 'none'`.
-- Inline display only for an allowlist of inert types verified by content sniffing: `image/png`, `image/jpeg`, `image/webp`, `image/gif`, `text/plain` (as `text/plain; charset=utf-8`). Everything else, including SVG, HTML, and PDF, is served with `Content-Disposition: attachment`. PDFs are displayed through a widget that reads bytes via the bridge.
+- Inline display only for an allowlist of inert types verified by content sniffing: `image/png`, `image/jpeg`, `image/webp`, `image/gif`, `text/plain` (as `text/plain; charset=utf-8`). The stored mime must be on the list and the bytes must match it (the PNG, JPEG, GIF, and WebP signatures; for `text/plain`, valid UTF-8 with no NUL byte). Everything else, including SVG, HTML, and PDF, and every `?download=1`, is served as `application/octet-stream` with `Content-Disposition: attachment` and the name in `filename*` (ADR 0138). PDFs are displayed through a widget that reads bytes via the bridge.
 - Size limit: 100 MB per blob, for uploads (`PUT /blobs`) and `ctx.store.blobs.put` alike (`BLOB_TOO_LARGE`); fixed in v2.
 
 ## 13.8 Security tests (required, see `14`)

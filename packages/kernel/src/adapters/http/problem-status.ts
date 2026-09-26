@@ -7,6 +7,7 @@ const statusByCode: Partial<Record<KernelErrorCode, number>> = {
   HOST_FORBIDDEN: 403,
   TYPE_NOT_FOUND: 404,
   NOT_FOUND: 404,
+  BLOB_NOT_FOUND: 404,
   IDEMPOTENCY_MISMATCH: 409,
   PAYLOAD_TOO_LARGE: 413,
   BLOB_TOO_LARGE: 413,

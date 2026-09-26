@@ -6,7 +6,7 @@ function issues(result: Awaited<ReturnType<typeof personCommand>>): string[] {
   return result.ok ? [] : (result.problem.issues ?? []).map((issue) => `${result.problem.code} ${issue.path}`);
 }
 
-describe('payload validation (ADRs 0055, 0056)', () => {
+describe('payload validation (ADRs 0055, 0056, 0135)', () => {
   it('M1.4-E11 payloads are checked against the manifest schema with Ajv', async () => {
     const fixture = openRouterFixture();
     expect(issues(await personCommand(fixture, { type: 'pdf.import', payload: { blobId: 'ABC' } }))).toEqual(['VALIDATION_FAILED payload.blobId']);
@@ -18,11 +18,11 @@ describe('payload validation (ADRs 0055, 0056)', () => {
     expect(fixture.validators.validatorFor(schema)).toBe(fixture.validators.validatorFor(schema));
   });
 
-  it('M1.4-E12 payloads are inline up to 16 MB', async () => {
+  it('M1.4-E12 payloads are stored up to 16 MB', async () => {
     const fixture = openRouterFixture();
     const large = await personCommand(fixture, { type: 'pdf.batch', payload: { batch: 'b1', part: 1, data: 'x'.repeat(1024 * 1024) } });
     expect(large).toMatchObject({ ok: true });
-    expect(String(messageRows(fixture)[0]?.['payload']).length).toBeGreaterThan(1024 * 1024);
+    expect(messageRows(fixture)[0]).toMatchObject({ payload: null, payload_ref: expect.stringMatching(/^[0-9a-f]{64}$/) });
     const tooLarge = await personCommand(fixture, { type: 'pdf.batch', payload: { batch: 'b2', part: 1, data: 'x'.repeat(16 * 1024 * 1024) } });
     expect(tooLarge).toMatchObject({ ok: false, problem: { code: 'PAYLOAD_TOO_LARGE', params: { limit: 'payload', max: 16777216 } } });
   });

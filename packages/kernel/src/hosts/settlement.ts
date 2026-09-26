@@ -3,7 +3,7 @@ import { kernelProblem } from '../problems.ts';
 import type { Claim } from '../scheduler/dispatcher.ts';
 import type { Scheduler } from '../scheduler/scheduler.ts';
 import type { CommitPipeline } from '../storage/commit-pipeline.ts';
-import type { CommitResult, CommitUnit } from '../storage/commit-unit.ts';
+import type { Admission, CommitResult, CommitUnit } from '../storage/commit-unit.ts';
 import type { LiveAddress, LiveBus } from './live-bus.ts';
 import type { QueryPath } from './query-path.ts';
 import type { Quarantines } from './quarantines.ts';
@@ -18,9 +18,13 @@ export type SettlementDeps = {
   live: LiveBus;
   values: RecordedValueStore;
   quarantines: Quarantines;
+  // ADR 0134: a query result may name only blobs its handler may read.
+  results: Pick<Admission, 'checkResult'>;
+  // 04 §4.6: an attempt's open uploads, and without a commit its pending blob references, end with it.
+  blobs: { ended(messageId: string, committed: boolean): Promise<void> };
 };
 
-type Run = { claim: Claim; live: ReadonlyMap<string, LiveAddress> };
+type Run = { claim: Claim; live: ReadonlyMap<string, LiveAddress>; received?: ReadonlySet<string> };
 
 const noNewValues: NewRecordedValues = { id: [], now: [] };
 
@@ -39,7 +43,7 @@ export class Settlement {
   async completed(run: Run, frame: CompleteFrame): Promise<void> {
     const { claim } = run;
     if (claim.message.kind === 'query') {
-      this.#answerQuery(claim, frame.outcome);
+      this.#answerQuery(run, frame.outcome);
       return;
     }
     const { outcome } = frame;
@@ -47,8 +51,9 @@ export class Settlement {
       await this.#failed(run, outcome.problem, frame.recorded);
       return;
     }
-    const result = await this.#commit(claim, outcome, frame.unitOfWork, true);
+    const result = await this.#commit(run, outcome, frame.unitOfWork, true);
     if (result.committed) {
+      await this.#deps.blobs.ended(claim.message.id, true);
       this.#deps.scheduler.settled(claim.message.id);
       this.#deps.waiters.resolve(result.replies);
       const { deadlineAt } = claim.message;
@@ -65,7 +70,7 @@ export class Settlement {
     const code = reason === 'deadline' ? 'DEADLINE_EXCEEDED' : message.kind === 'query' ? 'QUERY_TIMEOUT' : 'HANDLER_TIMEOUT';
     const problem = kernelProblem(code, { correlationId: message.correlationId, messageId: message.id });
     if (message.kind === 'query') {
-      this.#reset(run);
+      await this.#reset(run);
       this.#deps.queries.answer(message.id, { ok: false, problem });
       return;
     }
@@ -73,13 +78,13 @@ export class Settlement {
   }
 
   // A cancel already ended the message in its own unit (ADR 0083); only the preview is withdrawn.
-  aborted(run: Run): void {
-    this.#reset(run);
+  async aborted(run: Run): Promise<void> {
+    await this.#reset(run);
   }
 
   // 03 §3.6: caught on a stuck host through no fault of its own, it returns without an attempt penalty.
   async collateral(run: Run): Promise<void> {
-    this.#reset(run);
+    await this.#reset(run);
     const { message, extension } = run.claim;
     if (message.kind === 'query') {
       this.#deps.scheduler.submitQuery({ message, handler: extension });
@@ -90,7 +95,7 @@ export class Settlement {
 
   // 03 §3.9, ADR 0091: shutdown ended the attempt; it returns to pending without an attempt and runs at the next boot.
   async interrupted(run: Run): Promise<void> {
-    this.#reset(run);
+    await this.#reset(run);
     const { message } = run.claim;
     if (message.kind === 'query') {
       this.#deps.queries.answer(message.id, { ok: false, problem: kernelProblem('KERNEL_STOPPING', { correlationId: message.correlationId, messageId: message.id }) });
@@ -127,7 +132,14 @@ export class Settlement {
     await this.#failed({ claim, live: new Map() }, problem, noNewValues);
   }
 
-  #answerQuery(claim: Claim, outcome: HostOutcome): void {
+  #answerQuery({ claim, received }: Run, outcome: HostOutcome): void {
+    if ('ok' in outcome && outcome.ok) {
+      const problem = this.#deps.results.checkResult({ message: claim.message, value: outcome.value, extension: claim.extension, received: received ?? new Set() });
+      if (problem !== undefined) {
+        this.#deps.queries.answer(claim.message.id, { ok: false, problem });
+        return;
+      }
+    }
     if ('deferred' in outcome) {
       const problem = kernelProblem('INTERNAL', { correlationId: claim.message.correlationId, detail: 'a query cannot defer' });
       this.#deps.queries.answer(claim.message.id, { ok: false, problem });
@@ -137,8 +149,11 @@ export class Settlement {
   }
 
   // The handler's own unit is checked against its invocation deadline (04 §4.2); a failure the kernel records is not.
-  #commit(claim: Claim, outcome: HostOutcome, contents: EmptyContents, handlerUnit: boolean): Promise<CommitResult> {
-    const invocation = { message: claim.message, extension: claim.extension, outcome, stored: claim.stored, ...(handlerUnit ? { deadlineAt: claim.deadlineAt } : {}) };
+  #commit({ claim, received }: Run, outcome: HostOutcome, contents: EmptyContents, handlerUnit: boolean): Promise<CommitResult> {
+    const invocation = {
+      message: claim.message, extension: claim.extension, outcome, stored: claim.stored,
+      ...(handlerUnit ? { deadlineAt: claim.deadlineAt } : {}), ...(received === undefined ? {} : { received }),
+    };
     return this.#deps.pipeline.enqueue({ origin: { kind: 'invocation', invocation }, ...contents });
   }
 
@@ -147,7 +162,7 @@ export class Settlement {
       await this.#failed(run, problem, recorded);
       return;
     }
-    this.#reset(run);
+    await this.#reset(run);
     if (!run.claim.stored) {
       this.#deps.scheduler.dropped(run.claim.message.id);
       return;
@@ -157,7 +172,7 @@ export class Settlement {
   }
 
   async #failed(run: Run, problem: Problem, recorded: NewRecordedValues): Promise<void> {
-    this.#reset(run);
+    await this.#reset(run);
     const { claim } = run;
     if (!claim.stored) {
       this.#deps.scheduler.dropped(claim.message.id);
@@ -172,7 +187,7 @@ export class Settlement {
   }
 
   async #failFinal(run: Run, problem: Problem): Promise<void> {
-    const result = await this.#commit(run.claim, { ok: false, problem }, emptyContents, false);
+    const result = await this.#commit(run, { ok: false, problem }, emptyContents, false);
     if (!result.committed && result.stale) return;
     this.#deps.scheduler.settled(run.claim.message.id);
     this.#resolveWaiters(result);
@@ -182,7 +197,8 @@ export class Settlement {
     if (result.committed) this.#deps.waiters.resolve(result.replies);
   }
 
-  #reset({ claim, live }: Run): void {
+  async #reset({ claim, live }: Run): Promise<void> {
     if (live.size > 0) this.#deps.live.reset(claim.message.id, live.values());
+    await this.#deps.blobs.ended(claim.message.id, false);
   }
 }

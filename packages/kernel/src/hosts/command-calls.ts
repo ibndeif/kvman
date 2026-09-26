@@ -55,9 +55,10 @@ export async function callCommand(deps: CommandCallDeps, invocation: ActiveInvoc
     deadlineAt: Math.min(call.options.deadlineAt ?? deadlineAt, deadlineAt),
   };
   const messageId = deps.ids.next();
-  const reentrant = laneReentrancy(deps, { send, sender, cause: message, workspaceId: message.workspaceId, index: 0, id: messageId });
+  const { received } = invocation;
+  const reentrant = laneReentrancy(deps, { send, sender, cause: message, workspaceId: message.workspaceId, index: 0, id: messageId, received });
   if (reentrant !== undefined) return { ok: false, problem: reentrant };
-  const result = await deps.pipeline.enqueue({ origin: { kind: 'call', sender, cause: message, messageId }, writes: [], sends: [send], publishes: [], replies: [] });
+  const result = await deps.pipeline.enqueue({ origin: { kind: 'call', sender, cause: message, messageId, received }, writes: [], sends: [send], publishes: [], replies: [] });
   if (!result.committed) return { ok: false, problem: result.problem };
   const target = result.inserted[0]?.message.id ?? result.duplicates[0]?.id;
   if (target === undefined) {

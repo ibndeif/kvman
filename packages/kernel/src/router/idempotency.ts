@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto';
 import { canonicalJson, replyPayloadSchema, requestDigestFields, type RequestDigestInput } from '@kvman/protocol';
 import type { OriginalMessage } from '../storage/commit-unit.ts';
-import type { Connection } from '../storage/driver.ts';
 import { storedState } from '../storage/message-rows.ts';
+import { storedReplyText, type RowReader } from '../storage/stored-message.ts';
 import { jsonOf } from '../store/json-order.ts';
 
 export function requestDigestNow(input: RequestDigestInput): string {
@@ -11,12 +11,13 @@ export function requestDigestNow(input: RequestDigestInput): string {
 
 export type KeyedMessage = OriginalMessage & { digest: string | undefined };
 
-export function findKeyedMessage(connection: Connection, source: string, key: string): KeyedMessage | undefined {
-  const row = connection
-    .prepare('SELECT id, state, digest, result FROM messages WHERE idempotency_source = ? AND idempotency_key = ?')
+export function findKeyedMessage(rows: RowReader, source: string, key: string): KeyedMessage | undefined {
+  const row = rows.connection
+    .prepare('SELECT id, state, digest, result, result_ref FROM messages WHERE idempotency_source = ? AND idempotency_key = ?')
     .get(source, key);
   if (row === undefined) return undefined;
-  const reply = row['result'] === null ? undefined : replyPayloadSchema.parse(jsonOf(row['result']));
+  const text = storedReplyText(rows.files, row);
+  const reply = text === undefined ? undefined : replyPayloadSchema.parse(jsonOf(text));
   return {
     id: String(row['id']), state: storedState(row['state']), digest: typeof row['digest'] === 'string' ? row['digest'] : undefined,
     ...(reply === undefined ? {} : { reply }),

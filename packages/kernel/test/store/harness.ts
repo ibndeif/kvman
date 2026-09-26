@@ -1,7 +1,7 @@
 import type { Issue, JsonObject, Message, StoreWrite } from '@kvman/protocol';
 import {
-  createCollectionIndexes, createHandlerStore, openReadConnection, betterSqlite3Driver, ConnectionReads, StoreReader, UnindexedScanThrottle, UnindexedScanWarnings,
-  type CommitResult, type DataDeclarations, type HandlerStore, type UnindexedScan,
+  createCollectionIndexes, createHandlerStore, kernelProblem, ProblemError, openReadConnection, betterSqlite3Driver, ConnectionReads, StoreReader, UnindexedScanThrottle, UnindexedScanWarnings,
+  type BlobChannel, type CommitResult, type DataDeclarations, type HandlerStore, type UnindexedScan,
 } from '../../src/index.ts';
 import { invocationMessage, now, openTestStore, ulids, workspaceId, type TestStore } from '../storage/harness.ts';
 
@@ -28,11 +28,16 @@ export function openStoreFixture(): StoreFixture {
   return { ...store, reader: new StoreReader(openReadConnection(store.file, betterSqlite3Driver)), warnings, scans: new UnindexedScanWarnings(new UnindexedScanThrottle(now), (scan) => warnings.push(scan)) };
 }
 
+// The store tests reach no kernel, so a blob call fails as it would with no kernel behind the host.
+const noKernel: BlobChannel = {
+  call: () => Promise.reject(new ProblemError(kernelProblem('INTERNAL', { correlationId: ulids.next(), detail: 'the store tests have no kernel' }))),
+};
+
 export type HandlerOptions = { workspace?: string | null; readOnly?: boolean };
 
 export function handlerStore(fixture: StoreFixture, options: HandlerOptions = {}): HandlerStore {
   return createHandlerStore({
-    reader: new ConnectionReads(fixture.reader), owner, workspaceId: options.workspace === null ? undefined : (options.workspace ?? workspaceId),
+    reader: new ConnectionReads(fixture.reader), blobs: noKernel, owner, workspaceId: options.workspace === null ? undefined : (options.workspace ?? workspaceId),
     data: declarations, validateDocument: rejectInvalidField, correlationId: ulids.next(), readOnly: options.readOnly ?? false,
     unindexedScans: fixture.scans,
   });

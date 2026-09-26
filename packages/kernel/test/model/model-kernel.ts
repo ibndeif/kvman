@@ -1,7 +1,7 @@
 import { dirname } from 'node:path';
 import type { CompleteFrame, HostOutcome, HostUnitOfWork, Json } from '@kvman/protocol';
 import {
-  AdapterPath, betterSqlite3Driver, CommitPipeline, ExtensionQueries, insertVersionRows, insertWorkspace, KernelCommits, KernelHost, kernelOwner, InspectionQueries, KernelQueries,
+  AdapterPath, betterSqlite3Driver, CommitPipeline, FileServices, inertFaults, ExtensionQueries, insertVersionRows, insertWorkspace, KernelCommits, KernelHost, kernelOwner, InspectionQueries, KernelQueries,
   KernelRegistry, LiveBus, openKernelDatabase, PayloadValidators, PendingIndex, Quarantines, QueryPath, recoverInterrupted, RecordedValueStore, RegistryState,
   ReplyWaiters, Router, Scheduler, SecretStore, Settlement, WorkspaceDirectory, WorkspaceQueries, writeAppliedPreset, type Claim, type Connection, type Dispatcher,
   type HostLoad,
@@ -85,14 +85,18 @@ export async function bootModelKernel(file: string, time: TestTime = { value: st
   const current = (): KernelRegistry => registry.current();
   const grants = new MapGrants();
   grants.grant(modelExtension, workspaceA, {});
-  const router = new Router({ registry: current, grants, workspaces: new WorkspaceDirectory(connection), validators: new PayloadValidators(), ids: ulids, now, defaultLocale: () => 'en' });
-  const index = PendingIndex.rebuild(connection, now);
-  const pipeline = new CommitPipeline({ connection, admission: router, now, maxBatchUnits: 1 });
-  const waiters = new ReplyWaiters(connection);
   const timers = new ManualTimers(time);
+  const services = new FileServices({ home: dirname(file), connection, now, timers, ids: ulids, logger: { write: () => undefined }, faults: inertFaults });
+  const { files } = services;
+  const router = new Router({
+    registry: current, grants, workspaces: new WorkspaceDirectory(connection), validators: new PayloadValidators(), ids: ulids, now, defaultLocale: () => 'en', blobs: services.rights, files,
+  });
+  const index = PendingIndex.rebuild(connection, now);
+  const pipeline = new CommitPipeline({ connection, files, admission: router, now, maxBatchUnits: 1 });
+  const waiters = new ReplyWaiters({ connection, files });
   const dispatcher = new ModelDispatcher();
   const scheduler = new Scheduler({
-    connection, pipeline, index, registry: current, dispatcher, now, timers,
+    connection, files, pipeline, index, registry: current, dispatcher, now, timers,
     onCommitted: (result) => {
       if (result.committed) waiters.resolve(result.replies);
     },
@@ -100,19 +104,21 @@ export async function bootModelKernel(file: string, time: TestTime = { value: st
   const queries = new QueryPath(router, scheduler);
   const settlement = new Settlement({
     pipeline, scheduler, waiters, queries, live: new LiveBus(), values: new RecordedValueStore(connection), quarantines: new Quarantines(pipeline, registry, ulids),
+    results: router, blobs: services,
   });
   const commits = new KernelCommits(pipeline, scheduler, waiters);
+  services.link({ pipeline, commits, grants });
   dispatcher.kernel = new KernelHost({
     connection, commits, scheduler, grants, queries, abortMessages: (ids) => dispatcher.abort(ids), commands: new Map(),
     requestShutdown: () => undefined,
     kernelQueries: new KernelQueries({
       connection, registry: current, version: '0.0.0', extensions: new ExtensionQueries(connection, registry, grants),
       workspaces: new WorkspaceQueries(connection, registry, SecretStore.load(dirname(file), ulids.next())),
-      inspection: new InspectionQueries({ connection, registry: current, grants }), grants,
+      inspection: new InspectionQueries({ connection, registry: current, grants }), grants, trust: services.trust,
       health: () => ({ status: 'ok', version: '0.0.0', instanceId: '0b5c7f2e-4a1d-4c3b-9e8f-1a2b3c4d5e6f', processStart: 'x', uptimeMs: 0, port: 4173, home: '/h' }),
     }),
   });
-  const recovered = await recoverInterrupted({ connection, pipeline, registry: current, now });
+  const recovered = await recoverInterrupted({ connection, files, pipeline, registry: current, now });
   index.placeStored(connection, recovered);
   scheduler.start();
   return { file, connection, time, timers, pipeline, scheduler, dispatcher, settlement, adapter: new AdapterPath(pipeline, ulids) };
@@ -131,7 +137,7 @@ export async function crash(kernel: ModelKernel): Promise<ModelKernel> {
   return bootModelKernel(kernel.file, kernel.time);
 }
 
-const emptyUnit: HostUnitOfWork = { writes: [], sends: [], publishes: [], replies: [], config: [], secrets: [] };
+const emptyUnit: HostUnitOfWork = { writes: [], sends: [], publishes: [], replies: [], config: [], secrets: [], blobRefs: [] };
 
 // Ends a running invocation as its host would report it.
 export async function end(kernel: ModelKernel, messageId: string, outcome: HostOutcome, unit: Partial<HostUnitOfWork> = {}): Promise<void> {

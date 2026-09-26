@@ -1,7 +1,7 @@
 import { outboundPublishSchema, type Message } from '@kvman/protocol';
 import type { EventDelivery, PublishAdmission, PublishRequest } from '../storage/commit-unit.ts';
 import type { Subscriber } from '../registry/kernel-registry.ts';
-import { checkPayload, checkWorkspace, refusalOf, resolveType, type AdmissionOptions } from './admission-context.ts';
+import { checkBlobs, checkPayload, checkWorkspace, refusalOf, resolveType, type AdmissionOptions } from './admission-context.ts';
 import { receivesEvent } from './event-grants.ts';
 import { requestDigestNow } from './idempotency.ts';
 import { renderLane } from './lane-rendering.ts';
@@ -40,7 +40,9 @@ export function admitPublish(options: AdmissionOptions, request: PublishRequest)
     const resolved = resolveType(options, type, request.workspaceId, 'event');
     checkPublish(sender, resolved.owner, resolved.entry);
     const deliveryClass = resolved.entry.kind === 'event' ? resolved.entry.delivery : 'durable';
-    checkPayload(options, resolved.entry.kind === 'event' ? resolved.entry.payload : undefined, payload);
+    const schema = resolved.entry.kind === 'event' ? resolved.entry.payload : undefined;
+    checkPayload(options, schema, payload);
+    checkBlobs(options, sender, schema, payload, request.received);
     const event: Message = {
       v: 1, id, kind: 'event', type, source: sender.address,
       ...(resolved.workspaceId === undefined ? {} : { workspaceId: resolved.workspaceId }),

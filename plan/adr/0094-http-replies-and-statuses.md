@@ -1,6 +1,6 @@
 # ADR 0094 — Command replies over HTTP and the status of each problem
 
-- **Status**: accepted
+- **Status**: accepted; the 404 row gains `BLOB_NOT_FOUND` (ADR 0138)
 - **Date**: 2026-09-25
 - **Milestone**: M1.8
 - **Decided by**: the product owner
@@ -32,7 +32,7 @@ Option 1:
 |---|---|
 | 400 | `VALIDATION_FAILED` (also a missing JSON `Content-Type`, an unparsable body, or a bad header) |
 | 403 | `CAPABILITY_DENIED`, `CALLER_NOT_ALLOWED`, `HOST_FORBIDDEN` (also a refused `Sec-Fetch-Site`) |
-| 404 | `TYPE_NOT_FOUND`, `NOT_FOUND` |
+| 404 | `TYPE_NOT_FOUND`, `NOT_FOUND`, `BLOB_NOT_FOUND` (ADR 0138) |
 | 409 | `IDEMPOTENCY_MISMATCH`, `STORAGE_CONFLICT`, every `*_STALE`, every `*_CONFLICT` |
 | 413 | `PAYLOAD_TOO_LARGE`, `BLOB_TOO_LARGE` |
 | 500 | `INTERNAL` |

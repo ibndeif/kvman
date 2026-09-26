@@ -1,11 +1,12 @@
 import { jsonSchema, typeNameSchema, type Json, type Message, type Problem } from '@kvman/protocol';
 import type { AdmittedMessage, Sender } from '../storage/commit-unit.ts';
-import { checkPayload, checkWorkspace, refusalOf, resolveType, type AdmissionOptions } from './admission-context.ts';
+import { checkBlobs, checkPayload, checkWorkspace, refusalOf, resolveType, type AdmissionOptions } from './admission-context.ts';
 import { assignContext, assignPriority } from './message-assignment.ts';
 import { checkAccess, checkCallCapability } from './permission-checks.ts';
 import { invalid } from './refusal.ts';
 
-export type QueryRequest = { sender: Sender; type: string; payload: Json; cause: Message | undefined; workspaceId: string | undefined };
+// `received` holds the blob IDs the asking invocation received (ADR 0134); empty for people.
+export type QueryRequest = { sender: Sender; type: string; payload: Json; cause: Message | undefined; workspaceId: string | undefined; received?: ReadonlySet<string> };
 
 export type QueryAdmission = { ok: true; admitted: AdmittedMessage } | { ok: false; problem: Problem };
 
@@ -21,7 +22,9 @@ export function admitQuery(options: AdmissionOptions, request: QueryRequest): Qu
     const resolved = resolveType(options, request.type, request.workspaceId, 'query');
     checkCallCapability(options, sender, { owner: resolved.owner, entry: resolved.entry }, request.workspaceId);
     checkAccess(sender, resolved.owner, resolved.entry);
-    checkPayload(options, resolved.entry.kind === 'query' ? resolved.entry.input : undefined, request.payload);
+    const input = resolved.entry.kind === 'query' ? resolved.entry.input : undefined;
+    checkPayload(options, input, request.payload);
+    checkBlobs(options, sender, input, request.payload, request.received ?? new Set());
     const message: Message = {
       v: 1, id, kind: 'query', type: request.type, source: sender.address,
       ...(resolved.workspaceId === undefined ? {} : { workspaceId: resolved.workspaceId }),

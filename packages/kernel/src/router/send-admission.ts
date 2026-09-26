@@ -1,7 +1,7 @@
 import { outboundSendSchema, type Message, type OutboundSend } from '@kvman/protocol';
 import type { SendAdmission, SendRequest } from '../storage/commit-unit.ts';
 import type { Connection } from '../storage/driver.ts';
-import { checkPayload, checkWorkspace, refusalOf, resolveType, type AdmissionOptions, type Resolved } from './admission-context.ts';
+import { checkBlobs, checkPayload, checkWorkspace, refusalOf, resolveType, type AdmissionOptions, type Resolved } from './admission-context.ts';
 import { findKeyedMessage, requestDigestNow } from './idempotency.ts';
 import { renderLane } from './lane-rendering.ts';
 import { assignContext, assignNotBefore, assignPriority } from './message-assignment.ts';
@@ -97,14 +97,16 @@ export function admitSend(options: AdmissionOptions, connection: Connection, req
     message = withHandlerPriority(resolved, request, resolved.workspaceId === undefined ? unscoped : { ...unscoped, workspaceId: resolved.workspaceId });
     checkCallCapability(options, request.sender, { owner, entry: resolved.entry }, request.workspaceId);
     checkAccess(request.sender, owner, resolved.entry);
-    checkPayload(options, resolved.entry.kind === 'command' ? resolved.entry.input : undefined, message.payload);
+    const input = resolved.entry.kind === 'command' ? resolved.entry.input : undefined;
+    checkPayload(options, input, message.payload);
+    checkBlobs(options, request.sender, input, message.payload, request.received);
     const lane = laneOf(resolved, request.send, message);
     if (lane !== undefined) message = { ...message, lane };
     const key = idempotencyKeyOf(request);
     const digest = requestDigestNow({ type: message.type, payload: message.payload, ...(resolved.workspaceId === undefined ? {} : { workspaceId: resolved.workspaceId }), ...(lane === undefined ? {} : { lane }) });
     if (key === undefined) return { outcome: 'admitted', admitted: { message, handler: owner, digest } };
     message = { ...message, idempotencyKey: key };
-    const existing = findKeyedMessage(connection, message.source, key);
+    const existing = findKeyedMessage({ connection, files: options.files }, message.source, key);
     if (existing === undefined) return { outcome: 'admitted', admitted: { message, handler: owner, digest } };
     if (existing.digest === digest) {
       const { digest: _stored, ...original } = existing;

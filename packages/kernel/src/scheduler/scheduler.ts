@@ -5,6 +5,7 @@ import type { HandlerSettings, KernelRegistry } from '../registry/kernel-registr
 import type { CommitPipeline } from '../storage/commit-pipeline.ts';
 import type { AdmittedMessage, CommitResult } from '../storage/commit-unit.ts';
 import type { Connection } from '../storage/driver.ts';
+import type { SpillFiles } from '../storage/spill.ts';
 import { inWriteTransaction } from '../storage/write-transaction.ts';
 import { BatchClaims } from './batch-claims.ts';
 import { claimRunnable } from './claim-pass.ts';
@@ -22,6 +23,7 @@ import type { SchedulerTimers, TimerHandle } from './timers.ts';
 
 export type SchedulerOptions = {
   connection: Connection;
+  files: SpillFiles;
   pipeline: CommitPipeline;
   index: PendingIndex;
   registry: () => KernelRegistry;
@@ -238,9 +240,9 @@ export class Scheduler {
     const eligible = (entry: PendingEntry): boolean => this.#eligible(entry, now);
     const candidates = this.#options.index.candidates(now, eligible);
     if (candidates.length === 0) return;
-    const { connection, index, dispatcher } = this.#options;
+    const { connection, files, index, dispatcher } = this.#options;
     const passDeps = {
-      connection, index, dispatcher, rotation: this.#rotation, inFlight: this.#inFlight, eligible, undispatched: this.#batches.undispatched(),
+      connection, files, index, dispatcher, rotation: this.#rotation, inFlight: this.#inFlight, eligible, undispatched: this.#batches.undispatched(),
       timeoutMs: (entry: PendingEntry) => this.#settings(entry).timeoutMs,
     };
     claimRunnable(passDeps, now, candidates, claimed);

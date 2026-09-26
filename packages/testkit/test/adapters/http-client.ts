@@ -7,7 +7,7 @@ import { vi } from 'vitest';
 
 export type HttpAnswer = { status: number; headers: IncomingHttpHeaders; text: string; json: unknown };
 
-export type RequestOptions = { headers?: OutgoingHttpHeaders; body?: unknown; rawBody?: string; host?: string };
+export type RequestOptions = { headers?: OutgoingHttpHeaders; body?: unknown; rawBody?: string | Buffer; host?: string };
 
 export function served(port: number): string {
   return `127.0.0.1:${port}`;

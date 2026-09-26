@@ -1,4 +1,4 @@
-import type { Filter, Json, JsonObject } from '@kvman/protocol';
+import type { BlobInfo, BlobStat, Filter, Json, JsonObject } from '@kvman/protocol';
 import type { CollectionRef, LogRef } from './references.ts';
 
 /** One kv entry returned by `kv.list`. */
@@ -58,7 +58,34 @@ export interface Log<Value = Json> {
   drop(): void;
 }
 
-/** The three data primitives in one scope. */
+/** What a blob put takes: bytes, text, a stream of bytes, or a workspace file (which needs `files.read`). */
+export type BlobSource = Uint8Array | string | ReadableStream<Uint8Array> | { workspacePath: string };
+
+/** The mime type and file name a put records; the first put of the same bytes wins. */
+export type BlobPutOptions = { mime?: string; name?: string };
+
+/** What a put answers, and what `stat` answers. */
+export type { BlobInfo, BlobStat };
+
+/** Bytes stored once per content (04 §4.3); readable with a reference or a `z.blobId()` hand-over. */
+export interface BlobStore {
+  /** Stores bytes now (up to 100 MB) and keeps them for this extension when the handler commits. */
+  put(source: BlobSource, options?: BlobPutOptions): Promise<BlobInfo>;
+  /** A blob's UTF-8 text, up to 16 MB. */
+  text(blobId: string): Promise<string>;
+  /** A blob's bytes, up to 16 MB. */
+  bytes(blobId: string): Promise<Uint8Array>;
+  /** A blob's bytes as a stream, of any size. */
+  stream(blobId: string): Promise<ReadableStream<Uint8Array>>;
+  /** A blob's size, mime type, and name, or `undefined` when it does not exist. */
+  stat(blobId: string): Promise<BlobStat | undefined>;
+  /** Adds this extension's reference to a blob it may read, when the handler commits. */
+  keep(blobId: string): void;
+  /** Removes this extension's reference, when the handler commits. */
+  release(blobId: string): void;
+}
+
+/** The data primitives in one scope. */
 export interface ScopedStore {
   /** Key-value entries. */
   readonly kv: KvStore;
@@ -72,6 +99,8 @@ export interface ScopedStore {
   log<Entry>(reference: LogRef<string, Entry>): Log<Entry>;
   /** A log whose name matches a log this extension registered; with `key`, the log `<family>:<key>` of a family. */
   log<Value = Json>(name: string, key?: string): Log<Value>;
+  /** Blobs referenced in this scope. */
+  readonly blobs: BlobStore;
 }
 
 /** The extension's storage in the invocation's workspace, with `global` for global scope. */

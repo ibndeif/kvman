@@ -1,6 +1,8 @@
 import { jsonByteLength, type Json, type JsonObject, type MessageKind, type TypeEntry } from '@kvman/protocol';
+import type { BlobRights } from '../blobs/blob-rights.ts';
 import type { KernelRegistry } from '../registry/kernel-registry.ts';
 import type { Sender } from '../storage/commit-unit.ts';
+import type { SpillFiles } from '../storage/spill.ts';
 import type { UlidGenerator } from '../ulid.ts';
 import type { GrantsSource } from './grants.ts';
 import type { PayloadValidators } from './payload-validators.ts';
@@ -21,6 +23,9 @@ export type AdmissionOptions = {
   ids: UlidGenerator;
   now: () => number;
   defaultLocale: () => string;
+  blobs: BlobRights;
+  // Where a stored reply of an idempotent duplicate may have spilled (ADR 0135).
+  files: SpillFiles;
 };
 
 export const maxPayloadBytes = 16 * 1024 * 1024;
@@ -50,7 +55,7 @@ export function resolveType(options: AdmissionOptions, type: string, workspaceId
   return { owner: extension, entry, workspaceId: global ? undefined : workspaceId };
 }
 
-// 03 §3.3 step 5 and 02 §2.13: at most 16 MB (inline until the blob store, ADR 0055), then the manifest schema.
+// 03 §3.3 step 5 and 02 §2.13: at most 16 MB (over 256 KB it spills when stored, ADR 0135), then the manifest schema.
 export function checkPayload(options: AdmissionOptions, schema: JsonObject | undefined, payload: Json): void {
   if (jsonByteLength(payload) > maxPayloadBytes) {
     throw new Refusal('PAYLOAD_TOO_LARGE', { params: { limit: 'payload', max: maxPayloadBytes }, hint: 'store large data as a blob and send its id' });
@@ -58,6 +63,15 @@ export function checkPayload(options: AdmissionOptions, schema: JsonObject | und
   if (schema === undefined) return;
   const issues = options.validators.issues(schema, payload);
   if (issues.length > 0) throw new Refusal('VALIDATION_FAILED', { issues });
+}
+
+// 04 §4.6, ADR 0134: every z.blobId() field names a blob the sender may read.
+export function checkBlobs(options: AdmissionOptions, sender: Sender, schema: JsonObject | undefined, payload: Json, received: ReadonlySet<string>): void {
+  const blobId = options.blobs.unreadable(sender, schema, payload, received);
+  if (blobId === undefined) return;
+  throw new Refusal('CAPABILITY_DENIED', {
+    detail: `the sender may not read the blob ${blobId}`, hint: 'name only blobs you hold a reference to or received in a z.blobId() field',
+  });
 }
 
 export function refusalOf(error: unknown): Refusal {

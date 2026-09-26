@@ -1,11 +1,11 @@
 import type { JsonObject, Manifest, Message, OutboundPublish, OutboundSend, Priority, Problem } from '@kvman/protocol';
 import {
-  AdapterPath, betterSqlite3Driver, CommitPipeline, insertMessage, kernelProblem, KernelRegistry, openKernelDatabase, PayloadValidators,
+  AdapterPath, betterSqlite3Driver, BlobFiles, CommitPipeline, insertMessage, kernelProblem, KernelRegistry, openKernelDatabase, PayloadValidators,
   PendingIndex, Router, Scheduler, type AdapterCommand, type CommitResult, type Connection, type InvocationOutcome, type Sender,
 } from '../../src/index.ts';
 import { event, manifest, query, subscription, workspaceA, workspaceB } from '../registry/manifests.ts';
 import { MapGrants, openWorkspaces } from '../router/harness.ts';
-import { temporaryDatabaseFile, ulids } from '../storage/harness.ts';
+import { blobRightsOf, temporaryBlobFiles, temporaryDatabaseFile, ulids } from '../storage/harness.ts';
 import { ManualTimers, startTime, TestDispatcher, type TestTime } from './doubles.ts';
 
 export { workspaceA, workspaceB };
@@ -40,6 +40,7 @@ const audit = manifest('@acme/audit', 'audit', {
 
 export type SchedulerFixture = {
   connection: Connection;
+  files: BlobFiles;
   time: TestTime;
   timers: ManualTimers;
   dispatcher: TestDispatcher;
@@ -67,13 +68,16 @@ function assemble({ connection, time, index }: Shared): SchedulerFixture {
   const grants = new MapGrants();
   grants.grant('@acme/audit', workspaceA, { derived: { subscribes: ['pdf.imported'], providesLlm: [] } });
   grants.grant('@acme/pdf', workspaceA, { requested: [{ name: 'calls', types: ['agent.*'] }] });
-  const router = new Router({ registry: () => built, grants, workspaces: openWorkspaces, validators: new PayloadValidators(), ids: ulids, now, defaultLocale: () => 'en' });
+  const files = temporaryBlobFiles();
+  const router = new Router({
+    registry: () => built, grants, workspaces: openWorkspaces, validators: new PayloadValidators(), ids: ulids, now, defaultLocale: () => 'en', blobs: blobRightsOf(connection), files,
+  });
   const pending = index ?? new PendingIndex(now);
-  const pipeline = new CommitPipeline({ connection, admission: router, now });
+  const pipeline = new CommitPipeline({ connection, files, admission: router, now });
   const timers = new ManualTimers(time);
   const dispatcher = new TestDispatcher();
-  const scheduler = new Scheduler({ connection, pipeline, index: pending, registry: () => built, dispatcher, now, timers, onCommitted: () => undefined });
-  return { connection, time, timers, dispatcher, router, pipeline, adapter: new AdapterPath(pipeline, ulids), index: pending, scheduler };
+  const scheduler = new Scheduler({ connection, files, pipeline, index: pending, registry: () => built, dispatcher, now, timers, onCommitted: () => undefined });
+  return { connection, files, time, timers, dispatcher, router, pipeline, adapter: new AdapterPath(pipeline, ulids), index: pending, scheduler };
 }
 
 export function openSchedulerFixture(): SchedulerFixture {
@@ -154,10 +158,10 @@ export async function commandFrom(fixture: SchedulerFixture, parentId: string, t
   const parent = claimOf(fixture, parentId);
   const extension = extensionOfClaim(fixture, parentId);
   const admission = fixture.router.admitSend(fixture.connection, {
-    send: { type, payload }, sender: { address: `ext:${extension}`, extension }, cause: parent, workspaceId: parent.workspaceId, index: 0,
+    send: { type, payload }, sender: { address: `ext:${extension}`, extension }, cause: parent, workspaceId: parent.workspaceId, index: 0, received: new Set(),
   });
   if (admission.outcome !== 'admitted') throw new Error(`${type} was not admitted: ${admission.outcome === 'refused' ? admission.problem.code : 'duplicate'}`);
-  fixture.index.add([insertMessage(fixture.connection, admission.admitted, 'pending', undefined, fixture.time.value)]);
+  fixture.index.add([insertMessage({ connection: fixture.connection, files: fixture.files, now: fixture.time.value }, admission.admitted, 'pending', undefined)]);
   await nextTurn();
   return admission.admitted.message.id;
 }

@@ -10,6 +10,7 @@ import { validateRequest } from '../validation/kernel-validate.ts';
 import { isAdministrator } from './administrators.ts';
 import type { ExtensionQueries, ExtensionQueryAnswer } from './extension-queries.ts';
 import type { InspectionQueries } from './inspection-queries.ts';
+import type { TrustService } from './trust-service.ts';
 import type { WorkspaceQueries } from './workspace-queries.ts';
 import type { QueryAnswer } from './query-path.ts';
 import { readWorkspace } from './workspace-rows.ts';
@@ -19,6 +20,7 @@ export type KernelQueriesDeps = {
   extensions: ExtensionQueries;
   workspaces: WorkspaceQueries;
   inspection: InspectionQueries;
+  trust: TrustService;
   grants: GrantsSource;
   registry: () => KernelRegistry;
   health: () => HealthResult;
@@ -36,7 +38,9 @@ export class KernelQueries {
     this.#deps = deps;
   }
 
-  answer(message: Message): QueryAnswer {
+  // kernel.trust.preview hashes files, so its answer comes later (07 §7.2).
+  answer(message: Message): QueryAnswer | Promise<QueryAnswer> {
+    if (message.type === 'kernel.trust.preview') return this.#deps.trust.preview(message);
     if (message.type === 'kernel.health.get') return { ok: true, value: this.#deps.health() satisfies Json };
     if (message.type === 'kernel.schema.get') return this.#schema(message);
     if (message.type === 'kernel.validate') return this.#validate(message);

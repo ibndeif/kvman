@@ -315,7 +315,15 @@ interface Ctx {
   // effects
   step<T>(name, fn: () => Promise<T>, opts?: { retrySafe?: boolean }): Promise<T>;
   process: { spawn(opts): Promise<ProcessHandle> };                        // capability 'process'; detached + onExit, 03 §3.7
-  files: { read, write, list, stat, mkdir, rm, glob };                     // capabilities files.read / files.write (07 §7.2)
+  files: {                                                                 // capabilities files.read / files.write (07 §7.2, ADR 0136)
+    read(path): Promise<string>;                                           // UTF-8, ≤ 16 MB; paths relative to the workspace root
+    write(path, content: string | Uint8Array): Promise<void>;             // creates or replaces, creates parents; ≤ 16 MB
+    list(path?): Promise<Array<{ name, kind: 'file' | 'directory' | 'symlink' | 'other', size }>>;  // by name
+    stat(path): Promise<{ kind, size, modifiedAt } | undefined>;
+    mkdir(path): Promise<void>;                                            // recursive; no error if it exists
+    rm(path, opts?: { recursive? }): Promise<void>;                       // no error if missing
+    glob(pattern): Promise<string[]>;                                      // Node fs.glob syntax, sorted, ≤ 5,000 matches
+  };
   http?: { fetch }                                                         // capability 'network'
 
   // data

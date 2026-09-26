@@ -1,5 +1,6 @@
-import type { Json, JsonObject, StoreScope, StoreWrite } from '@kvman/protocol';
+import type { BlobRefChange, Json, JsonObject, StoreScope, StoreWrite } from '@kvman/protocol';
 import type { Collection, Log, ScopedStore, Store } from '@kvman/sdk';
+import { createBlobStore } from './blob-api.ts';
 import { createCollection } from './collection-api.ts';
 import { createKvStore } from './kv-api.ts';
 import { createLog } from './log-api.ts';
@@ -8,7 +9,7 @@ import { storeFailure, type ScopeBinding, type StoreContext } from './store-cont
 
 export type StoreOptions = Omit<StoreContext, 'pending'>;
 
-export type HandlerStore = { store: Store; writes(): StoreWrite[] };
+export type HandlerStore = { store: Store; writes(): StoreWrite[]; blobRefs(): BlobRefChange[] };
 
 function logMatches(families: readonly string[], name: string): boolean {
   return families.some((family) => (family.endsWith(':*') ? name.startsWith(family.slice(0, -1)) && name.length > family.length - 1 : name === family));
@@ -31,8 +32,10 @@ function typedView<View>(untyped: unknown): View {
 function scopedStore(binding: ScopeBinding): ScopedStore {
   const { context } = binding;
   const kv = createKvStore(binding);
+  const blobs = createBlobStore(binding);
   return {
     kv,
+    blobs,
     collection<Doc extends object = JsonObject>(name: string) {
       const declaration = context.data.collections.find((collection) => collection.name === name);
       if (declaration === undefined) {
@@ -61,6 +64,9 @@ function workspaceStore(context: StoreContext): ScopedStore {
     get kv() {
       return refuse();
     },
+    get blobs() {
+      return refuse();
+    },
     collection: refuse,
     log: refuse,
   };
@@ -74,9 +80,12 @@ export function createHandlerStore(options: StoreOptions): HandlerStore {
     get kv() {
       return workspace.kv;
     },
+    get blobs() {
+      return workspace.blobs;
+    },
     collection: <Doc extends object = JsonObject>(name: string) => workspace.collection<Doc>(name),
     log: <Value = Json>(name: string, key?: string) => workspace.log<Value>(name, key),
     global,
   };
-  return { store, writes: () => context.pending.writes() };
+  return { store, writes: () => context.pending.writes(), blobRefs: () => [...context.pending.blobRefs] };
 }

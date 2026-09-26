@@ -109,11 +109,12 @@ describe('uninstall (plan 06 §6.8, ADR 0120)', installTests, () => {
       v: 1, id, kind, type, source: 'user:local', workspaceId: workspaceA, payload: {}, correlationId: id, context: {}, priority: 'normal', createdAt: now,
       ...(kind === 'event' ? { delivery: 'durable' as const } : {}),
     });
+    const rows = { connection: fixture.connection, files: fixture.runtime.files.files, now };
     const ids = ['01JAZ3K4M5N6P7Q8R9S0T1V2W4', '01JAZ3K4M5N6P7Q8R9S0T1V2W5', '01JAZ3K4M5N6P7Q8R9S0T1V2W6'] as const;
-    insertMessage(fixture.connection, { message: message(ids[0], 'command', 'busy.echo'), handler: '@acme/busy' }, 'pending', undefined, now);
-    insertMessage(fixture.connection, { message: message(ids[1], 'command', 'busy.echo'), handler: '@acme/busy' }, 'awaiting', undefined, now);
+    insertMessage(rows, { message: message(ids[0], 'command', 'busy.echo'), handler: '@acme/busy' }, 'pending', undefined);
+    insertMessage(rows, { message: message(ids[1], 'command', 'busy.echo'), handler: '@acme/busy' }, 'awaiting', undefined);
     fixture.connection.prepare('UPDATE messages SET on_abort = ? WHERE id = ?').run('busy.aborted', ids[1]);
-    insertMessage(fixture.connection, { message: message(ids[2], 'event', 'kernel.extension.installed'), handler: '@acme/busy|subscription:kernel.*' }, 'pending', undefined, now);
+    insertMessage(rows, { message: message(ids[2], 'event', 'kernel.extension.installed'), handler: '@acme/busy|subscription:kernel.*' }, 'pending', undefined);
     const waiters = ids.map((id) => fixture?.runtime.awaitReply(id));
     expect(await command(fixture, 'kernel.extension.uninstall', { name: '@acme/busy' })).toEqual({ ok: true, value: {} });
     for (const waiter of waiters) expect(await waiter).toMatchObject({ ok: false, problem: { code: 'CANCELLED' } });

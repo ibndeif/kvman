@@ -41,7 +41,7 @@ export class KernelHost {
   async run(claim: Claim): Promise<void> {
     const { message } = claim;
     if (message.kind === 'query') {
-      this.#deps.queries.answer(message.id, this.#deps.kernelQueries.answer(message));
+      this.#deps.queries.answer(message.id, await this.#deps.kernelQueries.answer(message));
       return;
     }
     try {

@@ -1,12 +1,12 @@
 import type { Problem } from '@kvman/protocol';
 import { ConfigChecker } from '../config/config-values.ts';
-import type { Admission, ConfigCheck, PublishAdmission, PublishRequest, ReplyCheck, SendAdmission, SendRequest } from '../storage/commit-unit.ts';
+import type { Admission, ConfigCheck, PublishAdmission, PublishRequest, ReplyCheck, ResultCheck, SendAdmission, SendRequest } from '../storage/commit-unit.ts';
 import type { Connection } from '../storage/driver.ts';
 import type { AdmissionOptions } from './admission-context.ts';
 import { checkConfig } from './config-check.ts';
 import { admitPublish } from './publish-admission.ts';
 import { admitQuery, type QueryAdmission, type QueryRequest } from './query-admission.ts';
-import { checkReply } from './reply-check.ts';
+import { checkReply, checkResult } from './reply-check.ts';
 import { admitSend } from './send-admission.ts';
 
 // The router's admission (03 §3.3): sends and publishes inside a unit of work, and queries for the priority path.
@@ -29,6 +29,10 @@ export class Router implements Admission {
 
   checkReply(check: ReplyCheck): Problem | undefined {
     return checkReply(this.#options, check);
+  }
+
+  checkResult(check: ResultCheck): Problem | undefined {
+    return checkResult(this.#options, check);
   }
 
   checkConfig(check: ConfigCheck): Problem | undefined {

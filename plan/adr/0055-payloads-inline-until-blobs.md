@@ -1,6 +1,6 @@
 # ADR 0055 — Payloads inline until the blob store
 
-- **Status**: accepted
+- **Status**: accepted; the spill it names is built in M2.5 (ADR 0135)
 - **Date**: 2026-09-25
 - **Milestone**: M1.4
 - **Decided by**: the product owner

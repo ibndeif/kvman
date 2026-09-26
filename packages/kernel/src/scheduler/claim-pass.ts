@@ -1,4 +1,5 @@
 import type { Connection } from '../storage/driver.ts';
+import type { SpillFiles } from '../storage/spill.ts';
 import { claimMessage } from './claims.ts';
 import { commandSlots, type Dispatcher, type HostLoad } from './dispatcher.ts';
 import type { InFlight, RunningInvocation } from './in-flight.ts';
@@ -9,6 +10,7 @@ import type { Candidate, PendingEntry } from './run-queues.ts';
 
 export type ClaimPassDeps = {
   connection: Connection;
+  files: SpillFiles;
   index: PendingIndex;
   dispatcher: Dispatcher;
   rotation: Rotation;
@@ -31,7 +33,7 @@ function hostHasRoom(dispatcher: Dispatcher, entry: PendingEntry, claimed: reado
 }
 
 function claim(deps: ClaimPassDeps, entry: PendingEntry, now: number): RunningInvocation | undefined {
-  const result = entry.unstored === undefined ? claimMessage(deps.connection, entry, now) : { claimed: true, message: entry.unstored.message } as const;
+  const result = entry.unstored === undefined ? claimMessage(deps, entry, now) : { claimed: true, message: entry.unstored.message } as const;
   if (!result.claimed) return undefined;
   const deadlineAt = invocationDeadline(result.message, deps.timeoutMs(entry), now);
   const invocation: RunningInvocation = { entry, message: result.message, attempt: entry.attempts + 1, conflicts: 0, deadlineAt };

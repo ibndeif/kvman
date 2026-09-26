@@ -1,6 +1,7 @@
 import type { Message, Priority, ReplyPayload } from '@kvman/protocol';
 import type { AdmittedMessage, InvocationOutcome, MessageState, RetryOutcome, StoredMessage } from './commit-unit.ts';
-import { StorageFailure, type Connection } from './driver.ts';
+import { StorageFailure } from './driver.ts';
+import { spillJson, spillRefs, type RowWriter } from './spill.ts';
 
 const messageStates: readonly MessageState[] = ['pending', 'running', 'awaiting', 'done', 'failed', 'dead', 'cancelled'];
 
@@ -20,9 +21,10 @@ export function priorityOfCode(code: unknown): Priority {
   return priority;
 }
 
-const insertSql = `INSERT INTO messages (id, kind, type, source, target, handler, workspace_id, lane, payload, context, state, priority,
-  not_before, deadline_at, correlation_id, causation_id, on_reply, idempotency_source, idempotency_key, digest, result, created_at, updated_at)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+const insertSql = `INSERT INTO messages (id, kind, type, source, target, handler, workspace_id, lane, payload, payload_ref, context, state,
+  priority, not_before, deadline_at, correlation_id, causation_id, on_reply, idempotency_source, idempotency_key, digest, result, result_ref,
+  created_at, updated_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
 // A lane belongs to the handling extension (02 §2.6), also for an event delivery, whose handler is
 // <extension>|subscription:<pattern> (ADR 0053).
@@ -34,14 +36,16 @@ function storedLane(admitted: AdmittedMessage): string | null {
   return admitted.message.lane === undefined ? null : laneKeyOf(admitted.handler, admitted.message.lane);
 }
 
-export function insertMessage(connection: Connection, admitted: AdmittedMessage, state: MessageState, result: ReplyPayload | undefined, now: number): StoredMessage {
+export function insertMessage(rows: RowWriter, admitted: AdmittedMessage, state: MessageState, result: ReplyPayload | undefined): StoredMessage {
   const { message } = admitted;
-  const inserted = connection.prepare(insertSql).run(
+  const payload = spillJson(rows, message.payload, { ws: message.workspaceId, ref: spillRefs.payload(message.id) });
+  const stored = result === undefined ? { inline: null, ref: null } : spillJson(rows, result, { ws: message.workspaceId, ref: spillRefs.result(message.id) });
+  const inserted = rows.connection.prepare(insertSql).run(
     message.id, message.kind, message.type, message.source, message.target ?? null, admitted.handler, message.workspaceId ?? null,
-    storedLane(admitted), JSON.stringify(message.payload), JSON.stringify(message.context), state, priorityCodes[message.priority],
+    storedLane(admitted), payload.inline, payload.ref, JSON.stringify(message.context), state, priorityCodes[message.priority],
     message.notBefore ?? null, message.deadlineAt ?? null, message.correlationId, message.causationId ?? null,
     message.onReply === undefined ? null : JSON.stringify(message.onReply), message.idempotencyKey === undefined ? null : message.source,
-    message.idempotencyKey ?? null, admitted.digest ?? null, result === undefined ? null : JSON.stringify(result), now, now,
+    message.idempotencyKey ?? null, admitted.digest ?? null, stored.inline, stored.ref, rows.now, rows.now,
   );
   return { ...admitted, seq: inserted.lastInsertRowid, state };
 }
@@ -53,37 +57,40 @@ export function replyOf(outcome: FinalOutcome): ReplyPayload {
 }
 
 // A deferred command waits in `awaiting` with its onAbort (02 §2.8); any other outcome is its reply.
-export function markInvocation(connection: Connection, messageId: string, outcome: InvocationOutcome, now: number): void {
+export function markInvocation(rows: RowWriter, message: Message, outcome: InvocationOutcome): void {
   if ('deferred' in outcome) {
-    connection
+    rows.connection
       .prepare("UPDATE messages SET state = 'awaiting', on_abort = ?, updated_at = ? WHERE id = ?")
-      .run(outcome.onAbort ?? null, now, messageId);
+      .run(outcome.onAbort ?? null, rows.now, message.id);
     return;
   }
-  markReplied(connection, messageId, replyOf(outcome), now);
+  markReplied(rows, message, replyOf(outcome));
 }
 
-export function markReplied(connection: Connection, messageId: string, reply: ReplyPayload, now: number): void {
-  const state: MessageState = reply.ok ? 'done' : 'failed';
-  connection.prepare('UPDATE messages SET state = ?, result = ?, updated_at = ? WHERE id = ?').run(state, JSON.stringify(reply), now, messageId);
+export function markReplied(rows: RowWriter, message: Message, reply: ReplyPayload, state: MessageState = reply.ok ? 'done' : 'failed'): void {
+  const stored = spillJson(rows, reply, { ws: message.workspaceId, ref: spillRefs.result(message.id) });
+  rows.connection
+    .prepare('UPDATE messages SET state = ?, result = ?, result_ref = ?, updated_at = ? WHERE id = ?')
+    .run(state, stored.inline, stored.ref, rows.now, message.id);
 }
 
-export function markRetry(connection: Connection, messageId: string, attempts: number, outcome: RetryOutcome, now: number): void {
+export function markRetry(rows: RowWriter, message: Message, attempts: number, outcome: RetryOutcome): void {
   if (outcome.state === 'pending') {
-    connection
+    rows.connection
       .prepare("UPDATE messages SET state = 'pending', attempts = ?, not_before = ?, updated_at = ? WHERE id = ?")
-      .run(attempts, outcome.notBefore, now, messageId);
+      .run(attempts, outcome.notBefore, rows.now, message.id);
     return;
   }
-  connection
-    .prepare("UPDATE messages SET state = 'dead', attempts = ?, result = ?, updated_at = ? WHERE id = ?")
-    .run(attempts, JSON.stringify(outcome.reply), now, messageId);
+  rows.connection.prepare('UPDATE messages SET attempts = ? WHERE id = ?').run(attempts, message.id);
+  markReplied(rows, message, outcome.reply, 'dead');
 }
 
 // The row keeps the event's own createdAt, so a replay on the event stream equals the live push (ADR 0027).
-export function insertEvent(connection: Connection, event: Message): number {
-  return connection
-    .prepare('INSERT INTO events (id, type, source, workspace_id, payload, correlation_id, causation_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-    .run(event.id, event.type, event.source, event.workspaceId ?? null, JSON.stringify(event.payload), event.correlationId, event.causationId ?? null, event.createdAt)
+export function insertEvent(rows: RowWriter, event: Message): number {
+  const payload = spillJson(rows, event.payload, { ws: event.workspaceId, ref: spillRefs.event(event.id) });
+  return rows.connection
+    .prepare(`INSERT INTO events (id, type, source, workspace_id, payload, payload_ref, correlation_id, causation_id, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    .run(event.id, event.type, event.source, event.workspaceId ?? null, payload.inline, payload.ref, event.correlationId, event.causationId ?? null, event.createdAt)
     .lastInsertRowid;
 }

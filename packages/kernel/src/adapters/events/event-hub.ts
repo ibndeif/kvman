@@ -4,12 +4,13 @@ import type { SchedulerTimers } from '../../scheduler/timers.ts';
 import type { CommitPipeline } from '../../storage/commit-pipeline.ts';
 import type { AppliedMessages } from '../../storage/commit-unit.ts';
 import type { Connection } from '../../storage/driver.ts';
+import type { SpillFiles } from '../../storage/spill.ts';
 import { EventLog, streamedEventOf, type LoggedStreamEvent } from './event-log.ts';
 import { EventStream } from './event-stream.ts';
 import { StreamWriter, type StreamSink } from './stream-writer.ts';
 import { matchesEvent, matchesLive, subscriptionOf, type StreamedEvent, type Subscription } from './subscriptions.ts';
 
-export type EventHubDeps = { connection: Connection; pipeline: CommitPipeline; live: LiveBus; timers: SchedulerTimers; version: string };
+export type EventHubDeps = { connection: Connection; files: SpillFiles; pipeline: CommitPipeline; live: LiveBus; timers: SchedulerTimers; version: string };
 
 // Where a late reply goes: the tab that sent the command (12 §12.3).
 export type ReplyTarget = { streamId: string; clientId: string };
@@ -28,7 +29,7 @@ export class EventHub {
 
   constructor(deps: EventHubDeps) {
     this.#deps = deps;
-    this.#log = new EventLog(deps.connection);
+    this.#log = new EventLog(deps);
     this.#cursor = this.#log.newest();
     this.#unobserve = [deps.pipeline.observe((applied) => this.#committed(applied)), deps.live.subscribe((frame) => this.#live(frame))];
   }

@@ -1,5 +1,5 @@
 import type {
-  Address, ConfigWrite, ConfigWriteScope, DeferredReply, Json, JsonObject, Message, OutboundPublish, OutboundSend, Problem, QuarantineReason, ReplyPayload,
+  Address, BlobRefChange, ConfigWrite, ConfigWriteScope, DeferredReply, Json, JsonObject, Message, OutboundPublish, OutboundSend, Problem, QuarantineReason, ReplyPayload,
   SecretWrite, StoreWrite,
 } from '@kvman/protocol';
 import type { SecretChange } from '../secrets/secret-store.ts';
@@ -12,7 +12,10 @@ export type InvocationOutcome = { ok: true; value: Json } | { ok: false; problem
 
 // An unstored invocation is a transient event's delivery (ADR 0069): it has no row to mark. `deadlineAt` is the
 // invocation deadline: a unit that reaches commit after it is refused (04 §4.2, ADR 0084).
-export type CommitInvocation = { message: Message; extension: string; outcome: InvocationOutcome; stored: boolean; deadlineAt?: number };
+// `received` holds the blob IDs the invocation received (ADR 0134): its sends, publishes, results, and keeps may name them.
+export type CommitInvocation = {
+  message: Message; extension: string; outcome: InvocationOutcome; stored: boolean; deadlineAt?: number; received?: ReadonlySet<string>;
+};
 
 // Who sends: the kernel-assigned address, and for ext:* and proc:* sources the extension whose grants apply.
 export type Sender = { address: Address; extension?: string };
@@ -27,7 +30,7 @@ export type UnitOrigin =
   | { kind: 'invocation'; invocation: CommitInvocation }
   | { kind: 'adapter'; sender: Sender; workspaceId?: string; messageId: string }
   | { kind: 'retry'; message: Message; attempts: number; outcome: RetryOutcome }
-  | { kind: 'call'; sender: Sender; cause: Message; messageId: string }
+  | { kind: 'call'; sender: Sender; cause: Message; messageId: string; received: ReadonlySet<string> }
   | { kind: 'cancel'; invocation: CommitInvocation; messageIds: readonly string[]; unstored: number }
   | { kind: 'expire'; messageIds: readonly string[]; correlationId: string }
   | { kind: 'quarantine'; extension: string; reason: QuarantineReason; correlationId: string }
@@ -45,6 +48,8 @@ export type CommitUnit = {
   // An invocation's ctx.config.set, applied in the commit, and ctx.secrets.set, applied after it (04 §4.2, §4.7).
   config?: ConfigWrite[];
   secrets?: SecretWrite[];
+  // An invocation's ctx.store.blobs.keep and release (04 §4.2).
+  blobRefs?: BlobRefChange[];
 };
 
 export type AdmittedMessage = { message: Message; handler: string; digest?: string };
@@ -57,6 +62,7 @@ export type SendRequest = {
   cause: Message | undefined;
   workspaceId: string | undefined;
   index: number;
+  received: ReadonlySet<string>;
   id?: string;
 };
 
@@ -66,7 +72,7 @@ export type SendAdmission =
   | { outcome: 'duplicate'; original: OriginalMessage }
   | { outcome: 'refused'; problem: Problem; failed?: AdmittedMessage };
 
-export type PublishRequest = { publish: OutboundPublish; sender: Sender; cause: Message | undefined; workspaceId: string | undefined };
+export type PublishRequest = { publish: OutboundPublish; sender: Sender; cause: Message | undefined; workspaceId: string | undefined; received: ReadonlySet<string> };
 
 export type EventDelivery = { admitted: AdmittedMessage; problem?: Problem };
 
@@ -74,8 +80,12 @@ export type PublishAdmission =
   | { outcome: 'admitted'; event: Message; deliveries: EventDelivery[] }
   | { outcome: 'refused'; problem: Problem };
 
-// A deferred reply checked against its command's output schema (ADR 0074).
-export type ReplyCheck = { command: Message; payload: ReplyPayload };
+// A deferred reply checked against its command's output schema (ADR 0074), and its blob IDs against the replying
+// extension's read rights (ADR 0134).
+export type ReplyCheck = { command: Message; payload: ReplyPayload; replier: string; received: ReadonlySet<string> };
+
+// A handler's own result: only its blob IDs are checked, since the host checked it against the output schema.
+export type ResultCheck = { message: Message; value: Json; extension: string; received: ReadonlySet<string> };
 
 // A config write checked against its extension's config (ADR 0125): `global` is the stored global value, which a
 // workspace value is merged over.
@@ -85,6 +95,7 @@ export interface Admission {
   admitSend(connection: Connection, request: SendRequest): SendAdmission;
   admitPublish(connection: Connection, request: PublishRequest): PublishAdmission;
   checkReply(check: ReplyCheck): Problem | undefined;
+  checkResult(check: ResultCheck): Problem | undefined;
   checkConfig(check: ConfigCheck): Problem | undefined;
 }
 
