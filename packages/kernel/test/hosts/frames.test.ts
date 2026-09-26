@@ -6,7 +6,7 @@ import {
 } from '../../src/index.ts';
 import { command, manifest, workspaceA } from '../registry/manifests.ts';
 import { temporaryDatabaseFile, ulids } from '../storage/harness.ts';
-import { fakeThreads } from './fake-threads.ts';
+import { fakeThreads, sharedGrants, unusedReads } from './fake-threads.ts';
 
 const notes = manifest('@acme/notes', 'notes', { types: [command('notes.add')] });
 
@@ -37,7 +37,7 @@ describe('host frames (ADR 0076)', () => {
     };
     const { start, started } = fakeThreads();
     const hosts = new HostManager({
-      connection, registry: () => build.registry, snapshots: { verifiedEntry: () => '/x/notes.ts', verify: async () => true }, values: new RecordedValueStore(connection),
+      connection, registry: () => build.registry, grants: sharedGrants, reads: unusedReads(), startSandbox: () => start, snapshots: { verifiedEntry: () => ({ folder: '/x', entry: '/x/notes.ts' }), verify: async () => true }, values: new RecordedValueStore(connection),
       logger: { write: (record) => logged.push(record) }, ids: ulids, poolSize: 1, startThread: start,
       timers: { set: () => ({ cancel: () => undefined }) }, now: () => 1, failures: new HostFailures(), faults: inertFaults,
     });

@@ -6,7 +6,7 @@ One SQLite database `~/.kvman/kvman.db` in WAL mode with `synchronous=FULL`, `fo
 
 Driver: `better-sqlite3` (R-Q1). The storage engine hides the driver behind one interface so it can be replaced (e.g. by `node:sqlite` once stable) with one adapter and an ADR.
 
-**Who touches the file**: the kernel main thread is the only writer (the commit pipeline, §4.2). Shared and dedicated hosts read through their own read-only connections. Sandboxed hosts never load the driver: their reads go by RPC to the kernel's **read pool**, 2 worker threads (configurable) with read-only connections, so a large read never runs on the main thread.
+**Who touches the file**: the kernel main thread is the only writer (the commit pipeline, §4.2). Shared and dedicated hosts read through their own read-only connections. Sandboxed hosts never load the driver: their reads go by RPC to the kernel's **read pool**, 2 worker threads (the kernel option `readPoolSize`, ADR 0131) with read-only connections, so a large read never runs on the main thread.
 
 ### Kernel tables (abridged DDL)
 

@@ -1,7 +1,7 @@
 import { dirname } from 'node:path';
 import type { CompleteFrame, HostOutcome, HostUnitOfWork, Json } from '@kvman/protocol';
 import {
-  AdapterPath, betterSqlite3Driver, CommitPipeline, ExtensionQueries, insertVersionRows, insertWorkspace, KernelCommits, KernelHost, kernelOwner, KernelQueries,
+  AdapterPath, betterSqlite3Driver, CommitPipeline, ExtensionQueries, insertVersionRows, insertWorkspace, KernelCommits, KernelHost, kernelOwner, InspectionQueries, KernelQueries,
   KernelRegistry, LiveBus, openKernelDatabase, PayloadValidators, PendingIndex, Quarantines, QueryPath, recoverInterrupted, RecordedValueStore, RegistryState,
   ReplyWaiters, Router, Scheduler, SecretStore, Settlement, WorkspaceDirectory, WorkspaceQueries, writeAppliedPreset, type Claim, type Connection, type Dispatcher,
   type HostLoad,
@@ -108,6 +108,7 @@ export async function bootModelKernel(file: string, time: TestTime = { value: st
     kernelQueries: new KernelQueries({
       connection, registry: current, version: '0.0.0', extensions: new ExtensionQueries(connection, registry, grants),
       workspaces: new WorkspaceQueries(connection, registry, SecretStore.load(dirname(file), ulids.next())),
+      inspection: new InspectionQueries({ connection, registry: current, grants }), grants,
       health: () => ({ status: 'ok', version: '0.0.0', instanceId: '0b5c7f2e-4a1d-4c3b-9e8f-1a2b3c4d5e6f', processStart: 'x', uptimeMs: 0, port: 4173, home: '/h' }),
     }),
   });

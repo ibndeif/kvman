@@ -19,7 +19,7 @@ export function admitQuery(options: AdmissionOptions, request: QueryRequest): Qu
     if (!jsonSchema.safeParse(request.payload).success) throw invalid('payload', 'expected JSON');
     checkWorkspace(options, request.workspaceId, sender);
     const resolved = resolveType(options, request.type, request.workspaceId, 'query');
-    checkCallCapability(options.grants, sender, resolved.owner, resolved.entry, resolved.workspaceId);
+    checkCallCapability(options, sender, { owner: resolved.owner, entry: resolved.entry }, request.workspaceId);
     checkAccess(sender, resolved.owner, resolved.entry);
     checkPayload(options, resolved.entry.kind === 'query' ? resolved.entry.input : undefined, request.payload);
     const message: Message = {

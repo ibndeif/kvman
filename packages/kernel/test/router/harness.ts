@@ -77,6 +77,10 @@ export class MapGrants implements GrantsSource {
   capabilities(extension: string, workspaceId: string | undefined): Capabilities | undefined {
     return this.#grants.get(`${extension}@${workspaceId ?? ''}`);
   }
+
+  disabledTools(): ReadonlySet<string> {
+    return new Set();
+  }
 }
 
 export type RouterFixture = {

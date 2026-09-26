@@ -3,7 +3,7 @@ import type { Collection, FindQuery, OrderBy } from '@kvman/sdk';
 import { isIndexedQuery, type CollectionDeclaration } from './collection-indexes.ts';
 import { compareDocuments } from './json-order.ts';
 import { UnsupportedFieldName } from './sql-paths.ts';
-import { requireWritable, storeFailure, storeLimits, tooLarge, type ScopeBinding, type StoreContext } from './store-context.ts';
+import { readScopeOf, requireWritable, storeFailure, storeLimits, tooLarge, type ScopeBinding, type StoreContext } from './store-context.ts';
 
 type CheckedQuery = { where: Filter; orderBy: OrderBy; limit: number | undefined };
 
@@ -22,9 +22,9 @@ function objectOf(value: Json): JsonObject | undefined {
   return value !== null && typeof value === 'object' && !Array.isArray(value) ? value : undefined;
 }
 
-function withSqlErrors<Result>(context: StoreContext, read: () => Result): Result {
+async function withSqlErrors<Result>(context: StoreContext, read: () => Promise<Result>): Promise<Result> {
   try {
-    return read();
+    return await read();
   } catch (error) {
     if (error instanceof UnsupportedFieldName) throw storeFailure(context, 'VALIDATION_FAILED', { detail: error.message });
     throw error;
@@ -32,8 +32,9 @@ function withSqlErrors<Result>(context: StoreContext, read: () => Result): Resul
 }
 
 export function createCollection(binding: ScopeBinding, declaration: CollectionDeclaration): Collection {
-  const { context, scope, ws } = binding;
+  const { context, scope } = binding;
   const { reader, pending, owner } = context;
+  const at = readScopeOf(binding);
   const name = declaration.name;
 
   const idOf = (document: JsonObject): string => {
@@ -47,9 +48,9 @@ export function createCollection(binding: ScopeBinding, declaration: CollectionD
     const issues = context.validateDocument(name, document);
     if (issues.length > 0) throw storeFailure(context, 'VALIDATION_FAILED', { issues });
   };
-  const guardScan = (query: CheckedQuery): void => {
+  const guardScan = async (query: CheckedQuery): Promise<void> => {
     if (isIndexedQuery(declaration, query.where, query.orderBy, query.limit)) return;
-    if (reader.documentCount(owner, ws, name, {}) > storeLimits.unindexedScanRows) {
+    if ((await reader.documentCount(at, name, {})) > storeLimits.unindexedScanRows) {
       throw storeFailure(context, 'STORE_RESULT_TOO_LARGE', { detail: `an unindexed read of ${name} scans more than ${storeLimits.unindexedScanRows} documents`, hint: 'add an index or filter on an indexed field' });
     }
     context.unindexedScans.note({ owner, collection: name, shape: JSON.stringify([Object.keys(query.where).sort(), query.orderBy.map(([field]) => field)]) });
@@ -59,7 +60,7 @@ export function createCollection(binding: ScopeBinding, declaration: CollectionD
     async get(id) {
       const buffered = pending.document(scope, name, id);
       if (buffered !== undefined) return buffered.deleted ? undefined : buffered.value;
-      const stored = reader.documentGet(owner, ws, name, id);
+      const stored = await reader.documentGet(at, name, id);
       pending.noteDocumentVersion(scope, name, id, stored?.version ?? 0);
       return stored?.data;
     },
@@ -87,10 +88,10 @@ export function createCollection(binding: ScopeBinding, declaration: CollectionD
     },
     async find(query = {}) {
       const checked = checkedQuery(context, query);
-      guardScan(checked);
+      await guardScan(checked);
       const buffered = pending.documents(scope, name);
       const fetchLimit = checked.limit === undefined ? storeLimits.resultRows + buffered.length + 1 : checked.limit + buffered.length;
-      const stored = withSqlErrors(context, () => reader.documentFind(owner, ws, name, { where: checked.where, orderBy: checked.orderBy, limit: fetchLimit }));
+      const stored = await withSqlErrors(context, () => reader.documentFind(at, name, { where: checked.where, orderBy: checked.orderBy, limit: fetchLimit }));
       const bufferedIds = new Set(buffered.map((entry) => entry.id));
       const committed = stored.filter((row) => !bufferedIds.has(row.id));
       const added = buffered.flatMap((entry) => (!entry.pending.deleted && matchesDocument(entry.pending.value, checked.where) ? [{ id: entry.id, data: entry.pending.value }] : []));
@@ -102,10 +103,10 @@ export function createCollection(binding: ScopeBinding, declaration: CollectionD
     },
     async count(query = {}) {
       const checked = checkedQuery(context, { where: query.where ?? {} });
-      guardScan(checked);
+      await guardScan(checked);
       const buffered = pending.documents(scope, name);
-      const committed = withSqlErrors(context, () => reader.documentCount(owner, ws, name, checked.where));
-      const replaced = withSqlErrors(context, () => reader.matchingIds(owner, ws, name, checked.where, buffered.map((entry) => entry.id)));
+      const committed = await withSqlErrors(context, () => reader.documentCount(at, name, checked.where));
+      const replaced = await withSqlErrors(context, () => reader.matchingIds(at, name, checked.where, buffered.map((entry) => entry.id)));
       const added = buffered.filter((entry) => !entry.pending.deleted && matchesDocument(entry.pending.value, checked.where));
       return committed - replaced.length + added.length;
     },

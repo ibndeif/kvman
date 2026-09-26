@@ -7,6 +7,7 @@ import { readConfigRow } from '../storage/config-rows.ts';
 import type { StepJournal } from '../store/step-journal.ts';
 import { extensionSender, type ActiveInvocation } from './active-invocation.ts';
 import { callCommand, type CommandCallDeps } from './command-calls.ts';
+import type { ServiceCall } from './invocation-sink.ts';
 import { redactFields, redactText, type KernelLogger, type LogAttributes } from './kernel-logger.ts';
 import type { LiveBus } from './live-bus.ts';
 import { publishLive } from './live-calls.ts';
@@ -45,7 +46,7 @@ export class RpcService {
     this.#deps = deps;
   }
 
-  async handle(invocation: ActiveInvocation, call: RpcCall): Promise<RpcResult> {
+  async handle(invocation: ActiveInvocation, call: ServiceCall): Promise<RpcResult> {
     const { message } = invocation.claim;
     if (message.kind === 'query' && !queryAllowed.has(call.name)) return { ok: false, problem: this.#queryDenied(invocation, call.name) };
     switch (call.name) {

@@ -1,4 +1,4 @@
-import type { Capabilities, Manifest } from '@kvman/protocol';
+import type { Capabilities, Isolation, Manifest } from '@kvman/protocol';
 
 // A foreign subscription is a derived capability (05 §5.7); the extension's own namespace and kernel.* events are not.
 function foreign(event: string, namespace: string): boolean {
@@ -27,11 +27,15 @@ function labels(capabilities: Pick<Capabilities, 'requested' | 'derived'>): Set<
   ]);
 }
 
-// Isolation is sandboxed, or the lower level the manifest requested; builtin extensions run shared (05 §5.7).
+const isolationOrder: readonly Isolation[] = ['shared', 'dedicated', 'sandboxed'];
+
+// ADR 0128: isolation is the level the manifest requested or any higher one (sandboxed when it requested none);
+// builtin extensions run shared (05 §5.7).
 function isolationProblem(manifest: Manifest, grant: Capabilities, builtin: boolean): string | undefined {
   if (builtin) return grant.isolation === 'shared' ? undefined : `a builtin extension runs shared, not ${grant.isolation}`;
-  if (grant.isolation === 'sandboxed' || grant.isolation === manifest.permissions.isolation?.mode) return undefined;
-  return `${grant.isolation} isolation was not requested`;
+  const requested = manifest.permissions.isolation?.mode ?? 'sandboxed';
+  if (isolationOrder.indexOf(grant.isolation) >= isolationOrder.indexOf(requested)) return undefined;
+  return `${grant.isolation} isolation is lower than the ${requested} the extension requested`;
 }
 
 // ADR 0123: a grant is valid only when it equals the manifest's capabilities, all or nothing; undefined when valid.

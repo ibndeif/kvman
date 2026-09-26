@@ -18,7 +18,7 @@ const exact: Capabilities = {
   derived: { subscribes: ['pdf.imported'], providesLlm: ['asker-local'] },
 };
 
-describe('the grant check (plan 05 §5.7, ADR 0123)', () => {
+describe('the grant check (plan 05 §5.7, ADRs 0123, 0128)', () => {
   it('M2.3-E19 a grant must hold exactly what the manifest requests and derives, in any order', () => {
     expect(grantDifferences(asker, exact, false)).toBeUndefined();
     expect(grantDifferences(asker, { ...exact, requested: [...exact.requested, { name: 'process' }] }, false)).toEqual({ missing: [], unexpected: ['process'] });
@@ -28,10 +28,24 @@ describe('the grant check (plan 05 §5.7, ADR 0123)', () => {
   });
 
   it('M2.3-E20 isolation is sandboxed or the level requested; builtins run shared', () => {
-    expect(grantDifferences(asker, { ...exact, isolation: 'shared' }, false)).toEqual({ missing: [], unexpected: [], isolation: 'shared isolation was not requested' });
+    expect(grantDifferences(asker, { ...exact, isolation: 'shared' }, false)).toEqual({ missing: [], unexpected: [], isolation: 'shared isolation is lower than the dedicated the extension requested' });
     expect(grantDifferences(asker, { ...exact, isolation: 'dedicated' }, false)).toBeUndefined();
     expect(grantDifferences(asker, exact, false)).toBeUndefined();
     expect(grantDifferences(asker, exact, true)).toEqual({ missing: [], unexpected: [], isolation: 'a builtin extension runs shared, not sandboxed' });
     expect(grantDifferences(asker, { ...exact, isolation: 'shared' }, true)).toBeUndefined();
+  });
+
+  it('M2.4-E1 a grant\'s isolation is the requested level or higher', () => {
+    const requesting = (mode: 'shared' | 'dedicated' | undefined): Manifest => ({
+      ...asker, permissions: { ...asker.permissions, isolation: mode === undefined ? null : { mode, reason: 'Runs fast.' } },
+    });
+    const accepted = (manifestOf: Manifest, builtin = false): string[] => (['shared', 'dedicated', 'sandboxed'] as const)
+      .filter((isolation) => grantDifferences(manifestOf, { ...exact, isolation }, builtin) === undefined);
+    expect(accepted(requesting('shared'))).toEqual(['shared', 'dedicated', 'sandboxed']);
+    expect(accepted(requesting('dedicated'))).toEqual(['dedicated', 'sandboxed']);
+    expect(accepted(requesting(undefined))).toEqual(['sandboxed']);
+    expect(accepted(requesting(undefined), true)).toEqual(['shared']);
+    expect(grantDifferences(requesting(undefined), { ...exact, isolation: 'dedicated' }, false))
+      .toEqual({ missing: [], unexpected: [], isolation: 'dedicated isolation is lower than the sandboxed the extension requested' });
   });
 });

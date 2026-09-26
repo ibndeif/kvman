@@ -2,7 +2,7 @@ import type { Issue, JsonObject, KernelErrorCode, StoreScope } from '@kvman/prot
 import { kernelProblem, ProblemError, type ProblemContext } from '../problems.ts';
 import type { CollectionDeclaration } from './collection-indexes.ts';
 import type { PendingState } from './pending-state.ts';
-import type { StoreReader } from './store-reader.ts';
+import type { ReadScope, StoreReads } from './store-reads.ts';
 
 export const storeLimits = {
   resultRows: 5000,
@@ -53,7 +53,7 @@ export class UnindexedScanWarnings implements ScanNotes {
 }
 
 export type StoreContext = {
-  reader: StoreReader;
+  reader: StoreReads;
   pending: PendingState;
   owner: string;
   workspaceId: string | undefined;
@@ -65,6 +65,10 @@ export type StoreContext = {
 };
 
 export type ScopeBinding = { context: StoreContext; scope: StoreScope; ws: string };
+
+export function readScopeOf({ context, scope, ws }: ScopeBinding): ReadScope {
+  return { owner: context.owner, ws, scope };
+}
 
 export function storeFailure(context: StoreContext, code: KernelErrorCode, details: Omit<ProblemContext, 'correlationId'> = {}): ProblemError {
   return new ProblemError(kernelProblem(code, { correlationId: context.correlationId, ...details }));

@@ -14,7 +14,7 @@ function stored(value: SqlValue | undefined, name: string, id: string): unknown 
 }
 
 // The stored lane is <extension>|<lane> (ADR 0053); the message carries the rendered lane only.
-function laneOfKey(laneKey: string | undefined): string | undefined {
+export function laneOfKey(laneKey: string | undefined): string | undefined {
   return laneKey === undefined ? undefined : laneKey.slice(laneKey.indexOf('|') + 1);
 }
 

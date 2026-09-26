@@ -110,11 +110,16 @@ export class KernelRegistry {
   }
 
   subscribers(eventType: string, workspaceId: string | undefined): Subscriber[] {
+    return this.subscriptions(eventType, workspaceId).filter((subscriber) => !this.isQuarantined(subscriber.extension));
+  }
+
+  // Every subscription of an enabled extension matching the event, quarantined ones included (ADR 0133); none for a
+  // live event, which reaches only screens.
+  subscriptions(eventType: string, workspaceId: string | undefined): Subscriber[] {
     const live = (this.owners.get(eventType) ?? []).some((owner) => owner.entry.kind === 'event' && owner.entry.delivery === 'live');
     if (live) return [];
     const extensions = workspaceId === undefined ? [...this.enabledSomewhere] : (this.enabledIn.get(workspaceId) ?? []);
     return extensions
-      .filter((extension) => !extension.quarantined)
       .flatMap(({ manifest }) => manifest.subscriptions
         .filter((subscription) => matchesTypePattern(subscription.event, eventType))
         .map((subscription) => ({ extension: manifest.meta.name, subscription })));

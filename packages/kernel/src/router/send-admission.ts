@@ -95,7 +95,7 @@ export function admitSend(options: AdmissionOptions, connection: Connection, req
     owner = resolved.owner;
     const { workspaceId: _requested, ...unscoped } = message;
     message = withHandlerPriority(resolved, request, resolved.workspaceId === undefined ? unscoped : { ...unscoped, workspaceId: resolved.workspaceId });
-    checkCallCapability(options.grants, request.sender, owner, resolved.entry, resolved.workspaceId);
+    checkCallCapability(options, request.sender, { owner, entry: resolved.entry }, request.workspaceId);
     checkAccess(request.sender, owner, resolved.entry);
     checkPayload(options, resolved.entry.kind === 'command' ? resolved.entry.input : undefined, message.payload);
     const lane = laneOf(resolved, request.send, message);

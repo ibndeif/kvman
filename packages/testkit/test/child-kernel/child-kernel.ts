@@ -6,11 +6,12 @@ import {
   createUlidGenerator, faultPointsOf, Kernel, kernelProblem, npmRegistryFrom, pinoKernelLogger, ProblemError, readBuiltinDigests, RotatingLogFile, systemTimers,
   type DaemonLogger,
 } from '@kvman/kernel';
-import type { DaemonStartReport, Problem } from '@kvman/protocol';
+import type { Capabilities, DaemonStartReport, Problem } from '@kvman/protocol';
 import type { ExtensionDefinition } from '@kvman/sdk';
 import bench from './fixtures/extensions/bench.ts';
 import ledger from './fixtures/extensions/ledger.ts';
 import desk from '../workspaces/fixtures/extensions/desk.ts';
+import probe from '../isolation/fixtures/extensions/probe.ts';
 import { applyTestPreset, emptyGrant } from '../install/fixture-presets.ts';
 import { closedRegistry, installFixture, noBuiltins, prepareHome } from '../install/fixture-snapshots.ts';
 import { fixtureFolder } from './workspace.ts';
@@ -18,15 +19,20 @@ import { fixtureFolder } from './workspace.ts';
 // A kernel process with one fixture extension, booted as the daemon boots (ADR 0089): the fault harness kills it at
 // a fault point (ADR 0100), and the benchmarks load it over HTTP (ADR 0104). It reports like the daemon (ADR 0087).
 
-type Fixture = { name: string; definition: ExtensionDefinition; folder: string; file: string; poolSize: number };
+type Fixture = { name: string; definition: ExtensionDefinition; folder: string; file: string; poolSize: number; grant?: Capabilities };
 
 const childFixtures = fileURLToPath(new URL('./fixtures/extensions/', import.meta.url));
 
-// The desk of the workspace tests: a secret config field and a deferred command, for the M2.3 crash points.
+// The desk of the workspace tests: a secret config field and a deferred command, for the M2.3 crash points. The probe of
+// the isolation tests runs sandboxed, for the M2.4 host crash point.
 const fixtures: Record<string, Fixture> = {
   ledger: { name: '@acme/ledger', definition: ledger, folder: childFixtures, file: 'ledger.ts', poolSize: 1 },
   bench: { name: '@acme/bench', definition: bench, folder: childFixtures, file: 'bench.ts', poolSize: Math.max(1, Math.min(4, availableParallelism() - 1)) },
   desk: { name: '@acme/desk', definition: desk, folder: fileURLToPath(new URL('../workspaces/fixtures/extensions/', import.meta.url)), file: 'desk.ts', poolSize: 1 },
+  probe: {
+    name: '@acme/probe', definition: probe, folder: fileURLToPath(new URL('../isolation/fixtures/extensions/', import.meta.url)), file: 'probe.ts', poolSize: 1,
+    grant: { ...emptyGrant, isolation: 'sandboxed' },
+  },
 };
 
 const { values } = parseArgs({ options: { home: { type: 'string' }, fixture: { type: 'string' }, builtin: { type: 'string' } }, strict: true });
@@ -81,11 +87,11 @@ async function main(): Promise<void> {
   }
   const fixture = fixtures[values.fixture ?? ''];
   const home = values.home;
-  if (fixture === undefined || home === undefined) throw new Error('usage: child-kernel.ts --home <folder> --fixture ledger|bench|desk|first-run [--builtin <folder>]');
+  if (fixture === undefined || home === undefined) throw new Error('usage: child-kernel.ts --home <folder> --fixture ledger|bench|desk|probe|first-run [--builtin <folder>]');
   try {
     await prepareHome(home, async (connection) => {
       await installFixture(connection, home, { definition: fixture.definition, folder: fixture.folder, entry: fixture.file });
-      applyTestPreset(connection, fixtureFolder, { [fixture.name]: emptyGrant });
+      applyTestPreset(connection, fixtureFolder, { [fixture.name]: fixture.grant ?? emptyGrant });
     });
     const kernel = await Kernel.boot({
       home, builtin: noBuiltins(home), homeWorkspace: homeWorkspaceOf(home), npmRegistry: closedRegistry, environment: {},

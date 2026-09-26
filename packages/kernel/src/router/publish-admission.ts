@@ -2,18 +2,12 @@ import { outboundPublishSchema, type Message } from '@kvman/protocol';
 import type { EventDelivery, PublishAdmission, PublishRequest } from '../storage/commit-unit.ts';
 import type { Subscriber } from '../registry/kernel-registry.ts';
 import { checkPayload, checkWorkspace, refusalOf, resolveType, type AdmissionOptions } from './admission-context.ts';
+import { receivesEvent } from './event-grants.ts';
 import { requestDigestNow } from './idempotency.ts';
 import { renderLane } from './lane-rendering.ts';
 import { assignContext, assignPriority } from './message-assignment.ts';
 import { checkPublish } from './permission-checks.ts';
 import { Refusal } from './refusal.ts';
-
-// A foreign event reaches a subscriber only when its subscription is granted (05 §5.7); own and kernel.* events
-// need no grant.
-function granted(options: AdmissionOptions, owner: string, event: Message, { extension, subscription }: Subscriber): boolean {
-  if (extension === owner || event.type.startsWith('kernel.')) return true;
-  return options.grants.capabilities(extension, event.workspaceId)?.derived.subscribes.includes(subscription.event) === true;
-}
 
 // One row per matching subscription (ADR 0053). A subscription lane that cannot be rendered fails only that
 // delivery, never the publisher.
@@ -54,7 +48,8 @@ export function admitPublish(options: AdmissionOptions, request: PublishRequest)
       context: assignContext(cause, undefined, options.defaultLocale()), priority: assignPriority(sender, cause, undefined),
       delivery: deliveryClass, createdAt: options.now(),
     };
-    const subscribers = options.registry().subscribers(type, event.workspaceId).filter((subscriber) => granted(options, resolved.owner, event, subscriber));
+    const published = { type, owner: resolved.owner, workspaceId: event.workspaceId };
+    const subscribers = options.registry().subscribers(type, event.workspaceId).filter((subscriber) => receivesEvent(options.grants, published, subscriber));
     return { outcome: 'admitted', event, deliveries: subscribers.map((subscriber) => delivery(options, event, subscriber)) };
   } catch (error) {
     return { outcome: 'refused', problem: refusalOf(error).problem(correlationId) };

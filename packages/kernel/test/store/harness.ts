@@ -1,6 +1,6 @@
 import type { Issue, JsonObject, Message, StoreWrite } from '@kvman/protocol';
 import {
-  createCollectionIndexes, createHandlerStore, openReadConnection, betterSqlite3Driver, StoreReader, UnindexedScanThrottle, UnindexedScanWarnings,
+  createCollectionIndexes, createHandlerStore, openReadConnection, betterSqlite3Driver, ConnectionReads, StoreReader, UnindexedScanThrottle, UnindexedScanWarnings,
   type CommitResult, type DataDeclarations, type HandlerStore, type UnindexedScan,
 } from '../../src/index.ts';
 import { invocationMessage, now, openTestStore, ulids, workspaceId, type TestStore } from '../storage/harness.ts';
@@ -32,7 +32,7 @@ export type HandlerOptions = { workspace?: string | null; readOnly?: boolean };
 
 export function handlerStore(fixture: StoreFixture, options: HandlerOptions = {}): HandlerStore {
   return createHandlerStore({
-    reader: fixture.reader, owner, workspaceId: options.workspace === null ? undefined : (options.workspace ?? workspaceId),
+    reader: new ConnectionReads(fixture.reader), owner, workspaceId: options.workspace === null ? undefined : (options.workspace ?? workspaceId),
     data: declarations, validateDocument: rejectInvalidField, correlationId: ulids.next(), readOnly: options.readOnly ?? false,
     unindexedScans: fixture.scans,
   });

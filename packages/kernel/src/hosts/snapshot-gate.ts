@@ -1,8 +1,11 @@
 import type { Claim } from '../scheduler/dispatcher.ts';
 
-// Each extension's entry module in its snapshot, verified before its first load in this process (06 §6.5).
+// A verified snapshot: its folder, which a sandboxed host may read (ADR 0129), and the extension's entry module.
+export type VerifiedSnapshot = { folder: string; entry: string };
+
+// Each extension's snapshot, verified before its first load in this process (06 §6.5).
 export interface ExtensionSnapshots {
-  verifiedEntry(extension: string): string | undefined;
+  verifiedEntry(extension: string): VerifiedSnapshot | undefined;
   verify(extension: string): Promise<boolean>;
 }
 
@@ -18,7 +21,7 @@ export class SnapshotGate {
     this.#snapshots = snapshots;
   }
 
-  entry(extension: string): string | undefined {
+  entry(extension: string): VerifiedSnapshot | undefined {
     return this.#snapshots.verifiedEntry(extension);
   }
 

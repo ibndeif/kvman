@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { poolSize, WorkerPool, type PoolWorker } from '../../src/index.ts';
+import { poolSize, WorkerPool, type PoolWorker, type SchedulerTimers } from '../../src/index.ts';
 import { fakeThreads } from './fake-threads.ts';
 
 const quiet = { frame: () => undefined, failed: () => undefined, exit: () => undefined };
+const noTimers: SchedulerTimers = { set: () => ({ cancel: () => undefined }) };
 
 describe('the shared pool (plan 03 §3.5, ADR 0071)', () => {
   it('M1.6-E32 threads start lazily, invocations go to the least-loaded thread, preferring one that loaded the extension', () => {
     const { start, started } = fakeThreads();
-    const pool = new WorkerPool(3, start, quiet);
+    const pool = new WorkerPool({ name: 'shared', size: 3, start, events: quiet, timers: noTimers });
     expect(pool.load('@acme/notes')).toEqual({ host: 'shared:new', inFlight: 0, cap: 64 });
     expect(started).toHaveLength(0);
 

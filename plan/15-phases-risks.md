@@ -141,7 +141,8 @@ Inside a phase, each milestone needs the one before it unless *Needs* says other
 #### M2.4 Capabilities and isolation — 2.5 days
 - **Read**: `05` §5.7, `03` §3.5, §3.8 ("Who" column), `13` §13.6.
 - **Build**: requested and derived capabilities; the `Capabilities` grant shape and its validity check against the manifest (`05` §5.7); enforcement on every `ctx` RPC, at commit, and on event delivery; `kernel.subscribers.list` from committed grants; the `tools` capability; admin-only queries; grant-command caller rules; the dedicated worker host; the sandboxed process host with Node permission flags, `--no-experimental-sqlite`, and JSON-lines IPC; hosts keyed by `(extension, isolation)`; idle unload. The read pool serving sandboxed hosts' reads (`04` §4.1).
-- **Done when**: the same sample extension runs in all three isolation modes; every `ctx` surface denies without its capability; a sandboxed extension cannot read a file outside its grant or load `node:sqlite`; an unsubscribed foreign event is never delivered. A large `find` from a sandboxed extension does not delay a concurrent `/health` request.
+- **Done when**: the same sample extension runs in all three isolation modes; every `ctx` surface denies without its capability; a sandboxed extension cannot read a file outside its grant or load `node:sqlite`; an unsubscribed foreign event is never delivered. A large `find` from a sandboxed extension does not delay a concurrent `/health` request (every request answers within 25 ms, ADR 0131).
+- **Split**: the admin-only query built here is `kernel.messages.list` (ADR 0132). The `ctx` surfaces of later milestones enforce their capabilities when they are built: `ctx.files` (M2.5), `ctx.process` (M2.6), `ctx.llm` (M2.9), and `ui.*` (M2.12).
 
 #### M2.5 Blobs, workspace I/O, trust — 2 days
 - **Read**: `04` §4.6, `07` §7.2, `12` §12.2 (blobs), `13` §13.7.

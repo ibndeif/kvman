@@ -1,14 +1,16 @@
 import { compareByCodePoint, jsonByteLength, type Json } from '@kvman/protocol';
 import type { KvEntry, KvStore } from '@kvman/sdk';
-import { requireWritable, storeFailure, storeLimits, tooLarge, type ScopeBinding } from './store-context.ts';
+import { readScopeOf, requireWritable, storeFailure, storeLimits, tooLarge, type ScopeBinding } from './store-context.ts';
 
-export function createKvStore({ context, scope, ws }: ScopeBinding): KvStore {
-  const { reader, pending, owner } = context;
+export function createKvStore(binding: ScopeBinding): KvStore {
+  const { context, scope } = binding;
+  const { reader, pending } = context;
+  const at = readScopeOf(binding);
   return {
     async get<Value extends Json = Json>(key: string) {
       const buffered = pending.kv(scope, key);
       if (buffered !== undefined) return (buffered.deleted ? undefined : buffered.value) as Value | undefined;
-      const stored = reader.kvGet(owner, ws, key);
+      const stored = await reader.kvGet(at, key);
       pending.noteKvVersion(scope, key, stored?.version ?? 0);
       return stored?.value as Value | undefined;
     },
@@ -25,7 +27,7 @@ export function createKvStore({ context, scope, ws }: ScopeBinding): KvStore {
     },
     async list<Value extends Json = Json>(prefix: string) {
       const buffered = pending.kvEntries(scope).filter((entry) => entry.key.startsWith(prefix));
-      const stored = reader.kvList(owner, ws, prefix, storeLimits.resultRows + buffered.length + 1);
+      const stored = await reader.kvList(at, prefix, storeLimits.resultRows + buffered.length + 1);
       for (const row of stored) pending.noteKvVersion(scope, row.key, row.version);
       const merged = new Map<string, Json>(stored.map((row) => [row.key, row.value]));
       for (const { key, pending: value } of buffered) {

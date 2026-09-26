@@ -26,8 +26,25 @@ export function extensionProblem(manifest: Manifest, message: Message, code: str
   return { problem: parsed.data, registered: registered !== undefined };
 }
 
-// A thrown ProblemError passes through; anything else is INTERNAL, retryable, without its text (13 §13.1).
+const deniedOperations: Record<string, string> = {
+  FileSystemRead: 'a file read', FileSystemWrite: 'a file write', ChildProcess: 'a child process', WorkerThreads: 'a worker', Addon: 'a native addon',
+};
+
+// ADR 0129: what Node's permission model refused in a sandboxed host, named without its path.
+function deniedOperation(error: unknown): string | undefined {
+  if (!(error instanceof Error) || !('code' in error)) return undefined;
+  if (error.code === 'ERR_DLOPEN_DISABLED') return 'a native addon';
+  if (error.code !== 'ERR_ACCESS_DENIED') return undefined;
+  const permission = 'permission' in error && typeof error.permission === 'string' ? error.permission : '';
+  return deniedOperations[permission] ?? 'an operation';
+}
+
+// A thrown ProblemError passes through; an operation the permission model refused is CAPABILITY_DENIED (ADR 0129);
+// anything else is INTERNAL, retryable, without its text (13 §13.1).
 export function problemOfThrown(error: unknown, message: Message): Problem {
   if (error instanceof ProblemError) return error.problem;
-  return kernelProblem('INTERNAL', { correlationId: message.correlationId, messageId: message.id });
+  const denied = deniedOperation(error);
+  const context = { correlationId: message.correlationId, messageId: message.id };
+  if (denied !== undefined) return kernelProblem('CAPABILITY_DENIED', { ...context, detail: `this sandboxed host may not perform ${denied}`, hint: 'reach files, processes, and the network through ctx' });
+  return kernelProblem('INTERNAL', context);
 }

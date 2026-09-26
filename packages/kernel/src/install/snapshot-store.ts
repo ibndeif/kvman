@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import { readPackageJson } from './package-checks.ts';
 import { snapshotFolder, type InstallPaths } from './install-paths.ts';
+import type { VerifiedSnapshot } from '../hosts/snapshot-gate.ts';
 import { verifyTree } from './snapshot-files.ts';
 
 // 06 §6.5: a snapshot is rehashed before its first load in a kernel process (and at boot for every enabled
@@ -8,15 +9,15 @@ import { verifyTree } from './snapshot-files.ts';
 export class SnapshotStore {
   readonly #paths: InstallPaths;
   readonly #digestOf: (extension: string) => string | undefined;
-  readonly #verified = new Map<string, string>();
+  readonly #verified = new Map<string, VerifiedSnapshot>();
 
   constructor(paths: InstallPaths, digestOf: (extension: string) => string | undefined) {
     this.#paths = paths;
     this.#digestOf = digestOf;
   }
 
-  // The entry module of the extension's active snapshot, if this process has verified it.
-  verifiedEntry(extension: string): string | undefined {
+  // The extension's active snapshot, if this process has verified it.
+  verifiedEntry(extension: string): VerifiedSnapshot | undefined {
     const digest = this.#digestOf(extension);
     return digest === undefined ? undefined : this.#verified.get(`${extension}@${digest}`);
   }
@@ -31,7 +32,7 @@ export class SnapshotStore {
     const packageFolder = join(folder, 'node_modules', extension);
     const { main } = await readPackageJson(packageFolder);
     if (main === undefined) return false;
-    this.#verified.set(key, join(packageFolder, main));
+    this.#verified.set(key, { folder, entry: join(packageFolder, main) });
     return true;
   }
 }

@@ -1,6 +1,6 @@
 # ADR 0123 — Enable, disable, and grants from applied presets
 
-- **Status**: accepted
+- **Status**: accepted; its isolation rule is superseded by ADR 0128
 - **Date**: 2026-09-26
 - **Milestone**: M2.3
 - **Decided by**: the product owner

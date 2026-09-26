@@ -7,7 +7,7 @@ import type { GrantsSource } from '../router/grants.ts';
 import type { Connection } from '../storage/driver.ts';
 import { readWorkspace } from './workspace-rows.ts';
 
-export type ExtensionQueryAnswer<T> = { ok: true; value: T } | { ok: false; code: 'NOT_FOUND' | 'WORKSPACE_INVALID'; detail: string };
+export type ExtensionQueryAnswer<T> = { ok: true; value: T } | { ok: false; code: 'NOT_FOUND' | 'WORKSPACE_INVALID' | 'CAPABILITY_DENIED'; detail: string };
 
 type ExtensionRow = { name: string; digest: string; status: string; reason: unknown; pending: boolean };
 

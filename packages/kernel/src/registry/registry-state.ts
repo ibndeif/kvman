@@ -20,6 +20,7 @@ export class RegistryState implements GrantsSource {
   readonly #manifests = new Map<string, Manifest>();
   #digests = new Map<string, string>();
   #grants: EnabledGrants = new Map();
+  #disabledTools = new Map<string, ReadonlySet<string>>();
   #registry: KernelRegistry;
 
   constructor(connection: Connection) {
@@ -50,6 +51,11 @@ export class RegistryState implements GrantsSource {
     }));
   }
 
+  // ADR 0133: every type listed in an `extensions[*].disable` of the workspace's applied preset.
+  disabledTools(workspaceId: string): ReadonlySet<string> {
+    return this.#disabledTools.get(workspaceId) ?? new Set();
+  }
+
   refresh(): void {
     this.#registry = this.#build();
   }
@@ -71,21 +77,24 @@ export class RegistryState implements GrantsSource {
     return manifest;
   }
 
-  // Entries with `enabled: true` of every applied preset, for installed extensions only.
-  #enabledGrants(installed: ReadonlySet<string>): EnabledGrants {
-    const grants: EnabledGrants = new Map();
+  // Entries with `enabled: true` of every applied preset, for installed extensions only, and the tools each preset
+  // turns off.
+  #readPresets(installed: ReadonlySet<string>): void {
+    this.#grants = new Map();
+    this.#disabledTools = new Map();
     for (const row of this.#connection.prepare('SELECT workspace_id, preset FROM workspace_presets ORDER BY workspace_id').all()) {
-      const preset = presetSchema.parse(JSON.parse(String(row['preset'])));
-      const enabled = Object.entries(preset.extensions).filter(([name, entry]) => entry.enabled && installed.has(name));
-      grants.set(String(row['workspace_id']), new Map(enabled.map(([name, entry]) => [name, entry.grants])));
+      const workspaceId = String(row['workspace_id']);
+      const entries = Object.entries(presetSchema.parse(JSON.parse(String(row['preset']))).extensions);
+      const enabled = entries.filter(([name, entry]) => entry.enabled && installed.has(name));
+      this.#grants.set(workspaceId, new Map(enabled.map(([name, entry]) => [name, entry.grants])));
+      this.#disabledTools.set(workspaceId, new Set(entries.flatMap(([, entry]) => entry.disable ?? [])));
     }
-    return grants;
   }
 
   #build(): KernelRegistry {
     const rows = this.#rows();
     this.#digests = new Map(rows.map((row) => [row.name, row.digest]));
-    this.#grants = this.#enabledGrants(new Set(this.#digests.keys()));
+    this.#readPresets(new Set(this.#digests.keys()));
     const extensions: InstalledExtension[] = rows.map((row) => ({ manifest: this.#manifest(row), quarantined: row.quarantined }));
     const build = KernelRegistry.build({ extensions, enabled: this.enabled() });
     if (!build.ok) throw new Error(`the registry cannot be built: ${build.failure.detail}`);

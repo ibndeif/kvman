@@ -4,7 +4,7 @@ import type { Schema } from '../../extension/recording.ts';
 import { ProblemError } from '../../problems.ts';
 import { createHandlerStore, type HandlerStore } from '../../store/store-api.ts';
 import type { UnindexedScanThrottle } from '../../store/store-context.ts';
-import type { StoreReader } from '../../store/store-reader.ts';
+import type { StoreReads } from '../../store/store-reads.ts';
 import { createContext } from './handler-context.ts';
 import { hostProblem, problemOfThrown } from './host-problems.ts';
 import type { InvocationState } from './invocation-state.ts';
@@ -16,7 +16,7 @@ export type RunParts = {
   state: InvocationState;
   extension: ExtensionRecording;
   client: RpcClient;
-  reader: StoreReader;
+  reader: StoreReads;
   throttle: UnindexedScanThrottle;
   newId: () => string;
   clock: () => number;

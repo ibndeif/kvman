@@ -3,7 +3,8 @@ import {
   extensionEnabledSchema, extensionEnableRequestSchema, extensionUnquarantinedSchema, presetRevisionResultSchema, secretChangeResultSchema,
   secretClearRequestSchema, secretSetRequestSchema, workspaceChangeResultSchema, workspaceEventSchema, workspaceForgetRequestSchema,
   workspaceGetRequestSchema, workspaceGetResultSchema, workspaceOpenRequestSchema, workspaceOpenResultSchema, workspaceRenameRequestSchema,
-  workspacesListRequestSchema, workspacesListResultSchema, type TypeEntry,
+  workspacesListRequestSchema, workspacesListResultSchema, messagesListRequestSchema, messagesListResultSchema, subscribersListRequestSchema,
+  subscribersListResultSchema, type TypeEntry,
 } from '@kvman/protocol';
 import { jsonDocument } from './kernel-json-schemas.ts';
 
@@ -35,6 +36,8 @@ export function workspaceEntries(): TypeEntry[] {
     query('kernel.workspaces.list', 'The opened workspaces, sorted by name, each with whether its folder still exists.', workspacesListRequestSchema, workspacesListResultSchema),
     query('kernel.workspace.get', 'One workspace: its path, name, kind, and trust.', workspaceGetRequestSchema, workspaceGetResultSchema),
     query('kernel.config.get', "An extension's stored config rows and merged value, with secrets redacted.", configGetRequestSchema, configGetResultSchema),
+    query('kernel.messages.list', 'The stored messages matching the filters, newest first, without payloads or results. Admin only.', messagesListRequestSchema, messagesListResultSchema),
+    query('kernel.subscribers.list', 'The extensions enabled in a workspace that would receive an event, each with its granted calls there.', subscribersListRequestSchema, subscribersListResultSchema),
     event('kernel.workspace.opened', 'A folder was opened as a workspace.', workspaceEventSchema),
     event('kernel.workspace.renamed', 'A workspace was renamed.', workspaceEventSchema),
     event('kernel.workspace.forgotten', 'A workspace and all its data were forgotten.', workspaceEventSchema),

@@ -3,7 +3,10 @@ import { inertFaults, type FaultPoints } from '../faults/fault-points.ts';
 import { CallDepths } from '../hosts/call-depths.ts';
 import { HostFailures } from '../hosts/host-failures.ts';
 import { HostManager } from '../hosts/host-manager.ts';
+import { InspectionQueries } from '../hosts/inspection-queries.ts';
 import { workerThreadStarter, type StartHostThread } from '../hosts/host-thread.ts';
+import { defaultReadPoolSize, ReadPool, readThreadStarter } from '../hosts/read-pool/read-pool.ts';
+import { sandboxProcessStarter } from '../hosts/sandbox/sandbox-process.ts';
 import type { KernelLogger } from '../hosts/kernel-logger.ts';
 import { EnableCommands } from '../hosts/enable-commands.ts';
 import { ExtensionCommands } from '../hosts/extension-commands.ts';
@@ -18,7 +21,7 @@ import { WorkspaceQueries } from '../hosts/workspace-queries.ts';
 import { hostPlatform, pnpmExecutable } from '../install/bundled-tools.ts';
 import { InstallService } from '../install/install-service.ts';
 import { installPaths } from '../install/install-paths.ts';
-import { kernelSdkVersion } from '../install/kernel-packages.ts';
+import { kernelReadRoots, kernelSdkVersion } from '../install/kernel-packages.ts';
 import { ForkedLoader } from '../install/loader-process.ts';
 import { SnapshotStore } from '../install/snapshot-store.ts';
 import { kernelProblem } from '../problems.ts';
@@ -67,6 +70,8 @@ export type KernelRuntimeOptions = {
   // kernel.shutdown committed (ADR 0090): the daemon runs its shutdown.
   requestShutdown: () => void;
   startThread?: StartHostThread;
+  // ADR 0131: the read pool's threads, 2 unless given.
+  readPoolSize?: number;
   // ADR 0100: the fault points of a test run; inert unless given.
   faults?: FaultPoints;
 };
@@ -105,6 +110,7 @@ export class KernelRuntime {
   readonly #queries: QueryPath;
   readonly #options: KernelRuntimeOptions;
   readonly #quarantines: Quarantines;
+  readonly #reads: ReadPool;
   #kernelHost: KernelHost | undefined;
 
   constructor(options: KernelRuntimeOptions) {
@@ -122,9 +128,11 @@ export class KernelRuntime {
     writeCommittedSecrets(this.pipeline, options.secrets, options.logger, faults);
     this.#waiters = new ReplyWaiters(connection);
     const values = new RecordedValueStore(connection);
+    this.#reads = new ReadPool(options.readPoolSize ?? defaultReadPoolSize, readThreadStarter(options.databaseFile));
     this.hosts = new HostManager({
-      connection, registry, snapshots: this.snapshots, values, logger: options.logger, ids, poolSize: options.poolSize, timers, now,
-      startThread: options.startThread ?? workerThreadStarter(options.databaseFile), failures: new HostFailures(), faults,
+      connection, registry, grants: this.registry, snapshots: this.snapshots, values, logger: options.logger, ids, poolSize: options.poolSize, timers, now,
+      startThread: options.startThread ?? workerThreadStarter(options.databaseFile), startSandbox: sandboxProcessStarter(kernelReadRoots()),
+      reads: this.#reads, failures: new HostFailures(), faults,
     });
     this.scheduler = new Scheduler({
       connection, pipeline: this.pipeline, index: this.index, registry, dispatcher: this.hosts, now, timers, faults,
@@ -187,7 +195,7 @@ export class KernelRuntime {
   // already started can finish before the database closes. Without drain() first, this is how a crash leaves rows.
   stop(): Promise<void> {
     this.scheduler.stop();
-    const stopped = this.hosts.stop();
+    const stopped = this.hosts.stop().then(() => this.#reads.close());
     this.#waiters.close();
     this.#queries.close();
     return stopped;
@@ -243,6 +251,7 @@ export class KernelRuntime {
       kernelQueries: new KernelQueries({
         connection, registry, health: () => this.health(), version: options.identity.version,
         extensions: new ExtensionQueries(connection, this.registry, this.registry), workspaces: new WorkspaceQueries(connection, this.registry, options.secrets),
+        inspection: new InspectionQueries({ connection, registry, grants: this.registry }), grants: this.registry,
       }),
     });
     this.#kernelHost = kernel;

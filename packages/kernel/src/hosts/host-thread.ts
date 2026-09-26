@@ -3,9 +3,16 @@ import { fileURLToPath } from 'node:url';
 import { Worker } from 'node:worker_threads';
 import type { KernelToHostFrame } from '@kvman/protocol';
 
-// What the pool needs of one execution host thread; tests pass fake threads.
+// The process and thread an execution host runs in.
+export type HostIdentity = { pid: number; threadId: number };
+
+// What the pool needs of one execution host (a worker thread or a sandboxed process); tests pass fake threads.
 export interface HostThread {
+  readonly identity: HostIdentity;
   post(frame: KernelToHostFrame): void;
+  // ADR 0131: a read pool answer whose value is already JSON, forwarded without parsing it on the main thread. Only
+  // sandboxed hosts read through the pool.
+  postValue?(invocationId: string, callId: number, value: Uint8Array): void;
   terminate(): void;
 }
 
@@ -30,6 +37,7 @@ export function workerThreadStarter(databaseFile: string): StartHostThread {
     worker.on('error', (error: unknown) => events.failed(error));
     worker.on('exit', () => events.exit());
     return {
+      identity: { pid: process.pid, threadId: worker.threadId },
       post: (frame) => worker.postMessage(frame),
       terminate: () => {
         void worker.terminate();

@@ -8,6 +8,7 @@ import { problemSchema } from './problem.ts';
 import { replyPayloadSchema } from './reply.ts';
 import { configWriteSchema, outboundPublishSchema, outboundSendSchema, secretWriteSchema, storeWriteSchema } from './unit-of-work.ts';
 import { secretNameSchema } from './config-values.ts';
+import { storeReadSchema } from './store-reads.ts';
 
 // 03 §3.5 and ADR 0076: the frames between the kernel and an execution host.
 
@@ -58,6 +59,8 @@ export const rpcCallSchema = z.discriminatedUnion('name', [
   // ADRs 0125, 0126: the merged config with the handler's own pending values, and one secret of its extension.
   z.strictObject({ name: z.literal('config.get'), pending: z.strictObject({ global: jsonObjectSchema.exactOptional(), workspace: jsonObjectSchema.exactOptional() }) }),
   z.strictObject({ name: z.literal('secret.get'), secret: secretNameSchema }),
+  // ADR 0131: a sandboxed host's read, served by the read pool.
+  z.strictObject({ name: z.literal('store.read'), read: storeReadSchema }),
   z.strictObject({
     name: z.literal('log'), level: z.enum(['debug', 'info', 'warn', 'error']), message: z.string(), fields: jsonObjectSchema.exactOptional(),
   }),

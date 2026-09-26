@@ -1,6 +1,6 @@
 # ADR 0052 — Capability checks with grants as data
 
-- **Status**: accepted; the grants source over the database moved to M2.3 (ADR 0123)
+- **Status**: accepted; the grants source over the database moved to M2.3 (ADR 0123); the grant checked is the calling invocation's (ADR 0133)
 - **Date**: 2026-09-25
 - **Milestone**: M1.4
 - **Decided by**: the product owner

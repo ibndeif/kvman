@@ -1,26 +1,38 @@
 import { matchesTypePattern, type Access, type Capabilities, type TypeEntry } from '@kvman/protocol';
-import type { Sender } from '../storage/commit-unit.ts';
+import type { KernelRegistry } from '../registry/kernel-registry.ts';
 import { kernelOwner } from '../registry/kernel-types.ts';
+import type { Sender } from '../storage/commit-unit.ts';
 import type { GrantsSource } from './grants.ts';
 import { Refusal } from './refusal.ts';
 
-function grantedCall(capabilities: Capabilities, entry: TypeEntry): boolean {
-  if (entry.kind === 'event') return false;
-  const patternReachable = entry.access !== 'internal' && entry.access !== 'user';
-  const byCalls = capabilities.requested.some((capability) => capability.name === 'calls'
-    && patternReachable && capability.types.some((pattern) => matchesTypePattern(pattern, entry.type)));
-  const byTools = entry.agentTool !== undefined && capabilities.requested.some((capability) => capability.name === 'tools');
-  return byCalls || byTools;
+export type CallGrants = { grants: GrantsSource; registry: () => KernelRegistry };
+
+// A type the caller reaches: its owner and definition.
+export type CallTarget = { owner: string; entry: TypeEntry };
+
+function byCalls(capabilities: Capabilities, entry: TypeEntry): boolean {
+  if (entry.kind === 'event' || entry.access === 'internal' || entry.access === 'user') return false;
+  return capabilities.requested.some((capability) => capability.name === 'calls' && capability.types.some((pattern) => matchesTypePattern(pattern, entry.type)));
+}
+
+// ADR 0133: `tools` reaches the agent tools of the extensions enabled in the calling invocation's workspace that its
+// applied preset does not turn off; a global invocation has no tool set.
+function byTools(options: CallGrants, capabilities: Capabilities, { owner, entry }: CallTarget, workspaceId: string | undefined): boolean {
+  if (entry.kind === 'event' || entry.agentTool === undefined || workspaceId === undefined) return false;
+  if (!capabilities.requested.some((capability) => capability.name === 'tools')) return false;
+  return options.registry().isEnabled(owner, workspaceId) && !options.grants.disabledTools(workspaceId).has(entry.type);
 }
 
 // 05 §5.7 for commands and queries: an extension (or its process) calls its own types freely; a foreign type needs
-// a `calls` pattern covering it (never a foreign internal or user type) or, for an agent tool, `tools`. kernel.* types
-// apply their own Who rule instead (03 §3.8, ADR 0079).
-export function checkCallCapability(grants: GrantsSource, sender: Sender, owner: string, entry: TypeEntry, workspaceId: string | undefined): void {
+// a `calls` pattern covering it (never a foreign internal or user type) or, for an agent tool, `tools`. The grant is
+// the one of the calling invocation's workspace, or the intersection for a global invocation (ADR 0133). kernel.*
+// types apply their own Who rule instead (03 §3.8, ADR 0079).
+export function checkCallCapability(options: CallGrants, sender: Sender, target: CallTarget, workspaceId: string | undefined): void {
   const acting = sender.extension;
+  const { owner, entry } = target;
   if (acting === undefined || acting === owner || owner === kernelOwner) return;
-  const capabilities = grants.capabilities(acting, workspaceId);
-  if (capabilities !== undefined && grantedCall(capabilities, entry)) return;
+  const capabilities = options.grants.capabilities(acting, workspaceId);
+  if (capabilities !== undefined && (byCalls(capabilities, entry) || byTools(options, capabilities, target, workspaceId))) return;
   throw new Refusal('CAPABILITY_DENIED', {
     detail: `${acting} may not call "${entry.type}" of ${owner}`,
     hint: `add ext.requestCapability('calls', { types: ['${entry.type}'] })`,
