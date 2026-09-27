@@ -122,3 +122,4 @@ export const scheduleEntrySchema = z
       check.addIssue({ code: 'custom', path: ['every'], message: 'a schedule has exactly one of every and cron' });
     }
   });
+export type ScheduleEntry = z.infer<typeof scheduleEntrySchema>;

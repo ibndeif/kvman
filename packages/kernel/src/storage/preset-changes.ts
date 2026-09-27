@@ -1,13 +1,16 @@
-import { presetSchema, type ExtensionEnabled, type ExtensionUnquarantined, type Json, type Preset, type PresetChanged } from '@kvman/protocol';
+import { presetSchema, type ExtensionEnabled, type Json, type Preset, type PresetChanged } from '@kvman/protocol';
 import { kernelProblem } from '../problems.ts';
 import { sameGrants } from '../registry/grant-validity.ts';
+import { setMigrating } from './migration-changes.ts';
 import { publishKernelEvent, UnitRejected, type UnitScope } from './unit-contents.ts';
+import { releaseQuarantineOf } from './version-changes.ts';
 
 export type PresetEntry = Preset['extensions'][string];
 
-// Enable and disable edit the applied preset (06 §6.4, ADR 0123); the checks ran before the unit.
+// Enable and disable edit the applied preset (06 §6.4, ADR 0123); the checks ran before the unit. The unit that
+// completes an enable records the data version of an extension that had none and clears `migrating` (04 §4.8).
 export type PresetChange =
-  | { kind: 'extension.enable'; workspaceId: string; name: string; entry: PresetEntry }
+  | { kind: 'extension.enable'; workspaceId: string; name: string; entry: PresetEntry; dataVersion: number }
   | { kind: 'extension.disable'; workspaceId: string; name: string };
 
 type AppliedPreset = { preset: Preset; revision: number };
@@ -37,6 +40,8 @@ function writePreset(scope: UnitScope, workspaceId: string, applied: AppliedPres
 
 function enable(scope: UnitScope, change: Extract<PresetChange, { kind: 'extension.enable' }>): Json {
   const applied = presetOf(scope, change.workspaceId);
+  scope.connection.prepare('INSERT INTO schema_versions (owner, version) VALUES (?, ?) ON CONFLICT(owner) DO NOTHING').run(change.name, change.dataVersion);
+  setMigrating(scope, change.name, undefined);
   const current = applied.preset.extensions[change.name];
   if (current?.enabled === true && sameGrants(current.grants, change.entry.grants)) return { revision: applied.revision };
   const entry = current?.disable === undefined ? change.entry : { ...change.entry, disable: current.disable };
@@ -52,13 +57,7 @@ function enabledAnywhere(scope: UnitScope, name: string): boolean {
 
 // 03 §3.6: disabled in every workspace, a quarantined extension is released (ADR 0123).
 function releaseQuarantine(scope: UnitScope, name: string): void {
-  if (enabledAnywhere(scope, name)) return;
-  const released = scope.connection
-    .prepare(`UPDATE extensions SET status = 'active', quarantine_reason = NULL WHERE name = ? AND status = 'quarantined'`)
-    .run(name);
-  if (released.changes === 0) return;
-  const payload: ExtensionUnquarantined = { name };
-  publishKernelEvent(scope, undefined, { type: 'kernel.extension.unquarantined', payload });
+  if (!enabledAnywhere(scope, name)) releaseQuarantineOf(scope, name);
 }
 
 function disable(scope: UnitScope, change: Extract<PresetChange, { kind: 'extension.disable' }>): Json {

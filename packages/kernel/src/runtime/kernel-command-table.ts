@@ -1,20 +1,21 @@
 import type { QuarantineReason } from '@kvman/protocol';
-import { ConfigChecker } from '../config/config-values.ts';
 import type { FaultPoints } from '../faults/fault-points.ts';
 import { EnableCommands } from '../hosts/enable-commands.ts';
 import { ExtensionCommands } from '../hosts/extension-commands.ts';
 import type { KernelCommits } from '../hosts/kernel-commits.ts';
+import type { ExtensionVersions } from '../hosts/extension-versions.ts';
 import type { KernelCommand } from '../hosts/kernel-host.ts';
 import { SerialChanges } from '../hosts/serial-changes.ts';
 import { SettingCommands } from '../hosts/setting-commands.ts';
 import type { TrustService } from '../hosts/trust-service.ts';
+import { VersionCommands } from '../hosts/version-commands.ts';
 import { WorkspaceCommands } from '../hosts/workspace-commands.ts';
 import { WorkspaceForgetting } from '../hosts/workspace-forgetting.ts';
 import type { InstallService } from '../install/install-service.ts';
 import type { SnapshotStore } from '../install/snapshot-store.ts';
+import type { DataMigrations } from '../migrations/data-migrations.ts';
 import type { RegistryState } from '../registry/registry-state.ts';
 import type { WorkspaceDirectory } from '../registry/workspace-directory.ts';
-import { PayloadValidators } from '../router/payload-validators.ts';
 import type { Scheduler } from '../scheduler/scheduler.ts';
 import type { SchedulerTimers } from '../scheduler/timers.ts';
 import type { CommitPipeline } from '../storage/commit-pipeline.ts';
@@ -30,6 +31,8 @@ export type KernelCommandDeps = {
   install: InstallService;
   snapshots: SnapshotStore;
   trust: TrustService;
+  versions: ExtensionVersions;
+  migrations: DataMigrations;
   timers: SchedulerTimers;
   faults: FaultPoints;
   home: string;
@@ -38,14 +41,14 @@ export type KernelCommandDeps = {
   quarantine: (extension: string, reason: QuarantineReason) => Promise<void>;
 };
 
-// The kernel commands that change extensions, workspaces, presets, trust, config, and secrets (03 §3.8), by type.
+// The kernel commands that change extensions and their versions, workspaces, presets, trust, config, and secrets
+// (03 §3.8), by type.
 export function kernelCommandTable(deps: KernelCommandDeps): Map<string, KernelCommand> {
   const { connection, commits, scheduler, registry, abortMessages } = deps;
   const serial = new SerialChanges();
   const extensions = new ExtensionCommands({ connection, commits, scheduler, grants: registry, registry, install: deps.install, serial, abortMessages });
-  const enabling = new EnableCommands({
-    connection, commits, scheduler, registry, snapshots: deps.snapshots, config: new ConfigChecker(new PayloadValidators()), serial, quarantine: deps.quarantine,
-  });
+  const enabling = new EnableCommands({ connection, commits, scheduler, registry, snapshots: deps.snapshots, migrations: deps.migrations, serial, quarantine: deps.quarantine });
+  const versions = new VersionCommands({ connection, commits, scheduler, registry, grants: registry, versions: deps.versions, serial });
   const workspaces = new WorkspaceCommands({ connection, commits, registry, home: deps.home });
   const forgetting = new WorkspaceForgetting({
     connection, pipeline: deps.pipeline, commits, scheduler, registry, directory: deps.directory, serial, timers: deps.timers, faults: deps.faults, abortMessages,
@@ -58,6 +61,9 @@ export function kernelCommandTable(deps: KernelCommandDeps): Map<string, KernelC
     ['kernel.extension.uninstall', (claim) => extensions.uninstall(claim)],
     ['kernel.extension.enable', (claim) => enabling.enable(claim)],
     ['kernel.extension.disable', (claim) => enabling.disable(claim)],
+    ['kernel.extension.reload', (claim) => versions.reload(claim)],
+    ['kernel.extension.rollback', (claim) => versions.rollback(claim)],
+    ['kernel.extension.unquarantine', (claim) => versions.unquarantine(claim)],
     ['kernel.workspace.open', (claim) => workspaces.open(claim)],
     ['kernel.workspace.rename', (claim) => workspaces.rename(claim)],
     ['kernel.workspace.forget', (claim, signal) => forgetting.forget(claim, signal)],

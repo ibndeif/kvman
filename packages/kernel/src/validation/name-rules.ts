@@ -69,9 +69,9 @@ function dataVersionIssues({ version, compatibleWith, steps }: DataVersion): Iss
   }
   const seenVersions = new Set<number>();
   compatibleWith.forEach((compatible, index) => {
-    const compatibleHint = `list versions lower than ${version}, each once`;
-    if (compatible >= version) {
-      issues.push({ path: `data.compatibleWith.${index}`, message: `compatible versions are lower than the data version ${version}`, hint: compatibleHint });
+    const compatibleHint = `list newer data versions than ${version} that this code still runs on, each once`;
+    if (compatible <= version) {
+      issues.push({ path: `data.compatibleWith.${index}`, message: `compatible versions are higher than the data version ${version}`, hint: compatibleHint });
     } else if (seenVersions.has(compatible)) {
       issues.push({ path: `data.compatibleWith.${index}`, message: `version ${compatible} is already listed`, hint: compatibleHint });
     }

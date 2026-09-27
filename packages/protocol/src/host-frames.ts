@@ -14,6 +14,7 @@ import { blobIdSchema } from './blob-id.ts';
 import { fileContentSchema, workspacePathSchema } from './workspace-files.ts';
 import { storeScopeSchema } from './unit-of-work.ts';
 import { spawnOptionsSchema } from './processes.ts';
+import { migrateFrameSchema, migratedFrameSchema, migrationCalls } from './migration-frames.ts';
 
 // 03 §3.5 and ADR 0076: the frames between the kernel and an execution host.
 
@@ -101,6 +102,7 @@ export const rpcCallSchema = z.discriminatedUnion('name', [
   ...blobCalls,
   ...workspaceCalls,
   ...processCalls,
+  ...migrationCalls,
   z.strictObject({
     name: z.literal('log'), level: z.enum(['debug', 'info', 'warn', 'error']), message: z.string(), fields: jsonObjectSchema.exactOptional(),
   }),
@@ -162,8 +164,8 @@ export type AbortFrame = z.infer<typeof abortFrameSchema>;
 export const loadFailedFrameSchema = z.strictObject({ frame: z.literal('loadFailed'), invocationId: invocationIdSchema, problem: problemSchema });
 export type LoadFailedFrame = z.infer<typeof loadFailedFrameSchema>;
 
-export const kernelToHostFrameSchema = z.discriminatedUnion('frame', [invokeFrameSchema, rpcResultFrameSchema, abortFrameSchema]);
+export const kernelToHostFrameSchema = z.discriminatedUnion('frame', [invokeFrameSchema, rpcResultFrameSchema, abortFrameSchema, migrateFrameSchema]);
 export type KernelToHostFrame = z.infer<typeof kernelToHostFrameSchema>;
 
-export const hostToKernelFrameSchema = z.discriminatedUnion('frame', [rpcFrameSchema, completeFrameSchema, loadFailedFrameSchema]);
+export const hostToKernelFrameSchema = z.discriminatedUnion('frame', [rpcFrameSchema, completeFrameSchema, loadFailedFrameSchema, migratedFrameSchema]);
 export type HostToKernelFrame = z.infer<typeof hostToKernelFrameSchema>;

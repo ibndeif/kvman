@@ -42,9 +42,13 @@ function deniedOperation(error: unknown): string | undefined {
 // A thrown ProblemError passes through; an operation the permission model refused is CAPABILITY_DENIED (ADR 0129);
 // anything else is INTERNAL, retryable, without its text (13 §13.1).
 export function problemOfThrown(error: unknown, message: Message): Problem {
+  return problemOfThrownIn(error, { correlationId: message.correlationId, messageId: message.id });
+}
+
+// The same, for work that has no message of its own, such as a migration step (ADR 0143).
+export function problemOfThrownIn(error: unknown, context: { correlationId: string; messageId?: string }): Problem {
   if (error instanceof ProblemError) return error.problem;
   const denied = deniedOperation(error);
-  const context = { correlationId: message.correlationId, messageId: message.id };
   if (denied !== undefined) return kernelProblem('CAPABILITY_DENIED', { ...context, detail: `this sandboxed host may not perform ${denied}`, hint: 'reach files, processes, and the network through ctx' });
   return kernelProblem('INTERNAL', context);
 }

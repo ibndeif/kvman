@@ -1,18 +1,17 @@
 import { extensionDisableRequestSchema, extensionEnableRequestSchema, type ExtensionEnableRequest, type Manifest, type Message, type Problem } from '@kvman/protocol';
-import type { ConfigChecker } from '../config/config-values.ts';
-import { mergedConfig } from '../config/config-values.ts';
 import type { SnapshotStore } from '../install/snapshot-store.ts';
+import { configProblem, covers, storedDataVersion, type DataMigrations } from '../migrations/data-migrations.ts';
 import { grantDifferences } from '../registry/grant-validity.ts';
 import { kernelTypeEntries } from '../registry/kernel-types.ts';
 import type { RegistryState } from '../registry/registry-state.ts';
 import type { Claim } from '../scheduler/dispatcher.ts';
 import type { Scheduler } from '../scheduler/scheduler.ts';
-import { readConfigRow } from '../storage/config-rows.ts';
 import type { Connection } from '../storage/driver.ts';
 import type { KernelChange } from '../storage/kernel-changes.ts';
 import { readAppliedPreset, type PresetEntry } from '../storage/preset-changes.ts';
 import { isAdministrator } from './administrators.ts';
 import { parsed, refusal } from './command-payloads.ts';
+import { mostIsolated } from './reload-checks.ts';
 import type { KernelCommits } from './kernel-commits.ts';
 import type { SerialChanges } from './serial-changes.ts';
 import { readWorkspace } from './workspace-rows.ts';
@@ -23,7 +22,7 @@ export type EnableCommandsDeps = {
   scheduler: Scheduler;
   registry: RegistryState;
   snapshots: SnapshotStore;
-  config: ConfigChecker;
+  migrations: DataMigrations;
   serial: SerialChanges;
   quarantine: (extension: string, reason: 'EXT_INTEGRITY') => Promise<void>;
 };
@@ -59,8 +58,35 @@ export class EnableCommands {
     const checked = await this.#enableCheck(message, request.value);
     if (!checked.ok) return this.#deps.commits.fail(claim, checked.problem);
     const { workspaceId, name, grants } = request.value;
+    const data = await this.#prepareData(message, name, checked.version.digest, grants);
+    // An enable the kernel's shutdown interrupted stays running and is redelivered at the next start (ADR 0091).
+    if (!data.ok && data.problem.code === 'KERNEL_STOPPING') return undefined;
+    if (!data.ok) return this.#deps.commits.fail(claim, data.problem);
     const entry: PresetEntry = { ...checked.version, enabled: true, grants };
-    await this.#change(claim, { kind: 'extension.enable', workspaceId, name, entry });
+    await this.#change(claim, { kind: 'extension.enable', workspaceId, name, entry, dataVersion: data.version });
+  }
+
+  // 04 §4.8, ADRs 0142, 0143: before the enable commits, data older than the code is migrated with it (and every
+  // stored config value checked in the last step); newer data it does not cover refuses the enable.
+  async #prepareData(message: Message, name: string, digest: string, grants: ExtensionEnableRequest['grants']): Promise<{ ok: true; version: number } | { ok: false; problem: Problem }> {
+    const manifest = this.#deps.registry.current().manifestOf(name);
+    const snapshot = this.#deps.snapshots.verifiedEntry(name);
+    if (manifest === undefined || snapshot === undefined) return { ok: false, problem: refusal(message, 'NOT_FOUND', { detail: `no verified version of ${name} is installed` }) };
+    const code = manifest.data.version;
+    const stored = storedDataVersion(this.#deps.connection, name);
+    if (stored !== undefined && stored > code && !covers(manifest, stored)) {
+      return { ok: false, problem: refusal(message, 'SCHEMA_TOO_NEW', { detail: `the stored data of ${name} is at version ${stored}, newer than its code's ${code}`, params: { stored, supported: code } }) };
+    }
+    if (stored === undefined || stored >= code) {
+      const problem = configProblem(this.#deps.connection, name, manifest, message.correlationId);
+      return problem === undefined ? { ok: true, version: code } : { ok: false, problem };
+    }
+    const others = [...this.#deps.registry.enabled()].flatMap(([workspaceId, names]) => (names.includes(name) ? [this.#deps.registry.capabilities(name, workspaceId)] : []));
+    const outcome = await this.#deps.migrations.migrate({
+      extension: name, target: { digest, manifest, snapshot }, active: manifest, isolation: mostIsolated([grants, ...others.filter((grant) => grant !== undefined)]),
+      migrating: { digest }, resume: false, correlationId: message.correlationId,
+    });
+    return outcome.ok ? { ok: true, version: code } : { ok: false, problem: outcome.problem };
   }
 
   async #disable(claim: Claim): Promise<void> {
@@ -107,8 +133,7 @@ export class EnableCommands {
     }
     const problem = this.#namespaceProblem(message, workspaceId, manifest)
       ?? this.#grantProblem(message, manifest, grants, version.source.startsWith('builtin:'))
-      ?? this.#requiresProblem(message, workspaceId, manifest)
-      ?? this.#configProblem(message, workspaceId, manifest);
+      ?? this.#requiresProblem(message, workspaceId, manifest);
     return problem === undefined ? { ok: true, version } : refused(problem);
   }
 
@@ -145,15 +170,6 @@ export class EnableCommands {
     const types = requiredTypes(manifest).filter((type) => !provided.has(type) && !kernelTypes.has(type));
     if (types.length === 0) return undefined;
     return refusal(message, 'EXT_REQUIRES_MISSING', { detail: `no extension enabled here provides ${types.join(', ')}`, hint: 'enable the extensions that provide them first', params: { types }, issues: types.map((type) => ({ path: 'requireTypes', message: `${type} is not provided` })) });
-  }
-
-  #configProblem(message: Message, workspaceId: string, manifest: Manifest): Problem | undefined {
-    if (manifest.config === null) return undefined;
-    const { schema } = manifest.config;
-    const merged = mergedConfig(schema, readConfigRow(this.#deps.connection, manifest.meta.name, undefined).value, readConfigRow(this.#deps.connection, manifest.meta.name, workspaceId).value);
-    const issues = this.#deps.config.issues(schema, merged);
-    const [first] = issues;
-    return first === undefined ? undefined : refusal(message, 'CONFIG_INVALID', { detail: first.message, issues, hint: 'fix the stored config first' });
   }
 
   // 06 §6.4: the extensions enabled here whose requireTypes name one of its types.

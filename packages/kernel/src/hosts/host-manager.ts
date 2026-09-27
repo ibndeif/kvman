@@ -1,4 +1,4 @@
-import { hostToKernelFrameSchema, type AbortReason, type KernelToHostFrame, type RpcCall, type RpcResult, type StoreRead } from '@kvman/protocol';
+import { hostToKernelFrameSchema, type AbortReason, type KernelToHostFrame } from '@kvman/protocol';
 import { receivedWith } from '../blobs/received-blobs.ts';
 import type { FaultPoints } from '../faults/fault-points.ts';
 import { kernelProblem } from '../problems.ts';
@@ -10,7 +10,8 @@ import type { SchedulerTimers } from '../scheduler/timers.ts';
 import type { Connection } from '../storage/driver.ts';
 import type { UlidGenerator } from '../ulid.ts';
 import type { ActiveInvocation } from './active-invocation.ts';
-import { abortProblem } from './aborted-invocations.ts';
+import { ExtensionReplacement } from './extension-replacement.ts';
+import { HostCalls } from './host-calls.ts';
 import type { HostFailures } from './host-failures.ts';
 import { HostRegistry, type HostEntry } from './host-registry.ts';
 import type { StartHostThread } from './host-thread.ts';
@@ -20,7 +21,6 @@ import type { ReadPool } from './read-pool/read-pool.ts';
 import { noRecordedValues, type RecordedValueStore } from './recorded-value-store.ts';
 import { RunningInvocations } from './running-invocations.ts';
 import { SnapshotGate, type ExtensionSnapshots } from './snapshot-gate.ts';
-import { serveStoreRead } from './store-read-calls.ts';
 import type { PoolWorker } from './worker-pool.ts';
 import { readWorkspace } from './workspace-rows.ts';
 
@@ -51,6 +51,8 @@ export class HostManager implements Dispatcher {
   readonly #hosts: HostRegistry;
   readonly #gate: SnapshotGate;
   readonly #running: RunningInvocations;
+  readonly #calls: HostCalls;
+  readonly #replacement: ExtensionReplacement;
   readonly #work = new Set<Promise<unknown>>();
   #sink: InvocationSink | undefined;
   #idle: (() => void) | undefined;
@@ -69,6 +71,9 @@ export class HostManager implements Dispatcher {
         exit: (worker) => this.#exited(worker),
       },
     });
+    const parts = { running: this.#running, hosts: this.#hosts, sink: () => this.#connected(), track: (work: Promise<unknown>) => this.#track(work) };
+    this.#calls = new HostCalls({ ...parts, reads: options.reads, ids: options.ids });
+    this.#replacement = new ExtensionReplacement({ ...parts, timers: options.timers, end: (invocation) => this.#end(invocation) });
   }
 
   connect(sink: InvocationSink): void {
@@ -93,6 +98,11 @@ export class HostManager implements Dispatcher {
       return;
     }
     const { message } = claim;
+    if (message.kind === 'query' && this.#options.registry().isReloading(claim.extension)) {
+      const problem = kernelProblem('HANDLER_UNAVAILABLE', { correlationId: message.correlationId, messageId: message.id, detail: `${claim.extension} is reloading`, retryable: true, retryAfterMs: 1000 });
+      queueMicrotask(() => this.#track(sink.refused(claim, problem)));
+      return;
+    }
     const workspace = message.workspaceId === undefined ? undefined : readWorkspace(this.#options.connection, message.workspaceId);
     if (message.workspaceId !== undefined && workspace === undefined) {
       const problem = kernelProblem('WORKSPACE_INVALID', { correlationId: message.correlationId, messageId: message.id, detail: `no workspace ${message.workspaceId} exists` });
@@ -116,7 +126,8 @@ export class HostManager implements Dispatcher {
   async #verifyThenDispatch(claim: Claim): Promise<void> {
     const outcome = await this.#gate.admit(claim);
     if (outcome === 'dropped' || this.#stopping) return;
-    if (outcome === 'verified') this.dispatch(claim);
+    if (this.#options.registry().isReloading(claim.extension)) this.#track(this.#connected().interrupted({ claim, live: new Map() }));
+    else if (outcome === 'verified') this.dispatch(claim);
     else await this.#connected().integrityFailed(claim);
   }
 
@@ -195,6 +206,17 @@ export class HostManager implements Dispatcher {
   #end(invocation: ActiveInvocation): void {
     this.#running.end(invocation);
     if (this.#running.size === 0) this.#idle?.();
+    this.#replacement.ended();
+  }
+
+  // 06 §6.6 step 3: a reload waits for the extension's running invocations (ADR 0145).
+  drainExtension(extension: string, graceMs: number): Promise<void> {
+    return this.#replacement.drain(extension, graceMs);
+  }
+
+  // 06 §6.6 step 5: the hosts that loaded the extension's old code are replaced.
+  replaceHosts(extension: string, graceMs: number): void {
+    this.#replacement.replace(extension, graceMs);
   }
 
   // 03 §3.6: the stuck invocation's extension is charged; the rest of the host returns without penalty.
@@ -237,8 +259,14 @@ export class HostManager implements Dispatcher {
       return;
     }
     const frame = parsed.data;
+    if (frame.frame === 'migrated') {
+      this.#log(`host ${worker.host} sent a migration frame, which only a migration host sends`, { path: 'frame', issue: 'migrated' });
+      this.#hosts.stop(worker);
+      this.#exited(worker);
+      return;
+    }
     if (frame.frame === 'rpc') {
-      this.#call(worker, frame.invocationId, frame.callId, frame.call);
+      this.#calls.call(worker, frame.invocationId, frame.callId, frame.call);
       return;
     }
     const aborted = this.#running.abortedOn(worker, frame.invocationId);
@@ -253,31 +281,6 @@ export class HostManager implements Dispatcher {
     this.#hosts.release(worker);
     const sink = this.#connected();
     this.#track(frame.frame === 'complete' ? sink.completed(invocation, frame) : sink.loadFailed(invocation, frame.problem));
-  }
-
-  // A call from an invocation that ended is answered with the problem that ended it (ADRs 0076, 0084).
-  #call(worker: PoolWorker, invocationId: string, callId: number, call: RpcCall): void {
-    const invocation = this.#running.on(worker, invocationId);
-    if (invocation === undefined) {
-      const aborted = this.#running.abortedOn(worker, invocationId);
-      const problem = aborted === undefined
-        ? kernelProblem('INTERNAL', { correlationId: this.#options.ids.next(), detail: 'the invocation has ended' })
-        : abortProblem(aborted);
-      this.#hosts.post(worker, { frame: 'rpcResult', invocationId, callId, result: { ok: false, problem } });
-      return;
-    }
-    if (call.name === 'store.read') this.#track(this.#read(invocation, callId, call.read));
-    else this.#track(this.#connected().called(invocation, call).then((result) => this.#answer(invocation, callId, result)));
-  }
-
-  async #read(invocation: ActiveInvocation, callId: number, read: StoreRead): Promise<void> {
-    const outcome = await serveStoreRead(this.#options.reads, invocation.worker, invocation, read);
-    if (!outcome.ok) this.#answer(invocation, callId, outcome);
-    else if (this.#running.isRunning(invocation)) invocation.worker.thread.postValue?.(invocation.id, callId, outcome.value);
-  }
-
-  #answer(invocation: ActiveInvocation, callId: number, result: RpcResult): void {
-    if (this.#running.isRunning(invocation)) this.#hosts.post(invocation.worker, { frame: 'rpcResult', invocationId: invocation.id, callId, result });
   }
 
   #track(work: Promise<unknown>): void {

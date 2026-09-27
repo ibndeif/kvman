@@ -55,3 +55,21 @@ export function sameGrants(left: Capabilities, right: Capabilities): boolean {
   const rightLabels = labels(right);
   return left.isolation === right.isolation && leftLabels.size === rightLabels.size && [...leftLabels].every((label) => rightLabels.has(label));
 }
+
+// 06 §6.6: a reload keeps a workspace's grant minus what the new version no longer requests or derives.
+export function prunedGrant(manifest: Manifest, grant: Capabilities): Capabilities {
+  const expected = labels(derivedCapabilities(manifest));
+  const kept = (label: string): boolean => expected.has(label);
+  return {
+    ...grant,
+    requested: grant.requested.flatMap((capability): Capabilities['requested'] => {
+      if (capability.name !== 'calls') return kept(capability.name) ? [capability] : [];
+      const types = capability.types.filter((type) => kept(`calls ${type}`));
+      return types.length === 0 ? [] : [{ name: 'calls', types }];
+    }),
+    derived: {
+      subscribes: grant.derived.subscribes.filter((event) => kept(`subscribes ${event}`)),
+      providesLlm: grant.derived.providesLlm.filter((provider) => kept(`providesLlm ${provider}`)),
+    },
+  };
+}

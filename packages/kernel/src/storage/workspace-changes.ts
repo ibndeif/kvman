@@ -16,7 +16,7 @@ export type WorkspaceChange =
 // go with their messages, and the workspaces row goes last.
 const workspaceTables = [
   ['kv', 'ws'], ['docs', 'ws'], ['logs', 'ws'], ['blob_refs', 'ws'], ['events', 'workspace_id'], ['llm_usage', 'ws'],
-  ['workspace_presets', 'workspace_id'], ['workspace_config', 'workspace_id'], ['notifications', 'ws'], ['processes', 'ws'],
+  ['workspace_presets', 'workspace_id'], ['workspace_config', 'workspace_id'], ['notifications', 'ws'], ['processes', 'ws'], ['schedules', 'ws'],
 ] as const;
 
 function announce(scope: UnitScope, type: string, workspaceId: string): void {

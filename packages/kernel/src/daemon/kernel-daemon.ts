@@ -3,7 +3,7 @@ import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { kernelPorts, type KernelStarted } from '@kvman/protocol';
+import { kernelPorts, semverSchema, type KernelStarted } from '@kvman/protocol';
 import { EventHub } from '../adapters/events/event-hub.ts';
 import { HttpAdapter } from '../adapters/http/http-adapter.ts';
 import { SocketAdapter } from '../adapters/socket/socket-adapter.ts';
@@ -15,6 +15,7 @@ import type { KernelIdentity } from '../runtime/health.ts';
 import { KernelRuntime } from '../runtime/kernel-runtime.ts';
 import { openHomeWorkspace } from '../runtime/home-workspace.ts';
 import { installBuiltins, verifyEnabledSnapshots } from '../runtime/snapshot-boot.ts';
+import { isUpgrade, resumeMigrations, upgradeBuiltins } from '../runtime/version-boot.ts';
 import type { SchedulerTimers } from '../scheduler/timers.ts';
 import { SecretStore } from '../secrets/secret-store.ts';
 import { betterSqlite3Driver } from '../storage/better-sqlite3-driver.ts';
@@ -58,6 +59,12 @@ export function kernelBuiltinFolder(): string {
 // A first run that failed leaves no database, so the next start is a first run again (ADR 0115).
 function removeDatabase(home: string): void {
   for (const suffix of ['', '-wal', '-shm']) rmSync(join(home, `kvman.db${suffix}`), { force: true });
+}
+
+// The kvman version the last boot recorded (03 §3.9), if any.
+function recordedVersion(connection: Connection): string | undefined {
+  const row = connection.prepare("SELECT value FROM kernel_settings WHERE key = 'kvman.version'").get();
+  return row === undefined ? undefined : semverSchema.parse(JSON.parse(String(row['value'])));
 }
 
 // The kvman version is the kernel package's version (ADR 0089).
@@ -150,17 +157,19 @@ export class Kernel {
     const { adapter, identity, logger, options, firstRun } = this.#resources;
     await this.runtime.install.clearStaging();
     await verifyEnabledSnapshots(this.runtime);
+    const correlationId = options.ids.next();
+    await resumeMigrations(this.runtime, this.connection, logger, correlationId);
     if (firstRun) {
-      const correlationId = options.ids.next();
       await installBuiltins(this.runtime, correlationId);
       await openHomeWorkspace(this.runtime, options.homeWorkspace ?? defaultHomeWorkspace(), options.home, correlationId);
+    } else if (isUpgrade(recordedVersion(this.connection), identity.version)) {
+      await upgradeBuiltins(this.runtime, this.connection, logger, correlationId);
     }
     await this.runtime.start();
     writeKvShim(options.home);
     await this.#socket.listen();
     adapter.open({ runtime: this.runtime, hub: this.#hub });
     const started: KernelStarted = { version: identity.version, instanceId: identity.instanceId };
-    const correlationId = options.ids.next();
     const result = await this.runtime.pipeline.enqueue({
       origin: { kind: 'announce', correlationId }, writes: [], sends: [], replies: [], publishes: [{ type: 'kernel.started', payload: started }],
     });

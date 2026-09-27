@@ -102,7 +102,7 @@ describe('kernel.extension.enable (plan 06 §6.4, ADR 0123)', workspaceTests, ()
   it('M2.3-E17 an invalid stored config blocks enable with CONFIG_INVALID', async () => {
     const current = await opened();
     current.connection.prepare("INSERT INTO workspace_config (workspace_id, extension, value, revision, updated_at) VALUES (?, '@acme/desk', ?, 1, 1)").run(workspaceA, JSON.stringify({ limit: 'many' }));
-    expect(problemOf(await enable(current, workspaceA, '@acme/desk'))).toMatchObject({ code: 'CONFIG_INVALID', issues: [expect.objectContaining({ path: 'limit' })] });
+    expect(problemOf(await enable(current, workspaceA, '@acme/desk'))).toMatchObject({ code: 'CONFIG_INVALID', issues: [expect.objectContaining({ path: `workspaces.${workspaceA}.limit` })] });
   });
 
   it('M2.3-E18 only a person enables: an extension with kernel.admin is not allowed', async () => {

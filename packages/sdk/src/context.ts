@@ -140,14 +140,3 @@ export interface SecretAccess {
 
 /** Where a stored config value lives. */
 export type ConfigScope = 'global' | 'workspace';
-
-/** What a data migration step acts through. */
-export interface MigrationContext {
-  /** The extension's stored config. */
-  readonly config: {
-    /** The stored value in `scope` (of `workspaceId` for `workspace`), or `undefined`. */
-    get(scope: ConfigScope, workspaceId?: string): Promise<JsonObject | undefined>;
-    /** Replaces the stored value when the step commits. */
-    set(scope: ConfigScope, value: JsonObject, workspaceId?: string): void;
-  };
-}

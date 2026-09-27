@@ -111,6 +111,7 @@ export function createRecordingExt(recording: Recording, closedError: () => Erro
         const path = `data.migrations.${recording.migrations.length}`;
         recording.migrations.push({ to: migration.to, handler: `migration:${migration.to}` });
         recording.bind(`migration:${migration.to}`, `${path}.handler`, migration.up);
+        recording.bindMigration(migration.to, migration.up);
       }
     },
     registerCollection(name, definition) {

@@ -28,6 +28,8 @@ type Choice = { worker: PoolWorker } | { start: true };
 export class WorkerPool {
   readonly #options: PoolOptions;
   readonly #workers: PoolWorker[] = [];
+  // 06 §6.6 step 5: workers that loaded replaced code take no new invocation and stop once theirs end.
+  readonly #retiring = new Set<PoolWorker>();
   #nextId = 1;
 
   constructor(options: PoolOptions) {
@@ -63,28 +65,41 @@ export class WorkerPool {
   }
 
   post(worker: PoolWorker, frame: KernelToHostFrame): void {
-    if (this.#workers.includes(worker)) worker.thread.post(frame);
+    if (this.holds(worker)) worker.thread.post(frame);
   }
 
   holds(worker: PoolWorker): boolean {
-    return this.#workers.includes(worker);
+    return this.#workers.includes(worker) || this.#retiring.has(worker);
+  }
+
+  // The workers that loaded `extension` leave the choice; the caller stops each once its invocations end.
+  retire(extension: string): PoolWorker[] {
+    const retired = this.#workers.filter((worker) => worker.loaded.has(extension));
+    for (const worker of retired) {
+      this.#workers.splice(this.#workers.indexOf(worker), 1);
+      worker.idle?.cancel();
+      worker.idle = undefined;
+      this.#retiring.add(worker);
+    }
+    return retired;
   }
 
   // A stopped worker leaves the pool at once, so nothing more is sent to it; its exit is not reported.
   stop(worker: PoolWorker): void {
     const position = this.#workers.indexOf(worker);
     if (position !== -1) this.#workers.splice(position, 1);
+    this.#retiring.delete(worker);
     worker.idle?.cancel();
     worker.idle = undefined;
     worker.thread.terminate();
   }
 
   stopAll(): void {
-    for (const worker of [...this.#workers]) this.stop(worker);
+    for (const worker of [...this.#workers, ...this.#retiring]) this.stop(worker);
   }
 
   workers(): readonly PoolWorker[] {
-    return this.#workers;
+    return [...this.#workers, ...this.#retiring];
   }
 
   #choose(extension: string): Choice {
@@ -103,7 +118,9 @@ export class WorkerPool {
       frame: (value) => this.#withWorker(id, (worker) => events.frame(worker, value)),
       failed: (error) => this.#withWorker(id, (worker) => events.failed(worker, error)),
       exit: () => this.#withWorker(id, (worker) => {
-        this.#workers.splice(this.#workers.indexOf(worker), 1);
+        const position = this.#workers.indexOf(worker);
+        if (position !== -1) this.#workers.splice(position, 1);
+        this.#retiring.delete(worker);
         worker.idle?.cancel();
         events.exit(worker);
       }),
@@ -114,7 +131,7 @@ export class WorkerPool {
   }
 
   #withWorker(id: number, act: (worker: PoolWorker) => void): void {
-    const worker = this.#workers.find((candidate) => candidate.id === id);
+    const worker = [...this.#workers, ...this.#retiring].find((candidate) => candidate.id === id);
     if (worker !== undefined) act(worker);
   }
 }

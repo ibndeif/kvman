@@ -56,6 +56,7 @@ export class Recording {
   readonly functions = new Map<string, RegisteredFunction>();
   readonly schemas: RecordedSchemas = { handlers: new Map(), events: new Map(), collections: new Map() };
   readonly handlers = new Map<string, HandlerDefinition>();
+  readonly migrationSteps = new Map<number, MigrationDef['up']>();
   private readonly onceOnlyCalls = new Set<OnceOnlyCall>();
 
   // An input is recorded in its input view (ADR 0077) but must convert in its output view too, which is where a
@@ -75,6 +76,10 @@ export class Recording {
       return;
     }
     if (!this.functions.has(reference)) this.functions.set(reference, handle);
+  }
+
+  bindMigration(to: number, up: MigrationDef['up']): void {
+    if (isFunction(up) && !this.migrationSteps.has(to)) this.migrationSteps.set(to, up);
   }
 
   bindHandler(reference: string, definition: HandlerDefinition): void {

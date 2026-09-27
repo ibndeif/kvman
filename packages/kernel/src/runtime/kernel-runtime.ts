@@ -5,26 +5,23 @@ import { inertFaults, type FaultPoints } from '../faults/fault-points.ts';
 import { CallDepths } from '../hosts/call-depths.ts';
 import { HostFailures } from '../hosts/host-failures.ts';
 import { HostManager } from '../hosts/host-manager.ts';
-import { InspectionQueries } from '../hosts/inspection-queries.ts';
 import { workerThreadStarter, type StartHostThread } from '../hosts/host-thread.ts';
 import { defaultReadPoolSize, ReadPool, readThreadStarter } from '../hosts/read-pool/read-pool.ts';
 import { sandboxProcessStarter } from '../hosts/sandbox/sandbox-process.ts';
 import type { KernelLogger } from '../hosts/kernel-logger.ts';
-import { ExtensionQueries } from '../hosts/extension-queries.ts';
+import { ExtensionVersions } from '../hosts/extension-versions.ts';
 import { KernelCommits } from '../hosts/kernel-commits.ts';
-import { KernelHost } from '../hosts/kernel-host.ts';
+import type { KernelHost } from '../hosts/kernel-host.ts';
 import { ProcessCalls } from '../hosts/process-calls.ts';
-import { ProcessQueries } from '../hosts/process-queries.ts';
-import { WorkspaceQueries } from '../hosts/workspace-queries.ts';
 import { hostPlatform, pnpmExecutable } from '../install/bundled-tools.ts';
 import { InstallService } from '../install/install-service.ts';
 import { installPaths } from '../install/install-paths.ts';
 import { kernelReadRoots, kernelSdkVersion } from '../install/kernel-packages.ts';
 import { ForkedLoader } from '../install/loader-process.ts';
 import { SnapshotStore } from '../install/snapshot-store.ts';
+import { DataMigrations } from '../migrations/data-migrations.ts';
 import { kernelProblem, ProblemError } from '../problems.ts';
 import { kernelEventPayloads } from '../registry/kernel-types.ts';
-import { KernelQueries } from '../hosts/kernel-queries.ts';
 import { LiveBus } from '../hosts/live-bus.ts';
 import { Quarantines } from '../hosts/quarantines.ts';
 import { QueryPath, type QueryAnswer } from '../hosts/query-path.ts';
@@ -51,10 +48,11 @@ import type { UlidGenerator } from '../ulid.ts';
 import { JobTokens } from '../processes/job-tokens.ts';
 import { reconcileProcesses } from '../processes/process-reconciliation.ts';
 import { ProcessSupervisor } from '../processes/process-supervisor.ts';
+import { ScheduleService } from '../schedules/schedule-service.ts';
 import { recoverInterrupted } from './crash-recovery.ts';
-import { kernelCommandTable } from './kernel-command-table.ts';
 import { FileServices } from './file-services.ts';
 import { healthOf, type KernelIdentity } from './health.ts';
+import { wireKernelHost } from './kernel-host-wiring.ts';
 
 export type KernelRuntimeOptions = {
   databaseFile: string;
@@ -111,6 +109,10 @@ export class KernelRuntime {
   readonly processes: ProcessSupervisor;
   // kernel.sock's requests (12 §12.4); the daemon serves them on the socket.
   readonly socket: SocketRequests;
+  readonly migrations: DataMigrations;
+  readonly versions: ExtensionVersions;
+  readonly schedules: ScheduleService;
+  readonly #commits: KernelCommits;
   readonly #tokens = new JobTokens();
   readonly #adapter: AdapterPath;
   readonly #waiters: ReplyWaiters;
@@ -145,10 +147,10 @@ export class KernelRuntime {
     this.#waiters = new ReplyWaiters({ connection, files: blobFiles });
     const values = new RecordedValueStore(connection);
     this.#reads = new ReadPool(options.readPoolSize ?? defaultReadPoolSize, readThreadStarter(options.databaseFile));
+    const starters = { startThread: options.startThread ?? workerThreadStarter(options.databaseFile), startSandbox: sandboxProcessStarter(kernelReadRoots()) };
     this.hosts = new HostManager({
       connection, registry, grants: this.registry, snapshots: this.snapshots, values, logger: options.logger, ids, poolSize: options.poolSize, timers, now,
-      startThread: options.startThread ?? workerThreadStarter(options.databaseFile), startSandbox: sandboxProcessStarter(kernelReadRoots()),
-      reads: this.#reads, failures: new HostFailures(), faults,
+      ...starters, reads: this.#reads, failures: new HostFailures(), faults,
     });
     this.scheduler = new Scheduler({
       connection, files: blobFiles, pipeline: this.pipeline, index: this.index, registry, dispatcher: this.hosts, now, timers, faults,
@@ -158,6 +160,14 @@ export class KernelRuntime {
     });
     this.#adapter = new AdapterPath(this.pipeline, ids);
     this.#quarantines = new Quarantines(this.pipeline, this.registry, ids, (extension) => this.processes.killExtension(extension));
+    this.#commits = new KernelCommits(this.pipeline, this.scheduler, this.#waiters);
+    const quarantine = (extension: string, reason: QuarantineReason): Promise<void> => this.#quarantines.quarantine(extension, reason);
+    this.migrations = new DataMigrations({ connection, pipeline: this.pipeline, hosts: { connection, ...starters, timers, now, ids, logger: options.logger }, faults, quarantine });
+    this.versions = new ExtensionVersions({
+      connection, pipeline: this.pipeline, commits: this.#commits, registry: this.registry, snapshots: this.snapshots, migrations: this.migrations, hosts: this.hosts,
+      scheduler: this.scheduler, faults, quarantine,
+    });
+    this.schedules = new ScheduleService({ connection, pipeline: this.pipeline, registry: this.registry, workspaces: this.workspaces, ids, logger: options.logger });
     this.#queries = new QueryPath(this.router, this.scheduler);
     this.socket = new SocketRequests({
       tokens: this.#tokens, registry, grants: this.registry, pipeline: this.pipeline, queries: this.#queries, waiters: this.#waiters,
@@ -177,6 +187,7 @@ export class KernelRuntime {
     const cleared = await this.pipeline.enqueue({ origin: { kind: 'change', change: { kind: 'trust.clear-once' }, correlationId: ids.next() }, writes: [], sends: [], publishes: [], replies: [] });
     if (!cleared.committed) throw new ProblemError(cleared.problem);
     this.index.placeStored(connection, recovered);
+    await this.schedules.start();
     await this.files.collector.start();
     this.scheduler.start();
   }
@@ -222,7 +233,8 @@ export class KernelRuntime {
   // already started can finish before the database closes. Without drain() first, this is how a crash leaves rows.
   stop(): Promise<void> {
     this.scheduler.stop();
-    const stopped = Promise.all([this.hosts.stop().then(() => this.#reads.close()), this.files.collector.stop(), this.processes.stop()]).then(() => undefined);
+    this.migrations.stop();
+    const stopped = Promise.all([this.hosts.stop().then(() => this.#reads.close()), this.files.collector.stop(), this.processes.stop(), this.schedules.stop()]).then(() => undefined);
     this.#waiters.close();
     this.#queries.close();
     return stopped;
@@ -231,7 +243,7 @@ export class KernelRuntime {
   #connectHosts(options: KernelRuntimeOptions, values: RecordedValueStore): void {
     const { connection, ids } = options;
     const registry = () => this.registry.current();
-    const commits = new KernelCommits(this.pipeline, this.scheduler, this.#waiters);
+    const commits = this.#commits;
     this.files.link({ pipeline: this.pipeline, commits, grants: this.registry });
     const rpc = new RpcService({
       connection, router: this.router, pipeline: this.pipeline, scheduler: this.scheduler, waiters: this.#waiters, values, ids, registry,
@@ -250,19 +262,12 @@ export class KernelRuntime {
       this.hosts.abortMessages(messageIds);
       this.processes.killSpawnedBy(messageIds);
     };
-    const kernel = new KernelHost({
-      connection, commits, scheduler: this.scheduler, grants: this.registry, queries: this.#queries, abortMessages, commands: kernelCommandTable({
-        connection, commits, pipeline: this.pipeline, scheduler: this.scheduler, registry: this.registry, directory: this.workspaces, install: this.install,
-        snapshots: this.snapshots, trust: this.files.trust, timers: options.timers, faults: options.faults ?? inertFaults, home: options.install.home, abortMessages,
-        killProcesses: (workspaceId) => this.processes.killWorkspace(workspaceId), quarantine: (extension, reason) => quarantines.quarantine(extension, reason),
-      }),
+    const kernel = wireKernelHost({
+      connection, commits, pipeline: this.pipeline, scheduler: this.scheduler, registry: this.registry, directory: this.workspaces, install: this.install,
+      snapshots: this.snapshots, trust: this.files.trust, queries: this.#queries, secrets: options.secrets, versions: this.versions, migrations: this.migrations,
+      timers: options.timers, faults: options.faults ?? inertFaults, home: options.install.home, version: options.identity.version, health: () => this.health(),
+      abortMessages, killProcesses: (workspaceId) => this.processes.killWorkspace(workspaceId), quarantine: (extension, reason) => quarantines.quarantine(extension, reason),
       requestShutdown: options.requestShutdown,
-      kernelQueries: new KernelQueries({
-        connection, registry, health: () => this.health(), version: options.identity.version,
-        extensions: new ExtensionQueries(connection, this.registry, this.registry), workspaces: new WorkspaceQueries(connection, this.registry, options.secrets),
-        inspection: new InspectionQueries({ connection, registry, grants: this.registry }), processes: new ProcessQueries(connection, this.registry), grants: this.registry,
-        trust: this.files.trust,
-      }),
     });
     this.#kernelHost = kernel;
     this.hosts.connect({

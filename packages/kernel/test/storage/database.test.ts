@@ -7,7 +7,7 @@ import { rows, temporaryDatabaseFile, ulids } from './harness.ts';
 
 const kernelTables = [
   'blob_refs', 'blobs', 'docs', 'events', 'extension_versions', 'extensions', 'global_config', 'kernel_settings', 'kv', 'llm_models',
-  'llm_usage', 'logs', 'messages', 'notifications', 'presets', 'processes', 'recorded_values', 'schema_versions', 'steps', 'user_preferences',
+  'llm_usage', 'logs', 'messages', 'notifications', 'presets', 'processes', 'recorded_values', 'schedules', 'schema_versions', 'steps', 'user_preferences',
   'workspace_config', 'workspace_presets', 'workspaces',
 ];
 

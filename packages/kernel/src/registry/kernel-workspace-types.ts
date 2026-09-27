@@ -11,15 +11,15 @@ import { jsonDocument } from './kernel-json-schemas.ts';
 
 type Schema = Parameters<typeof jsonDocument>[0];
 
-function command(type: string, access: 'all' | 'user', description: string, input: Schema, output: Schema): TypeEntry {
+export function command(type: string, access: 'all' | 'user', description: string, input: Schema, output: Schema): TypeEntry {
   return { type, kind: 'command', access, handler: `command:${type}`, description, input: jsonDocument(input, 'input'), output: jsonDocument(output, 'output') };
 }
 
-function query(type: string, description: string, input: Schema, output: Schema): TypeEntry {
+export function query(type: string, description: string, input: Schema, output: Schema): TypeEntry {
   return { type, kind: 'query', access: 'all', handler: `query:${type}`, description, input: jsonDocument(input, 'input'), output: jsonDocument(output, 'output') };
 }
 
-function event(type: string, description: string, payload: Schema): TypeEntry {
+export function event(type: string, description: string, payload: Schema): TypeEntry {
   return { type, kind: 'event', delivery: 'durable', description, payload: jsonDocument(payload, 'input') };
 }
 

@@ -1,6 +1,6 @@
 # ADR 0050 — `Ctx` and `MigrationContext` declare only what is built
 
-- **Status**: accepted
+- **Status**: accepted; completed by ADR 0143 (the migration context's bulk calls)
 - **Date**: 2026-09-24
 - **Milestone**: M1.3
 - **Decided by**: the product owner

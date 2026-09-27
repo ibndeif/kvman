@@ -2,7 +2,8 @@ import type {
   Access, EventDelivery, Json, Priority, Text, agentToolSchema, commandAgentToolSchema, configScopeSchema, slashSchema,
 } from '@kvman/protocol';
 import type { output as Output, input as Input, ZodType } from 'zod';
-import type { Ctx, Deferred, MigrationContext } from './context.ts';
+import type { Ctx, Deferred } from './context.ts';
+import type { MigrationContext } from './migration.ts';
 
 /** A composer slash command of a command. */
 export type SlashDef = Output<typeof slashSchema>;
@@ -87,7 +88,7 @@ export interface MigrationDef {
   up(m: MigrationContext): Promise<void>;
 }
 
-/** The data version's migrations and the older versions its code can still read. */
+/** The data version's migrations and the newer data versions its code can still run on. */
 export interface DataVersionDef {
   migrations?: MigrationDef[];
   compatibleWith?: number[];

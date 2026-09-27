@@ -1,4 +1,5 @@
 export * from './context.ts';
+export * from './migration.ts';
 export * from './define-extension.ts';
 export * from './definitions.ts';
 export * from './ext.ts';

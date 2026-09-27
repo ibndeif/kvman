@@ -21,6 +21,8 @@ export class RegistryState implements GrantsSource {
   #digests = new Map<string, string>();
   #grants: EnabledGrants = new Map();
   #disabledTools = new Map<string, ReadonlySet<string>>();
+  readonly #reloading = new Set<string>();
+  readonly #refreshed = new Set<() => void>();
   #registry: KernelRegistry;
 
   constructor(connection: Connection) {
@@ -58,6 +60,21 @@ export class RegistryState implements GrantsSource {
 
   refresh(): void {
     this.#registry = this.#build();
+    for (const listener of this.#refreshed) listener();
+  }
+
+  // Called after each rebuild, which follows every committed change to extensions or applied presets.
+  onRefresh(listener: () => void): void {
+    this.#refreshed.add(listener);
+  }
+
+  // 06 §6.6 step 3: dispatch to the extension stops until resume().
+  hold(extension: string): void {
+    this.#reloading.add(extension);
+  }
+
+  resume(extension: string): void {
+    this.#reloading.delete(extension);
   }
 
   #rows(): InstalledRow[] {
@@ -96,7 +113,7 @@ export class RegistryState implements GrantsSource {
     this.#digests = new Map(rows.map((row) => [row.name, row.digest]));
     this.#readPresets(new Set(this.#digests.keys()));
     const extensions: InstalledExtension[] = rows.map((row) => ({ manifest: this.#manifest(row), quarantined: row.quarantined }));
-    const build = KernelRegistry.build({ extensions, enabled: this.enabled() });
+    const build = KernelRegistry.build({ extensions, enabled: this.enabled(), reloading: this.#reloading });
     if (!build.ok) throw new Error(`the registry cannot be built: ${build.failure.detail}`);
     return build.registry;
   }

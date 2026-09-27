@@ -7,6 +7,7 @@ import {
   uninstallResultSchema, validateRequestSchema, validateResultSchema, type JsonObject, type TypeEntry,
 } from '@kvman/protocol';
 import { jsonDocument } from './kernel-json-schemas.ts';
+import { versionEntries } from './kernel-version-types.ts';
 import { workspaceEntries } from './kernel-workspace-types.ts';
 
 export const kernelOwner = 'kernel';
@@ -55,6 +56,7 @@ export function kernelTypeEntries(): TypeEntry[] {
       input: jsonDocument(processesListRequestSchema, 'input'), output: jsonDocument(processesListResultSchema, 'output'),
     },
     ...extensionLifecycleEntries(),
+    ...versionEntries(),
     ...workspaceEntries(),
     {
       type: 'kernel.started', kind: 'event', delivery: 'transient',

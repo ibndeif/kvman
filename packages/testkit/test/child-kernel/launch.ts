@@ -7,9 +7,17 @@ import { daemonStartReportSchema } from '@kvman/protocol';
 
 export type Exit = { code: number | null; signal: NodeJS.Signals | null };
 
-export type ChildKernel = { port: number; pid: number; exited: Promise<Exit>; stop(): Promise<Exit> };
+export type ChildKernel = { port: number; pid: number; exited: Promise<Exit>; stop(): Promise<Exit>; ask(message: string): Promise<unknown> };
 
-export type LaunchOptions = { home: string; fixture: 'ledger' | 'bench' | 'desk' | 'probe' | 'keeper' | 'runner' | 'first-run'; faults?: string; builtin?: string; environment?: NodeJS.ProcessEnv };
+export type LaunchOptions = {
+  home: string;
+  fixture: 'ledger' | 'bench' | 'desk' | 'probe' | 'keeper' | 'runner' | 'notes' | 'notes-enable' | 'notes-shared' | 'first-run';
+  faults?: string;
+  builtin?: string;
+  environment?: NodeJS.ProcessEnv;
+  // Extra Node flags, such as --expose-gc.
+  execArgv?: string[];
+};
 
 const entry = fileURLToPath(new URL('./child-kernel.ts', import.meta.url));
 
@@ -22,7 +30,7 @@ function forkKernel(options: LaunchOptions): { child: ChildProcess; exited: Prom
   const { KVMAN_FAULTS: _inherited, ...environment } = process.env;
   const builtin = options.builtin === undefined ? [] : ['--builtin', options.builtin];
   const child = fork(entry, ['--home', options.home, '--fixture', options.fixture, ...builtin], {
-    execArgv: ['--conditions=@kvman/source'], stdio: ['ignore', 'ignore', 'inherit', 'ipc'],
+    execArgv: ['--conditions=@kvman/source', ...(options.execArgv ?? [])], stdio: ['ignore', 'ignore', 'inherit', 'ipc'],
     env: { ...environment, ...options.environment, ...(options.faults === undefined ? {} : { KVMAN_FAULTS: options.faults }) },
   });
   const exited = new Promise<Exit>((resolve) => child.once('exit', (code, signal) => resolve({ code, signal })));
@@ -41,6 +49,10 @@ export function launchKernel(options: LaunchOptions): Promise<ChildKernel> {
       }
       resolve({
         port: report.port, pid: child.pid ?? 0, exited,
+        ask: (question) => new Promise((answered) => {
+          child.once('message', answered);
+          child.send(question);
+        }),
         stop: () => {
           child.kill('SIGTERM');
           return exited;

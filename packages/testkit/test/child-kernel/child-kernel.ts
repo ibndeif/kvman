@@ -15,6 +15,8 @@ import desk from '../workspaces/fixtures/extensions/desk.ts';
 import probe from '../isolation/fixtures/extensions/probe.ts';
 import keeper from '../blobs/fixtures/extensions/keeper.ts';
 import runner from '../processes/fixtures/extensions/runner.ts';
+import notes1 from '../reload/fixtures/extensions/notes/notes-1.ts';
+import notes3 from '../reload/fixtures/extensions/notes/notes-3.ts';
 import { applyTestPreset, emptyGrant } from '../install/fixture-presets.ts';
 import { closedRegistry, installFixture, noBuiltins, prepareHome } from '../install/fixture-snapshots.ts';
 import { fixtureFolder, workspaceFolderOf } from './workspace.ts';
@@ -23,9 +25,17 @@ import { fixtureFolder, workspaceFolderOf } from './workspace.ts';
 // a fault point (ADR 0100), and the benchmarks load it over HTTP (ADR 0104). It reports like the daemon (ADR 0087).
 
 // `realWorkspace` gives the fixture workspace a real folder beside the home, and PATH to the processes it starts.
-type Fixture = { name: string; definition: ExtensionDefinition; folder: string; file: string; poolSize: number; grant?: Capabilities; realWorkspace?: boolean };
+// `versions` are further installed versions; `storedVersion` is the extension's data version before boot; with
+// `enabled: false` the workspace's preset does not enable it.
+type FixtureVersion = { definition: ExtensionDefinition; file: string; version: string };
+type Fixture = {
+  name: string; definition: ExtensionDefinition; folder: string; file: string; poolSize: number; grant?: Capabilities; realWorkspace?: boolean;
+  version?: string; versions?: FixtureVersion[]; storedVersion?: number; enabled?: boolean;
+};
 
 const childFixtures = fileURLToPath(new URL('./fixtures/extensions/', import.meta.url));
+const notesFolder = fileURLToPath(new URL('../reload/fixtures/extensions/notes/', import.meta.url));
+const sandboxed: Capabilities = { ...emptyGrant, isolation: 'sandboxed' };
 
 // The desk of the workspace tests: a secret config field and a deferred command, for the M2.3 crash points. The probe of
 // the isolation tests runs sandboxed, for the M2.4 host crash point. The keeper of the blob tests puts blobs, for the M2.5
@@ -44,6 +54,14 @@ const fixtures: Record<string, Fixture> = {
     name: '@acme/runner', definition: runner, folder: fileURLToPath(new URL('../processes/fixtures/extensions/', import.meta.url)), file: 'runner.ts', poolSize: 1,
     grant: { ...emptyGrant, requested: [{ name: 'process' }] }, realWorkspace: true,
   },
+  // The reload tests' Notes for the M2.7 crash points: 1.0.0 enabled with its data at version 1 and 3.0.0 installed,
+  // or 3.0.0 alone enabled nowhere, or 1.0.0 enabled shared for the hot reloads of M2.7-H8.
+  notes: {
+    name: '@acme/notes', definition: notes1, folder: notesFolder, file: 'notes-1.ts', poolSize: 1, grant: sandboxed, storedVersion: 1,
+    versions: [{ definition: notes3, file: 'notes-3.ts', version: '3.0.0' }],
+  },
+  'notes-enable': { name: '@acme/notes', definition: notes3, folder: notesFolder, file: 'notes-3.ts', version: '3.0.0', poolSize: 1, storedVersion: 1, enabled: false },
+  'notes-shared': { name: '@acme/notes', definition: notes1, folder: notesFolder, file: 'notes-1.ts', poolSize: 1, grant: emptyGrant, storedVersion: 1 },
 };
 
 const { values } = parseArgs({ options: { home: { type: 'string' }, fixture: { type: 'string' }, builtin: { type: 'string' } }, strict: true });
@@ -85,6 +103,17 @@ async function firstRun(home: string, builtin: string): Promise<void> {
   report({ ok: true, port: kernel.identity.port });
 }
 
+// M2.7-H8: asked over IPC, the kernel collects garbage (with --expose-gc) and reports its heap and running hosts.
+function answerMemory(kernel: Kernel): void {
+  process.on('message', (message) => {
+    if (message !== 'memory') return;
+    const collect: unknown = Reflect.get(globalThis, 'gc');
+    if (typeof collect === 'function') collect();
+    const hosts = kernel.runtime.hosts.hosts().map((entry) => ({ isolation: entry.isolation, host: entry.worker.host, threadId: entry.worker.thread.identity.threadId }));
+    process.send?.({ heapUsed: process.memoryUsage().heapUsed, hosts });
+  });
+}
+
 async function main(): Promise<void> {
   if (values.fixture === 'first-run' && values.home !== undefined && values.builtin !== undefined) {
     try {
@@ -98,13 +127,15 @@ async function main(): Promise<void> {
   }
   const fixture = fixtures[values.fixture ?? ''];
   const home = values.home;
-  if (fixture === undefined || home === undefined) throw new Error('usage: child-kernel.ts --home <folder> --fixture ledger|bench|desk|probe|keeper|runner|first-run [--builtin <folder>]');
+  if (fixture === undefined || home === undefined) throw new Error('usage: child-kernel.ts --home <folder> --fixture <fixture> [--builtin <folder>]');
   try {
     const workspace = fixture.realWorkspace === true ? { ...fixtureFolder, path: workspaceFolderOf(home) } : fixtureFolder;
     if (fixture.realWorkspace === true) mkdirSync(workspace.path, { recursive: true });
     await prepareHome(home, async (connection) => {
-      await installFixture(connection, home, { definition: fixture.definition, folder: fixture.folder, entry: fixture.file });
-      applyTestPreset(connection, workspace, { [fixture.name]: fixture.grant ?? emptyGrant });
+      await installFixture(connection, home, { definition: fixture.definition, folder: fixture.folder, entry: fixture.file, ...(fixture.version === undefined ? {} : { version: fixture.version }) });
+      for (const { definition, file, version } of fixture.versions ?? []) await installFixture(connection, home, { definition, folder: fixture.folder, entry: file, version });
+      if (fixture.storedVersion !== undefined) connection.prepare('INSERT INTO schema_versions (owner, version) VALUES (?, ?)').run(fixture.name, fixture.storedVersion);
+      applyTestPreset(connection, workspace, fixture.enabled === false ? {} : { [fixture.name]: fixture.grant ?? emptyGrant });
     });
     const kernel = await Kernel.boot({
       home, builtin: noBuiltins(home), homeWorkspace: homeWorkspaceOf(home), npmRegistry: closedRegistry,
@@ -113,6 +144,7 @@ async function main(): Promise<void> {
       faults: faultPointsOf(process.env['KVMAN_FAULTS'], ids.next()),
     });
     process.on('SIGTERM', () => void kernel.shutdown().then(() => process.disconnect()));
+    answerMemory(kernel);
     report({ ok: true, port: kernel.identity.port });
   } catch (error) {
     process.exitCode = 1;

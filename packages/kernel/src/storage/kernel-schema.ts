@@ -80,3 +80,11 @@ export const kernelSchemaVersion4 = [
   'CREATE INDEX processes_state ON processes(state)',
   'CREATE INDEX processes_ws ON processes(ws)',
 ];
+
+// ADR 0144: each declared schedule's one outstanding run per workspace (ws '' for a global run), and the lookup a
+// run's end makes.
+export const kernelSchemaVersion5 = [
+  `CREATE TABLE schedules (extension TEXT NOT NULL, name TEXT NOT NULL, ws TEXT NOT NULL, anchor_at INTEGER NOT NULL,
+    due_at INTEGER NOT NULL, message_id TEXT, PRIMARY KEY(extension, name, ws))`,
+  'CREATE INDEX schedules_message ON schedules(message_id)',
+];

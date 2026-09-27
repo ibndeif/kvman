@@ -99,6 +99,9 @@ export class RpcService {
       case 'log':
         this.#deps.logger.write({ level: call.level, message: redactText(call.message), fields: redactFields(call.fields ?? {}), attributes: attributesOf(invocation) });
         return { ok: true };
+      case 'migration.rows':
+      case 'migration.config.get':
+        return { ok: false, problem: kernelProblem('CAPABILITY_DENIED', { correlationId: message.correlationId, messageId: message.id, detail: `${call.name} is served only to a migration step` }) };
     }
   }
 

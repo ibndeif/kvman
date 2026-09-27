@@ -4,6 +4,7 @@ import { objectOf } from './json-reading.ts';
 import { manifestNames } from './manifest-names.ts';
 import { nameIssues } from './name-rules.ts';
 import { requiredTypeIssues, subscriptionLaneIssues, type KernelEvents } from './reference-rules.ts';
+import { scheduleIssues } from './schedule-rules.ts';
 import { schemaIssues } from './schema-issues.ts';
 import { typeIssues } from './type-rules.ts';
 
@@ -28,6 +29,7 @@ export function validateManifest(candidate: Json, context: ManifestContext, reco
     ...subscriptionLaneIssues(manifest, context.kernelEvents),
     ...requiredTypeIssues(manifest),
     ...configIssues(manifest),
+    ...scheduleIssues(manifest),
   ];
   const known = [...recorded, ...rules];
   const reported = new Set(known.filter((issue) => issue.severity !== 'warning').map((issue) => issue.path));

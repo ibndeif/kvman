@@ -90,11 +90,11 @@ describe('manifest entries (plan 05 §5.12, ADRs 0013, 0046, 0047)', () => {
     expect(problem.issues).toEqual([{ path: 'types.0.handler', message: 'expected a function', hint: 'pass an async function as handle' }]);
   });
 
-  it('M1.3-E6 migrations cover every version step once; compatible versions are lower', () => {
+  it('M1.3-E6 migrations cover every version step once; compatible versions are higher (ADR 0142)', () => {
     const { manifest } = record((ext) => {
-      ext.registerDataVersion(3, { migrations: [{ to: 2, up }, { to: 3, up }], compatibleWith: [2] });
+      ext.registerDataVersion(3, { migrations: [{ to: 2, up }, { to: 3, up }], compatibleWith: [4] });
     });
-    expect(manifest.data).toMatchObject({ version: 3, compatibleWith: [2], migrations: [{ to: 2, handler: 'migration:2' }, { to: 3, handler: 'migration:3' }] });
+    expect(manifest.data).toMatchObject({ version: 3, compatibleWith: [4], migrations: [{ to: 2, handler: 'migration:2' }, { to: 3, handler: 'migration:3' }] });
     const failing = (migrations: Array<{ to: number; up: typeof up }>, compatibleWith: number[] = []) => issuePaths(recordingProblem((ext) => {
       ext.registerDataVersion(3, { migrations, compatibleWith });
     }));
@@ -102,7 +102,8 @@ describe('manifest entries (plan 05 §5.12, ADRs 0013, 0046, 0047)', () => {
     expect(failing([{ to: 2, up }, { to: 2, up }, { to: 3, up }])).toEqual(['data.migrations.1.to']);
     expect(failing([{ to: 2, up }, { to: 3, up }, { to: 4, up }])).toEqual(['data.migrations.2.to']);
     expect(failing([{ to: 2, up }, { to: 3, up }], [3])).toEqual(['data.compatibleWith.0']);
-    expect(failing([{ to: 2, up }, { to: 3, up }], [2, 2])).toEqual(['data.compatibleWith.1']);
+    expect(failing([{ to: 2, up }, { to: 3, up }], [2])).toEqual(['data.compatibleWith.0']);
+    expect(failing([{ to: 2, up }, { to: 3, up }], [4, 4])).toEqual(['data.compatibleWith.1']);
   });
 
   it('M1.3-E7 a schema that cannot become JSON Schema fails at its path', () => {

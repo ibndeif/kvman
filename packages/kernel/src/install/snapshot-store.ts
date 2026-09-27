@@ -24,15 +24,21 @@ export class SnapshotStore {
 
   async verify(extension: string): Promise<boolean> {
     const digest = this.#digestOf(extension);
-    if (digest === undefined) return false;
+    return digest !== undefined && (await this.verifyDigest(extension, digest)) !== undefined;
+  }
+
+  // Any installed digest of the extension, rehashed once per process: a reload's target (06 §6.6, ADR 0145).
+  async verifyDigest(extension: string, digest: string): Promise<VerifiedSnapshot | undefined> {
     const key = `${extension}@${digest}`;
-    if (this.#verified.has(key)) return true;
+    const known = this.#verified.get(key);
+    if (known !== undefined) return known;
     const folder = snapshotFolder(this.#paths, digest);
-    if (!(await verifyTree(folder, digest))) return false;
+    if (!(await verifyTree(folder, digest))) return undefined;
     const packageFolder = join(folder, 'node_modules', extension);
     const { main } = await readPackageJson(packageFolder);
-    if (main === undefined) return false;
-    this.#verified.set(key, { folder, entry: join(packageFolder, main) });
-    return true;
+    if (main === undefined) return undefined;
+    const verified = { folder, entry: join(packageFolder, main) };
+    this.#verified.set(key, verified);
+    return verified;
   }
 }

@@ -1,5 +1,6 @@
 import { pageDefSchema, presetSchema, presetSecretIssues, type Issue, type JsonObject, type ValidateRequest, type ValidateResult } from '@kvman/protocol';
 import { validateManifest } from './manifest-validation.ts';
+import { schedulePayloadIssues } from './schedule-payloads.ts';
 import type { KernelEvents } from './reference-rules.ts';
 import { schemaIssues } from './schema-issues.ts';
 
@@ -19,7 +20,7 @@ function pageIssues(candidate: unknown): Issue[] {
 }
 
 function issuesOf(request: ValidateRequest, context: ValidateContext): Issue[] {
-  if ('manifest' in request) return validateManifest(request.manifest, context);
+  if ('manifest' in request) return [...validateManifest(request.manifest, context), ...schedulePayloadIssues(request.manifest)];
   if ('preset' in request) return presetIssues(request.preset, context);
   if ('page' in request) return pageIssues(request.page);
   return [];

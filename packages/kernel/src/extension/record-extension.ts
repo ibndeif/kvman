@@ -1,5 +1,5 @@
 import { manifestSchema, type Issue, type Manifest } from '@kvman/protocol';
-import type { ExtensionDefinition } from '@kvman/sdk';
+import type { ExtensionDefinition, MigrationDef } from '@kvman/sdk';
 import { kernelProblem, ProblemError } from '../problems.ts';
 import { kernelEventPayloads } from '../registry/kernel-types.ts';
 import { validateManifest } from '../validation/manifest-validation.ts';
@@ -16,6 +16,7 @@ export type ExtensionRecording = {
   warnings: Issue[];
   functions: ReadonlyMap<string, RegisteredFunction>;
   handlers: ReadonlyMap<string, HandlerDefinition>;
+  migrationSteps: ReadonlyMap<number, MigrationDef['up']>;
   schemas: RecordedSchemas;
 };
 
@@ -70,5 +71,5 @@ export function recordExtension(definition: ExtensionDefinition, options: Record
   const parsed = manifestSchema.safeParse(candidate);
   if (!parsed.success || errors.length > 0) throw manifestInvalid(options, { issues: errors });
   const warnings = issues.filter((issue) => issue.severity === 'warning');
-  return { manifest: parsed.data, warnings, functions: first.functions, handlers: first.handlers, schemas: first.schemas };
+  return { manifest: parsed.data, warnings, functions: first.functions, handlers: first.handlers, migrationSteps: first.migrationSteps, schemas: first.schemas };
 }

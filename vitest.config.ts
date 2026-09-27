@@ -15,6 +15,10 @@ export default defineConfig({
   ssr: { resolve: { conditions: sourceConditions, externalConditions: ['@kvman/source'] } },
   test: {
     allowOnly: false,
+    // Each test file runs a kernel with its worker threads, sandboxed hosts, or a child daemon (~300–600 MB); half the
+    // cores keeps a full run within a developer machine's memory.
+    maxWorkers: '50%',
+    globalSetup: ['./test/temporary-folder.ts'],
     projects: [
       { extends: true, test: { name: 'parallel', include: tests, exclude: [...excluded, ...timing], sequence: { groupOrder: 0 } } },
       { extends: true, test: { name: 'timing', include: timing, exclude: excluded, fileParallelism: false, sequence: { groupOrder: 1 } } },

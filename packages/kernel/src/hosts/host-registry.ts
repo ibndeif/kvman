@@ -64,6 +64,18 @@ export class HostRegistry {
     this.#pools.get(worker)?.stop(worker);
   }
 
+  // 06 §6.6 step 5: the extension's own hosts leave (the caller stops them) and so do the shared workers that loaded
+  // it; fresh ones start on the next dispatch.
+  retire(extension: string): PoolWorker[] {
+    const retired = this.#shared.retire(extension);
+    for (const [key, own] of this.#own) {
+      if (own.extension !== extension) continue;
+      this.#own.delete(key);
+      retired.push(...own.pool.workers());
+    }
+    return retired;
+  }
+
   stopAll(): void {
     this.#shared.stopAll();
     for (const { pool } of this.#own.values()) pool.stopAll();

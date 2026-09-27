@@ -1,13 +1,16 @@
 import type { Json } from '@kvman/protocol';
 import { applyExtensionChange, type ExtensionChange } from './extension-changes.ts';
+import { applyMigrationChange, type MigrationChange } from './migration-changes.ts';
 import { applyPresetChange, type PresetChange } from './preset-changes.ts';
+import { applyScheduleChange, type ScheduleChange } from './schedule-changes.ts';
 import { applySettingChange, type SettingChange } from './setting-changes.ts';
 import { applyTrustChange, type TrustChange } from './trust-changes.ts';
 import type { UnitScope } from './unit-contents.ts';
+import { applyVersionChange, type VersionChange } from './version-changes.ts';
 import { applyWorkspaceChange, type WorkspaceChange } from './workspace-changes.ts';
 
 // The kernel's own writes, each applied in one unit with its events and its command's reply.
-export type KernelChange = ExtensionChange | WorkspaceChange | PresetChange | SettingChange | TrustChange;
+export type KernelChange = ExtensionChange | WorkspaceChange | PresetChange | SettingChange | TrustChange | MigrationChange | VersionChange | ScheduleChange;
 
 export function applyKernelChange(scope: UnitScope, change: KernelChange): Json {
   switch (change.kind) {
@@ -31,5 +34,15 @@ export function applyKernelChange(scope: UnitScope, change: KernelChange): Json 
     case 'trust.close':
     case 'trust.clear-once':
       return applyTrustChange(scope, change);
+    case 'migration.begin':
+    case 'migration.step':
+    case 'migration.end':
+      return applyMigrationChange(scope, change);
+    case 'extension.swap':
+    case 'extension.pending':
+    case 'extension.unquarantine':
+      return applyVersionChange(scope, change);
+    case 'schedules.reconcile':
+      return applyScheduleChange(scope, change);
   }
 }

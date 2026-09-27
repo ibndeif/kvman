@@ -1,6 +1,6 @@
 # ADR 0046 — Migrations cover every version step
 
-- **Status**: accepted
+- **Status**: accepted; amended by ADR 0142 (`compatibleWith` lists higher versions)
 - **Date**: 2026-09-24
 - **Milestone**: M1.3
 - **Decided by**: the product owner

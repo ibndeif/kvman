@@ -75,12 +75,13 @@ function deleteData(scope: UnitScope, name: string): void {
   removePresetEntries(scope, name);
 }
 
-// 06 §6.8, ADR 0120: its unfinished messages are cancelled without onAbort (the owner is gone), its rows go, and
-// with deleteData every row it owns and, after the commit, its secrets.
+// 06 §6.8, ADRs 0120, 0144: its unfinished messages are cancelled without onAbort (the owner is gone), its rows and
+// schedules go, and with deleteData every row it owns and, after the commit, its secrets.
 function uninstall(scope: UnitScope, name: string, withData: boolean): Json {
   cancelMessages(scope, unfinishedMessages(scope, name), { sendAbort: false });
   scope.connection.prepare('DELETE FROM extension_versions WHERE name = ?').run(name);
   scope.connection.prepare('DELETE FROM extensions WHERE name = ?').run(name);
+  scope.connection.prepare('DELETE FROM schedules WHERE extension = ?').run(name);
   if (withData) {
     deleteData(scope, name);
     scope.applied.secrets.push({ kind: 'clear-extension', extension: name });

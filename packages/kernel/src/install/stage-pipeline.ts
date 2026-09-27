@@ -2,6 +2,7 @@ import { mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { manifestSchema, type Issue, type Json } from '@kvman/protocol';
 import { validateManifest } from '../validation/manifest-validation.ts';
+import { schedulePayloadIssues } from '../validation/schedule-payloads.ts';
 import type { KernelEvents } from '../validation/reference-rules.ts';
 import { InstallFailure, sourceInvalid } from './install-failure.ts';
 import type { StagingArea } from './install-paths.ts';
@@ -22,7 +23,7 @@ export type StageTools = {
 };
 
 function manifestIssues(candidate: Json, tools: StageTools): { errors: Issue[]; warnings: Issue[] } {
-  const issues = validateManifest(candidate, { kernelEvents: tools.kernelEvents });
+  const issues = [...validateManifest(candidate, { kernelEvents: tools.kernelEvents }), ...schedulePayloadIssues(candidate)];
   return { errors: issues.filter((issue) => issue.severity !== 'warning'), warnings: issues.filter((issue) => issue.severity === 'warning') };
 }
 

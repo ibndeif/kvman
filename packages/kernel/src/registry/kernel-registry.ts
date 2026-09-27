@@ -3,9 +3,9 @@ import { kernelOwner, kernelTypeEntries } from './kernel-types.ts';
 
 export type InstalledExtension = { manifest: Manifest; quarantined: boolean };
 
-// The registry's inputs: every installed manifest (read from the database, ADR 0114), and the names of the
-// extensions each workspace's applied preset enables (ADR 0123).
-export type RegistryInput = { extensions: readonly InstalledExtension[]; enabled: ReadonlyMap<string, readonly string[]> };
+// The registry's inputs: every installed manifest (read from the database, ADR 0114), the names of the extensions each
+// workspace's applied preset enables (ADR 0123), and the extensions a reload holds (06 §6.6 step 3), a live set.
+export type RegistryInput = { extensions: readonly InstalledExtension[]; enabled: ReadonlyMap<string, readonly string[]>; reloading?: ReadonlySet<string> };
 
 export type RegistryFailure = { code: KernelErrorCode; detail: string; hint?: string };
 
@@ -64,8 +64,10 @@ export class KernelRegistry {
   private readonly enabledSomewhere = new Set<InstalledExtension>();
 
   private readonly installed = new Map<string, InstalledExtension>();
+  private readonly reloading: ReadonlySet<string>;
 
   private constructor(input: RegistryInput) {
+    this.reloading = input.reloading ?? new Set();
     for (const entry of kernelTypeEntries()) this.owners.set(entry.type, [{ name: kernelOwner, extension: undefined, entry }]);
     for (const extension of input.extensions) {
       this.installed.set(extension.manifest.meta.name, extension);
@@ -170,6 +172,16 @@ export class KernelRegistry {
   // ADR 0086: a quarantined extension's pending messages wait; nothing of it is dispatched.
   isQuarantined(extension: string): boolean {
     return this.installed.get(extension)?.quarantined === true;
+  }
+
+  // 06 §6.6 step 3: while a reload holds an extension, its messages wait and its queries are refused.
+  isReloading(extension: string): boolean {
+    return this.reloading.has(extension);
+  }
+
+  // Whether the scheduler leaves the extension's pending messages waiting: quarantined or held by a reload.
+  isHeld(extension: string): boolean {
+    return this.isQuarantined(extension) || this.isReloading(extension);
   }
 
   private resolveGlobally(type: string, owners: readonly Owner[]): TypeLookup {

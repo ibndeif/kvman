@@ -1,6 +1,6 @@
 # ADR 0016 — Durations, private names, lane templates, naming exceptions
 
-- **Status**: accepted
+- **Status**: accepted; cron completed by ADR 0144
 - **Date**: 2026-09-24
 - **Milestone**: M0.3
 - **Decided by**: the product owner (confirmed after the implementer first stated it without asking)

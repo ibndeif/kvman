@@ -255,13 +255,13 @@ export class Scheduler {
     }
   }
 
-  // A message whose deadline passed is left for expiry (ADR 0084); a quarantined extension's wait (ADR 0086), and so
-  // do a disabled extension's until it is enabled again (06 §6.4).
+  // A message whose deadline passed is left for expiry (ADR 0084); a quarantined or reloading extension's wait (ADR 0086,
+  // 06 §6.6), and so do a disabled extension's until it is enabled again (06 §6.4).
   #eligible(entry: PendingEntry, now: number): boolean {
     const concurrency = this.#settings(entry).concurrency ?? schedulerDefaults.handlerConcurrency;
     const registry = this.#options.registry();
     return (entry.deadlineAt === undefined || entry.deadlineAt > now)
-      && !registry.isQuarantined(entry.extension)
+      && !registry.isHeld(entry.extension)
       && registry.isEnabled(entry.extension, entry.workspaceId)
       && this.#inFlight.laneFreeFor(entry)
       && this.#inFlight.handlerCount(entry.handlerKey) < concurrency
