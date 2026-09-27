@@ -34,15 +34,25 @@ export class InstallService {
     this.#staged = new StagedVersions(this.#area, options.now);
   }
 
+  // The running kvman version: the integrity of a builtin: source (06 §6.1).
+  get kvmanVersion(): string {
+    return this.#options.kvmanVersion;
+  }
+
   // 06 §6.2: interrupted staging trees are deleted at boot.
   clearStaging(): Promise<void> {
     return this.#area.clear();
   }
 
   async stage(source: string, correlationId: string, signal: AbortSignal): Promise<StageResult> {
-    await this.#staged.purgeExpired();
-    const staged = await stageTree(source, (folders) => resolveSource(source, folders, { ...this.#options, signal }), this.#stageTools(correlationId));
+    const staged = await this.stageVersion(source, correlationId, signal);
     return { ...stageSummary(staged), ...this.#staged.add(staged) };
+  }
+
+  // 07 §7.4: the same pipeline as stage, without issuing an install token; preset apply stages every entry this way.
+  async stageVersion(source: string, correlationId: string, signal: AbortSignal): Promise<StagedVersion> {
+    await this.#staged.purgeExpired();
+    return stageTree(source, (folders) => resolveSource(source, folders, { ...this.#options, signal }), this.#stageTools(correlationId));
   }
 
   // The dev folder pipeline (ADR 0116), which kernel.dev.folder.stage and kernel.dev.build will call with their
@@ -54,13 +64,24 @@ export class InstallService {
   // A staged version whose token was issued and whose reply did not commit is dropped with its tree.
   async discard(confirmationToken: string): Promise<void> {
     const staged = await this.#staged.take(confirmationToken);
-    if (staged !== undefined) await this.#area.remove(dirname(staged.tree));
+    if (staged !== undefined) await this.discardStaged(staged);
+  }
+
+  // A staged tree dropped with its root, as a failed stage drops it.
+  async discardStaged(staged: StagedVersion): Promise<void> {
+    await this.#area.remove(dirname(staged.tree));
   }
 
   // 06 §6.2 steps 6–7: a live token's tree, re-verified against its digest and moved into snapshots/.
   async confirm(confirmationToken: string): Promise<ExtensionVersion> {
     const staged = await this.#staged.take(confirmationToken);
     if (staged === undefined) throw new InstallFailure('CONFIRMATION_EXPIRED', { detail: 'the confirmation expired or was already used', hint: 'stage the extension again' });
+    return this.placeStaged(staged);
+  }
+
+  // A staged tree re-verified against its digest and moved into snapshots/ (06 §6.2 steps 6–7);
+  // CONFIRMATION_EXPIRED when the tree changed.
+  async placeStaged(staged: StagedVersion): Promise<ExtensionVersion> {
     const digest = await placeSnapshot(this.paths, staged.tree, staged.manifest, staged.digest);
     if (digest === undefined) throw new InstallFailure('CONFIRMATION_EXPIRED', { detail: 'the staged files changed after staging', hint: 'stage the extension again' });
     const { manifest, source, integrity } = staged;

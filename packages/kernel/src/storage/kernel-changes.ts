@@ -1,6 +1,8 @@
 import type { Json } from '@kvman/protocol';
+import { applyCatalogChange, type CatalogChange } from './catalog-changes.ts';
 import { applyExtensionChange, type ExtensionChange } from './extension-changes.ts';
 import { applyMigrationChange, type MigrationChange } from './migration-changes.ts';
+import { applyPresetApplyChange, type PresetApplyChange } from './preset-apply-changes.ts';
 import { applyPresetChange, type PresetChange } from './preset-changes.ts';
 import { applyScheduleChange, type ScheduleChange } from './schedule-changes.ts';
 import { applySettingChange, type SettingChange } from './setting-changes.ts';
@@ -10,7 +12,7 @@ import { applyVersionChange, type VersionChange } from './version-changes.ts';
 import { applyWorkspaceChange, type WorkspaceChange } from './workspace-changes.ts';
 
 // The kernel's own writes, each applied in one unit with its events and its command's reply.
-export type KernelChange = ExtensionChange | WorkspaceChange | PresetChange | SettingChange | TrustChange | MigrationChange | VersionChange | ScheduleChange;
+export type KernelChange = ExtensionChange | WorkspaceChange | PresetChange | PresetApplyChange | CatalogChange | SettingChange | TrustChange | MigrationChange | VersionChange | ScheduleChange;
 
 export function applyKernelChange(scope: UnitScope, change: KernelChange): Json {
   switch (change.kind) {
@@ -21,10 +23,17 @@ export function applyKernelChange(scope: UnitScope, change: KernelChange): Json 
     case 'workspace.rename':
     case 'workspace.forget':
     case 'workspace.cancel':
+    case 'workspace.preview':
       return applyWorkspaceChange(scope, change);
     case 'extension.enable':
     case 'extension.disable':
       return applyPresetChange(scope, change);
+    case 'preset.install':
+    case 'preset.apply':
+      return applyPresetApplyChange(scope, change);
+    case 'catalog.write':
+    case 'catalog.delete':
+      return applyCatalogChange(scope, change);
     case 'config.set':
     case 'secret.set':
     case 'secret.clear':

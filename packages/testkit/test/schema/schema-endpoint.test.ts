@@ -55,7 +55,7 @@ describe('the schema endpoint (plan 12 §12.7, ADRs 0111, 0112)', workerTests, (
 
   it('M2.1-E42 q keeps only matching entries, ranked', async () => {
     const document = await schemaAt('?q=add');
-    expect(document.types.map((type) => type.type)).toEqual(['files.add', 'notes.add']);
+    expect(document.types.map((type) => type.type)).toEqual(['files.add', 'notes.add', 'kernel.preset.import']);
     expect(document.extensions).toEqual([]);
     expect(document.errors.every((error) => `${error.code} ${error.description}`.toLowerCase().includes('add'))).toBe(true);
   });

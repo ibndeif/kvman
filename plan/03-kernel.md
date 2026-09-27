@@ -165,7 +165,7 @@ The kernel exposes itself through the same message model and follows the naming 
 | user | `access: 'user'`: only a person (and the kernel itself, e.g. first-run setup) |
 | grant | `access: 'user'` **and** confirmed only in the shell's grant dialog (D41, `08` §8.13): views can open the dialog with `openGrantDialog`, never send the command directly. An extension with `kernel.admin` may prepare these (stage, compute previews and tokens) but never confirm them. |
 
-Preview tokens (`kernel.trust.preview`, `kernel.preset.import.preview`) are stateless: an HMAC with a per-instance key over the previewed content digest and an expiry (10 minutes), so previews stay read-only queries. `kernel.extension.stage` and `kernel.preset.apply.stage` are commands because they download and snapshot packages; their tokens are stored with the staged snapshot and expire after 10 minutes (`CONFIRMATION_EXPIRED`).
+Preview tokens (`kernel.trust.preview`, `kernel.preset.import.preview`) are stateless: an HMAC with a per-instance key over the previewed content digest and an expiry (10 minutes), so previews stay read-only queries. An import preview token carries the previewed preset itself, so `kernel.preset.import` needs only the token (ADR 0147). `kernel.extension.stage` and `kernel.preset.apply.stage` are commands because they download and snapshot packages; their tokens are stored with the staged snapshot and expire after 10 minutes (`CONFIRMATION_EXPIRED`).
 
 ### Queries
 
@@ -173,15 +173,16 @@ Preview tokens (`kernel.trust.preview`, `kernel.preset.import.preview`) are stat
 |---|---|---|---|
 | `kernel.health.get` | `{}` → `{ status: 'ok' \| 'degraded', version, instanceId, processStart, uptimeMs, port, home }` | any | also `GET /api/v1/health`; `port` and `home` (the home folder path) are used by `local-guard` (`10` §10.11); `degraded` while an extension is quarantined (ADR 0092); `version` is the kernel package version and `instanceId` the lock nonce (ADRs 0088, 0089) |
 | `kernel.schema.get` | `{ workspaceId?, q? }` → Schema (`12` §12.7) | any | internal types omitted; without `workspaceId`, every installed extension that is not quarantined (ADR 0111) |
-| `kernel.validate` | `{ workspaceId?, manifest? \| preset? \| page? \| catalog? }` → `{ ok, issues: Issue[] }` (`ok` is false exactly when an issue has severity `error`) | any | structural checks, plus referential ones when `workspaceId` is given (`06` §6.3); M2.1 accepts `manifest`, `preset`, and `page`, and refuses `catalog` and `workspaceId` with a hint until their milestones (ADR 0110) |
+| `kernel.validate` | `{ workspaceId?, manifest? \| preset? \| page? \| catalog? }` → `{ ok, issues: Issue[] }` (`ok` is false exactly when an issue has severity `error`) | any | structural checks, plus referential ones when `workspaceId` is given (`06` §6.3); M2.1 accepts `manifest`, `preset`, and `page`; M2.8 accepts `workspaceId` with the non-UI referential checks, M2.10 adds the UI ones, and `catalog` is refused with a hint until M2.11 (ADRs 0110, 0151) |
 | `kernel.extensions.list` | `{ workspaceId? }` → `[{ name, title, icon, description, version, namespace, activeDigest, status: 'active' \| 'quarantined' \| 'needs-approval', quarantineReason?, isolation: Record<workspaceId, Isolation>, enabledIn: workspaceId[] }]` (sorted by name) | any | `needs-approval`: an installed newer version waits for grants; ADR 0119 |
 | `kernel.extension.get` | `{ name }` → `{ versions: [{ digest, source, version, installedAt }], manifest, grants: Record<workspaceId, Capabilities> }` | any | versions newest first; an unknown name fails `NOT_FOUND` (ADR 0119) |
 | `kernel.workspaces.list` | `{ includePreview? }` → `[{ id, path, name, kind: 'normal' \| 'preview', trusted, exists }]` (`exists: false` when the folder is gone: moved, renamed, or deleted, `07` §7.1) | any | preview workspaces only with `includePreview` |
-| `kernel.workspace.get` | `{ workspaceId }` → `{ id, path, name, kind, trust: { mode, files } \| null }` | any | |
-| `kernel.presets.list` | `{}` → `[{ id, name, description, icon, builtin, revision }]` | any | the catalog |
+| `kernel.workspace.get` | `{ workspaceId }` → `{ id, path, name, kind, trust: { mode, files } \| null, repoPreset }` | any | `repoPreset`: trusted and `<ws>/.kvman/preset.json` exists (ADR 0150) |
+| `kernel.workspace.preset.get` | `{ workspaceId }` → `{ json }` | any | reads `<ws>/.kvman/preset.json` through the trust gate: `WORKSPACE_UNTRUSTED`, `NOT_FOUND`, or `PRESET_INVALID` when not JSON (ADR 0150) |
+| `kernel.presets.list` | `{}` → `[{ id, name, description, icon, builtin, revision }]` | any | the catalog, sorted by name then id (ADR 0149) |
 | `kernel.preset.get` | `{ presetId }` → `Preset` | any | |
 | `kernel.preset.current.get` | `{ workspaceId }` → `{ preset: Preset, revision }` | any | the applied copy; its `config` is read from the workspace's config rows (`04` §4.7) |
-| `kernel.preset.import.preview` | `{ json }` → `{ summary, issues, confirmationToken }` | any | inert (`07` §7.4) |
+| `kernel.preset.import.preview` | `{ json }` → `{ summary, issues, confirmationToken }` | any | inert (`07` §7.4); a refused preset fails with its code and every issue (ADR 0147) |
 | `kernel.preset.export.get` | `{ presetId } \| { workspaceId }` → shareable preset JSON | any | fails `PRESET_UNSHAREABLE` for `dev:`/`local:` sources |
 | `kernel.config.get` | `{ extension, workspaceId? }` → `{ global: { value, revision }, workspace: { value, revision } \| null, merged }` | any | secrets redacted (`••••1234`); each scope has its own revision (`07` §7.5); a missing row is `{ value: {}, revision: 0 }`, and an extension without config fails `NOT_FOUND` (ADR 0125) |
 | `kernel.trust.preview` | `{ workspaceId }` → `{ files: [{ path, sha256 }], confirmationToken }` | any | |
@@ -209,22 +210,22 @@ Preview tokens (`kernel.trust.preview`, `kernel.preset.import.preview`) are stat
 |---|---|---|---|
 | `kernel.workspace.open` | `{ path }` → `{ workspaceId }` | admin | `07` §7.1; refuses paths inside `~/.kvman` (`WORKSPACE_INVALID`) |
 | `kernel.workspace.rename` | `{ workspaceId, name }` → `{}` | admin | display name only |
-| `kernel.workspace.forget` | `{ workspaceId }` → `{}` | user; admin for preview workspaces | deletes the record and all scoped data; never touches the folder (preview folders are deleted) |
-| `kernel.workspace.preview.create` | `{ name, from: workspaceId }` → `{ workspaceId }` | admin | `07` §7.1 |
+| `kernel.workspace.forget` | `{ workspaceId }` → `{}` | user; admin for preview workspaces | deletes the record and all scoped data; never touches the folder (preview folders are deleted after the commit); registered with access `all`, the handler allowing a person, or `kernel.admin` for a preview (ADR 0150) |
+| `kernel.workspace.preview.create` | `{ name, from: workspaceId }` → `{ workspaceId }` | admin | `07` §7.1, ADR 0150 |
 | `kernel.trust.grant` | `{ confirmationToken, mode: 'once' \| 'always' }` → `{}` | grant | |
 | `kernel.trust.revoke` | `{ workspaceId }` → `{}` | admin | |
 | `kernel.extension.stage` | `{ source }` → stage result (`06` §6.2) | admin | |
 | `kernel.extension.install` | `{ confirmationToken }` → `{ name, digest }` | admin | installing never enables |
-| `kernel.extension.enable` | `{ workspaceId, name, grants }` → `{ revision }` | grant; admin in preview workspaces (`07` §7.1) | on an already enabled extension it replaces the grants (used to change capabilities or isolation) |
+| `kernel.extension.enable` | `{ workspaceId, name, grants }` → `{ revision }` | grant; admin in preview workspaces (`07` §7.1) | on an already enabled extension it replaces the grants (used to change capabilities or isolation); registered with access `all`, the handler allowing a person, or `kernel.admin` for a `dev:` source in a preview (ADR 0150) |
 | `kernel.extension.disable` | `{ workspaceId, name }` → `{ revision }` | admin | `EXT_IN_USE` while required (`06` §6.4) |
 | `kernel.extension.reload` | `{ name, digest?, grants?: Record<workspaceId, Capabilities> }` → `{ digest }` | admin; grant when `grants` is present | upgrade, hot reload (`06` §6.6) |
 | `kernel.extension.rollback` | `{ name, digest }` → `{ digest }` | admin | `06` §6.7 |
 | `kernel.extension.unquarantine` | `{ name }` → `{}` | user | clears `quarantined`; the recovery page's "Re-enable"; only for reason `HOST_FAILURES`, else `EXT_QUARANTINED` (§3.6) |
 | `kernel.extension.uninstall` | `{ name, deleteData?, keepSnapshots? }` → `{}` | user | `06` §6.8 |
 | `kernel.preset.import` | `{ confirmationToken }` → `{ presetId }` | grant | |
-| `kernel.preset.apply.stage` | `{ workspaceId, presetId } \| { workspaceId, json }` → apply preview + `confirmationToken` | admin | `07` §7.4; with `json` the confirmed apply also imports it; version switches in other workspaces are part of the preview |
+| `kernel.preset.apply.stage` | `{ workspaceId, presetId } \| { workspaceId, json }` → apply preview + `confirmationToken` | admin | `07` §7.4; with `json` the confirmed apply also imports it; version switches in other workspaces are part of the preview; the preview's shape and checks are in ADR 0148 |
 | `kernel.preset.apply` | `{ confirmationToken }` → `{ revision }` | grant | |
-| `kernel.preset.update` | `{ workspaceId, patch, revision }` → `{ revision }` | admin; grant when the patch touches `extensions` | `patch` is a JSON Merge Patch (RFC 7396) of the applied preset |
+| `kernel.preset.update` | `{ workspaceId, patch, revision }` → `{ revision }` | admin; grant when the patch touches `extensions` | `patch` is a JSON Merge Patch (RFC 7396) of the applied preset; patchable keys and `enabled` changes in ADR 0149 |
 | `kernel.preset.save` | `{ workspaceId, name, description? }` → `{ presetId }` | admin | |
 | `kernel.preset.delete` | `{ presetId }` → `{}` | admin | built-in presets cannot be deleted (`PRESET_READONLY`) |
 | `kernel.config.set` | `{ extension, scope, workspaceId?, value, revision }` → `{ revision }` | admin | `07` §7.5 |
@@ -291,7 +292,7 @@ Kernel handlers run on the main thread, are short, and use the same unit-of-work
 7. Start hosts lazily: every host starts on its extension's first message.
 8. Start adapters; publish `kernel.started` (transient).
 
-First run (no `kvman.db` before step 2): after step 5 the kernel installs every builtin extension from the self-contained builtin tarballs in the kernel package, without network (`06` §6.2, §6.9), seeds the built-in presets into the catalog (`kernel.preset.catalog.changed {cause: 'seed'}`), and creates and opens the Home workspace `~/kvman`. The shell's first-run screen then applies the chosen preset (`08` §8.3). On an upgrade (a newer kvman version than the one recorded in `kernel_settings` under `kvman.version`), after step 5 every bundled builtin tarball whose digest is not installed is installed as a new version; one whose package version is higher than the active version's becomes active, through a reload by the kernel where it is enabled (a reload that needs new capabilities records `pending_digest`) or by switching `active_digest` where it is enabled nowhere; a failure is logged and boot continues (ADR 0145). Built-in presets are re-seeded (never overwriting applied copies). Every boot ends by recording the running kvman version as `kvman.version`.
+First run (no `kvman.db` before step 2): after step 5 the kernel installs every builtin extension from the self-contained builtin tarballs in the kernel package, without network (`06` §6.2, §6.9), seeds the built-in presets from the kernel package's `builtin/presets/` into the catalog (`kernel.preset.catalog.changed {cause: 'seed'}`, ADR 0146), and creates and opens the Home workspace `~/kvman`. The shell's first-run screen then applies the chosen preset (`08` §8.3). On an upgrade (a newer kvman version than the one recorded in `kernel_settings` under `kvman.version`), after step 5 every bundled builtin tarball whose digest is not installed is installed as a new version; one whose package version is higher than the active version's becomes active, through a reload by the kernel where it is enabled (a reload that needs new capabilities records `pending_digest`) or by switching `active_digest` where it is enabled nowhere; a failure is logged and boot continues (ADR 0145). Built-in presets are re-seeded: every bundled one is written again, built-ins no longer bundled are deleted, and a non-built-in entry with a bundled id is replaced; applied copies are never touched (ADR 0146). Every boot ends by recording the running kvman version as `kvman.version`.
 
 **Shutdown** (SIGTERM, SIGINT, `kernel.shutdown`): stop admitting new adapter messages → let in-flight invocations finish for up to 10 s → abort the rest: their live events are reset and their rows return to `pending` without counting an attempt, so they redeliver on next boot (ADR 0091) → kill process groups → flush the commit pipeline → close SQLite → release the lock. Shutdown is idempotent across repeated signals. From its start a command, query, or subscription request gets 503 `KERNEL_STOPPING` while `GET /health` still answers (the listener stays open until the end), a request still waiting for a reply answers `202 { id, state }`, and every event stream gets `close { reason: 'shutdown' }` (ADR 0090).
 

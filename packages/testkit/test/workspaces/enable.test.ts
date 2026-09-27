@@ -2,7 +2,7 @@ import { appendFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { workspaceA, workspaceB } from '../hosts/harness.ts';
-import { extensionActor, problemOf, type InstallFixture } from '../install/harness.ts';
+import { command, extensionActor, problemOf, type InstallFixture } from '../install/harness.ts';
 import { admission, enable, eventsOf, openFolderAsWorkspace, grantsOf, openWorkspaceFixture, presetRow, rows, run, temporaryFolder, valueOf, workspaceTests } from './harness.ts';
 
 let fixture: InstallFixture | undefined;
@@ -109,7 +109,8 @@ describe('kernel.extension.enable (plan 06 §6.4, ADR 0123)', workspaceTests, ()
     const current = await opened();
     current.enable(workspaceA, '@acme/steward', grantsOf(current, '@acme/steward', 'shared'));
     const payload = { workspaceId: workspaceA, name: '@acme/desk', grants: grantsOf(current, '@acme/desk') };
-    expect(await admission(current, 'kernel.extension.enable', payload, extensionActor('@acme/steward'), undefined)).toBe('CALLER_NOT_ALLOWED');
+    expect(await admission(current, 'kernel.extension.enable', payload, extensionActor('@acme/steward'), undefined)).toBe('admitted');
+    expect(problemOf(await command(current, 'kernel.extension.enable', payload, extensionActor('@acme/steward')))).toMatchObject({ code: 'CALLER_NOT_ALLOWED' });
     expect(await run(current, 'steward.call', { type: 'kernel.extension.enable', payload })).toEqual({ ok: true, value: { code: 'CALLER_NOT_ALLOWED' } });
   });
 });

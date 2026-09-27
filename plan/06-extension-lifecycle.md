@@ -128,7 +128,7 @@ Errors are structured and include a fix hint where possible:
 - Disable fails `EXT_IN_USE`, listing the dependents (`params { dependents }`), while another enabled extension in the workspace requires its types (`requireTypes`) or its public components (`requireComponents`); the user disables the dependents first or together.
 - Disable: new messages to its types fail `HANDLER_UNAVAILABLE`; in-flight invocations finish; pending messages stay pending (they run if re-enabled, or are discarded by `kernel.message.discard`). A message still pending 7 days after its handler's extension was disabled in its workspace is cancelled by housekeeping (`04` §4.9). Its pages and contributions disappear from that workspace; its data stays.
 - **Global-scope types** (registered with `scope: 'global'`, e.g. `llm-providers.login.start`) have no workspace. The router delivers them while the extension is enabled in at least one workspace (else `HANDLER_UNAVAILABLE`), also when a message to them carries a workspace (it is stored without one, ADR 0048), and the invocation runs with the **intersection** of the extension's grants across those workspaces and the most isolated of their isolation levels. There is no global enable.
-- **Preview workspaces** (`07` §7.1): `enable` may be sent by an extension with `kernel.admin`, without the grant dialog, only for `dev:` sources, always `sandboxed`, and never granting `process`, `network`, `kernel.admin`, or lower isolation.
+- **Preview workspaces** (`07` §7.1): `enable` may be sent by an extension with `kernel.admin`, without the grant dialog, only for `dev:` sources, always `sandboxed`, and never granting `process`, `network`, `kernel.admin`, or lower isolation. These limits bind every enable of a `dev:` source in a preview workspace, a person's too (ADR 0150).
 
 ## 6.5 Loading and isolation
 
@@ -166,6 +166,7 @@ An extension enabled in no workspace is reloaded without steps 3, 4, and 6: afte
 ## 6.9 Builtin extensions and first run
 
 - The kernel package ships core extensions as self-contained tarballs (each includes its dependencies) plus a digest list, so first run and upgrades work offline. `pnpm build` produces them: `scripts/pack-builtins` packs every `extensions/*` package into `packages/kernel/builtin/<name>.tgz` (the package name without `@` and with `/` replaced by `-`; the tarball holds the tree a staging install produces) and writes `digests.json` (`{ [name]: { file, digest } }`, the snapshot digest of the unpacked tree; ADR 0115), so development builds and tests install core extensions exactly as a release does. On first run (and on upgrade), the kernel installs them through the same pipeline with source `builtin:<name>`, so they are snapshotted, verified, and versioned like any other extension; core extensions never bypass the install pipeline.
+- Built-in presets are authored in `presets/` at the repository root; `scripts/pack-builtins` checks each against the preset schema and copies it to `packages/kernel/builtin/presets/<id>.json`, setting the integrity of its `builtin:` entries to `builtin:<kvman version>` (ADR 0146).
 - First run also seeds the built-in presets and creates the Home workspace (`03` §3.9). No preset is applied until the person chooses one on the shell's first-run screen (`08` §8.3, `07` §7.6).
 
 ## 6.10 Capability grant flow

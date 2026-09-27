@@ -6,7 +6,9 @@ import { schemaIssues } from './schema-issues.ts';
 
 export type ValidateContext = { kernelEvents: KernelEvents; configSchemas: Readonly<Record<string, JsonObject>> };
 
-// A request M2.1 cannot answer is refused with its issue; anything else is answered, valid or not (ADR 0110).
+// A request M2.1 cannot answer is refused with its issue; anything else is answered, valid or not (ADRs 0110,
+// 0151). `catalog` validation arrives in M2.11; the workspace checks run where the query is answered, against the
+// workspace the request names.
 export type ValidateOutcome = { answered: true; result: ValidateResult } | { answered: false; issues: Issue[] };
 
 function presetIssues(candidate: unknown, context: ValidateContext): Issue[] {
@@ -28,9 +30,6 @@ function issuesOf(request: ValidateRequest, context: ValidateContext): Issue[] {
 
 // 03 §3.8, 06 §6.3: structural checks; `ok` is false exactly when some issue is an error (ADR 0011).
 export function validateRequest(request: ValidateRequest, context: ValidateContext): ValidateOutcome {
-  if (request.workspaceId !== undefined) {
-    return { answered: false, issues: [{ path: 'workspaceId', message: 'referential validation against a workspace is not available yet', hint: 'omit workspaceId to run the structural checks' }] };
-  }
   if ('catalog' in request) {
     return { answered: false, issues: [{ path: 'catalog', message: 'catalog validation is not available yet', hint: 'validate a manifest, preset, or page' }] };
   }

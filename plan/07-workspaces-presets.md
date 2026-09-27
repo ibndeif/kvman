@@ -11,9 +11,9 @@
 - Each browser tab has one current workspace, shown in the switcher and sent with every request. Switching loads that workspace's UI registry (`08` §8.14); tabs in different workspaces work independently. A workspace with no applied preset (opened but never set up) shows the first-run question for that workspace.
 
 **Preview workspaces** (for the builder, `11` §11.7):
-- `kernel.workspace.preview.create {name, from}` (admin) creates a workspace of kind `preview` at `~/.kvman/previews/<name>/` — the only workspace path allowed under `~/.kvman`. Its applied preset starts as a copy of workspace `from`'s applied preset (same extensions and grants, `revision` 1), and its config rows are copied too, so the preview can use the same providers and tools. Only the dev version enabled there is limited (below).
-- Preview workspaces are hidden from the workspace switcher and `kernel.workspaces.list` (unless `includePreview`), are never trusted (their `.kvman/` is empty), and hold only throwaway data.
-- Inside a preview workspace an extension with `kernel.admin` may enable `dev:` sources without the grant dialog, sandboxed only, and never granting `process`, `network`, `kernel.admin`, or lower isolation (`06` §6.4). Everything else follows the normal rules.
+- `kernel.workspace.preview.create {name, from}` (admin) creates a workspace of kind `preview` at `~/.kvman/previews/<name>/` — the only workspace path allowed under `~/.kvman`. Its applied preset starts as a copy of workspace `from`'s applied preset (same extensions and grants, `revision` 1), and its config rows are copied too (at revision 1), so the preview can use the same providers and tools. Only the dev version enabled there is limited (below). `name` matches `^[a-z0-9-]{1,64}$`; an existing preview of that name fails `WORKSPACE_INVALID`; `from` needs an applied preset (`PRESET_REQUIRED`); creation publishes `kernel.workspace.opened` and `kernel.preset.changed {cause: 'apply'}` (ADR 0150).
+- Preview workspaces are hidden from the workspace switcher and `kernel.workspaces.list` (unless `includePreview`), are never trusted (their `.kvman/` is empty; `kernel.trust.preview` and `grant` on one fail `WORKSPACE_INVALID`), and hold only throwaway data.
+- Inside a preview workspace an extension with `kernel.admin` may enable `dev:` sources without the grant dialog, sandboxed only, and never granting `process`, `network`, `kernel.admin`, or lower isolation (`06` §6.4). The limits bind every enable of a `dev:` source there, a person's too (ADR 0150). Everything else follows the normal rules.
 - `kernel.workspace.forget` on a preview workspace (admin allowed) deletes its data and its folder.
 
 ## 7.2 Workspace file I/O and trust
@@ -105,9 +105,9 @@ Example (a kiosk-style PDF app in Arabic and English):
 
 ## 7.4 Preset lifecycle
 
-**Catalog** — installed presets live in the `presets` table. Built-in presets (`builtin = 1`) are seeded on first run and replaced by newer versions after upgrades.
+**Catalog** — installed presets live in the `presets` table, listed by name then id. Built-in presets (`builtin = 1`) are seeded on first run from the kernel package's `builtin/presets/` and replaced by newer versions after upgrades; built-ins no longer bundled are deleted, and built-in ids are reserved (ADR 0146). An imported entry keeps its JSON's `revision`, a saved one starts at 1 (ADR 0149).
 
-**Ids** — a preset id matches `^[a-z0-9-]{1,64}$`. `kernel.preset.save` derives it from the name (lowercase, spaces and other characters to `-`, trimmed to 64) and appends `-2`, `-3`, … if taken. Import keeps the JSON's id: if it names a built-in preset, import fails `PRESET_READONLY`; if it names another catalog entry, the import preview says "replaces <name>" and the import replaces it (applied copies are never affected).
+**Ids** — a preset id matches `^[a-z0-9-]{1,64}$`. `kernel.preset.save` derives it from the name (lowercase; each run of other characters to one `-`; leading and trailing `-` removed; `preset` if nothing is left; cut to fit 64 with its suffix) and appends `-2`, `-3`, … if taken, built-in ids included (ADR 0149). Import keeps the JSON's id: if it names a built-in preset, import fails `PRESET_READONLY`; if it names another catalog entry, the import preview says "replaces <name>" and the import replaces it (applied copies are never affected).
 
 **Import** (inert):
 ```
@@ -118,6 +118,7 @@ kernel.preset.import.preview {json}  (query) → validate structure; reject secr
                                        → summary (including "replaces <name>" when the id exists) + confirmationToken
 kernel.preset.import {confirmationToken}  (access: user) → add to catalog. Downloads nothing, runs nothing.
 ```
+A refused preset fails the preview with every issue and the first code that applies: `PRESET_INVALID` (the schema, outside `source`), `PRESET_UNSHAREABLE` (sources, `dev:`/`local:`, `digest`), `PRESET_SECRET`; a built-in id fails `PRESET_READONLY`. The token carries the preset itself, signed, so import needs nothing else; the summary lists the preset, the entry it replaces, its extensions with grants, its pages, the extensions it configures, and what it hides (ADR 0147).
 
 **Apply** to a workspace (one confirmation):
 ```
@@ -148,6 +149,7 @@ kernel.preset.apply {confirmationToken}  (access: user — Confirm in the shell'
   version switch leaves that switch in place (it is a normal, complete reload) and the workspace keeps its
   previous preset; the error names what failed.
 ```
+The preview's shape, the grants of `builtin:` entries (the bundled manifest's, keeping the preset's isolation when allowed; `npm:` and `git:` grants must match exactly), staging of every entry including disabled ones, the checks stage runs before issuing a token, and the per-extension events apply publishes are in ADR 0148.
 
 **Versions across workspaces** — the kernel runs **one version of each extension** for the whole home folder (`extensions.active_digest`; hosts are per extension, `03` §3.5). A preset's `integrity` therefore says which version the preset needs; it does not create a second copy:
 - If the active version already matches (for `builtin:` entries, always), nothing is installed.
@@ -156,6 +158,7 @@ kernel.preset.apply {confirmationToken}  (access: user — Confirm in the shell'
 - Every reload, upgrade, or rollback updates `source`, `integrity`, and `digest` of that extension in every applied preset in the same unit of work (`06` §6.6 step 5), so applied copies always name the running version.
 
 **Edit** — `kernel.preset.update {workspaceId, patch, revision}` applies a JSON Merge Patch (RFC 7396) to the applied copy (layout, order, hidden items, labels, pages, nav, translations, app, and the `extensions` fields below), re-validates the whole result (`06` §6.3), and publishes `kernel.preset.changed {cause: 'update'}`; enable and disable publish it with `cause: 'enable' | 'disable'`. Every write bumps the revision, and the shell refreshes the UI registry on this one event (`08` §8.6). A stale revision fails `PRESET_STALE`. The applied copy is independent of the catalog template.
+- **Keys.** A patch may touch `app`, `layout`, `hidden`, `labels`, `pages`, `navGroups`, `nav`, `translations`, and `extensions`; any other key fails `PRESET_INVALID`. Turning `enabled` on runs enable's checks, migrations, and config check; turning it off fails `EXT_IN_USE` while required; changed entries publish `kernel.extension.enabled`/`.disabled` (ADR 0149).
 - **Config is not patched here.** A patch with a `config` key fails `PRESET_INVALID`; config is changed with `kernel.config.set` (§7.5), which never changes the preset's revision.
 - **Arrays are replaced whole** (RFC 7396 has no array merge): to change one page, the patch carries the complete `pages` array. `null` removes a key.
 - **Patching `extensions`** is limited to entries already in the preset and to three fields: `enabled`, `grants` (which must equal the extension's requested and derived capabilities, plus an allowed isolation), and `disable`. Adding or removing an entry, or changing `source`, `integrity`, or `digest`, fails `PRESET_INVALID` (use apply, enable, or reload). Such a patch is a grant command: accepted only from a user through the grant dialog (`CALLER_NOT_ALLOWED` otherwise).
@@ -166,7 +169,7 @@ kernel.preset.apply {confirmationToken}  (access: user — Confirm in the shell'
 
 **Delete** — `kernel.preset.delete {presetId}` removes a catalog entry; built-in presets cannot be deleted (`PRESET_READONLY`). Applied copies are never affected by catalog changes. Every catalog write publishes `kernel.preset.catalog.changed`.
 
-**Repo preset** — if a trusted workspace contains `<ws>/.kvman/preset.json`, the shell offers "Apply this folder's preset": `kernel.preset.apply.stage {workspaceId, json}`, then one Confirm in the grant dialog imports and applies it. The file is never applied silently.
+**Repo preset** — if a trusted workspace contains `<ws>/.kvman/preset.json` (`kernel.workspace.get` answers `repoPreset: true`), the shell offers "Apply this folder's preset": it reads the file with `kernel.workspace.preset.get {workspaceId}` (through the trust gate), sends it to `kernel.preset.apply.stage {workspaceId, json}`, then one Confirm in the grant dialog imports and applies it. The file is never applied silently (ADR 0150).
 
 ## 7.5 Config values
 
@@ -179,7 +182,7 @@ kernel.preset.apply {confirmationToken}  (access: user — Confirm in the shell'
 
 ## 7.6 Presets shipped with kvman
 
-The **platform pack** (`settings`, `presets`, `extensions`, `inspector`) is in every built-in preset so users can always manage the app. A preset may hide or disable them like any extension; the kvman menu and the recovery page remain the way back (`08` §8.17).
+Built-in presets ship as JSON in the kernel package once the extensions they name exist (ADR 0146). The **platform pack** (`settings`, `presets`, `extensions`, `inspector`) is in every built-in preset so users can always manage the app. A preset may hide or disable them like any extension; the kvman menu and the recovery page remain the way back (`08` §8.17).
 
 | Preset | Extensions (beyond platform pack) | Notes |
 |---|---|---|

@@ -32,7 +32,7 @@ async function packed(builtins: readonly Builtin[]): Promise<string> {
     writePackage({ name: builtin.name, version: builtin.version, files: { 'dist/extension.js': source(builtin) } }, join(extensions, builtin.name.slice('@acme/'.length)));
   }
   const builtin = join(temporary('upgrade-builtin'), 'builtin');
-  await packBuiltins(extensions, builtin, { registry: closedRegistry, environment: process.env });
+  await packBuiltins(extensions, builtin, { registry: closedRegistry, environment: process.env, kvmanVersion: '0.0.0' });
   return builtin;
 }
 

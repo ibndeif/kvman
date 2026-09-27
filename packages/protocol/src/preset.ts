@@ -10,6 +10,11 @@ import { textSchema } from './text.ts';
 import { navGroupDefSchema, navItemDefSchema, pageDefSchema } from './ui/contributions.ts';
 import { withIdentity } from './ui/entries.ts';
 
+// 07 §7.6: the platform pack namespaces hidden as one group.
+export const platformNamespaces = ['settings', 'presets', 'extensions', 'inspector'] as const;
+
+export const presetIdSchema = z.string().regex(/^[a-z0-9-]{1,64}$/, 'preset ids match ^[a-z0-9-]{1,64}$');
+
 const presetExtensionSchema = z
   .strictObject({
     source: sourceSchema,
@@ -31,7 +36,7 @@ const homeRouteSchema = z.string().regex(/^\/(?:[a-z0-9-]+(?:\/[a-z0-9-]+)*)?$/,
 
 export const presetSchema = z.strictObject({
   presetVersion: z.literal(1, 'requires a newer kvman'),
-  id: z.string().regex(/^[a-z0-9-]{1,64}$/, 'preset ids match ^[a-z0-9-]{1,64}$'),
+  id: presetIdSchema,
   name: z.string().min(1),
   description: z.string().min(1).exactOptional(),
   icon: iconNameSchema.exactOptional(),

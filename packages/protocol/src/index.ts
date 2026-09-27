@@ -38,6 +38,7 @@ export * from './migration-frames.ts';
 export * from './message.ts';
 export * from './naming/naming-grammar.ts';
 export * from './naming/type-pattern.ts';
+export * from './preset-lifecycle.ts';
 export * from './preset-secrets.ts';
 export * from './preset.ts';
 export * from './problem.ts';

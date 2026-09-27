@@ -43,7 +43,7 @@ export class WorkspaceQueries {
     return { ok: true, value: listings };
   }
 
-  get(payload: unknown): ExtensionQueryAnswer<WorkspaceGetResult> {
+  get(payload: unknown): ExtensionQueryAnswer<Omit<WorkspaceGetResult, 'repoPreset'>> {
     const { workspaceId } = workspaceGetRequestSchema.parse(payload);
     const row = this.#rows().find((candidate) => candidate.id === workspaceId);
     if (row === undefined) return { ok: false, code: 'WORKSPACE_INVALID', detail: `no workspace ${workspaceId} exists` };

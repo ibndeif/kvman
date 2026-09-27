@@ -14,7 +14,7 @@ export async function packedBuiltins(): Promise<string> {
     writePackage({ name, files: { 'dist/extension.js': extensionSource(name, namespace) } }, join(extensions, namespace));
   }
   const builtin = join(temporary('builtin'), 'builtin');
-  await packBuiltins(extensions, builtin, { registry: closedRegistry, environment: process.env });
+  await packBuiltins(extensions, builtin, { registry: closedRegistry, environment: process.env, kvmanVersion: '0.0.0' });
   return builtin;
 }
 

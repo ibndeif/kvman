@@ -1,13 +1,20 @@
 import {
   extensionGetRequestSchema, extensionsListRequestSchema, jsonSchema, manifestSchema, quarantineReasonSchema, type Capabilities, type ExtensionGetResult, type ExtensionListing,
-  type Isolation, type Json, type Manifest,
+  type Isolation, type Issue, type Json, type Manifest,
 } from '@kvman/protocol';
 import type { RegistryState } from '../registry/registry-state.ts';
 import type { GrantsSource } from '../router/grants.ts';
 import type { Connection } from '../storage/driver.ts';
 import { readWorkspace } from './workspace-rows.ts';
 
-export type ExtensionQueryAnswer<T> = { ok: true; value: T } | { ok: false; code: 'NOT_FOUND' | 'WORKSPACE_INVALID' | 'CAPABILITY_DENIED'; detail: string };
+export type ExtensionQueryAnswer<T> =
+  | { ok: true; value: T }
+  | {
+    ok: false;
+    code: 'NOT_FOUND' | 'WORKSPACE_INVALID' | 'CAPABILITY_DENIED' | 'PRESET_REQUIRED' | 'PRESET_INVALID' | 'PRESET_UNSHAREABLE' | 'PRESET_SECRET' | 'PRESET_READONLY';
+    detail: string;
+    issues?: Issue[];
+  };
 
 type ExtensionRow = { name: string; digest: string; status: string; reason: unknown; pending: boolean };
 

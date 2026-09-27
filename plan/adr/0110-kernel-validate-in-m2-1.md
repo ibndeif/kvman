@@ -36,4 +36,4 @@ Option 1.
 
 - `@kvman/protocol` gains `validateRequestSchema` and `validateResultSchema`.
 - `03` §3.8's row notes what M2.1 accepts.
-- M2.3 adds `workspaceId`, and M2.11 (which builds `registerTranslations` and catalog validation) adds `catalog`.
+- M2.8 adds `workspaceId` (M2.3 did not; ADR 0151), and M2.11 (which builds `registerTranslations` and catalog validation) adds `catalog`.

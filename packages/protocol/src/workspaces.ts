@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { workspaceIdSchema } from './identifiers.ts';
+import { jsonSchema } from './json.ts';
 import { trustedFileSchema, trustModeSchema } from './trust.ts';
 
 // The payloads and results of the workspace kernel types (03 §3.8, 07 §7.1, ADRs 0122 and 0127).
@@ -54,9 +55,24 @@ export const workspaceGetResultSchema = z.strictObject({
   name: z.string().min(1),
   kind: workspaceKindSchema,
   trust: workspaceTrustSchema.nullable(),
+  repoPreset: z.boolean(),
 });
 export type WorkspaceGetResult = z.infer<typeof workspaceGetResultSchema>;
 
 // kernel.workspace.opened, .renamed, and .forgotten, published without a workspace (ADR 0122).
 export const workspaceEventSchema = z.strictObject({ workspaceId: workspaceIdSchema });
 export type WorkspaceEvent = z.infer<typeof workspaceEventSchema>;
+
+// 07 §7.1, §7.2, §7.4, ADR 0150: preview workspaces and the repo preset query.
+
+// ADR 0150: a preview name matches ^[a-z0-9-]{1,64}$.
+export const previewNameSchema = z.string().regex(/^[a-z0-9-]{1,64}$/, 'a preview name matches ^[a-z0-9-]{1,64}$');
+
+export const workspacePreviewCreateRequestSchema = z.strictObject({ name: previewNameSchema, from: workspaceIdSchema });
+export type WorkspacePreviewCreateRequest = z.infer<typeof workspacePreviewCreateRequestSchema>;
+
+export const workspacePresetGetRequestSchema = z.strictObject({ workspaceId: workspaceIdSchema });
+export type WorkspacePresetGetRequest = z.infer<typeof workspacePresetGetRequestSchema>;
+
+export const workspacePresetGetResultSchema = z.strictObject({ json: jsonSchema });
+export type WorkspacePresetGetResult = z.infer<typeof workspacePresetGetResultSchema>;

@@ -112,7 +112,7 @@ describe('sources (plan 06 §6.1–§6.2, ADRs 0116, 0118)', installTests, () =>
     const extensions = temporary('builtin-sources');
     writePackage(samplePackage(), join(extensions, 'sample'));
     const builtin = join(temporary('builtin'), 'builtin');
-    await packBuiltins(extensions, builtin, { registry: closedRegistry, environment: process.env });
+    await packBuiltins(extensions, builtin, { registry: closedRegistry, environment: process.env, kvmanVersion: '0.0.0' });
     const digests = join(builtin, 'digests.json');
     writeFileSync(digests, readFileSync(digests, 'utf8').replace(/"digest": "[0-9a-f]{64}"/, `"digest": "${'0'.repeat(64)}"`));
     fixture = await openInstallFixture({ builtin });

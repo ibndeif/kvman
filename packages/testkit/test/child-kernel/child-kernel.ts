@@ -103,6 +103,25 @@ async function firstRun(home: string, builtin: string): Promise<void> {
   report({ ok: true, port: kernel.identity.port });
 }
 
+// M2.8-E49/E50: workspaces A and B, each with an empty applied preset and no extension installed. The kernel
+// boots with the npm registry and environment of its process (the test points them at its local registry).
+const presetsWorkspaceB = { workspaceId: 'b'.repeat(64), path: '/w/b', name: 'B' } as const;
+
+async function bootPresetsKernel(home: string): Promise<void> {
+  await prepareHome(home, async (connection) => {
+    applyTestPreset(connection, fixtureFolder, {});
+    applyTestPreset(connection, presetsWorkspaceB, {});
+  });
+  const kernel = await Kernel.boot({
+    home, builtin: noBuiltins(home), homeWorkspace: homeWorkspaceOf(home),
+    npmRegistry: npmRegistryFrom(process.env), environment: process.env,
+    poolSize: 1, ids, now: Date.now, timers: systemTimers, openLogger, defaultLocale: () => 'en',
+    faults: faultPointsOf(process.env['KVMAN_FAULTS'], ids.next()),
+  });
+  process.on('SIGTERM', () => void kernel.shutdown().then(() => process.disconnect()));
+  report({ ok: true, port: kernel.identity.port });
+}
+
 // M2.7-H8: asked over IPC, the kernel collects garbage (with --expose-gc) and reports its heap and running hosts.
 function answerMemory(kernel: Kernel): void {
   process.on('message', (message) => {
@@ -118,6 +137,16 @@ async function main(): Promise<void> {
   if (values.fixture === 'first-run' && values.home !== undefined && values.builtin !== undefined) {
     try {
       await firstRun(values.home, values.builtin);
+    } catch (error) {
+      process.exitCode = 1;
+      report({ ok: false, problem: problemOf(error) });
+      process.disconnect();
+    }
+    return;
+  }
+  if (values.fixture === 'presets' && values.home !== undefined) {
+    try {
+      await bootPresetsKernel(values.home);
     } catch (error) {
       process.exitCode = 1;
       report({ ok: false, problem: problemOf(error) });

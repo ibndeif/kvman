@@ -48,7 +48,8 @@ function enable(scope: UnitScope, change: Extract<PresetChange, { kind: 'extensi
   return writePreset(scope, change.workspaceId, applied, { ...applied.preset.extensions, [change.name]: entry }, { name: change.name, cause: 'enable' });
 }
 
-function enabledAnywhere(scope: UnitScope, name: string): boolean {
+// Whether any workspace's applied preset enables the extension.
+export function enabledAnywhere(scope: Pick<UnitScope, 'connection'>, name: string): boolean {
   return scope.connection
     .prepare('SELECT preset FROM workspace_presets')
     .all()

@@ -7,6 +7,7 @@ import {
   uninstallResultSchema, validateRequestSchema, validateResultSchema, type JsonObject, type TypeEntry,
 } from '@kvman/protocol';
 import { jsonDocument } from './kernel-json-schemas.ts';
+import { presetEntries } from './kernel-preset-types.ts';
 import { versionEntries } from './kernel-version-types.ts';
 import { workspaceEntries } from './kernel-workspace-types.ts';
 
@@ -47,7 +48,7 @@ export function kernelTypeEntries(): TypeEntry[] {
     },
     {
       type: 'kernel.validate', kind: 'query', access: 'all', handler: 'query:kernel.validate',
-      description: 'Checks a manifest, preset, or page against the structural rules and returns every issue with its hint.',
+      description: 'Checks a manifest, preset, or page against the structural rules, and against the workspace when workspaceId names one, returning every issue with its hint.',
       input: jsonDocument(validateRequestSchema, 'input'), output: jsonDocument(validateResultSchema, 'output'),
     },
     {
@@ -58,6 +59,7 @@ export function kernelTypeEntries(): TypeEntry[] {
     ...extensionLifecycleEntries(),
     ...versionEntries(),
     ...workspaceEntries(),
+    ...presetEntries(),
     {
       type: 'kernel.started', kind: 'event', delivery: 'transient',
       description: 'The kernel finished booting.',

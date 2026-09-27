@@ -11,7 +11,7 @@ export type ChildKernel = { port: number; pid: number; exited: Promise<Exit>; st
 
 export type LaunchOptions = {
   home: string;
-  fixture: 'ledger' | 'bench' | 'desk' | 'probe' | 'keeper' | 'runner' | 'notes' | 'notes-enable' | 'notes-shared' | 'first-run';
+  fixture: 'ledger' | 'bench' | 'desk' | 'probe' | 'keeper' | 'runner' | 'notes' | 'notes-enable' | 'notes-shared' | 'first-run' | 'presets';
   faults?: string;
   builtin?: string;
   environment?: NodeJS.ProcessEnv;

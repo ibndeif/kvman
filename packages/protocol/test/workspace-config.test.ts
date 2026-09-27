@@ -16,7 +16,7 @@ describe('workspace, enable, config, and secret shapes (plan 03 §3.8, ADRs 0122
       [workspaceRenameRequestSchema, { workspaceId, name: 'Research' }], [workspaceForgetRequestSchema, { workspaceId }],
       [workspacesListRequestSchema, { includePreview: true }],
       [workspacesListResultSchema, [{ id: workspaceId, path: '/w/a', name: 'A', kind: 'normal', trusted: false, exists: true }]],
-      [workspaceGetResultSchema, { id: workspaceId, path: '/w/a', name: 'A', kind: 'normal', trust: null }], [workspaceEventSchema, { workspaceId }],
+      [workspaceGetResultSchema, { id: workspaceId, path: '/w/a', name: 'A', kind: 'normal', trust: null, repoPreset: false }], [workspaceEventSchema, { workspaceId }],
       [extensionEnableRequestSchema, { workspaceId, name: '@acme/pdf', grants }], [extensionDisableRequestSchema, { workspaceId, name: '@acme/pdf' }],
       [presetRevisionResultSchema, { revision: 2 }], [extensionEnabledSchema, { workspaceId, name: '@acme/pdf' }], [extensionUnquarantinedSchema, { name: '@acme/pdf' }],
       [configGetRequestSchema, { extension: '@acme/pdf', workspaceId }],

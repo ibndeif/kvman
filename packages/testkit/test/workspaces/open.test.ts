@@ -3,7 +3,7 @@ import { mkdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'nod
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { workspaceA } from '../hosts/harness.ts';
-import { extensionActor, problemOf, type InstallFixture } from '../install/harness.ts';
+import { command, extensionActor, problemOf, type InstallFixture } from '../install/harness.ts';
 import { admission, enable, eventsOf, openFolderAsWorkspace, openWorkspaceFixture, query, rows, run, temporaryFolder, valueOf, workspaceTests } from './harness.ts';
 
 let fixture: InstallFixture | undefined;
@@ -90,7 +90,7 @@ describe('opening and naming workspaces (plan 07 §7.1, ADR 0127)', workspaceTes
       ],
     });
     expect(await query(current, 'kernel.workspace.get', { workspaceId: one?.workspaceId ?? '' })).toEqual({
-      ok: true, value: { id: one?.workspaceId, path: one?.path, name: 'beta', kind: 'normal', trust: null },
+      ok: true, value: { id: one?.workspaceId, path: one?.path, name: 'beta', kind: 'normal', trust: null, repoPreset: false },
     });
     expect(await query(current, 'kernel.workspace.get', { workspaceId: 'c'.repeat(64) })).toMatchObject({ ok: false, problem: { code: 'WORKSPACE_INVALID' } });
   });
@@ -104,7 +104,8 @@ describe('opening and naming workspaces (plan 07 §7.1, ADR 0127)', workspaceTes
     expect(await run(current, 'desk.call', { type: 'kernel.workspace.rename', payload: { workspaceId: workspaceA, name: 'X' } })).toEqual({ ok: true, value: { code: 'CAPABILITY_DENIED' } });
     expect(await run(current, 'steward.call', { type: 'kernel.workspace.open', payload: { path } })).toEqual({ ok: true, value: { result: { workspaceId: idOf(path) } } });
     expect(await run(current, 'steward.call', { type: 'kernel.workspace.rename', payload: { workspaceId: workspaceA, name: 'X' } })).toEqual({ ok: true, value: { result: {} } });
-    expect(await admission(current, 'kernel.workspace.forget', { workspaceId: idOf(path) }, extensionActor('@acme/steward'))).toBe('CALLER_NOT_ALLOWED');
+    expect(await admission(current, 'kernel.workspace.forget', { workspaceId: idOf(path) }, extensionActor('@acme/steward'))).toBe('admitted');
+    expect(problemOf(await command(current, 'kernel.workspace.forget', { workspaceId: idOf(path) }, extensionActor('@acme/steward')))).toMatchObject({ code: 'CALLER_NOT_ALLOWED' });
   });
 
   it('M2.3-E6 a command or query for a workspace without a row is refused at admission', async () => {

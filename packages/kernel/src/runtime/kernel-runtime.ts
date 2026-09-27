@@ -53,6 +53,7 @@ import { recoverInterrupted } from './crash-recovery.ts';
 import { FileServices } from './file-services.ts';
 import { healthOf, type KernelIdentity } from './health.ts';
 import { wireKernelHost } from './kernel-host-wiring.ts';
+import { PresetImportTokens } from '../presets/import-tokens.ts';
 
 export type KernelRuntimeOptions = {
   databaseFile: string;
@@ -262,10 +263,11 @@ export class KernelRuntime {
       this.hosts.abortMessages(messageIds);
       this.processes.killSpawnedBy(messageIds);
     };
+    const presetTokens = new PresetImportTokens(options.now);
     const kernel = wireKernelHost({
       connection, commits, pipeline: this.pipeline, scheduler: this.scheduler, registry: this.registry, directory: this.workspaces, install: this.install,
       snapshots: this.snapshots, trust: this.files.trust, queries: this.#queries, secrets: options.secrets, versions: this.versions, migrations: this.migrations,
-      timers: options.timers, faults: options.faults ?? inertFaults, home: options.install.home, version: options.identity.version, health: () => this.health(),
+      timers: options.timers, faults: options.faults ?? inertFaults, home: options.install.home, logger: options.logger, version: options.identity.version, now: options.now, presetTokens, health: () => this.health(),
       abortMessages, killProcesses: (workspaceId) => this.processes.killWorkspace(workspaceId), quarantine: (extension, reason) => quarantines.quarantine(extension, reason),
       requestShutdown: options.requestShutdown,
     });

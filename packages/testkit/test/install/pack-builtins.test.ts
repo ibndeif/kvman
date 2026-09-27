@@ -1,10 +1,12 @@
 import { execFile } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
+import { packBuiltins } from '@kvman/kernel';
 import { builtinDigestsSchema } from '@kvman/protocol';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { closedRegistry } from './fixture-snapshots.ts';
 import { installed, installTests, openInstallFixture } from './harness.ts';
 import { extensionSource, packPackage, temporary, writePackage } from './packages.ts';
 import { startRegistry, type LocalRegistry } from './registries.ts';
@@ -45,5 +47,30 @@ describe('scripts/pack-builtins (plan 06 §6.9, ADR 0115)', installTests, () => 
     const emptyOut = join(temporary('pack-out'), 'builtin');
     await packBuiltinsScript(join(temporary('no-extensions'), 'extensions'), emptyOut);
     expect(JSON.parse(readFileSync(join(emptyOut, 'digests.json'), 'utf8'))).toEqual({});
+  });
+
+  it('M2.8-E5 packBuiltins packs builtin presets and names an invalid file', async () => {
+    const presets = join(temporary('pack-presets'), 'presets');
+    mkdirSync(presets, { recursive: true });
+    const coding = {
+      presetVersion: 1, id: 'coding', name: 'Coding', revision: 3, app: { title: 'Coding', home: '/' },
+      extensions: {
+        '@acme/first': {
+          source: 'builtin:@acme/first', integrity: 'builtin:0.0.1', enabled: true,
+          grants: { isolation: 'shared', requested: [], derived: { subscribes: [], providesLlm: [] } },
+        },
+      },
+    };
+    writeFileSync(join(presets, 'coding.json'), JSON.stringify(coding));
+    const extensions = join(temporary('pack-presets-empty'), 'extensions');
+    mkdirSync(extensions, { recursive: true });
+    const out = join(temporary('pack-presets-out'), 'builtin');
+    await packBuiltins(extensions, out, { registry: closedRegistry, environment: process.env, presets, kvmanVersion: '0.0.0' });
+    const packed = JSON.parse(readFileSync(join(out, 'presets', 'coding.json'), 'utf8'));
+    expect(packed.extensions['@acme/first'].integrity).toBe('builtin:0.0.0');
+    expect(packed.revision).toBe(3);
+    writeFileSync(join(presets, 'broken.json'), 'not json at all');
+    await expect(packBuiltins(extensions, join(temporary('pack-presets-out'), 'builtin'), { registry: closedRegistry, environment: process.env, presets, kvmanVersion: '0.0.0' }))
+      .rejects.toThrow('broken.json');
   });
 });

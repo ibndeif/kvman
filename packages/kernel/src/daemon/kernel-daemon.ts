@@ -14,6 +14,7 @@ import { kernelProblem, ProblemError } from '../problems.ts';
 import type { KernelIdentity } from '../runtime/health.ts';
 import { KernelRuntime } from '../runtime/kernel-runtime.ts';
 import { openHomeWorkspace } from '../runtime/home-workspace.ts';
+import { seedBuiltinPresets } from '../runtime/preset-seeding.ts';
 import { installBuiltins, verifyEnabledSnapshots } from '../runtime/snapshot-boot.ts';
 import { isUpgrade, resumeMigrations, upgradeBuiltins } from '../runtime/version-boot.ts';
 import type { SchedulerTimers } from '../scheduler/timers.ts';
@@ -161,9 +162,11 @@ export class Kernel {
     await resumeMigrations(this.runtime, this.connection, logger, correlationId);
     if (firstRun) {
       await installBuiltins(this.runtime, correlationId);
+      await seedBuiltinPresets(this.runtime, this.connection, 'first-run', logger, correlationId);
       await openHomeWorkspace(this.runtime, options.homeWorkspace ?? defaultHomeWorkspace(), options.home, correlationId);
     } else if (isUpgrade(recordedVersion(this.connection), identity.version)) {
       await upgradeBuiltins(this.runtime, this.connection, logger, correlationId);
+      await seedBuiltinPresets(this.runtime, this.connection, 'upgrade', logger, correlationId);
     }
     await this.runtime.start();
     writeKvShim(options.home);

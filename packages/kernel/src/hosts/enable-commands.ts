@@ -1,6 +1,6 @@
 import { extensionDisableRequestSchema, extensionEnableRequestSchema, type ExtensionEnableRequest, type Manifest, type Message, type Problem } from '@kvman/protocol';
 import type { SnapshotStore } from '../install/snapshot-store.ts';
-import { configProblem, covers, storedDataVersion, type DataMigrations } from '../migrations/data-migrations.ts';
+import type { DataMigrations } from '../migrations/data-migrations.ts';
 import { grantDifferences } from '../registry/grant-validity.ts';
 import { kernelTypeEntries } from '../registry/kernel-types.ts';
 import type { RegistryState } from '../registry/registry-state.ts';
@@ -11,10 +11,10 @@ import type { KernelChange } from '../storage/kernel-changes.ts';
 import { readAppliedPreset, type PresetEntry } from '../storage/preset-changes.ts';
 import { isAdministrator } from './administrators.ts';
 import { parsed, refusal } from './command-payloads.ts';
-import { mostIsolated } from './reload-checks.ts';
+import { prepareEnableData } from './enable-data.ts';
 import type { KernelCommits } from './kernel-commits.ts';
 import type { SerialChanges } from './serial-changes.ts';
-import { readWorkspace } from './workspace-rows.ts';
+import { readWorkspace, readWorkspaceKind } from './workspace-rows.ts';
 
 export type EnableCommandsDeps = {
   connection: Connection;
@@ -58,35 +58,12 @@ export class EnableCommands {
     const checked = await this.#enableCheck(message, request.value);
     if (!checked.ok) return this.#deps.commits.fail(claim, checked.problem);
     const { workspaceId, name, grants } = request.value;
-    const data = await this.#prepareData(message, name, checked.version.digest, grants);
+    const data = await prepareEnableData(this.#deps, message, name, checked.version.digest, grants);
     // An enable the kernel's shutdown interrupted stays running and is redelivered at the next start (ADR 0091).
     if (!data.ok && data.problem.code === 'KERNEL_STOPPING') return undefined;
     if (!data.ok) return this.#deps.commits.fail(claim, data.problem);
     const entry: PresetEntry = { ...checked.version, enabled: true, grants };
     await this.#change(claim, { kind: 'extension.enable', workspaceId, name, entry, dataVersion: data.version });
-  }
-
-  // 04 §4.8, ADRs 0142, 0143: before the enable commits, data older than the code is migrated with it (and every
-  // stored config value checked in the last step); newer data it does not cover refuses the enable.
-  async #prepareData(message: Message, name: string, digest: string, grants: ExtensionEnableRequest['grants']): Promise<{ ok: true; version: number } | { ok: false; problem: Problem }> {
-    const manifest = this.#deps.registry.current().manifestOf(name);
-    const snapshot = this.#deps.snapshots.verifiedEntry(name);
-    if (manifest === undefined || snapshot === undefined) return { ok: false, problem: refusal(message, 'NOT_FOUND', { detail: `no verified version of ${name} is installed` }) };
-    const code = manifest.data.version;
-    const stored = storedDataVersion(this.#deps.connection, name);
-    if (stored !== undefined && stored > code && !covers(manifest, stored)) {
-      return { ok: false, problem: refusal(message, 'SCHEMA_TOO_NEW', { detail: `the stored data of ${name} is at version ${stored}, newer than its code's ${code}`, params: { stored, supported: code } }) };
-    }
-    if (stored === undefined || stored >= code) {
-      const problem = configProblem(this.#deps.connection, name, manifest, message.correlationId);
-      return problem === undefined ? { ok: true, version: code } : { ok: false, problem };
-    }
-    const others = [...this.#deps.registry.enabled()].flatMap(([workspaceId, names]) => (names.includes(name) ? [this.#deps.registry.capabilities(name, workspaceId)] : []));
-    const outcome = await this.#deps.migrations.migrate({
-      extension: name, target: { digest, manifest, snapshot }, active: manifest, isolation: mostIsolated([grants, ...others.filter((grant) => grant !== undefined)]),
-      migrating: { digest }, resume: false, correlationId: message.correlationId,
-    });
-    return outcome.ok ? { ok: true, version: code } : { ok: false, problem: outcome.problem };
   }
 
   async #disable(claim: Claim): Promise<void> {
@@ -119,6 +96,8 @@ export class EnableCommands {
     const refused = (problem: Problem) => ({ ok: false, problem }) as const;
     const { workspaceId, name, grants } = request;
     if (readWorkspace(this.#deps.connection, workspaceId) === undefined) return refused(refusal(message, 'WORKSPACE_INVALID', { detail: `no workspace ${workspaceId} exists` }));
+    const caller = this.#callerProblem(message, workspaceId, name);
+    if (caller !== undefined) return refused(caller);
     if (readAppliedPreset(this.#deps, workspaceId) === undefined) {
       return refused(refusal(message, 'PRESET_REQUIRED', { detail: `workspace ${workspaceId} has no applied preset`, hint: 'choose a preset for the workspace first' }));
     }
@@ -126,6 +105,8 @@ export class EnableCommands {
     const manifest = registry.manifestOf(name);
     const version = this.#activeVersion(name);
     if (manifest === undefined || version === undefined) return refused(refusal(message, 'NOT_FOUND', { detail: `no extension ${name} is installed` }));
+    const limited = this.#devLimitProblem(message, workspaceId, grants, version.source);
+    if (limited !== undefined) return refused(limited);
     if (registry.isQuarantined(name)) return refused(refusal(message, 'EXT_QUARANTINED', { detail: `${name} is quarantined`, hint: 'resolve the quarantine on the recovery page first' }));
     if (!(await this.#deps.snapshots.verify(name))) {
       await this.#deps.quarantine(name, 'EXT_INTEGRITY');
@@ -135,6 +116,30 @@ export class EnableCommands {
       ?? this.#grantProblem(message, manifest, grants, version.source.startsWith('builtin:'))
       ?? this.#requiresProblem(message, workspaceId, manifest);
     return problem === undefined ? { ok: true, version } : refused(problem);
+  }
+
+  // 07 §7.1, ADR 0150: a person (and the kernel) may enable anywhere; an extension with kernel.admin only a
+  // dev: source in a preview workspace, without the grant dialog; anyone else is refused.
+  #callerProblem(message: Message, workspaceId: string, name: string): Problem | undefined {
+    if (message.source === 'kernel' || message.source.startsWith('user:')) return undefined;
+    if (!isAdministrator(this.#deps.registry, message)) {
+      return refusal(message, 'CALLER_NOT_ALLOWED', { detail: `only a person may enable ${name} in workspace ${workspaceId}`, hint: 'an extension with kernel.admin may enable a dev version in a preview workspace' });
+    }
+    const preview = readWorkspaceKind(this.#deps.connection, workspaceId) === 'preview';
+    const source = this.#activeVersion(name)?.source;
+    if (!preview || source === undefined || !source.startsWith('dev:')) {
+      return refusal(message, 'CALLER_NOT_ALLOWED', { detail: `only a person may enable ${name} in workspace ${workspaceId}`, hint: 'an extension with kernel.admin may enable a dev version in a preview workspace' });
+    }
+    return undefined;
+  }
+
+  // 06 §6.4, ADR 0150: every enable of a dev: source in a preview workspace, a person's too, runs sandboxed and is
+  // never granted process, network, or kernel.admin.
+  #devLimitProblem(message: Message, workspaceId: string, grants: ExtensionEnableRequest['grants'], source: string): Problem | undefined {
+    if (!source.startsWith('dev:') || readWorkspaceKind(this.#deps.connection, workspaceId) !== 'preview') return undefined;
+    const forbidden = grants.requested.some((capability) => capability.name === 'process' || capability.name === 'network' || capability.name === 'kernel.admin');
+    if (grants.isolation === 'sandboxed' && !forbidden) return undefined;
+    return refusal(message, 'CAPABILITY_DENIED', { detail: 'a dev version in a preview workspace runs sandboxed and is never granted process, network, or kernel.admin' });
   }
 
   #activeVersion(name: string): ActiveVersion | undefined {

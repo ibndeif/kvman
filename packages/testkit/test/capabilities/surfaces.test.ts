@@ -2,7 +2,7 @@ import type { Sender } from '@kvman/kernel';
 import type { Json } from '@kvman/protocol';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { workspaceA, workspaceB } from '../hosts/harness.ts';
-import { problemOf, type InstallFixture } from '../install/harness.ts';
+import { command, problemOf, type InstallFixture } from '../install/harness.ts';
 import { admission, enable, grantsOf, presetRow, rows, run, valueOf } from '../workspaces/harness.ts';
 import { disableTools, enableAt, enableWithGrant, isolationTests, openIsolationFixture } from '../isolation/harness.ts';
 
@@ -72,7 +72,8 @@ describe('capability enforcement on ctx (plan 05 §5.7, 03 §3.8, ADRs 0052, 013
       ['kernel.shutdown', {}],
     ];
     for (const [type, payload] of attempts) expect({ type, outcome: await wardenCall(type, payload) }).toEqual({ type, outcome: { code: 'CALLER_NOT_ALLOWED' } });
-    expect(await admission(fixture, 'kernel.extension.enable', { workspaceId: workspaceA, name: '@acme/probe', grants }, wardenProcess, undefined)).toBe('CALLER_NOT_ALLOWED');
+    expect(await admission(fixture, 'kernel.extension.enable', { workspaceId: workspaceA, name: '@acme/probe', grants }, wardenProcess, undefined)).toBe('admitted');
+    expect(problemOf(await command(fixture, 'kernel.extension.enable', { workspaceId: workspaceA, name: '@acme/probe', grants }, wardenProcess))).toMatchObject({ code: 'CALLER_NOT_ALLOWED' });
     expect(presetRow(fixture).extensions['@acme/probe']).toBeUndefined();
     expect(rows(fixture, 'SELECT id FROM workspaces WHERE id = ?', workspaceB)).toHaveLength(1);
     expect(await enable(fixture, workspaceA, '@acme/probe', grants)).toMatchObject({ ok: true });
