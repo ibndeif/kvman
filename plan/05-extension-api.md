@@ -314,7 +314,10 @@ interface Ctx {
 
   // effects
   step<T>(name, fn: () => Promise<T>, opts?: { retrySafe?: boolean }): Promise<T>;
-  process: { spawn(opts): Promise<ProcessHandle> };                        // capability 'process'; detached + onExit, 03 §3.7
+  process: {                                                               // capability 'process'; detached + onExit, 03 §3.7, ADR 0139
+    spawn(opts: SpawnOptions): Promise<ProcessHandle>;                     // { processId, wait(): Promise<ProcessResult>, kill() }
+    kill(processId: string): Promise<void>;                                // any live process the extension owns
+  };
   files: {                                                                 // capabilities files.read / files.write (07 §7.2, ADR 0136)
     read(path): Promise<string>;                                           // UTF-8, ≤ 16 MB; paths relative to the workspace root
     write(path, content: string | Uint8Array): Promise<void>;             // creates or replaces, creates parents; ≤ 16 MB

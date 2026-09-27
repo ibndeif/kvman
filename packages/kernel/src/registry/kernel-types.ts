@@ -1,7 +1,8 @@
 import {
   cancelRequestSchema, cancelResultSchema, extensionGetRequestSchema, extensionGetResultSchema, extensionInstalledSchema, extensionQuarantinedSchema,
   extensionsListRequestSchema, extensionsListResultSchema, extensionUninstalledSchema, healthRequestSchema, healthResultSchema, installRequestSchema,
-  installResultSchema, kernelStartedSchema, messageDeadLetteredSchema, presetChangedSchema, schemaDocumentSchema, schemaGetRequestSchema,
+  installResultSchema, kernelStartedSchema, messageDeadLetteredSchema, presetChangedSchema, processesListRequestSchema, processesListResultSchema,
+  schemaDocumentSchema, schemaGetRequestSchema,
   shutdownRequestSchema, shutdownResultSchema, stageRequestSchema, stageResultSchema, uninstallRequestSchema,
   uninstallResultSchema, validateRequestSchema, validateResultSchema, type JsonObject, type TypeEntry,
 } from '@kvman/protocol';
@@ -47,6 +48,11 @@ export function kernelTypeEntries(): TypeEntry[] {
       type: 'kernel.validate', kind: 'query', access: 'all', handler: 'query:kernel.validate',
       description: 'Checks a manifest, preset, or page against the structural rules and returns every issue with its hint.',
       input: jsonDocument(validateRequestSchema, 'input'), output: jsonDocument(validateResultSchema, 'output'),
+    },
+    {
+      type: 'kernel.processes.list', kind: 'query', access: 'all', handler: 'query:kernel.processes.list',
+      description: "Supervised processes, newest first, without args, environment, or output: an extension's own, or every one for an administrator.",
+      input: jsonDocument(processesListRequestSchema, 'input'), output: jsonDocument(processesListResultSchema, 'output'),
     },
     ...extensionLifecycleEntries(),
     ...workspaceEntries(),

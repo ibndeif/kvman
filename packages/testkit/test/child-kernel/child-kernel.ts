@@ -1,3 +1,4 @@
+import { mkdirSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -13,20 +14,23 @@ import ledger from './fixtures/extensions/ledger.ts';
 import desk from '../workspaces/fixtures/extensions/desk.ts';
 import probe from '../isolation/fixtures/extensions/probe.ts';
 import keeper from '../blobs/fixtures/extensions/keeper.ts';
+import runner from '../processes/fixtures/extensions/runner.ts';
 import { applyTestPreset, emptyGrant } from '../install/fixture-presets.ts';
 import { closedRegistry, installFixture, noBuiltins, prepareHome } from '../install/fixture-snapshots.ts';
-import { fixtureFolder } from './workspace.ts';
+import { fixtureFolder, workspaceFolderOf } from './workspace.ts';
 
 // A kernel process with one fixture extension, booted as the daemon boots (ADR 0089): the fault harness kills it at
 // a fault point (ADR 0100), and the benchmarks load it over HTTP (ADR 0104). It reports like the daemon (ADR 0087).
 
-type Fixture = { name: string; definition: ExtensionDefinition; folder: string; file: string; poolSize: number; grant?: Capabilities };
+// `realWorkspace` gives the fixture workspace a real folder beside the home, and PATH to the processes it starts.
+type Fixture = { name: string; definition: ExtensionDefinition; folder: string; file: string; poolSize: number; grant?: Capabilities; realWorkspace?: boolean };
 
 const childFixtures = fileURLToPath(new URL('./fixtures/extensions/', import.meta.url));
 
 // The desk of the workspace tests: a secret config field and a deferred command, for the M2.3 crash points. The probe of
 // the isolation tests runs sandboxed, for the M2.4 host crash point. The keeper of the blob tests puts blobs, for the M2.5
-// blob crash point and the boot that clears `once` trust.
+// blob crash point and the boot that clears `once` trust. The runner of the process tests spawns processes, for the M2.6
+// crash points, restarts, and shutdown.
 const fixtures: Record<string, Fixture> = {
   ledger: { name: '@acme/ledger', definition: ledger, folder: childFixtures, file: 'ledger.ts', poolSize: 1 },
   bench: { name: '@acme/bench', definition: bench, folder: childFixtures, file: 'bench.ts', poolSize: Math.max(1, Math.min(4, availableParallelism() - 1)) },
@@ -36,6 +40,10 @@ const fixtures: Record<string, Fixture> = {
     grant: { ...emptyGrant, isolation: 'sandboxed' },
   },
   keeper: { name: '@acme/keeper', definition: keeper, folder: fileURLToPath(new URL('../blobs/fixtures/extensions/', import.meta.url)), file: 'keeper.ts', poolSize: 1 },
+  runner: {
+    name: '@acme/runner', definition: runner, folder: fileURLToPath(new URL('../processes/fixtures/extensions/', import.meta.url)), file: 'runner.ts', poolSize: 1,
+    grant: { ...emptyGrant, requested: [{ name: 'process' }] }, realWorkspace: true,
+  },
 };
 
 const { values } = parseArgs({ options: { home: { type: 'string' }, fixture: { type: 'string' }, builtin: { type: 'string' } }, strict: true });
@@ -90,14 +98,17 @@ async function main(): Promise<void> {
   }
   const fixture = fixtures[values.fixture ?? ''];
   const home = values.home;
-  if (fixture === undefined || home === undefined) throw new Error('usage: child-kernel.ts --home <folder> --fixture ledger|bench|desk|probe|keeper|first-run [--builtin <folder>]');
+  if (fixture === undefined || home === undefined) throw new Error('usage: child-kernel.ts --home <folder> --fixture ledger|bench|desk|probe|keeper|runner|first-run [--builtin <folder>]');
   try {
+    const workspace = fixture.realWorkspace === true ? { ...fixtureFolder, path: workspaceFolderOf(home) } : fixtureFolder;
+    if (fixture.realWorkspace === true) mkdirSync(workspace.path, { recursive: true });
     await prepareHome(home, async (connection) => {
       await installFixture(connection, home, { definition: fixture.definition, folder: fixture.folder, entry: fixture.file });
-      applyTestPreset(connection, fixtureFolder, { [fixture.name]: fixture.grant ?? emptyGrant });
+      applyTestPreset(connection, workspace, { [fixture.name]: fixture.grant ?? emptyGrant });
     });
     const kernel = await Kernel.boot({
-      home, builtin: noBuiltins(home), homeWorkspace: homeWorkspaceOf(home), npmRegistry: closedRegistry, environment: {},
+      home, builtin: noBuiltins(home), homeWorkspace: homeWorkspaceOf(home), npmRegistry: closedRegistry,
+      environment: fixture.realWorkspace === true ? { PATH: process.env['PATH'] ?? '' } : {},
       poolSize: fixture.poolSize, ids, now: Date.now, timers: systemTimers, openLogger, defaultLocale: () => 'en',
       faults: faultPointsOf(process.env['KVMAN_FAULTS'], ids.next()),
     });

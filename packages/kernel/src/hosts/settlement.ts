@@ -22,9 +22,12 @@ export type SettlementDeps = {
   results: Pick<Admission, 'checkResult'>;
   // 04 §4.6: an attempt's open uploads, and without a commit its pending blob references, end with it.
   blobs: { ended(messageId: string, committed: boolean): Promise<void> };
+  // 03 §3.7: the processes of the invocation that are not detached end with it.
+  processes: { invocationEnded(invocationId: string): void };
 };
 
-type Run = { claim: Claim; live: ReadonlyMap<string, LiveAddress>; received?: ReadonlySet<string> };
+// `id` is the invocation's; a claim that never reached a host has none.
+type Run = { id?: string; claim: Claim; live: ReadonlyMap<string, LiveAddress>; received?: ReadonlySet<string> };
 
 const noNewValues: NewRecordedValues = { id: [], now: [] };
 
@@ -41,6 +44,7 @@ export class Settlement {
   }
 
   async completed(run: Run, frame: CompleteFrame): Promise<void> {
+    this.#ended(run);
     const { claim } = run;
     if (claim.message.kind === 'query') {
       this.#answerQuery(run, frame.outcome);
@@ -66,6 +70,7 @@ export class Settlement {
 
   // ADR 0084: the invocation deadline ended the attempt; the handler's later result is discarded by the host manager.
   async timedOut(run: Run, reason: 'deadline' | 'timeout'): Promise<void> {
+    this.#ended(run);
     const { message } = run.claim;
     const code = reason === 'deadline' ? 'DEADLINE_EXCEEDED' : message.kind === 'query' ? 'QUERY_TIMEOUT' : 'HANDLER_TIMEOUT';
     const problem = kernelProblem(code, { correlationId: message.correlationId, messageId: message.id });
@@ -79,11 +84,13 @@ export class Settlement {
 
   // A cancel already ended the message in its own unit (ADR 0083); only the preview is withdrawn.
   async aborted(run: Run): Promise<void> {
+    this.#ended(run);
     await this.#reset(run);
   }
 
   // 03 §3.6: caught on a stuck host through no fault of its own, it returns without an attempt penalty.
   async collateral(run: Run): Promise<void> {
+    this.#ended(run);
     await this.#reset(run);
     const { message, extension } = run.claim;
     if (message.kind === 'query') {
@@ -94,6 +101,7 @@ export class Settlement {
   }
 
   // 03 §3.9, ADR 0091: shutdown ended the attempt; it returns to pending without an attempt and runs at the next boot.
+  // Its processes are left to the supervisor's stop, which kills every group and leaves the rows to boot (ADR 0139).
   async interrupted(run: Run): Promise<void> {
     await this.#reset(run);
     const { message } = run.claim;
@@ -106,6 +114,7 @@ export class Settlement {
 
   // ADRs 0071, 0081: the extension could not be loaded; drift quarantines it.
   async loadFailed(run: Run, problem: Problem): Promise<void> {
+    this.#ended(run);
     const { message, extension } = run.claim;
     if (message.kind === 'query') this.#deps.queries.answer(message.id, { ok: false, problem });
     else await this.#failed(run, { ...problem, retryable: false }, noNewValues);
@@ -114,6 +123,7 @@ export class Settlement {
 
   // A host lost with the invocation in it (ADR 0067): a retryable INTERNAL.
   async lost(run: Run): Promise<void> {
+    this.#ended(run);
     const { message } = run.claim;
     const problem = kernelProblem('INTERNAL', { correlationId: message.correlationId, messageId: message.id, detail: 'the host running the handler exited' });
     if (message.kind === 'query') {
@@ -195,6 +205,10 @@ export class Settlement {
 
   #resolveWaiters(result: CommitResult): void {
     if (result.committed) this.#deps.waiters.resolve(result.replies);
+  }
+
+  #ended(run: Run): void {
+    if (run.id !== undefined) this.#deps.processes.invocationEnded(run.id);
   }
 
   async #reset({ claim, live }: Run): Promise<void> {

@@ -54,7 +54,11 @@ CREATE TABLE recorded_values (message_id TEXT, kind TEXT /* 'id' | 'now' */, n I
 
 CREATE TABLE processes (id TEXT PRIMARY KEY, message_id TEXT, extension TEXT, pid INTEGER,
   pgid INTEGER, process_start TEXT, state TEXT, log_path TEXT, log_blob TEXT, exit_code INTEGER,
-  started_at INTEGER, ended_at INTEGER);
+  started_at INTEGER, ended_at INTEGER,
+  -- kernel schema 4 (ADR 0139): what boot reconciliation needs to send onExit; spawned_by is the
+  -- spawning message's envelope without its payload
+  ws TEXT, command TEXT, detached INTEGER NOT NULL DEFAULT 0, on_exit TEXT, signal TEXT, reason TEXT,
+  truncated INTEGER NOT NULL DEFAULT 0, spawned_by TEXT);
 
 -- extension storage
 CREATE TABLE kv   (owner TEXT, ws TEXT, key TEXT, value TEXT, version INTEGER, updated_at INTEGER,
@@ -279,7 +283,7 @@ handle: async (_, ctx) => ({ items: await ctx.store.collection(files).find({ ord
 - **Scopes**: `workspace` (default) and `global` (`ctx.store.global`).
 - **Forgetting a workspace** (`kernel.workspace.forget`) happens in this order:
   1. Stop admitting messages for the workspace (`WORKSPACE_INVALID`), except the `onAbort` commands the kernel sends in step 2 (ADR 0122).
-  2. Cancel every unfinished message of the workspace (`kernel.cancel` semantics, `02` §2.9: running invocations are aborted, deferred commands end with `CANCELLED` and their `onAbort` runs, timers are dropped) and kill its processes (`03` §3.7, from M2.6). Wait for these, the `onAbort` commands included, to settle (at most 10 s, then abort).
+  2. Cancel every unfinished message of the workspace (`kernel.cancel` semantics, `02` §2.9: running invocations are aborted, deferred commands end with `CANCELLED` and their `onAbort` runs, timers are dropped) and kill its processes (`03` §3.7, from M2.6). Wait for these, the `onAbort` commands and the `onExit` commands of its killed detached processes included (ADR 0139), to settle (at most 10 s, then abort).
   3. In one transaction, delete every row with its `ws` for every owner (kv, docs, logs, blob refs), its messages, events, steps, and recorded values, its `llm_usage` rows, its applied preset, its `workspace_config` rows, and its notifications; then its `workspaces` row. Publish `kernel.workspace.forgotten` without a workspace (ADR 0122).
   4. Blobs left without references are collected by the normal GC (§4.6). The folder is never touched (a preview workspace's folder is deleted, `07` §7.1).
 - **Ownership**: an extension reads and writes only rows where `owner` is its name. To read another extension's data it calls that extension's queries.
@@ -342,7 +346,7 @@ A kernel background job (priority `background`):
 - deletes finished messages, their steps, spilled payloads, and events past `retain_until` (default 7 days, per-type overrides);
 - expires upload refs and collects unreferenced blobs;
 - trims the notification tray: entries past `expires_at`, read entries older than 7 days, all entries older than 30 days, and, per workspace, everything beyond the newest 200 (`08` §8.11);
-- finalizes and caps process logs;
+- finalizes and caps process logs, and deletes ended `processes` rows and their `process:<id>` blob refs 7 days after they ended (with blob GC, every 10 minutes, ADR 0139);
 - cancels messages that have been pending for 7 days while their handler's extension is disabled in their workspace (`06` §6.4);
 - runs `PRAGMA wal_checkpoint(TRUNCATE)` and, weekly, `PRAGMA optimize`.
 

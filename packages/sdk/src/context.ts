@@ -1,6 +1,7 @@
 import type { Json, JsonObject, LiveChunk, Message, OnReply, Priority, Problem } from '@kvman/protocol';
 import type { CommandRef, EventRef, QueryRef } from './references.ts';
 import type { WorkspaceFiles } from './files.ts';
+import type { Processes } from './process.ts';
 import type { Store } from './store.ts';
 
 /** Options of `ctx.step`. */
@@ -117,6 +118,8 @@ export interface Ctx {
   readonly secrets: SecretAccess;
   /** The workspace's files (capabilities `files.read` and `files.write`). */
   readonly files: WorkspaceFiles;
+  /** OS processes (capability `process`). */
+  readonly process: Processes;
 }
 
 /** `ctx.config` (05 §5.8). */

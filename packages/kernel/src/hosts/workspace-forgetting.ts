@@ -25,6 +25,8 @@ export type WorkspaceForgettingDeps = {
   timers: SchedulerTimers;
   faults: FaultPoints;
   abortMessages: (messageIds: ReadonlySet<string>) => void;
+  // Kills the workspace's processes and resolves once their ends and onExit commands committed (ADR 0139).
+  killProcesses: (workspaceId: string) => Promise<void>;
 };
 
 // 04 §4.4 step 2: the cancelled work, onAbort commands included, gets this long to settle before it is aborted.
@@ -56,6 +58,7 @@ export class WorkspaceForgetting {
       });
       if (!cancelled.committed) return await this.#deps.commits.fail(claim, cancelled.problem);
       this.#ended(workspaceId, cancelled);
+      await this.#deps.killProcesses(workspaceId);
       this.#deps.faults.reach('workspace.forget.after-cancel');
       await this.#settled(workspaceId, message.id, signal);
       await this.#deps.serial.run(() => this.#delete(claim, workspaceId));

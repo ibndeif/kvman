@@ -5,20 +5,22 @@ import { collectBatch, type BlobStore } from './blob-store.ts';
 export const collectIntervalMs = 10 * 60_000;
 
 // ADR 0134: GC runs at boot and then every 10 minutes on the kernel clock. Each batch is one synchronous step, and
-// other work runs between batches.
+// other work runs between batches. Each run first does the housekeeping that frees blobs (ADR 0139: ended processes).
 export class BlobCollector {
   readonly #store: BlobStore;
   readonly #timers: SchedulerTimers;
   readonly #failed: (error: unknown) => void;
+  readonly #housekeeping: () => void;
   #timer: TimerHandle | undefined;
   #running: Promise<void> = Promise.resolve();
   #stopped = false;
 
   // A run that fails (the database or the disk) is reported, and the next run comes at the next interval.
-  constructor(store: BlobStore, timers: SchedulerTimers, failed: (error: unknown) => void) {
+  constructor(store: BlobStore, timers: SchedulerTimers, failed: (error: unknown) => void, housekeeping: () => void) {
     this.#store = store;
     this.#timers = timers;
     this.#failed = failed;
+    this.#housekeeping = housekeeping;
   }
 
   start(): Promise<void> {
@@ -44,6 +46,7 @@ export class BlobCollector {
   }
 
   async #collect(): Promise<void> {
+    if (!this.#stopped) this.#housekeeping();
     while (!this.#stopped && this.#store.collect() === collectBatch) await nextTurn();
   }
 

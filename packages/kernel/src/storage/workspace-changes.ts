@@ -16,7 +16,7 @@ export type WorkspaceChange =
 // go with their messages, and the workspaces row goes last.
 const workspaceTables = [
   ['kv', 'ws'], ['docs', 'ws'], ['logs', 'ws'], ['blob_refs', 'ws'], ['events', 'workspace_id'], ['llm_usage', 'ws'],
-  ['workspace_presets', 'workspace_id'], ['workspace_config', 'workspace_id'], ['notifications', 'ws'],
+  ['workspace_presets', 'workspace_id'], ['workspace_config', 'workspace_id'], ['notifications', 'ws'], ['processes', 'ws'],
 ] as const;
 
 function announce(scope: UnitScope, type: string, workspaceId: string): void {
@@ -57,6 +57,7 @@ function forget(scope: UnitScope, workspaceId: string): Json {
   connection.prepare('DELETE FROM steps WHERE message_id IN (SELECT id FROM messages WHERE workspace_id = ?)').run(workspaceId);
   connection.prepare('DELETE FROM recorded_values WHERE message_id IN (SELECT id FROM messages WHERE workspace_id = ?)').run(workspaceId);
   connection.prepare('DELETE FROM messages WHERE workspace_id = ?').run(workspaceId);
+  connection.prepare("DELETE FROM blob_refs WHERE ref IN (SELECT 'process:' || id FROM processes WHERE ws = ?)").run(workspaceId);
   for (const [table, column] of workspaceTables) connection.prepare(`DELETE FROM ${table} WHERE ${column} = ?`).run(workspaceId);
   connection.prepare('DELETE FROM workspaces WHERE id = ?').run(workspaceId);
   dropDeleted(scope, workspaceId);

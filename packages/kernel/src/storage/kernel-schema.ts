@@ -66,3 +66,17 @@ export const kernelSchemaVersion3 = [
   'CREATE INDEX blob_refs_ref ON blob_refs(ref)',
   'CREATE INDEX blob_refs_expiry ON blob_refs(expires_at) WHERE expires_at IS NOT NULL',
 ];
+
+// ADR 0139: what boot reconciliation needs to end a process and send its onExit, and the lookups of the kill paths.
+export const kernelSchemaVersion4 = [
+  'ALTER TABLE processes ADD COLUMN ws TEXT',
+  'ALTER TABLE processes ADD COLUMN command TEXT',
+  'ALTER TABLE processes ADD COLUMN detached INTEGER NOT NULL DEFAULT 0',
+  'ALTER TABLE processes ADD COLUMN on_exit TEXT',
+  'ALTER TABLE processes ADD COLUMN signal TEXT',
+  'ALTER TABLE processes ADD COLUMN reason TEXT',
+  'ALTER TABLE processes ADD COLUMN truncated INTEGER NOT NULL DEFAULT 0',
+  'ALTER TABLE processes ADD COLUMN spawned_by TEXT',
+  'CREATE INDEX processes_state ON processes(state)',
+  'CREATE INDEX processes_ws ON processes(ws)',
+];

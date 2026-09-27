@@ -12,7 +12,7 @@ function lower(requested: Priority, ceiling: Priority): Priority {
 // 02 §2.6: people start interactive chains, processes and kernel roots run normal, handlers pass their own class
 // on; a sender may only lower it, and a request for a higher class is lowered silently.
 export function assignPriority(sender: Sender, cause: Message | undefined, requested: Priority | undefined): Priority {
-  const inherited = cause?.priority ?? (sender.address.startsWith('user:') ? 'interactive' : 'normal');
+  const inherited = sender.address.startsWith('proc:') ? 'normal' : cause?.priority ?? (sender.address.startsWith('user:') ? 'interactive' : 'normal');
   return requested === undefined ? inherited : lower(requested, inherited);
 }
 

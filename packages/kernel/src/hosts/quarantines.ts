@@ -4,16 +4,19 @@ import type { CommitPipeline } from '../storage/commit-pipeline.ts';
 import type { UlidGenerator } from '../ulid.ts';
 
 // 03 §3.6, ADR 0080: a quarantine is stored and announced in one kernel unit; the registry then refuses the
-// extension everywhere and the scheduler leaves its pending messages waiting (ADR 0086).
+// extension everywhere and the scheduler leaves its pending messages waiting (ADR 0086). Its processes are killed
+// (03 §3.7).
 export class Quarantines {
   readonly #pipeline: CommitPipeline;
   readonly #registry: RegistryState;
   readonly #ids: UlidGenerator;
+  readonly #quarantined: (extension: string) => void;
 
-  constructor(pipeline: CommitPipeline, registry: RegistryState, ids: UlidGenerator) {
+  constructor(pipeline: CommitPipeline, registry: RegistryState, ids: UlidGenerator, quarantined: (extension: string) => void) {
     this.#pipeline = pipeline;
     this.#registry = registry;
     this.#ids = ids;
+    this.#quarantined = quarantined;
   }
 
   async quarantine(extension: string, reason: QuarantineReason): Promise<void> {
@@ -23,6 +26,8 @@ export class Quarantines {
       origin: { kind: 'quarantine', extension, reason, correlationId: this.#ids.next() },
       writes: [], sends: [], publishes: [{ type: 'kernel.extension.quarantined', payload }], replies: [],
     });
-    if (result.committed) this.#registry.refresh();
+    if (!result.committed) return;
+    this.#registry.refresh();
+    this.#quarantined(extension);
   }
 }

@@ -5,6 +5,7 @@ import type {
 import type { SecretChange } from '../secrets/secret-store.ts';
 import type { Connection } from './driver.ts';
 import type { KernelChange } from './kernel-changes.ts';
+import type { ProcessEnd } from './process-rows.ts';
 
 export type MessageState = 'pending' | 'running' | 'awaiting' | 'done' | 'failed' | 'dead' | 'cancelled';
 
@@ -17,8 +18,13 @@ export type CommitInvocation = {
   message: Message; extension: string; outcome: InvocationOutcome; stored: boolean; deadlineAt?: number; received?: ReadonlySet<string>;
 };
 
-// Who sends: the kernel-assigned address, and for ext:* and proc:* sources the extension whose grants apply.
-export type Sender = { address: Address; extension?: string };
+// A delegated job token's actor (ADR 0140): the extension whose calls and tools apply, a person, who delegates only
+// access-`all` types, or nobody (a process whose own token ended), who delegates nothing.
+export type DelegatingActor = { kind: 'extension'; extension: string } | { kind: 'person' } | { kind: 'nobody' };
+
+// Who sends: the kernel-assigned address, and for ext:* and proc:* sources the extension whose grants apply (its blob
+// reads included). A process with a delegated token calls with its actor's grants instead (`delegatedBy`).
+export type Sender = { address: Address; extension?: string; delegatedBy?: DelegatingActor };
 
 // A failed attempt as the scheduler settles it (03 §3.4): back to pending after its backoff, or dead with its reply.
 export type RetryOutcome = { state: 'pending'; notBefore: number } | { state: 'dead'; reply: ReplyPayload };
@@ -37,7 +43,9 @@ export type UnitOrigin =
   // A change to the extension catalog, a workspace, an applied preset, config, or secrets, by a kernel command, which
   // it replies to, or by the kernel itself at first run.
   | { kind: 'change'; change: KernelChange; command?: Message; correlationId: string }
-  | { kind: 'announce'; correlationId: string };
+  | { kind: 'announce'; correlationId: string }
+  // A process ended (03 §3.7, ADR 0139): its row ends, and a detached one's onExit is sent, caused by the spawning message.
+  | { kind: 'process'; end: ProcessEnd; cause: Message };
 
 export type CommitUnit = {
   origin: UnitOrigin;
@@ -132,7 +140,7 @@ export type CommitResult = ({ committed: true } & AppliedMessages) | { committed
 export function correlationOf(origin: UnitOrigin): string {
   if (origin.kind === 'invocation' || origin.kind === 'cancel') return origin.invocation.message.correlationId;
   if (origin.kind === 'expire' || origin.kind === 'quarantine' || origin.kind === 'announce' || origin.kind === 'change') return origin.correlationId;
-  if (origin.kind === 'call') return origin.cause.correlationId;
+  if (origin.kind === 'call' || origin.kind === 'process') return origin.cause.correlationId;
   return origin.kind === 'retry' ? origin.message.correlationId : origin.messageId;
 }
 
@@ -144,7 +152,7 @@ export function senderOf(origin: UnitOrigin): Sender {
 // The message a unit acts for: its sends and publishes are caused by it and run in its workspace.
 export function causeOf(origin: UnitOrigin): Message | undefined {
   if (origin.kind === 'invocation' || origin.kind === 'cancel') return origin.invocation.message;
-  if (origin.kind === 'call') return origin.cause;
+  if (origin.kind === 'call' || origin.kind === 'process') return origin.cause;
   if (origin.kind === 'change') return origin.command;
   return origin.kind === 'retry' ? origin.message : undefined;
 }

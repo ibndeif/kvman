@@ -13,6 +13,7 @@ import type { ServiceCall } from './invocation-sink.ts';
 import { redactFields, redactText, type KernelLogger, type LogAttributes } from './kernel-logger.ts';
 import type { LiveBus } from './live-bus.ts';
 import { publishLive } from './live-calls.ts';
+import type { ProcessCalls } from './process-calls.ts';
 import type { QueryPath } from './query-path.ts';
 import type { WorkspaceCalls } from './workspace-calls.ts';
 
@@ -25,6 +26,7 @@ export type RpcServiceDeps = CommandCallDeps & {
   secrets: SecretStore;
   blobs: BlobCalls;
   files: WorkspaceCalls;
+  processes: ProcessCalls;
 };
 
 // A query reads and may query; everything else a handler can do is refused to it (ADR 0074).
@@ -78,6 +80,10 @@ export class RpcService {
       case 'workspace.rm':
       case 'workspace.glob':
         return this.#deps.files.handle(invocation, call);
+      case 'process.spawn':
+      case 'process.wait':
+      case 'process.kill':
+        return this.#deps.processes.handle(invocation, call);
       case 'live':
         return this.#publishLive(invocation, call);
       case 'step.begin':

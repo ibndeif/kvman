@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { kernelPorts, type KernelStarted } from '@kvman/protocol';
 import { EventHub } from '../adapters/events/event-hub.ts';
 import { HttpAdapter } from '../adapters/http/http-adapter.ts';
+import { SocketAdapter } from '../adapters/socket/socket-adapter.ts';
 import type { FaultPoints } from '../faults/fault-points.ts';
 import type { StartHostThread } from '../hosts/host-thread.ts';
 import type { KernelLogger } from '../hosts/kernel-logger.ts';
@@ -22,6 +23,8 @@ import type { Connection } from '../storage/driver.ts';
 import type { UlidGenerator } from '../ulid.ts';
 import { acquireDaemonLock, releaseDaemonLock } from './daemon-lock.ts';
 import { prepareHomeFolder } from './home-folder.ts';
+import { socketPathOf } from './home-paths.ts';
+import { writeKvShim } from './kv-shim.ts';
 import { processStartOf } from './process-identity.ts';
 
 export type DaemonLogger = KernelLogger & { close(): void };
@@ -80,6 +83,7 @@ export class Kernel {
   readonly runtime: KernelRuntime;
   readonly #resources: Resources;
   readonly #hub: EventHub;
+  readonly #socket: SocketAdapter;
   #shutdown: Promise<void> | undefined;
 
   private constructor(resources: Resources) {
@@ -96,6 +100,7 @@ export class Kernel {
       ...(options.faults === undefined ? {} : { faults: options.faults }),
     });
     this.#hub = new EventHub({ connection, files: this.runtime.files.files, pipeline: this.runtime.pipeline, live: this.runtime.live, timers: options.timers, version: identity.version });
+    this.#socket = new SocketAdapter({ path: socketPathOf(options.home), requests: this.runtime.socket, logger: resources.logger, ids: options.ids });
   }
 
   static async boot(options: BootOptions): Promise<Kernel> {
@@ -123,6 +128,7 @@ export class Kernel {
     } catch (error) {
       logger.write({ level: 'error', message: 'the kernel did not start', fields: { error: error instanceof Error ? error.message : 'unknown' }, attributes: { correlationId } });
       await kernel?.runtime.stop();
+      if (kernel !== undefined) await kernel.#socket.close();
       connection?.close();
       if (firstRun && connection !== undefined) removeDatabase(home);
       if (nonce !== undefined) releaseDaemonLock(home, nonce);
@@ -133,7 +139,8 @@ export class Kernel {
   }
 
   // 03 §3.9 and ADRs 0090, 0091: stop admitting, let running handlers finish for 10 s, set the rest back to pending,
-  // answer waiting requests and streams, stop the hosts, flush the commit pipeline, close SQLite, release the lock.
+  // answer waiting requests and streams, stop the hosts and kill process groups, flush the commit pipeline, close
+  // SQLite and kernel.sock, release the lock.
   shutdown(): Promise<void> {
     this.#shutdown ??= this.#stop();
     return this.#shutdown;
@@ -149,6 +156,8 @@ export class Kernel {
       await openHomeWorkspace(this.runtime, options.homeWorkspace ?? defaultHomeWorkspace(), options.home, correlationId);
     }
     await this.runtime.start();
+    writeKvShim(options.home);
+    await this.#socket.listen();
     adapter.open({ runtime: this.runtime, hub: this.#hub });
     const started: KernelStarted = { version: identity.version, instanceId: identity.instanceId };
     const correlationId = options.ids.next();
@@ -166,12 +175,14 @@ export class Kernel {
   async #stop(): Promise<void> {
     const { adapter, identity, logger, options } = this.#resources;
     adapter.stopAdmitting();
+    this.#socket.stopAdmitting();
     await this.runtime.drain();
     adapter.releaseWaiting();
     this.#hub.close();
     await this.runtime.stop();
     this.runtime.pipeline.flush();
     await adapter.close();
+    await this.#socket.close();
     this.connection.close();
     releaseDaemonLock(identity.home, identity.instanceId);
     logger.write({ level: 'info', message: 'kernel stopped', fields: {}, attributes: { correlationId: options.ids.next() } });

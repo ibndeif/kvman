@@ -13,6 +13,7 @@ import { base64Schema, blobLimits, blobNameSchema, blobRefChangeSchema, mimeType
 import { blobIdSchema } from './blob-id.ts';
 import { fileContentSchema, workspacePathSchema } from './workspace-files.ts';
 import { storeScopeSchema } from './unit-of-work.ts';
+import { spawnOptionsSchema } from './processes.ts';
 
 // 03 §3.5 and ADR 0076: the frames between the kernel and an execution host.
 
@@ -76,6 +77,13 @@ const workspaceCalls = [
   z.strictObject({ name: z.literal('workspace.glob'), pattern: z.string().min(1).max(4096) }),
 ] as const;
 
+// 03 §3.7, ADR 0139: ctx.process, served by the kernel's process supervisor.
+const processCalls = [
+  z.strictObject({ name: z.literal('process.spawn'), options: spawnOptionsSchema }),
+  z.strictObject({ name: z.literal('process.wait'), processId: ulidSchema }),
+  z.strictObject({ name: z.literal('process.kill'), processId: ulidSchema }),
+] as const;
+
 export const rpcCallSchema = z.discriminatedUnion('name', [
   z.strictObject({
     name: z.literal('command'), type: typeNameSchema, payload: jsonSchema, options: commandOptionsSchema, ordinal: callNumberSchema,
@@ -92,6 +100,7 @@ export const rpcCallSchema = z.discriminatedUnion('name', [
   z.strictObject({ name: z.literal('store.read'), read: storeReadSchema }),
   ...blobCalls,
   ...workspaceCalls,
+  ...processCalls,
   z.strictObject({
     name: z.literal('log'), level: z.enum(['debug', 'info', 'warn', 'error']), message: z.string(), fields: jsonObjectSchema.exactOptional(),
   }),

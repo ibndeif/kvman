@@ -1,4 +1,6 @@
+import { realpathSync } from 'node:fs';
 import type { HealthResult, MessageStatus, QuarantineReason, ReplyPayload } from '@kvman/protocol';
+import { SocketRequests } from '../adapters/socket/socket-requests.ts';
 import { inertFaults, type FaultPoints } from '../faults/fault-points.ts';
 import { CallDepths } from '../hosts/call-depths.ts';
 import { HostFailures } from '../hosts/host-failures.ts';
@@ -8,15 +10,11 @@ import { workerThreadStarter, type StartHostThread } from '../hosts/host-thread.
 import { defaultReadPoolSize, ReadPool, readThreadStarter } from '../hosts/read-pool/read-pool.ts';
 import { sandboxProcessStarter } from '../hosts/sandbox/sandbox-process.ts';
 import type { KernelLogger } from '../hosts/kernel-logger.ts';
-import { EnableCommands } from '../hosts/enable-commands.ts';
-import { ExtensionCommands } from '../hosts/extension-commands.ts';
 import { ExtensionQueries } from '../hosts/extension-queries.ts';
 import { KernelCommits } from '../hosts/kernel-commits.ts';
-import { KernelHost, type KernelCommand } from '../hosts/kernel-host.ts';
-import { SerialChanges } from '../hosts/serial-changes.ts';
-import { SettingCommands } from '../hosts/setting-commands.ts';
-import { WorkspaceCommands } from '../hosts/workspace-commands.ts';
-import { WorkspaceForgetting } from '../hosts/workspace-forgetting.ts';
+import { KernelHost } from '../hosts/kernel-host.ts';
+import { ProcessCalls } from '../hosts/process-calls.ts';
+import { ProcessQueries } from '../hosts/process-queries.ts';
 import { WorkspaceQueries } from '../hosts/workspace-queries.ts';
 import { hostPlatform, pnpmExecutable } from '../install/bundled-tools.ts';
 import { InstallService } from '../install/install-service.ts';
@@ -34,7 +32,6 @@ import { RecordedValueStore } from '../hosts/recorded-value-store.ts';
 import { ReplyWaiters, type ReplyListener } from '../hosts/reply-waiters.ts';
 import { RpcService } from '../hosts/rpc-service.ts';
 import { Settlement } from '../hosts/settlement.ts';
-import { ConfigChecker } from '../config/config-values.ts';
 import { RegistryState } from '../registry/registry-state.ts';
 import { WorkspaceDirectory } from '../registry/workspace-directory.ts';
 import { AdapterPath, type AdapterCommand, type Submission } from '../router/adapter-path.ts';
@@ -51,7 +48,11 @@ import { readMessageStatus } from '../storage/message-status.ts';
 import type { Connection } from '../storage/driver.ts';
 import { StepJournal } from '../store/step-journal.ts';
 import type { UlidGenerator } from '../ulid.ts';
+import { JobTokens } from '../processes/job-tokens.ts';
+import { reconcileProcesses } from '../processes/process-reconciliation.ts';
+import { ProcessSupervisor } from '../processes/process-supervisor.ts';
 import { recoverInterrupted } from './crash-recovery.ts';
+import { kernelCommandTable } from './kernel-command-table.ts';
 import { FileServices } from './file-services.ts';
 import { healthOf, type KernelIdentity } from './health.ts';
 
@@ -107,6 +108,10 @@ export class KernelRuntime {
   readonly snapshots: SnapshotStore;
   readonly live = new LiveBus();
   readonly files: FileServices;
+  readonly processes: ProcessSupervisor;
+  // kernel.sock's requests (12 §12.4); the daemon serves them on the socket.
+  readonly socket: SocketRequests;
+  readonly #tokens = new JobTokens();
   readonly #adapter: AdapterPath;
   readonly #waiters: ReplyWaiters;
   readonly #queries: QueryPath;
@@ -132,6 +137,10 @@ export class KernelRuntime {
       blobs: this.files.rights, files: blobFiles,
     });
     this.pipeline = new CommitPipeline({ connection, files: blobFiles, admission: this.router, now, faults });
+    this.processes = new ProcessSupervisor({
+      home: options.install.home, connection, pipeline: this.pipeline, store: this.files.store, live: this.live, tokens: this.#tokens,
+      environment: options.install.environment, timers, now, logger: options.logger, faults,
+    });
     writeCommittedSecrets(this.pipeline, options.secrets, options.logger, faults);
     this.#waiters = new ReplyWaiters({ connection, files: blobFiles });
     const values = new RecordedValueStore(connection);
@@ -148,18 +157,23 @@ export class KernelRuntime {
       },
     });
     this.#adapter = new AdapterPath(this.pipeline, ids);
-    this.#quarantines = new Quarantines(this.pipeline, this.registry, ids);
+    this.#quarantines = new Quarantines(this.pipeline, this.registry, ids, (extension) => this.processes.killExtension(extension));
     this.#queries = new QueryPath(this.router, this.scheduler);
+    this.socket = new SocketRequests({
+      tokens: this.#tokens, registry, grants: this.registry, pipeline: this.pipeline, queries: this.#queries, waiters: this.#waiters,
+      status: (messageId) => this.messageStatus(messageId), timers, ids,
+    });
     this.#connectHosts(options, values);
   }
 
   // 03 §3.9 step 6, ADR 0091: rows a crash left running are recovered before the scheduler claims anything.
-  // Boot step 6 also clears `once` trust (07 §7.2) and the temporary files of puts a crash interrupted; GC runs at
-  // boot and every 10 minutes (ADR 0134).
+  // Boot step 6 also reconciles processes (ADR 0139), clears `once` trust (07 §7.2) and the temporary files of puts a
+  // crash interrupted; GC runs at boot and every 10 minutes (ADR 0134).
   async start(): Promise<void> {
-    const { connection, now, ids } = this.#options;
+    const { connection, now, ids, logger, timers } = this.#options;
     this.files.files.clearTemporary();
     const recovered = await recoverInterrupted({ connection, files: this.files.files, pipeline: this.pipeline, registry: () => this.registry.current(), now });
+    await reconcileProcesses({ connection, store: this.files.store, pipeline: this.pipeline, logger, timers, now });
     const cleared = await this.pipeline.enqueue({ origin: { kind: 'change', change: { kind: 'trust.clear-once' }, correlationId: ids.next() }, writes: [], sends: [], publishes: [], replies: [] });
     if (!cleared.committed) throw new ProblemError(cleared.problem);
     this.index.placeStored(connection, recovered);
@@ -208,42 +222,10 @@ export class KernelRuntime {
   // already started can finish before the database closes. Without drain() first, this is how a crash leaves rows.
   stop(): Promise<void> {
     this.scheduler.stop();
-    const stopped = Promise.all([this.hosts.stop().then(() => this.#reads.close()), this.files.collector.stop()]).then(() => undefined);
+    const stopped = Promise.all([this.hosts.stop().then(() => this.#reads.close()), this.files.collector.stop(), this.processes.stop()]).then(() => undefined);
     this.#waiters.close();
     this.#queries.close();
     return stopped;
-  }
-
-  // The kernel commands that change extensions, workspaces, presets, config, and secrets (03 §3.8).
-  #kernelCommands(commits: KernelCommits, abortMessages: (messageIds: ReadonlySet<string>) => void): Map<string, KernelCommand> {
-    const { connection, timers } = this.#options;
-    const serial = new SerialChanges();
-    const { scheduler, registry } = this;
-    const extensions = new ExtensionCommands({ connection, commits, scheduler, grants: registry, registry, install: this.install, serial, abortMessages });
-    const enabling = new EnableCommands({
-      connection, commits, scheduler, registry, snapshots: this.snapshots, config: new ConfigChecker(new PayloadValidators()), serial,
-      quarantine: (extension, reason) => this.#quarantines.quarantine(extension, reason),
-    });
-    const workspaces = new WorkspaceCommands({ connection, commits, registry, home: this.#options.install.home });
-    const forgetting = new WorkspaceForgetting({
-      connection, pipeline: this.pipeline, commits, scheduler, registry, directory: this.workspaces, serial, timers, faults: this.#options.faults ?? inertFaults, abortMessages,
-    });
-    const settings = new SettingCommands({ connection, commits, registry });
-    return new Map<string, KernelCommand>([
-      ['kernel.extension.stage', (claim, signal) => extensions.stage(claim, signal)],
-      ['kernel.extension.install', (claim) => extensions.install(claim)],
-      ['kernel.extension.uninstall', (claim) => extensions.uninstall(claim)],
-      ['kernel.extension.enable', (claim) => enabling.enable(claim)],
-      ['kernel.extension.disable', (claim) => enabling.disable(claim)],
-      ['kernel.workspace.open', (claim) => workspaces.open(claim)],
-      ['kernel.workspace.rename', (claim) => workspaces.rename(claim)],
-      ['kernel.workspace.forget', (claim, signal) => forgetting.forget(claim, signal)],
-      ['kernel.trust.grant', (claim) => this.files.trust.grant(claim)],
-      ['kernel.trust.revoke', (claim) => this.files.trust.revoke(claim)],
-      ['kernel.config.set', (claim) => settings.setConfig(claim)],
-      ['kernel.secret.set', (claim) => settings.setSecret(claim)],
-      ['kernel.secret.clear', (claim) => settings.clearSecret(claim)],
-    ]);
   }
 
   #connectHosts(options: KernelRuntimeOptions, values: RecordedValueStore): void {
@@ -255,20 +237,31 @@ export class KernelRuntime {
       connection, router: this.router, pipeline: this.pipeline, scheduler: this.scheduler, waiters: this.#waiters, values, ids, registry,
       queries: this.#queries, live: this.live, journal: new StepJournal(connection, options.now), logger: options.logger, depths: new CallDepths(),
       faults: options.faults ?? inertFaults, secrets: options.secrets, blobs: this.files.blobCalls, files: this.files.workspaceCalls,
+      processes: new ProcessCalls({
+        connection, registry, grants: this.registry, supervisor: this.processes, tokens: this.#tokens, ids, home: realpathSync.native(options.install.home),
+      }),
     });
     const quarantines = this.#quarantines;
     const settlement = new Settlement({
       pipeline: this.pipeline, scheduler: this.scheduler, waiters: this.#waiters, queries: this.#queries, live: this.live, values, quarantines,
-      results: this.router, blobs: this.files,
+      results: this.router, blobs: this.files, processes: this.processes,
     });
-    const abortMessages = (messageIds: ReadonlySet<string>): void => this.hosts.abortMessages(messageIds);
+    const abortMessages = (messageIds: ReadonlySet<string>): void => {
+      this.hosts.abortMessages(messageIds);
+      this.processes.killSpawnedBy(messageIds);
+    };
     const kernel = new KernelHost({
-      connection, commits, scheduler: this.scheduler, grants: this.registry, queries: this.#queries, abortMessages, commands: this.#kernelCommands(commits, abortMessages),
+      connection, commits, scheduler: this.scheduler, grants: this.registry, queries: this.#queries, abortMessages, commands: kernelCommandTable({
+        connection, commits, pipeline: this.pipeline, scheduler: this.scheduler, registry: this.registry, directory: this.workspaces, install: this.install,
+        snapshots: this.snapshots, trust: this.files.trust, timers: options.timers, faults: options.faults ?? inertFaults, home: options.install.home, abortMessages,
+        killProcesses: (workspaceId) => this.processes.killWorkspace(workspaceId), quarantine: (extension, reason) => quarantines.quarantine(extension, reason),
+      }),
       requestShutdown: options.requestShutdown,
       kernelQueries: new KernelQueries({
         connection, registry, health: () => this.health(), version: options.identity.version,
         extensions: new ExtensionQueries(connection, this.registry, this.registry), workspaces: new WorkspaceQueries(connection, this.registry, options.secrets),
-        inspection: new InspectionQueries({ connection, registry, grants: this.registry }), grants: this.registry, trust: this.files.trust,
+        inspection: new InspectionQueries({ connection, registry, grants: this.registry }), processes: new ProcessQueries(connection, this.registry), grants: this.registry,
+        trust: this.files.trust,
       }),
     });
     this.#kernelHost = kernel;

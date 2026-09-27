@@ -1,5 +1,5 @@
 import { realpathSync } from 'node:fs';
-import type { BlobInfo } from '@kvman/protocol';
+import { processLimits, type BlobInfo } from '@kvman/protocol';
 import { BlobCollector } from '../blobs/blob-collector.ts';
 import { BlobFiles } from '../blobs/blob-files.ts';
 import type { TakenBlob } from '../blobs/blob-intake.ts';
@@ -16,6 +16,8 @@ import type { GrantsSource } from '../router/grants.ts';
 import type { SchedulerTimers } from '../scheduler/timers.ts';
 import type { CommitPipeline } from '../storage/commit-pipeline.ts';
 import type { Connection } from '../storage/driver.ts';
+import { deleteExpiredProcesses } from '../storage/process-rows.ts';
+import { inWriteTransaction } from '../storage/write-transaction.ts';
 import type { UlidGenerator } from '../ulid.ts';
 import { TrustGate } from '../workspaces/trust-gate.ts';
 import { TrustTokens } from '../workspaces/trust-tokens.ts';
@@ -49,9 +51,13 @@ export class FileServices {
     this.files = new BlobFiles(deps.home);
     this.store = new BlobStore({ connection: deps.connection, files: this.files, now: deps.now, faults: deps.faults });
     this.rights = new BlobRights(deps.connection, deps.now);
-    this.collector = new BlobCollector(this.store, deps.timers, (error) => deps.logger.write({
+    const { connection, now } = deps;
+    const failed = (error: unknown): void => deps.logger.write({
       level: 'error', message: 'blob GC failed', fields: { error: error instanceof Error ? error.name : 'unknown' }, attributes: { correlationId: deps.ids.next() },
-    }));
+    });
+    // 04 §4.9, ADR 0139: ended processes and their log refs go 7 days after the end, so GC can collect the logs.
+    const housekeeping = (): void => inWriteTransaction(connection, () => deleteExpiredProcesses(connection, now() - processLimits.retentionMs));
+    this.collector = new BlobCollector(this.store, deps.timers, failed, housekeeping);
   }
 
   link(links: FileServiceLinks): void {

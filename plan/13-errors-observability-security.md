@@ -39,7 +39,7 @@ type Issue = {
 | `TYPE_NOT_FOUND` | unknown message type in this workspace | Unknown message type in this workspace | no |
 | `HANDLER_UNAVAILABLE` | owner disabled, not enabled in the workspace, quarantined, or reloading (queries only; commands wait, `06` §6.6) | The handling extension is not available | yes (reloading, `retryAfterMs`) / no |
 | `NAMESPACE_CONFLICT` | enabling a second extension with the same namespace | Another enabled extension owns this namespace | no |
-| `CAPABILITY_DENIED` | caller lacks the capability or grant (including a `z.blobId()` field naming a blob the sender may not read) | The caller lacks the capability or grant | no |
+| `CAPABILITY_DENIED` | caller lacks the capability or grant (including a `z.blobId()` field naming a blob the sender may not read, and an unknown, revoked, or missing job token, ADR 0140) | The caller lacks the capability or grant | no |
 | `CALLER_NOT_ALLOWED` | the source does not match the type's `access` (`02` §2.4): a non-user calling an `access: 'user'` type, a person calling an `access: 'extensions'` type, or anyone but the owner and the kernel calling an `internal` one; also a user sending `ui.*` | This caller may not send this type | no |
 | `IDEMPOTENCY_MISMATCH` | same key, different request digest | The idempotency key was used for a different request | no |
 | `LANE_REENTRANT` | `ctx.command` into its own lane or an ancestor's lane | The command would wait on a lane its own chain holds | no |

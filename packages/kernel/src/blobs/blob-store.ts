@@ -29,8 +29,8 @@ export class BlobStore {
     return this.#options.files;
   }
 
-  intake(): Promise<BlobIntake> {
-    return BlobIntake.open(this.#options.files);
+  intake(maxBytes?: number): Promise<BlobIntake> {
+    return BlobIntake.open(this.#options.files, maxBytes);
   }
 
   // One synchronous step: the file is placed (or dropped as a duplicate), then the row and the reference commit.

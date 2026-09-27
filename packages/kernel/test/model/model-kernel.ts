@@ -1,7 +1,7 @@
 import { dirname } from 'node:path';
 import type { CompleteFrame, HostOutcome, HostUnitOfWork, Json } from '@kvman/protocol';
 import {
-  AdapterPath, betterSqlite3Driver, CommitPipeline, FileServices, inertFaults, ExtensionQueries, insertVersionRows, insertWorkspace, KernelCommits, KernelHost, kernelOwner, InspectionQueries, KernelQueries,
+  AdapterPath, betterSqlite3Driver, CommitPipeline, FileServices, inertFaults, ExtensionQueries, insertVersionRows, insertWorkspace, KernelCommits, KernelHost, kernelOwner, InspectionQueries, KernelQueries, ProcessQueries,
   KernelRegistry, LiveBus, openKernelDatabase, PayloadValidators, PendingIndex, Quarantines, QueryPath, recoverInterrupted, RecordedValueStore, RegistryState,
   ReplyWaiters, Router, Scheduler, SecretStore, Settlement, WorkspaceDirectory, WorkspaceQueries, writeAppliedPreset, type Claim, type Connection, type Dispatcher,
   type HostLoad,
@@ -103,8 +103,8 @@ export async function bootModelKernel(file: string, time: TestTime = { value: st
   });
   const queries = new QueryPath(router, scheduler);
   const settlement = new Settlement({
-    pipeline, scheduler, waiters, queries, live: new LiveBus(), values: new RecordedValueStore(connection), quarantines: new Quarantines(pipeline, registry, ulids),
-    results: router, blobs: services,
+    pipeline, scheduler, waiters, queries, live: new LiveBus(), values: new RecordedValueStore(connection), quarantines: new Quarantines(pipeline, registry, ulids, () => undefined),
+    results: router, blobs: services, processes: { invocationEnded: () => undefined },
   });
   const commits = new KernelCommits(pipeline, scheduler, waiters);
   services.link({ pipeline, commits, grants });
@@ -114,7 +114,7 @@ export async function bootModelKernel(file: string, time: TestTime = { value: st
     kernelQueries: new KernelQueries({
       connection, registry: current, version: '0.0.0', extensions: new ExtensionQueries(connection, registry, grants),
       workspaces: new WorkspaceQueries(connection, registry, SecretStore.load(dirname(file), ulids.next())),
-      inspection: new InspectionQueries({ connection, registry: current, grants }), grants, trust: services.trust,
+      inspection: new InspectionQueries({ connection, registry: current, grants }), processes: new ProcessQueries(connection, grants), grants, trust: services.trust,
       health: () => ({ status: 'ok', version: '0.0.0', instanceId: '0b5c7f2e-4a1d-4c3b-9e8f-1a2b3c4d5e6f', processStart: 'x', uptimeMs: 0, port: 4173, home: '/h' }),
     }),
   });

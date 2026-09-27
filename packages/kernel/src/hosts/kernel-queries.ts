@@ -10,6 +10,7 @@ import { validateRequest } from '../validation/kernel-validate.ts';
 import { isAdministrator } from './administrators.ts';
 import type { ExtensionQueries, ExtensionQueryAnswer } from './extension-queries.ts';
 import type { InspectionQueries } from './inspection-queries.ts';
+import type { ProcessQueries } from './process-queries.ts';
 import type { TrustService } from './trust-service.ts';
 import type { WorkspaceQueries } from './workspace-queries.ts';
 import type { QueryAnswer } from './query-path.ts';
@@ -20,6 +21,7 @@ export type KernelQueriesDeps = {
   extensions: ExtensionQueries;
   workspaces: WorkspaceQueries;
   inspection: InspectionQueries;
+  processes: ProcessQueries;
   trust: TrustService;
   grants: GrantsSource;
   registry: () => KernelRegistry;
@@ -50,6 +52,7 @@ export class KernelQueries {
     if (message.type === 'kernel.workspace.get') return this.#extensionAnswer(message, this.#deps.workspaces.get(message.payload));
     if (message.type === 'kernel.config.get') return this.#extensionAnswer(message, this.#deps.workspaces.config(message.payload));
     if (message.type === 'kernel.subscribers.list') return this.#extensionAnswer(message, this.#deps.inspection.subscribers(message.payload));
+    if (message.type === 'kernel.processes.list') return this.#extensionAnswer(message, this.#deps.processes.list(message));
     if (message.type === 'kernel.messages.list') return this.#extensionAnswer(message, this.#adminOnly(message, () => this.#deps.inspection.messages(message.payload)));
     return this.#refused(message, 'INTERNAL', `the kernel has no handler for ${message.type}`);
   }

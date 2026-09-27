@@ -26,11 +26,20 @@ function byTools(options: CallGrants, capabilities: Capabilities, { owner, entry
 // 05 §5.7 for commands and queries: an extension (or its process) calls its own types freely; a foreign type needs
 // a `calls` pattern covering it (never a foreign internal or user type) or, for an agent tool, `tools`. The grant is
 // the one of the calling invocation's workspace, or the intersection for a global invocation (ADR 0133). kernel.*
-// types apply their own Who rule instead (03 §3.8, ADR 0079).
+// types apply their own Who rule instead (03 §3.8, ADR 0079). A delegated token calls with its actor's grants
+// (ADR 0140).
 export function checkCallCapability(options: CallGrants, sender: Sender, target: CallTarget, workspaceId: string | undefined): void {
-  const acting = sender.extension;
   const { owner, entry } = target;
-  if (acting === undefined || acting === owner || owner === kernelOwner) return;
+  if (owner === kernelOwner) return;
+  const { delegatedBy } = sender;
+  // A person sends access-all types (user and internal ones are the access check's to refuse, CALLER_NOT_ALLOWED).
+  if (delegatedBy?.kind === 'person') {
+    if (entry.kind === 'event' || entry.access !== 'extensions') return;
+    throw new Refusal('CAPABILITY_DENIED', { detail: `a person may not send "${entry.type}", so a token they delegated may not either` });
+  }
+  if (delegatedBy?.kind === 'nobody') throw new Refusal('CAPABILITY_DENIED', { detail: `the token that delegated "${entry.type}" has ended` });
+  const acting = delegatedBy?.extension ?? sender.extension;
+  if (acting === undefined || acting === owner) return;
   const capabilities = options.grants.capabilities(acting, workspaceId);
   if (capabilities !== undefined && (byCalls(capabilities, entry) || byTools(options, capabilities, target, workspaceId))) return;
   throw new Refusal('CAPABILITY_DENIED', {

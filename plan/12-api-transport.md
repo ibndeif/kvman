@@ -87,9 +87,11 @@ close   { reason: 'slow-consumer' | 'shutdown' }
 ## 12.4 Local socket and job tokens
 
 - Processes spawned with a `token` (`03` §3.7) receive `KVMAN_SOCKET` and `KVMAN_TOKEN` in their environment.
-- Frames (newline-delimited JSON, one request per connection): `{ token, op: 'command' | 'query', type, payload, idempotencyKey?, wait? }` → `{ ok, data | problem }`.
+- The socket is `<home>/kernel.sock` (0600); a stale file is removed at boot and the socket is deleted at shutdown. A path over 103 bytes refuses to start with `HOME_INVALID` (ADR 0140).
+- Frames (newline-delimited JSON, one request per connection, at most 17 MB): `{ token, op: 'command' | 'query', type, payload, idempotencyKey?, wait? }` or `{ token, op: 'help', type? }` → `{ ok, data | problem }`. A command waits like `POST /commands` (`wait` default and maximum 60 s); a deferred or slower reply answers `data: { id, state }`. `help` answers `{ types: [{ type, kind, description }] }`, or for one type `{ type, kind, description, input, output?, markdown }` (ADR 0140).
+- An unknown, revoked, or missing token, and a type outside `token.calls` or the actor's grants, are refused `CAPABILITY_DENIED` (ADR 0140).
 - Processes are never users: types with access `user` or `internal` are rejected with `CALLER_NOT_ALLOWED` whatever the token says.
-- The kernel resolves the token to `proc:<processId>`, its allowed types (∩ the spawner's capabilities, or ∩ the requesting actor's capabilities for delegated tokens — `03` §3.7), and its inherited `context` (e.g. `sessionId`). Tokens are revoked when the process exits or is killed.
+- The kernel resolves the token to `proc:<processId>`, its allowed types (∩ the spawner's capabilities, or ∩ the requesting actor's capabilities for delegated tokens — `03` §3.7; re-evaluated on every call), and its inherited `context` (e.g. `sessionId`). A call is sent in the spawning message's workspace and correlation, caused by it, with its context overlaid with `token.context`, at priority `normal` (ADR 0140). Tokens are revoked when the process exits or is killed.
 
 ## 12.5 `kvman` CLI
 
@@ -129,7 +131,7 @@ The CLI is operated by the person at the terminal, so it may send grant commands
 
 ## 12.6 `kv` shim (inside processes)
 
-A tiny dependency-free Node script at `~/.kvman/bin/kv`, placed **last** on `PATH`. Its first line is a shebang with the absolute path of the Node binary running the kernel (`process.execPath`), rewritten at every kernel start, so it works even when that Node is not on the person's `PATH` (nvm, a bundled runtime). `kvman doctor` checks that the shebang points to an existing Node.
+A tiny dependency-free Node script at `~/.kvman/bin/kv`, placed **last** on `PATH` (by the kernel, for every process with a token). Its first line is a shebang with the absolute path of the Node binary running the kernel (`process.execPath`), rewritten at every kernel start, so it works even when that Node is not on the person's `PATH` (nvm, a bundled runtime). Its second line imports the shim module shipped in `@kvman/kernel`, which uses only Node built-ins (ADR 0141). `kvman doctor` checks that the shebang points to an existing Node.
 
 ```
 kv <type> --<field> <value> …          kebab-case flags map to input schema fields
@@ -140,6 +142,8 @@ kv help <type>                          LLM-friendly Markdown: usage, flags, exa
 ```
 
 `kv help` lists only types the token allows, so user-only and internal types never appear.
+
+Flags (ADR 0141): `--field-name` maps to the top-level input field `fieldName`, coerced by its JSON Schema type (numbers parsed; a bare boolean flag is `true`, `--no-flag` is `false`; an array repeats the flag; an object is JSON text); an unknown flag or a value that does not coerce is a usage error. A command waits for its reply up to `--wait <ms>` (default and maximum 60,000); `--idempotency-key` sets the key, else each call gets a random one.
 
 Output: `{"ok":true,"data":…}` on stdout with exit 0; `{"ok":false,"problem":…}` on stderr with exit 1; usage errors exit 2. Help text is generated from the registry, so it is always in sync with the schemas.
 

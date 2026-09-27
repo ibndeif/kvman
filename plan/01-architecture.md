@@ -126,7 +126,7 @@ kvman/
     shell/           @kvman/shell — Vue SPA: frame and shell-only zones, renderer, component library, data layer,
                      notifications, formatting, right-to-left, kvman catalogs (en, ar).
     widget-bridge/   @kvman/widget-bridge — tiny library used inside widget iframes.
-    cli/             @kvman/cli — `kvman` command and the `kv` shim.
+    cli/             @kvman/cli — `kvman` command (the `kv` shim ships in the kernel, ADR 0141).
     devtools/        @kvman/devtools — TypeScript, esbuild, and the build and test-run scripts of kernel.dev.build
                      (11 §11.5); the kernel starts these scripts as child processes and never imports them.
   extensions/
@@ -163,7 +163,7 @@ Test files may also import JSON data from another package's `test/fixtures/` fol
                                              preferences, notifications
   secrets.json                               (0600) credentials, never exported or backed up
   daemon.lock                                exclusive lock {pid, processStart, nonce, port, startedAt}
-  kernel.sock                                (0600) local socket for kv shim and CLI fallback
+  kernel.sock                                (0600) local socket for the kv shim (ADR 0140)
   blobs/ab/cd/<sha256>                       content-addressed bytes
   jobs/<processId>.log                       live process logs (capped, finalized into blobs)
   extensions/

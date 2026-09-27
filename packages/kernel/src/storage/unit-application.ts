@@ -8,6 +8,7 @@ import { StorageFailure, type Connection } from './driver.ts';
 import { writeConfig } from './config-rows.ts';
 import { applyKernelChange, type KernelChange } from './kernel-changes.ts';
 import { cancelMessages, expireMessages } from './message-ending.ts';
+import { endProcessRow } from './process-rows.ts';
 import { markInvocation, markRetry, replyOf } from './message-rows.ts';
 import type { SpillFiles } from './spill.ts';
 import { readMessageState } from './stored-message.ts';
@@ -100,6 +101,9 @@ function settleOrigin(scope: UnitScope, unit: CommitUnit): void {
   if (origin.kind === 'expire') expireMessages(scope, origin.messageIds);
   if (origin.kind === 'quarantine') upsertQuarantine(scope.connection, origin.extension, origin.reason);
   if (origin.kind === 'change') settleKernelChange(scope, origin.change, origin.command);
+  if (origin.kind === 'process' && !endProcessRow(scope.connection, origin.end)) {
+    throw new UnitRejected(kernelProblem('INTERNAL', { correlationId: scope.correlationId, detail: `process ${origin.end.processId} has no running row` }));
+  }
 }
 
 function settleKernelChange(scope: UnitScope, change: KernelChange, command: Message | undefined): void {

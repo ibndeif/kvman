@@ -9,7 +9,7 @@ export type Exit = { code: number | null; signal: NodeJS.Signals | null };
 
 export type ChildKernel = { port: number; pid: number; exited: Promise<Exit>; stop(): Promise<Exit> };
 
-export type LaunchOptions = { home: string; fixture: 'ledger' | 'bench' | 'desk' | 'probe' | 'keeper' | 'first-run'; faults?: string; builtin?: string; environment?: NodeJS.ProcessEnv };
+export type LaunchOptions = { home: string; fixture: 'ledger' | 'bench' | 'desk' | 'probe' | 'keeper' | 'runner' | 'first-run'; faults?: string; builtin?: string; environment?: NodeJS.ProcessEnv };
 
 const entry = fileURLToPath(new URL('./child-kernel.ts', import.meta.url));
 
