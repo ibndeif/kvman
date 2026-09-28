@@ -87,7 +87,7 @@ Rules:
 
 - Type format: `<namespace>.<segment>[.<segment>…]`, lowercase, multi-word segments in kebab-case (`agent.session.set-model`). The namespace is declared in `defineExtension`'s `meta.namespace` and is the first segment.
 - Reserved: `kernel.*` (kernel API), `ui.*` (commands handled by the kernel that deliver one-way messages to the user actor: `ui.toast`, `ui.notify`, `ui.dismiss`, `ui.navigate`, `08` §8.11), `frame.*` (the shell's frame slots, `08` §8.3), `sys.*` (reserved, unused in v2). An extension whose `meta.namespace` is one of these fails validation.
-- `ui.*` commands may be sent only by extensions holding the `ui` capability and by the kernel (a user sending one gets `CALLER_NOT_ALLOWED`). The kernel handles them at commit and replies `{ ok: true }` at once; senders never wait for a person.
+- `ui.*` commands may be sent only by extensions holding the `ui` capability and by the kernel (a user or a process sending one gets `CALLER_NOT_ALLOWED`). The kernel handles them at commit, stores them as `done` rows, and replies `{ ok: true }` at once; senders never wait for a person (ADR 0162).
 
 ### Access
 

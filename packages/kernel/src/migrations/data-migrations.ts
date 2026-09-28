@@ -1,10 +1,11 @@
-import { migratingRecordSchema, type Isolation, type Manifest, type MigratingRecord, type Problem, type QuarantineReason } from '@kvman/protocol';
+import { migratingRecordSchema, type Isolation, type Manifest, type MigratingRecord, type OutboundSend, type Problem, type QuarantineReason } from '@kvman/protocol';
 import type { FaultPoints } from '../faults/fault-points.ts';
 import type { VerifiedSnapshot } from '../hosts/snapshot-gate.ts';
 import { storedConfigIssues } from '../config/stored-config.ts';
 import { kernelProblem, ProblemError } from '../problems.ts';
 import type { CommitPipeline } from '../storage/commit-pipeline.ts';
 import type { Connection } from '../storage/driver.ts';
+import { migrationNotice } from '../notifications/kernel-notices.ts';
 import type { KernelChange } from '../storage/kernel-changes.ts';
 import { MigrationHost, type MigrationHostOptions } from './migration-host.ts';
 
@@ -126,12 +127,13 @@ export class DataMigrations {
       await this.#deps.quarantine(request.extension, 'MIGRATION_FAILED');
       return { ok: false, problem, quarantined: true };
     }
-    await this.#change({ kind: 'migration.end', name: request.extension }, request.correlationId);
+    await this.#change({ kind: 'migration.end', name: request.extension }, request.correlationId, [migrationNotice(request.extension, problem)]);
     return { ok: false, problem, quarantined: false };
   }
 
-  async #change(change: KernelChange, correlationId: string): Promise<void> {
-    const result = await this.#deps.pipeline.enqueue({ origin: { kind: 'change', change, correlationId }, writes: [], sends: [], publishes: [], replies: [] });
+  // ADR 0164: a failure that keeps the old version notifies the person with the migration's end.
+  async #change(change: KernelChange, correlationId: string, sends: OutboundSend[] = []): Promise<void> {
+    const result = await this.#deps.pipeline.enqueue({ origin: { kind: 'change', change, correlationId }, writes: [], sends, publishes: [], replies: [] });
     if (!result.committed) throw new ProblemError(result.problem);
   }
 }

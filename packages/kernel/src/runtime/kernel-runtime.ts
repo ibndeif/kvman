@@ -275,7 +275,7 @@ export class KernelRuntime {
       snapshots: this.snapshots, trust: this.files.trust, queries: this.#queries, secrets: options.secrets, versions: this.versions, migrations: this.migrations,
       timers: options.timers, faults: options.faults ?? inertFaults, home: options.install.home, logger: options.logger, version: options.identity.version, now: options.now, presetTokens, preferences: this.preferences, llm, provide: (call) => this.hosts.provide(call), ids, health: () => this.health(),
       abortMessages, retireHosts: (extension) => this.hosts.replaceHosts(extension, reloadGraceMs), killProcesses: (workspaceId) => this.processes.killWorkspace(workspaceId), quarantine: (extension, reason) => quarantines.quarantine(extension, reason),
-      requestShutdown: options.requestShutdown,
+      requestShutdown: options.requestShutdown, index: this.index,
     });
     this.#kernelHost = kernel;
     this.hosts.connect({

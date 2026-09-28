@@ -106,7 +106,7 @@ export class Kernel {
       ...(options.startThread === undefined ? {} : { startThread: options.startThread }),
       ...(options.faults === undefined ? {} : { faults: options.faults }),
     });
-    this.#hub = new EventHub({ connection, files: this.runtime.files.files, pipeline: this.runtime.pipeline, live: this.runtime.live, timers: options.timers, version: identity.version });
+    this.#hub = new EventHub({ connection, files: this.runtime.files.files, pipeline: this.runtime.pipeline, live: this.runtime.live, timers: options.timers, version: identity.version, now: options.now });
     this.#socket = new SocketAdapter({ path: socketPathOf(options.home), requests: this.runtime.socket, logger: resources.logger, ids: options.ids });
   }
 

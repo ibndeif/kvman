@@ -1,6 +1,7 @@
-import { jsonByteLength, type Message, type Problem } from '@kvman/protocol';
+import { jsonByteLength, type Message, type Problem, type ReplyPayload } from '@kvman/protocol';
 import { applyBlobRefChanges } from '../blobs/blob-ref-changes.ts';
 import { settlePendingRefs } from '../blobs/blob-rows.ts';
+import { deadLetterNotice } from '../notifications/kernel-notices.ts';
 import { kernelProblem } from '../problems.ts';
 import type { Admission, AppliedMessages, CommitInvocation, CommitResult, CommitUnit } from './commit-unit.ts';
 import { causeOf, correlationOf, senderOf } from './commit-unit.ts';
@@ -90,7 +91,10 @@ function settleOrigin(scope: UnitScope, unit: CommitUnit): void {
   }
   if (origin.kind === 'retry') {
     markRetry(scope, origin.message, origin.attempts, origin.outcome);
-    if (origin.outcome.state === 'dead') finalReply(scope, origin.message, origin.outcome.reply);
+    if (origin.outcome.state === 'dead') {
+      finalReply(scope, origin.message, origin.outcome.reply);
+      noticeDeadLetter(scope, origin.message, origin.outcome.reply);
+    }
   }
   if (origin.kind === 'cancel') {
     const cancelled = cancelMessages(scope, origin.messageIds) + origin.unstored;
@@ -104,6 +108,14 @@ function settleOrigin(scope: UnitScope, unit: CommitUnit): void {
   if (origin.kind === 'process' && !endProcessRow(scope.connection, origin.end)) {
     throw new UnitRejected(kernelProblem('INTERNAL', { correlationId: scope.correlationId, detail: `process ${origin.end.processId} has no running row` }));
   }
+}
+
+// ADR 0164: a dead message of a correlation a person started notifies them, caused by it, in its workspace.
+function noticeDeadLetter(scope: UnitScope, message: Message, reply: ReplyPayload): void {
+  if (reply.ok) return;
+  const root = scope.connection.prepare('SELECT source FROM messages WHERE id = ?').get(message.correlationId);
+  if (root === undefined || !String(root['source']).startsWith('user:')) return;
+  admitSend(scope, deadLetterNotice(message, reply.problem), 0, undefined);
 }
 
 function settleKernelChange(scope: UnitScope, change: KernelChange, command: Message | undefined): void {
@@ -150,7 +162,7 @@ function applyContents(storage: UnitStorage, unit: CommitUnit, admission: Admiss
   const scope: UnitScope = {
     connection, files: storage.files, admission, now, sender: senderOf(origin), cause, correlationId: correlationOf(origin), received: receivedOf(origin),
     workspaceId: origin.kind === 'adapter' ? origin.workspaceId : cause?.workspaceId,
-    applied: { inserted: [], duplicates: [], logged: [], announced: [], unstored: [], replies: [], ended: [], secrets: [], correlationId: correlationOf(origin) },
+    applied: { inserted: [], duplicates: [], logged: [], announced: [], unstored: [], replies: [], ended: [], secrets: [], pushes: [], correlationId: correlationOf(origin) },
   };
   unit.sends.forEach((send, index) => admitSend(scope, send, index, index === 0 ? firstSendId(unit) : undefined));
   for (const publish of unit.publishes) admitPublish(scope, publish);

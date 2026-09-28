@@ -8,6 +8,7 @@ import {
 } from '@kvman/protocol';
 import { jsonDocument } from './kernel-json-schemas.ts';
 import { llmEntries } from './kernel-llm-types.ts';
+import { notificationEntries } from './kernel-notification-types.ts';
 import { presetEntries } from './kernel-preset-types.ts';
 import { uiTypeEntries } from './kernel-ui-types.ts';
 import { versionEntries } from './kernel-version-types.ts';
@@ -64,6 +65,7 @@ export function kernelTypeEntries(): TypeEntry[] {
     ...presetEntries(),
     ...llmEntries(),
     ...uiTypeEntries(),
+    ...notificationEntries(),
     {
       type: 'kernel.started', kind: 'event', delivery: 'transient',
       description: 'The kernel finished booting.',

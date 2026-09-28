@@ -39,11 +39,11 @@ describe('kernel schema 2 (ADR 0070)', () => {
     direct.close();
     expect(columnsOf('schedules', file)).toEqual(['extension', 'name', 'ws', 'anchor_at', 'due_at', 'message_id']);
     const connection = openKernelDatabase(file, betterSqlite3Driver, ulids.next());
-    expect(rows(connection, "SELECT version FROM schema_versions WHERE owner = 'kernel'")).toEqual([{ version: 5 }]);
+    expect(rows(connection, "SELECT version FROM schema_versions WHERE owner = 'kernel'")).toEqual([{ version: latestKernelSchemaVersion }]);
     expect(rows(connection, "SELECT name, pk FROM pragma_table_info('schedules') WHERE pk > 0 ORDER BY pk")).toEqual([
       { name: 'extension', pk: 1 }, { name: 'name', pk: 2 }, { name: 'ws', pk: 3 },
     ]);
-    connection.prepare("UPDATE schema_versions SET version = 6 WHERE owner = 'kernel'").run();
+    connection.prepare(`UPDATE schema_versions SET version = ${latestKernelSchemaVersion + 1} WHERE owner = 'kernel'`).run();
     connection.close();
     expect(() => openKernelDatabase(file, betterSqlite3Driver, ulids.next())).toThrow(expect.objectContaining({ problem: expect.objectContaining({ code: 'SCHEMA_TOO_NEW' }) }));
   });

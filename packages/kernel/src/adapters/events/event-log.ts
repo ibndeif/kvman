@@ -53,13 +53,4 @@ export class EventLog {
     const oldest = this.#connection.prepare('SELECT MIN(seq) AS seq FROM events').get()?.['seq'];
     return oldest === null || oldest === undefined || Number(oldest) > cursor + 1 ? 'cursor-expired' : undefined;
   }
-
-  // The hello message's tray counts (08 §8.11): the tray itself comes with M2.12.
-  notifications(): SseMessage<'hello'>['notifications'] {
-    const row = this.#connection
-      .prepare(`SELECT COUNT(*) AS unread, COALESCE(SUM(attention), 0) AS attention FROM notifications
-        WHERE read_at IS NULL AND dismissed_at IS NULL`)
-      .get();
-    return { unread: Number(row?.['unread'] ?? 0), attention: Number(row?.['attention'] ?? 0) };
-  }
 }

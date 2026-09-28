@@ -8,6 +8,12 @@ import { dismissSchema, navigateSchema, notificationSchema, toastSchema } from '
 
 const countSchema = z.number().int().nonnegative();
 
+function uiStreamMessage<Type extends string, Payload extends z.ZodType>(type: Type, payload: Payload) {
+  return z.strictObject({
+    clientId: z.string().min(1).exactOptional(), workspaceId: workspaceIdSchema.exactOptional(), type: z.literal(type), source: addressSchema, payload,
+  });
+}
+
 export const streamedEventSchema = z.strictObject({
   id: ulidSchema, type: typeNameSchema, source: addressSchema, workspaceId: workspaceIdSchema.exactOptional(), payload: jsonSchema,
   correlationId: ulidSchema, causationId: ulidSchema.exactOptional(), createdAt: epochMsSchema,
@@ -26,11 +32,12 @@ export const sseMessageSchemas = {
     z.strictObject({ clientId: z.string().min(1), id: ulidSchema, ok: z.literal(true), data: jsonSchema }),
     z.strictObject({ clientId: z.string().min(1), id: ulidSchema, ok: z.literal(false), problem: problemSchema }),
   ]),
+  // ADR 0163: `workspaceId` is the message's workspace (absent = global), so the shell picks the tabs that show it.
   ui: z.union([
-    z.strictObject({ clientId: z.string().min(1).exactOptional(), type: z.literal('ui.toast'), source: addressSchema, payload: toastSchema }),
-    z.strictObject({ clientId: z.string().min(1).exactOptional(), type: z.literal('ui.notify'), source: addressSchema, payload: notificationSchema }),
-    z.strictObject({ clientId: z.string().min(1).exactOptional(), type: z.literal('ui.dismiss'), source: addressSchema, payload: dismissSchema }),
-    z.strictObject({ clientId: z.string().min(1).exactOptional(), type: z.literal('ui.navigate'), source: addressSchema, payload: navigateSchema }),
+    uiStreamMessage('ui.toast', toastSchema),
+    uiStreamMessage('ui.notify', notificationSchema),
+    uiStreamMessage('ui.dismiss', dismissSchema),
+    uiStreamMessage('ui.navigate', navigateSchema),
   ]),
   resync: z.strictObject({ reason: z.enum(['cursor-expired', 'cursor-unknown']) }),
   close: z.strictObject({ reason: z.enum(['slow-consumer', 'shutdown']) }),

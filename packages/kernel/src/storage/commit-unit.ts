@@ -1,5 +1,5 @@
 import type {
-  Address, BlobRefChange, ConfigWrite, ConfigWriteScope, DeferredReply, Json, JsonObject, Message, OutboundPublish, OutboundSend, Problem, QuarantineReason, ReplyPayload,
+  Address, BlobRefChange, Notification, SseMessage, Toast, ConfigWrite, ConfigWriteScope, DeferredReply, Json, JsonObject, Message, OutboundPublish, OutboundSend, Problem, QuarantineReason, ReplyPayload,
   SecretWrite, StoreWrite,
 } from '@kvman/protocol';
 import type { SecretChange } from '../secrets/secret-store.ts';
@@ -74,9 +74,18 @@ export type SendRequest = {
   id?: string;
 };
 
-// A refused send carries the row to store as `failed` only when its continuation can be delivered (ADR 0034).
+// A checked ui.* send, which the kernel handles at commit (ADR 0162): a notification's entity route is rendered, and a
+// toast or notification carries the id of the tray entry it may store or fold into.
+export type UiSend =
+  | { kind: 'toast'; toast: Toast; entryId: string }
+  | { kind: 'notify'; notification: Notification; entryId: string }
+  | { kind: 'dismiss'; key: string }
+  | { kind: 'navigate'; route: string };
+
+// A refused send carries the row to store as `failed` only when its continuation can be delivered (ADR 0034); a
+// refused ui.* send never does.
 export type SendAdmission =
-  | { outcome: 'admitted'; admitted: AdmittedMessage }
+  | { outcome: 'admitted'; admitted: AdmittedMessage; ui?: UiSend }
   | { outcome: 'duplicate'; original: OriginalMessage }
   | { outcome: 'refused'; problem: Problem; failed?: AdmittedMessage };
 
@@ -128,8 +137,12 @@ export type AppliedMessages = {
   ended: EndedMessage[];
   // Applied to secrets.json after the commit, in commit order (04 §4.7).
   secrets: SecretChange[];
+  // The ui.* messages the event stream pushes after the commit (12 §12.3, ADR 0162).
+  pushes: UiPush[];
   correlationId: string;
 };
+
+export type UiPush = SseMessage<'ui'>;
 
 // A transient event's delivery, with the message that published the event (for cancel scopes, ADR 0083).
 export type UnstoredDelivery = { admitted: AdmittedMessage; publisher: string | undefined };

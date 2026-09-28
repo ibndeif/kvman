@@ -66,6 +66,7 @@ export * from './ui/contributions.ts';
 export * from './ui/entries.ts';
 export * from './ui/frame-slots.ts';
 export * from './ui/notifications.ts';
+export * from './ui/notification-tray.ts';
 export * from './ui/prop-schemas.ts';
 export * from './ui/ui-registry.ts';
 export * from './ui/view-node.ts';

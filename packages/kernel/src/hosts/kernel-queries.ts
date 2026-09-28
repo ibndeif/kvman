@@ -17,6 +17,7 @@ import { isAdministrator } from './administrators.ts';
 import type { ExtensionQueries, ExtensionQueryAnswer } from './extension-queries.ts';
 import type { InspectionQueries } from './inspection-queries.ts';
 import type { LlmQueries } from './llm-queries.ts';
+import type { NotificationQueries } from './notification-queries.ts';
 import type { SavedPreferences } from '../preferences/user-preferences.ts';
 import type { PresetQueries } from './preset-queries.ts';
 import type { ProcessQueries } from './process-queries.ts';
@@ -36,6 +37,7 @@ export type KernelQueriesDeps = {
   presets: PresetQueries;
   llm: LlmQueries;
   ui: UiQueries;
+  notifications: NotificationQueries;
   preferences: SavedPreferences;
   grants: GrantsSource;
   registry: () => KernelRegistry;
@@ -83,6 +85,8 @@ export class KernelQueries {
     if (message.type === 'kernel.ui.page.get') return this.#deps.ui.page(message);
     if (message.type === 'kernel.ui.translations.get') return this.#deps.ui.translations(message);
     if (message.type === 'kernel.user.preferences.get') return { ok: true, value: this.#deps.preferences.read() };
+    if (message.type === 'kernel.notifications.list') return this.#extensionAnswer(message, this.#adminOnly(message, () => this.#deps.notifications.list(message.payload)));
+    if (message.type === 'kernel.notifications.count') return { ok: true, value: this.#deps.notifications.count(message.payload) };
     return this.#refused(message, 'INTERNAL', `the kernel has no handler for ${message.type}`);
   }
 

@@ -1,5 +1,5 @@
 import type { Connection } from './driver.ts';
-import { kernelSchemaVersion1, kernelSchemaVersion2, kernelSchemaVersion3, kernelSchemaVersion4, kernelSchemaVersion5 } from './kernel-schema.ts';
+import { kernelSchemaVersion1, kernelSchemaVersion2, kernelSchemaVersion3, kernelSchemaVersion4, kernelSchemaVersion5, kernelSchemaVersion6 } from './kernel-schema.ts';
 
 export type KernelMigration = { version: number; statements: readonly string[] };
 
@@ -9,6 +9,7 @@ export const kernelMigrations: readonly KernelMigration[] = [
   { version: 3, statements: kernelSchemaVersion3 },
   { version: 4, statements: kernelSchemaVersion4 },
   { version: 5, statements: kernelSchemaVersion5 },
+  { version: 6, statements: kernelSchemaVersion6 },
 ];
 
 export const latestKernelSchemaVersion = kernelMigrations.length;

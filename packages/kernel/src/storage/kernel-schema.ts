@@ -88,3 +88,9 @@ export const kernelSchemaVersion5 = [
     due_at INTEGER NOT NULL, message_id TEXT, PRIMARY KEY(extension, name, ws))`,
   'CREATE INDEX schedules_message ON schedules(message_id)',
 ];
+
+// ADR 0163: the tray's order and cap, and the ui.* rows the rate limit counts (ADR 0162).
+export const kernelSchemaVersion6 = [
+  'CREATE INDEX notifications_ws ON notifications(ws, updated_at)',
+  "CREATE INDEX messages_ui ON messages(source, type, created_at) WHERE type IN ('ui.toast', 'ui.notify')",
+];

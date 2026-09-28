@@ -200,8 +200,8 @@ Preview tokens (`kernel.trust.preview`, `kernel.preset.import.preview`) are stat
 | `kernel.ui.page.get` | `{ workspaceId, pageId }` → `{ page, components: Array<{ name, owner, def }> }` | any | `NOT_FOUND` for a page that is not active (ADR 0159) |
 | `kernel.ui.translations.get` | `{ workspaceId }` → `{ locale, catalogs: Record<owner, Record<locale, Catalog>> }` for the saved language and its fallbacks | any | ADR 0159 |
 | `kernel.user.preferences.get` | `{}` → `{ locale, theme, desktopAlerts }` | any | defaults `en`, `app`, `false` (ADR 0161) |
-| `kernel.notifications.list` | `{ workspaceId?, unreadOnly? }` → `{ items }` | admin | the tray holds every extension's messages; at most 200 per workspace are kept (`04` §4.9), so the list is always complete |
-| `kernel.notifications.count` | `{ workspaceId? }` → `{ unread, attention }` | any | |
+| `kernel.notifications.list` | `{ workspaceId?, unreadOnly? }` → `{ items: NotificationItem[] }` | admin | the tray holds every extension's messages; at most 200 per workspace are kept (`04` §4.9), so the list is always complete; scope and item shape in `08` §8.11 (ADR 0163) |
+| `kernel.notifications.count` | `{ workspaceId? }` → `{ unread, attention }` | any | muted entries are not counted (ADR 0163) |
 | `kernel.dev.file.get` / `kernel.dev.files.list` | `{ project, path }` → file content / `[{ path, size }]` | admin | builder projects (`11` §11.5); jailed to the project folder (ADR 0012) |
 
 ### Commands
@@ -231,7 +231,7 @@ Preview tokens (`kernel.trust.preview`, `kernel.preset.import.preview`) are stat
 | `kernel.config.set` | `{ extension, scope, workspaceId?, value, revision }` → `{ revision }` | admin | `07` §7.5 |
 | `kernel.secret.set` / `kernel.secret.clear` | `{ extension, name, value }` / `{ extension, name }` → `{}` | admin | |
 | `kernel.cancel` | `{ messageId } \| { correlationId }` → `{ cancelled: number }` | any for its own messages; admin otherwise | `02` §2.9 |
-| `kernel.message.retry` / `kernel.message.discard` | `{ messageId }` → `{}` | admin | dead or pending messages |
+| `kernel.message.retry` / `kernel.message.discard` | `{ messageId }` → `{}` | admin | dead or pending messages. Retry: a dead message is pending again with attempts `0`, no stored reply, and no `onReply`; a pending one loses its `not_before`; other states `VALIDATION_FAILED` (ADR 0164). Discard comes with the inspector (M5.4) |
 | `kernel.dev.project.create` / `.delete` | `{ name, template? }` / `{ name }` → `{}` | admin | builder projects under `~/.kvman/extensions/dev/` (`11` §11.5) |
 | `kernel.dev.file.write` / `.delete` | `{ project, path, content }` / `{ project, path }` → `{}` | admin | jailed to the project folder |
 | `kernel.dev.build` | `{ project, test? }` → `{ ok, issues, tests?, versionId? }` | admin | compile, record the manifest, and run the tests in a sandboxed test process; records a `dev:` version when clean (`11` §11.5) |
@@ -243,8 +243,8 @@ Preview tokens (`kernel.trust.preview`, `kernel.preset.import.preview`) are stat
 | `kernel.user.preferences.set` | `{ locale?, theme?, desktopAlerts? }` → `{}` | user | `08` §8.16; the canonical tag is stored; `changed` only when a value changed (ADR 0161) |
 | `kernel.notification.read` / `kernel.notification.dismiss` | `{ id }` → `{}` | user | `08` §8.11 |
 | `kernel.notifications.read-all` | `{ workspaceId? }` → `{}` | user | |
-| `kernel.notifications.mute` | `{ workspaceId, extension, muted }` → `{}` | user | |
-| `ui.toast`, `ui.notify`, `ui.dismiss`, `ui.navigate` | `08` §8.11 → `{ ok: true }` | extensions with `ui`, kernel | one-way; handled at commit |
+| `kernel.notifications.mute` | `{ workspaceId, extension, muted }` → `{}` | user | stored in `user_preferences` (ADR 0163) |
+| `ui.toast`, `ui.notify`, `ui.dismiss`, `ui.navigate` | `08` §8.11 → `{ ok: true }` | extensions with `ui`, kernel | one-way; handled at commit and stored as `done` rows; every refusal fails the sender's unit (ADR 0162) |
 
 ### Events
 
@@ -265,11 +265,11 @@ Every extension may subscribe to `kernel.*` events without a grant. All are dura
 | `kernel.message.dead-lettered` | `{ messageId, type, correlationId }` | §3.4; in the dead message's workspace (ADR 0061) |
 | `kernel.llm.models.changed` / `kernel.llm.defaults.changed` | `{ provider? }` / `{ workspaceId? }` | §3.12 |
 | `kernel.user.preferences.changed` | `{ locale, theme, desktopAlerts }` | preferences set |
-| `kernel.notifications.changed` (transient) | `{ workspaceId }` | any tray change |
+| `kernel.notifications.changed` (transient) | `{ workspaceId? }` | any tray change; global, `workspaceId` absent for a global entry (ADR 0163) |
 
 **`kernel.preset.changed`** is published in the same unit of work that bumps the applied preset's revision. `kernel.extension.enabled` / `.disabled` are still published for subscribers that care about one extension. The shell uses `kernel.preset.changed`, `kernel.extension.reloaded`, and `kernel.extension.quarantined` / `.unquarantined` to refresh the UI registry (`08` §8.6); there is no separate "UI changed" event, because the UI is computed from the preset and the enabled code.
 
-**Notifications** (`08` §8.11): the kernel stores `ui.notify` in the `notifications` table (replacing by `key`, enforcing rate limits, checking action buttons like view actions) and forwards toasts and notifications to connected tabs. It notifies the person itself when an extension is quarantined, a migration or integrity check fails, or a message from a person's action is dead-lettered.
+**Notifications** (`08` §8.11): the kernel stores `ui.notify` in the `notifications` table (replacing by `key`, enforcing rate limits, checking action buttons like view actions) and forwards toasts and notifications to connected tabs. It notifies the person itself when an extension is quarantined, a migration or integrity check fails, a message from a person's action is dead-lettered, or the secrets file cannot be written (keys, text, and buttons in ADR 0164).
 
 Kernel handlers run on the main thread, are short, and use the same unit-of-work commit. `kernel.llm.complete` is the exception in duration only: the kernel forwards it to a provider's host and completes it when the provider returns (§3.12).
 

@@ -1,4 +1,4 @@
-import type { Json, JsonObject, LiveChunk, LlmRequest, LlmResult, Message, ModelInfo, OnReply, Priority, Problem } from '@kvman/protocol';
+import type { Json, JsonObject, LiveChunk, LlmRequest, LlmResult, Message, ModelInfo, Notification, OnReply, Priority, Problem, Toast } from '@kvman/protocol';
 import type { CommandRef, EventRef, QueryRef } from './references.ts';
 import type { WorkspaceFiles } from './files.ts';
 import type { Processes } from './process.ts';
@@ -132,6 +132,20 @@ export interface Ctx {
   readonly process: Processes;
   /** Models through the kernel's LLM service (capability `llm`). */
   readonly llm: LlmAccess;
+  /** Toasts and tray notifications for the person (capability `ui`), sent when the handler commits. */
+  readonly ui: UiNotices;
+}
+
+/** `ctx.ui` (08 §8.11): shorthands for `ctx.send('ui.toast' | 'ui.notify' | 'ui.dismiss' | 'ui.navigate', …)`. */
+export interface UiNotices {
+  /** Shows a short toast in the tabs of the workspace, or only in the tab whose click started the chain. */
+  toast(toast: Toast): void;
+  /** Stores a notification in the tray; one with the same `key` replaces the earlier one. */
+  notify(notification: Notification): void;
+  /** Removes this extension's toast and notification with `key`. */
+  dismiss(key: string): void;
+  /** Opens `route` in the tab that started the chain; dropped when no tab started it. */
+  navigate(route: string): void;
 }
 
 /** `ctx.config` (05 §5.8). */

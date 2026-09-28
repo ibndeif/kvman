@@ -100,8 +100,12 @@ CREATE TABLE notifications (id TEXT PRIMARY KEY, ws TEXT, source TEXT, key TEXT,
                    level TEXT, data TEXT, attention INTEGER, read_at INTEGER, dismissed_at INTEGER,
                    expires_at INTEGER, created_at INTEGER, updated_at INTEGER);
 CREATE UNIQUE INDEX notifications_key ON notifications(source, ws, key) WHERE key IS NOT NULL;
+-- kernel schema 6 (ADR 0163): the tray's order and cap, and the ui.* rows the rate limit counts (ADR 0162)
+CREATE INDEX notifications_ws ON notifications(ws, updated_at);
+CREATE INDEX messages_ui ON messages(source, type, created_at) WHERE type IN ('ui.toast', 'ui.notify');
 CREATE TABLE user_preferences (user_id TEXT PRIMARY KEY, data TEXT,
-                   -- { locale, theme: app|system|light|dark, desktopAlerts, muted: { [workspaceId]: extension[] } } (08 §8.16)
+                   -- { locale, theme: app|system|light|dark, desktopAlerts, muted: { [workspaceId]: extension[] } } (08 §8.16,
+                   -- ADR 0163: preferences.set keeps muted)
                    revision INTEGER, updated_at INTEGER);
 
 -- LLM service (03 §3.12)
@@ -327,7 +331,7 @@ const text = await ctx.step('ocr', () => runOcr(blobId), { retrySafe: false });
 - **Global config** for extension X: `global_config` row, revisioned.
 - **Workspace config** for extension X: the `workspace_config` row (workspace, X), revisioned on its own. The applied preset row holds no config: applying a preset writes these rows from the preset's `config`, and `kernel.preset.current.get`, save-as, and export rebuild the preset's `config` from them (`07` §7.4). So a config change never changes the applied preset's revision or the UI registry (`08` §8.6).
 - **Secrets**: `secrets.json`, keyed by `extension/name`. Config schema fields marked `secret` are stored here under their dotted path, never in config rows or presets; a config write carrying one fails `CONFIG_INVALID`. Reads by other extensions or the UI are redacted: `••••` plus the last 4 characters for secrets of 12 or more characters, else `••••` (ADR 0126). Boot step 3 loads the file; one that does not parse refuses to start with `INTERNAL`.
-- **Writing secrets**: the file is outside the database transaction. Secret writes (from `kernel.secret.set/clear` and from `ctx.secrets.set` in a unit of work) are applied **after** the database commit, in commit order, by writing a new file (0600), fsyncing it, and renaming it over the old one, so the file is always either the old or the new version. If that write fails, the old value stays, the kernel logs the failure, and it sends an error notification naming the extension and the secret name (never the value); the command that set it has already succeeded.
+- **Writing secrets**: the file is outside the database transaction. Secret writes (from `kernel.secret.set/clear` and from `ctx.secrets.set` in a unit of work) are applied **after** the database commit, in commit order, by writing a new file (0600), fsyncing it, and renaming it over the old one, so the file is always either the old or the new version. If that write fails, the old value stays, the kernel logs the failure, and it sends an error notification naming the extension and the secret name (never the value; one per changed secret, ADR 0164); the command that set it has already succeeded.
 - Writes go through `kernel.config.set` and `kernel.secret.set` (user or `kernel.admin`), or `ctx.config.set` / `ctx.secrets.set` by the owner itself.
 
 ## 4.8 Migrations
@@ -351,7 +355,7 @@ const text = await ctx.step('ocr', () => runOcr(blobId), { retrySafe: false });
 A kernel background job (priority `background`):
 - deletes finished messages, their steps, spilled payloads, and events past `retain_until` (default 7 days, per-type overrides);
 - expires upload refs and collects unreferenced blobs;
-- trims the notification tray: entries past `expires_at`, read entries older than 7 days, all entries older than 30 days, and, per workspace, everything beyond the newest 200 (`08` §8.11);
+- trims the notification tray every 10 minutes, with blob GC: entries past `expires_at`, dismissed entries, entries read more than 7 days ago, and entries not updated for 30 days; the cap of the newest 200 per workspace is applied when an entry is stored (`08` §8.11, ADR 0163);
 - finalizes and caps process logs, and deletes ended `processes` rows and their `process:<id>` blob refs 7 days after they ended (with blob GC, every 10 minutes, ADR 0139);
 - cancels messages that have been pending for 7 days while their handler's extension is disabled in their workspace (`06` §6.4);
 - runs `PRAGMA wal_checkpoint(TRUNCATE)` and, weekly, `PRAGMA optimize`.

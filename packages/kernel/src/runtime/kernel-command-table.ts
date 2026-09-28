@@ -8,6 +8,7 @@ import type { ExtensionVersions } from '../hosts/extension-versions.ts';
 import type { KernelCommand } from '../hosts/kernel-host.ts';
 import type { LlmCalls } from '../hosts/llm-calls.ts';
 import { LlmDefaultsCommands } from '../hosts/llm-defaults-commands.ts';
+import { NotificationCommands } from '../hosts/notification-commands.ts';
 import type { KernelLogger } from '../hosts/kernel-logger.ts';
 import { PresetApply } from '../hosts/preset-apply.ts';
 import { PreviewWorkspaces } from '../hosts/preview-workspaces.ts';
@@ -28,6 +29,7 @@ import type { PresetImportTokens } from '../presets/import-tokens.ts';
 import { StagedApplies } from '../presets/staged-applies.ts';
 import type { RegistryState } from '../registry/registry-state.ts';
 import type { WorkspaceDirectory } from '../registry/workspace-directory.ts';
+import type { PendingIndex } from '../scheduler/pending-index.ts';
 import type { Scheduler } from '../scheduler/scheduler.ts';
 import type { SchedulerTimers } from '../scheduler/timers.ts';
 import type { CommitPipeline } from '../storage/commit-pipeline.ts';
@@ -38,6 +40,7 @@ export type KernelCommandDeps = {
   commits: KernelCommits;
   pipeline: CommitPipeline;
   scheduler: Scheduler;
+  index: PendingIndex;
   registry: RegistryState;
   directory: WorkspaceDirectory;
   install: InstallService;
@@ -87,6 +90,7 @@ export function kernelCommandTable(deps: KernelCommandDeps): Map<string, KernelC
   });
   const llmDefaults = new LlmDefaultsCommands({ connection, commits, registry, serial });
   const preferences = new PreferenceCommands({ commits, preferences: deps.preferences, serial: new SerialChanges() });
+  const notifications = new NotificationCommands({ connection, commits, registry, grants: registry, index: deps.index });
   return new Map<string, KernelCommand>([
     ['kernel.extension.stage', (claim, signal) => extensions.stage(claim, signal)],
     ['kernel.extension.install', (claim) => extensions.install(claim)],
@@ -115,5 +119,10 @@ export function kernelCommandTable(deps: KernelCommandDeps): Map<string, KernelC
     ['kernel.llm.models.refresh', (claim) => deps.refresh.refreshCommand(claim)],
     ['kernel.llm.defaults.set', (claim) => llmDefaults.set(claim)],
     ['kernel.user.preferences.set', (claim) => preferences.set(claim)],
+    ['kernel.notification.read', (claim) => notifications.read(claim)],
+    ['kernel.notification.dismiss', (claim) => notifications.dismiss(claim)],
+    ['kernel.notifications.read-all', (claim) => notifications.readAll(claim)],
+    ['kernel.notifications.mute', (claim) => notifications.mute(claim)],
+    ['kernel.message.retry', (claim) => notifications.retry(claim)],
   ]);
 }

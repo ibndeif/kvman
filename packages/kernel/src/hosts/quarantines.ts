@@ -1,11 +1,12 @@
 import type { ExtensionQuarantined, QuarantineReason } from '@kvman/protocol';
+import { quarantineNotice } from '../notifications/kernel-notices.ts';
 import type { RegistryState } from '../registry/registry-state.ts';
 import type { CommitPipeline } from '../storage/commit-pipeline.ts';
 import type { UlidGenerator } from '../ulid.ts';
 
 // 03 §3.6, ADR 0080: a quarantine is stored and announced in one kernel unit; the registry then refuses the
 // extension everywhere and the scheduler leaves its pending messages waiting (ADR 0086). Its processes are killed
-// (03 §3.7).
+// (03 §3.7), and the person is notified (ADR 0164).
 export class Quarantines {
   readonly #pipeline: CommitPipeline;
   readonly #registry: RegistryState;
@@ -24,7 +25,7 @@ export class Quarantines {
     const payload: ExtensionQuarantined = { name: extension, reason };
     const result = await this.#pipeline.enqueue({
       origin: { kind: 'quarantine', extension, reason, correlationId: this.#ids.next() },
-      writes: [], sends: [], publishes: [{ type: 'kernel.extension.quarantined', payload }], replies: [],
+      writes: [], sends: [quarantineNotice(extension, reason)], publishes: [{ type: 'kernel.extension.quarantined', payload }], replies: [],
     });
     if (!result.committed) return;
     this.#registry.refresh();

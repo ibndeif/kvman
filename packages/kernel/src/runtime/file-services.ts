@@ -12,6 +12,7 @@ import type { KernelCommits } from '../hosts/kernel-commits.ts';
 import type { KernelLogger } from '../hosts/kernel-logger.ts';
 import { TrustService } from '../hosts/trust-service.ts';
 import { WorkspaceCalls } from '../hosts/workspace-calls.ts';
+import { ProblemError } from '../problems.ts';
 import type { GrantsSource } from '../router/grants.ts';
 import type { SchedulerTimers } from '../scheduler/timers.ts';
 import type { CommitPipeline } from '../storage/commit-pipeline.ts';
@@ -35,7 +36,7 @@ export type FileServicesDeps = {
 // The pieces that need the commit pipeline and the kernel commits, which exist only after the router.
 export type FileServiceLinks = { pipeline: CommitPipeline; commits: KernelCommits; grants: GrantsSource };
 
-type LinkedServices = { trust: TrustService; blobCalls: BlobCalls; workspaceCalls: WorkspaceCalls };
+type LinkedServices = { trust: TrustService; blobCalls: BlobCalls; workspaceCalls: WorkspaceCalls; pipeline: CommitPipeline };
 
 // 04 §4.6, 07 §7.2: the blob store with its read rights and GC, and the workspace I/O edge with the trust gate.
 export class FileServices {
@@ -55,8 +56,12 @@ export class FileServices {
     const failed = (error: unknown): void => deps.logger.write({
       level: 'error', message: 'blob GC failed', fields: { error: error instanceof Error ? error.name : 'unknown' }, attributes: { correlationId: deps.ids.next() },
     });
-    // 04 §4.9, ADR 0139: ended processes and their log refs go 7 days after the end, so GC can collect the logs.
-    const housekeeping = (): void => inWriteTransaction(connection, () => deleteExpiredProcesses(connection, now() - processLimits.retentionMs));
+    // 04 §4.9, ADR 0139: ended processes and their log refs go 7 days after the end, so GC can collect the logs; the
+    // tray is trimmed in a kernel unit, which publishes its changes (ADR 0163).
+    const housekeeping = async (): Promise<void> => {
+      inWriteTransaction(connection, () => deleteExpiredProcesses(connection, now() - processLimits.retentionMs));
+      await this.#trimTray();
+    };
     this.collector = new BlobCollector(this.store, deps.timers, failed, housekeeping);
   }
 
@@ -64,7 +69,15 @@ export class FileServices {
     const { connection, ids, now, home } = this.#deps;
     const trust = new TrustService({ connection, pipeline: links.pipeline, commits: links.commits, grants: links.grants, gate: new TrustGate(), tokens: new TrustTokens(now), ids });
     const workspaceCalls = new WorkspaceCalls({ connection, grants: links.grants, trust, home: realpathSync.native(home) });
-    this.#linked = { trust, workspaceCalls, blobCalls: new BlobCalls({ store: this.store, rights: this.rights, files: workspaceCalls }) };
+    this.#linked = { trust, workspaceCalls, blobCalls: new BlobCalls({ store: this.store, rights: this.rights, files: workspaceCalls }), pipeline: links.pipeline };
+  }
+
+  async #trimTray(): Promise<void> {
+    const pipeline = this.#linked?.pipeline;
+    if (pipeline === undefined) return;
+    const origin = { kind: 'change', change: { kind: 'notifications.trim' }, correlationId: this.#deps.ids.next() } as const;
+    const result = await pipeline.enqueue({ origin, writes: [], sends: [], publishes: [], replies: [] });
+    if (!result.committed) throw new ProblemError(result.problem);
   }
 
   get trust(): TrustService {

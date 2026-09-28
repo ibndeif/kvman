@@ -6,6 +6,7 @@ import type { KernelCommits } from '../hosts/kernel-commits.ts';
 import type { KernelLogger } from '../hosts/kernel-logger.ts';
 import type { LlmCalls } from '../hosts/llm-calls.ts';
 import { LlmQueries } from '../hosts/llm-queries.ts';
+import { NotificationQueries } from '../hosts/notification-queries.ts';
 import { KernelHost } from '../hosts/kernel-host.ts';
 import { KernelQueries } from '../hosts/kernel-queries.ts';
 import { PresetQueries } from '../hosts/preset-queries.ts';
@@ -23,6 +24,7 @@ import type { DataMigrations } from '../migrations/data-migrations.ts';
 import type { SavedPreferences } from '../preferences/user-preferences.ts';
 import type { RegistryState } from '../registry/registry-state.ts';
 import type { WorkspaceDirectory } from '../registry/workspace-directory.ts';
+import type { PendingIndex } from '../scheduler/pending-index.ts';
 import type { Scheduler } from '../scheduler/scheduler.ts';
 import type { SchedulerTimers } from '../scheduler/timers.ts';
 import type { SecretStore } from '../secrets/secret-store.ts';
@@ -37,6 +39,7 @@ export type KernelHostWiring = {
   commits: KernelCommits;
   pipeline: CommitPipeline;
   scheduler: Scheduler;
+  index: PendingIndex;
   registry: RegistryState;
   directory: WorkspaceDirectory;
   install: InstallService;
@@ -85,7 +88,7 @@ export function wireKernelHost(parts: KernelHostWiring): KernelHost {
       extensions: new ExtensionQueries(connection, registry, registry), workspaces: new WorkspaceQueries(connection, registry, parts.secrets),
       inspection: new InspectionQueries({ connection, registry: current, grants: registry }), processes: new ProcessQueries(connection, registry), grants: registry,
       trust: parts.trust, presets, llm: llmQueries, preferences: parts.preferences,
-      ui: new UiQueries({ connection, registry, preferences: parts.preferences }),
+      ui: new UiQueries({ connection, registry, preferences: parts.preferences }), notifications: new NotificationQueries(connection, parts.now),
     }),
   });
 }

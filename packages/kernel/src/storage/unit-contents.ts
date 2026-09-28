@@ -1,6 +1,7 @@
 import type { DeferredReply, Message, OnReply, OutboundPublish, OutboundSend, Problem, ReplyPayload } from '@kvman/protocol';
 import { kernelProblem } from '../problems.ts';
-import type { Admission, AppliedMessages, SendAdmission, SendRequest, Sender } from './commit-unit.ts';
+import { applyUiSend } from '../notifications/ui-effects.ts';
+import type { Admission, AdmittedMessage, AppliedMessages, SendAdmission, SendRequest, Sender, UiSend } from './commit-unit.ts';
 import type { Connection } from './driver.ts';
 import { insertEvent, insertMessage, markReplied } from './message-rows.ts';
 import type { SpillFiles } from './spill.ts';
@@ -38,9 +39,28 @@ function continuationOf(commandId: string, onReply: OnReply, reply: ReplyPayload
 }
 
 export function recordSend(scope: UnitScope, result: SendAdmission): void {
-  if (result.outcome === 'admitted') scope.applied.inserted.push(insertMessage(scope, result.admitted, 'pending', undefined));
+  if (result.outcome === 'admitted' && result.ui !== undefined) recordUiSend(scope, result.admitted, result.ui);
+  else if (result.outcome === 'admitted') scope.applied.inserted.push(insertMessage(scope, result.admitted, 'pending', undefined));
   else if (result.outcome === 'duplicate') scope.applied.duplicates.push(result.original);
   else throw new UnitRejected(result.problem);
+}
+
+const uiReply: ReplyPayload = { ok: true, value: { ok: true } };
+
+// ADR 0162: the kernel handles a ui.* send at commit. Its effect comes first (the rate count sees only earlier rows),
+// then its row is stored `done` with its target and the reply `{ ok: true }`, which reaches waiters and continuations.
+function recordUiSend(scope: UnitScope, admitted: AdmittedMessage, ui: UiSend): void {
+  const effect = applyUiSend(scope, admitted.message, ui);
+  const message = { ...admitted.message, target: effect.target };
+  scope.applied.inserted.push(insertMessage(scope, { ...admitted, message }, 'done', uiReply));
+  if (effect.push !== undefined) scope.applied.pushes.push(effect.push);
+  for (const ws of effect.changed) publishTrayChange(scope, ws);
+  finalReply(scope, message, uiReply);
+}
+
+// ADR 0163: kernel.notifications.changed is published globally, naming the tray's workspace ('' = the global entries).
+export function publishTrayChange(scope: UnitScope, ws: string): void {
+  publishKernelEvent(scope, undefined, { type: 'kernel.notifications.changed', payload: ws === '' ? {} : { workspaceId: ws } });
 }
 
 // A message's result is stored in this unit: its waiters learn it after commit, and a command's continuation is

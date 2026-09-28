@@ -77,7 +77,7 @@ describe('boot (plan 03 §3.9, ADRs 0088, 0089)', workerTests, () => {
     const port = await adapter.bind(kernelPorts, ids.next());
     const answering = send(port, 'GET', '/api/v1/health');
     await eventually(() => expect(logged).toContainEqual(expect.objectContaining({ message: 'a request waits for boot', fields: { method: 'GET', route: '/api/v1/health' } })));
-    const hub = new EventHub({ connection: hosts.connection, files: hosts.runtime.files.files, pipeline: hosts.runtime.pipeline, live: hosts.runtime.live, timers: hosts.timers, version: '0.0.0' });
+    const hub = new EventHub({ connection: hosts.connection, files: hosts.runtime.files.files, pipeline: hosts.runtime.pipeline, live: hosts.runtime.live, timers: hosts.timers, version: '0.0.0', now: () => hosts.timers.time.value });
     adapter.open({ runtime: hosts.runtime, hub });
     const answer = await answering;
     expect([answer.status, healthResultSchema.parse(answer.json).status]).toEqual([200, 'ok']);

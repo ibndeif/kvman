@@ -2,7 +2,8 @@ import { protocolVersion, type ReplyPayload, type SubscriptionRequestBody } from
 import type { LiveBus, LiveFrame } from '../../hosts/live-bus.ts';
 import type { SchedulerTimers } from '../../scheduler/timers.ts';
 import type { CommitPipeline } from '../../storage/commit-pipeline.ts';
-import type { AppliedMessages } from '../../storage/commit-unit.ts';
+import { countTray } from '../../notifications/tray-items.ts';
+import type { AppliedMessages, UiPush } from '../../storage/commit-unit.ts';
 import type { Connection } from '../../storage/driver.ts';
 import type { SpillFiles } from '../../storage/spill.ts';
 import { EventLog, streamedEventOf, type LoggedStreamEvent } from './event-log.ts';
@@ -10,15 +11,17 @@ import { EventStream } from './event-stream.ts';
 import { StreamWriter, type StreamSink } from './stream-writer.ts';
 import { matchesEvent, matchesLive, subscriptionOf, type StreamedEvent, type Subscription } from './subscriptions.ts';
 
-export type EventHubDeps = { connection: Connection; files: SpillFiles; pipeline: CommitPipeline; live: LiveBus; timers: SchedulerTimers; version: string };
+export type EventHubDeps = {
+  connection: Connection; files: SpillFiles; pipeline: CommitPipeline; live: LiveBus; timers: SchedulerTimers; version: string; now: () => number;
+};
 
 // Where a late reply goes: the tab that sent the command (12 §12.3).
 export type ReplyTarget = { streamId: string; clientId: string };
 
 export type Subscribed = 'subscribed' | 'not-connected';
 
-// Everything the kernel pushes to people (12 §12.3): committed durable and transient events, live events, and late
-// replies, sent to each stream whose subscriptions match. Durable events carry their seq as the resume cursor; a
+// Everything the kernel pushes to people (12 §12.3): committed durable and transient events, live events, late
+// replies, and one-way ui.* messages, sent to each stream whose subscriptions match (ui.* to every stream). Durable events carry their seq as the resume cursor; a
 // transient event carries the cursor at the time, without an id (ADR 0098).
 export class EventHub {
   readonly #deps: EventHubDeps;
@@ -44,7 +47,7 @@ export class EventHub {
     if (problem !== undefined) stream.subscriptions.clear();
     stream.send('hello', {
       userId: 'local', cursor: this.#cursor, protocolVersion, kernelVersion: this.#deps.version,
-      subscriptions: [...stream.subscriptions.keys()], notifications: this.#log.notifications(),
+      subscriptions: [...stream.subscriptions.keys()], notifications: countTray(this.#deps.connection, { workspaceId: undefined, now: this.#deps.now() }),
     });
     if (problem !== undefined) stream.send('resync', { reason: problem });
     else if (cursor !== undefined) this.#replay(stream, [...stream.subscriptions.values()], cursor);
@@ -97,6 +100,12 @@ export class EventHub {
       this.#fanOut({ seq: logged.seq, event: streamedEventOf(logged.event) }, true);
     }
     for (const event of applied.announced) this.#fanOut({ seq: this.#cursor, event: streamedEventOf(event) }, false);
+    for (const push of applied.pushes) this.#push(push);
+  }
+
+  // ADR 0163: a ui.* message goes to every connected stream; its clientId and workspaceId let the shell pick the tabs.
+  #push(push: UiPush): void {
+    for (const stream of this.#streams.values()) stream.send('ui', push);
   }
 
   #fanOut(logged: LoggedStreamEvent, durable: boolean): void {

@@ -6,6 +6,7 @@ import { createMessaging, type MessagingParts } from './context-messaging.ts';
 import { createProcesses } from './context-process.ts';
 import { createSettings } from './context-settings.ts';
 import { createText } from './context-text.ts';
+import { createUi } from './context-ui.ts';
 import { stepRecorder } from './step-recorder.ts';
 
 export type ContextParts = MessagingParts & { store: Store };
@@ -39,6 +40,7 @@ export function createContext(parts: ContextParts): Ctx {
     ...createLlm({ command: messaging.command, query: messaging.query, workspaceId: invoke.workspace?.id }),
     files: createFiles(parts),
     process: createProcesses(parts),
+    ui: createUi(messaging.send),
     get store() {
       state.open();
       return store;

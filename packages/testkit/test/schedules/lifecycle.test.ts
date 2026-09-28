@@ -45,7 +45,7 @@ describe('schedule runs across the extension lifecycle (ADR 0144)', scheduleTest
     current.timers.advance(hour);
     expect(scheduleRows(current.connection)).toEqual(waiting);
     for (const row of waiting) expect(stateOf(current, row.messageId), row.name).toBe('pending');
-    expect(current.connection.prepare("SELECT id FROM messages WHERE source = 'kernel' AND state IN ('running', 'done', 'failed')").all()).toEqual([]);
+    expect(current.connection.prepare("SELECT id FROM messages WHERE source = 'kernel' AND type NOT LIKE 'ui.%' AND state IN ('running', 'done', 'failed')").all()).toEqual([]);
     valueOf(await command(current, 'kernel.extension.unquarantine', { name: tickerName }, person));
     await settled();
     expect((await runsOf(current.runtime)).filter((run) => run.type === 'ticker.tick').map((run) => [run.workspaceId, run.notBefore])).toEqual([[workspaceA, morning + hour], [workspaceB, morning + 65 * minute]]);

@@ -69,7 +69,9 @@ event   { sid, seq, event }            // durable events also carry `id: <seq>` 
 live    { sid, type, key, run, n, chunk }  // a live event (02 §2.3); run = publishing message id; n counts per
                                         // <type>:<key>; a gap in n means "reset every run there and refetch"
 reply   { clientId, id, ok: true, data } | { clientId, id, ok: false, problem }   // a reply that missed its POST
-ui      { clientId?, type: 'ui.toast' | 'ui.notify' | 'ui.dismiss' | 'ui.navigate', source, payload }  // one-way (08 §8.11)
+ui      { clientId?, workspaceId?, type: 'ui.toast' | 'ui.notify' | 'ui.dismiss' | 'ui.navigate', source, payload }
+                                        // one-way (08 §8.11): clientId for a tab-targeted toast or navigate; workspaceId
+                                        // is the message's (absent = global), so the shell picks the tabs (ADR 0163)
 resync  { reason }                     // the client must refetch its queries and re-subscribe
 close   { reason: 'slow-consumer' | 'shutdown' }
 ```

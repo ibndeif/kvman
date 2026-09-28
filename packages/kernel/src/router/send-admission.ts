@@ -7,6 +7,7 @@ import { renderLane } from './lane-rendering.ts';
 import { assignContext, assignNotBefore, assignPriority } from './message-assignment.ts';
 import { checkAccess, checkCallCapability } from './permission-checks.ts';
 import { invalid, Refusal } from './refusal.ts';
+import { checkUiSend, checkUiSender, uiTypes } from './ui-admission.ts';
 
 function checkEnvelope(request: SendRequest): void {
   const parsed = outboundSendSchema.safeParse(request.send);
@@ -90,6 +91,8 @@ export function admitSend(options: AdmissionOptions, connection: Connection, req
     return { outcome: 'refused', problem: refusalOf(error).problem(correlationId) };
   }
   let owner = '';
+  // A refused ui.* send fails its unit, even with onReply (ADR 0162), so it never leaves a row to store.
+  const ui = uiTypes.has(message.type);
   try {
     const resolved = resolveType(options, message.type, request.workspaceId, 'command');
     owner = resolved.owner;
@@ -97,17 +100,20 @@ export function admitSend(options: AdmissionOptions, connection: Connection, req
     message = withHandlerPriority(resolved, request, resolved.workspaceId === undefined ? unscoped : { ...unscoped, workspaceId: resolved.workspaceId });
     checkCallCapability(options, request.sender, { owner, entry: resolved.entry }, request.workspaceId);
     checkAccess(request.sender, owner, resolved.entry);
+    if (ui) checkUiSender(request.sender, message.type);
     const input = resolved.entry.kind === 'command' ? resolved.entry.input : undefined;
     checkPayload(options, input, message.payload);
     checkBlobs(options, request.sender, input, message.payload, request.received);
+    const uiSend = ui ? checkUiSend(options, request, message) : undefined;
     const lane = laneOf(resolved, request.send, message);
     if (lane !== undefined) message = { ...message, lane };
     const key = idempotencyKeyOf(request);
     const digest = requestDigestNow({ type: message.type, payload: message.payload, ...(resolved.workspaceId === undefined ? {} : { workspaceId: resolved.workspaceId }), ...(lane === undefined ? {} : { lane }) });
-    if (key === undefined) return { outcome: 'admitted', admitted: { message, handler: owner, digest } };
+    const admitted = (): SendAdmission => ({ outcome: 'admitted', admitted: { message, handler: owner, digest }, ...(uiSend === undefined ? {} : { ui: uiSend }) });
+    if (key === undefined) return admitted();
     message = { ...message, idempotencyKey: key };
     const existing = findKeyedMessage({ connection, files: options.files }, message.source, key);
-    if (existing === undefined) return { outcome: 'admitted', admitted: { message, handler: owner, digest } };
+    if (existing === undefined) return admitted();
     if (existing.digest === digest) {
       const { digest: _stored, ...original } = existing;
       return { outcome: 'duplicate', original };
@@ -116,6 +122,7 @@ export function admitSend(options: AdmissionOptions, connection: Connection, req
   } catch (error) {
     const refusal = refusalOf(error);
     const row = refusal.code === 'IDEMPOTENCY_MISMATCH' ? withoutKey(message) : message;
+    if (ui) return { outcome: 'refused', problem: refusal.problem(correlationId) };
     return { outcome: 'refused', problem: refusal.problem(correlationId), failed: { message: row, handler: owner } };
   }
 }

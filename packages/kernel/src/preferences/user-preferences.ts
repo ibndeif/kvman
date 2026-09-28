@@ -1,4 +1,4 @@
-import { localeSchema, userPreferencesSchema, type UserPreferences } from '@kvman/protocol';
+import { localeSchema, storedPreferencesSchema, type StoredPreferences, type UserPreferences } from '@kvman/protocol';
 import type { Connection } from '../storage/driver.ts';
 
 // v2 has one local user, `user:local` (02 §2.1); its row in user_preferences (04 §4.1).
@@ -10,9 +10,21 @@ const defaults: UserPreferences = { locale: 'en', theme: 'app', desktopAlerts: f
 // Every message context carries the locale, so a saved tag stays short (ADR 0161).
 const maxLocaleLength = 64;
 
-export function readPreferences(connection: Pick<Connection, 'prepare'>): UserPreferences {
+// The stored row: the preferences and the muted extensions per workspace (ADR 0163).
+export function readStoredPreferences(connection: Pick<Connection, 'prepare'>): StoredPreferences {
   const row = connection.prepare('SELECT data FROM user_preferences WHERE user_id = ?').get(localUserId);
-  return row === undefined ? defaults : userPreferencesSchema.parse(JSON.parse(String(row['data'])));
+  return row === undefined ? defaults : storedPreferencesSchema.parse(JSON.parse(String(row['data'])));
+}
+
+export function readPreferences(connection: Pick<Connection, 'prepare'>): UserPreferences {
+  const { locale, theme, desktopAlerts } = readStoredPreferences(connection);
+  return { locale, theme, desktopAlerts };
+}
+
+// ADR 0163: the extensions whose notifications are muted in a workspace; the global entries are never muted.
+export function mutedExtensions(connection: Pick<Connection, 'prepare'>, workspaceId: string): readonly string[] {
+  if (workspaceId === '') return [];
+  return readStoredPreferences(connection).muted?.[workspaceId] ?? [];
 }
 
 // ADR 0161: any tag Intl accepts, stored in its canonical form (`en-us` → `en-US`); `undefined` when it is not a

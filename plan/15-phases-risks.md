@@ -186,6 +186,7 @@ Inside a phase, each milestone needs the one before it unless *Needs* says other
 - **Read**: `08` §8.11, `04` §4.1 (notifications), §4.9.
 - **Build**: `ui.*` handling at commit; action-button checks; the `notifications` table with key replacement; rate-limit folding; muting; retention; `kernel.notifications.*`; kernel-generated notifications (quarantine, migration failure, dead letter of a person's correlation, failed secrets-file write); `ctx.ui`; SSE `ui` messages. Notifications that open an entity through its `route`.
 - **Done when**: a second `ui.notify` with the same key replaces the first; a button targeting a grant command fails the unit with `CAPABILITY_DENIED`; the 11th notification in a minute is folded; a dead-lettered user action produces a notification with Retry; a failed secrets-file write notifies with the extension and secret name.
+- **Decisions**: ADRs 0162–0164 (`ui.*` stored as `done` rows with targets, every refusal failing the unit, buttons by the view-action rule failing closed, entity routes rendered by the kernel, a sliding minute folding into one entry, runtime keys unchecked; the tray item, scope like subscriptions, `workspaceId` on the stream's `ui` message, muting a workspace's entries, retention and kernel schema 6; the four kernel notifications and `kernel.message.retry` built now).
 
 #### M2.13 Testkit, prompts, developer docs — 2 days
 - **Read**: `05` §5.3, §5.5 (prompt pattern), §5.9–§5.10, `14` §14.5.
