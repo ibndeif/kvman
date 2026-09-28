@@ -253,7 +253,7 @@ Name sets inside one extension:
 | `registerRendererTarget(name, { description, item })` | a renderer target its pages declare | `agent.entry` | |
 | `registerRenderer(name, RendererDef)` | a renderer for a target, entity, or MIME type | `pdf.preview` | |
 | `registerComponent(name, CompositeDef \| WidgetDef)` | a composite or widget component | `pdf.fileCard` | `visibility: 'private'` (default) or `'public'`; `08` §8.9, §8.15 |
-| `registerSettingsSection({ description, view })` | a custom view (a `ViewNode`) for its settings section, replacing the generated form | — | optional, once; the section id stays `settings.section.<ns>` (`08` §8.4) |
+| `registerSettingsSection({ description, view })` | a custom view (a `ViewNode`) for its settings section, replacing the generated form | — | optional, once, and only with `registerConfig` (ADR 0160); the section id stays `settings.section.<ns>` (`08` §8.4) |
 | `registerTranslations({ default, catalogs })` | translation catalogs, one per language (ICU MessageFormat) | — | once; keys are namespaced automatically (`08` §8.16) |
 | **LLM** (§5.11) | | | |
 | `registerProvider(id, ProviderDef)` | an LLM provider implementation | `anthropic` | provider IDs are global names shown to users |
@@ -283,7 +283,8 @@ interface Ctx {
   signal: AbortSignal; deadlineAt: number;
   now(): number; ids: { new(): string };        // deterministic per invocation for replay safety
   locale: string;                   // the user's language for this message (BCP 47); always set, from message context (02 §2.10)
-  i18n: { t(key: string, params?: Record<string, Json>): string };   // own catalog in ctx.locale, for text leaving kvman
+  i18n: { t(key: string, params?: Record<string, Json>): string };   // own catalog in ctx.locale, for text leaving kvman;
+                                    // a missing key or parameter throws VALIDATION_FAILED (ADR 0161)
 
   // messaging
   command<T>(type, payload, opts?: { lane?, priority?, deadlineAt?, context?, idempotencyKey? }): Promise<T>;

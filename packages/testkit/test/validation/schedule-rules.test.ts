@@ -48,7 +48,10 @@ describe('schedule rules (ADR 0144)', () => {
 
     fixture = await openInstallFixture();
     const answered = jsonObjectSchema.parse(JSON.parse(JSON.stringify(await query(fixture, 'kernel.validate', { manifest: wrongPayload }))));
-    expect(answered).toMatchObject({ ok: true, value: { ok: false, issues: [expect.objectContaining({ path: 'schedules.0.payload.days' })] } });
+    expect(answered).toMatchObject({ ok: true, value: { ok: false, issues: [
+      expect.objectContaining({ path: 'meta.title', severity: 'warning', message: expect.stringContaining('literal') }),
+      expect.objectContaining({ path: 'schedules.0.payload.days' }),
+    ] } });
     const clean = jsonObjectSchema.parse(JSON.parse(JSON.stringify(await query(fixture, 'kernel.validate', { manifest: valid }))));
     expect(clean).toMatchObject({ ok: true, value: { ok: true } });
   });

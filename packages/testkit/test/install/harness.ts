@@ -44,7 +44,7 @@ export async function openInstallFixture(options: InstallFixtureOptions = {}): P
   const runtime = new KernelRuntime({
     databaseFile, connection, secrets: SecretStore.load(home, ids.next()),
     install: { home, builtin: options.builtin ?? noBuiltins(home), registry: options.registry ?? closedRegistry, environment: process.env },
-    ids, now: () => timers.time.value, timers, poolSize: 1, logger: { write: (record) => logged.push(record) }, defaultLocale: () => 'en',
+    ids, now: () => timers.time.value, timers, poolSize: 1, logger: { write: (record) => logged.push(record) },
     identity: { version: '0.0.0', instanceId: '0b5c7f2e-4a1d-4c3b-9e8f-1a2b3c4d5e6f', processStart: 'Thu Sep 25 10:00:00 2026', port: 4173, home, startedAt: timers.time.value },
     requestShutdown: () => undefined,
   });

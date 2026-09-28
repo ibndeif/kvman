@@ -11,6 +11,7 @@ import { LlmDefaultsCommands } from '../hosts/llm-defaults-commands.ts';
 import type { KernelLogger } from '../hosts/kernel-logger.ts';
 import { PresetApply } from '../hosts/preset-apply.ts';
 import { PreviewWorkspaces } from '../hosts/preview-workspaces.ts';
+import { PreferenceCommands } from '../hosts/preference-commands.ts';
 import { PresetUpdate } from '../hosts/preset-update.ts';
 import { SerialChanges } from '../hosts/serial-changes.ts';
 import { SettingCommands } from '../hosts/setting-commands.ts';
@@ -22,6 +23,7 @@ import type { InstallService } from '../install/install-service.ts';
 import type { SnapshotStore } from '../install/snapshot-store.ts';
 import type { ModelRefresh } from '../llm/model-refresh.ts';
 import type { DataMigrations } from '../migrations/data-migrations.ts';
+import type { SavedPreferences } from '../preferences/user-preferences.ts';
 import type { PresetImportTokens } from '../presets/import-tokens.ts';
 import { StagedApplies } from '../presets/staged-applies.ts';
 import type { RegistryState } from '../registry/registry-state.ts';
@@ -50,6 +52,7 @@ export type KernelCommandDeps = {
   presetTokens: PresetImportTokens;
   llm: LlmCalls;
   refresh: ModelRefresh;
+  preferences: SavedPreferences;
   now: () => number;
   abortMessages: (messageIds: ReadonlySet<string>) => void;
   retireHosts: (extension: string) => void;
@@ -83,6 +86,7 @@ export function kernelCommandTable(deps: KernelCommandDeps): Map<string, KernelC
     quarantine: deps.quarantine,
   });
   const llmDefaults = new LlmDefaultsCommands({ connection, commits, registry, serial });
+  const preferences = new PreferenceCommands({ commits, preferences: deps.preferences, serial: new SerialChanges() });
   return new Map<string, KernelCommand>([
     ['kernel.extension.stage', (claim, signal) => extensions.stage(claim, signal)],
     ['kernel.extension.install', (claim) => extensions.install(claim)],
@@ -110,5 +114,6 @@ export function kernelCommandTable(deps: KernelCommandDeps): Map<string, KernelC
     ['kernel.llm.complete', (claim, signal) => deps.llm.complete(claim, signal)],
     ['kernel.llm.models.refresh', (claim) => deps.refresh.refreshCommand(claim)],
     ['kernel.llm.defaults.set', (claim) => llmDefaults.set(claim)],
+    ['kernel.user.preferences.set', (claim) => preferences.set(claim)],
   ]);
 }

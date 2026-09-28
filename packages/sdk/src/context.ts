@@ -63,6 +63,12 @@ export type OutputOf<Ref> = TypesOf<Ref> extends { output: infer Output } ? Outp
 /** The payload type of an event reference. */
 export type PayloadOf<Ref> = TypesOf<Ref> extends { payload: infer Payload } ? Payload : never;
 
+/** Translation of the extension's own catalogs (`08` §8.16). */
+export interface I18n {
+  /** The message for `key` in `ctx.locale`, else its base language, else the default locale; throws VALIDATION_FAILED for a missing key or parameter. */
+  t(key: string, params?: Record<string, Json>): string;
+}
+
 /** What a handler acts through; it grows with each milestone that builds a member of `05` §5.4. */
 export interface Ctx {
   /** The message being handled. */
@@ -75,6 +81,10 @@ export interface Ctx {
   readonly deadlineAt: number;
   /** The invocation's workspace; absent for global-scope handlers. */
   readonly workspace?: Workspace;
+  /** The language of the person who started the chain (BCP 47), inherited by every message it caused. */
+  readonly locale: string;
+  /** The extension's own catalogs in `locale`, for text that leaves kvman. */
+  readonly i18n: I18n;
   /** Ids that repeat when the message is redelivered. */
   readonly ids: {
     /** A new ULID; the n-th call returns the same id on every attempt. */

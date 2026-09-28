@@ -59,6 +59,7 @@ describe('capabilities, access, and names (plan 02 §2.4, 06 §6.3, ADRs 0107, 0
       { path: 'types.1.type', message: 'query names end in a read verb (get, list, search, count, preview, validate)', hint: 'rename "pdf.files" to end in one of them', severity: 'warning' },
       { path: 'types.2.type', message: 'event names end in a past participle', hint: 'did you mean "pdf.translated"?', severity: 'warning' },
       { path: 'types.3.type', message: 'command names end in an imperative verb, never a read verb', hint: 'a command that only reads is a query', severity: 'warning' },
+      expect.objectContaining({ path: 'meta.title', severity: 'warning', message: expect.stringContaining('"Test" is literal') }),
     ]);
   });
 
@@ -67,7 +68,10 @@ describe('capabilities, access, and names (plan 02 §2.4, 06 §6.3, ADRs 0107, 0
       ext.registerEvent('pdf.translate', { description: 'Translated.', namingException: 'kept for the v1 API' });
       ext.registerCommand('pdf.import', { description: 'Imports.', input, namingException: 'not needed', handle });
     });
-    expect(issues).toEqual([{ path: 'types.0.type', message: 'excepted: kept for the v1 API', hint: 'did you mean "pdf.translated"?', severity: 'warning' }]);
+    expect(issues).toEqual([
+      { path: 'types.0.type', message: 'excepted: kept for the v1 API', hint: 'did you mean "pdf.translated"?', severity: 'warning' },
+      expect.objectContaining({ path: 'meta.title', severity: 'warning', message: expect.stringContaining('"Test" is literal') }),
+    ]);
   });
 
   it('M2.1-E21 a format finding is an error, never a warning', () => {

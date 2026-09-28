@@ -73,4 +73,19 @@ describe('scripts/pack-builtins (plan 06 §6.9, ADR 0115)', installTests, () => 
     await expect(packBuiltins(extensions, join(temporary('pack-presets-out'), 'builtin'), { registry: closedRegistry, environment: process.env, presets, kvmanVersion: '0.0.0' }))
       .rejects.toThrow('broken.json');
   });
+
+  it('M2.11-E18 packing rejects a built-in preset whose page key is absent from its catalog', async () => {
+    const presets = join(temporary('pack-text-presets'), 'presets');
+    mkdirSync(presets, { recursive: true });
+    writeFileSync(join(presets, 'help.json'), JSON.stringify({
+      presetVersion: 1, id: 'help', name: 'Help', revision: 1, app: { title: 'Help', home: '/help' }, extensions: {},
+      pages: [{ name: 'help', description: 'Help.', route: '/help', title: '$t.help.missing', view: { type: 'stack' } }],
+      translations: { default: 'en', catalogs: { en: { help: { title: 'Help' } } } },
+    }));
+    const extensions = join(temporary('pack-text-empty'), 'extensions');
+    mkdirSync(extensions, { recursive: true });
+    await expect(packBuiltins(extensions, join(temporary('pack-text-out'), 'builtin'), {
+      registry: closedRegistry, environment: process.env, presets, kvmanVersion: '0.0.0',
+    })).rejects.toThrow('help.json is not a valid preset');
+  });
 });

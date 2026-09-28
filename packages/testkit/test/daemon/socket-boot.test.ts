@@ -53,7 +53,7 @@ describe('the kv shim and kernel.sock at boot (plan 12 §12.4, §12.6, ADRs 0140
     const timers = new ManualTimers();
     const refused = await Kernel.boot({
       home: longHome, builtin: noBuiltins(longHome), npmRegistry: closedRegistry, environment: {}, poolSize: 1, ids: createUlidGenerator(Date.now),
-      now: () => timers.time.value, timers, openLogger: () => ({ write: () => undefined, close: () => undefined }), defaultLocale: () => 'en',
+      now: () => timers.time.value, timers, openLogger: () => ({ write: () => undefined, close: () => undefined }),
     }).then(() => undefined, (error: unknown) => error);
     expect(refused).toBeInstanceOf(ProblemError);
     expect(refused instanceof ProblemError ? refused.problem : undefined).toMatchObject({ code: 'HOME_INVALID', hint: 'use a shorter home path with --home or KVMAN_HOME' });

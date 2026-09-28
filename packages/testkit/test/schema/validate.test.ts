@@ -75,10 +75,7 @@ describe('kernel.validate (plan 03 §3.8, ADR 0110)', workerTests, () => {
     expect(result.issues.every((issue) => issue.path.startsWith('view'))).toBe(true);
   });
 
-  it('M2.1-E27 catalog is refused with a hint; workspaceId runs the referential checks', async () => {
-    const catalog = await validate({ catalog: { hello: 'Hello' } });
-    expect(catalog.status).toBe(400);
-    expect(problemSchema.parse(catalog.json)).toMatchObject({ code: 'VALIDATION_FAILED', issues: [{ path: 'catalog', hint: 'validate a manifest, preset, or page' }] });
+  it('M2.1-E27 workspaceId runs the referential checks', async () => {
     expect(await validated({ manifest: pdfManifest(), workspaceId: workspaceA })).toEqual({ ok: true, issues: [] });
   });
 

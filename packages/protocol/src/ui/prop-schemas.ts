@@ -1,9 +1,9 @@
 import { actionSchema } from './action.ts';
 import { viewTextSchema } from './bound-values.ts';
+import { actionPropFormat, textPropFormat } from './prop-formats.ts';
 
-export const textPropFormat = 'kvman-text';
-export const actionPropFormat = 'kvman-action';
+export { actionPropFormat, textPropFormat };
 
-export const textPropSchema = viewTextSchema.meta({ format: textPropFormat });
+export const textPropSchema = viewTextSchema;
 
 export const actionPropSchema = actionSchema.meta({ format: actionPropFormat });

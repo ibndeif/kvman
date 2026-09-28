@@ -2,6 +2,7 @@ import {
   presetSchema, presetUpdateRequestSchema, jsonObjectSchema,
   type Issue, type JsonObject, type Manifest, type Message, type Preset, type Problem,
 } from '@kvman/protocol';
+import { presetTextIssues } from '../i18n/owner-text.ts';
 import type { SnapshotStore } from '../install/snapshot-store.ts';
 import type { DataMigrations } from '../migrations/data-migrations.ts';
 import { requiresFrom } from '../presets/enabled-checks.ts';
@@ -135,6 +136,10 @@ export class PresetUpdate {
       return this.#deps.commits.fail(claim, refusal(message, 'PRESET_INVALID', { detail: issues[0]?.message ?? 'the patched preset is not valid', issues }));
     }
     const preset = merged.data;
+    const text = presetTextIssues(preset);
+    if (text.some((issue) => issue.severity !== 'warning')) {
+      return this.#deps.commits.fail(claim, refusal(message, 'PRESET_INVALID', { detail: text[0]?.message ?? 'the patched preset has invalid text', issues: text }));
+    }
     const registry = this.#deps.registry.current();
     const granted = this.#grantProblem(message, registry, applied.preset, preset);
     if (granted !== undefined) return this.#deps.commits.fail(claim, granted);

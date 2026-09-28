@@ -21,9 +21,9 @@ All adapters are thin: they authenticate the caller, turn a request into a messa
 | GET | `/messages/:id` | — | `{ id, type, state, reply?, problem? }`: `reply` is a successful reply's value, `problem` a failed one's Problem; an unknown id is 404 `NOT_FOUND` |
 | POST | `/queries/:type` | `{ payload, workspaceId? }` | `200 { data }` |
 | GET | `/schema?workspaceId=&q=` | — | registry (§12.7) |
-| GET | `/ui?workspaceId=` | — | the workspace's UI registry (`08` §8.6); `ETag`, `304` on `If-None-Match` |
+| GET | `/ui?workspaceId=` | — | the workspace's UI registry (`08` §8.6); `ETag: "<revision>"`, `304` on `If-None-Match` (ADR 0159) |
 | GET | `/ui/pages/:pageId?workspaceId=` | — | `{ page, components }`: a page view and the composite components it uses; same `ETag` |
-| GET | `/ui/translations?workspaceId=` | — | translation catalogs of the enabled extensions and the preset for the saved language and its fallbacks (never named in the URL, `08` §8.16); `ETag` |
+| GET | `/ui/translations?workspaceId=` | — | translation catalogs of the enabled extensions and the preset for the saved language and its fallbacks (never named in the URL, `08` §8.16); `ETag: "<revision>:<locale>"` |
 | PUT | `/blobs` | raw bytes; headers `Content-Type` (default `application/octet-stream`), `X-Kvman-Filename` (optional, percent-encoded UTF-8, 1–255 characters), `X-Kvman-Workspace` (optional; the upload ref is global without it) | `{ blobId, size, mime, name? }` (upload ref, 24 h; ADR 0138) |
 | GET | `/blobs/:id?download=1` | — | bytes with the serving policy of `13` §13.7; an unknown blob is 404 `BLOB_NOT_FOUND` |
 | GET | `/events?stream=&lastEventId=` | — | `text/event-stream` (§12.3) |

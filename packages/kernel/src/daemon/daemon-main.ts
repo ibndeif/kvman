@@ -49,7 +49,7 @@ async function main(): Promise<void> {
       home, ...(port === undefined ? {} : { port: Number(port) }),
       npmRegistry: npmRegistryFrom(process.env), environment: process.env,
       poolSize: Math.max(1, Math.min(4, availableParallelism() - 1)), ids, now: Date.now, timers: systemTimers,
-      openLogger: (folder) => openLogger(folder, foreground === true), defaultLocale: () => 'en', faults,
+      openLogger: (folder) => openLogger(folder, foreground === true), faults,
     });
     process.on('SIGTERM', () => void kernel.shutdown());
     process.on('SIGINT', () => void kernel.shutdown());

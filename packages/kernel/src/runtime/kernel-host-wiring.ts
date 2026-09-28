@@ -10,6 +10,7 @@ import { KernelHost } from '../hosts/kernel-host.ts';
 import { KernelQueries } from '../hosts/kernel-queries.ts';
 import { PresetQueries } from '../hosts/preset-queries.ts';
 import { ProcessQueries } from '../hosts/process-queries.ts';
+import { UiQueries } from '../hosts/ui-queries.ts';
 import type { ProviderCall, ProviderOutcome } from '../hosts/provider-invocations.ts';
 import type { QueryPath } from '../hosts/query-path.ts';
 import type { TrustService } from '../hosts/trust-service.ts';
@@ -19,6 +20,7 @@ import type { InstallService } from '../install/install-service.ts';
 import type { SnapshotStore } from '../install/snapshot-store.ts';
 import { ModelRefresh } from '../llm/model-refresh.ts';
 import type { DataMigrations } from '../migrations/data-migrations.ts';
+import type { SavedPreferences } from '../preferences/user-preferences.ts';
 import type { RegistryState } from '../registry/registry-state.ts';
 import type { WorkspaceDirectory } from '../registry/workspace-directory.ts';
 import type { Scheduler } from '../scheduler/scheduler.ts';
@@ -52,6 +54,7 @@ export type KernelHostWiring = {
   now: () => number;
   ids: UlidGenerator;
   presetTokens: PresetImportTokens;
+  preferences: SavedPreferences;
   llm: LlmCalls;
   provide: (call: ProviderCall) => Promise<ProviderOutcome>;
   health: () => HealthResult;
@@ -81,7 +84,8 @@ export function wireKernelHost(parts: KernelHostWiring): KernelHost {
       connection, registry: current, health: parts.health, version: parts.version,
       extensions: new ExtensionQueries(connection, registry, registry), workspaces: new WorkspaceQueries(connection, registry, parts.secrets),
       inspection: new InspectionQueries({ connection, registry: current, grants: registry }), processes: new ProcessQueries(connection, registry), grants: registry,
-      trust: parts.trust, presets, llm: llmQueries,
+      trust: parts.trust, presets, llm: llmQueries, preferences: parts.preferences,
+      ui: new UiQueries({ connection, registry, preferences: parts.preferences }),
     }),
   });
 }

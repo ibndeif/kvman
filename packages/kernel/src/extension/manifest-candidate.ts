@@ -2,8 +2,7 @@ import type { JsonObject } from '@kvman/protocol';
 import type { ExtensionMeta } from '@kvman/sdk';
 import { compact, type Recording } from './recording.ts';
 
-// The manifest of 05 §5.12 before validation, with the defaults of ADR 0013 written out. Translations are not
-// recorded yet, so their section is empty.
+// The manifest of 05 §5.12 before validation, with the defaults of ADR 0013 written out.
 export function manifestCandidate(meta: ExtensionMeta, version: string, recording: Recording): JsonObject {
   return {
     manifestVersion: 1,
@@ -31,7 +30,7 @@ export function manifestCandidate(meta: ExtensionMeta, version: string, recordin
       rendererTargets: recording.rendererTargets, renderers: recording.renderers, components: recording.components,
       settingsSection: recording.settingsSection,
     },
-    translations: null,
+    translations: recording.translations,
     llm: { providers: recording.providers, models: recording.models },
   };
 }

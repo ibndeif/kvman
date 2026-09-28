@@ -5,6 +5,7 @@ import { createLlm } from './context-llm.ts';
 import { createMessaging, type MessagingParts } from './context-messaging.ts';
 import { createProcesses } from './context-process.ts';
 import { createSettings } from './context-settings.ts';
+import { createText } from './context-text.ts';
 import { stepRecorder } from './step-recorder.ts';
 
 export type ContextParts = MessagingParts & { store: Store };
@@ -32,6 +33,7 @@ export function createContext(parts: ContextParts): Ctx {
       state.open();
       return values.now();
     },
+    ...createText(state, parts.extension.manifest),
     ...messaging,
     ...createSettings(parts),
     ...createLlm({ command: messaging.command, query: messaging.query, workspaceId: invoke.workspace?.id }),

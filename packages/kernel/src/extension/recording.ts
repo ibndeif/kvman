@@ -21,7 +21,7 @@ export type RecordedSchemas = {
   collections: Map<string, Schema>;
 };
 
-export type OnceOnlyCall = 'requestIsolation' | 'registerConfig' | 'registerDataVersion' | 'registerSettingsSection';
+export type OnceOnlyCall = 'requestIsolation' | 'registerConfig' | 'registerDataVersion' | 'registerSettingsSection' | 'registerTranslations';
 
 export type DataVersion = { version: number; compatibleWith: number[] };
 
@@ -72,6 +72,7 @@ export class Recording {
   readonly renderers: JsonObject[] = [];
   readonly components: JsonObject[] = [];
   settingsSection: JsonObject | null = null;
+  translations: JsonObject | null = null;
 
   readonly issues: Issue[] = [];
   readonly functions = new Map<string, RegisteredFunction>();

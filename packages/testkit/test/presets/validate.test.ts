@@ -36,7 +36,7 @@ function validated(answer: unknown): ValidateResult {
 }
 
 describe('kernel.validate against a workspace (plan 06 §6.3, ADR 0151)', presetTests, () => {
-  it('M2.8-E48 a missing type, a bad config, and a namespace clash fail; unknown workspaces and catalogs are refused', async () => {
+  it('M2.8-E48 a missing type, a bad config, and a namespace clash fail; unknown workspaces are refused', async () => {
     fixture = await openPresetFixture(registry);
     const current = openFixture();
     await installed(current, 'npm:@acme/pdf@1.0.0');
@@ -80,9 +80,6 @@ describe('kernel.validate against a workspace (plan 06 §6.3, ADR 0151)', preset
 
     expect(await query(current, 'kernel.validate', { workspaceId: unknownWorkspace, preset: limited })).toMatchObject({
       ok: false, problem: { code: 'WORKSPACE_INVALID' },
-    });
-    expect(await query(current, 'kernel.validate', { catalog: { hello: 'Hello' } })).toMatchObject({
-      ok: false, problem: { code: 'VALIDATION_FAILED', issues: [{ path: 'catalog', hint: 'validate a manifest, preset, or page' }] },
     });
   });
 });

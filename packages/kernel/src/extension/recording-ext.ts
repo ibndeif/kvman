@@ -1,10 +1,23 @@
-import type { Text } from '@kvman/protocol';
+import { translationsSchema, type Issue, type JsonObject, type Text } from '@kvman/protocol';
 import type { Ext, SubscriptionDef } from '@kvman/sdk';
 import { compact, reference, type Recording } from './recording.ts';
 import { uiRegistrations } from './recording-ui.ts';
 
 export type RecordingExt = { ext: Ext; close(): void };
 
+// A registered value parsed with its protocol schema, with issues at the manifest path the value lands on. A
+// dotted catalog key fails the key pattern: its message, which hints to nest objects, is reported at the key.
+function parsedTranslations(value: unknown): { data: JsonObject } | { issues: Issue[] } {
+  const parsed = translationsSchema.safeParse(value);
+  if (parsed.success) return { data: parsed.data };
+  return {
+    issues: parsed.error.issues.flatMap((issue) => {
+      const path = ['translations', ...issue.path.map(String)].join('.');
+      if (issue.code === 'invalid_key') return issue.issues.map((nested) => ({ path, message: nested.message }));
+      return [{ path, message: issue.message }];
+    }),
+  };
+}
 
 export function createRecordingExt(recording: Recording, closedError: () => Error): RecordingExt {
   let closed = false;
@@ -148,6 +161,16 @@ export function createRecordingExt(recording: Recording, closedError: () => Erro
       if (!recording.firstCall('registerConfig', 'config')) return;
       const schema = recording.jsonSchema('config.schema', definition.schema);
       recording.config = compact({ scope: definition.scope, schema });
+    },
+    registerTranslations(translations) {
+      open();
+      if (!recording.firstCall('registerTranslations', 'translations')) return;
+      const recorded = parsedTranslations(translations);
+      if ('issues' in recorded) {
+        recording.issues.push(...recorded.issues);
+        return;
+      }
+      recording.translations = recorded.data;
     },
     registerProvider(id, definition) {
       open();

@@ -17,9 +17,11 @@ import { isAdministrator } from './administrators.ts';
 import type { ExtensionQueries, ExtensionQueryAnswer } from './extension-queries.ts';
 import type { InspectionQueries } from './inspection-queries.ts';
 import type { LlmQueries } from './llm-queries.ts';
+import type { SavedPreferences } from '../preferences/user-preferences.ts';
 import type { PresetQueries } from './preset-queries.ts';
 import type { ProcessQueries } from './process-queries.ts';
 import type { TrustService } from './trust-service.ts';
+import type { UiQueries } from './ui-queries.ts';
 import type { WorkspaceQueries } from './workspace-queries.ts';
 import type { QueryAnswer } from './query-path.ts';
 import { readWorkspace } from './workspace-rows.ts';
@@ -33,6 +35,8 @@ export type KernelQueriesDeps = {
   trust: TrustService;
   presets: PresetQueries;
   llm: LlmQueries;
+  ui: UiQueries;
+  preferences: SavedPreferences;
   grants: GrantsSource;
   registry: () => KernelRegistry;
   health: () => HealthResult;
@@ -75,6 +79,10 @@ export class KernelQueries {
     if (message.type === 'kernel.llm.defaults.get') return this.#deps.llm.defaultsGet(message);
     if (message.type === 'kernel.llm.tokens.count') return this.#deps.llm.tokensCount(message);
     if (message.type === 'kernel.llm.usage.get') return this.#deps.llm.usageGet(message);
+    if (message.type === 'kernel.ui.get') return this.#deps.ui.registry(message);
+    if (message.type === 'kernel.ui.page.get') return this.#deps.ui.page(message);
+    if (message.type === 'kernel.ui.translations.get') return this.#deps.ui.translations(message);
+    if (message.type === 'kernel.user.preferences.get') return { ok: true, value: this.#deps.preferences.read() };
     return this.#refused(message, 'INTERNAL', `the kernel has no handler for ${message.type}`);
   }
 
@@ -102,25 +110,21 @@ export class KernelQueries {
   #validate(message: Message): QueryAnswer {
     const request = validateRequestSchema.parse(message.payload);
     const registry = this.#deps.registry();
-    const outcome = validateRequest(request, { kernelEvents: this.#kernelEvents, configSchemas: registry.configSchemas(), values: kernelValues });
-    if (!outcome.answered) {
-      const [first] = outcome.issues;
-      return { ok: false, problem: this.#problem(message, 'VALIDATION_FAILED', first?.message ?? 'the request cannot be validated', outcome.issues) };
-    }
+    const result = validateRequest(request, { kernelEvents: this.#kernelEvents, configSchemas: registry.configSchemas(), values: kernelValues });
     const workspaceId = request.workspaceId;
-    if (workspaceId === undefined) return { ok: true, value: outcome.result satisfies Json };
+    if (workspaceId === undefined) return { ok: true, value: result satisfies Json };
     if (readWorkspace(this.#deps.connection, workspaceId) === undefined) {
       return this.#refused(message, 'WORKSPACE_INVALID', `no workspace ${workspaceId} exists`);
     }
     // The structural issues come first; when they contain an error the referential checks do not run.
-    if (!outcome.result.ok) return { ok: true, value: outcome.result satisfies Json };
+    if (!result.ok) return { ok: true, value: result satisfies Json };
     // ADRs 0151, 0157: the referential checks against the workspace. A preset replaces the workspace's enabled set;
     // a manifest is added to it; a page is checked as one of the preset's pages.
     let extra: Issue[] = [];
     if ('preset' in request) extra = this.#presetReferential(workspaceId, request.preset, registry);
     else if ('manifest' in request) extra = this.#manifestReferential(workspaceId, request.manifest, registry);
     else if ('page' in request) extra = workspacePageIssues(registry, registry.manifestsEnabledIn(workspaceId), this.#appliedPreset(workspaceId), jsonObjectSchema.parse(request.page));
-    const issues = [...outcome.result.issues, ...extra];
+    const issues = [...result.issues, ...extra];
     return { ok: true, value: { ok: issues.every((issue) => issue.severity === 'warning'), issues } satisfies Json };
   }
 

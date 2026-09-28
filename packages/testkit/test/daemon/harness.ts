@@ -35,7 +35,7 @@ export async function bootFixture(options: BootFixtureOptions = {}): Promise<Dae
     home, ...(options.port === undefined ? {} : { port: options.port }),
     builtin: noBuiltins(home), npmRegistry: closedRegistry, environment: {}, poolSize: 1,
     ids: createUlidGenerator(Date.now), now: () => timers.time.value, timers,
-    openLogger: options.openLogger ?? (() => ({ write: (record) => logged.push(record), close: () => undefined })), defaultLocale: () => 'en',
+    openLogger: options.openLogger ?? (() => ({ write: (record) => logged.push(record), close: () => undefined })),
   });
   return {
     kernel, home, port: kernel.identity.port, timers, logged,

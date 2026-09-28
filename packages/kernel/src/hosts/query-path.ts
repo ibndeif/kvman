@@ -4,7 +4,8 @@ import type { QueryRequest } from '../router/query-admission.ts';
 import type { Router } from '../router/router.ts';
 import type { Scheduler } from '../scheduler/scheduler.ts';
 
-export type QueryAnswer = { ok: true; value: Json } | { ok: false; problem: Problem };
+// `etag` is the tag the `/ui` routes send with a kernel.ui.* answer (ADR 0159).
+export type QueryAnswer = { ok: true; value: Json; etag?: string } | { ok: false; problem: Problem };
 
 // A query is admitted, run on the scheduler's priority path, and answered in memory: it is never stored (02 §2.3).
 export class QueryPath {

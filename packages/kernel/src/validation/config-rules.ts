@@ -31,3 +31,10 @@ export function configIssues(manifest: JsonObject): Issue[] {
   const schema = objectOf(objectOf(manifest['config'])?.['schema']);
   return schema === undefined ? [] : fieldIssues(schema, 'config.schema');
 }
+
+// ADR 0160: registerSettingsSection replaces the form registerConfig generates, so it needs a config.
+export function settingsSectionIssues(manifest: JsonObject): Issue[] {
+  const section = objectOf(manifest['ui'])?.['settingsSection'];
+  if (section === undefined || section === null || manifest['config'] !== null) return [];
+  return [{ path: 'ui.settingsSection', message: 'the settings section replaces the form of registerConfig, but nothing registers a config', hint: 'call ext.registerConfig({ scope, schema }) too' }];
+}

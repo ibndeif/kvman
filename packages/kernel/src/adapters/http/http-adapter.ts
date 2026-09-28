@@ -12,6 +12,7 @@ import { edgeRefusal } from './edge-checks.ts';
 import { EdgeProblems, sendProblem } from './problem-replies.ts';
 import { registerReadRoutes } from './read-routes.ts';
 import { registerStreamRoutes } from './stream-routes.ts';
+import { registerUiRoutes } from './ui-routes.ts';
 
 // What the routes reach once boot has finished (03 §3.9 step 8).
 export type AdapterKernel = { runtime: KernelRuntime; hub: EventHub };
@@ -63,6 +64,7 @@ export class HttpAdapter {
     const context: RouteContext = { kernel: () => this.#attached(), problems: this.#problems, timers: options.timers, waiting: this.#waiting };
     registerCommandRoutes(this.#app, context);
     registerReadRoutes(this.#app, context);
+    registerUiRoutes(this.#app, context);
     registerStreamRoutes(this.#app, context);
     registerBlobRoutes(this.#app, context);
   }

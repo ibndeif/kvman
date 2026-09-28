@@ -53,3 +53,5 @@ No grant adds a flag. Files, processes, and the network are reached only through
 - `05` §5.7 and `03` §3.5 are corrected to state these flags and the error mapping.
 - `problemOfThrown` maps the two permission codes.
 - The sandboxed host shares the worker runtime; its store reads go to the read pool (ADR 0131).
+
+**Note (ADR 0160):** the read roots also include `intl-messageformat` and its three `@formatjs` packages (their real folders and the paths they are imported through), so `ctx.i18n.t` formats in sandboxed hosts.

@@ -50,7 +50,10 @@ describe('manifest rules (plan 06 §6.3, ADR 0042)', () => {
       ext.registerCommand('pdf.translated', { description: 'Translates.', input: z.object({}), handle });
     });
     const recording = recordExtension(definition, { packageName: '@acme/pdf', version: '1.0.0', correlationId });
-    expect(recording.warnings).toEqual([expect.objectContaining({ path: 'types.0.type', severity: 'warning', hint: 'did you mean "pdf.translate"?' })]);
+    expect(recording.warnings).toEqual([
+      expect.objectContaining({ path: 'types.0.type', severity: 'warning', hint: 'did you mean "pdf.translate"?' }),
+      expect.objectContaining({ path: 'meta.title', severity: 'warning', message: expect.stringContaining('"Test" is literal') }),
+    ]);
     const failing = defineExtension({ name: '@acme/pdf', namespace: 'pdf', title: 'Test', description: 'A test extension.' }, (ext) => {
       ext.registerCommand('pdf.translated', { description: 'Translates.', input: z.object({}), handle });
       ext.requireTypes(['fs.file.get'], { reason });

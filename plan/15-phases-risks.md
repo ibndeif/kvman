@@ -180,6 +180,7 @@ Inside a phase, each milestone needs the one before it unless *Needs* says other
 - **Read**: `08` §8.6, §8.16 (kernel parts), `02` §2.10.
 - **Build**: `kernel.ui.get`, `kernel.ui.page.get`, `kernel.ui.translations.get` and the `/ui` routes with ETag and `304`; `ext.registerTranslations`; catalog validation (ICU parsing, keys used, parameters); `user_preferences` and `kernel.user.preferences.*`; `context.locale` from the preference; `ctx.locale`, `ctx.i18n.t`; `Problem.params`.
 - **Done when**: the registry ETag changes exactly on `kernel.preset.changed`, reload, and quarantine; a missing `$t` key and an invalid ICU message fail validation; a handler three messages down a chain sees the locale of the person who started it. The ETag changes when an enabled extension is quarantined or unquarantined, although the preset did not change.
+- **Decisions**: ADRs 0159–0161 (registry, page, and translations shapes, preset labels beside items, composites for non-page items, the flat sidebar, `PRESET_REQUIRED` and `NOT_FOUND`; `intl-messageformat` in the kernel and readable by sandboxed hosts, literal and other-catalog warnings now, preset text checks as `PRESET_INVALID`, `registerSettingsSection` only with config, `kernel.validate { catalog }` for one language's catalog; preference defaults, events on change, canonical tags, `ctx.i18n.t` throwing `VALIDATION_FAILED`).
 
 #### M2.12 Notifications (kernel) — 1.5 days
 - **Read**: `08` §8.11, `04` §4.1 (notifications), §4.9.

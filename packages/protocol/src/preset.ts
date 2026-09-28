@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { capabilitiesSchema } from './extension/capabilities.ts';
-import { iconNameSchema, localeSchema, packageNameSchema, publicNameSchema } from './extension/grammar.ts';
+import { iconNameSchema, packageNameSchema, publicNameSchema } from './extension/grammar.ts';
 import { integrityProblem, sourceSchema } from './extension/source.ts';
 import { translationsSchema } from './extension/translations.ts';
 import { typeNameSchema } from './identifiers.ts';
@@ -9,6 +9,7 @@ import { modelRefSchema } from './llm.ts';
 import { textSchema } from './text.ts';
 import { navGroupDefSchema, navItemDefSchema, pageDefSchema } from './ui/contributions.ts';
 import { withIdentity } from './ui/entries.ts';
+import { presetLabelSchema } from './ui/ui-registry.ts';
 
 // 07 §7.6: the platform pack namespaces hidden as one group.
 export const platformNamespaces = ['settings', 'presets', 'extensions', 'inspector'] as const;
@@ -61,7 +62,7 @@ export const presetSchema = z.strictObject({
     })
     .exactOptional(),
   hidden: z.array(publicNameSchema).exactOptional(),
-  labels: z.record(publicNameSchema, z.union([z.string(), z.record(localeSchema, z.string())])).exactOptional(),
+  labels: z.record(publicNameSchema, presetLabelSchema).exactOptional(),
   pages: presetEntries(pageDefSchema).exactOptional(),
   navGroups: presetEntries(navGroupDefSchema).exactOptional(),
   nav: presetEntries(navItemDefSchema).exactOptional(),

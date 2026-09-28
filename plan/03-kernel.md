@@ -173,7 +173,7 @@ Preview tokens (`kernel.trust.preview`, `kernel.preset.import.preview`) are stat
 |---|---|---|---|
 | `kernel.health.get` | `{}` → `{ status: 'ok' \| 'degraded', version, instanceId, processStart, uptimeMs, port, home }` | any | also `GET /api/v1/health`; `port` and `home` (the home folder path) are used by `local-guard` (`10` §10.11); `degraded` while an extension is quarantined (ADR 0092); `version` is the kernel package version and `instanceId` the lock nonce (ADRs 0088, 0089) |
 | `kernel.schema.get` | `{ workspaceId?, q? }` → Schema (`12` §12.7) | any | internal types omitted; without `workspaceId`, every installed extension that is not quarantined (ADR 0111) |
-| `kernel.validate` | `{ workspaceId?, manifest? \| preset? \| page? \| catalog? }` → `{ ok, issues: Issue[] }` (`ok` is false exactly when an issue has severity `error`) | any | structural checks, plus referential ones when `workspaceId` is given (`06` §6.3); M2.1 accepts `manifest`, `preset`, and `page`; M2.8 accepts `workspaceId` with the non-UI referential checks, M2.10 adds the UI ones (a `page` is checked as a preset page of the workspace), and `catalog` is refused with a hint until M2.11 (ADRs 0110, 0151, 0157) |
+| `kernel.validate` | `{ workspaceId?, manifest? \| preset? \| page? \| catalog? }` → `{ ok, issues: Issue[] }` (`ok` is false exactly when an issue has severity `error`) | any | structural checks, plus referential ones when `workspaceId` is given (`06` §6.3); M2.1 accepts `manifest`, `preset`, and `page`; M2.8 accepts `workspaceId` with the non-UI referential checks, M2.10 adds the UI ones (a `page` is checked as a preset page of the workspace), and M2.11 adds `catalog`: one language's catalog, checked for its shape and ICU (ADRs 0110, 0151, 0157, 0160) |
 | `kernel.extensions.list` | `{ workspaceId? }` → `[{ name, title, icon, description, version, namespace, activeDigest, status: 'active' \| 'quarantined' \| 'needs-approval', quarantineReason?, isolation: Record<workspaceId, Isolation>, enabledIn: workspaceId[] }]` (sorted by name) | any | `needs-approval`: an installed newer version waits for grants; ADR 0119 |
 | `kernel.extension.get` | `{ name }` → `{ versions: [{ digest, source, version, installedAt }], manifest, grants: Record<workspaceId, Capabilities> }` | any | versions newest first; an unknown name fails `NOT_FOUND` (ADR 0119) |
 | `kernel.workspaces.list` | `{ includePreview? }` → `[{ id, path, name, kind: 'normal' \| 'preview', trusted, exists }]` (`exists: false` when the folder is gone: moved, renamed, or deleted, `07` §7.1) | any | preview workspaces only with `includePreview` |
@@ -196,10 +196,10 @@ Preview tokens (`kernel.trust.preview`, `kernel.preset.import.preview`) are stat
 | `kernel.llm.defaults.get` | `{ workspaceId? }` → `{ workspace: Defaults, global: Defaults, effective: Defaults }` | any | |
 | `kernel.llm.tokens.count` | `LlmRequest` → `{ tokens, exact: boolean }` | capability `llm` | the provider's `countTokens`, else `ceil(characters / 4)` with `exact: false` (ADR 0154) |
 | `kernel.llm.usage.get` | `{ workspaceId?, from?, to?, groupBy?: 'model' \| 'extension' \| 'day' }` → `{ rows: [{ key, calls, input, output, cacheRead, cacheWrite, costUsd }] }` | any | ADR 0154 |
-| `kernel.ui.get` | `{ workspaceId }` → `UiRegistry` | any | `08` §8.6; also `GET /ui` |
-| `kernel.ui.page.get` | `{ workspaceId, pageId }` → `{ page, components }` | any | |
-| `kernel.ui.translations.get` | `{ workspaceId }` → catalogs for the saved language and its fallbacks | any | |
-| `kernel.user.preferences.get` | `{}` → `{ locale, theme, desktopAlerts }` | any | |
+| `kernel.ui.get` | `{ workspaceId }` → `UiRegistry` | any | `08` §8.6; also `GET /ui`; `PRESET_REQUIRED` without an applied preset (ADR 0159) |
+| `kernel.ui.page.get` | `{ workspaceId, pageId }` → `{ page, components: Array<{ name, owner, def }> }` | any | `NOT_FOUND` for a page that is not active (ADR 0159) |
+| `kernel.ui.translations.get` | `{ workspaceId }` → `{ locale, catalogs: Record<owner, Record<locale, Catalog>> }` for the saved language and its fallbacks | any | ADR 0159 |
+| `kernel.user.preferences.get` | `{}` → `{ locale, theme, desktopAlerts }` | any | defaults `en`, `app`, `false` (ADR 0161) |
 | `kernel.notifications.list` | `{ workspaceId?, unreadOnly? }` → `{ items }` | admin | the tray holds every extension's messages; at most 200 per workspace are kept (`04` §4.9), so the list is always complete |
 | `kernel.notifications.count` | `{ workspaceId? }` → `{ unread, attention }` | any | |
 | `kernel.dev.file.get` / `kernel.dev.files.list` | `{ project, path }` → file content / `[{ path, size }]` | admin | builder projects (`11` §11.5); jailed to the project folder (ADR 0012) |
@@ -240,7 +240,7 @@ Preview tokens (`kernel.trust.preview`, `kernel.preset.import.preview`) are stat
 | `kernel.llm.complete` | `LlmRequest` → `LlmResult` | capability `llm` | §3.12 |
 | `kernel.llm.models.refresh` | `{ provider? }` → `{}` | admin | |
 | `kernel.llm.defaults.set` | `{ workspaceId?, purpose, model: ModelRef \| null }` → `{}` | admin | no `workspaceId` = global default; a workspace default is a preset write (`kernel.preset.changed { cause: 'update' }`, ADR 0152) |
-| `kernel.user.preferences.set` | `{ locale?, theme?, desktopAlerts? }` → `{}` | user | `08` §8.16 |
+| `kernel.user.preferences.set` | `{ locale?, theme?, desktopAlerts? }` → `{}` | user | `08` §8.16; the canonical tag is stored; `changed` only when a value changed (ADR 0161) |
 | `kernel.notification.read` / `kernel.notification.dismiss` | `{ id }` → `{}` | user | `08` §8.11 |
 | `kernel.notifications.read-all` | `{ workspaceId? }` → `{}` | user | |
 | `kernel.notifications.mute` | `{ workspaceId, extension, muted }` → `{}` | user | |

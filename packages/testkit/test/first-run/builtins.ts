@@ -35,7 +35,7 @@ export async function bootHome(home: string, options: { builtin?: string; regist
   const kernel = await Kernel.boot({
     home, builtin: options.builtin ?? noBuiltins(home), homeWorkspace: options.homeWorkspace ?? testHomeWorkspace(home), npmRegistry: options.registry ?? closedRegistry,
     environment: process.env, poolSize: 1, ids: createUlidGenerator(Date.now),
-    now: () => timers.time.value, timers, openLogger: () => ({ write: (record) => logged?.push(record), close: () => undefined }), defaultLocale: () => 'en',
+    now: () => timers.time.value, timers, openLogger: () => ({ write: (record) => logged?.push(record), close: () => undefined }),
   });
   return {
     kernel, timers,

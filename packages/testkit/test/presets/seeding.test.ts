@@ -151,4 +151,34 @@ describe('builtin preset seeding (plan 03 §3.9, 07 §7.4, ADR 0146)', presetTes
       await second.close();
     }
   });
+
+  it('M2.11-E19 an invalid ICU bundled preset refuses first run and is skipped on upgrade', async () => {
+    const invalid = builtinPreset('broken', 'Broken', 1);
+    const malformed = { ...invalid, translations: { default: 'en', catalogs: { en: { help: { body: '{oops' } } } } };
+    const firstBuiltin = await copyPresetBuiltins();
+    writeBuiltinPresets(firstBuiltin, { broken: malformed });
+    const firstHome = temporaryHome();
+    const failure = await bootHome(firstHome, { builtin: firstBuiltin }).then((): undefined => undefined, (error: unknown) => error);
+    expect(failure).toMatchObject({ problem: { code: 'PRESET_INVALID', detail: expect.stringContaining('broken.json') } });
+    expect(existsSync(join(firstHome, 'kvman.db'))).toBe(false);
+
+    const home = temporaryHome();
+    const initial = await copyPresetBuiltins();
+    writeBuiltinPresets(initial, { alpha: builtinPreset('alpha', 'Alpha', 1) });
+    const booted = await bootHome(home, { builtin: initial });
+    await booted.close();
+    withHomeDatabase(home, (connection) => {
+      connection.prepare("UPDATE kernel_settings SET value = ? WHERE key = 'kvman.version'").run(JSON.stringify('0.0.0-0'));
+    });
+    const upgrade = await copyPresetBuiltins();
+    writeBuiltinPresets(upgrade, { alpha: builtinPreset('alpha', 'Alpha', 2), broken: malformed });
+    const logged: LogRecord[] = [];
+    const upgraded = await bootHome(home, { builtin: upgrade, logged });
+    try {
+      expect(catalogRows(upgraded)).toEqual([{ id: 'alpha', builtin: 1, revision: 2 }]);
+      expect(logged).toEqual(expect.arrayContaining([expect.objectContaining({ level: 'warn', message: 'a built-in preset is not valid and was skipped', fields: { file: 'broken.json' } })]));
+    } finally {
+      await upgraded.close();
+    }
+  });
 });

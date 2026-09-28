@@ -117,7 +117,7 @@ async function startRuntime(shared: Shared): Promise<HostFixture> {
     databaseFile, connection, ids, now: () => timers.time.value, timers, poolSize: shared.poolSize,
     secrets: SecretStore.load(dirname(databaseFile), ids.next()), logger: { write: (record) => logged.push(record) },
     install: { home: dirname(databaseFile), builtin: noBuiltins(dirname(databaseFile)), registry: closedRegistry, environment: {} },
-    defaultLocale: () => 'en', identity: fixtureIdentity(databaseFile, timers.time.value),
+    identity: fixtureIdentity(databaseFile, timers.time.value),
     requestShutdown: () => {
       shutdownRequests.count += 1;
     },

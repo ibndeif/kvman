@@ -222,6 +222,7 @@ describe('UI structural validation (plan 06 §6.3, ADRs 0156–0157)', () => {
   });
   it('M2.10-E12 a page node sets entity and record together; settingsSections needs kernel.admin', () => {
     expect(errorsOf(recordedIssues((ext) => {
+      ext.registerConfig({ scope: 'global', schema: z.object({ name: z.string().describe('Name.') }) });
       homePage(ext, { type: 'page', entity: 'pdf.file', title: 'File' });
       ext.registerSettingsSection({ description: 'Settings.', view: { type: 'settingsSections' } });
     }))).toEqual([
@@ -232,6 +233,7 @@ describe('UI structural validation (plan 06 §6.3, ADRs 0156–0157)', () => {
       },
     ]);
     expect(errorsOf(recordedIssues((ext) => {
+      ext.registerConfig({ scope: 'global', schema: z.object({ name: z.string().describe('Name.') }) });
       ext.requestCapability('kernel.admin', { reason });
       homePage(ext, { type: 'page', title: 'File' });
       ext.registerSettingsSection({ description: 'Settings.', view: { type: 'settingsSections' } });

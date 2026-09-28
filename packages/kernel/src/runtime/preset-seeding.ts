@@ -2,6 +2,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { presetSchema, type Preset } from '@kvman/protocol';
 import type { KernelLogger } from '../hosts/kernel-logger.ts';
+import { presetTextIssues } from '../i18n/owner-text.ts';
 import { isUnreadable } from '../install/file-errors.ts';
 import { kernelProblem, ProblemError } from '../problems.ts';
 import type { Connection } from '../storage/driver.ts';
@@ -29,7 +30,8 @@ async function readPreset(runtime: KernelRuntime, file: string): Promise<Preset 
     throw error;
   }
   const checked = presetSchema.safeParse(parsed);
-  return checked.success ? checked.data : undefined;
+  // ADR 0160: a preset whose text fails its own catalogs is not a valid preset either.
+  return checked.success && !presetTextIssues(checked.data).some((issue) => issue.severity !== 'warning') ? checked.data : undefined;
 }
 
 async function commitChange(runtime: KernelRuntime, change: KernelChange, correlationId: string): Promise<void> {

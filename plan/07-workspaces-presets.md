@@ -70,7 +70,8 @@ type Preset = {
   pages?: Array<PageDef & { name: string }>;         // low-code pages owned by the preset, id `preset.<name>` (08 §8.5)
   navGroups?: Array<NavGroupDef & { name: string }>; // sidebar groups, id `preset.<name>`
   nav?: Array<NavItemDef & { name: string }>;        // sidebar items for its own pages or any extension page
-  translations?: { default: string; catalogs: Record<string, Catalog> };  // text for its pages, nav, and app title (08 §8.16)
+  translations?: { default: string; catalogs: Record<string, Catalog> };  // text for its pages, nav, and app title (08 §8.16);
+                                        //   its keys, ICU, and parameters are checked like an extension's (PRESET_INVALID, ADR 0160)
   config?: Record<string, Json>;        // non-secret workspace config per extension, validated against its schema;
                                         //   apply writes it to the workspace's config rows (§7.5)
   llm?: { defaults?: Partial<Record<'chat' | 'summary' | 'extension' | 'child', ModelRef>> };  // kernel.llm.defaults

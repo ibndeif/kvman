@@ -200,6 +200,7 @@ describe('UI bindings and values (ADR 0157)', () => {
   });
   it('M2.10-E20 component props check literals; bindings pass', () => {
     expect(errorsOf(checkedIssues((ext) => {
+      ext.registerTranslations({ default: 'en', catalogs: { en: { card: { title: 'Card' } } } });
       ext.registerComponent('pdf.fileCard', {
         description: 'Card.',
         props: z.strictObject({ title: z.text(), count: z.number(), onOpen: z.action().optional() }),

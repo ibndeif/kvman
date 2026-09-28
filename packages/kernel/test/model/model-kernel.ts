@@ -11,6 +11,8 @@ import { appliedPreset } from '../registry/presets.ts';
 import { MapGrants } from '../router/harness.ts';
 import { ulids } from '../storage/harness.ts';
 import { ManualTimers, startTime, type TestTime } from '../scheduler/doubles.ts';
+import { UiQueries } from '../../src/hosts/ui-queries.ts';
+import { SavedPreferences } from '../../src/preferences/user-preferences.ts';
 
 // The kernel's scheduling core for the model test (ADR 0102): router, commit pipeline, pending index, scheduler,
 // settlement, and the kernel host on a real SQLite file. A dispatcher double stands in for the hosts: it records
@@ -107,6 +109,7 @@ export async function bootModelKernel(file: string, time: TestTime = { value: st
     results: router, blobs: services, processes: { invocationEnded: () => undefined },
   });
   const commits = new KernelCommits(pipeline, scheduler, waiters);
+  const preferences = new SavedPreferences(connection);
   services.link({ pipeline, commits, grants });
   dispatcher.kernel = new KernelHost({
     connection, commits, scheduler, grants, queries, abortMessages: (ids) => dispatcher.abort(ids), commands: new Map(),
@@ -117,6 +120,7 @@ export async function bootModelKernel(file: string, time: TestTime = { value: st
       inspection: new InspectionQueries({ connection, registry: current, grants }), processes: new ProcessQueries(connection, grants), grants, trust: services.trust,
       presets: new PresetQueries({ connection, registry: current, tokens: new PresetImportTokens(now) }),
       llm: new LlmQueries({ connection, registry, provide: () => { throw new Error('the model kernel runs no providers'); }, now }),
+      preferences, ui: new UiQueries({ connection, registry, preferences }),
       health: () => ({ status: 'ok', version: '0.0.0', instanceId: '0b5c7f2e-4a1d-4c3b-9e8f-1a2b3c4d5e6f', processStart: 'x', uptimeMs: 0, port: 4173, home: '/h' }),
     }),
   });

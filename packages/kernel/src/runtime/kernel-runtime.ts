@@ -30,6 +30,7 @@ import { RecordedValueStore } from '../hosts/recorded-value-store.ts';
 import { ReplyWaiters, type ReplyListener } from '../hosts/reply-waiters.ts';
 import { RpcService } from '../hosts/rpc-service.ts';
 import { Settlement } from '../hosts/settlement.ts';
+import { SavedPreferences } from '../preferences/user-preferences.ts';
 import { RegistryState } from '../registry/registry-state.ts';
 import { WorkspaceDirectory } from '../registry/workspace-directory.ts';
 import { AdapterPath, type AdapterCommand, type Submission } from '../router/adapter-path.ts';
@@ -67,7 +68,6 @@ export type KernelRuntimeOptions = {
   now: () => number;
   timers: SchedulerTimers;
   poolSize: number;
-  defaultLocale: () => string;
   identity: KernelIdentity;
   // kernel.shutdown committed (ADR 0090): the daemon runs its shutdown.
   requestShutdown: () => void;
@@ -103,6 +103,8 @@ export class KernelRuntime {
   readonly scheduler: Scheduler;
   readonly hosts: HostManager;
   readonly registry: RegistryState;
+  // The saved language every message without an inherited locale gets (02 §2.10, ADR 0161).
+  readonly preferences: SavedPreferences;
   readonly workspaces: WorkspaceDirectory;
   readonly install: InstallService;
   readonly snapshots: SnapshotStore;
@@ -131,13 +133,14 @@ export class KernelRuntime {
     this.files = new FileServices({ home: options.install.home, connection, now, timers, ids, logger: options.logger, faults });
     const { files: blobFiles } = this.files;
     this.registry = new RegistryState(connection);
+    this.preferences = new SavedPreferences(connection);
     this.workspaces = new WorkspaceDirectory(connection);
     const registry = () => this.registry.current();
     this.install = installService(options);
     this.snapshots = new SnapshotStore(this.install.paths, (extension) => this.registry.digestOf(extension));
     this.index = PendingIndex.rebuild(connection, now);
     this.router = new Router({
-      registry, grants: this.registry, workspaces: this.workspaces, validators: new PayloadValidators(), ids, now, defaultLocale: options.defaultLocale,
+      registry, grants: this.registry, workspaces: this.workspaces, validators: new PayloadValidators(), ids, now, defaultLocale: () => this.preferences.locale(),
       blobs: this.files.rights, files: blobFiles,
     });
     this.pipeline = new CommitPipeline({ connection, files: blobFiles, admission: this.router, now, faults });
@@ -270,7 +273,7 @@ export class KernelRuntime {
     const kernel = wireKernelHost({
       connection, commits, pipeline: this.pipeline, scheduler: this.scheduler, registry: this.registry, directory: this.workspaces, install: this.install,
       snapshots: this.snapshots, trust: this.files.trust, queries: this.#queries, secrets: options.secrets, versions: this.versions, migrations: this.migrations,
-      timers: options.timers, faults: options.faults ?? inertFaults, home: options.install.home, logger: options.logger, version: options.identity.version, now: options.now, presetTokens, llm, provide: (call) => this.hosts.provide(call), ids, health: () => this.health(),
+      timers: options.timers, faults: options.faults ?? inertFaults, home: options.install.home, logger: options.logger, version: options.identity.version, now: options.now, presetTokens, preferences: this.preferences, llm, provide: (call) => this.hosts.provide(call), ids, health: () => this.health(),
       abortMessages, retireHosts: (extension) => this.hosts.replaceHosts(extension, reloadGraceMs), killProcesses: (workspaceId) => this.processes.killWorkspace(workspaceId), quarantine: (extension, reason) => quarantines.quarantine(extension, reason),
       requestShutdown: options.requestShutdown,
     });

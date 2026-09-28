@@ -47,7 +47,6 @@ export type BootOptions = {
   now: () => number;
   timers: SchedulerTimers;
   openLogger: (home: string) => DaemonLogger;
-  defaultLocale: () => string;
   startThread?: StartHostThread;
   faults?: FaultPoints;
 };
@@ -103,7 +102,7 @@ export class Kernel {
       databaseFile: join(options.home, 'kvman.db'), connection, secrets,
       install: { home: options.home, builtin: options.builtin ?? kernelBuiltinFolder(), registry: options.npmRegistry, environment: options.environment },
       logger: resources.logger, ids: options.ids, now: options.now, timers: options.timers, poolSize: options.poolSize,
-      defaultLocale: options.defaultLocale, identity, requestShutdown: () => void this.shutdown(),
+      identity, requestShutdown: () => void this.shutdown(),
       ...(options.startThread === undefined ? {} : { startThread: options.startThread }),
       ...(options.faults === undefined ? {} : { faults: options.faults }),
     });

@@ -4,6 +4,9 @@ import type { ExtensionDefinition } from '@kvman/sdk';
 import { installFixture } from '../install/fixture-snapshots.ts';
 import { openInstallFixture, type InstallFixture } from '../install/harness.ts';
 import { grantsOf } from '../workspaces/harness.ts';
+import board from './fixtures/extensions/board.ts';
+import boardV2 from './fixtures/extensions/board-v2.ts';
+import boardGoneGroup from './fixtures/extensions/board-gone-group.ts';
 import chain1 from './fixtures/extensions/chain-1.ts';
 import chain2 from './fixtures/extensions/chain-2.ts';
 import chain3 from './fixtures/extensions/chain-3.ts';
@@ -43,6 +46,9 @@ const folder = fileURLToPath(new URL('./fixtures/extensions/', import.meta.url))
 type UiBuild = { definition: ExtensionDefinition; entry: string; version?: string };
 
 export const uiBuilds = {
+  board: { definition: board, entry: 'board.ts' },
+  'board-v2': { definition: boardV2, entry: 'board-v2.ts', version: '2.0.0' },
+  'board-gone-group': { definition: boardGoneGroup, entry: 'board-gone-group.ts', version: '3.0.0' },
   kit: { definition: kit, entry: 'kit.ts' },
   shop: { definition: shop, entry: 'shop.ts' },
   'shop-lite': { definition: shopLite, entry: 'shop-lite.ts' },

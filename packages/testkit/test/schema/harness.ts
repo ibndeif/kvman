@@ -33,7 +33,7 @@ export async function bootSchemaFixture(): Promise<SchemaFixture> {
   await prepareHome(home, installSchemaFixtures);
   const kernel = await Kernel.boot({
     home, builtin: noBuiltins(home), npmRegistry: closedRegistry, environment: {}, poolSize: 1, ids: createUlidGenerator(Date.now), now: () => timers.time.value, timers,
-    openLogger: () => ({ write: () => undefined, close: () => undefined }), defaultLocale: () => 'en',
+    openLogger: () => ({ write: () => undefined, close: () => undefined }),
   });
   return {
     kernel, port: kernel.identity.port,

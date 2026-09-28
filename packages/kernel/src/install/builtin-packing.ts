@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { presetSchema, type BuiltinDigests, type Preset } from '@kvman/protocol';
 import { c } from 'tar';
+import { presetTextIssues } from '../i18n/owner-text.ts';
 import { hostPlatform, pnpmExecutable, toolEnvironment } from './bundled-tools.ts';
 import { isUnreadable } from './file-errors.ts';
 import { readPackageJson } from './package-checks.ts';
@@ -72,8 +73,11 @@ async function packPresets(folder: string | undefined, out: string, kvmanVersion
       throw error;
     }
     const checked = presetSchema.safeParse(parsed);
-    if (!checked.success || checked.data.id !== name) {
-      throw new Error(checked.success ? `the id of the built-in preset ${file} is not ${name}` : `the built-in preset ${file} is not a valid preset`);
+    if (!checked.success || presetTextIssues(checked.data).some((issue) => issue.severity !== 'warning')) {
+      throw new Error(`the built-in preset ${file} is not a valid preset`);
+    }
+    if (checked.data.id !== name) {
+      throw new Error(`the id of the built-in preset ${file} is not ${name}`);
     }
     const preset: Preset = {
       ...checked.data,

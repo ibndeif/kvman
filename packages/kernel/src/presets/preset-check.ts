@@ -1,7 +1,8 @@
 import { presetSchema, presetSecretIssues, type Issue, type JsonObject, type Preset } from '@kvman/protocol';
+import { presetTextIssues } from '../i18n/owner-text.ts';
 import { schemaIssues } from '../validation/schema-issues.ts';
 
-// 07 §7.4, ADR 0147: the import check shared by import preview, apply stage with json, and save-as.
+// 07 §7.4, ADRs 0147, 0160: the import check shared by import preview, apply stage with json, and save-as.
 export function checkShareablePreset(
   candidate: unknown,
   configSchemas: Readonly<Record<string, JsonObject>>,
@@ -13,6 +14,8 @@ export function checkShareablePreset(
     return invalid.length > 0 ? { ok: false, code: 'PRESET_INVALID', issues } : { ok: false, code: 'PRESET_UNSHAREABLE', issues };
   }
   const preset = parsed.data;
+  const text = presetTextIssues(preset);
+  if (text.some((issue) => issue.severity !== 'warning')) return { ok: false, code: 'PRESET_INVALID', issues: text };
   const unshareable: Issue[] = [];
   for (const [name, entry] of Object.entries(preset.extensions)) {
     if (entry.source.startsWith('dev:') || entry.source.startsWith('local:')) {

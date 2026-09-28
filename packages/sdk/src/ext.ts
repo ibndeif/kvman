@@ -1,4 +1,4 @@
-import type { Text, plainCapabilityNameSchema } from '@kvman/protocol';
+import type { Text, Translations, plainCapabilityNameSchema } from '@kvman/protocol';
 import type { input as Input, output as Output, ZodType } from 'zod';
 import type {
   CollectionDef, CommandDef, ConfigDef, DataVersionDef, EntityDef, ErrorDef, EventDef, LogDef, ModelDef, ProviderDef, QueryDef, ScheduleDef, SubscriptionDef,
@@ -88,4 +88,6 @@ export interface Ext {
   registerComponent<Name extends string>(name: Name, definition: CompositeDef | WidgetDef): Name;
   /** Registers the extension's settings section, replacing the generated form. */
   registerSettingsSection(definition: SettingsSectionDef): void;
+  /** Registers translation catalogs, one per language (ICU MessageFormat); called at most once. */
+  registerTranslations(translations: Translations): void;
 }

@@ -24,12 +24,14 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@formatjs/icu-messageformat-parser": "3.5.20",
     "@kvman/protocol": "workspace:*",
     "@kvman/sdk": "workspace:*",
     "ajv": "8.20.0",
     "better-sqlite3": "13.0.3",
     "es-module-lexer": "3.0.2",
     "fastify": "5.12.5",
+    "intl-messageformat": "12.1.2",
     "pino": "10.3.1",
     "pnpm": "12.6.0",
     "semver": "7.8.5",

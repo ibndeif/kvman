@@ -60,8 +60,9 @@ describe('UI references against a workspace (plan 06 §6.3, ADR 0157)', uiTests,
     valueOf(await enable(fixture, workspaceA, '@acme/shop'));
     const before = await validatedManifest(fixture, workspaceA, '@acme/shop');
     expect(before.ok).toBe(true);
-    expect(before.issues).toHaveLength(3);
+    expect(before.issues).toHaveLength(4);
     expect(before.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: 'meta.title', severity: 'warning', message: expect.stringContaining('literal') }),
       expect.objectContaining({
         path: 'extensions.@acme/shop.ui.panels.0.slot',
         message: 'kit.tray belongs to @acme/kit, which is not enabled here: the panel is inactive',
@@ -80,7 +81,7 @@ describe('UI references against a workspace (plan 06 §6.3, ADR 0157)', uiTests,
     ]));
     valueOf(await enable(fixture, workspaceA, '@acme/kit'));
     const after = await validatedManifest(fixture, workspaceA, '@acme/shop');
-    expect(after).toEqual({ ok: true, issues: [] });
+    expect(after).toEqual({ ok: true, issues: [expect.objectContaining({ path: 'meta.title', severity: 'warning', message: expect.stringContaining('literal') })] });
   });
 
   it('M2.10-E22 a panel in kit.tray enables; a toolbar item and a missing slot prop fail', async () => {

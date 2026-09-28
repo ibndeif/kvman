@@ -42,6 +42,7 @@ export * from './naming/type-pattern.ts';
 export * from './preset-lifecycle.ts';
 export * from './preset-secrets.ts';
 export * from './preset.ts';
+export * from './preferences.ts';
 export * from './problem.ts';
 export * from './processes.ts';
 export * from './protocol-version.ts';

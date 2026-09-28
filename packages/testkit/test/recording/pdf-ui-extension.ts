@@ -1,4 +1,5 @@
 import { defineExtension, z } from '@kvman/sdk';
+import fixture from '../../../protocol/test/fixtures/pdf-manifest.json' with { type: 'json' };
 import { pdfSetup } from './pdf-extension.ts';
 
 // The pdf example's UI of plan 05 §5.2, written with the UI register* calls. Page views are JSON; only the
@@ -19,6 +20,7 @@ export const pdfUiExtension = defineExtension({
   description: 'Import PDF files and translate them with the configured AI model.',
 }, (ext) => {
   pdfSetup(ext);
+  ext.registerTranslations(fixture.translations);
 
   ext.registerPage('pdf.files', {
     'description': 'Uploaded PDF files with their translation status.',

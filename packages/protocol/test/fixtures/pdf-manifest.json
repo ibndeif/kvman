@@ -923,7 +923,8 @@
                                     "$ref": "#/$defs/__schema0"
                                   }
                                 }
-                              ]
+                              ],
+                              "format": "kvman-text"
                             },
                             "submitLabel": {
                               "anyOf": [
@@ -945,7 +946,8 @@
                                     "$ref": "#/$defs/__schema0"
                                   }
                                 }
-                              ]
+                              ],
+                              "format": "kvman-text"
                             },
                             "defaults": {
                               "type": "object",
@@ -991,7 +993,8 @@
                                           "$ref": "#/$defs/__schema0"
                                         }
                                       }
-                                    ]
+                                    ],
+                                    "format": "kvman-text"
                                   },
                                   "help": {
                                     "anyOf": [
@@ -1013,7 +1016,8 @@
                                           "$ref": "#/$defs/__schema0"
                                         }
                                       }
-                                    ]
+                                    ],
+                                    "format": "kvman-text"
                                   },
                                   "placeholder": {
                                     "anyOf": [
@@ -1035,7 +1039,8 @@
                                           "$ref": "#/$defs/__schema0"
                                         }
                                       }
-                                    ]
+                                    ],
+                                    "format": "kvman-text"
                                   },
                                   "order": {
                                     "type": "number"
@@ -1060,7 +1065,8 @@
                                           "$ref": "#/$defs/__schema0"
                                         }
                                       }
-                                    ]
+                                    ],
+                                    "format": "kvman-text"
                                   },
                                   "widget": {
                                     "type": "string",
@@ -1104,7 +1110,8 @@
                                                 "$ref": "#/$defs/__schema0"
                                               }
                                             }
-                                          ]
+                                          ],
+                                          "format": "kvman-text"
                                         }
                                       ],
                                       "items": false,
@@ -1144,7 +1151,8 @@
                                 "$ref": "#/$defs/__schema0"
                               }
                             }
-                          ]
+                          ],
+                          "format": "kvman-text"
                         },
                         "body": {
                           "anyOf": [
@@ -1166,7 +1174,8 @@
                                 "$ref": "#/$defs/__schema0"
                               }
                             }
-                          ]
+                          ],
+                          "format": "kvman-text"
                         }
                       },
                       "required": [
@@ -1194,7 +1203,8 @@
                             "$ref": "#/$defs/__schema0"
                           }
                         }
-                      ]
+                      ],
+                      "format": "kvman-text"
                     },
                     "then": {
                       "type": "array",
@@ -1223,7 +1233,8 @@
                                       "$ref": "#/$defs/__schema0"
                                     }
                                   }
-                                ]
+                                ],
+                                "format": "kvman-text"
                               },
                               "level": {
                                 "type": "string",
@@ -1358,7 +1369,8 @@
                                 "$ref": "#/$defs/__schema0"
                               }
                             }
-                          ]
+                          ],
+                          "format": "kvman-text"
                         },
                         "view": {
                           "type": "object",

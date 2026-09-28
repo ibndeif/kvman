@@ -17,6 +17,7 @@ describe('recording UI registrations (plan 05 §5.3, 08 §8.5, §8.9, ADR 0156)'
 
   it('M2.10-E1 one call of each UI register method lands in its ui array', () => {
     const { manifest } = record((ext) => {
+      ext.registerConfig({ scope: 'global', schema: z.object({ name: z.string().describe('Name.') }) });
       ext.registerPage('pdf.home', { description: 'Home.', route: '/home', title: 'Home', view: { type: 'stack' } });
       ext.registerNavGroup('pdf.docs', { description: 'Docs.', label: 'Docs' });
       ext.registerNavItem('pdf.nav-home', { description: 'Home item.', page: 'pdf.home', label: 'Home', icon: 'home' });
@@ -112,6 +113,7 @@ describe('recording UI registrations (plan 05 §5.3, 08 §8.5, §8.9, ADR 0156)'
     expect(manifest.ui.settingsSection).toEqual({ description: 'Settings.', view: { type: 'stack' } });
 
     expect(recordedIssues((ext) => {
+      ext.registerConfig({ scope: 'global', schema: z.object({ name: z.string().describe('Name.') }) });
       ext.registerSettingsSection({ description: 'First.', view: { type: 'stack' } });
       ext.registerSettingsSection({ description: 'Second.', view: { type: 'stack' } });
     })).toEqual([

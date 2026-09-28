@@ -95,7 +95,7 @@ async function firstRun(home: string, builtin: string): Promise<void> {
   const names = Object.keys(await readBuiltinDigests(builtin));
   const kernel = await Kernel.boot({
     home, builtin, homeWorkspace: homeWorkspaceOf(home), npmRegistry: npmRegistryFrom(process.env), environment: process.env,
-    poolSize: 1, ids, now: Date.now, timers: systemTimers, openLogger, defaultLocale: () => 'en',
+    poolSize: 1, ids, now: Date.now, timers: systemTimers, openLogger,
   });
   applyTestPreset(kernel.connection, fixtureFolder, Object.fromEntries(names.map((name) => [name, emptyGrant])));
   kernel.runtime.registry.refresh();
@@ -115,7 +115,7 @@ async function bootPresetsKernel(home: string): Promise<void> {
   const kernel = await Kernel.boot({
     home, builtin: noBuiltins(home), homeWorkspace: homeWorkspaceOf(home),
     npmRegistry: npmRegistryFrom(process.env), environment: process.env,
-    poolSize: 1, ids, now: Date.now, timers: systemTimers, openLogger, defaultLocale: () => 'en',
+    poolSize: 1, ids, now: Date.now, timers: systemTimers, openLogger,
     faults: faultPointsOf(process.env['KVMAN_FAULTS'], ids.next()),
   });
   process.on('SIGTERM', () => void kernel.shutdown().then(() => process.disconnect()));
@@ -169,7 +169,7 @@ async function main(): Promise<void> {
     const kernel = await Kernel.boot({
       home, builtin: noBuiltins(home), homeWorkspace: homeWorkspaceOf(home), npmRegistry: closedRegistry,
       environment: fixture.realWorkspace === true ? { PATH: process.env['PATH'] ?? '' } : {},
-      poolSize: fixture.poolSize, ids, now: Date.now, timers: systemTimers, openLogger, defaultLocale: () => 'en',
+      poolSize: fixture.poolSize, ids, now: Date.now, timers: systemTimers, openLogger,
       faults: faultPointsOf(process.env['KVMAN_FAULTS'], ids.next()),
     });
     process.on('SIGTERM', () => void kernel.shutdown().then(() => process.disconnect()));
