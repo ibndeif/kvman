@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { manifestSchema } from './extension/manifest.ts';
 import { epochMsSchema, typeNameSchema, ulidSchema, workspaceIdSchema } from './identifiers.ts';
 import { jsonObjectSchema, jsonSchema } from './json.ts';
+import { providerDeltaFrameSchema, provideFrameSchema, providedFrameSchema } from './llm-service.ts';
 import { liveChunkSchema } from './live-chunk.ts';
 import { messageKindSchema, messageSchema } from './message.ts';
 import { problemSchema } from './problem.ts';
@@ -164,8 +165,8 @@ export type AbortFrame = z.infer<typeof abortFrameSchema>;
 export const loadFailedFrameSchema = z.strictObject({ frame: z.literal('loadFailed'), invocationId: invocationIdSchema, problem: problemSchema });
 export type LoadFailedFrame = z.infer<typeof loadFailedFrameSchema>;
 
-export const kernelToHostFrameSchema = z.discriminatedUnion('frame', [invokeFrameSchema, rpcResultFrameSchema, abortFrameSchema, migrateFrameSchema]);
+export const kernelToHostFrameSchema = z.discriminatedUnion('frame', [invokeFrameSchema, provideFrameSchema, rpcResultFrameSchema, abortFrameSchema, migrateFrameSchema]);
 export type KernelToHostFrame = z.infer<typeof kernelToHostFrameSchema>;
 
-export const hostToKernelFrameSchema = z.discriminatedUnion('frame', [rpcFrameSchema, completeFrameSchema, loadFailedFrameSchema, migratedFrameSchema]);
+export const hostToKernelFrameSchema = z.discriminatedUnion('frame', [rpcFrameSchema, completeFrameSchema, providerDeltaFrameSchema, providedFrameSchema, loadFailedFrameSchema, migratedFrameSchema]);
 export type HostToKernelFrame = z.infer<typeof hostToKernelFrameSchema>;

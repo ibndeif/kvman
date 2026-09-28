@@ -306,7 +306,7 @@ interface Ctx {
   llm: {
     complete(req: LlmRequest): Promise<LlmResult>;  // journaled like ctx.command
     countTokens(req: LlmRequest): Promise<number>;
-    models(): Promise<ModelInfo[]>;                 // models available in this workspace
+    models(): Promise<ModelInfo[]>;                 // models available in this workspace; needs no `llm` (ADR 0155)
   };
 
   // notifications (capability 'ui', 08 §8.11): shorthands for ctx.send('ui.toast' | 'ui.notify' | 'ui.dismiss' | 'ui.navigate', …)
@@ -433,7 +433,7 @@ Capabilities come from two places: **requested** with `ext.requestCapability` (f
 | `tools` | `requestCapability('tools', { reason })` | calling every command and query flagged `agentTool` that is enabled in the invocation's workspace and not turned off by any `extensions[*].disable` of its applied preset (`09` §9.5); a global invocation has no tool set and needs `calls` (ADR 0133). Meant for agents; shown as "can run every agent tool enabled in this workspace" | kernel, per message, against the workspace's current tool set |
 | `subscribes` | derived from each `ext.subscribe` of a foreign event | receiving those events | kernel (no inbox row without the grant) |
 | `provides-llm` | derived from `ext.registerProvider` | serving LLM calls; the provider receives the prompts sent to its models | kernel |
-| `llm` | `requestCapability('llm')` | `ctx.llm.*` (§5.11) | kernel |
+| `llm` | `requestCapability('llm')` | `ctx.llm.complete` and `ctx.llm.countTokens` (§5.11; `ctx.llm.models()` is open like `kernel.llm.models.list`, ADR 0155) | kernel |
 | `ui` | `requestCapability('ui')` | sending the one-way `ui.toast`, `ui.notify`, `ui.dismiss`, `ui.navigate` (`08` §8.11); their action buttons are checked like view actions | kernel |
 | `files.read` / `files.write` | `requestCapability(…)` | `ctx.files` inside the workspace (never `~/.kvman`) | kernel + trust gate |
 | `process` | `requestCapability('process')` | `ctx.process.spawn` | kernel; OS permission for sandboxed |
@@ -494,7 +494,7 @@ expect(k.events('pdf.translated')).toHaveLength(1);
 await k.crashDuring('pdf.translate', 'after-step:extract');   // fault injection
 ```
 
-The testkit runs the real kernel with in-memory SQLite and a synchronous host, plus a fake LLM provider (`fakeProvider`, registered through the normal provider API), fake processes, and a recorder for `ui.*`. It also runs `setup` twice to prove it is deterministic, fails a test whose handler throws an error code the extension did not register, and checks the extension's catalogs (every key its views use exists in the default catalog, every message is valid ICU). `k.asUser({ locale: 'ar' })` sends with a given language so `ctx.locale` and `ctx.i18n.t` can be tested. Prompts are answered the way a person would: `k.asUser().command('interviewer.question.answer', { questionId, answer })`; `k.command(...)` sends as a test extension, so the testkit also proves that `access: 'user'` commands reject non-user sources and `access: 'extensions'` commands reject people. The same tests run against `sandboxed` isolation in CI. `createTestKernel` also has a **remote mode**, used by builder projects (`11` §11.5): inside a sandboxed test process it is a client, over IPC, of a test kernel that the build runs, with the same API; the project's own extension is always the one loaded from its `dist/`, and fakes such as `fakeProvider(...)` are passed as data.
+The testkit runs the real kernel with in-memory SQLite and a synchronous host, plus a fake LLM provider (`fakeProvider`, registered through the normal provider API; its options are in ADR 0154), fake processes, and a recorder for `ui.*`. It also runs `setup` twice to prove it is deterministic, fails a test whose handler throws an error code the extension did not register, and checks the extension's catalogs (every key its views use exists in the default catalog, every message is valid ICU). `k.asUser({ locale: 'ar' })` sends with a given language so `ctx.locale` and `ctx.i18n.t` can be tested. Prompts are answered the way a person would: `k.asUser().command('interviewer.question.answer', { questionId, answer })`; `k.command(...)` sends as a test extension, so the testkit also proves that `access: 'user'` commands reject non-user sources and `access: 'extensions'` commands reject people. The same tests run against `sandboxed` isolation in CI. `createTestKernel` also has a **remote mode**, used by builder projects (`11` §11.5): inside a sandboxed test process it is a client, over IPC, of a test kernel that the build runs, with the same API; the project's own extension is always the one loaded from its `dist/`, and fakes such as `fakeProvider(...)` are passed as data.
 
 ## 5.11 LLM access and providers
 
@@ -566,6 +566,7 @@ ext.registerModel('claude-sonnet-5', {
 - Models come from `registerModel` (static) and from `listModels` (dynamic, e.g. a local Ollama server or an OpenAI-compatible endpoint). The kernel stores the combined list in its `llm_models` table and refreshes it at enable, on provider config change, and on `kernel.llm.models.refresh`. It publishes `kernel.llm.models.changed`.
 - Credentials are the provider extension's own config and secrets (`ext.registerConfig`), so they appear in its settings section; `status` tells the Models page whether it is ready.
 - Providers report failures with the kernel's LLM codes through the SDK helper `llmProblem(code, detail, { retryAfterMs })`, so callers see the same errors whatever the provider.
+- Provider functions get a read-only `ProviderContext` (`workspace`, `signal`, `config.get`, `secrets.get`, `log`; `complete` also `delta`), never a handler `ctx` (ADR 0153).
 - Registering a provider derives the `provides-llm` capability (§5.7), so the user sees that this extension will receive prompts.
 
 ## 5.12 The manifest

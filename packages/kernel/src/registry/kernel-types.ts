@@ -7,6 +7,7 @@ import {
   uninstallResultSchema, validateRequestSchema, validateResultSchema, type JsonObject, type TypeEntry,
 } from '@kvman/protocol';
 import { jsonDocument } from './kernel-json-schemas.ts';
+import { llmEntries } from './kernel-llm-types.ts';
 import { presetEntries } from './kernel-preset-types.ts';
 import { versionEntries } from './kernel-version-types.ts';
 import { workspaceEntries } from './kernel-workspace-types.ts';
@@ -60,6 +61,7 @@ export function kernelTypeEntries(): TypeEntry[] {
     ...versionEntries(),
     ...workspaceEntries(),
     ...presetEntries(),
+    ...llmEntries(),
     {
       type: 'kernel.started', kind: 'event', delivery: 'transient',
       description: 'The kernel finished booting.',

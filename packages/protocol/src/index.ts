@@ -33,6 +33,7 @@ export * from './kernel-queries.ts';
 export * from './limits.ts';
 export * from './live-chunk.ts';
 export * from './llm.ts';
+export * from './llm-service.ts';
 export * from './merge-patch.ts';
 export * from './migration-frames.ts';
 export * from './message.ts';

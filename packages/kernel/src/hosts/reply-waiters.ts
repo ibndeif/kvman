@@ -7,7 +7,7 @@ import { jsonOf } from '../store/json-order.ts';
 // What a caller learns about a command it waits for: its stored reply, or that its handler deferred it.
 export type ReplyListener = { replied(reply: ReplyPayload): void; deferred?(): void };
 
-const finalStates = new Set(['done', 'failed', 'dead']);
+const finalStates = new Set(['done', 'failed', 'dead', 'cancelled']);
 
 function stopping(messageId: string): ReplyPayload {
   return { ok: false, problem: kernelProblem('KERNEL_STOPPING', { correlationId: messageId, messageId }) };

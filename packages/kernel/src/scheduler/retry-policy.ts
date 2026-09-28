@@ -12,9 +12,10 @@ export function backoffMs(retry: number): number {
 }
 
 // A failed run: `attempts` counts runs, so the run that reaches maxAttempts makes the message dead (ADR 0059). A dead
-// message stores MESSAGE_DEAD for its waiters (ADR 0062).
+// message stores MESSAGE_DEAD for its waiters (ADR 0062). The next run waits for the later of its backoff step and the
+// problem's `retryAfterMs` (ADRs 0011, 0153).
 export function retryOutcome(message: Message, attempts: number, maxAttempts: number, problem: Problem, now: number): RetryOutcome {
-  if (attempts < maxAttempts) return { state: 'pending', notBefore: now + backoffMs(attempts) };
+  if (attempts < maxAttempts) return { state: 'pending', notBefore: now + Math.max(backoffMs(attempts), problem.retryAfterMs ?? 0) };
   const dead = kernelProblem('MESSAGE_DEAD', {
     correlationId: message.correlationId, messageId: message.id, detail: `the last of ${attempts} attempts failed with ${problem.code}`,
   });

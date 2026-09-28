@@ -152,6 +152,34 @@ export function createRecordingExt(recording: Recording, closedError: () => Erro
       const schema = recording.jsonSchema('config.schema', definition.schema);
       recording.config = compact({ scope: definition.scope, schema });
     },
+    registerProvider(id, definition) {
+      open();
+      const index = recording.providers.length;
+      if (recording.providerDefinitions.has(id)) {
+        recording.issues.push({ path: `llm.providers.${index}`, message: `provider ${id} is already registered`, hint: 'register each provider once' });
+        return;
+      }
+      const functions = [`provider:${id}.complete`, `provider:${id}.status`];
+      if (typeof definition.listModels === 'function') functions.push(`provider:${id}.listModels`);
+      if (typeof definition.countTokens === 'function') functions.push(`provider:${id}.countTokens`);
+      recording.providers.push(compact({
+        id, title: definition.title, description: definition.description, auth: definition.auth, functions,
+      }));
+      recording.bind(`provider:${id}.complete`, `llm.providers.${index}.functions`, definition.complete);
+      recording.bind(`provider:${id}.status`, `llm.providers.${index}.functions`, definition.status);
+      if (definition.listModels !== undefined) recording.bind(`provider:${id}.listModels`, `llm.providers.${index}.functions`, definition.listModels);
+      if (definition.countTokens !== undefined) recording.bind(`provider:${id}.countTokens`, `llm.providers.${index}.functions`, definition.countTokens);
+      recording.providerDefinitions.set(id, definition);
+    },
+    registerModel(id, definition) {
+      open();
+      const index = recording.models.length;
+      if (recording.models.some((model) => model['id'] === id)) {
+        recording.issues.push({ path: `llm.models.${index}`, message: `model ${id} is already registered`, hint: 'register each model once' });
+        return;
+      }
+      recording.models.push(compact({ id, ...definition }));
+    },
   };
 
   return { ext, close: () => { closed = true; } };

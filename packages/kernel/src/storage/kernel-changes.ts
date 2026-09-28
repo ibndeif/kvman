@@ -1,6 +1,7 @@
 import type { Json } from '@kvman/protocol';
 import { applyCatalogChange, type CatalogChange } from './catalog-changes.ts';
 import { applyExtensionChange, type ExtensionChange } from './extension-changes.ts';
+import { applyLlmChange, type LlmChange } from './llm-changes.ts';
 import { applyMigrationChange, type MigrationChange } from './migration-changes.ts';
 import { applyPresetApplyChange, type PresetApplyChange } from './preset-apply-changes.ts';
 import { applyPresetChange, type PresetChange } from './preset-changes.ts';
@@ -12,7 +13,7 @@ import { applyVersionChange, type VersionChange } from './version-changes.ts';
 import { applyWorkspaceChange, type WorkspaceChange } from './workspace-changes.ts';
 
 // The kernel's own writes, each applied in one unit with its events and its command's reply.
-export type KernelChange = ExtensionChange | WorkspaceChange | PresetChange | PresetApplyChange | CatalogChange | SettingChange | TrustChange | MigrationChange | VersionChange | ScheduleChange;
+export type KernelChange = ExtensionChange | WorkspaceChange | PresetChange | PresetApplyChange | CatalogChange | SettingChange | TrustChange | MigrationChange | VersionChange | ScheduleChange | LlmChange;
 
 export function applyKernelChange(scope: UnitScope, change: KernelChange): Json {
   switch (change.kind) {
@@ -53,5 +54,9 @@ export function applyKernelChange(scope: UnitScope, change: KernelChange): Json 
       return applyVersionChange(scope, change);
     case 'schedules.reconcile':
       return applyScheduleChange(scope, change);
+    case 'llm.usage':
+    case 'llm.models':
+    case 'llm.defaults':
+      return applyLlmChange(scope, change);
   }
 }

@@ -1,7 +1,9 @@
 import { toJsonSchemaDocument, type Issue, type Json, type JsonObject, type SchemaView } from '@kvman/protocol';
-import type { CommandDef, Ctx, MigrationDef, QueryDef, SubscriptionDef } from '@kvman/sdk';
+import type { CommandDef, Ctx, MigrationDef, ProviderDef, QueryDef, SubscriptionDef } from '@kvman/sdk';
 
-export type RegisteredFunction = CommandDef['handle'] | QueryDef['handle'] | SubscriptionDef['handle'] | MigrationDef['up'];
+export type RegisteredFunction =
+  | CommandDef['handle'] | QueryDef['handle'] | SubscriptionDef['handle'] | MigrationDef['up']
+  | ProviderDef['complete'] | ProviderDef['status'] | NonNullable<ProviderDef['listModels']> | NonNullable<ProviderDef['countTokens']>;
 
 // A command, query, or subscription definition as a host calls it: the host first parses the input with the same
 // definition's schema, so the value has the type its handler declares.
@@ -51,9 +53,12 @@ export class Recording {
   readonly entities: JsonObject[] = [];
   config: JsonObject | null = null;
   readonly errors: JsonObject[] = [];
+  readonly providers: JsonObject[] = [];
+  readonly models: JsonObject[] = [];
 
   readonly issues: Issue[] = [];
   readonly functions = new Map<string, RegisteredFunction>();
+  readonly providerDefinitions = new Map<string, ProviderDef>();
   readonly schemas: RecordedSchemas = { handlers: new Map(), events: new Map(), collections: new Map() };
   readonly handlers = new Map<string, HandlerDefinition>();
   readonly migrationSteps = new Map<number, MigrationDef['up']>();

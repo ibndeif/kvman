@@ -1,8 +1,8 @@
 import type {
-  Access, EventDelivery, Json, Priority, Text, agentToolSchema, commandAgentToolSchema, configScopeSchema, slashSchema,
+  Access, EventDelivery, Json, ListedModel as ProtocolListedModel, LlmRequest, LlmResult, ModelDef as ProtocolModelDef, Priority, Text, agentToolSchema, commandAgentToolSchema, configScopeSchema, slashSchema,
 } from '@kvman/protocol';
 import type { output as Output, input as Input, ZodType } from 'zod';
-import type { Ctx, Deferred } from './context.ts';
+import type { CompleteContext, Ctx, Deferred, ProviderContext } from './context.ts';
 import type { MigrationContext } from './migration.ts';
 
 /** A composer slash command of a command. */
@@ -122,4 +122,28 @@ export interface EntityDef<Schema extends ZodType = ZodType> {
 export interface ConfigDef<Schema extends ZodType = ZodType> {
   scope: Output<typeof configScopeSchema>;
   schema: Schema;
+}
+
+/** A model an extension registers; `provider` is one of the providers the extension registers. */
+export type ModelDef = ProtocolModelDef;
+
+/** A model a provider lists at runtime, without its provider. */
+export type ListedModel = ProtocolListedModel;
+
+/** An LLM provider an extension implements (05 §5.11). */
+export interface ProviderDef {
+  /** The provider's title for the Models page. */
+  title: Text;
+  /** What the provider is. */
+  description: string;
+  /** How the provider logs in. */
+  auth: 'api-key' | 'oauth' | 'none';
+  /** Whether the provider is ready to serve calls. */
+  status(ctx: ProviderContext): Promise<{ configured: boolean }>;
+  /** The provider's models discovered at runtime. */
+  listModels?(ctx: ProviderContext): Promise<ListedModel[]>;
+  /** The provider's exact token count for a request. */
+  countTokens?(request: LlmRequest, ctx: ProviderContext): Promise<number>;
+  /** Answers a request; `ctx.delta` relays text and thinking to the caller's live events. */
+  complete(request: LlmRequest, ctx: CompleteContext): Promise<LlmResult>;
 }

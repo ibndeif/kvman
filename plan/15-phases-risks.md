@@ -168,6 +168,7 @@ Inside a phase, each milestone needs the one before it unless *Needs* says other
 - **Read**: `05` §5.11, `03` §3.12, `04` §4.1 (LLM tables).
 - **Build**: `registerProvider` / `registerModel` recording; derived `provides-llm`; the model registry and `llm_models`; defaults in the preset and `kernel_settings`; `kernel.llm.complete` routed to the provider's host with delta relay; retries; usage rows; `kernel.llm.tokens.count`; the `llmProblem` helper; `fakeProvider` in the testkit.
 - **Done when**: a sample provider's deltas arrive as the caller's live events (`live.text` and `live.thinking`); a redelivered caller gets the recorded result without a second provider call; retryable failures back off and succeed; usage rows match calls.
+- **Decisions**: ADRs 0152–0155 (`ModelInfo`, refreshes, defaults as preset writes, `PROVIDER_CONFLICT` wherever namespaces are checked; the provider context, `complete` reporting an unconfigured provider, retry timing, global calls, the provider frames; token estimates, usage rows, and `fakeProvider`'s options; `ctx.llm.models()` open without `llm`).
 
 #### M2.10 UI registration and validation — 2.5 days
 - **Read**: `05` §5.3 (UI rows), `06` §6.3 (UI rules), `08` §8.4–§8.9, §8.17.

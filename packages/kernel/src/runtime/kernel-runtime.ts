@@ -6,10 +6,11 @@ import { CallDepths } from '../hosts/call-depths.ts';
 import { HostFailures } from '../hosts/host-failures.ts';
 import { HostManager } from '../hosts/host-manager.ts';
 import { workerThreadStarter, type StartHostThread } from '../hosts/host-thread.ts';
+import { LlmCalls } from '../hosts/llm-calls.ts';
 import { defaultReadPoolSize, ReadPool, readThreadStarter } from '../hosts/read-pool/read-pool.ts';
 import { sandboxProcessStarter } from '../hosts/sandbox/sandbox-process.ts';
 import type { KernelLogger } from '../hosts/kernel-logger.ts';
-import { ExtensionVersions } from '../hosts/extension-versions.ts';
+import { ExtensionVersions, reloadGraceMs } from '../hosts/extension-versions.ts';
 import { KernelCommits } from '../hosts/kernel-commits.ts';
 import type { KernelHost } from '../hosts/kernel-host.ts';
 import { ProcessCalls } from '../hosts/process-calls.ts';
@@ -151,7 +152,7 @@ export class KernelRuntime {
     const starters = { startThread: options.startThread ?? workerThreadStarter(options.databaseFile), startSandbox: sandboxProcessStarter(kernelReadRoots()) };
     this.hosts = new HostManager({
       connection, registry, grants: this.registry, snapshots: this.snapshots, values, logger: options.logger, ids, poolSize: options.poolSize, timers, now,
-      ...starters, reads: this.#reads, failures: new HostFailures(), faults,
+      ...starters, reads: this.#reads, failures: new HostFailures(), faults, secrets: options.secrets,
     });
     this.scheduler = new Scheduler({
       connection, files: blobFiles, pipeline: this.pipeline, index: this.index, registry, dispatcher: this.hosts, now, timers, faults,
@@ -259,16 +260,18 @@ export class KernelRuntime {
       pipeline: this.pipeline, scheduler: this.scheduler, waiters: this.#waiters, queries: this.#queries, live: this.live, values, quarantines,
       results: this.router, blobs: this.files, processes: this.processes,
     });
+    const llm = new LlmCalls({ connection, commits, registry: this.registry, live: this.live, provide: (call) => this.hosts.provide(call) });
     const abortMessages = (messageIds: ReadonlySet<string>): void => {
       this.hosts.abortMessages(messageIds);
+      llm.abortMessages(messageIds);
       this.processes.killSpawnedBy(messageIds);
     };
     const presetTokens = new PresetImportTokens(options.now);
     const kernel = wireKernelHost({
       connection, commits, pipeline: this.pipeline, scheduler: this.scheduler, registry: this.registry, directory: this.workspaces, install: this.install,
       snapshots: this.snapshots, trust: this.files.trust, queries: this.#queries, secrets: options.secrets, versions: this.versions, migrations: this.migrations,
-      timers: options.timers, faults: options.faults ?? inertFaults, home: options.install.home, logger: options.logger, version: options.identity.version, now: options.now, presetTokens, health: () => this.health(),
-      abortMessages, killProcesses: (workspaceId) => this.processes.killWorkspace(workspaceId), quarantine: (extension, reason) => quarantines.quarantine(extension, reason),
+      timers: options.timers, faults: options.faults ?? inertFaults, home: options.install.home, logger: options.logger, version: options.identity.version, now: options.now, presetTokens, llm, provide: (call) => this.hosts.provide(call), ids, health: () => this.health(),
+      abortMessages, retireHosts: (extension) => this.hosts.replaceHosts(extension, reloadGraceMs), killProcesses: (workspaceId) => this.processes.killWorkspace(workspaceId), quarantine: (extension, reason) => quarantines.quarantine(extension, reason),
       requestShutdown: options.requestShutdown,
     });
     this.#kernelHost = kernel;

@@ -1,7 +1,8 @@
+import { dirname } from 'node:path';
 import type { Message } from '@kvman/protocol';
 import { describe, expect, it } from 'vitest';
 import {
-  betterSqlite3Driver, HostFailures, HostManager, inertFaults, KernelRegistry, openKernelDatabase, RecordedValueStore,
+  betterSqlite3Driver, HostFailures, HostManager, inertFaults, KernelRegistry, openKernelDatabase, RecordedValueStore, SecretStore,
   type ActiveInvocation, type Claim, type InvocationSink, type LogRecord,
 } from '../../src/index.ts';
 import { command, manifest, workspaceA } from '../registry/manifests.ts';
@@ -40,6 +41,7 @@ describe('host frames (ADR 0076)', () => {
       connection, registry: () => build.registry, grants: sharedGrants, reads: unusedReads(), startSandbox: () => start, snapshots: { verifiedEntry: () => ({ folder: '/x', entry: '/x/notes.ts' }), verify: async () => true }, values: new RecordedValueStore(connection),
       logger: { write: (record) => logged.push(record) }, ids: ulids, poolSize: 1, startThread: start,
       timers: { set: () => ({ cancel: () => undefined }) }, now: () => 1, failures: new HostFailures(), faults: inertFaults,
+      secrets: SecretStore.load(dirname(temporaryDatabaseFile()), ulids.next()),
     });
     hosts.connect(sink);
     const first = ulids.next();

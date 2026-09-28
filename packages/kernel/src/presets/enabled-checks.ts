@@ -43,6 +43,30 @@ export function namespaceIssues(manifests: readonly Manifest[]): Issue[] {
   }));
 }
 
+// Every pair of the enabled set sharing a provider id, in enable order (ADR 0152).
+export type ProviderClash = { first: string; second: string; provider: string };
+
+export function providerClashes(manifests: readonly Manifest[]): ProviderClash[] {
+  const clashes: ProviderClash[] = [];
+  const owners = new Map<string, string>();
+  for (const manifest of manifests) {
+    for (const provider of manifest.llm.providers) {
+      const first = owners.get(provider.id);
+      if (first !== undefined) clashes.push({ first, second: manifest.meta.name, provider: provider.id });
+      else owners.set(provider.id, manifest.meta.name);
+    }
+  }
+  return clashes;
+}
+
+// A provider clash is reported at the second extension, naming both extensions and the provider.
+export function providerIssues(manifests: readonly Manifest[]): Issue[] {
+  return providerClashes(manifests).map(({ first, second, provider }) => ({
+    path: `extensions.${second}`,
+    message: `${first} and ${second} both provide "${provider}"`,
+  }));
+}
+
 // Every required type no enabled manifest provides (and the kernel does not), in enable order (06 §6.3).
 export type MissingRequirement = { name: string; type: string };
 

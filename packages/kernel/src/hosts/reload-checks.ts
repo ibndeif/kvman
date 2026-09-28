@@ -23,6 +23,12 @@ export function referentialIssues(registry: KernelRegistry, target: Manifest, wo
     const issues: Issue[] = [];
     const owner = others.find((manifest) => manifest.meta.namespace === namespace);
     if (owner !== undefined) issues.push({ path, message: `${owner.meta.name} owns the namespace "${namespace}" here` });
+    const providerOwners = new Map<string, string>();
+    for (const manifest of others) for (const provider of manifest.llm.providers) providerOwners.set(provider.id, manifest.meta.name);
+    for (const provider of target.llm.providers) {
+      const ownerName = providerOwners.get(provider.id);
+      if (ownerName !== undefined) issues.push({ path, message: `${ownerName} provides "${provider.id}" here` });
+    }
     const provided = new Set([...others.flatMap((manifest) => [...typesOf(manifest)]), ...typesOf(target)]);
     for (const type of requiredTypes(target).filter((required) => !provided.has(required) && !kernelTypes.has(required))) {
       issues.push({ path, message: `the new version requires ${type}, which no extension enabled here provides` });

@@ -1,6 +1,7 @@
 import type { Ctx, Store } from '@kvman/sdk';
 import { createStepFunction } from '../../store/step-journal.ts';
 import { createFiles } from './context-files.ts';
+import { createLlm } from './context-llm.ts';
 import { createMessaging, type MessagingParts } from './context-messaging.ts';
 import { createProcesses } from './context-process.ts';
 import { createSettings } from './context-settings.ts';
@@ -14,6 +15,7 @@ export function createContext(parts: ContextParts): Ctx {
   const { invoke } = state;
   const { message } = invoke;
   const step = createStepFunction(stepRecorder(client, invoke.invocationId, values), message.id, message.correlationId);
+  const messaging = createMessaging(parts);
   return {
     message,
     context: message.context,
@@ -30,8 +32,9 @@ export function createContext(parts: ContextParts): Ctx {
       state.open();
       return values.now();
     },
-    ...createMessaging(parts),
+    ...messaging,
     ...createSettings(parts),
+    ...createLlm({ command: messaging.command, query: messaging.query, workspaceId: invoke.workspace?.id }),
     files: createFiles(parts),
     process: createProcesses(parts),
     get store() {

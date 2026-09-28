@@ -6,6 +6,8 @@ import { CatalogCommands } from '../hosts/catalog-commands.ts';
 import type { KernelCommits } from '../hosts/kernel-commits.ts';
 import type { ExtensionVersions } from '../hosts/extension-versions.ts';
 import type { KernelCommand } from '../hosts/kernel-host.ts';
+import type { LlmCalls } from '../hosts/llm-calls.ts';
+import { LlmDefaultsCommands } from '../hosts/llm-defaults-commands.ts';
 import type { KernelLogger } from '../hosts/kernel-logger.ts';
 import { PresetApply } from '../hosts/preset-apply.ts';
 import { PreviewWorkspaces } from '../hosts/preview-workspaces.ts';
@@ -18,6 +20,7 @@ import { WorkspaceCommands } from '../hosts/workspace-commands.ts';
 import { WorkspaceForgetting } from '../hosts/workspace-forgetting.ts';
 import type { InstallService } from '../install/install-service.ts';
 import type { SnapshotStore } from '../install/snapshot-store.ts';
+import type { ModelRefresh } from '../llm/model-refresh.ts';
 import type { DataMigrations } from '../migrations/data-migrations.ts';
 import type { PresetImportTokens } from '../presets/import-tokens.ts';
 import { StagedApplies } from '../presets/staged-applies.ts';
@@ -45,8 +48,11 @@ export type KernelCommandDeps = {
   home: string;
   logger: KernelLogger;
   presetTokens: PresetImportTokens;
+  llm: LlmCalls;
+  refresh: ModelRefresh;
   now: () => number;
   abortMessages: (messageIds: ReadonlySet<string>) => void;
+  retireHosts: (extension: string) => void;
   killProcesses: (workspaceId: string) => Promise<void>;
   quarantine: (extension: string, reason: QuarantineReason) => Promise<void>;
 };
@@ -56,7 +62,7 @@ export type KernelCommandDeps = {
 export function kernelCommandTable(deps: KernelCommandDeps): Map<string, KernelCommand> {
   const { connection, commits, scheduler, registry, abortMessages } = deps;
   const serial = new SerialChanges();
-  const extensions = new ExtensionCommands({ connection, commits, scheduler, grants: registry, registry, install: deps.install, serial, abortMessages });
+  const extensions = new ExtensionCommands({ connection, commits, scheduler, grants: registry, registry, install: deps.install, serial, abortMessages, retireHosts: deps.retireHosts });
   const enabling = new EnableCommands({ connection, commits, scheduler, registry, snapshots: deps.snapshots, migrations: deps.migrations, serial, quarantine: deps.quarantine });
   const versions = new VersionCommands({ connection, commits, scheduler, registry, grants: registry, versions: deps.versions, serial });
   const workspaces = new WorkspaceCommands({ connection, commits, registry, home: deps.home });
@@ -76,6 +82,7 @@ export function kernelCommandTable(deps: KernelCommandDeps): Map<string, KernelC
     connection, commits, scheduler, registry, snapshots: deps.snapshots, migrations: deps.migrations, serial,
     quarantine: deps.quarantine,
   });
+  const llmDefaults = new LlmDefaultsCommands({ connection, commits, registry, serial });
   return new Map<string, KernelCommand>([
     ['kernel.extension.stage', (claim, signal) => extensions.stage(claim, signal)],
     ['kernel.extension.install', (claim) => extensions.install(claim)],
@@ -100,5 +107,8 @@ export function kernelCommandTable(deps: KernelCommandDeps): Map<string, KernelC
     ['kernel.preset.update', (claim) => presetUpdate.update(claim)],
     ['kernel.preset.save', (claim) => catalog.save(claim)],
     ['kernel.preset.delete', (claim) => catalog.delete(claim)],
+    ['kernel.llm.complete', (claim, signal) => deps.llm.complete(claim, signal)],
+    ['kernel.llm.models.refresh', (claim) => deps.refresh.refreshCommand(claim)],
+    ['kernel.llm.defaults.set', (claim) => llmDefaults.set(claim)],
   ]);
 }

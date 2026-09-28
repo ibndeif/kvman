@@ -4,6 +4,7 @@ export * from './define-extension.ts';
 export * from './definitions.ts';
 export * from './ext.ts';
 export * from './files.ts';
+export * from './llm.ts';
 export * from './process.ts';
 export * from './references.ts';
 export * from './store.ts';

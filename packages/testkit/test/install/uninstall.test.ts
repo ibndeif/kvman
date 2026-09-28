@@ -80,7 +80,8 @@ describe('uninstall (plan 06 §6.8, ADR 0120)', installTests, () => {
       await eventually(() => expect(existsSync(snapshot)).toBe(false));
       expect(fixture.connection.prepare("SELECT payload FROM events WHERE type = 'kernel.extension.uninstalled' AND payload = ?").all(JSON.stringify({ name }))).toHaveLength(1);
     }
-    expect(dataRows(fixture.connection, '@acme/keep')).toEqual([3, 3, 3, 3, 1, 1, 1, 1, 1]);
+    // Model rows go with either option (ADR 0152).
+    expect(dataRows(fixture.connection, '@acme/keep')).toEqual([3, 3, 3, 3, 1, 1, 1, 1, 0]);
     expect(dataRows(fixture.connection, '@acme/drop')).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0]);
     expect(presetExtensions(fixture.connection)).toEqual({ names: ['@acme/keep'], revision: 4 });
     expect(fixture.connection.prepare("SELECT workspace_id, payload FROM events WHERE type = 'kernel.preset.changed'").all()).toEqual([
@@ -131,6 +132,6 @@ describe('uninstall (plan 06 §6.8, ADR 0120)', installTests, () => {
     const local = await staged(fixture, `local:${digest}`);
     expect(await command(fixture, 'kernel.extension.install', { confirmationToken: local.confirmationToken })).toEqual({ ok: true, value: { name: '@acme/keep', digest } });
     expect(fixture.connection.prepare('SELECT source FROM extension_versions WHERE name = ?').all('@acme/keep')).toEqual([{ source: `local:${digest}` }]);
-    expect(dataRows(fixture.connection, '@acme/keep')).toEqual([3, 3, 3, 3, 1, 1, 1, 1, 1]);
+    expect(dataRows(fixture.connection, '@acme/keep')).toEqual([3, 3, 3, 3, 1, 1, 1, 1, 0]);
   });
 });

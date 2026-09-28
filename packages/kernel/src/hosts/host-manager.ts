@@ -7,16 +7,19 @@ import { kernelOwner } from '../registry/kernel-types.ts';
 import type { GrantsSource } from '../router/grants.ts';
 import type { Claim, DispatchTarget, Dispatcher, HostLoad } from '../scheduler/dispatcher.ts';
 import type { SchedulerTimers } from '../scheduler/timers.ts';
+import type { SecretStore } from '../secrets/secret-store.ts';
 import type { Connection } from '../storage/driver.ts';
 import type { UlidGenerator } from '../ulid.ts';
 import type { ActiveInvocation } from './active-invocation.ts';
 import { ExtensionReplacement } from './extension-replacement.ts';
 import { HostCalls } from './host-calls.ts';
+import { HostSupervision } from './host-supervision.ts';
 import type { HostFailures } from './host-failures.ts';
 import { HostRegistry, type HostEntry } from './host-registry.ts';
 import type { StartHostThread } from './host-thread.ts';
 import type { InvocationSink } from './invocation-sink.ts';
 import type { KernelLogger } from './kernel-logger.ts';
+import { ProviderInvocations, type ProviderCall, type ProviderOutcome } from './provider-invocations.ts';
 import type { ReadPool } from './read-pool/read-pool.ts';
 import { noRecordedValues, type RecordedValueStore } from './recorded-value-store.ts';
 import { RunningInvocations } from './running-invocations.ts';
@@ -41,6 +44,7 @@ export type HostManagerOptions = {
   now: () => number;
   failures: HostFailures;
   faults: FaultPoints;
+  secrets: SecretStore;
 };
 
 // The execution hosts behind the scheduler's dispatcher interface (ADRs 0060, 0071), keyed by (extension, isolation)
@@ -53,6 +57,8 @@ export class HostManager implements Dispatcher {
   readonly #running: RunningInvocations;
   readonly #calls: HostCalls;
   readonly #replacement: ExtensionReplacement;
+  readonly #providers: ProviderInvocations;
+  readonly #supervision: HostSupervision;
   readonly #work = new Set<Promise<unknown>>();
   #sink: InvocationSink | undefined;
   #idle: (() => void) | undefined;
@@ -74,6 +80,16 @@ export class HostManager implements Dispatcher {
     const parts = { running: this.#running, hosts: this.#hosts, sink: () => this.#connected(), track: (work: Promise<unknown>) => this.#track(work) };
     this.#calls = new HostCalls({ ...parts, reads: options.reads, ids: options.ids });
     this.#replacement = new ExtensionReplacement({ ...parts, timers: options.timers, end: (invocation) => this.#end(invocation) });
+    this.#providers = new ProviderInvocations({
+      ...options, hosts: this.#hosts, moduleFor: (worker, extension, entry) => this.#moduleFor(worker, extension, entry),
+      quarantine: (extension) => this.#connected().quarantine(extension, 'EXT_INTEGRITY'),
+    });
+    this.#supervision = new HostSupervision({ ...parts, providers: this.#providers, failures: options.failures, now: options.now, end: (invocation) => this.#end(invocation) });
+  }
+
+  // 03 §3.12, ADR 0153: a provider function in its extension's host, for the kernel's LLM service.
+  provide(call: ProviderCall): Promise<ProviderOutcome> {
+    return this.#providers.invoke(call);
   }
 
   connect(sink: InvocationSink): void {
@@ -169,6 +185,7 @@ export class HostManager implements Dispatcher {
   async stop(): Promise<void> {
     this.#stopping = true;
     this.#running.cancelTimers();
+    this.#providers.stopAll();
     this.#hosts.stopAll();
     while (this.#work.size > 0) await Promise.allSettled([...this.#work]);
   }
@@ -198,7 +215,7 @@ export class HostManager implements Dispatcher {
   }
 
   #abort(invocation: ActiveInvocation, reason: AbortReason): void {
-    this.#running.abort(invocation, reason, () => this.#stuck(invocation));
+    this.#running.abort(invocation, reason, () => this.#supervision.stuck(invocation));
     if (this.#running.size === 0) this.#idle?.();
     this.#hosts.post(invocation.worker, { frame: 'abort', invocationId: invocation.id, reason });
   }
@@ -219,33 +236,8 @@ export class HostManager implements Dispatcher {
     this.#replacement.replace(extension, graceMs);
   }
 
-  // 03 §3.6: the stuck invocation's extension is charged; the rest of the host returns without penalty.
-  #stuck(invocation: ActiveInvocation): void {
-    if (!this.#running.isAborted(invocation)) return;
-    const { worker } = invocation;
-    this.#charge(invocation.claim.extension);
-    for (const other of this.#running.runningOn(worker)) {
-      this.#end(other);
-      this.#track(this.#connected().collateral(other));
-    }
-    this.#running.forgetAborted(worker);
-    this.#hosts.stop(worker);
-  }
-
-  // ADR 0082: a crash charges every extension running on the host, and each attempt counts.
   #exited(worker: PoolWorker): void {
-    if (this.#stopping) return;
-    const running = this.#running.runningOn(worker);
-    for (const extension of new Set(running.map((invocation) => invocation.claim.extension))) this.#charge(extension);
-    for (const invocation of running) {
-      this.#end(invocation);
-      this.#track(this.#connected().lost(invocation));
-    }
-    this.#running.forgetAborted(worker);
-  }
-
-  #charge(extension: string): void {
-    if (this.#options.failures.charge(extension, this.#options.now())) this.#track(this.#connected().quarantine(extension, 'HOST_FAILURES'));
+    if (!this.#stopping) this.#supervision.exited(worker);
   }
 
   #frame(worker: PoolWorker, value: unknown): void {
@@ -259,6 +251,7 @@ export class HostManager implements Dispatcher {
       return;
     }
     const frame = parsed.data;
+    if (frame.frame === 'provider.delta' || frame.frame === 'provided') return this.#providers.receive(worker, frame);
     if (frame.frame === 'migrated') {
       this.#log(`host ${worker.host} sent a migration frame, which only a migration host sends`, { path: 'frame', issue: 'migrated' });
       this.#hosts.stop(worker);
@@ -266,7 +259,7 @@ export class HostManager implements Dispatcher {
       return;
     }
     if (frame.frame === 'rpc') {
-      this.#calls.call(worker, frame.invocationId, frame.callId, frame.call);
+      if (!this.#providers.serve(worker, frame)) this.#calls.call(worker, frame.invocationId, frame.callId, frame.call);
       return;
     }
     const aborted = this.#running.abortedOn(worker, frame.invocationId);

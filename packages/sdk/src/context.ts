@@ -1,4 +1,4 @@
-import type { Json, JsonObject, LiveChunk, Message, OnReply, Priority, Problem } from '@kvman/protocol';
+import type { Json, JsonObject, LiveChunk, LlmRequest, LlmResult, Message, ModelInfo, OnReply, Priority, Problem } from '@kvman/protocol';
 import type { CommandRef, EventRef, QueryRef } from './references.ts';
 import type { WorkspaceFiles } from './files.ts';
 import type { Processes } from './process.ts';
@@ -120,6 +120,8 @@ export interface Ctx {
   readonly files: WorkspaceFiles;
   /** OS processes (capability `process`). */
   readonly process: Processes;
+  /** Models through the kernel's LLM service (capability `llm`). */
+  readonly llm: LlmAccess;
 }
 
 /** `ctx.config` (05 §5.8). */
@@ -140,3 +142,33 @@ export interface SecretAccess {
 
 /** Where a stored config value lives. */
 export type ConfigScope = 'global' | 'workspace';
+
+/** What a provider function acts through: read-only, it commits nothing (ADR 0153). */
+export interface ProviderContext {
+  /** The caller's workspace; `null` for a global call or a model listing. */
+  readonly workspace: Workspace | null;
+  /** Fires when the caller's invocation is cancelled or reaches its deadline. */
+  readonly signal: AbortSignal;
+  /** The provider extension's merged config for the call's workspace. */
+  readonly config: { get(): Promise<JsonObject> };
+  /** The provider extension's secrets. */
+  readonly secrets: { get(name: string): Promise<string | undefined> };
+  /** Structured log lines attributed to the call. */
+  readonly log: Logger;
+}
+
+/** What a provider's `complete` acts through: the provider context plus streaming. */
+export interface CompleteContext extends ProviderContext {
+  /** Relays text or thinking to the caller's live events. */
+  delta(chunk: { text?: string; thinking?: string }): void;
+}
+
+/** `ctx.llm` (05 §5.11): models through the kernel's LLM service. */
+export interface LlmAccess {
+  /** Completes a request with the resolved model; journaled, so a redelivery reuses the recorded result. */
+  complete(request: LlmRequest): Promise<LlmResult>;
+  /** Counts a request's tokens: the provider's exact count, else an estimate. */
+  countTokens(request: LlmRequest): Promise<number>;
+  /** The models of the providers enabled in the workspace, by provider then id. */
+  models(): Promise<ModelInfo[]>;
+}

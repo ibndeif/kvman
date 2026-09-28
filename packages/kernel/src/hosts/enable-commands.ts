@@ -113,6 +113,7 @@ export class EnableCommands {
       return refused(refusal(message, 'EXT_INTEGRITY', { detail: `the snapshot of ${name} does not match its digest` }));
     }
     const problem = this.#namespaceProblem(message, workspaceId, manifest)
+      ?? this.#providerProblem(message, workspaceId, manifest)
       ?? this.#grantProblem(message, manifest, grants, version.source.startsWith('builtin:'))
       ?? this.#requiresProblem(message, workspaceId, manifest);
     return problem === undefined ? { ok: true, version } : refused(problem);
@@ -156,6 +157,18 @@ export class EnableCommands {
     const other = this.#deps.registry.current().manifestsEnabledIn(workspaceId).find((enabled) => enabled.meta.namespace === namespace && enabled.meta.name !== name);
     if (other === undefined) return undefined;
     return refusal(message, 'NAMESPACE_CONFLICT', { detail: `${other.meta.name} already owns the namespace "${namespace}" in this workspace`, hint: `disable ${other.meta.name} first` });
+  }
+
+  #providerProblem(message: Message, workspaceId: string, manifest: Manifest): Problem | undefined {
+    const provided = new Map<string, string>();
+    for (const enabled of this.#deps.registry.current().manifestsEnabledIn(workspaceId)) {
+      if (enabled.meta.name === manifest.meta.name) continue;
+      for (const provider of enabled.llm.providers) provided.set(provider.id, enabled.meta.name);
+    }
+    const clash = manifest.llm.providers.find((provider) => provided.has(provider.id));
+    const owner = clash === undefined ? undefined : provided.get(clash.id);
+    if (clash === undefined || owner === undefined) return undefined;
+    return refusal(message, 'PROVIDER_CONFLICT', { detail: `${owner} and ${manifest.meta.name} both provide "${clash.id}"`, hint: `disable ${owner} first` });
   }
 
   #grantProblem(message: Message, manifest: Manifest, grants: ExtensionEnableRequest['grants'], builtin: boolean): Problem | undefined {

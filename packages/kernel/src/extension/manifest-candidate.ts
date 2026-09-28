@@ -7,8 +7,8 @@ const emptyUi = {
   rendererTargets: [], renderers: [], components: [], settingsSection: null,
 };
 
-// The manifest of 05 §5.12 before validation, with the defaults of ADR 0013 written out. UI, translations, and LLM
-// registrations are not recorded yet, so their sections are empty.
+// The manifest of 05 §5.12 before validation, with the defaults of ADR 0013 written out. UI and translations
+// are not recorded yet, so their sections are empty.
 export function manifestCandidate(meta: ExtensionMeta, version: string, recording: Recording): JsonObject {
   return {
     manifestVersion: 1,
@@ -32,6 +32,6 @@ export function manifestCandidate(meta: ExtensionMeta, version: string, recordin
     errors: recording.errors,
     ui: emptyUi,
     translations: null,
-    llm: { providers: [], models: [] },
+    llm: { providers: recording.providers, models: recording.models },
   };
 }

@@ -24,7 +24,7 @@ export class KernelCommits {
       this.#scheduler.settled(claim.message.id);
       this.#waiters.resolve(result.replies);
     } else if (!result.stale && result.problem.retryable) {
-      await this.#scheduler.failed(claim.message.id, result.problem);
+      await this.retry(claim, result.problem);
     } else if (!result.stale && unit.origin.kind !== 'invocation') {
       await this.fail(claim, result.problem);
     }
@@ -41,6 +41,13 @@ export class KernelCommits {
   reply(claim: Claim, value: Json): Promise<CommitResult> {
     const invocation = { message: claim.message, extension: claim.extension, outcome: { ok: true, value } as const, stored: true };
     return this.commit({ origin: { kind: 'invocation', invocation }, writes: [], sends: [], publishes: [], replies: [] }, claim);
+  }
+
+  // A retryable failure of this attempt: the scheduler runs the command again after its backoff, or makes it dead
+  // and stores MESSAGE_DEAD, which reaches its waiters (ADR 0062).
+  async retry(claim: Claim, problem: Problem): Promise<void> {
+    const result = await this.#scheduler.failed(claim.message.id, problem);
+    if (result.committed) this.#waiters.resolve(result.replies);
   }
 
   async fail(claim: Claim, problem: Problem): Promise<void> {

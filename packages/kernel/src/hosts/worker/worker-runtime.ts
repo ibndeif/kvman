@@ -1,5 +1,6 @@
 import {
   kernelToHostFrameSchema, type AbortReason, type CompleteFrame, type HostToKernelFrame, type InvokeFrame, type LoadFailedFrame, type MigrateFrame,
+  type ProvideFrame,
 } from '@kvman/protocol';
 import { kernelProblem } from '../../problems.ts';
 import { UnindexedScanThrottle } from '../../store/store-context.ts';
@@ -9,6 +10,7 @@ import { loadExtension, type ModuleLoad } from './extension-module.ts';
 import { InvocationState } from './invocation-state.ts';
 import { runInvocation } from './invocation-run.ts';
 import { runMigration } from './migration-run.ts';
+import { runProvider } from './provider-run.ts';
 import { RpcClient } from './rpc-client.ts';
 
 // How a host reads committed rows for one invocation.
@@ -26,6 +28,7 @@ export class WorkerRuntime {
   readonly #modules = new Map<string, Promise<ModuleLoad>>();
   readonly #running = new Map<string, InvocationState>();
   readonly #migrations = new Set<string>();
+  readonly #providers = new Map<string, AbortController>();
 
   constructor(post: (frame: HostToKernelFrame) => void, reads: HostReads) {
     this.#post = post;
@@ -39,6 +42,7 @@ export class WorkerRuntime {
     if (frame.frame === 'rpcResult') this.#client.answered(frame);
     else if (frame.frame === 'abort') this.#abort(frame.invocationId, frame.reason);
     else if (frame.frame === 'migrate') void this.#migrate(frame);
+    else if (frame.frame === 'provide') void this.#provide(frame);
     else void this.#invoke(frame);
   }
 
@@ -46,6 +50,12 @@ export class WorkerRuntime {
   #abort(invocationId: string, reason: AbortReason): void {
     if (this.#migrations.has(invocationId)) {
       this.#client.abandon(invocationId, kernelProblem('MIGRATION_FAILED', { correlationId: this.#ids.next(), detail: 'the migration step ran out of time' }));
+      return;
+    }
+    const provider = this.#providers.get(invocationId);
+    if (provider !== undefined) {
+      provider.abort(reason);
+      this.#client.abandon(invocationId, kernelProblem(reason === 'deadline' ? 'DEADLINE_EXCEEDED' : 'CANCELLED', { correlationId: this.#ids.next(), detail: `the provider call was ${reason === 'deadline' ? 'past its deadline' : 'stopped'}` }));
       return;
     }
     const state = this.#running.get(invocationId);
@@ -59,6 +69,17 @@ export class WorkerRuntime {
     const load = await this.#loadModule(frame.extension, frame.module, frame.correlationId);
     this.#post(load.ok ? await runMigration(frame, load.extension, this.#client) : { frame: 'loadFailed', invocationId: frame.invocationId, problem: load.problem });
     this.#migrations.delete(frame.invocationId);
+  }
+
+  // 03 §3.12, ADR 0153: a provider function runs with the caller's signal; the kernel aborts it on cancel or deadline.
+  async #provide(frame: ProvideFrame): Promise<void> {
+    const controller = new AbortController();
+    this.#providers.set(frame.invocationId, controller);
+    const load = await this.#loadModule(frame.extension, frame.module, frame.correlationId);
+    this.#post(load.ok
+      ? await runProvider(frame, load.extension, this.#client, controller.signal, this.#post)
+      : { frame: 'provided', invocationId: frame.invocationId, outcome: { ok: false, problem: load.problem } });
+    this.#providers.delete(frame.invocationId);
   }
 
   async #invoke(invoke: InvokeFrame): Promise<void> {

@@ -192,10 +192,10 @@ Preview tokens (`kernel.trust.preview`, `kernel.preset.import.preview`) are stat
 | `kernel.processes.list` | `{ extension?, state?, limit? }` → `{ items, total }` | any for its own; admin for others | newest first, `limit` 200 (at most 1,000); items carry no args, env, or output; ended rows are kept 7 days (ADR 0139) |
 | `kernel.metrics.get` | `{}` → metrics (`13` §13.5) | any | |
 | `kernel.llm.providers.list` | `{ workspaceId }` → `[{ id, title, extension, auth, configured }]` | any | |
-| `kernel.llm.models.list` | `{ workspaceId }` → `ModelInfo[]` | any | |
+| `kernel.llm.models.list` | `{ workspaceId }` → `ModelInfo[]` | any | `ModelInfo` = `ModelDef & { id, extension, source: 'static' \| 'listed' }`, by provider then id (ADR 0152) |
 | `kernel.llm.defaults.get` | `{ workspaceId? }` → `{ workspace: Defaults, global: Defaults, effective: Defaults }` | any | |
-| `kernel.llm.tokens.count` | `LlmRequest` → `{ tokens, exact: boolean }` | capability `llm` | |
-| `kernel.llm.usage.get` | `{ workspaceId?, from?, to?, groupBy?: 'model' \| 'extension' \| 'day' }` → rows | any | |
+| `kernel.llm.tokens.count` | `LlmRequest` → `{ tokens, exact: boolean }` | capability `llm` | the provider's `countTokens`, else `ceil(characters / 4)` with `exact: false` (ADR 0154) |
+| `kernel.llm.usage.get` | `{ workspaceId?, from?, to?, groupBy?: 'model' \| 'extension' \| 'day' }` → `{ rows: [{ key, calls, input, output, cacheRead, cacheWrite, costUsd }] }` | any | ADR 0154 |
 | `kernel.ui.get` | `{ workspaceId }` → `UiRegistry` | any | `08` §8.6; also `GET /ui` |
 | `kernel.ui.page.get` | `{ workspaceId, pageId }` → `{ page, components }` | any | |
 | `kernel.ui.translations.get` | `{ workspaceId }` → catalogs for the saved language and its fallbacks | any | |
@@ -239,7 +239,7 @@ Preview tokens (`kernel.trust.preview`, `kernel.preset.import.preview`) are stat
 | `kernel.shutdown` | `{}` → `{}` | user | shutdown starts once its unit commits; `kvman stop` sends it (ADR 0090) |
 | `kernel.llm.complete` | `LlmRequest` → `LlmResult` | capability `llm` | §3.12 |
 | `kernel.llm.models.refresh` | `{ provider? }` → `{}` | admin | |
-| `kernel.llm.defaults.set` | `{ workspaceId?, purpose, model: ModelRef \| null }` → `{}` | admin | no `workspaceId` = global default |
+| `kernel.llm.defaults.set` | `{ workspaceId?, purpose, model: ModelRef \| null }` → `{}` | admin | no `workspaceId` = global default; a workspace default is a preset write (`kernel.preset.changed { cause: 'update' }`, ADR 0152) |
 | `kernel.user.preferences.set` | `{ locale?, theme?, desktopAlerts? }` → `{}` | user | `08` §8.16 |
 | `kernel.notification.read` / `kernel.notification.dismiss` | `{ id }` → `{}` | user | `08` §8.11 |
 | `kernel.notifications.read-all` | `{ workspaceId? }` → `{}` | user | |
@@ -317,9 +317,10 @@ M1.8 builds steps 0–2, 6 (without trust and processes), 7, 8, and the `kvman.v
 
 The API extensions use is in `05` §5.11. Inside the kernel:
 
-- **Registry**: providers and static models come from manifests (`registerProvider`, `registerModel`). Dynamic models from `listModels` are stored in the `llm_models` table with their provider and refresh time. The combined list per workspace includes only providers whose extension is enabled there.
+- **Registry**: providers and static models come from manifests (`registerProvider`, `registerModel`). Dynamic models from `listModels` are stored in the `llm_models` table with their provider and refresh time. The combined list per workspace includes only providers whose extension is enabled there. A refresh rewrites a provider's rows (ADR 0152); `PROVIDER_CONFLICT` is checked wherever namespaces are.
 - **Defaults**: per purpose (`chat`, `summary`, `extension`, `child`). Workspace defaults are stored in the applied preset (`llm.defaults`); global defaults in the `kernel_settings` row `llm.defaults` (`04` §4.1). Set with `kernel.llm.defaults.set` by the user or `kernel.admin`; publishes `kernel.llm.defaults.changed`. Resolution: explicit request model → workspace default for the purpose → global default for the purpose → `LLM_MODEL_NOT_FOUND`.
 - **Call path**: `kernel.llm.complete` is admitted like any command (capability `llm`, schema, idempotency). The kernel resolves the model, then invokes the provider's `complete` function in the provider extension's host with the caller's deadline and abort signal, counted against that extension's concurrency limits. `ctx.delta` text and thinking chunks from the provider are published as the caller's live events named in `live.text` and `live.thinking` (`05` §5.11), with `run` = the calling handler's message id; a provider attempt that fails is reset for that run before the retry (`02` §2.3). The provider's result becomes the command's reply.
 - **Retries**: `LLM_CALL_FAILED` with `retryable` goes back through the normal retry path with backoff and the provider's `retryAfterMs`; other LLM codes fail at once.
 - **Usage**: one `llm_usage` row per call (workspace, caller extension, provider, model, tokens, cost, `correlationId`), written in the command's unit of work.
 - **No provider code**: the kernel depends on no provider SDK. With no provider enabled, calls fail `LLM_NOT_CONFIGURED`.
+- The provider context, the unconfigured case (reported by `complete`, not a `status()` call first), retry timing (the later of the backoff step and `retryAfterMs`; other provider errors become `LLM_CALL_FAILED`), global calls, and the provider host frames are in ADR 0153.

@@ -1,7 +1,7 @@
 import type { Text, plainCapabilityNameSchema } from '@kvman/protocol';
 import type { input as Input, output as Output, ZodType } from 'zod';
 import type {
-  CollectionDef, CommandDef, ConfigDef, DataVersionDef, EntityDef, ErrorDef, EventDef, LogDef, QueryDef, ScheduleDef, SubscriptionDef,
+  CollectionDef, CommandDef, ConfigDef, DataVersionDef, EntityDef, ErrorDef, EventDef, LogDef, ModelDef, ProviderDef, QueryDef, ScheduleDef, SubscriptionDef,
 } from './definitions.ts';
 import type { CollectionRef, CommandRef, EntityRef, ErrorRef, EventRef, LogRef, QueryRef, ScheduleRef } from './references.ts';
 
@@ -56,4 +56,8 @@ export interface Ext {
   registerEntity<Name extends string, Schema extends ZodType>(name: Name, definition: EntityDef<Schema>): EntityRef<Name, Output<Schema>>;
   /** Registers the extension's settings. */
   registerConfig(definition: ConfigDef): void;
+  /** Registers an LLM provider under its id. */
+  registerProvider(id: string, definition: ProviderDef): void;
+  /** Registers a static model under its id. */
+  registerModel(id: string, definition: ModelDef): void;
 }

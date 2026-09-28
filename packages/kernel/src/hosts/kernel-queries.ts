@@ -1,6 +1,6 @@
 import { manifestSchema, presetSchema, schemaGetRequestSchema, validateRequestSchema, workspaceGetRequestSchema, type HealthResult, type Issue, type Json, type Manifest, type Message, type Problem } from '@kvman/protocol';
 import { kernelProblem } from '../problems.ts';
-import { configIssues, namespaceIssues, requiresIssues } from '../presets/enabled-checks.ts';
+import { configIssues, namespaceIssues, providerIssues, requiresIssues } from '../presets/enabled-checks.ts';
 import type { KernelRegistry } from '../registry/kernel-registry.ts';
 import { kernelEventPayloads, kernelTypeEntries } from '../registry/kernel-types.ts';
 import { builtinComponentEntries } from '../registry/schema-components.ts';
@@ -11,6 +11,7 @@ import { validateRequest } from '../validation/kernel-validate.ts';
 import { isAdministrator } from './administrators.ts';
 import type { ExtensionQueries, ExtensionQueryAnswer } from './extension-queries.ts';
 import type { InspectionQueries } from './inspection-queries.ts';
+import type { LlmQueries } from './llm-queries.ts';
 import type { PresetQueries } from './preset-queries.ts';
 import type { ProcessQueries } from './process-queries.ts';
 import type { TrustService } from './trust-service.ts';
@@ -26,6 +27,7 @@ export type KernelQueriesDeps = {
   processes: ProcessQueries;
   trust: TrustService;
   presets: PresetQueries;
+  llm: LlmQueries;
   grants: GrantsSource;
   registry: () => KernelRegistry;
   health: () => HealthResult;
@@ -63,6 +65,11 @@ export class KernelQueries {
     if (message.type === 'kernel.preset.current.get') return this.#extensionAnswer(message, this.#deps.presets.current(message.payload));
     if (message.type === 'kernel.preset.import.preview') return this.#extensionAnswer(message, this.#deps.presets.importPreview(message.payload));
     if (message.type === 'kernel.preset.export.get') return this.#extensionAnswer(message, this.#deps.presets.export(message.payload));
+    if (message.type === 'kernel.llm.models.list') return this.#deps.llm.modelsList(message);
+    if (message.type === 'kernel.llm.providers.list') return this.#deps.llm.providersList(message);
+    if (message.type === 'kernel.llm.defaults.get') return this.#deps.llm.defaultsGet(message);
+    if (message.type === 'kernel.llm.tokens.count') return this.#deps.llm.tokensCount(message);
+    if (message.type === 'kernel.llm.usage.get') return this.#deps.llm.usageGet(message);
     return this.#refused(message, 'INTERNAL', `the kernel has no handler for ${message.type}`);
   }
 
@@ -126,6 +133,7 @@ export class KernelQueries {
     return [
       ...issues,
       ...namespaceIssues(enabled),
+      ...providerIssues(enabled),
       ...requiresIssues(enabled),
       ...configIssues({ connection: this.#deps.connection, workspaceId, enabled, entries, config: preset.config }),
     ];
@@ -136,6 +144,7 @@ export class KernelQueries {
     const enabled = [...registry.manifestsEnabledIn(workspaceId).filter((entry) => entry.meta.name !== manifest.meta.name), manifest];
     return [
       ...namespaceIssues(enabled),
+      ...providerIssues(enabled),
       ...requiresIssues(enabled),
       ...configIssues({ connection: this.#deps.connection, workspaceId, enabled: [manifest], entries: new Map(), config: undefined }),
     ];

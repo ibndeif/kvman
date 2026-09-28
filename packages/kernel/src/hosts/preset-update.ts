@@ -225,6 +225,16 @@ export class PresetUpdate {
       if (other !== undefined) {
         return refusal(message, 'NAMESPACE_CONFLICT', { detail: `${other} already owns the namespace "${manifest.meta.namespace}" in this workspace`, hint: `disable ${other} first` });
       }
+      const providerOwners = new Map<string, string>();
+      for (const candidate of enabled) {
+        if (candidate === name) continue;
+        for (const provider of registry.manifestOf(candidate)?.llm.providers ?? []) providerOwners.set(provider.id, candidate);
+      }
+      const clash = manifest.llm.providers.find((provider) => providerOwners.has(provider.id));
+      const owner = clash === undefined ? undefined : providerOwners.get(clash.id);
+      if (clash !== undefined && owner !== undefined) {
+        return refusal(message, 'PROVIDER_CONFLICT', { detail: `${owner} and ${name} both provide "${clash.id}"`, hint: `disable ${owner} first` });
+      }
       const provided = new Set(enabled.flatMap((candidate) => registry.manifestOf(candidate)?.types.map((entry) => entry.type) ?? []));
       const types = requiredTypes(manifest).filter((type) => !provided.has(type) && !kernelTypes.has(type));
       if (types.length > 0) {

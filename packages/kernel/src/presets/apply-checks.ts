@@ -8,7 +8,7 @@ import { derivedCapabilities, grantDifferences, type GrantDifferences } from '..
 import type { RegistryState } from '../registry/registry-state.ts';
 import type { Connection } from '../storage/driver.ts';
 import { grantFor, type PlannedExtension } from './apply-grants.ts';
-import { configFindingIssue, configFindings, missingRequirements, namespaceClashes, requiresIssues } from './enabled-checks.ts';
+import { configFindingIssue, configFindings, missingRequirements, namespaceClashes, providerClashes, requiresIssues } from './enabled-checks.ts';
 import type { ResolvedVersion } from './version-resolution.ts';
 
 // Like enable's grant refusal, at the preset entry's path.
@@ -115,6 +115,13 @@ function namespaceProblem(enabled: readonly PlannedExtension[], correlationId: s
   return kernelProblem('NAMESPACE_CONFLICT', { correlationId, detail: `${first.first} and ${first.second} both use the namespace "${first.namespace}" in this workspace` });
 }
 
+// ADR 0152: two enabled extensions registering one provider id conflict.
+function providerProblem(enabled: readonly PlannedExtension[], correlationId: string): Problem | undefined {
+  const [first] = providerClashes(enabled.map(({ version }) => version.manifest));
+  if (first === undefined) return undefined;
+  return kernelProblem('PROVIDER_CONFLICT', { correlationId, detail: `${first.first} and ${first.second} both provide "${first.provider}"` });
+}
+
 function requiresProblem(enabled: readonly PlannedExtension[], correlationId: string): Problem | undefined {
   const manifests = enabled.map(({ version }) => version.manifest);
   const missing = missingRequirements(manifests);
@@ -165,6 +172,7 @@ export function checkEnabledSet(
 ): Problem | undefined {
   const enabled = planned.filter(({ version }) => version.entry.enabled);
   return namespaceProblem(enabled, input.correlationId)
+    ?? providerProblem(enabled, input.correlationId)
     ?? requiresProblem(enabled, input.correlationId)
     ?? configProblem(input.preset, enabled, planned, input);
 }

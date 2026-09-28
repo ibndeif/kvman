@@ -22,6 +22,8 @@ export type ExtensionCommandsDeps = {
   install: InstallService;
   serial: SerialChanges;
   abortMessages: (messageIds: ReadonlySet<string>) => void;
+  // The hosts that loaded the extension leave, so no later version of it runs the old code (06 §6.6 step 5).
+  retireHosts: (extension: string) => void;
 };
 
 // A kernel command stopped by the kernel's shutdown runs again at the next start (ADR 0091).
@@ -107,6 +109,7 @@ export class ExtensionCommands {
     const ended = new Set(result.ended.map((entry) => entry.messageId));
     this.#deps.abortMessages(ended);
     this.#deps.scheduler.forget(ended);
+    this.#deps.retireHosts(name);
     if (keepSnapshots !== true) await this.#deps.install.removeSnapshots(digests);
   }
 
