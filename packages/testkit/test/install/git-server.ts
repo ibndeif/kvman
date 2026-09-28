@@ -33,10 +33,14 @@ function git(cwd: string, ...args: string[]): string {
 }
 
 // A local `git daemon` serving repositories over git:// (ADR 0116); every commit is a new repository's only commit.
+// `git daemon` runs `git-daemon` as a child that a signal to `git` does not reach, so the server leads its own
+// process group and closing it kills the group.
 export async function startGitServer(): Promise<GitServer> {
   const root = temporary('git');
   const port = await freePort();
-  const daemon = spawn('git', ['daemon', '--reuseaddr', '--export-all', `--base-path=${root}`, `--port=${port}`, '--listen=127.0.0.1', root], { stdio: 'ignore' });
+  const daemon = spawn('git', ['daemon', '--reuseaddr', '--export-all', `--base-path=${root}`, `--port=${port}`, '--listen=127.0.0.1', root], { stdio: 'ignore', detached: true });
+  const group = daemon.pid;
+  if (group === undefined) throw new Error('git daemon did not start');
   await vi.waitFor(async () => {
     if (!(await accepting(port))) throw new Error(`git daemon is not listening on ${port} yet`);
   }, { timeout: 10_000, interval: 20 });
@@ -52,7 +56,7 @@ export async function startGitServer(): Promise<GitServer> {
       return git(folder, 'rev-parse', 'HEAD');
     },
     close: () => {
-      daemon.kill('SIGKILL');
+      process.kill(-group, 'SIGKILL');
     },
   };
 }
