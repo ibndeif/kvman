@@ -1,4 +1,7 @@
-import { manifestSchema, presetSchema, schemaGetRequestSchema, validateRequestSchema, workspaceGetRequestSchema, type HealthResult, type Issue, type Json, type Manifest, type Message, type Problem } from '@kvman/protocol';
+import {
+  jsonObjectSchema, manifestSchema, presetSchema, schemaGetRequestSchema, validateRequestSchema, workspaceGetRequestSchema, type HealthResult, type Issue, type Json,
+  type Manifest, type Message, type Preset, type Problem,
+} from '@kvman/protocol';
 import { kernelProblem } from '../problems.ts';
 import { configIssues, namespaceIssues, providerIssues, requiresIssues } from '../presets/enabled-checks.ts';
 import type { KernelRegistry } from '../registry/kernel-registry.ts';
@@ -7,6 +10,8 @@ import { builtinComponentEntries } from '../registry/schema-components.ts';
 import { schemaDocument } from '../registry/schema-document.ts';
 import type { GrantsSource } from '../router/grants.ts';
 import type { Connection } from '../storage/driver.ts';
+import { readAppliedPreset } from '../storage/preset-changes.ts';
+import { kernelValues, workspacePageIssues, workspaceUi } from '../ui/ui-refusal.ts';
 import { validateRequest } from '../validation/kernel-validate.ts';
 import { isAdministrator } from './administrators.ts';
 import type { ExtensionQueries, ExtensionQueryAnswer } from './extension-queries.ts';
@@ -97,7 +102,7 @@ export class KernelQueries {
   #validate(message: Message): QueryAnswer {
     const request = validateRequestSchema.parse(message.payload);
     const registry = this.#deps.registry();
-    const outcome = validateRequest(request, { kernelEvents: this.#kernelEvents, configSchemas: registry.configSchemas() });
+    const outcome = validateRequest(request, { kernelEvents: this.#kernelEvents, configSchemas: registry.configSchemas(), values: kernelValues });
     if (!outcome.answered) {
       const [first] = outcome.issues;
       return { ok: false, problem: this.#problem(message, 'VALIDATION_FAILED', first?.message ?? 'the request cannot be validated', outcome.issues) };
@@ -109,11 +114,12 @@ export class KernelQueries {
     }
     // The structural issues come first; when they contain an error the referential checks do not run.
     if (!outcome.result.ok) return { ok: true, value: outcome.result satisfies Json };
-    // ADR 0151: the non-UI referential checks against the workspace. A preset replaces the workspace's enabled set;
-    // a manifest is added to it. A page has no referential checks yet (they arrive with the UI rules in M2.10).
+    // ADRs 0151, 0157: the referential checks against the workspace. A preset replaces the workspace's enabled set;
+    // a manifest is added to it; a page is checked as one of the preset's pages.
     let extra: Issue[] = [];
     if ('preset' in request) extra = this.#presetReferential(workspaceId, request.preset, registry);
     else if ('manifest' in request) extra = this.#manifestReferential(workspaceId, request.manifest, registry);
+    else if ('page' in request) extra = workspacePageIssues(registry, registry.manifestsEnabledIn(workspaceId), this.#appliedPreset(workspaceId), jsonObjectSchema.parse(request.page));
     const issues = [...outcome.result.issues, ...extra];
     return { ok: true, value: { ok: issues.every((issue) => issue.severity === 'warning'), issues } satisfies Json };
   }
@@ -136,7 +142,12 @@ export class KernelQueries {
       ...providerIssues(enabled),
       ...requiresIssues(enabled),
       ...configIssues({ connection: this.#deps.connection, workspaceId, enabled, entries, config: preset.config }),
+      ...workspaceUi(registry, enabled, preset, true).issues,
     ];
+  }
+
+  #appliedPreset(workspaceId: string): Preset | undefined {
+    return readAppliedPreset(this.#deps, workspaceId)?.preset;
   }
 
   #manifestReferential(workspaceId: string, candidate: Json, registry: KernelRegistry): Issue[] {
@@ -147,6 +158,7 @@ export class KernelQueries {
       ...providerIssues(enabled),
       ...requiresIssues(enabled),
       ...configIssues({ connection: this.#deps.connection, workspaceId, enabled: [manifest], entries: new Map(), config: undefined }),
+      ...workspaceUi(registry, enabled, this.#appliedPreset(workspaceId), false).issues,
     ];
   }
 

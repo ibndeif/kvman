@@ -4,6 +4,10 @@ import type {
   CollectionDef, CommandDef, ConfigDef, DataVersionDef, EntityDef, ErrorDef, EventDef, LogDef, ModelDef, ProviderDef, QueryDef, ScheduleDef, SubscriptionDef,
 } from './definitions.ts';
 import type { CollectionRef, CommandRef, EntityRef, ErrorRef, EventRef, LogRef, QueryRef, ScheduleRef } from './references.ts';
+import type {
+  ActionDef, CompositeDef, NavGroupDef, NavItemDef, PageDef, PanelDef, RendererDef, RendererTargetDef, SettingsSectionDef,
+  SlotDef, StatusItemDef, ToolbarItemDef, WidgetDef,
+} from './ui.ts';
 
 /** A capability requested without type patterns. */
 export type PlainCapabilityName = Output<typeof plainCapabilityNameSchema>;
@@ -60,4 +64,28 @@ export interface Ext {
   registerProvider(id: string, definition: ProviderDef): void;
   /** Registers a static model under its id. */
   registerModel(id: string, definition: ModelDef): void;
+  /** Registers a page under its full name. */
+  registerPage<Name extends string>(name: Name, definition: PageDef): Name;
+  /** Registers a nav group under its full name. */
+  registerNavGroup<Name extends string>(name: Name, definition: NavGroupDef): Name;
+  /** Registers a nav item under its full name. */
+  registerNavItem<Name extends string>(name: Name, definition: NavItemDef): Name;
+  /** Registers a toolbar item under its full name. */
+  registerToolbarItem<Name extends string>(name: Name, definition: ToolbarItemDef): Name;
+  /** Registers a status item under its full name. */
+  registerStatusItem<Name extends string>(name: Name, definition: StatusItemDef): Name;
+  /** Registers a panel under its full name. */
+  registerPanel<Name extends string>(name: Name, definition: PanelDef): Name;
+  /** Registers a slot under its full name. */
+  registerSlot<Name extends string>(name: Name, definition: SlotDef): Name;
+  /** Registers an action under its full name. */
+  registerAction<Name extends string>(name: Name, definition: ActionDef): Name;
+  /** Registers a renderer target under its full name. */
+  registerRendererTarget<Name extends string>(name: Name, definition: RendererTargetDef): Name;
+  /** Registers a renderer under its full name. */
+  registerRenderer<Name extends string>(name: Name, definition: RendererDef): Name;
+  /** Registers a composite or widget component under its full name. */
+  registerComponent<Name extends string>(name: Name, definition: CompositeDef | WidgetDef): Name;
+  /** Registers the extension's settings section, replacing the generated form. */
+  registerSettingsSection(definition: SettingsSectionDef): void;
 }

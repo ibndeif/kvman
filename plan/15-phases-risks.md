@@ -174,6 +174,7 @@ Inside a phase, each milestone needs the one before it unless *Needs* says other
 - **Read**: `05` §5.3 (UI rows), `06` §6.3 (UI rules), `08` §8.4–§8.9, §8.17.
 - **Build**: recording of every UI `register*` call; UI validation (slot `accepts`, component `children`, bindings against schemas, component authority, component existence and props, cycles and depth, routes and `ROUTE_CONFLICT`, inactive foreign placements, `requireComponents`, preset references: `hidden`, `labels`, `layout.order`, nav items, `app.home`, and routes, ADR 0151); re-validation of dependents on reload. The view rules of `06` §6.3 (reserved search parameters, palette actions without `$item`, `refreshOn` without live events, dialog depth); entity actions in their three forms (command, navigate, dialog). Entity `route` and the `page` node's `entity`/`record` pair.
 - **Done when**: a panel aimed at `frame.sidebar`, a missing component, a public component with its own command, a composite cycle across two extensions, and two pages on one route each fail with a hint; a panel for a disabled extension's slot is inactive with a warning.
+- **Decisions**: ADRs 0156–0158 (full UI names, nav items to own pages, `since` later; bindings checked wherever a schema exists, literals checked and bindings passed, the order of UI error codes, `kernel.validate`'s page as a preset page; `/schema` contributions and public extension components).
 
 #### M2.11 UI registry and localization (kernel) — 2 days
 - **Read**: `08` §8.6, §8.16 (kernel parts), `02` §2.10.

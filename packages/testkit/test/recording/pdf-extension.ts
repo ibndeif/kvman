@@ -1,6 +1,6 @@
-import { defineExtension, z } from '@kvman/sdk';
+import { z, type Ext } from '@kvman/sdk';
 
-// The pdf example of plan 05 §5.2 with its non-UI calls. Its handlers use only the ctx built so far (store, step);
+// The non-UI calls of the pdf example of plan 05 §5.2; pdf-ui-extension.ts defines the extension with its UI. Its handlers use only the ctx built so far (store, step);
 // ctx.problem comes with M1.6, so a missing file throws a plain error here.
 const File = z.object({
   id: z.string(), name: z.string(), blobId: z.blobId(),
@@ -11,14 +11,7 @@ const File = z.object({
 
 export const exampleBlobId = '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08';
 
-export const pdfExtension = defineExtension({
-  name: '@acme/pdf',
-  namespace: 'pdf',
-  title: '$t.meta.title',
-  summary: '$t.meta.summary',
-  icon: 'file-text',
-  description: 'Import PDF files and translate them with the configured AI model.',
-}, (ext) => {
+export function pdfSetup(ext: Ext): void {
   ext.requestCapability('llm', { reason: '$t.reasons.llm' });
   ext.requestCapability('ui', { reason: '$t.reasons.ui' });
 
@@ -104,4 +97,4 @@ export const pdfExtension = defineExtension({
       return file;
     },
   });
-});
+}

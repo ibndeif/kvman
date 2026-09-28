@@ -1,4 +1,4 @@
-import { kernelEventPayloads, ProblemError, recordExtension, validateManifest } from '@kvman/kernel';
+import { kernelEventPayloads, kernelValues, ProblemError, recordExtension, validateManifest } from '@kvman/kernel';
 import { jsonObjectSchema, type Issue, type Json, type JsonObject } from '@kvman/protocol';
 import { defineExtension, type Ext } from '@kvman/sdk';
 import fixture from '../../../protocol/test/fixtures/pdf-manifest.json' with { type: 'json' };
@@ -22,6 +22,21 @@ export function recordedIssues(setup: (ext: Ext) => void, options: RecordingOpti
 
 export function validatedIssues(manifest: unknown): Issue[] {
   return validateManifest(jsonObjectSchema.parse(manifest), { kernelEvents: kernelEventPayloads() });
+}
+
+// The issues of one recording checked with the kernel's value checker (ADR 0157): recording runs every UI rule
+// except value checks, so the recorded manifest is validated again with `kernelValues`. When recording itself
+// fails, its problem's issues are returned, as in `recordedIssues`.
+export function checkedIssues(setup: (ext: Ext) => void, options: RecordingOptions = {}): Issue[] {
+  const namespace = options.namespace ?? 'pdf';
+  const definition = defineExtension({ name: `@acme/${namespace}`, namespace, title: 'Test', description: 'A test extension.' }, setup);
+  try {
+    const recording = recordExtension(definition, { packageName: options.packageName ?? `@acme/${namespace}`, version: '1.0.0', correlationId });
+    return validateManifest(jsonObjectSchema.parse(recording.manifest), { kernelEvents: kernelEventPayloads(), values: kernelValues });
+  } catch (error) {
+    if (error instanceof ProblemError) return error.problem.issues ?? [];
+    throw error;
+  }
 }
 
 // The pdf example's manifest (the M0.3 fixture), changed by the test.

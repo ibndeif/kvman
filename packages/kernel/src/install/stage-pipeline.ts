@@ -13,6 +13,7 @@ import { checkPackage, readPackageJson } from './package-checks.ts';
 import { buildFileList, snapshotDigest } from './snapshot-files.ts';
 import type { ResolvedSource, StagingFolders } from './sources.ts';
 import type { StagedVersion } from './stage-summary.ts';
+import { kernelValues } from '../ui/ui-refusal.ts';
 
 export type StageTools = {
   area: StagingArea;
@@ -23,7 +24,7 @@ export type StageTools = {
 };
 
 function manifestIssues(candidate: Json, tools: StageTools): { errors: Issue[]; warnings: Issue[] } {
-  const issues = [...validateManifest(candidate, { kernelEvents: tools.kernelEvents }), ...schedulePayloadIssues(candidate)];
+  const issues = [...validateManifest(candidate, { kernelEvents: tools.kernelEvents, values: kernelValues }), ...schedulePayloadIssues(candidate)];
   return { errors: issues.filter((issue) => issue.severity !== 'warning'), warnings: issues.filter((issue) => issue.severity === 'warning') };
 }
 

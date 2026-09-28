@@ -1,8 +1,15 @@
 import { namespaceSchema, type Issue, type JsonObject } from '@kvman/protocol';
 import { arrayAt, stringAt } from './json-reading.ts';
-import type { DataVersion, ManifestNames } from './manifest-names.ts';
+import type { DataVersion, ManifestNames, UiName } from './manifest-names.ts';
 
 const kindArticles: Record<string, string> = { command: 'a command', query: 'a query', event: 'an event' };
+
+// The UI arrays share one name set (05 §5.3), so the duplicate message says which kind registered the name first.
+const uiKindArticles: Record<string, string> = {
+  pages: 'a page', navGroups: 'a nav group', navItems: 'a nav item', toolbarItems: 'a toolbar item',
+  statusItems: 'a status item', panels: 'a panel', slots: 'a slot', actions: 'an action',
+  rendererTargets: 'a renderer target', renderers: 'a renderer', components: 'a component',
+};
 
 export const reservedNamespaces: readonly string[] = ['kernel', 'ui', 'frame', 'sys', 'preset'];
 
@@ -52,6 +59,18 @@ function typeDuplicateIssues(names: ManifestNames): Issue[] {
   });
 }
 
+function uiPath(ui: UiName[], index: number): string {
+  const entry = ui[index];
+  return `ui.${entry?.kind ?? 'ui'}.${entry?.index ?? index}.id`;
+}
+
+function uiDuplicateIssues(names: ManifestNames): Issue[] {
+  return duplicateIssues(names.ui.map((entry) => entry.name), (index) => uiPath(names.ui, index), (first) => {
+    const article = uiKindArticles[names.ui[first]?.kind ?? ''] ?? 'a UI contribution';
+    return [` as ${article}`, 'rename one of them'];
+  });
+}
+
 function dataVersionIssues({ version, compatibleWith, steps }: DataVersion): Issue[] {
   const hint = `register one migration for each version from 2 to ${version}`;
   const issues: Issue[] = [];
@@ -97,12 +116,14 @@ export function nameIssues(manifest: JsonObject, names: ManifestNames): Issue[] 
   const prefixed = namespace === undefined || !namespaceSchema.safeParse(namespace).success ? [] : [
     ...publicNameIssues(namespace, names.types.map((type) => type.name), (index) => `types.${index}.type`),
     ...publicNameIssues(namespace, names.entities, (index) => `entities.${index}.name`),
+    ...publicNameIssues(namespace, names.ui.map((entry) => entry.name), (index) => uiPath(names.ui, index)),
     ...errorCodeIssues(namespace, names.errors),
   ];
   return [
     ...namespaceIssues(namespace),
     ...prefixed,
     ...typeDuplicateIssues(names),
+    ...uiDuplicateIssues(names),
     ...duplicateIssues(names.entities, (index) => `entities.${index}.name`),
     ...duplicateIssues(names.collections, (index) => `data.collections.${index}.name`),
     ...duplicateIssues(names.logs, (index) => `data.logs.${index}.prefix`),

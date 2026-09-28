@@ -1,7 +1,8 @@
-import { canonicalJson, type Capabilities, type GrantsRequiredParams, type Isolation, type Issue, type Manifest } from '@kvman/protocol';
+import { canonicalJson, type Capabilities, type GrantsRequiredParams, type Isolation, type Issue, type Manifest, type Preset } from '@kvman/protocol';
 import { grantDifferences, prunedGrant } from '../registry/grant-validity.ts';
 import type { KernelRegistry } from '../registry/kernel-registry.ts';
 import { kernelTypeEntries } from '../registry/kernel-types.ts';
+import { workspaceUi } from '../ui/ui-refusal.ts';
 
 const kernelTypes = new Set(kernelTypeEntries().map((entry) => entry.type));
 
@@ -14,8 +15,9 @@ function typesOf(manifest: Manifest): Set<string> {
 }
 
 // 06 §6.6 step 1: in each workspace where the extension is enabled, the target keeps its namespace free, finds the
-// types it requires, and still provides the types the other enabled extensions require.
-export function referentialIssues(registry: KernelRegistry, target: Manifest, workspaces: readonly string[]): Issue[] {
+// types it requires, still provides the types the other enabled extensions require, and the workspace's UI (its own
+// views and every dependent's, against the new props) still validates (ADR 0157).
+export function referentialIssues(registry: KernelRegistry, target: Manifest, workspaces: readonly string[], presetOf: (workspaceId: string) => Preset | undefined): Issue[] {
   const { name, namespace } = target.meta;
   return workspaces.flatMap((workspaceId) => {
     const path = `workspaces.${workspaceId}`;
@@ -39,7 +41,8 @@ export function referentialIssues(registry: KernelRegistry, target: Manifest, wo
         issues.push({ path, message: `${dependent.meta.name} requires ${type}, which the new version no longer provides` });
       }
     }
-    return issues;
+    const ui = workspaceUi(registry, [...others, target], presetOf(workspaceId), false).issues.filter((issue) => issue.severity !== 'warning');
+    return [...issues, ...ui.map((issue) => ({ ...issue, path: `${path}.${issue.path}` }))];
   });
 }
 

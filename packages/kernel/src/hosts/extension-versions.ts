@@ -13,6 +13,7 @@ import type { VersionChange } from '../storage/version-changes.ts';
 import type { KernelCommits } from './kernel-commits.ts';
 import { prunedGrant } from '../registry/grant-validity.ts';
 import { capabilityPlan, changedSchedules, mostIsolated, referentialIssues } from './reload-checks.ts';
+import { readAppliedPreset } from '../storage/preset-changes.ts';
 
 // 06 §6.6 steps 3 and 5: running invocations get 10 s to finish, and so do those on a shared worker being replaced.
 export const reloadGraceMs = 10_000;
@@ -97,7 +98,7 @@ export class ExtensionVersions {
       name, version: { digest, source: version.source, ...integrity, namespace: manifest.meta.namespace, dataVersion: manifest.data.version }, cancelSchedules: changedSchedules(current.manifestOf(name), manifest),
     };
     if (enabled.size === 0) return this.#swap({ ...swap, grants: {}, reloaded: [] }, context);
-    const issues = referentialIssues(current, manifest, [...enabled.keys()]);
+    const issues = referentialIssues(current, manifest, [...enabled.keys()], (workspaceId) => readAppliedPreset(this.#deps, workspaceId)?.preset);
     if (issues.length > 0) return refused('VALIDATION_FAILED', { detail: 'the new version would break a workspace where the extension is enabled', issues });
     const plan = capabilityPlan({ digest, manifest, builtin: version.source.startsWith('builtin:') }, enabled, request.grants);
     if (plan.kind === 'refused') return refused(plan.code, { detail: plan.detail, issues: plan.issues });

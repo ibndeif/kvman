@@ -17,6 +17,16 @@ function requiredTypes(manifest: Manifest): string[] {
   return manifest.permissions.requireTypes.flatMap((requirement) => requirement.types);
 }
 
+// 06 §6.4, 08 §8.9: `dependent` requires one of `provider`'s types (requireTypes) or components (requireComponents),
+// so `provider` cannot be disabled while `dependent` stays enabled.
+export function requiresFrom(dependent: Manifest, provider: Manifest | undefined): boolean {
+  if (provider === undefined || dependent.meta.name === provider.meta.name) return false;
+  const types = new Set(provider.types.map((entry) => entry.type));
+  const components = new Set(provider.ui.components.map((entry) => entry['id']));
+  return requiredTypes(dependent).some((type) => types.has(type))
+    || dependent.permissions.requireComponents.some((requirement) => requirement.components.some((component) => components.has(component)));
+}
+
 // Every pair of the enabled set sharing a namespace, in enable order (06 §6.3).
 export type NamespaceClash = { first: string; second: string; namespace: string };
 

@@ -4,6 +4,7 @@ import {
 } from '@kvman/protocol';
 import type { SnapshotStore } from '../install/snapshot-store.ts';
 import type { DataMigrations } from '../migrations/data-migrations.ts';
+import { requiresFrom } from '../presets/enabled-checks.ts';
 import { mergePatch } from '../presets/merge-patch.ts';
 import { grantDifferences, sameGrants } from '../registry/grant-validity.ts';
 import { kernelTypeEntries } from '../registry/kernel-types.ts';
@@ -19,6 +20,7 @@ import { parsed, refusal } from './command-payloads.ts';
 import { prepareEnableData } from './enable-data.ts';
 import type { KernelCommits } from './kernel-commits.ts';
 import type { SerialChanges } from './serial-changes.ts';
+import { uiProblem, workspaceUi } from '../ui/ui-refusal.ts';
 import { readWorkspace } from './workspace-rows.ts';
 
 export type PresetUpdateDeps = {
@@ -143,6 +145,10 @@ export class PresetUpdate {
       .sort();
     const checked = await this.#turnOnChecks(message, registry, preset, turnedOn);
     if (checked !== undefined) return this.#deps.commits.fail(claim, checked);
+    const enabled = Object.keys(preset.extensions).filter((name) => preset.extensions[name]?.enabled === true).sort()
+      .flatMap((name) => registry.manifestOf(name) ?? []);
+    const ui = uiProblem(workspaceUi(registry, enabled, preset, true), { correlationId: message.correlationId, messageId: message.id });
+    if (ui !== undefined) return this.#deps.commits.fail(claim, ui);
     const dataVersions = await this.#enableTurnedOn(claim, preset, turnedOn);
     if (dataVersions === undefined) return;
     const result = await this.#deps.commits.commit({
@@ -189,11 +195,10 @@ export class PresetUpdate {
     const enabled = Object.keys(merged.extensions).filter((name) => merged.extensions[name]?.enabled === true);
     for (const name of Object.keys(merged.extensions).sort()) {
       if (copy.extensions[name]?.enabled !== true || merged.extensions[name]?.enabled !== false) continue;
-      const provided = new Set((registry.manifestOf(name)?.types ?? []).map((entry) => entry.type));
+      const provider = registry.manifestOf(name);
       const dependents = enabled.filter((other) => {
-        if (other === name) return false;
         const manifest = registry.manifestOf(other);
-        return manifest !== undefined && requiredTypes(manifest).some((type) => provided.has(type));
+        return manifest !== undefined && requiresFrom(manifest, provider);
       }).sort();
       if (dependents.length === 0) continue;
       return refusal(message, 'EXT_IN_USE', {

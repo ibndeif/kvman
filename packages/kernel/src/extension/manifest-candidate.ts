@@ -2,13 +2,8 @@ import type { JsonObject } from '@kvman/protocol';
 import type { ExtensionMeta } from '@kvman/sdk';
 import { compact, type Recording } from './recording.ts';
 
-const emptyUi = {
-  pages: [], navGroups: [], navItems: [], toolbarItems: [], statusItems: [], panels: [], slots: [], actions: [],
-  rendererTargets: [], renderers: [], components: [], settingsSection: null,
-};
-
-// The manifest of 05 §5.12 before validation, with the defaults of ADR 0013 written out. UI and translations
-// are not recorded yet, so their sections are empty.
+// The manifest of 05 §5.12 before validation, with the defaults of ADR 0013 written out. Translations are not
+// recorded yet, so their section is empty.
 export function manifestCandidate(meta: ExtensionMeta, version: string, recording: Recording): JsonObject {
   return {
     manifestVersion: 1,
@@ -30,7 +25,12 @@ export function manifestCandidate(meta: ExtensionMeta, version: string, recordin
     entities: recording.entities,
     config: recording.config,
     errors: recording.errors,
-    ui: emptyUi,
+    ui: {
+      pages: recording.pages, navGroups: recording.navGroups, navItems: recording.navItems, toolbarItems: recording.toolbarItems,
+      statusItems: recording.statusItems, panels: recording.panels, slots: recording.slots, actions: recording.actions,
+      rendererTargets: recording.rendererTargets, renderers: recording.renderers, components: recording.components,
+      settingsSection: recording.settingsSection,
+    },
     translations: null,
     llm: { providers: recording.providers, models: recording.models },
   };

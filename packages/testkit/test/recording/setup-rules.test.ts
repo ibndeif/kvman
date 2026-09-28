@@ -3,7 +3,7 @@ import { ProblemError, recordExtension } from '@kvman/kernel';
 import { z, type Ext } from '@kvman/sdk';
 import { describe, expect, it } from 'vitest';
 import { correlationId, issuePaths, record, recordingProblem } from './harness.ts';
-import { pdfExtension as pdf } from './pdf-extension.ts';
+import { pdfUiExtension as pdf } from './pdf-ui-extension.ts';
 
 const input = z.object({});
 

@@ -57,13 +57,18 @@ describe('kernel.validate against a workspace (plan 06 §6.3, ADR 0151)', preset
     });
     expect(validated(await query(current, 'kernel.validate', { workspaceId: workspaceA, preset: lonely }))).toEqual({
       ok: false,
-      issues: [{ path: 'extensions.@acme/reader', message: 'pdf.files.list is not provided' }],
+      issues: [
+        { path: 'extensions.@acme/reader', message: 'pdf.files.list is not provided' },
+        // Since M2.10, hidden ids nothing enabled has are warnings (06 §6.3, ADR 0157).
+        { path: 'hidden.0', message: 'nothing enabled here has the id settings.nav-general', severity: 'warning' },
+        { path: 'hidden.1', message: 'nothing enabled here has the id pdf.debug', severity: 'warning' },
+      ],
     });
 
     const limited = jsonSchema.parse(presetP(pdf, { config: { '@acme/pdf': { limit: 50 } } }));
     const configAnswer = validated(await query(current, 'kernel.validate', { workspaceId: workspaceA, preset: limited }));
     expect(configAnswer.ok).toBe(false);
-    expect(configAnswer.issues).toEqual([expect.objectContaining({ path: 'config.@acme/pdf.limit' })]);
+    expect(configAnswer.issues.filter((issue) => issue.severity !== 'warning')).toEqual([expect.objectContaining({ path: 'config.@acme/pdf.limit' })]);
 
     const clash = current.runtime.registry.current().manifestOf('@acme/clash');
     if (clash === undefined) throw new Error('@acme/clash is not installed');

@@ -34,7 +34,7 @@
 | `types` | The kernel's types and each listed extension's types, except `internal` ones (see below) |
 | `entities` | `{ type: <entity name>, owner, description, schema, display }` |
 | `errors` | The kernel's catalog with owner `kernel`, and each listed extension's registered codes |
-| `contributions`, `contracts` | `[]`; UI recording lands in M2.10, and contracts are not yet defined |
+| `contributions`, `contracts` | `[]`; UI recording lands in M2.10, and contracts are not yet defined (M2.10 fills `contributions` and adds public extension components, ADR 0158) |
 | `components` | The 45 built-in specs from `@kvman/protocol`: owner `shell`, form `builtin`, props and event values as JSON Schema |
 | `frameSlots` | The protocol's catalog |
 

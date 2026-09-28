@@ -124,6 +124,8 @@ describe('preset apply stage (plan 07 §7.4, ADR 0148)', presetTests, () => {
     const json = jsonSchema.parse({
       presetVersion: 1, id: 'stash-app', name: 'Stash App', revision: 1, app: { title: 'Stash App', home: '/' },
       extensions: { '@acme/stash': { source: 'npm:@acme/stash@2.0.0', integrity, enabled: true, grants } },
+      // app.home names an active page (ADR 0157).
+      pages: [{ name: 'home', description: 'The stash.', route: '/', title: 'Stash', view: { type: 'stack' } }],
     });
     const previewed = await query(current, 'kernel.preset.import.preview', { json });
     if (typeof previewed !== 'object' || previewed === null || !('ok' in previewed) || previewed.ok !== true || !('value' in previewed)) {

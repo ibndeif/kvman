@@ -55,6 +55,8 @@ describe('manifest entries (plan 05 §5.12, ADRs 0013, 0046, 0047)', () => {
         description: 'A file.', title: 'File', schema, idField: 'id', display: { title: '$item.id', subtitle: '$item.id', icon: 'file' }, route: '/files/{{ $item.id }}',
       });
       ext.registerConfig({ scope: 'both', schema: z.object({ language: z.string().describe('The language code.') }) });
+      // An entity's route opens one of its own pages (05 §5.3), which M2.10 checks.
+      ext.registerPage('pdf.file-detail', { description: 'One file.', route: '/files/:fileId', title: 'File', view: { type: 'stack' } });
     });
     expect(manifestSchema.parse(manifest)).toEqual(manifest);
     expect(manifest.permissions).toEqual({

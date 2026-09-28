@@ -1,5 +1,6 @@
 import { frameSlots, kernelErrors, protocolVersion, type Manifest, type SchemaDocument, type TypeEntry } from '@kvman/protocol';
 import type { ComponentEntry } from './schema-components.ts';
+import { contributionListings, extensionComponentEntries } from './schema-contributions.ts';
 import { kernelOwner } from './kernel-types.ts';
 import { searchEntries } from './schema-search.ts';
 
@@ -79,8 +80,8 @@ export function schemaDocument(sources: SchemaSources, q: string | undefined): S
     types: searchEntries(types, q, (entry) => ({ name: entry.type, description: entry.description })),
     entities: searchEntries(entities, q, (entry) => ({ name: entry.type, description: entry.description })),
     errors: searchEntries(errors, q, (entry) => ({ name: entry.code, description: entry.description })),
-    contributions: [],
-    components: [...sources.components],
+    contributions: searchEntries(contributionListings(sources.extensions), q, (entry) => ({ name: entry.id, description: entry.description })),
+    components: [...sources.components, ...extensionComponentEntries(sources.extensions)],
     contracts: [],
     frameSlots: [...frameSlots],
   };

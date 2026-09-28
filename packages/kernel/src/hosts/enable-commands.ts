@@ -8,12 +8,14 @@ import type { Claim } from '../scheduler/dispatcher.ts';
 import type { Scheduler } from '../scheduler/scheduler.ts';
 import type { Connection } from '../storage/driver.ts';
 import type { KernelChange } from '../storage/kernel-changes.ts';
+import { requiresFrom } from '../presets/enabled-checks.ts';
 import { readAppliedPreset, type PresetEntry } from '../storage/preset-changes.ts';
 import { isAdministrator } from './administrators.ts';
 import { parsed, refusal } from './command-payloads.ts';
 import { prepareEnableData } from './enable-data.ts';
 import type { KernelCommits } from './kernel-commits.ts';
 import type { SerialChanges } from './serial-changes.ts';
+import { uiProblem, workspaceUi } from '../ui/ui-refusal.ts';
 import { readWorkspace, readWorkspaceKind } from './workspace-rows.ts';
 
 export type EnableCommandsDeps = {
@@ -115,7 +117,8 @@ export class EnableCommands {
     const problem = this.#namespaceProblem(message, workspaceId, manifest)
       ?? this.#providerProblem(message, workspaceId, manifest)
       ?? this.#grantProblem(message, manifest, grants, version.source.startsWith('builtin:'))
-      ?? this.#requiresProblem(message, workspaceId, manifest);
+      ?? this.#requiresProblem(message, workspaceId, manifest)
+      ?? this.#uiProblem(message, workspaceId, manifest);
     return problem === undefined ? { ok: true, version } : refused(problem);
   }
 
@@ -171,6 +174,15 @@ export class EnableCommands {
     return refusal(message, 'PROVIDER_CONFLICT', { detail: `${owner} and ${manifest.meta.name} both provide "${clash.id}"`, hint: `disable ${owner} first` });
   }
 
+  // ADR 0157: the workspace's UI with this extension enabled, including the placements its slots, entities, and
+  // targets make active for the others.
+  #uiProblem(message: Message, workspaceId: string, manifest: Manifest): Problem | undefined {
+    const registry = this.#deps.registry.current();
+    const enabled = [...registry.manifestsEnabledIn(workspaceId).filter((other) => other.meta.name !== manifest.meta.name), manifest];
+    const check = workspaceUi(registry, enabled, readAppliedPreset(this.#deps, workspaceId)?.preset, false);
+    return uiProblem(check, { correlationId: message.correlationId, messageId: message.id });
+  }
+
   #grantProblem(message: Message, manifest: Manifest, grants: ExtensionEnableRequest['grants'], builtin: boolean): Problem | undefined {
     const differences = grantDifferences(manifest, grants, builtin);
     if (differences === undefined) return undefined;
@@ -190,12 +202,12 @@ export class EnableCommands {
     return refusal(message, 'EXT_REQUIRES_MISSING', { detail: `no extension enabled here provides ${types.join(', ')}`, hint: 'enable the extensions that provide them first', params: { types }, issues: types.map((type) => ({ path: 'requireTypes', message: `${type} is not provided` })) });
   }
 
-  // 06 §6.4: the extensions enabled here whose requireTypes name one of its types.
+  // 06 §6.4, 08 §8.9: the extensions enabled here that require one of its types or components.
   #dependents(workspaceId: string, name: string): string[] {
     const registry = this.#deps.registry.current();
-    const provided = new Set((registry.manifestOf(name)?.types ?? []).map((entry) => entry.type));
+    const provider = registry.manifestOf(name);
     return registry.manifestsEnabledIn(workspaceId)
-      .filter((enabled) => enabled.meta.name !== name && requiredTypes(enabled).some((type) => provided.has(type)))
+      .filter((enabled) => requiresFrom(enabled, provider))
       .map((enabled) => enabled.meta.name)
       .sort();
   }

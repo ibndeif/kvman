@@ -10,6 +10,8 @@ import { contributionKindSchema, frameSlotSchema } from './ui/frame-slots.ts';
 
 const ownerSchema = z.string().min(1);
 const childrenRuleSchema = z.union([z.enum(['none', 'any']), z.array(z.string().min(1))]);
+// ADR 0158: the contribution kinds, plus the slots and renderer targets other extensions place into and render for.
+const listedKindSchema = z.union([contributionKindSchema, z.enum(['slot', 'rendererTarget'])]);
 
 export const schemaDocumentSchema = z.strictObject({
   kernelVersion: semverSchema,
@@ -35,7 +37,8 @@ export const schemaDocumentSchema = z.strictObject({
     retryable: z.boolean(), hint: z.string().min(1).exactOptional(),
   })),
   contributions: z.array(z.strictObject({
-    id: publicNameSchema, kind: contributionKindSchema, owner: ownerSchema, description: descriptionSchema, target: z.string().min(1).exactOptional(),
+    id: publicNameSchema, kind: listedKindSchema, owner: ownerSchema, description: descriptionSchema, target: z.string().min(1).exactOptional(),
+    schema: jsonSchemaDocumentSchema.exactOptional(),
   })),
   components: z.array(z.strictObject({
     name: z.string().min(1), owner: ownerSchema, form: z.enum(['builtin', 'composite', 'widget']), description: descriptionSchema,

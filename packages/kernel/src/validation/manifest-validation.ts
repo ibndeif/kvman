@@ -1,4 +1,6 @@
 import { canonicalJson, manifestSchema, type Issue, type Json } from '@kvman/protocol';
+import { manifestUiIssues } from '../ui/ui-checks.ts';
+import type { ValueChecker } from '../ui/value-checks.ts';
 import { configIssues } from './config-rules.ts';
 import { objectOf } from './json-reading.ts';
 import { manifestNames } from './manifest-names.ts';
@@ -8,7 +10,8 @@ import { scheduleIssues } from './schedule-rules.ts';
 import { schemaIssues } from './schema-issues.ts';
 import { typeIssues } from './type-rules.ts';
 
-export type ManifestContext = { kernelEvents: KernelEvents };
+// `values` checks literal values in views; the install loader has none (ADR 0157).
+export type ManifestContext = { kernelEvents: KernelEvents; values?: ValueChecker };
 
 export const maxManifestBytes = 5 * 1024 * 1024;
 
@@ -18,9 +21,9 @@ function sizeIssues(candidate: Json): Issue[] {
   return [{ path: '', message: `the manifest is ${bytes} bytes of canonical JSON; the limit is 5 MB`, hint: 'keep the manifest under 5 MB: shorten examples, views, and catalogs' }];
 }
 
-// Every structural rule of 06 §6.3 that reads a manifest (not its UI, M2.10), each mistake reported once (ADR 0042):
-// a rule's issue, which carries a hint, replaces the schema's issue at the same path, and so does an issue the
-// recording already reported there.
+// Every structural rule of 06 §6.3 that reads a manifest, each mistake reported once (ADR 0042): a rule's issue,
+// which carries a hint, replaces the schema's issue at the same path, and so does an issue the recording already
+// reported there. The UI rules read typed UI, so they run once the manifest matches its schema (ADR 0157).
 export function validateManifest(candidate: Json, context: ManifestContext, recorded: readonly Issue[] = []): Issue[] {
   const manifest = objectOf(candidate);
   const rules = manifest === undefined ? [] : [
@@ -35,5 +38,6 @@ export function validateManifest(candidate: Json, context: ManifestContext, reco
   const reported = new Set(known.filter((issue) => issue.severity !== 'warning').map((issue) => issue.path));
   const parsed = manifestSchema.safeParse(candidate);
   const fromSchema = parsed.success ? [] : schemaIssues(parsed.error.issues).filter((issue) => !reported.has(issue.path));
-  return [...known, ...sizeIssues(candidate), ...fromSchema];
+  const ui = parsed.success ? manifestUiIssues(parsed.data, context.values) : [];
+  return [...known, ...sizeIssues(candidate), ...fromSchema, ...ui];
 }

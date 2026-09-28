@@ -1,13 +1,10 @@
 import type { Text } from '@kvman/protocol';
 import type { Ext, SubscriptionDef } from '@kvman/sdk';
-import { compact, type Recording } from './recording.ts';
+import { compact, reference, type Recording } from './recording.ts';
+import { uiRegistrations } from './recording-ui.ts';
 
 export type RecordingExt = { ext: Ext; close(): void };
 
-// A typed reference is the registered name itself with a type-only brand (ADR 0044).
-function reference<Ref extends string>(name: string): Ref {
-  return name as Ref;
-}
 
 export function createRecordingExt(recording: Recording, closedError: () => Error): RecordingExt {
   let closed = false;
@@ -180,6 +177,8 @@ export function createRecordingExt(recording: Recording, closedError: () => Erro
       }
       recording.models.push(compact({ id, ...definition }));
     },
+
+    ...uiRegistrations(recording, open),
   };
 
   return { ext, close: () => { closed = true; } };

@@ -210,3 +210,8 @@ export * from './storage/migration-changes.ts';
 export * from './storage/schedule-changes.ts';
 export * from './storage/version-changes.ts';
 export * from './validation/schedule-payloads.ts';
+export * from './ui/composite-graph.ts';
+export * from './ui/routes.ts';
+export * from './ui/value-checks.ts';
+export { kernelValues } from './ui/ui-refusal.ts';
+export * from './validation/schema-paths.ts';

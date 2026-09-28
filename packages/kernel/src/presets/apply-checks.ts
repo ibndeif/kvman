@@ -10,6 +10,8 @@ import type { Connection } from '../storage/driver.ts';
 import { grantFor, type PlannedExtension } from './apply-grants.ts';
 import { configFindingIssue, configFindings, missingRequirements, namespaceClashes, providerClashes, requiresIssues } from './enabled-checks.ts';
 import type { ResolvedVersion } from './version-resolution.ts';
+import { uiProblem, workspaceUi } from '../ui/ui-refusal.ts';
+import { readAppliedPreset } from '../storage/preset-changes.ts';
 
 // Like enable's grant refusal, at the preset entry's path.
 export function grantProblem(name: string, differences: GrantDifferences, correlationId: string): Problem {
@@ -76,7 +78,7 @@ export function planSwitches(
   for (const { name, version } of planned) {
     if (registry.digestOf(name) === undefined || version.digest === registry.digestOf(name)) continue;
     const others = [...registry.enabled()].flatMap(([candidate, names]) => (candidate !== workspaceId && names.includes(name) ? [candidate] : []));
-    const issues = referentialIssues(current, version.manifest, others);
+    const issues = referentialIssues(current, version.manifest, others, (other) => readAppliedPreset({ connection }, other)?.preset);
     if (issues.length > 0) {
       return { ok: false, problem: kernelProblem('VALIDATION_FAILED', { correlationId, detail: 'the new version would break a workspace where the extension is enabled', issues }) };
     }
@@ -165,7 +167,8 @@ function configProblem(
   return kernelProblem('CONFIG_INVALID', { correlationId, detail: configFindingIssue(first).message, issues: [configFindingIssue(first)] });
 }
 
-// Check 4: the target workspace's enabled set against itself: namespaces, requireTypes, and config (ADR 0151).
+// Check 4: the target workspace's enabled set against itself: namespaces, providers, requireTypes, config (ADR 0151),
+// and the UI with the preset's references (ADR 0157).
 export function checkEnabledSet(
   planned: readonly PlannedExtension[],
   input: { preset: Preset; registry: KernelRegistry; connection: Connection; workspaceId: string; correlationId: string },
@@ -174,5 +177,6 @@ export function checkEnabledSet(
   return namespaceProblem(enabled, input.correlationId)
     ?? providerProblem(enabled, input.correlationId)
     ?? requiresProblem(enabled, input.correlationId)
-    ?? configProblem(input.preset, enabled, planned, input);
+    ?? configProblem(input.preset, enabled, planned, input)
+    ?? uiProblem(workspaceUi(input.registry, enabled.map(({ version }) => version.manifest), input.preset, true), { correlationId: input.correlationId });
 }

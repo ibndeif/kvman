@@ -1,4 +1,4 @@
-import { toJsonSchemaDocument, type Issue, type Json, type JsonObject, type SchemaView } from '@kvman/protocol';
+import { jsonObjectSchema, toJsonSchemaDocument, type Issue, type Json, type JsonObject, type SchemaView } from '@kvman/protocol';
 import type { CommandDef, Ctx, MigrationDef, ProviderDef, QueryDef, SubscriptionDef } from '@kvman/sdk';
 
 export type RegisteredFunction =
@@ -21,7 +21,7 @@ export type RecordedSchemas = {
   collections: Map<string, Schema>;
 };
 
-export type OnceOnlyCall = 'requestIsolation' | 'registerConfig' | 'registerDataVersion';
+export type OnceOnlyCall = 'requestIsolation' | 'registerConfig' | 'registerDataVersion' | 'registerSettingsSection';
 
 export type DataVersion = { version: number; compatibleWith: number[] };
 
@@ -34,6 +34,11 @@ function isFunction(value: unknown): boolean {
 export function compact(fields: Record<string, Json | undefined>): JsonObject {
   const entries = Object.entries(fields).filter((entry): entry is [string, Json] => entry[1] !== undefined);
   return Object.fromEntries(entries);
+}
+
+// A typed reference is the registered name itself with a type-only brand (ADR 0044).
+export function reference<Ref extends string>(name: string): Ref {
+  return name as Ref;
 }
 
 // What one run of setup registered: the manifest entries in call order, the mistakes only a run can show, and the
@@ -55,6 +60,18 @@ export class Recording {
   readonly errors: JsonObject[] = [];
   readonly providers: JsonObject[] = [];
   readonly models: JsonObject[] = [];
+  readonly pages: JsonObject[] = [];
+  readonly navGroups: JsonObject[] = [];
+  readonly navItems: JsonObject[] = [];
+  readonly toolbarItems: JsonObject[] = [];
+  readonly statusItems: JsonObject[] = [];
+  readonly panels: JsonObject[] = [];
+  readonly slots: JsonObject[] = [];
+  readonly actions: JsonObject[] = [];
+  readonly rendererTargets: JsonObject[] = [];
+  readonly renderers: JsonObject[] = [];
+  readonly components: JsonObject[] = [];
+  settingsSection: JsonObject | null = null;
 
   readonly issues: Issue[] = [];
   readonly functions = new Map<string, RegisteredFunction>();
@@ -71,6 +88,17 @@ export class Recording {
     const conversion = view === 'output' || !output.ok ? output : toJsonSchemaDocument(schema, view);
     if (conversion.ok) return conversion.document;
     this.issues.push({ path, message: `the schema cannot be written as JSON Schema: ${conversion.message}`, hint: losslessHint });
+    return undefined;
+  }
+
+  // A UI definition is JSON (05 §5.3), but extension code is untyped at runtime: the entry, without its undefined
+  // fields, must parse as JSON, or the recording reports it at the entry's path.
+  jsonEntry(path: string, fields: Record<string, unknown>): JsonObject | undefined {
+    const parsed = jsonObjectSchema.safeParse(Object.fromEntries(Object.entries(fields).filter((entry) => entry[1] !== undefined)));
+    if (parsed.success) return parsed.data;
+    const [first] = parsed.error.issues;
+    const at = first === undefined || first.path.length === 0 ? path : `${path}.${first.path.join('.')}`;
+    this.issues.push({ path: at, message: 'the definition holds a value that is not JSON', hint: 'use only JSON values in UI definitions: no functions, dates, or class instances' });
     return undefined;
   }
 

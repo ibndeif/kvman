@@ -53,6 +53,8 @@ describe('kernel.validate (plan 03 §3.8, ADR 0110)', workerTests, () => {
     const warned = pdfManifest((manifest) => {
       setAt(manifest, ['types', 3, 'type'], 'pdf.imported-file');
       setAt(manifest, ['types', 3, 'handler'], 'command:pdf.imported-file');
+      // The upload on the files page sends the renamed command (its target is checked since M2.10, ADR 0157).
+      setAt(manifest, ['ui', 'pages', 0, 'view', 'children', 1, 'onUpload', 'command'], 'pdf.imported-file');
     });
     const result = await validated({ manifest: warned });
     expect(result).toEqual({ ok: true, issues: [expect.objectContaining({ path: 'types.3.type', severity: 'warning' })] });

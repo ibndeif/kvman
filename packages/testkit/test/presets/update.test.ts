@@ -71,12 +71,15 @@ describe('preset update (plan 07 §7.4, ADR 0149)', presetTests, () => {
       hidden: ['pdf.debug'],
       labels: { 'pdf.nav': 'Files' },
       pages: [startPage],
+      // The home route follows the page that replaces /help: app.home names an active page (ADR 0157).
+      app: { home: '/start' },
       layout: { sidebar: 'collapsed' },
     }, 2)).toEqual({ ok: true, value: { revision: 3 } });
     const edited = readAppliedPreset({ connection: current.connection }, workspaceA);
     expect(edited?.revision).toBe(3);
     expect(edited?.preset.hidden).toEqual(['pdf.debug']);
     expect(edited?.preset.pages?.map((page) => page.name)).toEqual(['start']);
+    expect(edited?.preset.app.home).toBe('/start');
     expect(edited?.preset.labels).toEqual({ 'pdf.nav': 'Files' });
     expect(edited?.preset.layout).toEqual({ sidebar: 'collapsed' });
     expect(await updatePreset(current, workspaceA, { labels: null }, 3)).toEqual({ ok: true, value: { revision: 4 } });

@@ -3,6 +3,8 @@ import { arrayAt, numberAt, objectOf, stringAt } from './json-reading.ts';
 
 export type TypeName = { name: string | undefined; kind: string | undefined };
 
+export type UiName = { name: string | undefined; kind: string; index: number };
+
 export type DataVersion = { version: number; compatibleWith: number[]; steps: number[] };
 
 // The names each rule of 05 §5.3 checks, by manifest index; an entry whose name is not a string is left to the
@@ -17,6 +19,7 @@ export type ManifestNames = {
   errors: Array<string | undefined>;
   subscriptions: Array<string | undefined>;
   capabilities: Array<string | undefined>;
+  ui: UiName[];
   dataVersion: DataVersion | undefined;
 };
 
@@ -35,6 +38,16 @@ function dataVersionOf(data: Json | undefined): DataVersion | undefined {
   return { version, compatibleWith: numbers(arrayAt(data, 'compatibleWith')), steps };
 }
 
+// The UI arrays in manifest order; every entry is keyed `id` (05 §5.3).
+const uiKinds = [
+  'pages', 'navGroups', 'navItems', 'toolbarItems', 'statusItems', 'panels', 'slots', 'actions', 'rendererTargets',
+  'renderers', 'components',
+] as const;
+
+function uiNamesOf(ui: JsonObject | undefined): UiName[] {
+  return uiKinds.flatMap((kind) => arrayAt(ui, kind).map((entry, index) => ({ name: stringAt(entry, 'id'), kind, index })));
+}
+
 export function manifestNames(manifest: JsonObject): ManifestNames {
   const data = objectOf(manifest['data']);
   return {
@@ -47,6 +60,7 @@ export function manifestNames(manifest: JsonObject): ManifestNames {
     errors: namesAt(arrayAt(manifest, 'errors'), 'code'),
     subscriptions: namesAt(arrayAt(manifest, 'subscriptions'), 'event'),
     capabilities: namesAt(arrayAt(manifest['permissions'], 'capabilities'), 'name'),
+    ui: uiNamesOf(objectOf(manifest['ui'])),
     dataVersion: dataVersionOf(data),
   };
 }

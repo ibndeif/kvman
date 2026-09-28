@@ -1,10 +1,11 @@
 import { pageDefSchema, presetSchema, presetSecretIssues, type Issue, type JsonObject, type ValidateRequest, type ValidateResult } from '@kvman/protocol';
+import type { ValueChecker } from '../ui/value-checks.ts';
 import { validateManifest } from './manifest-validation.ts';
 import { schedulePayloadIssues } from './schedule-payloads.ts';
 import type { KernelEvents } from './reference-rules.ts';
 import { schemaIssues } from './schema-issues.ts';
 
-export type ValidateContext = { kernelEvents: KernelEvents; configSchemas: Readonly<Record<string, JsonObject>> };
+export type ValidateContext = { kernelEvents: KernelEvents; configSchemas: Readonly<Record<string, JsonObject>>; values: ValueChecker };
 
 // A request M2.1 cannot answer is refused with its issue; anything else is answered, valid or not (ADRs 0110,
 // 0151). `catalog` validation arrives in M2.11; the workspace checks run where the query is answered, against the
