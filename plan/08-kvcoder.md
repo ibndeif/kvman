@@ -4,7 +4,23 @@ kvcoder is the app-building harness, built on kvai and kvwebui. Its agent has on
 
 ## 8.1 Sessions and turns
 
-- **Storage.** Sessions and their messages are stored per workspace. Messages are pi-ai messages plus notices and summaries.
+- **Storage.** Sessions, turns, and messages live in kvcoder's workspace store, so a session exists only in its own workspace, and Home has its own sessions.
+- **A session** is `{ id, title, status, parentId?, model, usage, durationMs, createdAt, updatedAt }`, plus its binary check results. Subagents are hidden child sessions with `parentId`.
+- **A message:**
+
+  ```
+  { id, sessionId, turnId?, seq,
+    kind: 'user' | 'assistant' | 'toolResult' | 'notice' | 'summary',
+    source?: { kind: 'user' } | { kind: 'extension', name } | { kind: 'subagent', sessionId },
+    content,            // a pi-ai message, a notice { code, params, text }, or a summary { text, coversThroughSeq }
+    model?, usage?: { input, output, cacheRead, cacheWrite, cost },
+    durationMs?,        // the model call (assistant) or the run time (toolResult)
+    createdAt }
+  ```
+- **A turn** records `{ id, startedAt, endedAt, durationMs, steps, usage, outcome: 'done' | 'cancelled' | 'failed' | 'interrupted' | 'maxSteps' }`. While suspended, it also holds its `pending` calls (`{ toolCallId, kind: 'question' | 'subagent' | 'approval', questionId?, childSessionId? }`) and the results already produced in that step. When the last pending call resolves, kvcoder appends all results in the model's call order and queues the next step.
+- **Totals.** The session keeps running totals of `usage` and `durationMs`, and a subagent's usage adds to its parent's. The chat shows each turn's time, tokens, and cost under its last answer, and the session's totals in its header.
+- **Titles.** Until the first turn ends, the title is the first 60 characters of the first message. Then kvcoder asks `kvai.complete` (the session's model, no tools, `maxTokens` 30) for a 3–6 word title in the conversation's language. `kvcoder.session.rename` overrides it, and a renamed session is never retitled. A failed title call keeps the placeholder.
+- **Long histories.** `kvcoder.message.list` returns the newest `limit` messages, plus `omitted`, the number of older ones. The chat shows "N earlier messages" and offers the export.
 - **Sending.**
   - `kvcoder.message.send` is for the person only. When the session is idle, it starts a turn. When a turn is running, the message steers it: the next step sees it.
   - `kvcoder.message.inject` does the same for extensions, and marks the message as coming from that extension.
@@ -141,8 +157,11 @@ subagent run '{ "task", "mode": "fresh" | "fork", "connectors"?: [names], "bash"
 | `kvcoder.session.get` / `.rename` / `.delete` / `.compact` | query / commands | `{ sessionId, … }` |
 | `kvcoder.message.send` | command, user only | `{ sessionId, text }` → `{}` |
 | `kvcoder.message.inject` | command | `{ sessionId, text }` → `{}` |
-| `kvcoder.message.list` | query | `{ sessionId, limit }` → `Message[]` |
+| `kvcoder.message.list` | query | `{ sessionId, limit }` → `{ messages, omitted }` (the newest `limit`, in order) |
 | `kvcoder.turn.cancel` | command | `{ sessionId }` → `{}` |
+| `kvcoder.turn.list` | query | `{ sessionId, limit }` → `Turn[]`, newest first |
+| `kvcoder.session.export` | command | `{ sessionId }` → `{ fileId }`: a kernel file `<title>.json` with `{ session, turns, messages }`, subagent sessions included |
+| `kvcoder.session.fork` | command | `{ sessionId, throughSeq? }` → `Session`: a copy of the messages (and the current summary) through `throughSeq` (default: all); per-session sections aren't copied |
 | `kvcoder.question.answer` | command, user only | `{ questionId, answer }` → `{ jobId }` |
 | `kvcoder.prompt.get` | query | `{ sessionId }` → the exact system prompt |
 | `kvcoder.connector.register` | command | `{ name, description, commands: [{ name, command, examples? }] }` or `{ name, description, binary: { check, install? } }` → `{}` |
@@ -152,7 +171,7 @@ subagent run '{ "task", "mode": "fresh" | "fork", "connectors"?: [names], "bash"
 | `kvcoder.section.remove` | command | `{ id, sessionId? }` → `{}` |
 | `kvcoder.section.list` | query | `{ sessionId? }` → `[{ id, title, order, owner, sessionId?, size }]` |
 
-All are public. `Session` is `{ id, title, status, parentId?, model, usage, createdAt, updatedAt }`.
+All are public. `Session`, `Message`, and `Turn` are as in §8.1.
 
 ## 8.7 UI and settings
 

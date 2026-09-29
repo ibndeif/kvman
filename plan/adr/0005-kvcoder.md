@@ -90,3 +90,18 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds,
     - **Lifetime.** Connectors last one run: kvcoder clears them in its `kernel.started` handler, and extensions register again in theirs. Sections are stored until removed. Entries of extensions that aren't loaded are ignored.
     - The setting `kvcoder.connectors` (replacing `kvcoder.binaries`) adds binary connectors from the preset or the person.
     - `runConnector` is exported from `@kvman/kvcoder/testing`.
+24. **Message shape.** `{ id, sessionId, turnId?, seq, kind: 'user' | 'assistant' | 'toolResult' | 'notice' | 'summary', source?, content, model?, usage?, durationMs?, createdAt }`.
+    - `source` is `{ kind: 'user' }`, `{ kind: 'extension', name }`, or `{ kind: 'subagent', sessionId }`.
+    - `content` is a pi-ai message, a notice `{ code, params, text }`, or a summary `{ text, coversThroughSeq }`.
+    - `usage` is `{ input, output, cacheRead, cacheWrite, cost }`.
+    - `durationMs` is the model call's time for an assistant message, or the run time for a tool result.
+25. **Totals.**
+    - Each turn records `{ id, startedAt, endedAt, durationMs, steps, usage, outcome: 'done' | 'cancelled' | 'failed' | 'interrupted' | 'maxSteps' }`.
+    - The session keeps running totals of `usage` and `durationMs`, and a subagent's usage is added to its parent's.
+    - The chat shows each turn's time, tokens, and cost under its last answer, and the session's totals in its header.
+26. **Long histories.** `kvcoder.message.list { sessionId, limit }` returns the newest `limit` messages in order, plus `omitted` (the number of older ones). The chat shows "N earlier messages" with export. No pagination.
+27. **Turn state.** The turn record holds `pending: [{ toolCallId, kind: 'question' | 'subagent' | 'approval', questionId?, childSessionId? }]` and the tool results already produced in that step. When the last pending item resolves, kvcoder appends all results in the model's call order and queues the next step. It survives restarts.
+28. **Scope.** Sessions exist only in their own workspace.
+29. **Titles.** After the first turn ends, kvcoder asks `kvai.complete` (the session's model, no tools, `maxTokens` 30) for a 3–6 word title in the conversation's language. Until then, the title is the first 60 characters of the first message. `kvcoder.session.rename` overrides it, and a renamed session is never retitled. A failed title call keeps the placeholder.
+30. **Export.** JSON only: `kvcoder.session.export { sessionId }` → `{ fileId }`, a kernel file `<title>.json` holding `{ session, turns, messages }` (subagent sessions included).
+31. **Fork.** `kvcoder.session.fork { sessionId, throughSeq? }` → a new session with a copy of the messages (and the current summary) through `throughSeq` (default: all). Per-session sections aren't copied; their owners set them for the new session if they want to.
