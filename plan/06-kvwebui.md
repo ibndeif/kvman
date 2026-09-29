@@ -96,7 +96,7 @@ An extension contributes UI by registering the public query `<namespace>.ui.get`
 - **`then`.** `'rerun'` (the default), `{ navigate: '<ns>.<page>', params? }`, or `{ toast: key, level? }`. Effects (§6.5) apply after `then`.
 - **Chat.**
   - The messages query returns `[{ id, role: 'user' | 'assistant' | 'tool' | 'system', markdown, createdAt }]`.
-  - Send runs the command async with its input plus `{ text }`. Progress chunks whose `data` is `{ type: 'text', delta }` (from any source, ADR 0001, 79) append `delta` to a pending assistant bubble; chunks whose `data` is `{ type: 'component', component, props }` render inline as a `custom` component; other chunks are ignored. Stop cancels the job.
+  - Send runs the command async with its input plus `{ text }`. Progress chunks whose `data` is `{ type: 'text', delta }` (from any source, ADR 0001, 79) append `delta` to a pending assistant bubble; chunks whose `data` is `{ type: 'component', component, props }` render inline as a `custom` component; a chunk `{ type: 'follow', jobId }` makes the chat follow that job in the same bubble; other chunks are ignored. Stop cancels the job.
   - When the job ends, the messages query reruns.
 - **Custom.**
   - It loads `/web/<namespace>/components/<name>.js`, which default-exports a Vue component.

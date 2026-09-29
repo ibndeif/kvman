@@ -40,7 +40,7 @@ A pnpm monorepo, Node 24, TypeScript strict.
 | `packages/sdk` | The extension API: `ctx` types, zod, and the shared shapes (preset, extension manifest, Problem, job, envelope). | `zod` |
 | `packages/kernel` | Everything the kernel does, including HTTP. | `sdk`, its declared dependencies |
 | `packages/cli` | The `kvman` bin; it runs the kernel in the same process. | `kernel`, `sdk` |
-| `extensions/*` | kvai, kvwebui, kvinterviewer, kvcoder, kvdev. | `sdk`, their own npm dependencies; never `kernel`; another extension only with `import type`, when it is a `kvman.dependencies` entry |
+| `extensions/*` | kvai, kvwebui, kvcoder, kvdev. | `sdk`, their own npm dependencies; never `kernel`; another extension only with `import type` when it is a `kvman.dependencies` entry, except the runtime helper `@kvman/kvcoder/connector` |
 | `presets/` | `coder.json`, `dev.json`. | — |
 
 At runtime, extensions talk to each other only through `ctx.exec` and the other job calls (§3). Type-only imports exist for typed calls (§3.2).
@@ -51,8 +51,7 @@ Each is designed in its own round, after the kernel.
 
 - **kvai**: LLM calls, providers, and models. The pi-ai package's providers and models come by default, and other extensions can add theirs. Agents, tools, and loops are built by the extensions that need them (§7).
 - **kvwebui**: the Vue web app, plus a `kvwebui.*` API other extensions use to shape the UI.
-- **kvinterviewer**: talks with the user, and gives other extensions an API for that.
-- **kvcoder**: the app-building harness, on kvai and kvwebui. It has a main agent, subagents, and a bash tool only.
+- **kvcoder**: the app-building harness on kvai and kvwebui. Its agent has only a bash tool; connectors (including the built-in `ask` and `subagent`) and sections extend it (§8).
 - **kvdev**: the harness for developing kvman extensions and presets.
 
 ## 1.6 Principles for this phase

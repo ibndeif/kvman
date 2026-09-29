@@ -1,6 +1,6 @@
 # ADR 0004 — kvinterviewer
 
-Status: accepted, 2026-09-29. Decided with the product owner in question rounds.
+Status: superseded by ADR 0005, 8 (asking moved into kvcoder; kvinterviewer removed). Kept for its reasoning.
 
 1. **Waiting.** Continuations, never waiting. `kvinterviewer.question.ask { question, then: { command, input } }` stores the question and returns `{ questionId }` at once. On an answer or a dismissal, kvinterviewer queues `then.command` async in the question's workspace. Questions survive restarts.
 2. **Kinds.**

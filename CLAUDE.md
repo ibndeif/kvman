@@ -38,7 +38,7 @@ Milestones are in the plan (once written). Do them strictly in order. For each o
   - An extension's `package.json` `kvman` field declares its namespace and dependencies, and `main` default-exports `(ctx) => void`, which registers commands, queries, and settings with zod schemas and descriptions.
   - Registrations are private unless `public: true`.
   - There's no sandbox in this phase: non-bundled versions need the person's trust at start.
-- **The kernel knows no product concept.** UI, agents, and tools live in extensions (kvai, kvwebui, kvinterviewer, kvcoder, kvdev).
+- **The kernel knows no product concept.** UI, agents, and tools live in extensions (kvai, kvwebui, kvcoder, kvdev).
 - **Import walls** (enforced by ESLint; never bypass them):
 
   | Package | May import |
@@ -46,7 +46,7 @@ Milestones are in the plan (once written). Do them strictly in order. For each o
   | `sdk` | `zod` |
   | `kernel` | `sdk`, its declared dependencies |
   | `cli` | `kernel`, `sdk` |
-  | `extensions/*` | `sdk`, their own declared dependencies; never `kernel`; another extension only with `import type`, and only when it is a `kvman.dependencies` entry |
+  | `extensions/*` | `sdk`, their own declared dependencies; never `kernel`; another extension only with `import type` when it is a `kvman.dependencies` entry, except the runtime helper `@kvman/kvcoder/connector` |
 
 ## 4. Naming
 
