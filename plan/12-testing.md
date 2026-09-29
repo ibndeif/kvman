@@ -23,6 +23,7 @@ Tests run kvman as a child process and SIGKILL it at moments they observe throug
 3. Suspended kvcoder turns and their questions survive, and answering one continues the turn.
 4. `secrets.json` is either the old file or the new one, never partial.
 5. A kvcoder step interrupted by the kill ends `failed`, and its turn is marked interrupted.
+6. Long-lived processes left by the killed kvman are stopped at the next start (§2.16).
 
 There are no fault hooks in production code.
 

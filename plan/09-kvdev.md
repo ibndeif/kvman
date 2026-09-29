@@ -28,11 +28,12 @@ The toolchain comes from the project, so kvdev imports neither the kernel nor Ty
 - invalid registrations;
 - names outside the namespace;
 - missing descriptions;
-- missing locale keys.
+- missing locale keys;
+- warnings for `setInterval` and unawaited `setTimeout` in handlers (§2.2).
 
 ## 9.3 Preview
 
-`preview start` runs a second kvman as a child process:
+`preview start` runs a second kvman through the kernel's process service (`ctx.processes`, §2.16):
 - its own temporary home, so it never touches real data;
 - port 3738, or the next free one;
 - `--yes`;

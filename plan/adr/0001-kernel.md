@@ -173,3 +173,19 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds 
     - **Start and stop.** `kernel.started` is queued once after every extension loads. `kernel.stopping` runs at the start of shutdown, before jobs are aborted, within the 10 s budget; unfinished handlers are dropped, not resumed.
     - `kernel.extensions.list` shows each extension's handlers.
 85. **Kernel caller.** A job's caller may also be `{ kind: 'kernel' }` (handler jobs).
+86. **Work ends with its job.** A handler's in-process work ends when it returns. Long or repeated work goes to `execAsync` or `ctx.schedule`, never `setTimeout`, `setInterval`, or an unawaited promise. This is a rule, not policed by the kernel; kvdev's `ext check` warns about `setInterval` and unawaited `setTimeout` in handlers.
+87. **Process service.** For long-lived child processes only; short ones, such as kvcoder's bash calls, stay plain `node:child_process` inside their job. (Refines 30.)
+    - **API:**
+      - `ctx.processes.start(name, { command, args?, cwd?, env? })` → `{ name, pid, startedAt }`. Commands only (`READ_ONLY` in queries). The name is unique per extension and workspace, and a running one fails `PROCESS_RUNNING`.
+      - `ctx.processes.stop(name)`: SIGTERM to its group, then SIGKILL after 5 s.
+      - `ctx.processes.list()`.
+      - `ctx.processes.log(name, { tail? })`.
+    - **Tracking.**
+      - Each process runs in its own process group.
+      - stdout and stderr go to `logs/processes/<extension>/<name>.log`, capped at 10 MB with the oldest half dropped.
+      - Processes are recorded in SQLite. One that exits by itself triggers the handler point `kernel.process.exited { extension, workspaceId, name, exitCode, signal }`.
+    - **Lifecycle.**
+      - On kvman stop, after the `kernel.stopping` handlers, every group gets SIGTERM, then SIGKILL at the 10 s mark.
+      - After a crash, the start kills leftover recorded groups that are still alive and clears their rows.
+      - Hot reload leaves processes running.
+    - The public query `kernel.processes.list` lists all processes for the UI.

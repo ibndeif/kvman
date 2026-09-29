@@ -22,6 +22,7 @@ Every failure is a Problem: `{ code, message, params? }`.
 | `WORKER_CRASHED` | The worker died during the attempt. |
 | `HANDLER_FAILED` | A handler threw something that isn't a Problem. Its message is logged, never sent. |
 | `FORBIDDEN_ORIGIN` | A request's Host or Origin isn't kvman's own (§4.2). |
+| `PROCESS_RUNNING` | `ctx.processes.start` was given the name of a running process. |
 | `PORT_IN_USE` | The port is taken (start only). |
 | `EXTENSION_INVALID` | A manifest, dependency, namespace, registration, or entry failed at load. |
 | `KVMAN_RUNNING` | Another kvman holds this home's lock. |

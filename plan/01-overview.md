@@ -30,6 +30,7 @@ The default is `~/.kvman`; `--home <dir>` or `KVMAN_HOME` overrides it.
 | `extensions/<name>@<version>/` | npm-installed extensions (§2.9). |
 | `secrets.json` | Secrets, mode 0600 (§2.8). |
 | `logs/kvman.log` | Pino JSON logs, which never contain payloads, settings values, or secrets. |
+| `logs/processes/<extension>/<name>.log` | Output of long-lived processes (§2.16), 10 MB each. |
 
 ## 1.4 Packages
 

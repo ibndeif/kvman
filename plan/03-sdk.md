@@ -80,3 +80,4 @@ Every call returns a Promise, except the calls on a transaction's `tx`.
 | `ctx.files` | `write(name, data, type)` → File, `get(id)`, `read(id)` → Buffer, `path(id)`, `unlink(id)` |
 | `ctx.settings` | `get(key)`, `set(key, value, { scope: 'global' \| 'workspace' })` (own keys only) |
 | `ctx.secrets` | `get(name)`, `set(name, value)`, `delete(name)` |
+| `ctx.processes` | `start(name, { command, args?, cwd?, env? })`, `stop(name)`, `list()`, `log(name, { tail? })`: long-lived processes (§2.16) |

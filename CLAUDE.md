@@ -63,6 +63,7 @@ Milestones are in `plan/13-milestones.md`. Do them strictly in order. For each o
 - **Comments.** Minimal: comment only a non-obvious invariant. Every public export of `@kvman/sdk` has a one-line TSDoc comment.
 - **Validation.** Validate every boundary with zod: handler inputs and outputs, settings, presets, manifests, HTTP bodies, and persisted JSON.
 - **Errors** are Problems with catalog codes. Never throw strings, swallow an error, or return `null` to mean "failed".
+- **Work ends with its job.** A handler's in-process work ends when it returns: no `setTimeout`, `setInterval`, or unawaited promises that outlive it. Long work uses `execAsync` or `ctx.schedule`; long-lived child processes use `ctx.processes`.
 - **No workarounds.** No stubs, placeholders, TODO or FIXME, commented-out code, `@ts-ignore`, `@ts-expect-error`, `eslint-disable`, `.skip` or `.only`, sleeps or retries that hide races, catch-and-ignore, or test-only branches in production code. Fix the cause, or ask (§1).
 - **Dependencies.** Only those in the plan, at the latest stable version, pinned exactly. A new dependency is a question for the product owner.
 - **Logs** (Pino) never contain payloads, settings values, secrets, or request bodies.

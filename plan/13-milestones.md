@@ -100,17 +100,19 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
 
 ### M1.6 Workspaces, kernel API, localization, hot reload
 
-- **Read:** `02` §2.6, §2.8, §2.11, §2.12, §2.9 (hot reload).
+- **Read:** `02` §2.6, §2.8, §2.11, §2.12, §2.9 (hot reload), §2.16.
 - **Build:**
   - Home, and `kernel.workspace.*`.
   - The rest of `kernel.*` (settings, secrets, jobs, files, extensions, and health, with JSON Schemas).
   - `ctx.settings.set` (own keys only), and `ctx.files` (`read`, `path`, and access rules).
   - Locale catalogs merged per language.
   - `path:` hot reload (a watch, a reload in every worker, and the old code kept on failure).
+  - The process service (§2.16), `kernel.processes.list`, and the `kernel.process.exited` point.
 - **Done when:**
   - Every `kernel.*` command and query behaves as §2.12 says, including opening an open folder and closing Home.
   - `kernel.secrets.list` never returns a value.
   - An edited `path:` extension serves new registrations while a running job finishes on the old code, and a broken edit keeps the old code.
+  - A started process logs its output, survives a hot reload, triggers `kernel.process.exited` when it exits, and a second start of the same name fails `PROCESS_RUNNING`.
 
 ### M1.7 HTTP
 
@@ -151,7 +153,7 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
   - A taken port fails `PORT_IN_USE`.
   - Ctrl+C leaves unfinished async jobs queued.
   - Logs contain no payloads.
-  - Crash invariants 1, 2, and 4 hold (§12.2).
+  - Crash invariants 1, 2, 4, and 6 hold (§12.2).
 
 ## M2 — Extensions
 

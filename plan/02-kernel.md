@@ -34,6 +34,7 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 - A worker runs up to `kernel.workerConcurrency` jobs at once (default 32), since handlers mostly wait on I/O. A job that hogs the CPU slows only its own worker.
 - **The current job.** A worker tracks each running job with `AsyncLocalStorage`. Inside a handler, `ctx.store`, `ctx.files`, `ctx.settings`, `ctx.secrets`, and the job calls use that job's workspace and caller, and `ctx.job` describes it (§3.3). Calling any of these outside a job fails with `NO_JOB`.
 - Handlers keep no in-memory state between jobs. Anything that must last goes in the store.
+- **Work ends with its job.** A handler's in-process work ends when it returns. Long or repeated work goes to `execAsync` or `ctx.schedule`, never `setTimeout`, `setInterval`, or an unawaited promise. This is a rule, not policed by the kernel.
 - **Crashes.** When a worker dies, each job it was running fails that attempt with `WORKER_CRASHED`, and the kernel starts a replacement worker.
 
 ## 2.3 Failures, retries, timeouts, cancel
@@ -68,7 +69,7 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 - A workspace is a folder on disk, `{ id, name, path }`. The user's home folder is the built-in **Home** workspace, which is always open.
 - Other folders are opened with `kernel.workspace.open`, and they can be listed and closed (§2.12).
 - Every job has a workspace. An HTTP call names it with `workspaceId`, defaulting to Home, and nested jobs inherit it.
-- `ctx.job.workspace.path` is the folder. Extensions use `node:fs` and `node:child_process` on it directly; the kernel adds no file or process service for workspace folders. Child processes stop with kvman, and a handler kills its own on cancel.
+- `ctx.job.workspace.path` is the folder. Extensions use `node:fs` and `node:child_process` on it directly for work inside a job. A handler kills its own short-lived processes on cancel. Long-lived processes use the kernel's process service (§2.16).
 
 ## 2.7 Files
 
@@ -178,6 +179,7 @@ All are public. Types are in `@kvman/sdk`.
 | `kernel.files.list` | query | `{ limit }` → `File[]` in this workspace, newest first |
 | `kernel.files.unlink` | command | `{ id }` → `{}` |
 | `kernel.extensions.list` | query | `{}` → `[{ name, version, source, namespace, commands, queries, settings, handlers }]`; each command and query is `{ name, description, public, input, output }`, with `input` and `output` as JSON Schema |
+| `kernel.processes.list` | query | `{}` → `[{ extension, workspaceId, name, pid, startedAt }]` (§2.16) |
 | `kernel.health.get` | query | `{}` → `{ version, preset, mode, workers, uptimeMs }` |
 
 There is no sandbox in this phase, so extensions can call these too.
@@ -209,7 +211,7 @@ Going over a limit fails loudly and never cuts anything off.
 **Stop (Ctrl+C).**
 1. HTTP stops taking requests.
 2. Every running job's signal is aborted with the reason `shutdown`.
-3. kvman waits up to 10 s for handlers to return, then stops the workers.
+3. kvman waits up to 10 s for handlers to return, then stops the workers. `kernel.stopping` handlers run first. Every process from §2.16 gets SIGTERM, then SIGKILL at the 10 s mark.
 4. Async jobs that didn't finish stay `queued` and run again at the next start.
 
 A second Ctrl+C stops at once.
@@ -231,6 +233,7 @@ ctx.registerHandler('kernel.job.failed', {
 | `kernel.job.failed` | any job, sync or async, ends `failed` | `{ jobId, rootId, name, caller, workspaceId, problem, attempts }` |
 | `kernel.job.succeeded` | an async or scheduled job ends `succeeded` | `{ jobId, name, caller, workspaceId }` |
 | `kernel.job.cancelled` | any job ends `cancelled` | `{ jobId, rootId, name, workspaceId, reason }` |
+| `kernel.process.exited` | a process from §2.16 exits by itself | `{ extension, workspaceId, name, exitCode, signal }` |
 | `kernel.started` | once per start, after every extension loads | `{}` |
 | `kernel.stopping` | at the start of shutdown | `{}` |
 
@@ -240,4 +243,22 @@ Handler inputs never include a job's input or output. An unknown point fails the
 - **Handler jobs.** They are ordinary async jobs, with retries and timeouts. Their caller is `{ kind: 'kernel' }`, and their workspace is the job's (Home for `started` and `stopping`).
 - **Loop safety.** Jobs started by a handler (the handler job and everything nested in it) never trigger handlers.
 - **Stopping.** `kernel.stopping` handlers run at the start of shutdown, before running jobs are aborted, within the 10 s budget. Unfinished ones are dropped, not resumed.
+
+## 2.16 Processes
+
+The process service is for long-lived child processes, such as kvdev's preview kvman. Short ones, such as a bash call, stay plain `node:child_process` inside their job.
+
+| Call | Does |
+|---|---|
+| `ctx.processes.start(name, { command, args?, cwd?, env? })` | Starts it in its own process group → `{ name, pid, startedAt }`. The name is unique per extension and workspace; a running one fails `PROCESS_RUNNING`. Commands only (`READ_ONLY` in queries). |
+| `ctx.processes.stop(name)` | SIGTERM to its group, then SIGKILL after 5 s. |
+| `ctx.processes.list()` | This extension's processes in the workspace. |
+| `ctx.processes.log(name, { tail? })` | The last lines of its output. |
+
+- **Output.** stdout and stderr go to `logs/processes/<extension>/<name>.log`, capped at 10 MB with the oldest half dropped.
+- **Exit.** A process is recorded in SQLite. One that exits by itself triggers `kernel.process.exited` (§2.15).
+- **Stop.** On kvman stop, after the `kernel.stopping` handlers, every group gets SIGTERM, then SIGKILL at the 10 s mark.
+- **Crash.** At the next start, the kernel kills the leftover recorded groups that are still alive and clears their rows.
+- **Hot reload** leaves processes running.
+- `kernel.processes.list` lists every process, for the UI.
 
