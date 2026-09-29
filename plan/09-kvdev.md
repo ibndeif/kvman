@@ -1,6 +1,6 @@
 # 09 — kvdev (namespace `kvdev`)
 
-kvdev is the harness for developing kvman extensions and presets. It has no loop of its own: it extends kvcoder (§8.4) with connectors and sections, and the `dev` preset runs it. Projects live in the workspace folder, and the agent edits their files with bash.
+kvdev is the harness for developing kvman extensions and presets. It has no loop of its own: it extends kvcoder (§8.4), registering its connectors with `kvcoder.connector.register` and its sections with `kvcoder.section.set` from its `kernel.started` handler. The `dev` preset runs it. Projects live in the workspace folder, and the agent edits their files with bash.
 
 ## 9.1 Connectors
 
@@ -13,7 +13,7 @@ kvdev is the harness for developing kvman extensions and presets. It has no loop
 | `preset check '{ "file" }'` | `kvdev.preset.check` | validates the preset's schema and its references (extensions, settings, pages) |
 | `preview start '{ "extensions": [folders], "preset"?: file }'` | `kvdev.preview.start` | starts a preview kvman (§9.3) → `{ url }` |
 | `preview stop` / `preview status` | `kvdev.preview.stop` / `.status` | |
-| `docs get '{ "topic": "sdk" \| "views" \| "connectors" \| "registries" \| "presets" }'` | `kvdev.docs.get` | a guide as Markdown |
+| `docs get '{ "topic": "sdk" \| "views" \| "connectors" \| "presets" }'` | `kvdev.docs.get` | a guide as Markdown |
 
 ## 9.2 The scaffold
 

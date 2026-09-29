@@ -81,3 +81,12 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds,
 
     At each step kvcoder makes one `kernel.extensions.list` call to find them, calls the section queries (in parallel, 2 s timeout each, same caps), and runs binary checks at a session's first step, storing the results in the session record. Nothing about connectors is stored.
 22. **Import path.** The helper is `@kvman/kvcoder/registry`, the general `<package>/registry` subpath (ADR 0001, 88). It replaces `@kvman/kvcoder/connector`.
+23. **Connectors and sections by commands** (supersedes 5, 10, 15, and 19–22; `runConnector` stays).
+    - kvcoder stores what other extensions register and reads only its own store during a turn.
+    - `kvcoder.connector.register`: a **commands** connector `{ name, description, commands: [{ name, command, examples? }] }` runs the registering extension's own public commands through `ctx.exec`. A **binary** connector `{ name, description, binary: { check, install? } }` is run by the agent in real bash and listed only when its check passes (once per session, stored in the session record). A connector has exactly one of the two.
+    - `kvcoder.connector.unregister { name }` and `kvcoder.connector.list`.
+    - `kvcoder.section.set { id, title, order, content, sessionId? }`, `.remove`, and `.list`: pushed by the owner whenever its data changes; 16 KB each, 64 KB total.
+    - **Ownership.** The caller owns what it registers, and a name owned by another extension fails with `kvcoder/NAME_TAKEN`.
+    - **Lifetime.** Connectors last one run: kvcoder clears them in its `kernel.started` handler, and extensions register again in theirs. Sections are stored until removed. Entries of extensions that aren't loaded are ignored.
+    - The setting `kvcoder.connectors` (replacing `kvcoder.binaries`) adds binary connectors from the preset or the person.
+    - `runConnector` is exported from `@kvman/kvcoder/testing`.

@@ -42,10 +42,10 @@ A pnpm monorepo, Node 24, TypeScript strict.
 | `packages/kernel` | Everything the kernel does, including HTTP. | `sdk`, its declared dependencies |
 | `packages/cli` | The `kvman` bin; it runs the kernel in the same process. | `kernel`, `sdk` |
 | `packages/testkit` | `createTestKernel` for tests (§10). | `kernel`, `sdk` |
-| `extensions/*` | kvai, kvwebui, kvcoder, kvdev. | `sdk`, their own npm dependencies; never `kernel`; another extension only when it is a `kvman.dependencies` entry: `import type`, or a runtime import of its `<package>/registry` subpath (which may import only `sdk` and holds no state) |
+| `extensions/*` | kvai, kvwebui, kvcoder, kvdev. | `sdk`, their own npm dependencies; never `kernel`; another extension only when it is a `kvman.dependencies` entry: `import type`, or a runtime import of a subpath it exports (such a subpath may import only `sdk` and holds no state) |
 | `presets/` | `coder.json`, `dev.json`. | — |
 
-At runtime, extensions talk to each other only through `ctx.exec` and the other job calls (§3). Type-only imports exist for typed calls (§3.2). An extension that offers a registry ("register your X with me") exports its helpers from `<package>/registry`, and its dependents may import that subpath (ADR 0001, 88).
+At runtime, extensions talk to each other only through `ctx.exec` and the other job calls (§3). Type-only imports exist for typed calls (§3.2). An extension may export subpaths that its dependents import (ADR 0001, 89). To let others register things with it, an extension exposes public commands and keeps what it receives in its own store (ADR 0001, 91).
 
 ## 1.5 Core extensions
 

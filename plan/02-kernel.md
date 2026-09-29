@@ -131,13 +131,14 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 **Hot reload.**
 - A `path:` extension's folder is watched. On a change, every worker reloads it and its registrations are replaced. Running jobs finish on the old code.
 - A reload that fails keeps the previous code and logs the error.
+- After a reload, the extension's `kernel.started` handler runs again (§2.15).
 - A reload doesn't touch the extensions that depend on it. If the new version no longer satisfies a dependent's range, or drops a name a dependent calls, the reload still applies, a warning is logged, and those calls fail `NOT_FOUND`. The start-time checks apply again at the next start.
 
 **Access.**
 - A registration is private by default: only its own extension can call it.
 - With `public: true`, other extensions and HTTP clients can call it too. Calling a private name from outside fails with `NOT_PUBLIC`.
 - `public` is the only check between extensions: a caller doesn't have to declare the callee as a dependency. Declared dependencies are for presence and version checks, load order, and imports.
-- The boot function is the only lifecycle. An extension that offers a registry (kvcoder's connectors) is extended from the other extension's boot function through its helper, and reads those registrations when it needs them.
+- **Registering with another extension.** An extension that wants others to register things with it (kvcoder's connectors) exposes public commands, and stores entries in its own store keyed by the caller. Contributors call them from their `kernel.started` handler (§2.15).
 
 ## 2.10 Presets
 
@@ -206,7 +207,8 @@ Going over a limit fails loudly and never cuts anything off.
 5. Ask for trust.
 6. Start the workers, which load the extensions (`EXTENSION_INVALID`). In `web` mode, an extension whose namespace is `kernel.web.home` must declare `kvman.web` (`EXTENSION_INVALID` otherwise).
 7. Delete expired job rows, then resume unfinished jobs and due schedules.
-8. Listen on the port (`PORT_IN_USE`), then print the URL.
+8. Run the `kernel.started` handlers in dependency order (10 s budget; a failure is logged, and start goes on).
+9. Listen on the port (`PORT_IN_USE`), then print the URL.
 
 **Stop (Ctrl+C).**
 1. HTTP stops taking requests.
@@ -234,7 +236,7 @@ ctx.registerHandler('kernel.job.failed', {
 | `kernel.job.succeeded` | an async or scheduled job ends `succeeded` | `{ jobId, name, caller, workspaceId }` |
 | `kernel.job.cancelled` | any job ends `cancelled` | `{ jobId, rootId, name, workspaceId, reason }` |
 | `kernel.process.exited` | a process from §2.16 exits by itself | `{ extension, workspaceId, name, exitCode, signal }` |
-| `kernel.started` | once per start, after every extension loads | `{}` |
+| `kernel.started` | once per start, after every extension loads and before HTTP starts; again for a hot-reloaded extension | `{}` |
 | `kernel.stopping` | at the start of shutdown | `{}` |
 
 Handler inputs never include a job's input or output. An unknown point fails the load with `EXTENSION_INVALID`.
@@ -242,6 +244,7 @@ Handler inputs never include a job's input or output. An unknown point fails the
 - **Delivery.** Each occurrence queues one async job per registered handler, in the same SQLite transaction that records the job's end, so a crash never loses or duplicates a handler call.
 - **Handler jobs.** They are ordinary async jobs, with retries and timeouts. Their caller is `{ kind: 'kernel' }`, and their workspace is the job's (Home for `started` and `stopping`).
 - **Loop safety.** Jobs started by a handler (the handler job and everything nested in it) never trigger handlers.
+- **Started.** kvman runs the `kernel.started` handlers before it starts HTTP, in dependency order, with a 10 s budget. A handler that fails is logged, and kvman still starts. A `path:` hot reload runs the reloaded extension's handler again.
 - **Stopping.** `kernel.stopping` handlers run at the start of shutdown, before running jobs are aborted, within the 10 s budget. Unfinished ones are dropped, not resumed.
 
 ## 2.16 Processes

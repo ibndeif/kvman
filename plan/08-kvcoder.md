@@ -28,7 +28,7 @@ kvcoder is the app-building harness, built on kvai and kvwebui. Its agent has on
 1. **Build the prompt**, in this order:
    - the base prompt: English, telling the model to reply in `kernel.language` unless the person writes in another language;
    - the sections, by `order` (§8.4);
-   - the connector index: each connector's name and description, plus the binary connectors whose checks passed.
+   - the connector index: each registered connector's name and description (binary connectors only when their check passed).
 2. **Call the model.** `kvai.complete` with the session's messages (after the summary) and the one tool `bash { command, description, timeoutMs? }`. Deltas stream to the chat.
 3. **Handle the answer.**
    - **Bash calls.** For each call in the assistant message, kvcoder decides how it runs (§8.3). Then it queues the next step, or suspends the turn.
@@ -38,12 +38,12 @@ kvcoder is the app-building harness, built on kvai and kvwebui. Its agent has on
 
 | The command is | It runs as |
 |---|---|
-| `<connector> <command> '<json>'` (or JSON as a heredoc on stdin), standing alone | the connector's kernel command, through `ctx.exec`; the result is the output as JSON text, or `error <code>: <message>` with exit code 1 |
+| `<connector> <command> '<json>'` for a commands connector (or JSON as a heredoc on stdin), standing alone | the registered kernel command, through `ctx.exec`; the result is the output as JSON text, or `error <code>: <message>` with exit code 1 |
 | the same with `--async` | kvcoder's own job `kvcoder.connector.run` (which runs the command); prints `started <jobId>`. When it ends, the result is appended as a message, and starts a turn if the session is idle. |
-| `<connector> -h` / `<connector> <command> -h` | the connector's command list / that command's input and output JSON Schemas |
+| `<connector> -h` / `<connector> <command> -h` (commands connectors) | the connector's commands with descriptions / that command's description, input and output JSON Schemas, and examples |
 | `ask …`, `subagent run …` | built-in connectors that suspend the turn (§8.5) |
 | `jobs list`, `jobs cancel <id>` | built-in connector commands for `--async` jobs |
-| anything else | real bash (below) |
+| anything else, including binary connectors (`gh …`) | real bash (below) |
 
 **Real bash.**
 - It runs `bash -lc <command>` in the workspace folder.
@@ -53,50 +53,58 @@ kvcoder is the app-building harness, built on kvai and kvwebui. Its agent has on
 
 ## 8.4 Extending kvcoder
 
-An extension that depends on kvcoder imports its registry helpers from `@kvman/kvcoder/registry`: the `<package>/registry` subpath any extension may offer (ADR 0001, 88). The helper mirrors the SDK's `ctx.registerCommand(name, options)`.
+Other extensions extend kvcoder by calling its public commands. kvcoder keeps what they register in its own store, and reads only its own store while running a turn. It never calls other extensions to build a prompt.
+
+**A connector** is a word the agent can type in bash. There are two kinds.
 
 ```ts
-import { z, type Ctx } from '@kvman/sdk';
-import { registerConnector, registerSection, registerBinary } from '@kvman/kvcoder/registry';
+// A commands connector: `ext new '<json>'` runs kvdev's own public command.
+await ctx.exec('kvcoder.connector.register', {
+  name: 'ext',                                   // the word the agent types
+  description: 'Create and test kvman extensions.',
+  commands: [{
+    name: 'new',                                 // the second word: ext new '<json>'
+    command: 'kvdev.ext.new',                    // your own public command
+    examples: [{ description: 'Scaffold a notes extension', input: { name: 'notes', namespace: 'notes', folder: './notes' } }],
+  }],
+});
 
-export default (ctx: Ctx) => {
-  const notes = registerConnector(ctx, 'notes', 'Take and search notes in this workspace.');
+// A binary connector: a program on the system, run in real bash.
+await ctx.exec('kvcoder.connector.register', {
+  name: 'gh',
+  description: 'GitHub CLI.',
+  binary: { check: 'gh --version', install: 'https://cli.github.com' },
+});
+```
 
-  notes.registerCommand('add', {
-    description: 'Adds a note.',
-    input: z.object({ text: z.string().describe('The note text') }),
-    output: z.object({ id: z.string() }),
-    examples: [{ description: 'Remember a decision', input: { text: 'Use SQLite.' } }],
-    handle: async (input) => ({ id: (await ctx.store.collection('notes').insert(input)).id }),
+- **Two kinds.** A connector has exactly one of `commands` or `binary`.
+- **Commands connectors** run their commands through `ctx.exec`, with no shell. So validation, `--async`, cancel, retries, and timeouts are the kernel's. `-h` is built from each command's registered description and JSON Schema (through `kernel.extensions.list`) and its `examples`. A `command` must be a public command of the extension registering it, or the call fails with `VALIDATION_FAILED`.
+- **Binary connectors** are run by the agent in real bash, and `-h` is the program's own. One is listed in the prompt only when its `check` passes; checks run at a session's first step (5 s timeout each), and the results are stored in the session record. The setting `kvcoder.connectors` adds binary connectors from the preset or the person.
+
+**Sections** are text in the system prompt. The owner pushes them whenever its data changes:
+
+```ts
+await ctx.exec('kvcoder.section.set', { id: 'open-todos', title: 'Open todos', order: 40, sessionId, content: list });
+await ctx.exec('kvcoder.section.remove', { id: 'open-todos', sessionId });
+```
+
+- A section without `sessionId` is in every prompt of the workspace; one with it is in that session's prompts only.
+- Caps: 16 KB per section, 64 KB in total (`TOO_LARGE`).
+
+**Ownership and lifetime.**
+- **Ownership.** The caller (`ctx.job.caller`) owns what it registers, and only the owner replaces or removes it. A connector name owned by another extension fails with `kvcoder/NAME_TAKEN`.
+- **Connectors last one run.** kvcoder clears them in its own `kernel.started` handler. That handler runs first, because registering extensions depend on kvcoder (§2.15). Each extension then registers its connectors again in its own `kernel.started` handler:
+
+  ```ts
+  ctx.registerHandler('kernel.started', {
+    description: 'Registers kvdev connectors with kvcoder.',
+    handle: () => ctx.exec('kvcoder.connector.register', { … }),
   });
+  ```
+- **Sections are stored until removed.**
+- **Stale entries.** When kvcoder reads, it ignores any connector or section whose owner isn't loaded.
 
-  registerSection(ctx, 'notes-guide', { title: 'Notes', order: 50, content: async () => 'Use `notes add` to remember decisions.' });
-  registerBinary(ctx, 'gh', { description: 'GitHub CLI.', check: 'gh --version', install: 'https://cli.github.com' });
-};
-```
-
-What the agent sees:
-
-```
-prompt:  notes — Take and search notes in this workspace.
-bash:    notes -h                              → the commands with their descriptions
-bash:    notes add -h                          → input and output (from the zod schemas and .describe()), and the examples
-bash:    notes add '{"text":"Use SQLite."}'    → {"id":"…"}
-```
-
-| Call | Registers |
-|---|---|
-| `registerConnector(ctx, name, description)` | a connector, returned as an object with `registerCommand` |
-| `connector.registerCommand(name, { description, input, output, handle, examples?, timeoutMs?, retries? })` | an ordinary public kernel command, `<namespace>.<connector>.<command>`, collapsed to `<namespace>.<command>` when the connector's name equals the namespace (`notes.add`; kvdev's `ext new` is `kvdev.ext.new`). Sync, `--async`, cancel, retries, and timeouts are the kernel's, and the UI and other extensions can call it too. |
-| `registerSection(ctx, id, { title, order, content: async ({ sessionId }) => string })` | text added to the prompt at every step |
-| `registerBinary(ctx, name, { description, check, install? })` | a system binary, listed when `check` passes |
-
-**Testing.** `runConnector(kernel, 'notes add \'{"text":"hi"}\'')`, used with `createTestKernel`, parses the line exactly as kvcoder does and returns `{ output, exitCode }`, including for `-h`.
-
-**How kvcoder finds them (internal).** The helper also registers ordinary public queries: `<prefix>.help` per connector (which marks it, and serves `-h`), `<namespace>.section.<id>` per section, and `<namespace>.binary.<name>` per binary.
-- **Each step** makes one `kernel.extensions.list` call to find them, and calls the section queries in parallel, with a 2 s timeout each. A failing section contributes nothing to that step and adds a notice. Caps are 16 KB per section and 64 KB in total.
-- **Binaries** are checked at a session's first step (5 s timeout each), and the results are stored in the session record. The setting `kvcoder.binaries` adds more.
-- Nothing about connectors is stored, so a hot reload shows up at the next step.
+**Testing.** `runConnector(kernel, 'ext new \'{…}\'')` from `@kvman/kvcoder/testing`, used with `createTestKernel`, parses a line exactly as kvcoder does and returns `{ output, exitCode }`, including for `-h`.
 
 ## 8.5 Built-in connectors
 
@@ -137,6 +145,12 @@ subagent run '{ "task", "mode": "fresh" | "fork", "connectors"?: [names], "bash"
 | `kvcoder.turn.cancel` | command | `{ sessionId }` → `{}` |
 | `kvcoder.question.answer` | command, user only | `{ questionId, answer }` → `{ jobId }` |
 | `kvcoder.prompt.get` | query | `{ sessionId }` → the exact system prompt |
+| `kvcoder.connector.register` | command | `{ name, description, commands: [{ name, command, examples? }] }` or `{ name, description, binary: { check, install? } }` → `{}` |
+| `kvcoder.connector.unregister` | command | `{ name }` → `{}` (the owner only) |
+| `kvcoder.connector.list` | query | `{}` → `[{ name, description, owner, kind: 'commands' \| 'binary', commands?, binary? }]` |
+| `kvcoder.section.set` | command | `{ id, title, order, content, sessionId? }` → `{}` |
+| `kvcoder.section.remove` | command | `{ id, sessionId? }` → `{}` |
+| `kvcoder.section.list` | query | `{ sessionId? }` → `[{ id, title, order, owner, sessionId?, size }]` |
 
 All are public. `Session` is `{ id, title, status, parentId?, model, usage, createdAt, updatedAt }`.
 
@@ -158,5 +172,5 @@ All are public. `Session` is `{ id, title, status, parentId?, model, usage, crea
 | `kvcoder.maxSteps` | 50 |
 | `kvcoder.bash.approval` | `ask` (`auto`) |
 | `kvcoder.compactAt` | 0.8 |
-| `kvcoder.binaries` | `[]` |
+| `kvcoder.connectors` | `[]` (binary connectors: `{ name, description, binary: { check, install? } }`) |
 | `kvcoder.sessions.keep` | 100 |

@@ -18,7 +18,7 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
 - **Read:** `01` §1.4; `12` §12.1; `CLAUDE.md`.
 - **Build:**
   - The pnpm workspace (Node 24) and TypeScript strict, with the `CLAUDE.md` §5 flags.
-  - ESLint with the import walls of §1.4 (including the `<package>/registry` rule), `max-lines` 300, and no `any`.
+  - ESLint with the import walls of §1.4 (including the exported-subpath rule), `max-lines` 300, and no `any`.
   - Vitest, and the gate scripts `typecheck`, `lint`, `test`, `build`, `bench:check` (the benchmark runner, with no benchmarks yet).
   - Changesets for `sdk`, `testkit`, and `extensions/*`.
   - Empty `packages/sdk`, `kernel`, `cli`, and `testkit`.
@@ -88,6 +88,7 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
   - Nested progress to the root job.
   - Handler points (§2.15): `ctx.registerHandler`, delivery in the job's final transaction, loop safety, and `kernel.started` and `kernel.stopping`.
   - The shutdown sequence (abort, 10 s, workers stop, jobs stay queued).
+  - `kernel.started` handlers in dependency order before the kernel reports ready (10 s budget).
   - Resuming tested by closing and reopening a test kernel on the same home. The SIGKILL crash tests come in M1.8, once the bin exists.
   - The `execAsync` benchmark.
 - **Done when:**
@@ -108,6 +109,7 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
   - Locale catalogs merged per language.
   - `path:` hot reload (a watch, a reload in every worker, and the old code kept on failure).
   - The process service (§2.16), `kernel.processes.list`, and the `kernel.process.exited` point.
+  - Running a hot-reloaded extension's `kernel.started` handler again.
 - **Done when:**
   - Every `kernel.*` command and query behaves as §2.12 says, including opening an open folder and closing Home.
   - `kernel.secrets.list` never returns a value.
@@ -212,7 +214,7 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
   - `extensions/kvcoder`: sessions and messages, step chains with follow chunks, and steering.
   - Real bash (approval, limits, truncation).
   - The connector call path (JSON input, `-h`, `--async` with result messages, `jobs`).
-  - `@kvman/kvcoder/registry` (`registerConnector`, `registerSection`, `registerBinary`, `runConnector`), with `-h` generated from descriptions, schemas, and examples.
+  - Connector and section registration (`kvcoder.connector.*`, `kvcoder.section.*`, ownership, `kvcoder/NAME_TAKEN`, clearing at start), `-h` from descriptions, schemas, and examples, binary checks, and `runConnector` in `@kvman/kvcoder/testing`.
   - Section pulls with timeouts and caps.
   - `ask` and `subagent` (fresh or fork, connector subsets, parallel, `--async`).
   - Compaction, cancel, the restart rules, and retention.
