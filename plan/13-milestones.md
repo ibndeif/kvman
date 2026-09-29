@@ -212,7 +212,7 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
   - `extensions/kvcoder`: sessions and messages, step chains with follow chunks, and steering.
   - Real bash (approval, limits, truncation).
   - The connector call path (JSON input, `-h`, `--async` with result messages, `jobs`).
-  - `@kvman/kvcoder/connector` (`registerConnector`, `registerSection`, `registerBinary`).
+  - `@kvman/kvcoder/connector` (`registerConnector`, `registerSection`, `registerBinary`, `runConnector`), with `-h` generated from descriptions, schemas, and examples.
   - Section pulls with timeouts and caps.
   - `ask` and `subagent` (fresh or fork, connector subsets, parallel, `--async`).
   - Compaction, cancel, the restart rules, and retention.

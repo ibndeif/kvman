@@ -67,3 +67,16 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds,
     - `kvcoder.sessions.keep`: 100 top-level sessions per workspace; the oldest idle ones are deleted daily.
 
     The base prompt is English and tells the model to reply in `kernel.language` unless the person writes in another language.
+19. **Developer-facing API** (supersedes the call shapes and discovery in 5, 10, and 15). The helper mirrors the SDK's `ctx.registerCommand(name, options)`:
+    - `registerConnector(ctx, name, description)` → `connector.registerCommand(name, { description, input, output, handle, examples?, timeoutMs?, retries? })`.
+    - `registerSection(ctx, id, { title, order, content: async ({ sessionId }) => string })`.
+    - `registerBinary(ctx, name, { description, check, install? })`.
+    - `examples?: [{ description, input }]` are printed by `-h` as ready-to-copy calls.
+    - `runConnector(kernel, '<bash line>')` → `{ output, exitCode }` lets tests run a line exactly as kvcoder parses it, including `-h`.
+20. **Command names.** A connector command is `<namespace>.<connector>.<command>`, collapsed to `<namespace>.<command>` when the connector's name equals the namespace. A clash fails at load like any duplicate.
+21. **Discovery (internal to kvcoder).** The helper registers ordinary public queries next to the commands:
+    - `<prefix>.help` per connector, which marks it and serves `-h`;
+    - `<namespace>.section.<id>` per section → `{ title, order, content }`;
+    - `<namespace>.binary.<name>` per binary → `{ description, check, install? }`.
+
+    At each step kvcoder makes one `kernel.extensions.list` call to find them, calls the section queries (in parallel, 2 s timeout each, same caps), and runs binary checks at a session's first step, storing the results in the session record. Nothing about connectors is stored.

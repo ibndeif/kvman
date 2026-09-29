@@ -53,24 +53,50 @@ kvcoder is the app-building harness, built on kvai and kvwebui. Its agent has on
 
 ## 8.4 Extending kvcoder
 
-An extension that depends on kvcoder imports the helper `@kvman/kvcoder/connector`. It is the one runtime import of another extension that the walls allow.
+An extension that depends on kvcoder imports the helper `@kvman/kvcoder/connector`, the one runtime import of another extension the walls allow. The helper mirrors the SDK's `ctx.registerCommand(name, options)`.
 
 ```ts
+import { z, type Ctx } from '@kvman/sdk';
 import { registerConnector, registerSection, registerBinary } from '@kvman/kvcoder/connector';
 
 export default (ctx: Ctx) => {
-  const fs = registerConnector(ctx, 'fs', 'Read and edit workspace files.');
-  fs.registerCommand({ name: 'read', description: 'Reads a file.', input, output, handle });  // → <ns>.fs.read
-  registerSection(ctx, { id: 'rules', title: 'Rules', order: 60, content: async ({ sessionId }) => rulesText });
-  registerBinary(ctx, { name: 'gh', description: 'GitHub CLI.', check: 'gh --version', install: 'https://cli.github.com' });
+  const notes = registerConnector(ctx, 'notes', 'Take and search notes in this workspace.');
+
+  notes.registerCommand('add', {
+    description: 'Adds a note.',
+    input: z.object({ text: z.string().describe('The note text') }),
+    output: z.object({ id: z.string() }),
+    examples: [{ description: 'Remember a decision', input: { text: 'Use SQLite.' } }],
+    handle: async (input) => ({ id: (await ctx.store.collection('notes').insert(input)).id }),
+  });
+
+  registerSection(ctx, 'notes-guide', { title: 'Notes', order: 50, content: async () => 'Use `notes add` to remember decisions.' });
+  registerBinary(ctx, 'gh', { description: 'GitHub CLI.', check: 'gh --version', install: 'https://cli.github.com' });
 };
 ```
 
-- `registerCommand` registers an ordinary public kernel command, `<namespace>.<connector>.<name>`. Sync and async behavior are the kernel's.
-- The helper registers one query, `<namespace>.kvcoder.get { sessionId }`, which returns the extension's connectors, sections, and binaries.
-- **At each step**, kvcoder calls every such query (found through `kernel.extensions.list`) in parallel, with a 2 s timeout. One that fails or times out contributes nothing to that step and adds a notice.
-- **Section caps.** 16 KB per section and 64 KB in total.
-- **Binary checks.** A binary's `check` runs once per session (5 s timeout), and only the binaries that pass are listed. The setting `kvcoder.binaries` adds more binaries.
+What the agent sees:
+
+```
+prompt:  notes — Take and search notes in this workspace.
+bash:    notes -h                              → the commands with their descriptions
+bash:    notes add -h                          → input and output (from the zod schemas and .describe()), and the examples
+bash:    notes add '{"text":"Use SQLite."}'    → {"id":"…"}
+```
+
+| Call | Registers |
+|---|---|
+| `registerConnector(ctx, name, description)` | a connector, returned as an object with `registerCommand` |
+| `connector.registerCommand(name, { description, input, output, handle, examples?, timeoutMs?, retries? })` | an ordinary public kernel command, `<namespace>.<connector>.<command>`, collapsed to `<namespace>.<command>` when the connector's name equals the namespace (`notes.add`; kvdev's `ext new` is `kvdev.ext.new`). Sync, `--async`, cancel, retries, and timeouts are the kernel's, and the UI and other extensions can call it too. |
+| `registerSection(ctx, id, { title, order, content: async ({ sessionId }) => string })` | text added to the prompt at every step |
+| `registerBinary(ctx, name, { description, check, install? })` | a system binary, listed when `check` passes |
+
+**Testing.** `runConnector(kernel, 'notes add \'{"text":"hi"}\'')`, used with `createTestKernel`, parses the line exactly as kvcoder does and returns `{ output, exitCode }`, including for `-h`.
+
+**How kvcoder finds them (internal).** The helper also registers ordinary public queries: `<prefix>.help` per connector (which marks it, and serves `-h`), `<namespace>.section.<id>` per section, and `<namespace>.binary.<name>` per binary.
+- **Each step** makes one `kernel.extensions.list` call to find them, and calls the section queries in parallel, with a 2 s timeout each. A failing section contributes nothing to that step and adds a notice. Caps are 16 KB per section and 64 KB in total.
+- **Binaries** are checked at a session's first step (5 s timeout each), and the results are stored in the session record. The setting `kvcoder.binaries` adds more.
+- Nothing about connectors is stored, so a hot reload shows up at the next step.
 
 ## 8.5 Built-in connectors
 
