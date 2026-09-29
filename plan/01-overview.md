@@ -40,10 +40,10 @@ A pnpm monorepo, Node 24, TypeScript strict.
 | `packages/sdk` | The extension API: `ctx` types, zod, and the shared shapes (preset, extension manifest, Problem, job, envelope). | `zod` |
 | `packages/kernel` | Everything the kernel does, including HTTP. | `sdk`, its declared dependencies |
 | `packages/cli` | The `kvman` bin; it runs the kernel in the same process. | `kernel`, `sdk` |
-| `extensions/*` | kvai, kvwebui, kvinterviewer, kvcoder, kvdev. | `sdk`, their own npm dependencies; never `kernel` or another extension |
+| `extensions/*` | kvai, kvwebui, kvinterviewer, kvcoder, kvdev. | `sdk`, their own npm dependencies; never `kernel`; another extension only with `import type`, when it is a `kvman.dependencies` entry |
 | `presets/` | `coder.json`, `dev.json`. | — |
 
-Extensions talk to each other only through `ctx.exec` and the other job calls (§3), never by importing each other.
+At runtime, extensions talk to each other only through `ctx.exec` and the other job calls (§3). Type-only imports exist for typed calls (§3.2).
 
 ## 1.5 Core extensions
 

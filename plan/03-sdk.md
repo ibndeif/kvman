@@ -51,7 +51,7 @@ export default (ctx: Ctx) => {
 
 **Typing calls to other extensions.**
 - The SDK declares empty `interface Commands {}` and `interface Queries {}`, which map each name to `{ input; output }`.
-- An extension augments them for its public names and ships the declaration in its package. A caller then gets typed input and output after `import type {} from '@kvman/kvai'`.
+- An extension augments them for its public names and ships the declaration in its package. A caller then gets typed input and output after `import type {} from '@kvman/kvai'`. This type-only import is allowed only when the other extension is a `kvman.dependencies` entry and a devDependency; runtime imports of another extension are forbidden.
 - A name that isn't declared takes and returns `unknown`.
 - There's no generator, and the kernel validates at runtime either way.
 
@@ -62,6 +62,7 @@ export default (ctx: Ctx) => {
 | Field | Is |
 |---|---|
 | `id` | The job id (UUIDv7). A sync job has one too, but no row. |
+| `rootId` | The id of the first job of this sync chain (the one started by HTTP, a schedule, or the async queue). It equals `id` for that job and is inherited by nested `ctx.exec` calls. |
 | `workspace` | `{ id, name, path }`. |
 | `caller` | `{ kind: 'user' }` or `{ kind: 'extension', name }`. |
 | `signal` | An `AbortSignal`, aborted on cancel, timeout, or shutdown. |

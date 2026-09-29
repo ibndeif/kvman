@@ -149,3 +149,10 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds 
 72. **Never relaxed:** secrets handling (only in `secrets.json`; never logged, stored elsewhere, or returned), and the 127.0.0.1 listener with Host and Origin checks. Other behavior (the trust prompt, `public` checks, read-only queries) is ordinary tested behavior.
 73. **archive/v2** may be read and its code reused when a step needs it, adapted to the new plan; the new plan wins over old code.
 74. **Web home.** `kernel.web.home` defaults to `ui` (kvwebui's namespace). In `--mode web`, if no loaded extension with that namespace declares `kvman.web`, kvman refuses to start with `EXTENSION_INVALID`.
+
+## From the kvwebui rounds
+
+75. **Root job.** `ctx.job.rootId` is the id of the first job of a sync chain (the one started by HTTP, a schedule, or the async queue). It equals `ctx.job.id` for that first job and is inherited by nested `ctx.exec` calls.
+76. **Job id in the envelope.** Command and query answers carry the job id: `{ ok: true, output, jobId }` and `{ ok: false, problem, jobId }`.
+77. **Extension listing.** `kernel.extensions.list` returns each command and query as `{ name, description, public, input, output }`, with input and output as JSON Schema.
+78. **Type-only imports.** See ADR 0002, 12.

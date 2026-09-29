@@ -6,8 +6,8 @@ The kernel serves the API with Hono (`hono` and `@hono/node-server`) on `127.0.0
 
 | Route | Body → answer |
 |---|---|
-| `POST /api/commands/:type` | `{ input, workspaceId?, async? }` → `{ ok: true, output }`, or with `async: true`, `{ ok: true, jobId }` |
-| `POST /api/queries/:type` | `{ input, workspaceId? }` → `{ ok: true, output }` |
+| `POST /api/commands/:type` | `{ input, workspaceId?, async? }` → `{ ok: true, output, jobId }`, or with `async: true`, `{ ok: true, jobId }` |
+| `POST /api/queries/:type` | `{ input, workspaceId? }` → `{ ok: true, output, jobId }` |
 | `GET /api/jobs/:id` | → `{ ok: true, job }` |
 | `GET /api/jobs/:id/stream` | Server-Sent Events (§4.4) |
 | `POST /api/jobs/:id/cancel` | → `{ ok: true }` |
@@ -16,7 +16,7 @@ The kernel serves the API with Hono (`hono` and `@hono/node-server`) on `127.0.0
 | `GET /api/locales/:lang` | → `{ ok: true, catalog }` (§2.11) |
 
 - `workspaceId` defaults to Home.
-- **The envelope.** Every JSON answer is `{ ok: true, … }` or `{ ok: false, problem }`, with status 200. The two exceptions: a file download returns raw content, and a body that isn't valid JSON gets 400.
+- **The envelope.** Every JSON answer is `{ ok: true, … }` or `{ ok: false, problem }`, with status 200. A command or query failure also carries its `jobId`: `{ ok: false, problem, jobId }`. The two exceptions: a file download returns raw content, and a body that isn't valid JSON gets 400.
 
 **Static files.**
 - `GET /web/<namespace>/<path>` serves a file from that extension's `kvman.web` folder. A path that leaves the folder, or a missing file, gets 404.

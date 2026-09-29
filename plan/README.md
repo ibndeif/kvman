@@ -9,13 +9,14 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `03-sdk.md` | The extension API (`ctx`) |
 | `04-http-api.md` | Routes, the envelope, security, the job stream |
 | `05-errors.md` | The Problem shape and the kernel's error codes |
+| `06-kvwebui.md` | The web app: frame, contributions, view trees, effects, built-in pages |
 | `adr/0001-kernel.md` | Every kernel decision, with the product owner's answers |
-| `adr/0002-kvwebui.md` | The first kvwebui decisions (UI form, discovery, static files, stack) |
+| `adr/0002-kvwebui.md` | Every kvwebui decision |
 
 ## Still to design
 
-1. The core extensions, one round each: kvai, kvwebui, kvinterviewer, kvcoder, kvdev.
+1. The remaining core extensions: kvai, kvinterviewer, kvcoder, kvdev.
 2. The `coder` and `dev` presets.
 3. The milestones: the build order and each one's Build and Done-when lists.
 
-There are no open kernel questions. `adr/0002-kvwebui.md` holds the first kvwebui answers.
+There are no open questions.

@@ -173,7 +173,7 @@ All are public. Types are in `@kvman/sdk`.
 | `kernel.files.get` | query | `{ id }` → `File` |
 | `kernel.files.list` | query | `{ limit }` → `File[]` in this workspace, newest first |
 | `kernel.files.unlink` | command | `{ id }` → `{}` |
-| `kernel.extensions.list` | query | `{}` → `[{ name, version, source, namespace, commands, queries, settings }]` |
+| `kernel.extensions.list` | query | `{}` → `[{ name, version, source, namespace, commands, queries, settings }]`; each command and query is `{ name, description, public, input, output }`, with `input` and `output` as JSON Schema |
 | `kernel.health.get` | query | `{}` → `{ version, preset, mode, workers, uptimeMs }` |
 
 There is no sandbox in this phase, so extensions can call these too.
