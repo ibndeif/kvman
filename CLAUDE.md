@@ -31,7 +31,7 @@ Milestones are in `plan/13-milestones.md`. Do them strictly in order. For each o
 - **Jobs.** Everything runs as a job: a **command** (may write) or a **query** (read-only).
   - `ctx.exec` runs a job now and returns its output.
   - `ctx.execAsync` and `ctx.schedule` make SQLite rows that survive restarts and retry.
-  - There are no events, hooks, or listeners.
+  - There are no events or listeners. Owners offer fixed points that others register handlers for: the kernel's job and lifecycle points (`ctx.registerHandler`), and extension registries such as kvcoder's connectors.
 - **Workers.** A `worker_threads` pool runs every job. The kernel's main thread never runs extension code. `AsyncLocalStorage` gives each handler its current job (workspace, caller, signal).
 - **Storage.** One SQLite database (better-sqlite3, WAL), with a connection per worker. Extensions get Promise-based `ctx.store` (kv and JSON collections), per workspace plus `global`. Each call commits alone; `transaction(tx => …)` is synchronous.
 - **Extensions.**

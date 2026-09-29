@@ -161,3 +161,15 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds 
 81. **Dependency cycles.** A cycle in `kvman.dependencies` (A → B → A, or longer) stops kvman with `EXTENSION_INVALID`, printing the cycle (`@a/x → @b/y → @a/x`). Extensions can still call each other's public commands at runtime without declaring each other.
 82. **Calls between extensions.** The kernel checks only `public`: any extension may call any public name. Declared dependencies are for presence and version checks at start, load order, and imports. There is no second lifecycle: an extension that offers a registry (kvcoder's connectors, sections, and binaries) is extended from the other extension's boot function through its helper, and reads those registrations when it needs them (ADR 0005, 5 and 10). Registering is the handover. An earlier answer requiring declared calls was withdrawn in favor of this.
 83. **Hot reload and dependents.** Reloading a `path:` extension doesn't touch the extensions that depend on it; their calls reach the new registrations. If the new version no longer satisfies a dependent's range, or drops a name a dependent calls, the reload still applies, a warning is logged, and those calls fail `NOT_FOUND`. The start-time checks apply again at the next start.
+84. **Kernel handler points.** The kernel uses the same registry pattern as extensions (82): it owns a fixed set of points, and an extension registers a handler for one in its boot function with `ctx.registerHandler(point, { description, handle, retries?, timeoutMs? })`. There are still no events or listeners.
+    - **Points:**
+      - `kernel.job.failed { jobId, rootId, name, caller, workspaceId, problem, attempts }`: any job, sync or async.
+      - `kernel.job.succeeded { jobId, name, caller, workspaceId }`: async and scheduled jobs.
+      - `kernel.job.cancelled { jobId, rootId, name, workspaceId, reason }`: any job.
+      - `kernel.started {}` and `kernel.stopping {}`.
+      - Inputs and outputs are never included. An unknown point fails the load with `EXTENSION_INVALID`.
+    - **Delivery.** Each occurrence queues one async job per handler, in the same SQLite transaction that records the job's end, so a crash never loses or duplicates a handler call. The caller is `{ kind: 'kernel' }`, and the workspace is the job's (Home for `started` and `stopping`).
+    - **Loop safety.** Jobs started by a handler (the handler job and everything nested in it) never trigger handlers.
+    - **Start and stop.** `kernel.started` is queued once after every extension loads. `kernel.stopping` runs at the start of shutdown, before jobs are aborted, within the 10 s budget; unfinished handlers are dropped, not resumed.
+    - `kernel.extensions.list` shows each extension's handlers.
+85. **Kernel caller.** A job's caller may also be `{ kind: 'kernel' }` (handler jobs).

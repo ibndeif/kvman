@@ -57,6 +57,6 @@ Each is designed in its own round, after the kernel.
 
 ## 1.6 Principles for this phase
 
-- There are no hooks, events, or listeners: only commands, queries, and schedules, each under its extension's namespace.
+- There are no events or listeners: only commands, queries, and schedules, each under its extension's namespace. An owner may offer a fixed set of points that others register handlers for: the kernel's job and lifecycle points (§2.15), and registries like kvcoder's connectors (§8.4).
 - There are no sockets, no RPC, and no sandbox. The one push channel is a job's progress stream (§4.4).
 - Build the simplest thing that can be maintained and built on.

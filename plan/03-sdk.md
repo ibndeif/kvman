@@ -37,6 +37,7 @@ export default (ctx: Ctx) => {
   - Both may set `maxInputBytes` and `maxOutputBytes` (default 1 MiB, at most 32 MiB).
   - Commands also take `retries` (default 3).
   - Settings take `description`, `schema`, and `default`.
+  - `ctx.registerHandler(point, { description, handle, retries?, timeoutMs? })` registers a handler for one of the kernel's points (§2.15).
   - Every name starts with the extension's namespace. Every description is required and is one sentence.
 
 ## 3.2 Job calls
@@ -65,7 +66,7 @@ export default (ctx: Ctx) => {
 | `id` | The job id (UUIDv7). A sync job has one too, but no row. |
 | `rootId` | The id of the first job of this sync chain (the one started by HTTP, a schedule, or the async queue). It equals `id` for that job and is inherited by nested `ctx.exec` calls. |
 | `workspace` | `{ id, name, path }`. |
-| `caller` | `{ kind: 'user' }` or `{ kind: 'extension', name }`. |
+| `caller` | `{ kind: 'user' }`, `{ kind: 'extension', name }`, or `{ kind: 'kernel' }` (handler jobs, §2.15). |
 | `signal` | An `AbortSignal`, aborted on cancel, timeout, or shutdown. |
 | `progress(data)` | Sends a progress chunk (JSON, at most 64 KiB) to the stream of `rootId`, as `{ source: '<extension name>', data }` (§4.4). |
 

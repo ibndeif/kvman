@@ -79,13 +79,14 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
 
 ### M1.5 Async jobs and schedules
 
-- **Read:** `02` §2.1 (rows, retention), §2.3, §2.4, §2.14 (stop); `12` §12.2.
+- **Read:** `02` §2.1 (rows, retention), §2.3, §2.4, §2.14 (stop), §2.15; `12` §12.2.
 - **Build:**
   - `execAsync` job rows with first-in, first-out start, retries with backoff, `ctx.problem` without retry, and cancel (`ctx.cancel`) with shared signals for nested sync jobs.
   - Retention.
   - Resuming queued and running jobs at start.
   - `ctx.schedule` (`at`, `cron` with croner), `schedule.cancel`, the one-time delete, and a missed run once at start.
   - Nested progress to the root job.
+  - Handler points (§2.15): `ctx.registerHandler`, delivery in the job's final transaction, loop safety, and `kernel.started` and `kernel.stopping`.
   - The shutdown sequence (abort, 10 s, workers stop, jobs stay queued).
   - Resuming tested by closing and reopening a test kernel on the same home. The SIGKILL crash tests come in M1.8, once the bin exists.
   - The `execAsync` benchmark.
@@ -93,6 +94,7 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
   - A failing job retries three times with 1, 2, and 4 s backoff (fake clock), then ends `failed`.
   - A cancelled job ends `cancelled` and its nested sync job sees the abort.
   - A cron schedule runs at each due time, and a missed one runs once.
+  - A failed sync job and a failed async job each queue one `kernel.job.failed` handler job. A handler that fails, or that runs a failing nested job, triggers no handlers. `kernel.started` runs once per start.
   - A test kernel reopened on the same home resumes a queued job and never reruns a finished one.
   - The benchmark meets its target.
 

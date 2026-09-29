@@ -25,7 +25,7 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 - **Validation.** The kernel checks a job's input against the registration's zod `input` before it runs, and its output against `output` after. A mismatch fails with `VALIDATION_FAILED`.
 - **Ordering.** Queued jobs start first-in, first-out and run in parallel. The kernel keeps no other ordering; an extension that needs one-at-a-time (such as one agent turn per session) guards it in its own store.
 - **Depth.** A chain of sync `ctx.exec` calls deeper than 16 fails with `TOO_DEEP`. An async job starts a new chain.
-- **Caller.** A job's caller is `{ kind: 'user' }` for an HTTP call, or `{ kind: 'extension', name }` for a call from an extension's handler. A scheduled job's caller is the extension that scheduled it.
+- **Caller.** A job's caller is `{ kind: 'user' }` for an HTTP call, `{ kind: 'extension', name }` for a call from an extension's handler, or `{ kind: 'kernel' }` for a handler job (§2.15). A scheduled job's caller is the extension that scheduled it.
 
 ## 2.2 Workers
 
@@ -177,7 +177,7 @@ All are public. Types are in `@kvman/sdk`.
 | `kernel.files.get` | query | `{ id }` → `File` |
 | `kernel.files.list` | query | `{ limit }` → `File[]` in this workspace, newest first |
 | `kernel.files.unlink` | command | `{ id }` → `{}` |
-| `kernel.extensions.list` | query | `{}` → `[{ name, version, source, namespace, commands, queries, settings }]`; each command and query is `{ name, description, public, input, output }`, with `input` and `output` as JSON Schema |
+| `kernel.extensions.list` | query | `{}` → `[{ name, version, source, namespace, commands, queries, settings, handlers }]`; each command and query is `{ name, description, public, input, output }`, with `input` and `output` as JSON Schema |
 | `kernel.health.get` | query | `{}` → `{ version, preset, mode, workers, uptimeMs }` |
 
 There is no sandbox in this phase, so extensions can call these too.
@@ -213,3 +213,31 @@ Going over a limit fails loudly and never cuts anything off.
 4. Async jobs that didn't finish stay `queued` and run again at the next start.
 
 A second Ctrl+C stops at once.
+
+## 2.15 Handler points
+
+The kernel owns a fixed set of points. An extension registers a handler for a point in its boot function:
+
+```ts
+ctx.registerHandler('kernel.job.failed', {
+  description: 'Records failed jobs.',
+  handle: async (info) => { /* … */ },
+  retries: 3, timeoutMs: 600_000,          // optional, as for commands
+});
+```
+
+| Point | Occurs | Handler input |
+|---|---|---|
+| `kernel.job.failed` | any job, sync or async, ends `failed` | `{ jobId, rootId, name, caller, workspaceId, problem, attempts }` |
+| `kernel.job.succeeded` | an async or scheduled job ends `succeeded` | `{ jobId, name, caller, workspaceId }` |
+| `kernel.job.cancelled` | any job ends `cancelled` | `{ jobId, rootId, name, workspaceId, reason }` |
+| `kernel.started` | once per start, after every extension loads | `{}` |
+| `kernel.stopping` | at the start of shutdown | `{}` |
+
+Handler inputs never include a job's input or output. An unknown point fails the load with `EXTENSION_INVALID`.
+
+- **Delivery.** Each occurrence queues one async job per registered handler, in the same SQLite transaction that records the job's end, so a crash never loses or duplicates a handler call.
+- **Handler jobs.** They are ordinary async jobs, with retries and timeouts. Their caller is `{ kind: 'kernel' }`, and their workspace is the job's (Home for `started` and `stopping`).
+- **Loop safety.** Jobs started by a handler (the handler job and everything nested in it) never trigger handlers.
+- **Stopping.** `kernel.stopping` handlers run at the start of shutdown, before running jobs are aborted, within the 10 s budget. Unfinished ones are dropped, not resumed.
+
