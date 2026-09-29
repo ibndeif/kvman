@@ -11,13 +11,15 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `05-errors.md` | The Problem shape and the kernel's error codes |
 | `06-kvwebui.md` | The web app: frame, contributions, view trees, effects, built-in pages |
 | `07-kvai.md` | LLM calls, providers, models |
+| `08-kvinterviewer.md` | Asking the person questions, with continuations |
 | `adr/0001-kernel.md` | Every kernel decision, with the product owner's answers |
 | `adr/0002-kvwebui.md` | Every kvwebui decision |
 | `adr/0003-kvai.md` | Every kvai decision |
+| `adr/0004-kvinterviewer.md` | Every kvinterviewer decision |
 
 ## Still to design
 
-1. The remaining core extensions: kvinterviewer, kvcoder, kvdev.
+1. The remaining core extensions: kvcoder, kvdev.
 2. The `coder` and `dev` presets.
 3. The milestones: the build order and each one's Build and Done-when lists.
 

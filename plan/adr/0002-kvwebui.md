@@ -19,7 +19,7 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds 
 
    Ids are local to the extension (full id `<namespace>.<id>`), and titles and texts are translation keys.
 7. **Routes.**
-   - A page's URL is `/<namespace>/<page>`, and a page may declare params (`/coder/session/:sessionId`).
+   - A page's URL is `/<namespace>/<page>`, and a page may declare params (`/kvcoder/session/:sessionId`).
    - The preset's `kvwebui.home` names the page shown at `/`.
    - The current workspace is kvwebui state, not part of the URL.
 8. **Data binding.**
@@ -92,7 +92,7 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds 
     - `form { command, fixed?, submit, then? }`. The fields come from the command's input JSON Schema, minus `fixed`. Each label is the key `<command>.fields.<field>`, else the field's description.
     - `button { text, command, input, confirm?, style?, then? }`.
     - `Then` is `'rerun'` (the default), `{ navigate, params? }`, or `{ toast, level? }`. Effects apply after `then`.
-26. **Page params.** `params: string[]`: `{ id: 'session', params: ['sessionId'] }` routes to `/coder/session/:sessionId`. A nav item may point only at a page without params. `navigate` and `then` must give every param.
+26. **Page params.** `params: string[]`: `{ id: 'session', params: ['sessionId'] }` routes to `/kvcoder/session/:sessionId`. A nav item may point only at a page without params. `navigate` and `then` must give every param.
 27. **Panels.**
     - One panel is open at a time, chosen from a strip of panel icons (panels have an `icon`).
     - The open panel is remembered per tab in `localStorage`, and a `panel` effect opens or closes one.
@@ -100,3 +100,5 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds 
 28. **Status text.** `params` values may be `{ "$output": field }`, a top-level field of the status query's output (only in status items).
 29. **Nav.** One flat list, ordered by `kvwebui.nav.order`, then `order`. The built-in pages come at the bottom, after a divider.
 30. **Namespace.** kvwebui's namespace is `kvwebui` (supersedes `ui` in 3): its API is `kvwebui.effect.add` and `kvwebui.effect.take`, and its settings are `kvwebui.title`, `kvwebui.home`, `kvwebui.nav.order`, `kvwebui.nav.hidden`, and `kvwebui.theme`. The contribution convention `<namespace>.ui.get` is unchanged. `kernel.web.home` defaults to `kvwebui`.
+31. **Component chunks.** The `chat` component renders any progress chunk whose `data` is `{ type: 'component', component: '<ns>.<name>', props }` inline as a `custom` component (ADR 0004, 7).
+32. **`kvman.follow(jobId)`.** The injected `kvman` object also has `follow(jobId)`. Inside a chat, it streams that job into a new pending assistant bubble (with Stop) and reruns the messages query when the job ends. Elsewhere, it only reruns the page's queries when the job ends.

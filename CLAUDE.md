@@ -51,7 +51,7 @@ Milestones are in the plan (once written). Do them strictly in order. For each o
 ## 4. Naming
 
 - Command and query names are `<namespace>.<segment>…`, lowercase, with kebab-case segments. A command ends in an imperative verb. A query ends in a read verb (`get`, `list`, `search`, `count`).
-- Names are written in full everywhere: `ctx.registerCommand('coder.turn.run', …)`, `ctx.exec('coder.turn.run', …)`.
+- Names are written in full everywhere: `ctx.registerCommand('kvcoder.turn.run', …)`, `ctx.exec('kvcoder.turn.run', …)`.
 - Error codes: the kernel's are `UPPER_SNAKE` from `plan/05-errors.md`; an extension's are `<namespace>/UPPER_SNAKE`.
 - Code identifiers are descriptive full words: no abbreviations beyond `ctx` and `id`, and no `utils`, `helpers`, or `misc` modules.
 

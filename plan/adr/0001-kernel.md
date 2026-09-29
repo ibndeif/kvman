@@ -45,7 +45,7 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds 
 
 20. **npm install.** The kernel runs `npm install --ignore-scripts --omit=dev <name>@<exact version>` into `<home>/extensions/<name>@<version>/`. Presets pin exact versions. npm must be on the PATH.
 21. **Trust.** At start, kvman lists the non-bundled extensions (name, version, source) that haven't been accepted yet and asks y/N in the terminal. `--yes` skips the prompt. Accepted versions are remembered in the home, and a new version asks again.
-22. **Extension manifest.** The `kvman` field of package.json: `{ "namespace": "coder", "dependencies": { "@kvman/kvai": "^1.0.0" } }`, with `main` as the entry. Dependencies load first. The kernel refuses to start when a dependency is missing or out of range, or when two extensions claim one namespace. Registered names must start with `<namespace>.`.
+22. **Extension manifest.** The `kvman` field of package.json: `{ "namespace": "kvcoder", "dependencies": { "@kvman/kvai": "^1.0.0" } }`, with `main` as the entry. Dependencies load first. The kernel refuses to start when a dependency is missing or out of range, or when two extensions claim one namespace. Registered names must start with `<namespace>.`.
 23. **Progress.** A handler reports progress with `ctx.job.progress(data)`. `GET /api/jobs/:id/stream` (Server-Sent Events) carries those chunks and then the final result or error. Nothing else is pushed; the UI reruns its queries when a job ends.
 
 ## Round 7 answers

@@ -101,7 +101,7 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 
 ```json
 { "name": "@kvman/kvcoder", "version": "1.0.0", "main": "dist/index.js",
-  "kvman": { "namespace": "coder", "dependencies": { "@kvman/kvai": "^1.0.0", "@kvman/kvwebui": "^1.0.0" } } }
+  "kvman": { "namespace": "kvcoder", "dependencies": { "@kvman/kvai": "^1.0.0", "@kvman/kvwebui": "^1.0.0" } } }
 ```
 
 **Web files.** An extension may add `"web": "<folder>"` to its `kvman` field, and the kernel serves that folder at `/web/<namespace>/` (§4.1). This is how kvwebui ships its app and how extensions ship Vue components.
