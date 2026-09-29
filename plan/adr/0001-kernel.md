@@ -189,3 +189,7 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds 
       - After a crash, the start kills leftover recorded groups that are still alive and clears their rows.
       - Hot reload leaves processes running.
     - The public query `kernel.processes.list` lists all processes for the UI.
+88. **Registries between extensions.** An extension may offer a registry ("register your X with me"), as kvcoder does for connectors. There's no SDK primitive: each owner builds its own, following the pattern documented in kvdev's `docs get registries`.
+    - The owner exports its registration helpers from one subpath, `<package>/registry`, which may import only `@kvman/sdk` and holds no state.
+    - An extension that declares the owner as a dependency may import that subpath at runtime. This is the only runtime import between extensions, and it replaces kvcoder's one-off exception: kvcoder's helper is `@kvman/kvcoder/registry`.
+    - The recommended pattern: `register` adds ordinary public queries to the contributor, and the owner finds them with `kernel.extensions.list`. A computed contribution gets 2 s by default, and an owner may set up to 30 s. Contributions that fail, time out, or don't match the owner's schema are skipped and reported.

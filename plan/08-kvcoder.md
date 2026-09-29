@@ -53,11 +53,11 @@ kvcoder is the app-building harness, built on kvai and kvwebui. Its agent has on
 
 ## 8.4 Extending kvcoder
 
-An extension that depends on kvcoder imports the helper `@kvman/kvcoder/connector`, the one runtime import of another extension the walls allow. The helper mirrors the SDK's `ctx.registerCommand(name, options)`.
+An extension that depends on kvcoder imports its registry helpers from `@kvman/kvcoder/registry`: the `<package>/registry` subpath any extension may offer (ADR 0001, 88). The helper mirrors the SDK's `ctx.registerCommand(name, options)`.
 
 ```ts
 import { z, type Ctx } from '@kvman/sdk';
-import { registerConnector, registerSection, registerBinary } from '@kvman/kvcoder/connector';
+import { registerConnector, registerSection, registerBinary } from '@kvman/kvcoder/registry';
 
 export default (ctx: Ctx) => {
   const notes = registerConnector(ctx, 'notes', 'Take and search notes in this workspace.');

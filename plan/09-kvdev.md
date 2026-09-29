@@ -13,7 +13,7 @@ kvdev is the harness for developing kvman extensions and presets. It has no loop
 | `preset check '{ "file" }'` | `kvdev.preset.check` | validates the preset's schema and its references (extensions, settings, pages) |
 | `preview start '{ "extensions": [folders], "preset"?: file }'` | `kvdev.preview.start` | starts a preview kvman (§9.3) → `{ url }` |
 | `preview stop` / `preview status` | `kvdev.preview.stop` / `.status` | |
-| `docs get '{ "topic": "sdk" \| "views" \| "connectors" \| "presets" }'` | `kvdev.docs.get` | a guide as Markdown |
+| `docs get '{ "topic": "sdk" \| "views" \| "connectors" \| "registries" \| "presets" }'` | `kvdev.docs.get` | a guide as Markdown |
 
 ## 9.2 The scaffold
 

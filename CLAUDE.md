@@ -47,7 +47,7 @@ Milestones are in `plan/13-milestones.md`. Do them strictly in order. For each o
   | `kernel` | `sdk`, its declared dependencies |
   | `cli` | `kernel`, `sdk` |
   | `testkit` | `kernel`, `sdk` |
-  | `extensions/*` | `sdk`, their own declared dependencies; never `kernel`; another extension only with `import type` when it is a `kvman.dependencies` entry, except the runtime helper `@kvman/kvcoder/connector` |
+  | `extensions/*` | `sdk`, their own declared dependencies; never `kernel`; another extension only when it is a `kvman.dependencies` entry: `import type`, or a runtime import of its `<package>/registry` subpath (which may import only `sdk` and holds no state) |
 
 ## 4. Naming
 

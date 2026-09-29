@@ -8,7 +8,7 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds,
 4. **Bash limits.** `bash -lc <command>` in the workspace folder. The process group is killed on timeout (default 120 s; the model may ask for up to 600 s) or cancel. stdout and stderr are combined. Output over 30 KB keeps its first and last 15 KB around an explicit `[… N bytes omitted …]` marker. The result includes the exit code.
 5. **Connectors.** A connector is a named group of commands, kvcoder's own concept; the kernel knows nothing about it.
    - **Registering.** `const fs = registerConnector(ctx, 'fs', 'Read and edit workspace files.')`, then `fs.registerCommand({ name: 'read', description, input, output, handle })`. That registers the ordinary public command `<namespace>.fs.read`, so sync and async behavior come from the kernel. It also adds the connector to the extension's `<namespace>.kvcoder.get` query.
-   - **Where the helper lives.** In the kvcoder package's subpath `@kvman/kvcoder/connector`, which imports only the sdk. The import wall allows this one runtime import of another extension, when kvcoder is a `kvman.dependencies` entry.
+   - **Where the helper lives.** In the kvcoder package's subpath `@kvman/kvcoder/registry`, which imports only the sdk. The import wall allows this one runtime import of another extension, when kvcoder is a `kvman.dependencies` entry.
    - **Binary connectors** describe a system binary (gh, a browser CLI), which the agent runs in real bash.
 6. **Bash syntax.**
    - `<connector> <command> '<json input>'` (or the JSON as a heredoc on stdin). kvcoder runs it as the command itself, not in a shell, so the call must stand alone.
@@ -80,3 +80,4 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds,
     - `<namespace>.binary.<name>` per binary → `{ description, check, install? }`.
 
     At each step kvcoder makes one `kernel.extensions.list` call to find them, calls the section queries (in parallel, 2 s timeout each, same caps), and runs binary checks at a session's first step, storing the results in the session record. Nothing about connectors is stored.
+22. **Import path.** The helper is `@kvman/kvcoder/registry`, the general `<package>/registry` subpath (ADR 0001, 88). It replaces `@kvman/kvcoder/connector`.

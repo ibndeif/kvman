@@ -42,10 +42,10 @@ A pnpm monorepo, Node 24, TypeScript strict.
 | `packages/kernel` | Everything the kernel does, including HTTP. | `sdk`, its declared dependencies |
 | `packages/cli` | The `kvman` bin; it runs the kernel in the same process. | `kernel`, `sdk` |
 | `packages/testkit` | `createTestKernel` for tests (§10). | `kernel`, `sdk` |
-| `extensions/*` | kvai, kvwebui, kvcoder, kvdev. | `sdk`, their own npm dependencies; never `kernel`; another extension only with `import type` when it is a `kvman.dependencies` entry, except the runtime helper `@kvman/kvcoder/connector` |
+| `extensions/*` | kvai, kvwebui, kvcoder, kvdev. | `sdk`, their own npm dependencies; never `kernel`; another extension only when it is a `kvman.dependencies` entry: `import type`, or a runtime import of its `<package>/registry` subpath (which may import only `sdk` and holds no state) |
 | `presets/` | `coder.json`, `dev.json`. | — |
 
-At runtime, extensions talk to each other only through `ctx.exec` and the other job calls (§3). Type-only imports exist for typed calls (§3.2).
+At runtime, extensions talk to each other only through `ctx.exec` and the other job calls (§3). Type-only imports exist for typed calls (§3.2). An extension that offers a registry ("register your X with me") exports its helpers from `<package>/registry`, and its dependents may import that subpath (ADR 0001, 88).
 
 ## 1.5 Core extensions
 

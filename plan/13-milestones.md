@@ -18,7 +18,7 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
 - **Read:** `01` §1.4; `12` §12.1; `CLAUDE.md`.
 - **Build:**
   - The pnpm workspace (Node 24) and TypeScript strict, with the `CLAUDE.md` §5 flags.
-  - ESLint with the import walls of §1.4, `max-lines` 300, and no `any`.
+  - ESLint with the import walls of §1.4 (including the `<package>/registry` rule), `max-lines` 300, and no `any`.
   - Vitest, and the gate scripts `typecheck`, `lint`, `test`, `build`, `bench:check` (the benchmark runner, with no benchmarks yet).
   - Changesets for `sdk`, `testkit`, and `extensions/*`.
   - Empty `packages/sdk`, `kernel`, `cli`, and `testkit`.
@@ -212,7 +212,7 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
   - `extensions/kvcoder`: sessions and messages, step chains with follow chunks, and steering.
   - Real bash (approval, limits, truncation).
   - The connector call path (JSON input, `-h`, `--async` with result messages, `jobs`).
-  - `@kvman/kvcoder/connector` (`registerConnector`, `registerSection`, `registerBinary`, `runConnector`), with `-h` generated from descriptions, schemas, and examples.
+  - `@kvman/kvcoder/registry` (`registerConnector`, `registerSection`, `registerBinary`, `runConnector`), with `-h` generated from descriptions, schemas, and examples.
   - Section pulls with timeouts and caps.
   - `ask` and `subagent` (fresh or fork, connector subsets, parallel, `--async`).
   - Compaction, cancel, the restart rules, and retention.
