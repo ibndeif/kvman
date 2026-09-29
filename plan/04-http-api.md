@@ -36,6 +36,6 @@ A Problem is `{ code, message, params? }` (§5). `message` is English for logs a
 
 `GET /api/jobs/:id/stream` is the only push channel.
 
-- It sends each `ctx.job.progress(data)` chunk as a `progress` event, then one `result` event (the output) or `problem` event (the Problem), then closes.
+- It sends each `ctx.job.progress(data)` chunk of the job and of every job nested in it as a `progress` event `{ source, data }`, then one `result` event (the output) or `problem` event (the Problem), then closes.
 - Chunks aren't stored. A client that connects late sees only new chunks, and a finished job answers with its `result` or `problem` at once.
 - Anything that must survive, such as an agent's messages, the extension keeps in its store.

@@ -49,8 +49,8 @@ At runtime, extensions talk to each other only through `ctx.exec` and the other 
 
 Each is designed in its own round, after the kernel.
 
-- **kvai**: providers and models. The pi-ai package's providers and models come by default, and other extensions can add theirs. It also registers agents and tools, which other extensions build their harness loops on.
-- **kvwebui**: the Vue web app, plus a `ui.*` API other extensions use to shape the UI.
+- **kvai**: LLM calls, providers, and models. The pi-ai package's providers and models come by default, and other extensions can add theirs. Agents, tools, and loops are built by the extensions that need them (§7).
+- **kvwebui**: the Vue web app, plus a `kvwebui.*` API other extensions use to shape the UI.
 - **kvinterviewer**: talks with the user, and gives other extensions an API for that.
 - **kvcoder**: the app-building harness, on kvai and kvwebui. It has a main agent, subagents, and a bash tool only.
 - **kvdev**: the harness for developing kvman extensions and presets.

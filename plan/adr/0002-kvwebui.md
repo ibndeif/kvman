@@ -3,8 +3,8 @@
 Status: accepted, 2026-09-29. Decided with the product owner in question rounds A–G.
 
 1. **UI form.** Most UI is JSON view trees made of kvwebui's built-in components (page, list, table, form generated from a command's JSON Schema, markdown, a button that runs a command, chat). An extension that needs more ships a compiled Vue component (an ES module) that kvwebui loads by name.
-2. **Discovery.** By convention, an extension may register a public query `<namespace>.ui.get` that returns its pages, nav items, and panels. When the browser loads, kvwebui reads `kernel.extensions.list` and calls every `<namespace>.ui.get`. The preset's `ui.*` settings choose, order, and hide what's shown (home page, nav order). Nothing is pushed.
-3. **Static files.** kvwebui's app and extensions' Vue bundles are `kvman.web` folders served by the kernel (ADR 0001, 59 and 74). kvwebui's namespace is `ui`.
+2. **Discovery.** By convention, an extension may register a public query `<namespace>.ui.get` that returns its pages, nav items, and panels. When the browser loads, kvwebui reads `kernel.extensions.list` and calls every `<namespace>.ui.get`. The preset's `kvwebui.*` settings choose, order, and hide what's shown (home page, nav order). Nothing is pushed.
+3. **Static files.** kvwebui's app and extensions' Vue bundles are `kvman.web` folders served by the kernel (ADR 0001, 59 and 74). kvwebui's namespace is `kvwebui`.
 4. **Stack.** Vue 3 (Composition API, TypeScript), Vite, vue-router, Tailwind CSS with logical properties for right-to-left, and vue-i18n loading `/api/locales/:lang`. No component library.
 5. **Frame.**
    - A top bar: the app title from the preset, a workspace picker, a language switch, and a light/dark switch.
@@ -20,7 +20,7 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds 
    Ids are local to the extension (full id `<namespace>.<id>`), and titles and texts are translation keys.
 7. **Routes.**
    - A page's URL is `/<namespace>/<page>`, and a page may declare params (`/coder/session/:sessionId`).
-   - The preset's `ui.home` names the page shown at `/`.
+   - The preset's `kvwebui.home` names the page shown at `/`.
    - The current workspace is kvwebui state, not part of the URL.
 8. **Data binding.**
    - A data component names a public query and its input. Input values may reference `{ "$param": name }` (a route param) or `{ "$row": field }` (the clicked row). There's no expression language.
@@ -40,18 +40,18 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds 
     - kvwebui provides `vue` through an import map (one Vue instance); extensions build with `vue` as an external.
     - The component gets `props` plus an injected `kvman` object: `exec`, `execAsync`, `stream(jobId)`, `t`, `workspace`.
 12. **Type-only imports.** An extension may `import type` from another extension that is both a `kvman.dependencies` entry and a devDependency. Runtime imports of other extensions stay forbidden, and ESLint checks both. (This refines ADR 0001, 50.)
-13. **Invalid UI.** kvwebui validates every `ui.get` answer with zod at load. An extension whose answer is invalid, or whose `ui.get` fails, contributes nothing, and a dismissible error card lists the extension and its Problem. Other extensions are unaffected.
+13. **Invalid UI.** kvwebui validates every `<namespace>.ui.get` answer with zod at load. An extension whose answer is invalid, or whose `<namespace>.ui.get` fails, contributes nothing, and a dismissible error card lists the extension and its Problem. Other extensions are unaffected.
 14. **Chat.** `{ type: 'chat', messages: { query, input }, send: { command, input } }`.
     - The messages query returns `[{ id, role: 'user' | 'assistant' | 'tool' | 'system', markdown, createdAt }]`.
-    - The send command runs async with its input plus `{ text }`. Progress chunks `{ delta: string }` append to a pending assistant bubble, and a Stop button cancels the job.
+    - The send command runs async with its input plus `{ text }`. Progress chunks whose `data` is `{ type: 'text', delta }` (from any source, ADR 0001, 79) append `delta` to a pending assistant bubble; other chunks are ignored, and a Stop button cancels the job.
     - When the job ends, the messages query reruns.
 15. **Built-in pages.**
     - **Settings:** `kernel.settings.list` as JSON-Schema forms with global or workspace scope, and a secrets section that only sets or deletes values.
     - **Jobs:** `kernel.jobs.list`, with status and cancel.
     - **Extensions:** `kernel.extensions.list`, read-only.
 
-    The preset hides any nav item with `ui.nav.hidden`.
-16. **UI control.** A command's handler calls `ctx.exec('ui.effect.add', effect)` (toast, navigate, panel, refresh). kvwebui stores the effect against the job the UI started, and applies that job's effects when the job ends (at the sync reply or the stream's end). There's no background push.
+    The preset hides any nav item with `kvwebui.nav.hidden`.
+16. **UI control.** A command's handler calls `ctx.exec('kvwebui.effect.add', effect)` (toast, navigate, panel, refresh). kvwebui stores the effect against the job the UI started, and applies that job's effects when the job ends (at the sync reply or the stream's end). There's no background push.
 17. **Current workspace.**
     - Each tab has its own, default Home, remembered in `localStorage` and sent as `workspaceId` on every call.
     - The picker lists `kernel.workspace.list`; "Open folder…" takes a typed absolute path.
@@ -60,7 +60,7 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds 
 19. **Problems and theme.**
     - A failed command shows a toast with the translated `<ns>.errors.<CODE>`, plus field errors inside forms for `VALIDATION_FAILED`.
     - A failed query shows an error card in place of its component.
-    - The theme is the global setting `ui.theme`: `system` (default), `light`, or `dark`.
+    - The theme is the global setting `kvwebui.theme`: `system` (default), `light`, or `dark`.
 20. **Root job.** Effects attach to `ctx.job.rootId` (ADR 0001, 75).
 21. **Sync job ids.** The UI gets a sync call's job id from the envelope (ADR 0001, 76).
 22. **Effects.**
@@ -69,13 +69,13 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds 
     - `panel { panel: '<ns>.<id>', open }`
     - `refresh {}`
 
-    They're stored in kvwebui's workspace store. The public command `ui.effect.take { jobId }` returns a job's effects and deletes them. A schedule deletes effects not taken within 1 hour.
+    They're stored in kvwebui's workspace store. The public command `kvwebui.effect.take { jobId }` returns a job's effects and deletes them. A schedule deletes effects not taken within 1 hour.
 23. **Settings.**
-    - `ui.title`: a translation key; default `ui.title.default`, which is "kvman".
-    - `ui.home`: the full page id shown at `/`; default is the first nav item's page.
-    - `ui.nav.order`: full nav ids in order; the rest follow by `order`.
-    - `ui.nav.hidden`: full nav ids that aren't shown.
-    - `ui.theme`: `system`, `light`, or `dark`.
+    - `kvwebui.title`: a translation key; default `kvwebui.title.default`, which is "kvman".
+    - `kvwebui.home`: the full page id shown at `/`; default is the first nav item's page.
+    - `kvwebui.nav.order`: full nav ids in order; the rest follow by `order`.
+    - `kvwebui.nav.hidden`: full nav ids that aren't shown.
+    - `kvwebui.theme`: `system`, `light`, or `dark`.
 24. **View shapes (layout, text, data).** Every text is a translation key. `params` values and inputs may be `{ "$param": name }` or `{ "$row": field }`.
     - `stack { direction, gap?, children }`
     - `tabs { tabs: [{ title, view }] }`
@@ -98,4 +98,5 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds 
     - The open panel is remembered per tab in `localStorage`, and a `panel` effect opens or closes one.
     - Panels show on every page.
 28. **Status text.** `params` values may be `{ "$output": field }`, a top-level field of the status query's output (only in status items).
-29. **Nav.** One flat list, ordered by `ui.nav.order`, then `order`. The built-in pages come at the bottom, after a divider.
+29. **Nav.** One flat list, ordered by `kvwebui.nav.order`, then `order`. The built-in pages come at the bottom, after a divider.
+30. **Namespace.** kvwebui's namespace is `kvwebui` (supersedes `ui` in 3): its API is `kvwebui.effect.add` and `kvwebui.effect.take`, and its settings are `kvwebui.title`, `kvwebui.home`, `kvwebui.nav.order`, `kvwebui.nav.hidden`, and `kvwebui.theme`. The contribution convention `<namespace>.ui.get` is unchanged. `kernel.web.home` defaults to `kvwebui`.

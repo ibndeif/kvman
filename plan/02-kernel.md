@@ -89,7 +89,7 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
   - Any extension reads any key with `ctx.settings.get(key)`.
   - An extension writes only its own keys, with `ctx.settings.set(key, value, { scope: 'global' | 'workspace' })`.
   - The user changes any key with `kernel.settings.set`.
-- The kernel's own keys are `kernel.port` (3737), `kernel.workers`, `kernel.workerConcurrency` (32), `kernel.language` (`en`), `kernel.jobs.retentionDays` (7), and `kernel.web.home` (`ui`, §4.1).
+- The kernel's own keys are `kernel.port` (3737), `kernel.workers`, `kernel.workerConcurrency` (32), `kernel.language` (`en`), `kernel.jobs.retentionDays` (7), and `kernel.web.home` (`kvwebui`, §4.1).
 
 **Secrets.**
 - `ctx.secrets.get/set/delete(name)` belong to the calling extension and are home-wide. They're stored in `secrets.json` (mode 0600).
@@ -139,7 +139,7 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 ```json
 { "name": "coder",
   "extensions": { "@kvman/kvai": "bundled", "@acme/x": "npm:1.2.3", "@me/y": "path:../y" },
-  "settings": { "kvai.defaultModel": "…", "ui.pages": [] } }
+  "settings": { "kvai.defaultModel": "…", "kvwebui.home": "kvcoder.chat" } }
 ```
 
 - A preset is the whole app for one run: which extensions load, and the preset-level value of any setting.
@@ -184,7 +184,7 @@ Going over a limit fails loudly and never cuts anything off.
 
 | Limit | Value | Error |
 |---|---|---|
-| Job input or output | 1 MiB of JSON | `TOO_LARGE` |
+| Job input or output | 1 MiB of JSON by default; a registration may set `maxInputBytes` and `maxOutputBytes` up to 32 MiB | `TOO_LARGE` |
 | Progress chunk | 64 KiB | `TOO_LARGE` |
 | File | 1 GiB | `TOO_LARGE` |
 | `find` and `list` limits | required, at most 1000 | `VALIDATION_FAILED` |

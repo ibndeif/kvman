@@ -1,4 +1,4 @@
-# 06 — kvwebui (namespace `ui`)
+# 06 — kvwebui (namespace `kvwebui`)
 
 kvwebui is the web app, and it is an extension like any other. The kernel serves its `kvman.web` folder at `/` (§4.1). kvwebui builds the UI from other extensions' contributions, which it pulls; nothing is pushed.
 
@@ -26,12 +26,12 @@ kvwebui is the web app, and it is an extension like any other. The kernel serves
 ```
 
 **Top bar.**
-- The title is the `ui.title` key.
+- The title is the `kvwebui.title` key.
 - **The workspace picker** lists `kernel.workspace.list`. "Open folder…" takes a typed absolute path for `kernel.workspace.open`.
-- A language switch sets `kernel.language`, and a theme switch sets `ui.theme`.
+- A language switch sets `kernel.language`, and a theme switch sets `kvwebui.theme`.
 
 **Nav.**
-- One flat list, ordered by `ui.nav.order`, then by each item's `order`. Items in `ui.nav.hidden` are left out.
+- One flat list, ordered by `kvwebui.nav.order`, then by each item's `order`. Items in `kvwebui.nav.hidden` are left out.
 - Below a divider come the built-in pages: Settings, Jobs, and Extensions.
 
 **Panels.** One is open at a time, chosen from a strip of panel icons. The open panel is remembered per tab in `localStorage`, and panels show on every page.
@@ -59,10 +59,10 @@ An extension contributes UI by registering the public query `<namespace>.ui.get`
 
 - **Ids.** Ids are local to the extension; the full id is `<namespace>.<id>`. Titles and texts are translation keys.
 - **Loading.** kvwebui reads `kernel.extensions.list` when the browser loads, and calls every `<namespace>.ui.get`. It validates each answer with zod.
-- **Invalid UI.** An extension whose answer is invalid, or whose `ui.get` fails, contributes nothing. A dismissible error card lists the extension and its Problem, and the other extensions are unaffected. An answer is also invalid when:
+- **Invalid UI.** An extension whose answer is invalid, or whose `<namespace>.ui.get` fails, contributes nothing. A dismissible error card lists the extension and its Problem, and the other extensions are unaffected. An answer is also invalid when:
   - it names an unknown component or a query that isn't public;
   - a nav item points at a page that has params.
-- **Routes.** A page's URL is `/<namespace>/<page>`, followed by its params in order: `params: ['sessionId']` gives `/coder/session/:sessionId`. `ui.home` names the page shown at `/`; the default is the first nav item's page.
+- **Routes.** A page's URL is `/<namespace>/<page>`, followed by its params in order: `params: ['sessionId']` gives `/coder/session/:sessionId`. `kvwebui.home` names the page shown at `/`; the default is the first nav item's page.
 - **Status items.** A status item's `params` values may be `{ "$output": field }`, read from its query's output. Its query reruns after any command the UI runs, when a job the UI started ends, and every 30 s.
 
 ## 6.4 View trees
@@ -96,7 +96,7 @@ An extension contributes UI by registering the public query `<namespace>.ui.get`
 - **`then`.** `'rerun'` (the default), `{ navigate: '<ns>.<page>', params? }`, or `{ toast: key, level? }`. Effects (§6.5) apply after `then`.
 - **Chat.**
   - The messages query returns `[{ id, role: 'user' | 'assistant' | 'tool' | 'system', markdown, createdAt }]`.
-  - Send runs the command async with its input plus `{ text }`. Progress chunks `{ delta: string }` append to a pending assistant bubble, and Stop cancels the job.
+  - Send runs the command async with its input plus `{ text }`. Progress chunks whose `data` is `{ type: 'text', delta }` (from any source, ADR 0001, 79) append `delta` to a pending assistant bubble; other chunks are ignored, and Stop cancels the job.
   - When the job ends, the messages query reruns.
 - **Custom.**
   - It loads `/web/<namespace>/components/<name>.js`, which default-exports a Vue component.
@@ -105,8 +105,8 @@ An extension contributes UI by registering the public query `<namespace>.ui.get`
 
 ## 6.5 Effects: extensions controlling the UI
 
-- **Adding effects.** A handler calls `ctx.exec('ui.effect.add', effect)`. kvwebui stores the effect in its workspace store under the caller's `ctx.job.rootId`.
-- **Applying effects.** When a job the UI started ends (at the sync reply, or at the end of the stream for an async job), kvwebui calls `ui.effect.take { jobId }`. That returns the job's effects, deletes them, and kvwebui applies them in order. A schedule deletes effects that aren't taken within 1 hour.
+- **Adding effects.** A handler calls `ctx.exec('kvwebui.effect.add', effect)`. kvwebui stores the effect in its workspace store under the caller's `ctx.job.rootId`.
+- **Applying effects.** When a job the UI started ends (at the sync reply, or at the end of the stream for an async job), kvwebui calls `kvwebui.effect.take { jobId }`. That returns the job's effects, deletes them, and kvwebui applies them in order. A schedule deletes effects that aren't taken within 1 hour.
 
 | Effect | Shape |
 |---|---|
@@ -132,13 +132,13 @@ An extension contributes UI by registering the public query `<namespace>.ui.get`
 
 | Name | Kind | Input → output |
 |---|---|---|
-| `ui.effect.add` | command, public | an effect → `{}` |
-| `ui.effect.take` | command, public | `{ jobId }` → `effect[]` |
+| `kvwebui.effect.add` | command, public | an effect → `{}` |
+| `kvwebui.effect.take` | command, public | `{ jobId }` → `effect[]` |
 
 | Setting | Default |
 |---|---|
-| `ui.title` | `ui.title.default` ("kvman") |
-| `ui.home` | the first nav item's page |
-| `ui.nav.order` | `[]` |
-| `ui.nav.hidden` | `[]` |
-| `ui.theme` | `system` (`light`, `dark`) |
+| `kvwebui.title` | `kvwebui.title.default` ("kvman") |
+| `kvwebui.home` | the first nav item's page |
+| `kvwebui.nav.order` | `[]` |
+| `kvwebui.nav.hidden` | `[]` |
+| `kvwebui.theme` | `system` (`light`, `dark`) |

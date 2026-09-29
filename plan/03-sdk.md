@@ -34,6 +34,7 @@ export default (ctx: Ctx) => {
 - The entry default-exports one function that receives the extension's `ctx`. It only registers, and it runs once per worker at load.
 - **Registrations.**
   - Commands and queries take `description`, `input`, `output`, `handle(input)`, and optionally `public` (default `false`) and `timeoutMs` (default 600 000).
+  - Both may set `maxInputBytes` and `maxOutputBytes` (default 1 MiB, at most 32 MiB).
   - Commands also take `retries` (default 3).
   - Settings take `description`, `schema`, and `default`.
   - Every name starts with the extension's namespace. Every description is required and is one sentence.
@@ -66,7 +67,7 @@ export default (ctx: Ctx) => {
 | `workspace` | `{ id, name, path }`. |
 | `caller` | `{ kind: 'user' }` or `{ kind: 'extension', name }`. |
 | `signal` | An `AbortSignal`, aborted on cancel, timeout, or shutdown. |
-| `progress(data)` | Sends a progress chunk (JSON, at most 64 KiB) to the job's stream (§4.4). |
+| `progress(data)` | Sends a progress chunk (JSON, at most 64 KiB) to the stream of `rootId`, as `{ source: '<extension name>', data }` (§4.4). |
 
 ## 3.4 Storage, files, settings, secrets
 

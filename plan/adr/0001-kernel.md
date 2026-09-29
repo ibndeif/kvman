@@ -70,7 +70,7 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds 
     - Unknown thrown errors become `HANDLER_FAILED`, and their message is not sent to the UI.
 29. **Cancel.** `POST /api/jobs/:id/cancel` and `ctx.cancel(id)` cancel a job. Handlers get `ctx.job.signal` (AbortSignal). The job ends `cancelled` and is not retried. Nested `ctx.exec` jobs share the signal; `execAsync` jobs don't.
 30. **OS access.** Plain Node APIs (`node:fs`, `node:child_process`); `ctx.job.workspace.path` gives the folder. The kernel adds no process service. Children stop with kvman (Ctrl+C reaches the process group), and handlers kill their own processes on cancel.
-31. **Preset.** `{ name, extensions: { "<package>": "bundled" | "npm:<exact version>" | "path:<folder>" }, settings: { "<key>": value } }`. The UI shape is kvwebui's settings (`ui.*`); the kernel knows no UI concept. `--preset coder` names a bundled preset; `--preset ./my.json` names a file.
+31. **Preset.** `{ name, extensions: { "<package>": "bundled" | "npm:<exact version>" | "path:<folder>" }, settings: { "<key>": value } }`. The UI shape is kvwebui's settings (`kvwebui.*`); the kernel knows no UI concept. `--preset coder` names a bundled preset; `--preset ./my.json` names a file.
 
 ## Round 9 answers
 
@@ -148,7 +148,7 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds 
 71. **Changesets** for `@kvman/sdk` and each extension only; the kernel and CLI follow the root version.
 72. **Never relaxed:** secrets handling (only in `secrets.json`; never logged, stored elsewhere, or returned), and the 127.0.0.1 listener with Host and Origin checks. Other behavior (the trust prompt, `public` checks, read-only queries) is ordinary tested behavior.
 73. **archive/v2** may be read and its code reused when a step needs it, adapted to the new plan; the new plan wins over old code.
-74. **Web home.** `kernel.web.home` defaults to `ui` (kvwebui's namespace). In `--mode web`, if no loaded extension with that namespace declares `kvman.web`, kvman refuses to start with `EXTENSION_INVALID`.
+74. **Web home.** `kernel.web.home` defaults to `kvwebui` (kvwebui's namespace). In `--mode web`, if no loaded extension with that namespace declares `kvman.web`, kvman refuses to start with `EXTENSION_INVALID`.
 
 ## From the kvwebui rounds
 
@@ -156,3 +156,5 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds 
 76. **Job id in the envelope.** Command and query answers carry the job id: `{ ok: true, output, jobId }` and `{ ok: false, problem, jobId }`.
 77. **Extension listing.** `kernel.extensions.list` returns each command and query as `{ name, description, public, input, output }`, with input and output as JSON Schema.
 78. **Type-only imports.** See ADR 0002, 12.
+79. **Nested progress.** `ctx.job.progress(data)` always goes to the stream of `ctx.job.rootId`. A chunk is `{ source: '<extension name>', data }`.
+80. **Per-registration size caps.** A command or query may set `maxInputBytes` and `maxOutputBytes`: default 1 MiB, at most 32 MiB. Going over the registration's cap fails with `TOO_LARGE`. (Refines 48.)
