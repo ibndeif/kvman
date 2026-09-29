@@ -71,6 +71,6 @@ export function literalIssues(candidate: JsonObject, manifest: Manifest): Issue[
   viewTexts(manifest, found);
   return [...found].filter(([, text]) => isLiteral(text)).map(([path, text]): Issue => ({
     path, message: `the text "${text.length > 40 ? `${text.slice(0, 40)}…` : text}" is literal, so it is never translated`,
-    hint: 'write a key of the catalog, such as "$t.files.title"', severity: 'warning',
+    hint: 'write a key of the catalog, such as "$t.files.title"', code: 'LITERAL_TEXT', severity: 'warning',
   }));
 }

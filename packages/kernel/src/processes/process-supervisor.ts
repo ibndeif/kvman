@@ -31,7 +31,12 @@ export type SupervisorDeps = {
   now: () => number;
   logger: KernelLogger;
   faults: FaultPoints;
+  // ADR 0166: what is spawned for a requested command; the testkit's fake processes. Commands spawn as requested
+  // without one.
+  commands?: CommandResolver | undefined;
 };
+
+export type CommandResolver = (command: string, args: readonly string[]) => { command: string; args: readonly string[] };
 
 // A spawn the process calls checked and resolved (ADR 0139): the folder is real and jailed, the options valid.
 export type SpawnPlan = {
@@ -188,7 +193,8 @@ export class ProcessSupervisor {
 
   async #start(plan: SpawnPlan, token: string | undefined): Promise<GatedChild> {
     try {
-      return await spawnGated({ command: plan.command, args: plan.args, cwd: plan.cwd, env: environmentFor(this.#deps.environment, plan.env, this.#deps.home, token) });
+      const spawned = this.#deps.commands?.(plan.command, plan.args) ?? plan;
+      return await spawnGated({ command: spawned.command, args: spawned.args, cwd: plan.cwd, env: environmentFor(this.#deps.environment, plan.env, this.#deps.home, token) });
     } catch (error) {
       this.#deps.tokens.revoke(plan.processId);
       throw new ProcessStartFailed(`the process could not be started (${error instanceof Error && 'code' in error ? String(error.code) : 'unknown'})`);

@@ -14,6 +14,7 @@ export * from './extension/lane-template.ts';
 export * from './extension/manifest-llm.ts';
 export * from './extension/manifest.ts';
 export * from './extension/manifest-types.ts';
+export * from './extension/prompts.ts';
 export * from './extension/source.ts';
 export * from './extension/translations.ts';
 export * from './extension-lifecycle.ts';

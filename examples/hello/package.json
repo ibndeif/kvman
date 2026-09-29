@@ -1,0 +1,17 @@
+{
+  "name": "@kvman/example-hello",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The first extension of the extension guide: a greeting command and a count.",
+  "type": "module",
+  "main": "src/extension.ts",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@kvman/sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@kvman/testkit": "workspace:*"
+  }
+}

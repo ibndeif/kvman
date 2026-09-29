@@ -1,6 +1,6 @@
 import { recordExtension } from '@kvman/kernel';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fakeProvider } from '../../src/fake-provider.ts';
+import { fakeProviderExtension } from '../../src/fake-provider-extension.ts';
 import { workspaceA } from '../hosts/harness.ts';
 import { person, sendAs, type InstallFixture } from '../install/harness.ts';
 import { enable, rows, valueOf } from '../workspaces/harness.ts';
@@ -15,7 +15,7 @@ afterEach(async () => {
 
 const correlationId = '01JAZ3K4M5N6P7Q8R9S0T1V2W3';
 
-function recordedLlm(definition: ReturnType<typeof fakeProvider>): { providers: unknown; models: unknown } {
+function recordedLlm(definition: ReturnType<typeof fakeProviderExtension>): { providers: unknown; models: unknown } {
   const { manifest } = recordExtension(definition, { packageName: '@kvman/fake-provider', version: '1.0.0', correlationId });
   return { providers: manifest.llm.providers, models: manifest.llm.models };
 }
@@ -40,7 +40,7 @@ function textsOf(run: string): unknown[] {
 
 describe('fake provider (ADR 0154)', llmTests, () => {
   it('M2.9-E6 recording and running the fake answers the scripted reply, deltas, usage, and cost', async () => {
-    expect(recordedLlm(fakeProvider())).toEqual({
+    expect(recordedLlm(fakeProviderExtension())).toEqual({
       providers: [{
         id: 'fake',
         title: 'Fake',
@@ -80,7 +80,7 @@ describe('fake provider (ADR 0154)', llmTests, () => {
     expect(Number(usage?.['cost_usd'])).toBeCloseTo(0.00002, 10);
     await fixture.close();
 
-    expect(recordedLlm(fakeProvider({ reply: 'hi', chunks: ['h', 'i'], failures: 1, usage: { input: 3, output: 4 }, costUsd: 0.1 })).models)
+    expect(recordedLlm(fakeProviderExtension({ reply: 'hi', chunks: ['h', 'i'], failures: 1, usage: { input: 3, output: 4 }, costUsd: 0.1 })).models)
       .toHaveLength(1);
     fixture = await openLlmFixture();
     await installFakeProvider(fixture, { reply: 'hi', chunks: ['h', 'i'], failures: 1, usage: { input: 3, output: 4 }, costUsd: 0.1 });

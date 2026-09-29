@@ -31,7 +31,7 @@ describe('problems thrown by handlers (plan 13 §13.1, ADR 0074)', workerTests, 
     const id = await send(fixture, 'counter.unknown.code');
     expect(await fixture.runtime.awaitReply(id)).toMatchObject({ ok: false, problem: { code: 'counter/UNKNOWN', title: 'counter/UNKNOWN', retryable: false } });
     expect(fixture.logged).toContainEqual(expect.objectContaining({
-      level: 'warn', message: expect.stringContaining('counter/UNKNOWN'), attributes: expect.objectContaining({ extension: '@acme/counter', messageId: id }),
+      level: 'warn', fields: { code: 'counter/UNKNOWN', type: 'counter.unknown.code' }, attributes: expect.objectContaining({ extension: '@acme/counter', messageId: id }),
     }));
   });
 

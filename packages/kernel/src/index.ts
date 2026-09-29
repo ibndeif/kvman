@@ -90,6 +90,8 @@ export * from './runtime/crash-recovery.ts';
 export * from './runtime/health.ts';
 export * from './runtime/home-workspace.ts';
 export * from './runtime/kernel-runtime.ts';
+export * from './runtime/runtime-options.ts';
+export * from './hosts/unregistered-codes.ts';
 export * from './runtime/snapshot-boot.ts';
 export * from './runtime/preset-seeding.ts';
 export * from './scheduler/batch-claims.ts';

@@ -73,6 +73,8 @@ export class Recording {
   readonly components: JsonObject[] = [];
   settingsSection: JsonObject | null = null;
   translations: JsonObject | null = null;
+  // ADR 0167: `<ns>/BUSY` is registered by the first prompt with oneOpenPer.
+  busyErrorRegistered = false;
 
   readonly issues: Issue[] = [];
   readonly functions = new Map<string, RegisteredFunction>();

@@ -7,3 +7,4 @@ playwright-report/
 *.tsbuildinfo
 bench/.homes/
 packages/kernel/builtin/
+docs/api/

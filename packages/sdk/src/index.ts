@@ -6,6 +6,7 @@ export * from './ext.ts';
 export * from './files.ts';
 export * from './llm.ts';
 export * from './process.ts';
+export * from './prompts.ts';
 export * from './references.ts';
 export * from './store.ts';
 export * from './ui.ts';

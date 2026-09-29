@@ -1,8 +1,9 @@
 import type { Text, Translations, plainCapabilityNameSchema } from '@kvman/protocol';
-import type { input as Input, output as Output, ZodType } from 'zod';
+import type { input as Input, output as Output, ZodObject, ZodType } from 'zod';
 import type {
   CollectionDef, CommandDef, ConfigDef, DataVersionDef, EntityDef, ErrorDef, EventDef, LogDef, ModelDef, ProviderDef, QueryDef, ScheduleDef, SubscriptionDef,
 } from './definitions.ts';
+import type { PromptDef, PromptHandle } from './prompts.ts';
 import type { CollectionRef, CommandRef, EntityRef, ErrorRef, EventRef, LogRef, QueryRef, ScheduleRef } from './references.ts';
 import type {
   ActionDef, CompositeDef, NavGroupDef, NavItemDef, PageDef, PanelDef, RendererDef, RendererTargetDef, SettingsSectionDef,
@@ -43,6 +44,11 @@ export interface Ext {
   subscribe<Payload>(event: EventRef<string, Payload>, definition: SubscriptionDef<Payload>): void;
   /** Subscribes to an event type or a `<prefix>.*` pattern. */
   subscribe(event: string, definition: SubscriptionDef): void;
+  /** Registers a prompt a person answers: its collection, list query, answer, reject, and expire commands, and asked and closed events. */
+  registerPrompt<Name extends string, DataSchema extends ZodObject, AnswerSchema extends ZodObject>(
+    name: Name,
+    definition: PromptDef<DataSchema, AnswerSchema>,
+  ): PromptHandle<Output<DataSchema>>;
   /** Registers a timer that sends one of its own commands. */
   registerSchedule<Name extends string>(name: Name, definition: ScheduleDef): ScheduleRef<Name>;
   /** Registers an error code `<namespace>/UPPER_SNAKE`. */

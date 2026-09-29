@@ -233,7 +233,7 @@ Name sets inside one extension:
 | `registerEvent(name, EventDef)` | an event type this extension publishes, with its delivery class (`02` §2.5) | `pdf.translated`, `pdf.progress.updated` | `EventDef = { description, delivery?: 'durable' (default) \| 'transient' \| 'live', payload?: ZodType, chunk?: 'text' \| 'value' \| 'data', namingException?: string }`: `payload` for durable and transient events; `chunk` (the `LiveChunk` shape, `02` §2.3) for live events. Only registered events can be published |
 | `subscribe(eventType, SubscriptionDef)` | a handler for a durable or transient event (own, `kernel.*`, or another extension's) | `subscription:<eventType>` | wildcards allowed (`pdf.*`; they never match live events); foreign events need a grant (§5.7); subscribing to a live event fails validation (`EXT_MANIFEST_INVALID` when recording for its own, when building the registry for another's, ADR 0068) |
 | `registerSchedule(name, { description, every \| cron, command, payload? })` | a timer that sends one of its own commands | `prune` (private) | the command is usually `internal`; it must be one of its own commands with access other than `user`, `payload` (default `{}`) must match its input, and `cron` is five fields in local time; one run per enabled workspace, or one without a workspace for a global command (`03` §3.4, ADR 0144) |
-| `registerPrompt(name, PromptDef)` | a question or approval a person answers (§5.5) | `interviewer.question` | registers the prompt's collection, list query, `answer` / `reject` (access `user`) and `expire` (internal) commands, and `asked` / `closed` events; returns a handle whose `open(ctx, data)` stores the prompt and defers the reply |
+| `registerPrompt(name, PromptDef)` | a question or approval a person answers (§5.5) | `interviewer.question` | registers the prompt's collection, list query, `answer` / `reject` (access `user`) and `expire` (internal) commands, `asked` / `closed` events, and `<ns>/BUSY` when `oneOpenPer` is used; returns a handle whose `open(ctx, data)` stores the prompt and defers the reply (ADR 0167) |
 | `registerError(code, { description, title, retryable?, hint? })` | an error its handlers throw with `ctx.problem` (§5.4) | `pdf/NOT_FOUND` | `title` and `hint` are the English fallback; people see `problems.<CODE>` from its catalog (`08` §8.16); listed in `/schema` |
 | **Data** | | | |
 | `registerDataVersion(version, { migrations?, compatibleWith? })` | the data schema version and its migrations (`04` §4.8) | — | at most once; without it the version is 1; `compatibleWith` lists higher data versions this code still runs on (ADR 0142); a migration's `up(m)` uses `m.kv`, `m.collection(name)`, and `m.log(name)` `.each(fn)` and `m.config` (ADR 0143) |
@@ -417,6 +417,22 @@ export default defineExtension({
 
 Everything `registerPrompt` registers is in the manifest and `/schema` like hand-written registrations (the manifest has no prompt section of its own). The extension still owns the UI: `registerPrompt` provides data and commands, not views. A second `open` while a prompt with the same `oneOpenPer` value is open fails `<ns>/BUSY`, an error `registerPrompt` registers for the extension.
 
+The derived pieces (ADR 0167):
+
+- **Names.** The prompt's name is `<ns>.<noun>`. The plural is the noun plus `s`, and the id field is the noun in camelCase plus `Id` (`questionId`). `data` and `answer` are object schemas.
+- **Collection** `<plural>` holds `{ id, data, status: 'open' | 'answered' | 'rejected' | 'expired', answer?, openKey?, openedAt, closedAt? }`.
+  - `id` is the deferred command's id.
+  - Closed prompts are kept.
+- **Query** `<ns>.<plural>.list { status?, limit? (≤ 100), ...data fields }` answers `{ items }` oldest first. Every given data field must be equal.
+- **Commands.**
+  - `answer { <noun>Id, ...answer }` replies with the answer.
+  - `reject { <noun>Id }` replies `{ rejected: true }`.
+
+  Both close the prompt and publish `closed { <noun>Id, status }`. On a prompt that is not open, or an unknown id, they fail `REPLY_NOT_AWAITING` from `ctx.reply`.
+- **Expiry.** `expire { commandId, reason }` closes an open prompt as `expired`.
+- **Events.** `asked { <noun>Id }` and `closed` are durable.
+- **Close effects.** The handle has only `open`. An extension that needs its own effects on close (dismissing a notification, sending a review) subscribes to its `closed` event.
+
 ## 5.6 Entities and actions
 
 - An **entity** is a typed record the extension exposes (`pdf.file`, `agent.session`), registered with `ext.registerEntity`. It declares a schema, an id field, and display hints.
@@ -484,18 +500,37 @@ A preset records the **granted** set per extension, isolation included; an exten
 
 ```ts
 import { createTestKernel, fakeProvider } from '@kvman/testkit';
-import pdf from '../src/extension';
 
-const k = await createTestKernel({ extensions: [pdf, fakeProvider({ reply: 'مرحبا' })], workspace: 'tmp' });
+const k = await createTestKernel({
+  extensions: [new URL('../src/extension.ts', import.meta.url), fakeProvider({ reply: 'مرحبا' })],
+});
 const { blobId } = await k.blobs.put(samplePdf, { mime: 'application/pdf' });
 const { fileId } = await k.asUser().command('pdf.import', { blobId });
 await k.command('pdf.translate', { fileId, lang: 'ar' });
 expect(await k.query('pdf.files.list', {})).toMatchObject({ items: [{ status: 'translated' }] });
 expect(k.events('pdf.translated')).toHaveLength(1);
-await k.crashDuring('pdf.translate', 'after-step:extract');   // fault injection
+await k.crashDuring('pdf.translate', 'after-step:extract', { fileId, lang: 'ar' });   // fault injection
+await k.close();
 ```
 
-The testkit runs the real kernel with in-memory SQLite and a synchronous host, plus a fake LLM provider (`fakeProvider`, registered through the normal provider API; its options are in ADR 0154), fake processes, and a recorder for `ui.*`. It also runs `setup` twice to prove it is deterministic, fails a test whose handler throws an error code the extension did not register, and checks the extension's catalogs (every key its views use exists in the default catalog, every message is valid ICU). `k.asUser({ locale: 'ar' })` sends with a given language so `ctx.locale` and `ctx.i18n.t` can be tested. Prompts are answered the way a person would: `k.asUser().command('interviewer.question.answer', { questionId, answer })`; `k.command(...)` sends as a test extension, so the testkit also proves that `access: 'user'` commands reject non-user sources and `access: 'extensions'` commands reject people. The same tests run against `sandboxed` isolation in CI. `createTestKernel` also has a **remote mode**, used by builder projects (`11` §11.5): inside a sandboxed test process it is a client, over IPC, of a test kernel that the build runs, with the same API; the project's own extension is always the one loaded from its `dist/`, and fakes such as `fakeProvider(...)` are passed as data.
+The testkit runs the real kernel on a temporary home folder with the normal hosts: extension code runs in a worker thread (shared mode) or a sandboxed process (sandboxed mode), never in the test's thread (ADR 0165).
+
+- **Extensions** are named by their entry module. The testkit records each one in the test process, which runs `setup` twice to prove it is deterministic, and places the entry's folder as its snapshot.
+- **`fakeProvider(options)`** is a fake LLM provider, registered through the normal provider API. It is passed as data, and its options are in ADR 0154.
+- **Workspace.** The test kernel opens one workspace (a temporary folder unless `workspace` names one) and enables every extension there with all it requests.
+- **Senders.**
+  - `k.command(...)` and `k.query(...)` send as the testkit's own extension `@kvman/testkit-driver`, whose `calls` cover the extensions under test. The testkit so proves that `access: 'user'` and `internal` types reject extensions.
+  - `k.asUser({ locale? })` sends as the person, so it proves that `access: 'extensions'` types reject people. With `locale` it first saves that language, as the shell's language switch does, so `ctx.locale` and `ctx.i18n.t` can be tested.
+  - Prompts are answered the way a person would: `k.asUser().command('interviewer.question.answer', { questionId, answer })`.
+- **Results.** Calls return the reply's value and throw a `TestkitProblem` for a problem. `k.idle()` waits until nothing is due or running.
+- **Recorders.** `k.events(type?)` lists the committed events. `k.ui(type?)` lists the admitted `ui.*` sends.
+- **Fake processes.** `processes: { ffmpeg: { stdout, stderr, exitCode } }` makes a spawn of `ffmpeg` run a scripted stand-in, with real supervision (ADR 0166).
+- **Crashes.** `k.crashDuring(type, point, payload?)` stops the kernel abruptly and restarts it when the command reaches the point (`before-step:<name>`, `after-step:<name>`, or `before-commit`). It resolves with the reply after recovery (ADR 0166).
+- **Checks.**
+  - It fails a test whose handler throws a code of its own namespace that the extension did not register. The next testkit call throws, and `close()` throws for any left.
+  - It checks the extension's catalogs: every key its manifest uses exists in every shipped catalog, and every message is valid ICU. Literal text and placeholder descriptions are printed as warnings.
+- **Modes.** The same tests run in `shared` mode (extensions installed as builtins) and `sandboxed` mode (installed as local extensions, granted `sandboxed`). The mode comes from `createTestKernel({ isolation })` or `KVMAN_TESTKIT_ISOLATION`, and the gates run both.
+- **Remote mode.** `createTestKernel` also has a remote mode, used by builder projects (`11` §11.5). Inside a sandboxed test process it is a client, over IPC, of a test kernel that the build runs, with the same API. The project's own extension is always the one loaded from its `dist/`, and fakes such as `fakeProvider(...)` are passed as data.
 
 ## 5.11 LLM access and providers
 

@@ -71,7 +71,7 @@ fakeProvider({
 })
 ```
 
-It sends each chunk as a `delta`, then `thinking` (when set) as one thinking delta, and answers `content: reply`, `stopReason: 'end'`, and the requested model. The failure count is kept per fake provider instance. The `createTestKernel` of M2.13 will take it as an extension.
+It sends each chunk as a `delta`, then `thinking` (when set) as one thinking delta, and answers `content: reply`, `stopReason: 'end'`, and the requested model. The failure count is kept per fake provider instance. The `createTestKernel` of M2.13 takes it as an extension. There `fakeProvider(options)` returns a descriptor that the testkit places as data, and the count is kept per loaded instance (ADR 0165).
 
 ## Consequences
 

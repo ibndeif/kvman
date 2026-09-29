@@ -108,9 +108,7 @@ export function createMessaging({ state, client, values, extension }: MessagingP
     },
     problem(code, options) {
       state.open();
-      const built = extensionProblem(extension.manifest, message, code, options);
-      if (!built.registered) logger.warn(`${invoke.extension} used the unregistered error code ${code}`);
-      return new ProblemError(built.problem);
+      return new ProblemError(extensionProblem(extension.manifest, message, code, options));
     },
     log: logger,
   };

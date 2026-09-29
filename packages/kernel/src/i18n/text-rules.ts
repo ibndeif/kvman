@@ -50,7 +50,7 @@ function useIssues(use: KeyUse, translations: Translations, parsed: Parsed): Iss
     return [{ path: use.path, message: `${use.key} is not in the default catalog ${translations.default}`, hint: `add ${use.key} to the ${translations.default} catalog` }];
   }
   const absent = others.filter((locale) => messageAt(translations.catalogs[locale], use.key) === undefined).map((locale): Issue => ({
-    path: use.path, message: `${use.key} is not in the ${locale} catalog; ${locale} shows the ${translations.default} text`, severity: 'warning',
+    path: use.path, message: `${use.key} is not in the ${locale} catalog; ${locale} shows the ${translations.default} text`, code: 'TRANSLATION_MISSING', severity: 'warning',
   }));
   return [...absent, ...parameterIssues(use, parsed, [translations.default, ...others])];
 }

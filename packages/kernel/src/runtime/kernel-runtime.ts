@@ -1,28 +1,23 @@
 import { realpathSync } from 'node:fs';
 import type { HealthResult, MessageStatus, QuarantineReason, ReplyPayload } from '@kvman/protocol';
 import { SocketRequests } from '../adapters/socket/socket-requests.ts';
-import { inertFaults, type FaultPoints } from '../faults/fault-points.ts';
+import { inertFaults } from '../faults/fault-points.ts';
 import { CallDepths } from '../hosts/call-depths.ts';
 import { HostFailures } from '../hosts/host-failures.ts';
 import { HostManager } from '../hosts/host-manager.ts';
-import { workerThreadStarter, type StartHostThread } from '../hosts/host-thread.ts';
+import { workerThreadStarter } from '../hosts/host-thread.ts';
 import { LlmCalls } from '../hosts/llm-calls.ts';
 import { defaultReadPoolSize, ReadPool, readThreadStarter } from '../hosts/read-pool/read-pool.ts';
 import { sandboxProcessStarter } from '../hosts/sandbox/sandbox-process.ts';
-import type { KernelLogger } from '../hosts/kernel-logger.ts';
 import { ExtensionVersions, reloadGraceMs } from '../hosts/extension-versions.ts';
 import { KernelCommits } from '../hosts/kernel-commits.ts';
 import type { KernelHost } from '../hosts/kernel-host.ts';
 import { ProcessCalls } from '../hosts/process-calls.ts';
-import { hostPlatform, pnpmExecutable } from '../install/bundled-tools.ts';
-import { InstallService } from '../install/install-service.ts';
-import { installPaths } from '../install/install-paths.ts';
-import { kernelReadRoots, kernelSdkVersion } from '../install/kernel-packages.ts';
-import { ForkedLoader } from '../install/loader-process.ts';
+import { kernelReadRoots } from '../install/kernel-packages.ts';
 import { SnapshotStore } from '../install/snapshot-store.ts';
+import type { InstallService } from '../install/install-service.ts';
 import { DataMigrations } from '../migrations/data-migrations.ts';
 import { kernelProblem, ProblemError } from '../problems.ts';
-import { kernelEventPayloads } from '../registry/kernel-types.ts';
 import { LiveBus } from '../hosts/live-bus.ts';
 import { Quarantines } from '../hosts/quarantines.ts';
 import { QueryPath, type QueryAnswer } from '../hosts/query-path.ts';
@@ -30,6 +25,7 @@ import { RecordedValueStore } from '../hosts/recorded-value-store.ts';
 import { ReplyWaiters, type ReplyListener } from '../hosts/reply-waiters.ts';
 import { RpcService } from '../hosts/rpc-service.ts';
 import { Settlement } from '../hosts/settlement.ts';
+import { UnregisteredCodes } from '../hosts/unregistered-codes.ts';
 import { SavedPreferences } from '../preferences/user-preferences.ts';
 import { RegistryState } from '../registry/registry-state.ts';
 import { WorkspaceDirectory } from '../registry/workspace-directory.ts';
@@ -39,56 +35,20 @@ import type { QueryRequest } from '../router/query-admission.ts';
 import { Router } from '../router/router.ts';
 import { PendingIndex } from '../scheduler/pending-index.ts';
 import { Scheduler } from '../scheduler/scheduler.ts';
-import type { SecretStore } from '../secrets/secret-store.ts';
 import { writeCommittedSecrets } from '../secrets/secret-writes.ts';
-import type { SchedulerTimers } from '../scheduler/timers.ts';
 import { CommitPipeline } from '../storage/commit-pipeline.ts';
 import { readMessageStatus } from '../storage/message-status.ts';
-import type { Connection } from '../storage/driver.ts';
 import { StepJournal } from '../store/step-journal.ts';
-import type { UlidGenerator } from '../ulid.ts';
 import { JobTokens } from '../processes/job-tokens.ts';
 import { reconcileProcesses } from '../processes/process-reconciliation.ts';
 import { ProcessSupervisor } from '../processes/process-supervisor.ts';
 import { ScheduleService } from '../schedules/schedule-service.ts';
 import { recoverInterrupted } from './crash-recovery.ts';
 import { FileServices } from './file-services.ts';
-import { healthOf, type KernelIdentity } from './health.ts';
+import { healthOf } from './health.ts';
 import { wireKernelHost } from './kernel-host-wiring.ts';
+import { installService, type KernelRuntimeOptions } from './runtime-options.ts';
 import { PresetImportTokens } from '../presets/import-tokens.ts';
-
-export type KernelRuntimeOptions = {
-  databaseFile: string;
-  connection: Connection;
-  install: InstallSettings;
-  // secrets.json, loaded at boot step 3 (ADR 0126).
-  secrets: SecretStore;
-  logger: KernelLogger;
-  ids: UlidGenerator;
-  now: () => number;
-  timers: SchedulerTimers;
-  poolSize: number;
-  identity: KernelIdentity;
-  // kernel.shutdown committed (ADR 0090): the daemon runs its shutdown.
-  requestShutdown: () => void;
-  startThread?: StartHostThread;
-  // ADR 0131: the read pool's threads, 2 unless given.
-  readPoolSize?: number;
-  // ADR 0100: the fault points of a test run; inert unless given.
-  faults?: FaultPoints;
-};
-
-// Where extensions are installed from and to (06 §6.2, §6.9): the home folder, the builtin tarballs, the npm
-// registry of KVMAN_NPM_REGISTRY, and the environment whose path and proxies pnpm and git use.
-export type InstallSettings = { home: string; builtin: string; registry: string; environment: NodeJS.ProcessEnv };
-
-function installService(options: KernelRuntimeOptions): InstallService {
-  const { install, timers, now, identity } = options;
-  return new InstallService({
-    paths: installPaths(install.home, install.builtin), pnpm: () => pnpmExecutable(hostPlatform()), registry: install.registry, kvmanVersion: identity.version,
-    environment: install.environment, timers, loader: new ForkedLoader(timers), sdkVersion: kernelSdkVersion(), kernelEvents: kernelEventPayloads(), now,
-  });
-}
 
 // 03 §3.9: in-flight invocations get this long to finish at shutdown.
 export const shutdownGraceMs = 10_000;
@@ -146,13 +106,15 @@ export class KernelRuntime {
     this.pipeline = new CommitPipeline({ connection, files: blobFiles, admission: this.router, now, faults });
     this.processes = new ProcessSupervisor({
       home: options.install.home, connection, pipeline: this.pipeline, store: this.files.store, live: this.live, tokens: this.#tokens,
-      environment: options.install.environment, timers, now, logger: options.logger, faults,
+      environment: options.install.environment, timers, now, logger: options.logger, faults, commands: options.commands,
     });
     writeCommittedSecrets(this.pipeline, options.secrets, options.logger, faults);
     this.#waiters = new ReplyWaiters({ connection, files: blobFiles });
     const values = new RecordedValueStore(connection);
     this.#reads = new ReadPool(options.readPoolSize ?? defaultReadPoolSize, readThreadStarter(options.databaseFile));
-    const starters = { startThread: options.startThread ?? workerThreadStarter(options.databaseFile), startSandbox: sandboxProcessStarter(kernelReadRoots()) };
+    const starters = {
+      startThread: options.startThread ?? workerThreadStarter(options.databaseFile), startSandbox: options.startSandbox ?? sandboxProcessStarter(kernelReadRoots()),
+    };
     this.hosts = new HostManager({
       connection, registry, grants: this.registry, snapshots: this.snapshots, values, logger: options.logger, ids, poolSize: options.poolSize, timers, now,
       ...starters, reads: this.#reads, failures: new HostFailures(), faults, secrets: options.secrets,
@@ -262,6 +224,7 @@ export class KernelRuntime {
     const settlement = new Settlement({
       pipeline: this.pipeline, scheduler: this.scheduler, waiters: this.#waiters, queries: this.#queries, live: this.live, values, quarantines,
       results: this.router, blobs: this.files, processes: this.processes,
+      codes: new UnregisteredCodes({ logger: options.logger, manifestOf: (extension) => registry().manifestOf(extension) }),
     });
     const llm = new LlmCalls({ connection, commits, registry: this.registry, live: this.live, provide: (call) => this.hosts.provide(call) });
     const abortMessages = (messageIds: ReadonlySet<string>): void => {

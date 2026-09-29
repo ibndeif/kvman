@@ -107,7 +107,7 @@ export async function bootModelKernel(file: string, time: TestTime = { value: st
   const queries = new QueryPath(router, scheduler);
   const settlement = new Settlement({
     pipeline, scheduler, waiters, queries, live: new LiveBus(), values: new RecordedValueStore(connection), quarantines: new Quarantines(pipeline, registry, ulids, () => undefined),
-    results: router, blobs: services, processes: { invocationEnded: () => undefined },
+    results: router, blobs: services, processes: { invocationEnded: () => undefined }, codes: { check: () => undefined },
   });
   const commits = new KernelCommits(pipeline, scheduler, waiters);
   const preferences = new SavedPreferences(connection);

@@ -10,6 +10,9 @@ const excluded = ['**/node_modules/**', 'test/fixtures/**'];
 // decides their outcome (ADR 0131).
 const timing = ['packages/*/test/**/*.timing.test.ts'];
 
+// ADR 0165: the createTestKernel suites run a second time with the extensions under test sandboxed.
+const testKernelSuites = ['packages/testkit/test/test-kernel/**/*.test.ts', 'packages/testkit/test/prompts/**/*.test.ts', 'examples/*/test/**/*.test.ts', 'extensions/*/test/**/*.test.ts'];
+
 export default defineConfig({
   resolve: { conditions: sourceConditions },
   ssr: { resolve: { conditions: sourceConditions, externalConditions: ['@kvman/source'] } },
@@ -21,6 +24,10 @@ export default defineConfig({
     globalSetup: ['./test/temporary-folder.ts'],
     projects: [
       { extends: true, test: { name: 'parallel', include: tests, exclude: [...excluded, ...timing], sequence: { groupOrder: 0 } } },
+      {
+        extends: true,
+        test: { name: 'sandboxed', include: testKernelSuites, exclude: [...excluded, ...timing], env: { KVMAN_TESTKIT_ISOLATION: 'sandboxed' }, sequence: { groupOrder: 0 } },
+      },
       { extends: true, test: { name: 'timing', include: timing, exclude: excluded, fileParallelism: false, sequence: { groupOrder: 1 } } },
     ],
   },

@@ -1,6 +1,7 @@
 import { translationsSchema, type Issue, type JsonObject, type Text } from '@kvman/protocol';
 import type { Ext, SubscriptionDef } from '@kvman/sdk';
 import { compact, reference, type Recording } from './recording.ts';
+import { registerPrompt } from './recording-prompts.ts';
 import { uiRegistrations } from './recording-ui.ts';
 
 export type RecordingExt = { ext: Ext; close(): void };
@@ -95,6 +96,10 @@ export function createRecordingExt(recording: Recording, closedError: () => Erro
       }));
       recording.bind(`subscription:${event}`, `${path}.handler`, definition.handle);
       recording.bindHandler(`subscription:${event}`, definition);
+    },
+    registerPrompt(name, definition) {
+      open();
+      return registerPrompt(ext, recording, name, definition);
     },
     registerSchedule(name, definition) {
       open();

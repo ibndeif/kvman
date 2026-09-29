@@ -1,4 +1,5 @@
-import { actionPropSchema, blobIdSchema, textPropSchema } from '@kvman/protocol';
+import { actionPropSchema, blobIdSchema, textPropSchema, type Action } from '@kvman/protocol';
+import type { ZodType } from 'zod';
 
 export * from 'zod';
 
@@ -13,6 +14,6 @@ export function text(): typeof textPropSchema {
 }
 
 /** An event prop of a composite component: the using view passes an `Action`. */
-export function action(): typeof actionPropSchema {
+export function action(): ZodType<Action> {
   return actionPropSchema;
 }

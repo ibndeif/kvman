@@ -6,11 +6,9 @@ export function hostProblem(message: Message, code: KernelErrorCode, detail: str
   return new ProblemError(kernelProblem(code, { correlationId: message.correlationId, messageId: message.id, detail, ...(issues === undefined ? {} : { issues }) }));
 }
 
-export type ExtensionProblem = { problem: Problem; registered: boolean };
-
 // ctx.problem (13 §13.1, ADR 0074): a registered code takes its title, hint, and retryable; any other is delivered as
 // it is with its code as the title, not retryable.
-export function extensionProblem(manifest: Manifest, message: Message, code: string, options: ProblemOptions = {}): ExtensionProblem {
+export function extensionProblem(manifest: Manifest, message: Message, code: string, options: ProblemOptions = {}): Problem {
   const registered = manifest.errors.find((error) => error.code === code);
   const candidate = {
     code, title: registered?.title ?? code, retryable: registered?.retryable ?? false,
@@ -23,7 +21,7 @@ export function extensionProblem(manifest: Manifest, message: Message, code: str
   if (!parsed.success) {
     throw hostProblem(message, 'VALIDATION_FAILED', `"${code}" is not an error code`, [{ path: 'code', message: 'expected "<namespace>/UPPER_SNAKE"' }]);
   }
-  return { problem: parsed.data, registered: registered !== undefined };
+  return parsed.data;
 }
 
 const deniedOperations: Record<string, string> = {

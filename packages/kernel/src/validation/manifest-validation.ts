@@ -4,6 +4,7 @@ import { manifestTextIssues } from '../i18n/owner-text.ts';
 import { manifestUiIssues } from '../ui/ui-checks.ts';
 import type { ValueChecker } from '../ui/value-checks.ts';
 import { configIssues, settingsSectionIssues } from './config-rules.ts';
+import { descriptionIssues } from './description-rules.ts';
 import { objectOf } from './json-reading.ts';
 import { manifestNames } from './manifest-names.ts';
 import { nameIssues } from './name-rules.ts';
@@ -37,6 +38,7 @@ export function validateManifest(candidate: Json, context: ManifestContext, reco
     ...configIssues(manifest),
     ...settingsSectionIssues(manifest),
     ...scheduleIssues(manifest),
+    ...descriptionIssues(manifest),
   ];
   const known = [...recorded, ...rules];
   const reported = new Set(known.filter((issue) => issue.severity !== 'warning').map((issue) => issue.path));

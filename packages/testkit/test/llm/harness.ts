@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ExtensionDefinition } from '@kvman/sdk';
 import { expect, vi } from 'vitest';
-import { fakeProvider, type FakeProviderOptions } from '../../src/fake-provider.ts';
+import { fakeProviderExtension, type FakeProviderOptions } from '../../src/fake-provider-extension.ts';
 import { installFixture } from '../install/fixture-snapshots.ts';
 import { openInstallFixture, type InstallFixture } from '../install/harness.ts';
 import { temporary } from '../install/packages.ts';
@@ -38,16 +38,16 @@ export async function openLlmFixture(options: { home?: string } = {}): Promise<I
   return fixture;
 }
 
-const fakeSource = fileURLToPath(new URL('../../src/fake-provider.ts', import.meta.url));
+const fakeSource = fileURLToPath(new URL('../../src/fake-provider-extension.ts', import.meta.url));
 
 // Installs the testkit's fake provider as a fixture package and refreshes the registry (ADR 0154). Enabling it
 // triggers the model refresh, which writes fake-model; wait for its row with vi.waitFor(check, refreshWait) before
 // asking, and use refreshWait for every wait on work that starts a provider's host.
 export async function installFakeProvider(fixture: InstallFixture, options: FakeProviderOptions = {}): Promise<void> {
   const packageFolder = temporary('fake-provider');
-  writeFileSync(join(packageFolder, 'fake-provider.ts'), readFileSync(fakeSource, 'utf8'));
-  writeFileSync(join(packageFolder, 'entry.ts'), `import { fakeProvider } from './fake-provider.ts';\nexport default fakeProvider(${JSON.stringify(options)});\n`);
-  await installFixture(fixture.connection, fixture.home, { definition: fakeProvider(options), folder: packageFolder, entry: 'entry.ts' });
+  writeFileSync(join(packageFolder, 'fake-provider-extension.ts'), readFileSync(fakeSource, 'utf8'));
+  writeFileSync(join(packageFolder, 'entry.ts'), `import { fakeProviderExtension } from './fake-provider-extension.ts';\nexport default fakeProviderExtension(${JSON.stringify(options)});\n`);
+  await installFixture(fixture.connection, fixture.home, { definition: fakeProviderExtension(options), folder: packageFolder, entry: 'entry.ts' });
   fixture.runtime.registry.refresh();
 }
 

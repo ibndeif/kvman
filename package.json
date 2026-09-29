@@ -10,7 +10,7 @@
     "typecheck": "turbo run typecheck && tsc -p tsconfig.json",
     "lint": "eslint . --max-warnings=0",
     "test": "vitest run",
-    "build": "turbo run build && node --conditions=@kvman/source scripts/pack-builtins.ts",
+    "build": "turbo run build && node --conditions=@kvman/source scripts/pack-builtins.ts && node --conditions=@kvman/source scripts/api-reference.ts",
     "bench:check": "node --conditions=@kvman/source packages/testkit/bench/main.ts check",
     "bench:record": "node --conditions=@kvman/source packages/testkit/bench/main.ts record",
     "changeset": "changeset"
@@ -22,6 +22,7 @@
     "@types/node": "24.13.6",
     "eslint": "10.11.0",
     "turbo": "2.11.3",
+    "typedoc": "0.28.20",
     "typescript": "6.0.3",
     "typescript-eslint": "8.70.1",
     "vite": "8.3.0",

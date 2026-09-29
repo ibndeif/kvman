@@ -63,11 +63,11 @@ The kernel exposes named fault points. They are compiled into every build and do
 
 ## 14.5 Documentation as a deliverable
 
-- `docs/extension-guide.md`, `docs/view-language.md`, `docs/llms.txt`, and the examples are deliverables of M2.13, M3.10, and M6.3: an example that does not run in CI fails the build.
-- Schema descriptions are linted (non-empty, not placeholder text).
-- `docs/extension-guide.md` opens with **your first extension in 10 minutes**: `kvman ext new` → `kvman ext dev --watch` → edit a command and see it in the shell → `npm test` → `npm publish`. CI runs these steps.
+- `docs/extension-guide.md`, `docs/view-language.md`, `docs/llms.txt`, and the examples are deliverables of M2.13, M3.10, and M6.3: an example that does not run in the gates fails them (ADR 0007: until a CI system is chosen, "in CI" means the local gates).
+- Descriptions are linted: empty ones fail recording, and a placeholder (`todo`, `tbd`, `fixme`, `xxx`, `description`, `placeholder`, `...`, `…`, text starting with `lorem ipsum`, or the registration's own name) is a recording warning (ADR 0169).
+- `docs/extension-guide.md` opens with **your first extension in 10 minutes**: `kvman ext new` → `kvman ext dev --watch` → edit a command and see it in the shell → `npm test` → `npm publish`. Its code examples are projects under `examples/` whose tests run in the gates from M2.13; the walkthrough itself runs as a test from M2.14 (CLI steps) and M3.10 (the shell step) (ADR 0168).
 - `docs/naming.md` is a one-page cheat sheet: the naming grammar (`02` §2.4), full public names, the vocabulary (`ctx.command` waits, `ctx.send` does not, `ctx.query` reads; `lane`, `live`, `refreshOn`, `$item`), and the `register<Kind>` rule.
-- An API reference for `@kvman/sdk` and `@kvman/widget-bridge` is generated with TypeDoc from their types into `docs/api/` in CI; a public SDK export without a doc comment fails the build.
+- An API reference for `@kvman/sdk` and `@kvman/widget-bridge` is generated with TypeDoc from their types into `docs/api/` (git-ignored) by `pnpm build`; an exported declaration or member of either package without a doc comment fails the build (ADR 0168).
 
 ## 14.6 Performance targets (measured in M1.9 and M7.2 on the reference machine)
 

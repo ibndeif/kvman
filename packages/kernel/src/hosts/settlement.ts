@@ -9,6 +9,7 @@ import type { QueryPath } from './query-path.ts';
 import type { Quarantines } from './quarantines.ts';
 import type { RecordedValueStore } from './recorded-value-store.ts';
 import type { ReplyWaiters } from './reply-waiters.ts';
+import type { UnregisteredCodes } from './unregistered-codes.ts';
 
 export type SettlementDeps = {
   pipeline: CommitPipeline;
@@ -24,6 +25,8 @@ export type SettlementDeps = {
   blobs: { ended(messageId: string, committed: boolean): Promise<void> };
   // 03 §3.7: the processes of the invocation that are not detached end with it.
   processes: { invocationEnded(invocationId: string): void };
+  // ADR 0166: an unregistered code of the handler's own namespace is logged where every outcome arrives.
+  codes: Pick<UnregisteredCodes, 'check'>;
 };
 
 // `id` is the invocation's; a claim that never reached a host has none.
@@ -46,6 +49,7 @@ export class Settlement {
   async completed(run: Run, frame: CompleteFrame): Promise<void> {
     this.#ended(run);
     const { claim } = run;
+    if ('ok' in frame.outcome && !frame.outcome.ok) this.#deps.codes.check(claim, frame.outcome.problem);
     if (claim.message.kind === 'query') {
       this.#answerQuery(run, frame.outcome);
       return;
