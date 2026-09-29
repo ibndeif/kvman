@@ -219,6 +219,7 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
   - `ask` and `subagent` (fresh or fork, connector subsets, parallel, `--async`).
   - Compaction, cancel, the restart rules, and retention.
   - Message, turn, and session records with usage and time totals, titles, `omitted` counts, JSON export, and fork.
+  - Session points (`kvcoder.handler.*`), with handler injections that don't start turns.
   - The UI (Chat page, cards, status item, Prompt tab).
   - Settings.
   - The prompt-build benchmark.

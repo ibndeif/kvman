@@ -105,3 +105,12 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds,
 29. **Titles.** After the first turn ends, kvcoder asks `kvai.complete` (the session's model, no tools, `maxTokens` 30) for a 3–6 word title in the conversation's language. Until then, the title is the first 60 characters of the first message. `kvcoder.session.rename` overrides it, and a renamed session is never retitled. A failed title call keeps the placeholder.
 30. **Export.** JSON only: `kvcoder.session.export { sessionId }` → `{ fileId }`, a kernel file `<title>.json` holding `{ session, turns, messages }` (subagent sessions included).
 31. **Fork.** `kvcoder.session.fork { sessionId, throughSeq? }` → a new session with a copy of the messages (and the current summary) through `throughSeq` (default: all). Per-session sections aren't copied; their owners set them for the new session if they want to.
+32. **Session access for extensions.** kvcoder's whole API is public, except `message.send` and `question.answer`, which are for the person only. Any extension may read every session's messages in its workspace.
+33. **Session points.** `kvcoder.handler.register { point, command }` (the caller's own public command), `.unregister { point }`, and `.list`, registered from the extension's `kernel.started` handler. Handlers are cleared at each start and owned by the caller, like connectors. For each occurrence, kvcoder queues one async job per handler. Inputs carry ids and totals, never message contents:
+    - `kvcoder.session.created { sessionId, parentId? }`
+    - `kvcoder.session.deleted { sessionId }`
+    - `kvcoder.session.forked { fromSessionId, toSessionId, throughSeq }`
+    - `kvcoder.turn.started { sessionId, turnId }`
+    - `kvcoder.turn.ended { sessionId, turnId, outcome, usage, durationMs }`
+    - `kvcoder.session.waiting { sessionId, kind: 'question' | 'approval' | 'subagent' }`
+34. **Loop safety.** A message injected by a job that kvcoder started as a handler (or by anything nested in it) is stored but doesn't start a turn. The next turn sees it.

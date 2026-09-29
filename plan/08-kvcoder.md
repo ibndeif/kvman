@@ -120,6 +120,29 @@ await ctx.exec('kvcoder.section.remove', { id: 'open-todos', sessionId });
 - **Sections are stored until removed.**
 - **Stale entries.** When kvcoder reads, it ignores any connector or section whose owner isn't loaded.
 
+**Session points.** An extension can have one of its commands called when something happens to a session:
+
+```ts
+ctx.registerHandler('kernel.started', {
+  description: 'Registers todo cleanup with kvcoder.',
+  handle: () => ctx.exec('kvcoder.handler.register', { point: 'kvcoder.session.deleted', command: 'todo.session.forget' }),
+});
+```
+
+| Point | Input |
+|---|---|
+| `kvcoder.session.created` | `{ sessionId, parentId? }` |
+| `kvcoder.session.deleted` | `{ sessionId }` |
+| `kvcoder.session.forked` | `{ fromSessionId, toSessionId, throughSeq }` |
+| `kvcoder.turn.started` | `{ sessionId, turnId }` |
+| `kvcoder.turn.ended` | `{ sessionId, turnId, outcome, usage, durationMs }` |
+| `kvcoder.session.waiting` | `{ sessionId, kind: 'question' \| 'approval' \| 'subagent' }` |
+
+- **Calls.** For each occurrence, kvcoder queues one async job per registered handler. Inputs carry ids and totals, never message contents; a handler reads the messages with `kvcoder.message.list` if it needs them.
+- **Registration.** The `command` must be the caller's own public command. Handlers are owned by the caller and cleared at each start, like connectors.
+- **Loop safety.** A message injected by a handler job (or anything nested in it) is stored but doesn't start a turn. The next turn sees it.
+- **Access.** Every extension can use kvcoder's public API: read sessions, messages, and turns; create, rename, delete, fork, and export sessions; inject messages; cancel turns. Only `message.send` and `question.answer` are for the person.
+
 **Testing.** `runConnector(kernel, 'ext new \'{…}\'')` from `@kvman/kvcoder/testing`, used with `createTestKernel`, parses a line exactly as kvcoder does and returns `{ output, exitCode }`, including for `-h`.
 
 ## 8.5 Built-in connectors
@@ -156,7 +179,7 @@ subagent run '{ "task", "mode": "fresh" | "fork", "connectors"?: [names], "bash"
 | `kvcoder.session.list` | query | `{ limit }` → top-level `Session[]`, newest first |
 | `kvcoder.session.get` / `.rename` / `.delete` / `.compact` | query / commands | `{ sessionId, … }` |
 | `kvcoder.message.send` | command, user only | `{ sessionId, text }` → `{}` |
-| `kvcoder.message.inject` | command | `{ sessionId, text }` → `{}` |
+| `kvcoder.message.inject` | command | `{ sessionId, text }` → `{}`: starts a turn when the session is idle, unless it comes from a handler job (§8.4) |
 | `kvcoder.message.list` | query | `{ sessionId, limit }` → `{ messages, omitted }` (the newest `limit`, in order) |
 | `kvcoder.turn.cancel` | command | `{ sessionId }` → `{}` |
 | `kvcoder.turn.list` | query | `{ sessionId, limit }` → `Turn[]`, newest first |
@@ -169,6 +192,9 @@ subagent run '{ "task", "mode": "fresh" | "fork", "connectors"?: [names], "bash"
 | `kvcoder.connector.list` | query | `{}` → `[{ name, description, owner, kind: 'commands' \| 'binary', commands?, binary? }]` |
 | `kvcoder.section.set` | command | `{ id, title, order, content, sessionId? }` → `{}` |
 | `kvcoder.section.remove` | command | `{ id, sessionId? }` → `{}` |
+| `kvcoder.handler.register` | command | `{ point, command }` → `{}` |
+| `kvcoder.handler.unregister` | command | `{ point }` → `{}` (the owner only) |
+| `kvcoder.handler.list` | query | `{}` → `[{ point, command, owner }]` |
 | `kvcoder.section.list` | query | `{ sessionId? }` → `[{ id, title, order, owner, sessionId?, size }]` |
 
 All are public. `Session`, `Message`, and `Turn` are as in §8.1.
