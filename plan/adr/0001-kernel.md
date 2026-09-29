@@ -158,3 +158,4 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds 
 78. **Type-only imports.** See ADR 0002, 12.
 79. **Nested progress.** `ctx.job.progress(data)` always goes to the stream of `ctx.job.rootId`. A chunk is `{ source: '<extension name>', data }`.
 80. **Per-registration size caps.** A command or query may set `maxInputBytes` and `maxOutputBytes`: default 1 MiB, at most 32 MiB. Going over the registration's cap fails with `TOO_LARGE`. (Refines 48.)
+81. **Dependency cycles.** A cycle in `kvman.dependencies` (A → B → A, or longer) stops kvman with `EXTENSION_INVALID`, printing the cycle (`@a/x → @b/y → @a/x`). Extensions can still call each other's public commands at runtime without declaring each other.

@@ -71,7 +71,7 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
   - `@kvman/testkit` `createTestKernel` (§10).
   - The `ctx.exec` benchmark.
 - **Done when:**
-  - Every loading rule stops the kernel with `EXTENSION_INVALID` and the offending extension named.
+  - Every loading rule, including a dependency cycle, stops the kernel with `EXTENSION_INVALID` and the offending extension (or the cycle) named.
   - A handler sees its own workspace and caller while 32 jobs interleave on one worker.
   - Each access rule, limit, and depth rule fails with its code.
   - A crashed worker's jobs fail `WORKER_CRASHED` and a new worker takes over.

@@ -120,6 +120,7 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 
 **Loading.** Extensions load in dependency order. kvman stops with `EXTENSION_INVALID` (§2.14) when:
 - a dependency is missing or out of range;
+- dependencies form a cycle (the message prints it, for example `@a/x → @b/y → @a/x`);
 - two extensions claim one namespace;
 - a registered name doesn't start with `<namespace>.`;
 - a name is registered twice;
