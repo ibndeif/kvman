@@ -1,0 +1,79 @@
+# 03 — SDK (`@kvman/sdk`)
+
+The SDK is the whole API an extension sees. It stays small and developer-friendly. Every public export has a one-line TSDoc comment, which is the API reference.
+
+## 3.1 An extension
+
+```ts
+import { z, type Ctx } from '@kvman/sdk';
+
+export default (ctx: Ctx) => {
+  ctx.registerCommand('notes.add', {
+    description: 'Adds a note to this workspace.',
+    input: z.object({ text: z.string() }),
+    output: z.object({ id: z.string() }),
+    public: true,
+    handle: async (input) => {
+      const note = await ctx.store.collection('notes').insert({ text: input.text });
+      return { id: note.id };
+    },
+  });
+
+  ctx.registerQuery('notes.list', {
+    description: 'Lists the notes of this workspace.',
+    input: z.object({ limit: z.number().int().max(1000) }),
+    output: z.array(z.object({ id: z.string(), text: z.string() })),
+    public: true,
+    handle: (input) => ctx.store.collection('notes').find({}, { limit: input.limit }),
+  });
+
+  ctx.registerSetting('notes.greeting', { description: 'The greeting shown above notes.', schema: z.string(), default: 'Hello' });
+};
+```
+
+- The entry default-exports one function that receives the extension's `ctx`. It only registers, and it runs once per worker at load.
+- **Registrations.**
+  - Commands and queries take `description`, `input`, `output`, `handle(input)`, and optionally `public` (default `false`) and `timeoutMs` (default 600 000).
+  - Commands also take `retries` (default 3).
+  - Settings take `description`, `schema`, and `default`.
+  - Every name starts with the extension's namespace. Every description is required and is one sentence.
+
+## 3.2 Job calls
+
+| Call | Does |
+|---|---|
+| `ctx.exec(name, input)` | Runs a command or query now and resolves to its output. |
+| `ctx.execAsync(name, input)` | Queues a command and resolves to its job id. |
+| `ctx.schedule(name, input, { at: Date } \| { cron: string })` | Schedules a command and resolves to the schedule id. |
+| `ctx.schedule.cancel(id)` | Deletes a schedule. |
+| `ctx.cancel(jobId)` | Cancels a job (§2.3). |
+| `ctx.problem(code, params?)` | Makes a Problem to throw. `code` is `<namespace>/UPPER_SNAKE`, and it is never retried. |
+
+**Typing calls to other extensions.**
+- The SDK declares empty `interface Commands {}` and `interface Queries {}`, which map each name to `{ input; output }`.
+- An extension augments them for its public names and ships the declaration in its package. A caller then gets typed input and output after `import type {} from '@kvman/kvai'`.
+- A name that isn't declared takes and returns `unknown`.
+- There's no generator, and the kernel validates at runtime either way.
+
+## 3.3 The current job
+
+`ctx.job` exists only while a handler runs; outside one it fails with `NO_JOB`.
+
+| Field | Is |
+|---|---|
+| `id` | The job id (UUIDv7). A sync job has one too, but no row. |
+| `workspace` | `{ id, name, path }`. |
+| `caller` | `{ kind: 'user' }` or `{ kind: 'extension', name }`. |
+| `signal` | An `AbortSignal`, aborted on cancel, timeout, or shutdown. |
+| `progress(data)` | Sends a progress chunk (JSON, at most 64 KiB) to the job's stream (§4.4). |
+
+## 3.4 Storage, files, settings, secrets
+
+Every call returns a Promise, except the calls on a transaction's `tx`.
+
+| API | Calls |
+|---|---|
+| `ctx.store`, `ctx.store.global` | `kv.get/set/delete(key)`; `collection(name)` with `insert(doc)` → doc with `id`, `get(id)`, `find(filter, { limit })`, `update(id, patch)` → the document (shallow merge: top-level fields in `patch` replace the document's, and `null` is stored as `null`), `delete(id)`; `transaction((tx) => …)` |
+| `ctx.files` | `write(name, data, type)` → File, `get(id)`, `read(id)` → Buffer, `path(id)`, `unlink(id)` |
+| `ctx.settings` | `get(key)`, `set(key, value, { scope: 'global' \| 'workspace' })` (own keys only) |
+| `ctx.secrets` | `get(name)`, `set(name, value)`, `delete(name)` |
