@@ -13,7 +13,7 @@ The specification is `plan/`. Read `plan/README.md` and every file it lists befo
 
 ## 2. How to work: milestone by milestone
 
-Milestones are in the plan (once written). Do them strictly in order. For each one:
+Milestones are in `plan/13-milestones.md`. Do them strictly in order. For each one:
 
 1. **Read** its sections. Ask about anything unclear now.
 2. **Write the scenarios** in `milestones/<id>-TEST-CASES.md` before any code:
@@ -83,4 +83,4 @@ A test that needs one of these off is a wrong test. Everything else (the trust p
 
 ## 8. Commits
 
-Conventional commits, with a changeset for every change to `@kvman/sdk` or an extension (the kernel and CLI follow the root version). Commit each finished milestone to main; never push.
+Conventional commits, with a changeset for every change to `@kvman/sdk`, `@kvman/testkit`, or an extension (the kernel and CLI follow the root version). Commit each finished milestone to main; never push.

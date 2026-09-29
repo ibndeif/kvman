@@ -15,15 +15,14 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `09-kvdev.md` | The development harness: connectors, scaffold, preview |
 | `10-testkit.md` | `createTestKernel` |
 | `11-presets.md` | The `coder` and `dev` presets |
+| `12-testing.md` | Test layers, crash invariants, benchmarks |
+| `13-milestones.md` | The 13 milestones: Read, Build, Done when |
 | `adr/0001-kernel.md` | Every kernel decision, with the product owner's answers |
 | `adr/0002-kvwebui.md` | Every kvwebui decision |
 | `adr/0003-kvai.md` | Every kvai decision |
 | `adr/0004-kvinterviewer.md` | kvinterviewer (superseded by 0005) |
 | `adr/0005-kvcoder.md` | Every kvcoder decision |
 | `adr/0006-kvdev-testkit-presets.md` | kvdev, the testkit, and the presets |
+| `adr/0007-milestones-and-testing.md` | Milestones, benchmarks, crash and UI testing, changesets |
 
-## Still to design
-
-1. The milestones: the build order and each one's Build and Done-when lists.
-
-There are no open questions.
+The plan is complete. Implementation starts with M1.1.
