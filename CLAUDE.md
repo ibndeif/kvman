@@ -46,6 +46,7 @@ Milestones are in the plan (once written). Do them strictly in order. For each o
   | `sdk` | `zod` |
   | `kernel` | `sdk`, its declared dependencies |
   | `cli` | `kernel`, `sdk` |
+  | `testkit` | `kernel`, `sdk` |
   | `extensions/*` | `sdk`, their own declared dependencies; never `kernel`; another extension only with `import type` when it is a `kvman.dependencies` entry, except the runtime helper `@kvman/kvcoder/connector` |
 
 ## 4. Naming
