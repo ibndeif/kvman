@@ -130,10 +130,13 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 **Hot reload.**
 - A `path:` extension's folder is watched. On a change, every worker reloads it and its registrations are replaced. Running jobs finish on the old code.
 - A reload that fails keeps the previous code and logs the error.
+- A reload doesn't touch the extensions that depend on it. If the new version no longer satisfies a dependent's range, or drops a name a dependent calls, the reload still applies, a warning is logged, and those calls fail `NOT_FOUND`. The start-time checks apply again at the next start.
 
 **Access.**
 - A registration is private by default: only its own extension can call it.
 - With `public: true`, other extensions and HTTP clients can call it too. Calling a private name from outside fails with `NOT_PUBLIC`.
+- `public` is the only check between extensions: a caller doesn't have to declare the callee as a dependency. Declared dependencies are for presence and version checks, load order, and imports.
+- The boot function is the only lifecycle. An extension that offers a registry (kvcoder's connectors) is extended from the other extension's boot function through its helper, and reads those registrations when it needs them.
 
 ## 2.10 Presets
 
