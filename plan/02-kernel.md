@@ -92,11 +92,12 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 ## 2.8 Settings and secrets
 
 **Settings.**
-- An extension declares each key: `ctx.registerSetting('kvai.defaultModel', { description, schema, default, scopes? })`. A key starts with the extension's namespace.
-- **Scopes.** `scopes` is `['global', 'workspace']` (the default) or `['global']`. Setting a key in a scope it doesn't have fails `VALIDATION_FAILED`.
+- An extension declares each key: `ctx.registerSetting('kvai.defaultModel', { description, schema, default?, scopes? })`. A key starts with the extension's namespace.
+- **Scopes.** `scopes` is `['global', 'workspace']` (the default), `['global']`, or `[]`. Setting a key in a scope it doesn't have fails `VALIDATION_FAILED`. A key with `scopes: []` is **preset-only**: only the preset gives it a value, and the Settings page shows it read-only.
+- **Required keys.** A key registered without `default` must get its value from the preset; otherwise kvman stops at start with `VALIDATION_FAILED` (§2.14, step 7).
 - **Resolving a value.** A value comes from the workspace, else the global value, else the preset, else the default.
 - Values are stored in SQLite and checked against the key's schema when set. A stored value that no longer fits its schema (after an upgrade) is skipped, with a logged warning, and the next source is used.
-- Preset values are checked once the extensions have loaded (§2.14): an unknown key or an invalid value stops kvman with `VALIDATION_FAILED`.
+- Preset values are checked once the extensions have loaded (§2.14): an unknown key, an invalid value, or a required key without a value stops kvman with `VALIDATION_FAILED`.
 - **Access.**
   - Any extension reads any key with `ctx.settings.get(key)`.
   - An extension writes only its own keys, with `ctx.settings.set(key, value, { scope: 'global' | 'workspace' })`.
@@ -230,7 +231,7 @@ Going over a limit fails loudly and never cuts anything off.
 4. Install missing npm extensions.
 5. Ask for trust.
 6. Start the workers, which load the extensions (`EXTENSION_INVALID`). In `web` mode, an extension whose namespace is `kernel.web.home` must declare `kvman.web` (`EXTENSION_INVALID` otherwise).
-7. Check the preset's settings against the registered keys (`VALIDATION_FAILED`, §2.8).
+7. Check the preset's settings against the registered keys, including required keys (`VALIDATION_FAILED`, §2.8).
 8. Delete expired job rows. Attempts that were running when kvman last stopped or died fail with `INTERRUPTED` (§2.3). Then resume queued jobs and due schedules of open workspaces.
 9. Open the start folder as a workspace (§1.2).
 10. Run the `kernel.started` handlers in dependency order (10 s budget; a failure is logged, and start goes on).

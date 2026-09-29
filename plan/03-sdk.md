@@ -37,7 +37,7 @@ export default (ctx: Ctx) => {
   - Commands and queries take `description`, `input`, `output`, `handle(input)`, and optionally `public` (default `false`) and `timeoutMs` (default 600 000).
   - Both may set `maxInputBytes` and `maxOutputBytes` (default 1 MiB, at most 32 MiB).
   - Commands also take `retries` (default 3).
-  - Settings take `description`, `schema`, `default`, and optionally `scopes` (`['global', 'workspace']` by default, or `['global']`; §2.8).
+  - Settings take `description`, `schema`, and optionally `default` (without it, the preset must set the key) and `scopes` (`['global', 'workspace']` by default, `['global']`, or `[]` for preset-only; §2.8).
   - `ctx.registerHandler(point, { description, handle, retries?, timeoutMs? })` registers a handler for one of the kernel's points (§2.15).
   - Every name starts with the extension's namespace. Every description is required and is one sentence.
 

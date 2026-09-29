@@ -18,7 +18,7 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds 
    - `status: [{ id, query, input, text, order }]`
 
    Ids are local to the extension (full id `<namespace>.<id>`), and titles and texts are translation keys.
-7. **Routes.** (Refined by ADR 0008, 1: a one-time `?workspace=` start URL.)
+7. **Routes.** (The home page is now a required, preset-only setting: ADR 0008, 77.) (Refined by ADR 0008, 1: a one-time `?workspace=` start URL.)
    - A page's URL is `/<namespace>/<page>`, and a page may declare params (`/kvcoder/session/:sessionId`).
    - The preset's `kvwebui.home` names the page shown at `/`.
    - The current workspace is kvwebui state, not part of the URL.
@@ -70,7 +70,7 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds 
     - `refresh {}`
 
     They're stored in kvwebui's workspace store. The public command `kvwebui.effect.take { jobId }` returns a job's effects and deletes them. A schedule deletes effects not taken within 1 hour.
-23. **Settings.**
+23. **Settings.** (The home page is now a required, preset-only setting: ADR 0008, 77.)
     - `kvwebui.title`: a translation key; default `kvwebui.title.default`, which is "kvman".
     - `kvwebui.home`: the full page id shown at `/`; default is the first nav item's page.
     - `kvwebui.nav.order`: full nav ids in order; the rest follow by `order`.

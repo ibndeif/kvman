@@ -63,7 +63,9 @@ An extension contributes UI by registering the public query `<namespace>.ui.get`
 - **Invalid UI.** An extension whose answer is invalid, or whose `<namespace>.ui.get` fails, contributes nothing. A dismissible error card lists the extension and its Problem, and the other extensions are unaffected. An answer is also invalid when:
   - it names an unknown component or a query that isn't public;
   - a nav item points at a page that has params.
-- **Routes.** A page's URL is `/<namespace>/<page>`, followed by its params in order: `params: ['sessionId']` gives `/kvcoder/session/:sessionId`. `kvwebui.home` names the page shown at `/`; the default is the first nav item's page.
+- **Routes.** A page's URL is `/<namespace>/<page>`, followed by its params in order: `params: ['sessionId']` gives `/kvcoder/session/:sessionId`. `kvwebui.home` names the page shown at `/`.
+- **The home page.** The preset decides it: `kvwebui.home` is required and preset-only (§2.8), so every preset that loads kvwebui names its home page, and the person can't change it in Settings.
+  - When that page doesn't exist at load (its extension isn't loaded, its `ui.get` failed, or the page has params), `/` shows the built-in Extensions page with an error card: "Home page `<id>` isn't available" (`kvwebui.errors.HOME_UNAVAILABLE`), plus the Problem of the extension that should provide it, if any.
 - **Status items.** A status item's `params` values may be `{ "$output": field }`, read from its query's output. Its query reruns after any command the UI runs, when a job the UI started ends, and every 30 s.
 
 ## 6.4 View trees
@@ -123,7 +125,7 @@ An extension contributes UI by registering the public query `<namespace>.ui.get`
 
 | Page | Shows |
 |---|---|
-| **Settings** | Every key from `kernel.settings.list`, as a form built from its JSON Schema, with the scopes the key allows and each value's source. Each key shows `<key>.description`, or its English description. A secrets section sets and deletes secrets but never shows a value. |
+| **Settings** | Every key from `kernel.settings.list`, as a form built from its JSON Schema, with the scopes the key allows and each value's source. Preset-only keys are shown read-only. Each key shows `<key>.description`, or its English description. A secrets section sets and deletes secrets but never shows a value. |
 | **Jobs** | `kernel.jobs.list` for the workspace, with status, and cancel for running jobs. |
 | **Extensions** | `kernel.extensions.list`, read-only, with `<name>.description` for each command and query, or its English description. |
 
@@ -143,7 +145,7 @@ An extension contributes UI by registering the public query `<namespace>.ui.get`
 | Setting | Default |
 |---|---|
 | `kvwebui.title` | `kvwebui.title.default` ("kvman") |
-| `kvwebui.home` | the first nav item's page |
+| `kvwebui.home` | none: required and preset-only (`scopes: []`), a full page id without params |
 | `kvwebui.nav.order` | `[]` |
 | `kvwebui.nav.hidden` | `[]` |
 | `kvwebui.theme` | `system` (`light`, `dark`); global only |

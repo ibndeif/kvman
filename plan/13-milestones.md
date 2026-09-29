@@ -45,7 +45,7 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
 - **Build:**
   - Opening `kvman.db` (WAL, busy timeout), and the kernel tables for stores, settings, files, jobs, schedules, workspaces, and accepted extensions.
   - The store API: `kv`; collections with `insert`, `get`, `find` (equality, `limit` ≤ 1000, `order` by id), `count`, `update` (shallow merge), and `delete` (`NOT_FOUND` for a missing id); the 16 MiB document cap; synchronous `transaction(tx => …)` with `tx.global`; the workspace and `global` scopes.
-  - Settings resolution (workspace → global → preset → default), declared scopes, and skipping a stored value that fails its schema.
+  - Settings resolution (workspace → global → preset → default), declared scopes (including preset-only `[]`), and skipping a stored value that fails its schema.
   - `secrets.json` (atomic replace; mode 0600 on Linux and macOS).
   - Files (`files/<id>`, rows, the 1 GiB cap).
   - UUIDv7 ids with an injected clock and random source.
@@ -77,7 +77,7 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
 - **Done when:**
   - Every loading rule, including a dependency cycle and an sdk range the kernel doesn't satisfy, stops the kernel with `EXTENSION_INVALID` and the offending extension (or the cycle) named.
   - Two extensions get the same `@kvman/sdk` instance, and a `path:` extension loads from its `.ts` source.
-  - A preset setting with an unknown key or an invalid value fails `VALIDATION_FAILED`.
+  - A preset setting with an unknown key or an invalid value, or a required key the preset doesn't set, fails `VALIDATION_FAILED`.
   - A handler sees its own workspace and caller while 32 jobs interleave on one worker, and nested sync calls on a full worker still complete.
   - Each access rule, limit, and depth rule fails with its code.
   - A crashed worker's jobs fail `WORKER_CRASHED` and a new worker takes over.
@@ -203,7 +203,7 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
   - Per-tab workspaces, the `?workspace=<id>` start URL, and moving a tab to Home when its workspace closes.
   - The language switch from `kernel.health.get`, right-to-left for `ar`, `he`, `fa`, and `ur`, and translated descriptions with their English fallback.
   - Discovery through `<namespace>.ui.get`, with zod validation and error cards.
-  - Routes with params, and `kvwebui.home`.
+  - Routes with params, and the preset's `kvwebui.home` (required, preset-only), with the `HOME_UNAVAILABLE` card on the Extensions page.
   - Every view component except `custom`, including `link` and `$output` in `then`.
   - The Settings (with each key's scopes), Jobs, and Extensions pages, and the `kvwebui.*` settings.
   - Theme.
@@ -214,6 +214,7 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
   - Forms are generated from JSON Schema, and a failed command marks fields.
   - A button whose `then` navigates with `$output` opens the created item's page, and a `link` navigates without a command.
   - Opening `/?workspace=<id>` sets the tab's workspace and drops the parameter.
+  - `/` shows the preset's home page; a missing one shows the Extensions page with the `HOME_UNAVAILABLE` card; the Settings page shows `kvwebui.home` read-only.
   - Switching the language re-renders the UI in it, and a setting without `<key>.description` shows its English description.
   - Arabic renders right-to-left (Playwright).
   - Markdown can't inject HTML.

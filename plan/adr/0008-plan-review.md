@@ -107,3 +107,9 @@ Status: accepted, 2026-09-30. A full review of the plan before M1.1, decided wit
     - **UI actions.** The injected `kvman` gains `navigate(page, params?)`, `toast(text, params?, level?)`, and `panel(id, open)`.
     - **Web types.** `@kvman/sdk/web` exports the types of the injected `kvman` object and of view trees. It is types only and imports nothing but the SDK.
     - **Reloads.** `kernel.extensions.list` gives each extension a `revision` that grows with every hot reload. kvwebui adds it to component URLs, so a page refresh loads the new code.
+
+## Follow-up: the home page
+
+77. **The preset decides the home page.** `kvwebui.home` is a required, preset-only setting: every preset that loads kvwebui names its home page, and the person can't change it in Settings. There's no "first nav item" default any more. (Changes ADR 0002, 7 and 23.)
+78. **Required and preset-only settings.** Two general setting rules make 77 work without a UI concept in the kernel. A setting registered without `default` must get its value from the preset (`VALIDATION_FAILED` at start otherwise). A setting with `scopes: []` has no global or workspace values, so only the preset sets it, and the Settings page shows it read-only.
+79. **A missing home page.** When the named page doesn't exist at load (its extension isn't loaded, its `ui.get` failed, or the page has params), `/` shows the built-in Extensions page with an error card, `kvwebui.errors.HOME_UNAVAILABLE`, and the Problem of the extension that should provide it, if any.
