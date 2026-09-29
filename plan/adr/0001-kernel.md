@@ -69,7 +69,7 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds 
     - The UI shows a translated text by code. (HTTP statuses: superseded by 57, the envelope.)
     - Unknown thrown errors become `HANDLER_FAILED`, and their message is not sent to the UI.
 29. **Cancel.** `POST /api/jobs/:id/cancel` and `ctx.cancel(id)` cancel a job. Handlers get `ctx.job.signal` (AbortSignal). The job ends `cancelled` and is not retried. Nested `ctx.exec` jobs share the signal; `execAsync` jobs don't.
-30. **OS access.** Plain Node APIs (`node:fs`, `node:child_process`); `ctx.job.workspace.path` gives the folder. The kernel adds no process service. Children stop with kvman (Ctrl+C reaches the process group), and handlers kill their own processes on cancel.
+30. **OS access.** (Refined by 87.) Plain Node APIs (`node:fs`, `node:child_process`); `ctx.job.workspace.path` gives the folder. The kernel adds no process service. Children stop with kvman (Ctrl+C reaches the process group), and handlers kill their own processes on cancel.
 31. **Preset.** `{ name, extensions: { "<package>": "bundled" | "npm:<exact version>" | "path:<folder>" }, settings: { "<key>": value } }`. The UI shape is kvwebui's settings (`kvwebui.*`); the kernel knows no UI concept. `--preset coder` names a bundled preset; `--preset ./my.json` names a file.
 
 ## Round 9 answers
@@ -82,7 +82,7 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds 
 ## Round 10 answers
 
 36. **Localization.** The kernel and each extension ship `locales/en.json` and `locales/ar.json`, with keys under their namespace; error texts are `<ns>.errors.<CODE>`. The kernel merges them and serves `GET /api/locales/:lang`. The language is the `kernel.language` setting (default `en`), and the UI follows it; Arabic is right-to-left.
-37. **Packages.**
+37. **Packages.** (kvinterviewer removed: ADR 0005, 8.)
     - `packages/sdk`: ctx types, zod, and the shared shapes (preset, manifest, Problem, job).
     - `packages/kernel`: everything else, including HTTP.
     - `packages/cli`: the `kvman` bin; it runs the kernel in the same process.
@@ -111,7 +111,7 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds 
 49. **Async API.** `ctx.store`, `ctx.settings`, `ctx.secrets`, and `ctx.files` return Promises, so a later sandbox won't break extensions. Inside `ctx.store.transaction(fn)`, `fn` gets a synchronous `tx` with the same store shape.
 50. **Call typing.** The SDK has empty `interface Commands {}` and `interface Queries {}`. An extension augments them for its public names and ships the types in its package. Unknown names take and return `unknown`. There's no generator; runtime validation still runs.
 51. **Descriptions.** Every command, query, and setting has a required one-sentence `description`.
-52. **Shutdown.** On Ctrl+C, HTTP stops taking requests and every running job's signal is aborted with the reason `shutdown`. kvman waits up to 10 s for handlers, then stops the workers. Unfinished async jobs stay `queued` for the next start. A second Ctrl+C stops at once.
+52. **Shutdown.** (Unfinished attempts now fail `INTERRUPTED`: ADR 0008, 12.) On Ctrl+C, HTTP stops taking requests and every running job's signal is aborted with the reason `shutdown`. kvman waits up to 10 s for handlers, then stops the workers. Unfinished async jobs stay `queued` for the next start. A second Ctrl+C stops at once.
 53. **File access.** `ctx.files.get(id)` (row), `read(id)` (Buffer), `path(id)` (absolute path). Any extension reads any file of the job's workspace by id. Only the owner unlinks, except a user upload, which the user or any extension may unlink.
 54. **Settings access.** Any extension reads any key. `ctx.settings.set(key, value, { scope: 'global' | 'workspace' })` writes only its own keys. The user changes any key with `kernel.settings.set`.
 55. **Caller.** `ctx.job.caller` is `{ kind: 'user' }` or `{ kind: 'extension', name }`. A scheduled job's caller is the extension that scheduled it.
@@ -159,9 +159,9 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds 
 79. **Nested progress.** `ctx.job.progress(data)` always goes to the stream of `ctx.job.rootId`. A chunk is `{ source: '<extension name>', data }`.
 80. **Per-registration size caps.** A command or query may set `maxInputBytes` and `maxOutputBytes`: default 1 MiB, at most 32 MiB. Going over the registration's cap fails with `TOO_LARGE`. (Refines 48.)
 81. **Dependency cycles.** A cycle in `kvman.dependencies` (A → B → A, or longer) stops kvman with `EXTENSION_INVALID`, printing the cycle (`@a/x → @b/y → @a/x`). Extensions can still call each other's public commands at runtime without declaring each other.
-82. **Calls between extensions.** The kernel checks only `public`: any extension may call any public name. Declared dependencies are for presence and version checks at start, load order, and imports. There is no second lifecycle: an extension that offers a registry (kvcoder's connectors, sections, and binaries) is extended from the other extension's boot function through its helper, and reads those registrations when it needs them (ADR 0005, 5 and 10). Registering is the handover. An earlier answer requiring declared calls was withdrawn in favor of this.
+82. **Calls between extensions.** (The helper wording is superseded by 91.) The kernel checks only `public`: any extension may call any public name. Declared dependencies are for presence and version checks at start, load order, and imports. There is no second lifecycle: an extension that offers a registry (kvcoder's connectors, sections, and binaries) is extended from the other extension's boot function through its helper, and reads those registrations when it needs them (ADR 0005, 5 and 10). Registering is the handover. An earlier answer requiring declared calls was withdrawn in favor of this.
 83. **Hot reload and dependents.** Reloading a `path:` extension doesn't touch the extensions that depend on it; their calls reach the new registrations. If the new version no longer satisfies a dependent's range, or drops a name a dependent calls, the reload still applies, a warning is logged, and those calls fail `NOT_FOUND`. The start-time checks apply again at the next start.
-84. **Kernel handler points.** The kernel uses the same registry pattern as extensions (82): it owns a fixed set of points, and an extension registers a handler for one in its boot function with `ctx.registerHandler(point, { description, handle, retries?, timeoutMs? })`. There are still no events or listeners.
+84. **Kernel handler points.** (`kernel.started` timing refined by 90; reruns on reload by ADR 0008, 30.) The kernel uses the same registry pattern as extensions (82): it owns a fixed set of points, and an extension registers a handler for one in its boot function with `ctx.registerHandler(point, { description, handle, retries?, timeoutMs? })`. There are still no events or listeners.
     - **Points:**
       - `kernel.job.failed { jobId, rootId, name, caller, workspaceId, problem, attempts }`: any job, sync or async.
       - `kernel.job.succeeded { jobId, name, caller, workspaceId }`: async and scheduled jobs.

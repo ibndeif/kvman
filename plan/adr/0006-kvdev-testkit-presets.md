@@ -2,7 +2,7 @@
 
 Status: accepted, 2026-09-29. Decided with the product owner in question rounds, after reviewing v2's builder (`archive/v2:plan/11-self-extension.md`).
 
-1. **kvdev** extends kvcoder; it has no loop of its own. It adds connectors and sections (the SDK guide, the view-tree reference, connector authoring, and a summary of the workspace's projects). The `dev` preset loads kvai, kvwebui, kvcoder, and kvdev.
+1. **kvdev** (Sections: one global guide section, and the project summary is `ext list`: ADR 0008, 29.) extends kvcoder; it has no loop of its own. It adds connectors and sections (the SDK guide, the view-tree reference, connector authoring, and a summary of the workspace's projects). The `dev` preset loads kvai, kvwebui, kvcoder, and kvdev.
 2. **Preview.** `preview start '{ "extensions": [folders], "preset"?: file }'` starts a second kvman as a child process:
    - its own temporary home, and port 3738 or the next free one;
    - `--yes`, and a generated preset (the dev extensions as `path:`, plus kvai and kvwebui, or the given preset with the dev extensions added).
@@ -20,6 +20,6 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds,
    - `preview start`, `preview stop`, `preview status`.
    - `docs get { topic }` → the SDK, views, or connectors guide.
 5. **Toolchain.** `ext check` runs `npx tsc --noEmit` and the scaffold's `npm run check` (a script that loads the extension in a test kernel and reports invalid registrations, un-namespaced names, missing descriptions, and missing locale keys) as child processes in the project folder. `ext test` runs `npm test`. kvdev imports neither the kernel nor TypeScript. `ext new` needs the network once, for `npm install`.
-6. **Bundled presets.** Both use bundled extensions only.
+6. **Bundled presets.** (Both presets also set `kvai.defaultModel`: ADR 0008, 22.) Both use bundled extensions only.
    - `coder`: kvai, kvwebui, and kvcoder, with `kvwebui.title` `kvcoder.app.title` ("kvman Coder") and `kvwebui.home` `kvcoder.chat`.
    - `dev`: kvai, kvwebui, kvcoder, and kvdev, with `kvwebui.title` `kvdev.app.title` ("kvman Dev"), `kvwebui.home` `kvcoder.chat`, and `kvcoder.bash.approval` `ask`.

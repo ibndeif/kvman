@@ -9,20 +9,22 @@
 | HTTP | vitest + a real kvman child process | routes, the envelope, SSE, files, static files, Host/Origin |
 | Crash | vitest + a real kvman child process | SIGKILL and restart invariants (§12.2) |
 | Components | vitest + `@vue/test-utils` (`happy-dom`) | kvwebui components and view rendering |
-| End to end | Playwright (Chromium) + a real kvman + the fake OpenAI server | chat streaming, questions, subagents, right-to-left |
+| End to end | Playwright (Chromium) + a real kvman + the fake OpenAI server | kvcoder's conversation streaming, questions, subagents, right-to-left |
 | Performance | `bench:check` | §12.3 |
 
-Tests are deterministic. They use fake clocks where time matters and no network: npm tests use a local registry, and LLM tests use the fake OpenAI-compatible server (§7.4). Tests never touch the real `~/.kvman`.
+Tests are deterministic. They use fake clocks where time matters and no network: npm tests use a tiny in-test registry (an HTTP server on 127.0.0.1 serving package metadata and `npm pack` tarballs), and LLM tests use the fake OpenAI-compatible server (§7.4). Tests never touch the real `~/.kvman`.
+
+**Platforms.** There is no CI in this phase; the gates run locally on the developer's OS. Tests that depend on the OS (shells, process trees, file modes) cover each OS's branch and run the one that matches. Playwright and the benchmarks run on Linux.
 
 ## 12.2 Crash invariants
 
 Tests run kvman as a child process and SIGKILL it at moments they observe through the API: after an async job is queued, while one runs, while a turn is suspended, and during a secrets write. They then restart it and check that:
 
-1. No queued or running async job is lost; it runs again.
+1. No queued or running async job is lost: an interrupted attempt fails `INTERRUPTED` and the job runs again if it has retries left, otherwise it ends `failed`.
 2. A job that ended `succeeded`, `failed`, or `cancelled` never runs again.
 3. Suspended kvcoder turns and their questions survive, and answering one continues the turn.
 4. `secrets.json` is either the old file or the new one, never partial.
-5. A kvcoder step interrupted by the kill ends `failed`, and its turn is marked interrupted.
+5. A kvcoder step interrupted by the kill ends `failed` with `INTERRUPTED`, and its turn is marked interrupted.
 6. Long-lived processes left by the killed kvman are stopped at the next start (§2.16).
 
 There are no fault hooks in production code.

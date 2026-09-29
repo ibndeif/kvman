@@ -27,7 +27,9 @@ Milestones are in `plan/13-milestones.md`. Do them strictly in order. For each o
 
 ## 3. Architecture in one page
 
-- **Running.** `kvman [--mode web] [--preset coder]` is a foreground app, one per home folder (`~/.kvman`). HTTP listens on `127.0.0.1:3737`.
+- **Running.** `kvman [--mode web] [--preset coder]` is a foreground app that runs locally, one per home folder (`~/.kvman`). It opens the folder it's started from as a workspace, and a second run hands its folder over to the running one. HTTP listens on `127.0.0.1:3737`.
+- **Platforms.** Linux, macOS, and Windows, natively. Code that depends on the OS (shells, process trees, file modes) has an explicit branch per OS, and its tests cover each branch.
+- **Not a chat app.** kvman is a platform: the kernel and kvwebui hold no product concept (no chat, no agent). Product UI belongs to the extension that owns it, and presets place it.
 - **Jobs.** Everything runs as a job: a **command** (may write) or a **query** (read-only).
   - `ctx.exec` runs a job now and returns its output.
   - `ctx.execAsync` and `ctx.schedule` make SQLite rows that survive restarts and retry.
@@ -35,7 +37,8 @@ Milestones are in `plan/13-milestones.md`. Do them strictly in order. For each o
 - **Workers.** A `worker_threads` pool runs every job. The kernel's main thread never runs extension code. `AsyncLocalStorage` gives each handler its current job (workspace, caller, signal).
 - **Storage.** One SQLite database (better-sqlite3, WAL), with a connection per worker. Extensions get Promise-based `ctx.store` (kv and JSON collections), per workspace plus `global`. Each call commits alone; `transaction(tx => …)` is synchronous.
 - **Extensions.**
-  - An extension's `package.json` `kvman` field declares its namespace and dependencies, and `main` default-exports `(ctx) => void`, which registers commands, queries, and settings with zod schemas and descriptions.
+  - An extension's `package.json` `kvman` field declares its namespace and dependencies, and `main` (or `kvman.source` for a `path:` extension) default-exports `(ctx) => void`, which registers commands, queries, and settings with zod schemas and descriptions.
+  - `@kvman/sdk` is a peerDependency: every extension shares the kernel's copy, and its `z`.
   - Registrations are private unless `public: true`.
   - There's no sandbox in this phase: non-bundled versions need the person's trust at start.
 - **The kernel knows no product concept.** UI, agents, and tools live in extensions (kvai, kvwebui, kvcoder, kvdev).

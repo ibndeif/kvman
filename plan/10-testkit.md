@@ -6,12 +6,15 @@ The testkit runs a real kernel in-process for tests, with a temporary home and n
 const kernel = await createTestKernel({ extensions: ['./'], settings?: { … }, secrets?: { … } });
 await kernel.exec('notes.add', { text: 'hi' });                              // as the user
 await kernel.exec('notes.add', { text: 'hi' }, { as: '@acme/notes' });       // as an extension
+await kernel.exec('notes.add', { text: 'hi' }, { workspaceId: ws.id });      // in a workspace (default Home)
 const jobId = await kernel.execAsync('notes.reindex', {});
 const job = await kernel.waitForJob(jobId);
-kernel.clock.advance(60_000);                                                // fake clock: schedules, retries
+kernel.clock.advance(60_000);                                                // fake clock: the kernel's timers
 await kernel.close();
 ```
 
 - Workers, validation, storage, and every other kernel behavior are real.
 - `settings` and `secrets` are set before the extensions load.
-- It may import `kernel` and `sdk` (§1.4).
+- The fake clock drives the kernel's own timers: retries, schedules, retention, and ids. It doesn't change `Date` inside handlers.
+- `exec` and `execAsync` take `{ as?, workspaceId? }`.
+- It may import `kernel` and `sdk` (§1.4). It is published as `@kvman/testkit` and depends on `@kvman/kernel`.

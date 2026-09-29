@@ -6,8 +6,8 @@ The kernel serves the API with Hono (`hono` and `@hono/node-server`) on `127.0.0
 
 | Route | Body → answer |
 |---|---|
-| `POST /api/commands/:type` | `{ input, workspaceId?, async? }` → `{ ok: true, output, jobId }`, or with `async: true`, `{ ok: true, jobId }` |
-| `POST /api/queries/:type` | `{ input, workspaceId? }` → `{ ok: true, output, jobId }` |
+| `POST /api/commands/:name` | `{ input, workspaceId?, async? }` → `{ ok: true, output, jobId }`, or with `async: true`, `{ ok: true, jobId }` |
+| `POST /api/queries/:name` | `{ input, workspaceId? }` → `{ ok: true, output, jobId }` |
 | `GET /api/jobs/:id` | → `{ ok: true, job }` |
 | `GET /api/jobs/:id/stream` | Server-Sent Events (§4.4) |
 | `POST /api/jobs/:id/cancel` | → `{ ok: true }` |
@@ -15,7 +15,10 @@ The kernel serves the API with Hono (`hono` and `@hono/node-server`) on `127.0.0
 | `GET /api/files/:id` | → the raw content, with its `Content-Type` |
 | `GET /api/locales/:lang` | → `{ ok: true, catalog }` (§2.11) |
 
-- `workspaceId` defaults to Home.
+- `workspaceId` defaults to Home. A closed or unknown workspace fails `NOT_FOUND`.
+- A query name on the commands route, or a command name on the queries route, fails `NOT_FOUND`.
+- A body over the target's `maxInputBytes` fails `TOO_LARGE`.
+- A sync call whose client disconnects is cancelled (§2.3).
 - **The envelope.** Every JSON answer is `{ ok: true, … }` or `{ ok: false, problem }`, with status 200. A command or query failure also carries its `jobId`: `{ ok: false, problem, jobId }`. The two exceptions: a file download returns raw content, and a body that isn't valid JSON gets 400.
 
 **Static files.**
@@ -34,7 +37,7 @@ A Problem is `{ code, message, params? }` (§5). `message` is English for logs a
 
 ## 4.4 The job stream
 
-`GET /api/jobs/:id/stream` is the only push channel.
+`GET /api/jobs/:id/stream` is the only push channel. Only async and scheduled jobs have one; progress from a sync root job goes nowhere.
 
 - It sends each `ctx.job.progress(data)` chunk of the job and of every job nested in it as a `progress` event `{ source, data }`, then one `result` event (the output) or `problem` event (the Problem), then closes.
 - Chunks aren't stored. A client that connects late sees only new chunks, and a finished job answers with its `result` or `problem` at once.

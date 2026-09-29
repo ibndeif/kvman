@@ -16,7 +16,7 @@ kvai.complete {
   tools?: [{ name, description, parameters }],   // parameters: JSON Schema
   thinking?: 'off' | 'minimal' | 'low' | 'medium' | 'high',
   maxTokens?: number,
-} → { message: AssistantMessage, stopReason, usage: { input, output, cost } }
+} → { message: AssistantMessage, stopReason, usage: { input, output, cacheRead, cacheWrite, cost } }
 ```
 
 - `Message` and `AssistantMessage` are pi-ai's JSON types (text, image, thinking, and toolCall blocks), validated with zod in kvai. So a harness can store its context as JSON.
@@ -31,12 +31,13 @@ kvai.complete {
   | Code | When |
   |---|---|
   | `kvai/KEY_MISSING` | The provider's key isn't set. |
+  | `kvai/NO_MODEL` | No `model` was given and `kvai.defaultModel` is `null`. |
   | `kvai/MODEL_UNKNOWN` | No such model. |
   | `kvai/RATE_LIMITED` | The provider rate-limited the call. |
   | `kvai/CONTEXT_TOO_LONG` | The context doesn't fit the model. |
   | `kvai/PROVIDER_ERROR` | Any other provider failure. |
 
-- **Usage.** Each call adds its tokens and cost to the workspace's per-model totals.
+- **Usage.** Each call adds its tokens (input, output, cache reads, cache writes) and cost to the workspace's per-model totals.
 
 ## 7.2 Providers and models
 
@@ -61,12 +62,12 @@ kvai.complete {
 | `kvai.model.list` | query | `{ provider? }` → `[{ id, name, provider, reasoning, input: ('text' \| 'image')[], contextWindow, maxTokens, cost, builtIn }]` |
 | `kvai.model.add` | command | `{ provider, id, name, reasoning, input, contextWindow, maxTokens, cost? }` → `{}` |
 | `kvai.model.remove` | command | `{ id }` → `{}` |
-| `kvai.usage.get` | query | `{}` → `[{ model, input, output, cost }]` for the workspace |
+| `kvai.usage.get` | query | `{}` → `[{ model, input, output, cacheRead, cacheWrite, cost }]` for the workspace |
 | `kvai.ui.get` | query | kvai's UI contributions (§7.3) |
 
 All of these are public. Removing a built-in provider or model fails with `kvai/BUILT_IN`.
 
-**Setting.** `kvai.defaultModel`: a model id.
+**Setting.** `kvai.defaultModel`: a model id, or `null` (the default). Both bundled presets set `anthropic/claude-sonnet-5-5`; M2.1 checks that id against pi-ai's built-in list.
 
 ## 7.3 UI
 

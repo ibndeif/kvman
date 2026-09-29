@@ -20,6 +20,7 @@ Every failure is a Problem: `{ code, message, params? }`.
 | `TIMEOUT` | An attempt ran past its `timeoutMs`. |
 | `CANCELLED` | The job was cancelled. |
 | `WORKER_CRASHED` | The worker died during the attempt. |
+| `INTERRUPTED` | kvman stopped, or died, during the attempt (§2.3). |
 | `HANDLER_FAILED` | A handler threw something that isn't a Problem. Its message is logged, never sent. |
 | `FORBIDDEN_ORIGIN` | A request's Host or Origin isn't kvman's own (§4.2). |
 | `PROCESS_RUNNING` | `ctx.processes.start` was given the name of a running process. |

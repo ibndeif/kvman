@@ -3,10 +3,10 @@
 Status: accepted, 2026-09-29. Decided with the product owner in question rounds, after reviewing v2's agent, shell, interviewer, and builder designs on `archive/v2`.
 
 1. **Role.** kvcoder is the app-building harness on kvai and kvwebui. Its main agent has one tool, `bash`; everything else goes through bash. Other extensions extend kvcoder by adding connectors, sections (rules, skills, …), and so on.
-2. **Steps.** A turn runs as a chain of async jobs, one per step. A step that continues the turn queues the next with `execAsync` and sends the chunk `{ type: 'follow', jobId }`. kvwebui's chat handles that chunk like `kvman.follow(jobId)`, keeping one assistant bubble (ADR 0002, 33).
-3. **Bash approval.** The setting `kvcoder.bash.approval` is `ask` (default) or `auto`. With `ask`, a real bash call becomes a confirm question (item 8) and the turn suspends. A denied call returns "denied by the user" to the model.
-4. **Bash limits.** `bash -lc <command>` in the workspace folder. The process group is killed on timeout (default 120 s; the model may ask for up to 600 s) or cancel. stdout and stderr are combined. Output over 30 KB keeps its first and last 15 KB around an explicit `[… N bytes omitted …]` marker. The result includes the exit code.
-5. **Connectors.** A connector is a named group of commands, kvcoder's own concept; the kernel knows nothing about it.
+2. **Steps.** (The UI side is kvcoder's own conversation: ADR 0008, 23.) A turn runs as a chain of async jobs, one per step. A step that continues the turn queues the next with `execAsync` and sends the chunk `{ type: 'follow', jobId }`. kvwebui's chat handles that chunk like `kvman.follow(jobId)`, keeping one assistant bubble (ADR 0002, 33).
+3. **Bash approval.** (Renamed `kvcoder.shell.approval`: ADR 0008, 36.) The setting `kvcoder.bash.approval` is `ask` (default) or `auto`. With `ask`, a real bash call becomes a confirm question (item 8) and the turn suspends. A denied call returns "denied by the user" to the model.
+4. **Bash limits.** (PowerShell on Windows and tree kills: ADR 0008, 6 and 7.) `bash -lc <command>` in the workspace folder. The process group is killed on timeout (default 120 s; the model may ask for up to 600 s) or cancel. stdout and stderr are combined. Output over 30 KB keeps its first and last 15 KB around an explicit `[… N bytes omitted …]` marker. The result includes the exit code.
+5. **Connectors.** (Superseded by 23.) A connector is a named group of commands, kvcoder's own concept; the kernel knows nothing about it.
    - **Registering.** `const fs = registerConnector(ctx, 'fs', 'Read and edit workspace files.')`, then `fs.registerCommand({ name: 'read', description, input, output, handle })`. That registers the ordinary public command `<namespace>.fs.read`, so sync and async behavior come from the kernel. It also adds the connector to the extension's `<namespace>.kvcoder.get` query.
    - **Where the helper lives.** In the kvcoder package's subpath `@kvman/kvcoder/registry`, which imports only the sdk. The import wall allows this one runtime import of another extension, when kvcoder is a `kvman.dependencies` entry.
    - **Binary connectors** describe a system binary (gh, a browser CLI), which the agent runs in real bash.
@@ -18,7 +18,7 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds,
 7. **Async connector calls.** `--async` makes kvcoder queue its own job `kvcoder.connector.run`, which runs the command with `ctx.exec`, and prints `started <jobId>`. When that job ends, kvcoder appends the result to the session as a message, and starts a turn if the session is idle (otherwise the next step sees it). `jobs list` and `jobs cancel <id>` are built-in connector commands. Without `--async`, the call waits up to the command's own timeout.
 8. **ask.** A built-in connector. The step records the question and suspends the turn, so no job runs. The chat shows the question card inline (a component chunk), and the session shows "waiting". The person's `kvcoder.question.answer` (user only) appends the answer as the bash result and queues the next step, which the card follows. A dismissal answers "dismissed by the user". kvinterviewer is removed: ADR 0004 and `plan/08-kvinterviewer.md` are superseded.
 9. **subagent** is a connector as well (a built-in one).
-10. **Sections.** `registerSection(ctx, { id, title, order, content: async ({ sessionId }) => string })`, from the same helper, adds a section to the extension's `<namespace>.kvcoder.get { sessionId }` answer.
+10. **Sections.** (Superseded by 23.) `registerSection(ctx, { id, title, order, content: async ({ sessionId }) => string })`, from the same helper, adds a section to the extension's `<namespace>.kvcoder.get { sessionId }` answer.
     - At each step, kvcoder calls every such query in parallel with a 2 s timeout. One that fails or times out contributes nothing to that step and adds a notice.
     - Caps are 16 KB per section and 64 KB in total.
     - The prompt order is the base prompt, then the sections by `order`, then the connector index.
@@ -44,10 +44,10 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds,
     - Above `kvcoder.compactAt` (default 0.8), kvai summarizes the older messages, the last 10 are kept whole, and a summary message is stored. Older messages stay visible but aren't sent.
     - There's also a manual `kvcoder.session.compact`.
     - A failed summary adds a notice and the step goes on; `kvai/CONTEXT_TOO_LONG` then ends the turn.
-14. **Cancel and restart.**
+14. **Cancel and restart.** (Interrupted steps now fail `INTERRUPTED` and end their turn through a `kernel.job.failed` handler: ADR 0008, 12.)
     - Cancel stops the running step, the children's turns, and pending questions (a later answer fails `kvcoder/QUESTION_NOT_FOUND`), adds a notice, and sets the session idle. `--async` connector jobs keep running and still report back.
     - Step jobs register `retries: 0`, so a step interrupted by a stop ends `failed` and the turn is marked interrupted with a notice. Suspended turns survive restarts.
-15. **Binary connectors.** `registerBinary(ctx, { name, description, check, install? })` adds one to the extension's `<ns>.kvcoder.get`, and the setting `kvcoder.binaries` adds more (same shape). kvcoder runs each `check` once per session (at its first step, 5 s timeout) and lists only the ones that pass.
+15. **Binary connectors.** (Superseded by 23.) `registerBinary(ctx, { name, description, check, install? })` adds one to the extension's `<ns>.kvcoder.get`, and the setting `kvcoder.binaries` adds more (same shape). kvcoder runs each `check` once per session (at its first step, 5 s timeout) and lists only the ones that pass.
 16. **ask syntax.** Answers become the bash result as JSON; a dismissal gives `{ "dismissed": true }`.
     - `ask text '{ prompt, placeholder? }'` → `{ text }`
     - `ask choice '{ prompt, multiple, options: [{ id, label, description? }] (2–10), other? }'` → `{ selected, other? }`
@@ -57,7 +57,7 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds,
     - A status item with the count of waiting sessions.
     - Custom components: the question card and a bash-result card.
     - A Prompt tab showing `kvcoder.prompt.get`.
-18. **Settings.**
+18. **Settings.** (`kvcoder.binaries` became `kvcoder.connectors` (23); `sessions.keep` defaults to 0 (ADR 0008, 32).)
     - `kvcoder.model`: default `kvai.defaultModel`.
     - `kvcoder.thinking`: default `medium`.
     - `kvcoder.maxSteps`: 50 per turn, then a notice and idle.
@@ -67,20 +67,20 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds,
     - `kvcoder.sessions.keep`: 100 top-level sessions per workspace; the oldest idle ones are deleted daily.
 
     The base prompt is English and tells the model to reply in `kernel.language` unless the person writes in another language.
-19. **Developer-facing API** (supersedes the call shapes and discovery in 5, 10, and 15). The helper mirrors the SDK's `ctx.registerCommand(name, options)`:
+19. **Developer-facing API** (Superseded by 23.) (supersedes the call shapes and discovery in 5, 10, and 15). The helper mirrors the SDK's `ctx.registerCommand(name, options)`:
     - `registerConnector(ctx, name, description)` → `connector.registerCommand(name, { description, input, output, handle, examples?, timeoutMs?, retries? })`.
     - `registerSection(ctx, id, { title, order, content: async ({ sessionId }) => string })`.
     - `registerBinary(ctx, name, { description, check, install? })`.
     - `examples?: [{ description, input }]` are printed by `-h` as ready-to-copy calls.
     - `runConnector(kernel, '<bash line>')` → `{ output, exitCode }` lets tests run a line exactly as kvcoder parses it, including `-h`.
-20. **Command names.** A connector command is `<namespace>.<connector>.<command>`, collapsed to `<namespace>.<command>` when the connector's name equals the namespace. A clash fails at load like any duplicate.
-21. **Discovery (internal to kvcoder).** The helper registers ordinary public queries next to the commands:
+20. **Command names.** (Superseded by 23.) A connector command is `<namespace>.<connector>.<command>`, collapsed to `<namespace>.<command>` when the connector's name equals the namespace. A clash fails at load like any duplicate.
+21. **Discovery (internal to kvcoder).** (Superseded by 23.) The helper registers ordinary public queries next to the commands:
     - `<prefix>.help` per connector, which marks it and serves `-h`;
     - `<namespace>.section.<id>` per section → `{ title, order, content }`;
     - `<namespace>.binary.<name>` per binary → `{ description, check, install? }`.
 
     At each step kvcoder makes one `kernel.extensions.list` call to find them, calls the section queries (in parallel, 2 s timeout each, same caps), and runs binary checks at a session's first step, storing the results in the session record. Nothing about connectors is stored.
-22. **Import path.** The helper is `@kvman/kvcoder/registry`, the general `<package>/registry` subpath (ADR 0001, 88). It replaces `@kvman/kvcoder/connector`.
+22. **Import path.** (Superseded by 23.) The helper is `@kvman/kvcoder/registry`, the general `<package>/registry` subpath (ADR 0001, 88). It replaces `@kvman/kvcoder/connector`.
 23. **Connectors and sections by commands** (supersedes 5, 10, 15, and 19–22; `runConnector` stays).
     - kvcoder stores what other extensions register and reads only its own store during a turn.
     - `kvcoder.connector.register`: a **commands** connector `{ name, description, commands: [{ name, command, examples? }] }` runs the registering extension's own public commands through `ctx.exec`. A **binary** connector `{ name, description, binary: { check, install? } }` is run by the agent in real bash and listed only when its check passes (once per session, stored in the session record). A connector has exactly one of the two.

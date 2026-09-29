@@ -1,12 +1,13 @@
 # 09 — kvdev (namespace `kvdev`)
 
-kvdev is the harness for developing kvman extensions and presets. It has no loop of its own: it extends kvcoder (§8.4), registering its connectors with `kvcoder.connector.register` and its sections with `kvcoder.section.set` from its `kernel.started` handler. The `dev` preset runs it. Projects live in the workspace folder, and the agent edits their files with bash.
+kvdev is the harness for developing kvman extensions and presets. It has no loop of its own: it extends kvcoder (§8.4), registering its connectors with `kvcoder.connector.register` and its global sections with `kvcoder.section.set` from its `kernel.started` handler. The `dev` preset runs it. Projects live in the workspace folder, and the agent edits their files through its shell.
 
 ## 9.1 Connectors
 
 | Call | Kernel command | Does |
 |---|---|---|
 | `ext new '{ "name", "namespace", "folder" }'` | `kvdev.ext.new` | scaffolds a project (below), then runs `npm install` in it |
+| `ext list` | `kvdev.ext.list` | the projects in the workspace folder (folders whose package.json has a `kvman` field) → `[{ folder, name, namespace, version }]` |
 | `ext check '{ "folder" }'` | `kvdev.ext.check` | runs `npx tsc --noEmit` and `npm run check` → `[{ file?, message, hint }]` |
 | `ext test '{ "folder" }'` | `kvdev.ext.test` | runs `npm test` → its results |
 | `preset new '{ "name", "file" }'` | `kvdev.preset.new` | writes a preset skeleton |
@@ -18,8 +19,8 @@ kvdev is the harness for developing kvman extensions and presets. It has no loop
 ## 9.2 The scaffold
 
 `ext new` writes:
-- `package.json`: `main`, a `kvman` field (namespace, dependencies), and devDependencies `typescript`, `@kvman/sdk`, and `@kvman/testkit`, pinned to kvman's version, plus the scripts `build`, `check`, and `test`;
-- `src/index.ts`;
+- `package.json`: `main` (`dist/index.js`), a `kvman` field (namespace, `source: "src/index.ts"`, dependencies), `@kvman/sdk` as a peerDependency, and devDependencies `typescript`, `@kvman/sdk`, and `@kvman/testkit`, pinned to the versions that the running kvman bundles, plus the scripts `build` (for publishing), `check`, and `test`;
+- `src/index.ts`, in erasable TypeScript, which a `path:` extension loads directly (§2.9), so edits need no build step;
 - `locales/en.json` and `locales/ar.json`;
 - `test/extension.test.ts`, a passing `node:test` test that uses `createTestKernel`;
 - `tsconfig.json` and `README.md`.
@@ -33,16 +34,14 @@ The toolchain comes from the project, so kvdev imports neither the kernel nor Ty
 
 ## 9.3 Preview
 
-`preview start` runs a second kvman through the kernel's process service (`ctx.processes`, §2.16):
+`preview start` runs a second kvman through the kernel's process service (`ctx.processes`, §2.16), with the running kvman's Node and entry file (`process.execPath`, `process.argv[1]`):
 - its own temporary home, so it never touches real data;
 - port 3738, or the next free one;
-- `--yes`;
+- `--yes` and `--no-open`;
 - a generated preset: the dev extensions as `path:`, plus kvai and kvwebui (or the given preset, with the dev extensions added).
 
-It returns the URL, which the chat shows as a link. `path:` hot reload applies edits live. `preview stop` ends it, and it also stops with the main kvman.
+It returns the URL, which kvcoder's conversation shows as a link. `path:` hot reload applies edits live. `preview stop` ends it, and it also stops with the main kvman.
 
 ## 9.4 Sections
 
-kvdev adds these sections to kvcoder's prompt:
-- a short guide to extensions, connectors, and presets, pointing to `docs get` for details;
-- a summary of the projects in the workspace (folders whose package.json has a `kvman` field).
+kvdev adds one global section to kvcoder's prompt (§8.4): a short guide to extensions, connectors, and presets, pointing to `docs get` for details and to `ext list` for the workspace's projects.

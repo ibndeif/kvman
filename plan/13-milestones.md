@@ -9,7 +9,7 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
 6. Pass `pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm bench:check`.
 7. Add a README row, then commit.
 
-`bench:check` passes with no benchmarks until M1.3 adds the first one.
+`bench:check` passes with no benchmarks until M1.3 adds the first one. There is no CI in this phase: the gates run locally, on the developer's OS (§12.1).
 
 ## M1 — Kernel
 
@@ -21,7 +21,7 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
   - ESLint with the import walls of §1.4 (including the exported-subpath rule), `max-lines` 300, and no `any`.
   - Vitest, and the gate scripts `typecheck`, `lint`, `test`, `build`, `bench:check` (the benchmark runner, with no benchmarks yet).
   - Changesets for `sdk`, `testkit`, and `extensions/*`.
-  - Empty `packages/sdk`, `kernel`, `cli`, and `testkit`.
+  - Empty `packages/sdk`, `kernel`, `cli`, and `testkit`, with their published names (`@kvman/sdk`, `@kvman/kernel`, `kvman`, `@kvman/testkit`).
   - `.gitignore` and the README skeleton.
 - **Done when:**
   - All gates run green on the empty packages.
@@ -31,8 +31,8 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
 
 - **Read:** `03`; `05`; `02` §2.9–§2.10; `04` §4.1.
 - **Build:** `@kvman/sdk`:
-  - the `Ctx` types (§3.1–§3.4) and `z`;
-  - the zod schemas and types for the extension manifest (`kvman` field), preset, Problem (with the kernel codes), job row, workspace, file row, and the HTTP envelope;
+  - the `Ctx` types (§3.1–§3.5), including `scopes` on settings, `key` on schedules, `order` and `count` on collections, and `ctx.log`, plus `z`;
+  - the zod schemas and types for the extension manifest (`kvman` field, with `source`), preset, Problem (with the kernel codes, including `INTERRUPTED`), job row, workspace, file row, and the HTTP envelope;
   - the empty `Commands` and `Queries` maps with typed `exec`;
   - one-line TSDoc on every export.
 - **Done when:**
@@ -44,76 +44,86 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
 - **Read:** `02` §2.5, §2.7, §2.8, §2.13; `01` §1.3.
 - **Build:**
   - Opening `kvman.db` (WAL, busy timeout), and the kernel tables for stores, settings, files, jobs, schedules, workspaces, and accepted extensions.
-  - The store API: `kv`; collections with `insert`, `get`, `find` (equality, `limit` ≤ 1000), `update` (shallow merge), and `delete`; synchronous `transaction(tx => …)`; the workspace and `global` scopes.
-  - Settings resolution (workspace → global → preset → default).
-  - `secrets.json` (mode 0600, atomic replace).
+  - The store API: `kv`; collections with `insert`, `get`, `find` (equality, `limit` ≤ 1000, `order` by id), `count`, `update` (shallow merge), and `delete` (`NOT_FOUND` for a missing id); the 16 MiB document cap; synchronous `transaction(tx => …)` with `tx.global`; the workspace and `global` scopes.
+  - Settings resolution (workspace → global → preset → default), declared scopes, and skipping a stored value that fails its schema.
+  - `secrets.json` (atomic replace; mode 0600 on Linux and macOS).
   - Files (`files/<id>`, rows, the 1 GiB cap).
   - UUIDv7 ids with an injected clock and random source.
   - The collection `find` benchmark.
 - **Done when:**
   - Writes from two worker threads through their own connections are both visible.
   - An async `transaction` callback rolls back with `VALIDATION_FAILED`.
-  - `find` without a limit, or with more than 1000, fails.
-  - Settings resolve in order.
+  - `find` without a limit, or with more than 1000, fails; `order: 'desc'` returns the newest first, and `count` matches.
+  - A document over 16 MiB fails `TOO_LARGE`.
+  - Settings resolve in order; a global-only key refuses the workspace scope; a stored value that no longer fits is skipped with a warning.
   - A secret never appears in SQLite or in logs.
   - A file over 1 GiB fails `TOO_LARGE`.
   - The benchmark meets its target.
 
 ### M1.4 Extensions and workers
 
-- **Read:** `02` §2.1, §2.2, §2.9 (bundled and path sources, loading, access), §2.13; `03`; `10`.
+- **Read:** `02` §2.1, §2.2, §2.8 (preset checks), §2.9 (bundled and path sources, the SDK, TypeScript entries, loading, access), §2.13; `03`; `10`.
 - **Build:**
-  - Reading the `kvman` manifest; `bundled` and `path:` sources; dependency order; the `EXTENSION_INVALID` checks.
+  - Reading the `kvman` manifest; `bundled` and `path:` sources, with `kvman.source` loaded through type stripping; dependency order; `semver` ranges; the `EXTENSION_INVALID` checks, including the sdk peer range.
+  - The resolve hook that gives every extension the kernel's `@kvman/sdk`.
   - The worker pool (`kernel.workers`, `kernel.workerConcurrency`), with each worker loading every extension.
   - `AsyncLocalStorage` for the current job, including `ctx.job` (`id`, `rootId`, `workspace`, `caller`, `signal`, `progress`).
-  - Sync `ctx.exec`, with input and output validation, `public` access (`NOT_PUBLIC`), read-only queries (`READ_ONLY`), depth 16 (`TOO_DEEP`), and per-registration size caps (`TOO_LARGE`).
+  - Sync `ctx.exec` on the calling worker, with input and output validation, `public` access (`NOT_PUBLIC`), read-only queries (`READ_ONLY`), depth 16 (`TOO_DEEP`), and per-registration size caps (`TOO_LARGE`).
   - `HANDLER_FAILED` for unknown errors, `WORKER_CRASHED` with replacement, and timeouts (`TIMEOUT`).
-  - `@kvman/testkit` `createTestKernel` (§10).
+  - Checking the preset's settings after load.
+  - `ctx.log`.
+  - `@kvman/testkit` `createTestKernel` (§10), with `as` and `workspaceId`.
   - The `ctx.exec` benchmark.
 - **Done when:**
-  - Every loading rule, including a dependency cycle, stops the kernel with `EXTENSION_INVALID` and the offending extension (or the cycle) named.
-  - A handler sees its own workspace and caller while 32 jobs interleave on one worker.
+  - Every loading rule, including a dependency cycle and an sdk range the kernel doesn't satisfy, stops the kernel with `EXTENSION_INVALID` and the offending extension (or the cycle) named.
+  - Two extensions get the same `@kvman/sdk` instance, and a `path:` extension loads from its `.ts` source.
+  - A preset setting with an unknown key or an invalid value fails `VALIDATION_FAILED`.
+  - A handler sees its own workspace and caller while 32 jobs interleave on one worker, and nested sync calls on a full worker still complete.
   - Each access rule, limit, and depth rule fails with its code.
   - A crashed worker's jobs fail `WORKER_CRASHED` and a new worker takes over.
+  - `ctx.log` lines carry the extension and job id.
   - The benchmark meets its target.
 
 ### M1.5 Async jobs and schedules
 
 - **Read:** `02` §2.1 (rows, retention), §2.3, §2.4, §2.14 (stop), §2.15; `12` §12.2.
 - **Build:**
-  - `execAsync` job rows with first-in, first-out start, retries with backoff, `ctx.problem` without retry, and cancel (`ctx.cancel`) with shared signals for nested sync jobs.
+  - `execAsync` job rows with first-in, first-out start, retries with backoff, `ctx.problem` without retry, and cancel (`ctx.cancel`), which ends a job when its handler settles, with shared signals for nested sync jobs.
+  - `INTERRUPTED` attempts, retried like other failures.
   - Retention.
-  - Resuming queued and running jobs at start.
-  - `ctx.schedule` (`at`, `cron` with croner), `schedule.cancel`, the one-time delete, and a missed run once at start.
+  - Resuming queued jobs at start.
+  - `ctx.schedule` (`at`, `cron` with croner, `key`), `schedule.cancel`, the one-time delete, and a missed run once at start.
   - Nested progress to the root job.
   - Handler points (§2.15): `ctx.registerHandler`, delivery in the job's final transaction, loop safety, and `kernel.started` and `kernel.stopping`.
-  - The shutdown sequence (abort, 10 s, workers stop, jobs stay queued).
-  - `kernel.started` handlers in dependency order before the kernel reports ready (10 s budget).
+  - The shutdown sequence (`kernel.stopping`, abort, 10 s, workers stop, unfinished attempts `INTERRUPTED`).
+  - `kernel.started` handlers in dependency order before the kernel reports ready (10 s budget; unfinished ones keep running).
   - Resuming tested by closing and reopening a test kernel on the same home. The SIGKILL crash tests come in M1.8, once the bin exists.
   - The `execAsync` benchmark.
 - **Done when:**
   - A failing job retries three times with 1, 2, and 4 s backoff (fake clock), then ends `failed`.
-  - A cancelled job ends `cancelled` and its nested sync job sees the abort.
-  - A cron schedule runs at each due time, and a missed one runs once.
+  - A cancelled job ends `cancelled` once its handler returns, and its nested sync job sees the abort.
+  - A cron schedule runs at each due time, and a missed one runs once. Scheduling twice with the same key leaves one schedule.
   - A failed sync job and a failed async job each queue one `kernel.job.failed` handler job. A handler that fails, or that runs a failing nested job, triggers no handlers. `kernel.started` runs once per start.
-  - A test kernel reopened on the same home resumes a queued job and never reruns a finished one.
+  - Closing a test kernel mid-job fails the attempt with `INTERRUPTED`. On reopening, a job with retries left runs again, a job with `retries: 0` has ended `failed`, and a finished job never reruns.
   - The benchmark meets its target.
 
 ### M1.6 Workspaces, kernel API, localization, hot reload
 
 - **Read:** `02` §2.6, §2.8, §2.11, §2.12, §2.9 (hot reload), §2.16.
 - **Build:**
-  - Home, and `kernel.workspace.*`.
-  - The rest of `kernel.*` (settings, secrets, jobs, files, extensions, and health, with JSON Schemas).
-  - `ctx.settings.set` (own keys only), and `ctx.files` (`read`, `path`, and access rules).
+  - Home (`home`), and `kernel.workspace.*`: remembered workspaces, closing as a pause (queued jobs and schedules wait; calls fail `NOT_FOUND`), and reopening by path.
+  - The rest of `kernel.*` (settings with scopes, secrets with `set` sync only, jobs, files, extensions, and health, with JSON Schemas).
+  - `ctx.settings.set` (own keys only, declared scopes), and `ctx.files` (`read`, `path`, and access rules).
   - Locale catalogs merged per language.
-  - `path:` hot reload (a watch, a reload in every worker, and the old code kept on failure).
-  - The process service (§2.16), `kernel.processes.list`, and the `kernel.process.exited` point.
-  - Running a hot-reloaded extension's `kernel.started` handler again.
+  - `path:` hot reload: a recursive watch, fresh workers with the new code while the old ones drain, and the old code kept on failure.
+  - Rerunning the `kernel.started` handlers of a hot-reloaded extension and of its dependents, in dependency order.
+  - The process service (§2.16), with process groups on Linux and macOS and `taskkill /T /F` on Windows, `kernel.processes.list`, and the `kernel.process.exited` point.
 - **Done when:**
-  - Every `kernel.*` command and query behaves as §2.12 says, including opening an open folder and closing Home.
-  - `kernel.secrets.list` never returns a value.
+  - Every `kernel.*` command and query behaves as §2.12 says, including opening an open folder, reopening a closed one with its data, and closing Home.
+  - A closed workspace's queued job and due schedule wait, and run after it's reopened.
+  - `kernel.secrets.list` never returns a value, and `kernel.secrets.set` with `async` fails `VALIDATION_FAILED`.
   - An edited `path:` extension serves new registrations while a running job finishes on the old code, and a broken edit keeps the old code.
+  - A reload of an extension reruns its dependents' `kernel.started` handlers.
   - A started process logs its output, survives a hot reload, triggers `kernel.process.exited` when it exits, and a second start of the same name fails `PROCESS_RUNNING`.
 
 ### M1.7 HTTP
@@ -121,7 +131,7 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
 - **Read:** `04`; `02` §2.9 (web files).
 - **Build:**
   - Hono on 127.0.0.1, with Host and Origin checks (`FORBIDDEN_ORIGIN`).
-  - The envelope routes for commands (sync and async) and queries, with the `jobId`.
+  - The envelope routes for commands (sync and async) and queries, with the `jobId`, route mismatches (`NOT_FOUND`), body caps (`TOO_LARGE`), and cancel on client disconnect.
   - Jobs: get, cancel, and the SSE stream (`progress`, `result`, `problem`).
   - File upload (raw body) and download.
   - Locales.
@@ -132,6 +142,7 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
   - A foreign Host or Origin gets `FORBIDDEN_ORIGIN`.
   - The stream delivers a nested job's progress, then the result.
   - A finished job's stream answers at once.
+  - A sync call whose client disconnects ends `cancelled`.
   - A path outside a web folder gets 404.
   - The benchmark meets its target.
 
@@ -139,22 +150,26 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
 
 - **Read:** `01` §1.2–§1.3; `02` §2.9 (npm, trust), §2.10, §2.14; `12` §12.2.
 - **Build:** the `kvman` bin:
-  - flags, `--help`, and `--version`;
-  - `kvman.lock` (`KVMAN_RUNNING`);
-  - loading the preset (bundled name or file);
-  - `npm:` installs (`--ignore-scripts --omit=dev`, local registry in tests);
+  - flags (`--mode`, `--preset`, `--home`, `--port`, `--yes`, `--no-open`, `--log-level`), `--help`, and `--version`;
+  - `kvman.lock` (`KVMAN_RUNNING`, replacing a dead lock) and the hand-over to a running kvman;
+  - opening the start folder as a workspace, and the `?workspace=<id>` URL;
+  - opening the browser (`xdg-open`, `open`, `cmd /c start ""`);
+  - loading the preset (bundled name, `<home>/presets/<name>.json`, or file);
+  - `npm:` installs (`--ignore-scripts --omit=dev`, the in-test registry in tests);
   - the trust prompt (`--yes`, and refusing without a terminal);
   - the port (`PORT_IN_USE`);
   - the start order and the Ctrl+C sequence (a second Ctrl+C stops at once);
   - Pino logs to `logs/kvman.log`, with the short terminal log.
 - **Done when:**
-  - `kvman --preset <file>` starts and prints the URL.
-  - A second kvman on the same home fails `KVMAN_RUNNING`.
+  - `kvman --preset <file>` started in a folder prints (and, without `--no-open`, opens) the URL of that folder's workspace.
+  - A second kvman on the same home hands over its folder and exits 0; with a different preset it fails `KVMAN_RUNNING`.
+  - A stale lock is replaced.
+  - A preset name found both bundled and in `<home>/presets/` fails `VALIDATION_FAILED`.
   - An untrusted npm extension asks, and without a terminal it refuses.
   - `--yes` accepts, and a new version asks again.
   - A taken port fails `PORT_IN_USE`.
-  - Ctrl+C leaves unfinished async jobs queued.
-  - Logs contain no payloads.
+  - Ctrl+C fails unfinished attempts with `INTERRUPTED`, keeping jobs with retries left queued.
+  - Logs contain no payloads, and `--log-level` filters them.
   - Crash invariants 1, 2, 4, and 6 hold (§12.2).
 
 ## M2 — Extensions
@@ -163,13 +178,14 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
 
 - **Read:** `07`.
 - **Build:**
-  - `extensions/kvai`: `kvai.complete` (pi-ai, deltas, failure codes, retries 0, 32 MiB input), providers and models (built-in, custom, delegate), keys from secrets, usage totals.
+  - `extensions/kvai`: `kvai.complete` (pi-ai, deltas, failure codes including `kvai/NO_MODEL`, retries 0, 32 MiB input), providers and models (built-in, custom, delegate), keys from secrets, and usage totals with cache reads and writes.
   - `kvai.ui.get`: the Models page and the status item.
   - Locales.
   - The fake OpenAI-compatible server test helper.
 - **Done when:**
   - `kvai.complete` against the fake server streams text, thinking, and tool-call deltas to the root job and returns the message and usage.
-  - A missing key, an unknown model, a 429, and an over-long context fail with their codes.
+  - A missing key, a missing model, an unknown model, a 429, and an over-long context fail with their codes.
+  - `anthropic/claude-sonnet-5-5` is in pi-ai's built-in list.
   - A delegate provider forwards the call.
   - Removing a built-in fails `kvai/BUILT_IN`.
   - Usage adds up per workspace.
@@ -180,56 +196,62 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
 - **Build:**
   - `extensions/kvwebui`: the Vue app (Vite, vue-router, Tailwind, vue-i18n, lucide, markdown-it and DOMPurify).
   - The frame: top bar, nav, panels, and status bar.
-  - Per-tab workspaces.
+  - Per-tab workspaces, the `?workspace=<id>` start URL, and moving a tab to Home when its workspace closes.
   - Discovery through `<namespace>.ui.get`, with zod validation and error cards.
   - Routes with params, and `kvwebui.home`.
-  - Every view component except `chat` and `custom`.
-  - The Settings, Jobs, and Extensions pages, and the `kvwebui.*` settings.
+  - Every view component except `custom`, including `link` and `$output` in `then`.
+  - The Settings (with each key's scopes), Jobs, and Extensions pages, and the `kvwebui.*` settings.
   - Theme.
   - Right-to-left.
 - **Done when:**
   - A test extension's pages, nav, panels, and status items render.
   - An invalid `ui.get` shows an error card while the others render.
   - Forms are generated from JSON Schema, and a failed command marks fields.
+  - A button whose `then` navigates with `$output` opens the created item's page, and a `link` navigates without a command.
+  - Opening `/?workspace=<id>` sets the tab's workspace and drops the parameter.
   - Arabic renders right-to-left (Playwright).
   - Markdown can't inject HTML.
 
-### M2.3 kvwebui chat and effects
+### M2.3 kvwebui custom components and effects
 
-- **Read:** `06` §6.4 (chat, custom), §6.5.
+- **Read:** `06` §6.4 (custom), §6.5.
 - **Build:**
-  - The `chat` component: text deltas, component chunks, follow chunks, and Stop.
-  - `custom` components through the import map, with the injected `kvman` (`exec`, `execAsync`, `stream`, `follow`, `t`, `workspace`).
-  - `kvwebui.effect.add` and `kvwebui.effect.take`, and the 1-hour cleanup schedule.
+  - `custom` components through the import map, with the injected `kvman` (`exec`, `execAsync`, `stream`, `follow`, `t`, `workspace`, `View`).
+  - `kvwebui.effect.add`, `kvwebui.effect.take` (for jobs the UI starts or follows), and `kvwebui.effect.clean` on a keyed hourly schedule.
 - **Done when:**
-  - A chat streams a job, follows a chained job in the same bubble, and renders a component chunk.
-  - Stop cancels.
+  - A custom component shares kvwebui's Vue instance, streams a job's progress chunks, and renders Markdown through `View`.
+  - `follow` reruns the page's queries when the job ends.
   - Effects from a nested job apply once when the UI's job ends.
-  - A custom component shares kvwebui's Vue instance.
+  - Restarting leaves one cleanup schedule, and effects older than an hour are cleaned.
 
 ### M2.4 kvcoder
 
 - **Read:** `08`.
 - **Build:**
-  - `extensions/kvcoder`: sessions and messages, step chains with follow chunks, and steering.
-  - Real bash (approval, limits, truncation).
-  - The connector call path (JSON input, `-h`, `--async` with result messages, `jobs`).
-  - Connector and section registration (`kvcoder.connector.*`, `kvcoder.section.*`, ownership, `kvcoder/NAME_TAKEN`, clearing at start), `-h` from descriptions, schemas, and examples, binary checks, and `runConnector` in `@kvman/kvcoder/testing`.
-  - Section pulls with timeouts and caps.
-  - `ask` and `subagent` (fresh or fork, connector subsets, parallel, `--async`).
-  - Compaction, cancel, the restart rules, and retention.
-  - Message, turn, and session records with usage and time totals, titles, `omitted` counts, JSON export, and fork.
-  - Session points (`kvcoder.handler.*`), with handler injections that don't start turns.
-  - The UI (Chat page, cards, status item, Prompt tab).
+  - `extensions/kvcoder`: sessions and messages, step chains with follow chunks and `stepJobId`, steering, and a message while waiting dismissing the pending items.
+  - The real shell: bash on Linux and macOS, `pwsh` or `powershell.exe` on Windows, `kvcoder.shell.path`, approval, limits, truncation, and tree kills.
+  - All calls of a reply in parallel, with approvals asked together.
+  - The connector call path (JSON input, stdin JSON as a heredoc or a here-string, optional JSON, `-h`, `--async` with result messages, `jobs`, and refusing non-standalone lines).
+  - Connector and section registration (`kvcoder.connector.*`, `kvcoder.section.*` with `global`, ownership, `kvcoder/NAME_TAKEN`, clearing at start), `-h` from descriptions, schemas, and examples, binary checks, and `runConnector` in `@kvman/kvcoder/testing`.
+  - Section caps.
+  - `ask` and `subagent` (fresh or fork, the parent's model, connector subsets, parallel, `--async`).
+  - Compaction, cancel, interrupted steps through a `kernel.job.failed` handler, and retention (`kvcoder.sessions.keep`, keyed schedule).
+  - Message, turn, and session records with usage and time totals, titles, `omitted` counts, JSON export, fork, `session.configure`, and image `fileIds`.
+  - Session points (`kvcoder.handler.*`), with handler-job ids so their injections don't start turns.
+  - The UI: the Chat and session pages, the `kvcoder.conversation` component, the question and shell-result cards, the status item, and the Prompt tab.
   - Settings.
   - The prompt-build benchmark.
 - **Done when:**
-  - Against the fake model, a turn runs bash and a connector command, asks a question, suspends, and continues after the answer (also across a kvman restart).
+  - Against the fake model, a turn runs a shell call and a connector command in parallel, asks a question, suspends, and continues after the answer (also across a kvman restart).
+  - A message sent while waiting dismisses the question and runs the next step.
   - Two parallel subagents return their answers.
-  - A denied bash call reaches the model as denied.
+  - A denied shell call reaches the model as denied.
   - An `--async` connector result arrives as a message and starts a turn.
+  - A global section reaches a second workspace's prompt.
   - Compaction keeps the last 10 messages.
   - Cancel stops children and questions.
+  - An image attachment reaches an image model, and fails `VALIDATION_FAILED` for a text-only one.
+  - The conversation reattaches to a running step after a reload (Playwright).
   - Crash invariants 3 and 5 hold.
   - The benchmark meets its target.
 
@@ -237,10 +259,10 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
 
 - **Read:** `09`; `10`; `11`; `12` §12.3.
 - **Build:**
-  - `extensions/kvdev`: the `ext`, `preset`, `preview`, and `docs` connectors, the scaffold, the preview kvman, and sections.
+  - `extensions/kvdev`: the `ext`, `preset`, `preview`, and `docs` connectors, the scaffold (with `kvman.source`), the preview kvman, and its global section.
   - `presets/coder.json` and `presets/dev.json`.
   - The cold-start and RSS benchmarks.
 - **Done when:**
-  - In the `dev` preset, with the fake model, the agent scaffolds an extension whose own test passes. `ext check` reports a planted missing description, the preview starts and shows the new page, and an edit hot-reloads it (Playwright).
+  - In the `dev` preset, with the fake model, the agent scaffolds an extension whose own test passes. `ext list` shows it, `ext check` reports a planted missing description, the preview starts and shows the new page, and an edit to `src/index.ts` hot-reloads it with no build (Playwright).
   - `kvman` with no flags starts the `coder` preset.
   - Every benchmark meets its target.

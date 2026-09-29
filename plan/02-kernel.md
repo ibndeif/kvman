@@ -20,11 +20,12 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 - **Async and scheduled jobs** are rows in SQLite.
   - A row has the id, command, input, workspace, caller, status, attempts, result or Problem, and times.
   - The status is one of `queued`, `running`, `succeeded`, `failed`, or `cancelled`.
-  - An unfinished row runs again after a restart.
+  - An attempt cut off by a stop or by kvman dying fails with `INTERRUPTED` and is retried like any failure (§2.3), so an unfinished row runs again after a restart if it has retries left.
 - Rows of finished jobs are deleted after `kernel.jobs.retentionDays` (default 7), at start and then hourly. Queued and running rows are never deleted.
 - **Validation.** The kernel checks a job's input against the registration's zod `input` before it runs, and its output against `output` after. A mismatch fails with `VALIDATION_FAILED`.
 - **Ordering.** Queued jobs start first-in, first-out and run in parallel. The kernel keeps no other ordering; an extension that needs one-at-a-time (such as one agent turn per session) guards it in its own store.
 - **Depth.** A chain of sync `ctx.exec` calls deeper than 16 fails with `TOO_DEEP`. An async job starts a new chain.
+- **Where nested jobs run.** A nested sync `ctx.exec` runs on the calling job's worker and takes no extra slot, so a busy pool can't deadlock.
 - **Caller.** A job's caller is `{ kind: 'user' }` for an HTTP call, `{ kind: 'extension', name }` for a call from an extension's handler, or `{ kind: 'kernel' }` for a handler job (§2.15). A scheduled job's caller is the extension that scheduled it.
 
 ## 2.2 Workers
@@ -36,23 +37,25 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 - Handlers keep no in-memory state between jobs. Anything that must last goes in the store.
 - **Work ends with its job.** A handler's in-process work ends when it returns. Long or repeated work goes to `execAsync` or `ctx.schedule`, never `setTimeout`, `setInterval`, or an unawaited promise. This is a rule, not policed by the kernel.
 - **Crashes.** When a worker dies, each job it was running fails that attempt with `WORKER_CRASHED`, and the kernel starts a replacement worker.
+- **Logging.** `ctx.log` writes to `logs/kvman.log`, tagged with the extension and the job id (§3.5).
 
 ## 2.3 Failures, retries, timeouts, cancel
 
 - A command may set `retries` (default 3) and `timeoutMs` (default 600 000, ten minutes). A query may set `timeoutMs`.
 - **Timeouts.** An attempt that runs past `timeoutMs` fails with `TIMEOUT`, and its signal is aborted.
-- **Async and scheduled jobs.** A thrown error, a timeout, or a worker crash is retried after an exponential backoff (1 s, 2 s, 4 s, …) until the retries run out. Then the job ends `failed` with the last Problem. A Problem made with `ctx.problem(code)` ends the job `failed` at once, without a retry.
+- **Async and scheduled jobs.** A thrown error, a timeout, a worker crash, or an interruption (`INTERRUPTED`: kvman stopped or died during the attempt) is retried after an exponential backoff (1 s, 2 s, 4 s, …) until the retries run out. Then the job ends `failed` with the last Problem. A Problem made with `ctx.problem(code)` ends the job `failed` at once, without a retry.
 - **Sync jobs** are never retried; the caller gets the Problem.
 - Because an async job can run more than once, handlers are written to be safe to repeat.
 - **Unknown errors.** A thrown error that isn't a Problem becomes `HANDLER_FAILED`. Its message and stack go to the log, never to the caller.
-- **Cancel.** `ctx.cancel(jobId)` or `POST /api/jobs/:id/cancel` aborts the job's `ctx.job.signal` and ends it `cancelled`, with no retry. Jobs it started with `ctx.exec` share its signal; jobs it started with `execAsync` don't.
+- **Cancel.** `ctx.cancel(jobId)` or `POST /api/jobs/:id/cancel` aborts the job's `ctx.job.signal`. The job ends `cancelled`, with no retry, when its handler settles after the abort, or at its timeout if it ignores the signal. Jobs it started with `ctx.exec` share its signal; jobs it started with `execAsync` don't. A sync HTTP call whose client disconnects is cancelled the same way.
 
 ## 2.4 Schedules
 
 - `ctx.schedule(command, input, { at })` runs a command once at a date; `{ cron }` repeats it. croner computes the next run time.
+- **Keys.** `{ at | cron, key }` names the schedule. A key is unique per extension and workspace: scheduling again with the same key replaces the schedule and keeps its id. Recurring maintenance scheduled from `kernel.started` uses a key, so restarts don't pile up copies.
 - A schedule is a row with its id, command, input, `at` or `cron`, next run, workspace, and owner. It belongs to the workspace of the job that made it. `ctx.schedule.cancel(id)` deletes it.
 - When a schedule is due, the kernel queues an async job in the schedule's workspace, with the owner as its caller. A one-time schedule is then deleted.
-- A run that fell due while kvman was stopped runs once at the next start; missed repeats are not replayed.
+- A run that fell due while kvman was stopped, or while its workspace was closed (§2.6), runs once at the next start or reopening; missed repeats are not replayed.
 
 ## 2.5 Storage
 
@@ -60,16 +63,22 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 - The kernel owns every table. Extensions never see SQL and have no migrations.
 - **Store API** (§3.4). Every call returns a Promise.
   - `ctx.store.kv` has `get`, `set`, and `delete`.
-  - `ctx.store.collection(name)` holds JSON documents with kernel-assigned ids, with `insert`, `get`, `find` (equality filters on top-level fields, plus a required `limit`), `update`, and `delete`.
+  - `ctx.store.collection(name)` holds JSON documents with kernel-assigned ids (UUIDv7), with `insert`, `get`, `find`, `count`, `update`, and `delete`.
+  - `find(filter, { limit, order? })` takes equality filters on top-level fields and a required `limit`, and returns documents by id: `order` is `'asc'` (the default, oldest first) or `'desc'`. `count(filter)` returns the number of matches.
+  - `update` and `delete` of a missing id fail `NOT_FOUND`.
+  - A document or a kv value is JSON of at most 16 MiB (`TOO_LARGE`).
 - **Scope.** `ctx.store` is the current job's workspace; `ctx.store.global` is home-wide. Both hold only the calling extension's data.
-- **Atomicity.** Each call commits on its own. `ctx.store.transaction(fn)` runs `fn(tx)` in one SQLite transaction. `tx` has the store's shape, but its calls are synchronous, so the lock is never held across an `await`. If `fn` returns a Promise, the transaction is rolled back and fails with `VALIDATION_FAILED`.
+- **Atomicity.** Each call commits on its own. `ctx.store.transaction(fn)` runs `fn(tx)` in one SQLite transaction. `tx` has the store's shape (including `tx.global`), but its calls are synchronous, so the lock is never held across an `await`. If `fn` returns a Promise, the transaction is rolled back and fails with `VALIDATION_FAILED`.
 
 ## 2.6 Workspaces
 
-- A workspace is a folder on disk, `{ id, name, path }`. The user's home folder is the built-in **Home** workspace, which is always open.
-- Other folders are opened with `kernel.workspace.open`, and they can be listed and closed (§2.12).
+- A workspace is a folder on disk, `{ id, name, path }`. The user's home folder is the built-in **Home** workspace, with the id `home`, which is always open.
+- Other folders are opened with `kernel.workspace.open`, and they can be listed and closed (§2.12). At start, kvman opens the folder it's started from (§1.2).
+- `kernel.workspace.open` needs an absolute path to an existing folder (`VALIDATION_FAILED` otherwise).
+- **Remembered.** Workspaces are kept across restarts until closed. Opening a path that was open before gets the same id, and so the same data.
+- **Closing pauses.** Closing a workspace removes it from the list. Its data stays; its queued jobs and schedules wait until it's opened again; its running jobs finish; and calls naming it fail `NOT_FOUND`.
 - Every job has a workspace. An HTTP call names it with `workspaceId`, defaulting to Home, and nested jobs inherit it.
-- `ctx.job.workspace.path` is the folder. Extensions use `node:fs` and `node:child_process` on it directly for work inside a job. A handler kills its own short-lived processes on cancel. Long-lived processes use the kernel's process service (§2.16).
+- `ctx.job.workspace.path` is the folder. Extensions use `node:fs` and `node:child_process` on it directly for work inside a job. A handler kills its own short-lived processes on cancel: the process group on Linux and macOS, `taskkill /PID <pid> /T /F` on Windows. Long-lived processes use the kernel's process service (§2.16).
 
 ## 2.7 Files
 
@@ -83,18 +92,21 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 ## 2.8 Settings and secrets
 
 **Settings.**
-- An extension declares each key: `ctx.registerSetting('kvai.defaultModel', { description, schema, default })`. A key starts with the extension's namespace.
+- An extension declares each key: `ctx.registerSetting('kvai.defaultModel', { description, schema, default, scopes? })`. A key starts with the extension's namespace.
+- **Scopes.** `scopes` is `['global', 'workspace']` (the default) or `['global']`. Setting a key in a scope it doesn't have fails `VALIDATION_FAILED`.
 - **Resolving a value.** A value comes from the workspace, else the global value, else the preset, else the default.
-- Values are stored in SQLite and checked against the key's schema when set.
+- Values are stored in SQLite and checked against the key's schema when set. A stored value that no longer fits its schema (after an upgrade) is skipped, with a logged warning, and the next source is used.
+- Preset values are checked once the extensions have loaded (§2.14): an unknown key or an invalid value stops kvman with `VALIDATION_FAILED`.
 - **Access.**
   - Any extension reads any key with `ctx.settings.get(key)`.
   - An extension writes only its own keys, with `ctx.settings.set(key, value, { scope: 'global' | 'workspace' })`.
   - The user changes any key with `kernel.settings.set`.
-- The kernel's own keys are `kernel.port` (3737), `kernel.workers`, `kernel.workerConcurrency` (32), `kernel.language` (`en`), `kernel.jobs.retentionDays` (7), and `kernel.web.home` (`kvwebui`, §4.1).
+- The kernel's own keys are `kernel.port` (3737), `kernel.workers`, `kernel.workerConcurrency` (32), `kernel.language` (`en` or `ar`; default `en`), `kernel.jobs.retentionDays` (7), and `kernel.web.home` (`kvwebui`, §4.1). They are global only. `kernel.port`, `kernel.workers`, and `kernel.workerConcurrency` apply at the next start.
 
 **Secrets.**
-- `ctx.secrets.get/set/delete(name)` belong to the calling extension and are home-wide. They're stored in `secrets.json` (mode 0600).
-- A secret is never written to SQLite, settings, job rows, logs, or any HTTP response. The user sets and deletes secrets with `kernel.secrets.*`, which never returns a value.
+- `ctx.secrets.get/set/delete(name)` belong to the calling extension and are home-wide. They're stored in `secrets.json`: mode 0600 on Linux and macOS, and protected by the user profile folder's access rules on Windows. Writes replace the file atomically.
+- A secret is never written to SQLite, settings, job rows, logs, or any HTTP response. The user sets and deletes secrets with `kernel.secrets.*`, which never returns a value. `kernel.secrets.set` runs only as a sync call: `async` or a schedule fails `VALIDATION_FAILED`, so the value never lands in a job row.
+- In `kernel.secrets.*`, `extension` is the package name (as in `caller.name`).
 
 ## 2.9 Extensions
 
@@ -102,12 +114,18 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 
 ```json
 { "name": "@kvman/kvcoder", "version": "1.0.0", "main": "dist/index.js",
-  "kvman": { "namespace": "kvcoder", "dependencies": { "@kvman/kvai": "^1.0.0", "@kvman/kvwebui": "^1.0.0" } } }
+  "peerDependencies": { "@kvman/sdk": "^1.0.0" },
+  "kvman": { "namespace": "kvcoder", "source": "src/index.ts",
+             "dependencies": { "@kvman/kvai": "^1.0.0", "@kvman/kvwebui": "^1.0.0" } } }
 ```
+
+**The SDK.** An extension lists `@kvman/sdk` as a peerDependency. The kernel resolves every extension's `@kvman/sdk` import to its own copy (a Node module resolve hook), so all extensions share one SDK and one zod. Extensions build their schemas with the SDK's `z`, never their own zod.
+
+**TypeScript entries.** `kvman.source` is optional. For a `path:` extension, the kernel loads `source` when it's present, with Node's type stripping (erasable syntax only: no enums, namespaces, or parameter properties); otherwise, and always for `bundled` and `npm:`, it loads `main`.
 
 **Web files.** An extension may add `"web": "<folder>"` to its `kvman` field, and the kernel serves that folder at `/web/<namespace>/` (§4.1). This is how kvwebui ships its app and how extensions ship Vue components.
 
-**Entry.** `main` default-exports `(ctx) => void`, which registers the extension's commands, queries, and settings (§3.1). It runs in every worker when the worker loads.
+**Entry.** The entry (`main`, or `source`) default-exports `(ctx) => void`, which registers the extension's commands, queries, and settings (§3.1). It runs in every worker when the worker loads.
 
 **Sources** (named in the preset, §2.10):
 - `bundled`: a core extension shipped with kvman.
@@ -120,7 +138,8 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 - With no terminal and no `--yes`, kvman refuses to start.
 
 **Loading.** Extensions load in dependency order. kvman stops with `EXTENSION_INVALID` (§2.14) when:
-- a dependency is missing or out of range;
+- a dependency is missing or out of range (ranges are checked with `semver`);
+- the extension's `@kvman/sdk` peer range doesn't include the kernel's sdk version;
 - dependencies form a cycle (the message prints it, for example `@a/x → @b/y → @a/x`);
 - two extensions claim one namespace;
 - a registered name doesn't start with `<namespace>.`;
@@ -129,9 +148,9 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 - an entry throws.
 
 **Hot reload.**
-- A `path:` extension's folder is watched. On a change, every worker reloads it and its registrations are replaced. Running jobs finish on the old code.
-- A reload that fails keeps the previous code and logs the error.
-- After a reload, the extension's `kernel.started` handler runs again (§2.15).
+- A `path:` extension's folder is watched (`node:fs` `watch`, recursive, ignoring `node_modules`). On a change, the kernel starts fresh workers, which load every extension with the new code. The old workers take no new jobs and exit when their running jobs end, so running jobs finish on the old code. (ES modules can't be unloaded, so a worker never reloads in place.)
+- A reload that fails keeps the previous code and workers, and logs the error.
+- After a reload, the `kernel.started` handlers of the reloaded extension and of every extension that depends on it, directly or not, run again in dependency order (§2.15).
 - A reload doesn't touch the extensions that depend on it. If the new version no longer satisfies a dependent's range, or drops a name a dependent calls, the reload still applies, a warning is logged, and those calls fail `NOT_FOUND`. The start-time checks apply again at the next start.
 
 **Access.**
@@ -145,13 +164,13 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 ```json
 { "name": "coder",
   "extensions": { "@kvman/kvai": "bundled", "@acme/x": "npm:1.2.3", "@me/y": "path:../y" },
-  "settings": { "kvai.defaultModel": "…", "kvwebui.home": "kvcoder.chat" } }
+  "settings": { "kvai.defaultModel": "anthropic/claude-sonnet-5-5", "kvwebui.home": "kvcoder.chat" } }
 ```
 
 - A preset is the whole app for one run: which extensions load, and the preset-level value of any setting.
 - The app's UI shape is kvwebui's own settings; the kernel knows no UI concept.
-- A preset is validated at start. An invalid preset stops kvman with `VALIDATION_FAILED`.
-- Bundled presets: `coder` (the default) and `dev`.
+- A preset is validated at start, and its settings again once the extensions have loaded (§2.8). An invalid preset stops kvman with `VALIDATION_FAILED`.
+- Bundled presets: `coder` (the default) and `dev`. A person's own presets live in `<home>/presets/` (§1.2).
 
 ## 2.11 Localization
 
@@ -165,13 +184,13 @@ All are public. Types are in `@kvman/sdk`.
 
 | Name | Kind | Input → output |
 |---|---|---|
-| `kernel.workspace.open` | command | `{ path }` → `Workspace` (the existing one, if that path is already open) |
-| `kernel.workspace.close` | command | `{ workspaceId }` → `{}` (Home can't be closed: `VALIDATION_FAILED`) |
-| `kernel.workspace.list` | query | `{}` → `Workspace[]` |
+| `kernel.workspace.open` | command | `{ path }` → `Workspace`: the existing one if that path is open, the remembered one if it was open before (§2.6) |
+| `kernel.workspace.close` | command | `{ workspaceId }` → `{}`: pauses it (§2.6); Home can't be closed (`VALIDATION_FAILED`) |
+| `kernel.workspace.list` | query | `{}` → the open `Workspace[]`, Home first |
 | `kernel.settings.set` | command | `{ key, value, scope: 'global' \| 'workspace' }` → `{}` |
 | `kernel.settings.reset` | command | `{ key, scope }` → `{}` |
-| `kernel.settings.list` | query | `{}` → `[{ key, description, schema, value, source }]`, where `schema` is JSON Schema and `source` is `workspace`, `global`, `preset`, or `default` |
-| `kernel.secrets.set` | command | `{ extension, name, value }` → `{}` |
+| `kernel.settings.list` | query | `{}` → `[{ key, description, schema, scopes, value, source }]`, where `schema` is JSON Schema and `source` is `workspace`, `global`, `preset`, or `default` |
+| `kernel.secrets.set` | command | `{ extension, name, value }` → `{}`; sync only (§2.8) |
 | `kernel.secrets.delete` | command | `{ extension, name }` → `{}` |
 | `kernel.secrets.list` | query | `{}` → `[{ extension, name }]` (never values) |
 | `kernel.jobs.get` | query | `{ id }` → `Job` |
@@ -179,7 +198,7 @@ All are public. Types are in `@kvman/sdk`.
 | `kernel.files.get` | query | `{ id }` → `File` |
 | `kernel.files.list` | query | `{ limit }` → `File[]` in this workspace, newest first |
 | `kernel.files.unlink` | command | `{ id }` → `{}` |
-| `kernel.extensions.list` | query | `{}` → `[{ name, version, source, namespace, commands, queries, settings, handlers }]`; each command and query is `{ name, description, public, input, output }`, with `input` and `output` as JSON Schema |
+| `kernel.extensions.list` | query | `{}` → `[{ name, version, source, namespace, commands, queries, settings, handlers }]` (`source` is the preset's `bundled`, `npm:…`, or `path:…`); each command and query is `{ name, description, public, input, output }`, with `input` and `output` as JSON Schema |
 | `kernel.processes.list` | query | `{}` → `[{ extension, workspaceId, name, pid, startedAt }]` (§2.16) |
 | `kernel.health.get` | query | `{}` → `{ version, preset, mode, workers, uptimeMs }` |
 
@@ -194,27 +213,31 @@ Going over a limit fails loudly and never cuts anything off.
 | Job input or output | 1 MiB of JSON by default; a registration may set `maxInputBytes` and `maxOutputBytes` up to 32 MiB | `TOO_LARGE` |
 | Progress chunk | 64 KiB | `TOO_LARGE` |
 | File | 1 GiB | `TOO_LARGE` |
+| Store document or kv value | 16 MiB of JSON | `TOO_LARGE` |
 | `find` and `list` limits | required, at most 1000 | `VALIDATION_FAILED` |
 | Sync `ctx.exec` depth | 16 | `TOO_DEEP` |
 
 ## 2.14 Start and stop
 
 **Start.** Each step must succeed; any failure prints the Problem and a hint, then exits with code 1.
-1. Take `kvman.lock` (`KVMAN_RUNNING` if another kvman holds it).
+1. Take `kvman.lock`. If a live kvman holds it, hand over or fail `KVMAN_RUNNING` (§1.2); a lock whose process isn't alive is replaced.
 2. Open the database.
 3. Read and validate the preset.
 4. Install missing npm extensions.
 5. Ask for trust.
 6. Start the workers, which load the extensions (`EXTENSION_INVALID`). In `web` mode, an extension whose namespace is `kernel.web.home` must declare `kvman.web` (`EXTENSION_INVALID` otherwise).
-7. Delete expired job rows, then resume unfinished jobs and due schedules.
-8. Run the `kernel.started` handlers in dependency order (10 s budget; a failure is logged, and start goes on).
-9. Listen on the port (`PORT_IN_USE`), then print the URL.
+7. Check the preset's settings against the registered keys (`VALIDATION_FAILED`, §2.8).
+8. Delete expired job rows. Attempts that were running when kvman last stopped or died fail with `INTERRUPTED` (§2.3). Then resume queued jobs and due schedules of open workspaces.
+9. Open the start folder as a workspace (§1.2).
+10. Run the `kernel.started` handlers in dependency order (10 s budget; a failure is logged, and start goes on).
+11. Listen on the port (`PORT_IN_USE`), then print the URL and open the browser.
 
 **Stop (Ctrl+C).**
 1. HTTP stops taking requests.
-2. Every running job's signal is aborted with the reason `shutdown`.
-3. kvman waits up to 10 s for handlers to return, then stops the workers. `kernel.stopping` handlers run first. Every process from §2.16 gets SIGTERM, then SIGKILL at the 10 s mark.
-4. Async jobs that didn't finish stay `queued` and run again at the next start.
+2. The `kernel.stopping` handlers run.
+3. Every running job's signal is aborted with the reason `shutdown`.
+4. kvman waits up to 10 s for handlers to return, then stops the workers. Every process from §2.16 is stopped (§2.16), with the kill at the 10 s mark.
+5. Async attempts that didn't finish fail with `INTERRUPTED`: a job with retries left stays queued and runs at the next start; one without ends `failed` (§2.3).
 
 A second Ctrl+C stops at once.
 
@@ -233,35 +256,35 @@ ctx.registerHandler('kernel.job.failed', {
 | Point | Occurs | Handler input |
 |---|---|---|
 | `kernel.job.failed` | any job, sync or async, ends `failed` | `{ jobId, rootId, name, caller, workspaceId, problem, attempts }` |
-| `kernel.job.succeeded` | an async or scheduled job ends `succeeded` | `{ jobId, name, caller, workspaceId }` |
-| `kernel.job.cancelled` | any job ends `cancelled` | `{ jobId, rootId, name, workspaceId, reason }` |
+| `kernel.job.succeeded` | an async or scheduled job ends `succeeded` | `{ jobId, rootId, name, caller, workspaceId }` |
+| `kernel.job.cancelled` | any job ends `cancelled` | `{ jobId, rootId, name, caller, workspaceId, reason }` |
 | `kernel.process.exited` | a process from §2.16 exits by itself | `{ extension, workspaceId, name, exitCode, signal }` |
-| `kernel.started` | once per start, after every extension loads and before HTTP starts; again for a hot-reloaded extension | `{}` |
+| `kernel.started` | once per start, after every extension loads and before HTTP starts; again after a hot reload, for the reloaded extension and its dependents | `{}` |
 | `kernel.stopping` | at the start of shutdown | `{}` |
 
-Handler inputs never include a job's input or output. An unknown point fails the load with `EXTENSION_INVALID`.
+The three job points share the base `{ jobId, rootId, name, caller, workspaceId }`. Handler inputs never include a job's input or output. An unknown point fails the load with `EXTENSION_INVALID`.
 
-- **Delivery.** Each occurrence queues one async job per registered handler, in the same SQLite transaction that records the job's end, so a crash never loses or duplicates a handler call.
+- **Delivery.** Each occurrence queues one async job per registered handler, in the same SQLite transaction that records the job's end (for a sync job, which has no row, the transaction that inserts the handler jobs), so a crash never loses or duplicates a handler call.
 - **Handler jobs.** They are ordinary async jobs, with retries and timeouts. Their caller is `{ kind: 'kernel' }`, and their workspace is the job's (Home for `started` and `stopping`).
 - **Loop safety.** Jobs started by a handler (the handler job and everything nested in it) never trigger handlers.
-- **Started.** kvman runs the `kernel.started` handlers before it starts HTTP, in dependency order, with a 10 s budget. A handler that fails is logged, and kvman still starts. A `path:` hot reload runs the reloaded extension's handler again.
+- **Started.** kvman runs the `kernel.started` handlers before it starts HTTP, in dependency order, with a 10 s budget. A handler that fails is logged, and kvman still starts. Handlers still running when the budget ends keep running after HTTP starts. A `path:` hot reload runs the handlers of the reloaded extension and of every extension that depends on it again, in dependency order.
 - **Stopping.** `kernel.stopping` handlers run at the start of shutdown, before running jobs are aborted, within the 10 s budget. Unfinished ones are dropped, not resumed.
 
 ## 2.16 Processes
 
-The process service is for long-lived child processes, such as kvdev's preview kvman. Short ones, such as a bash call, stay plain `node:child_process` inside their job.
+The process service is for long-lived child processes, such as kvdev's preview kvman. Short ones, such as a kvcoder shell call, stay plain `node:child_process` inside their job.
 
 | Call | Does |
 |---|---|
-| `ctx.processes.start(name, { command, args?, cwd?, env? })` | Starts it in its own process group → `{ name, pid, startedAt }`. The name is unique per extension and workspace; a running one fails `PROCESS_RUNNING`. Commands only (`READ_ONLY` in queries). |
-| `ctx.processes.stop(name)` | SIGTERM to its group, then SIGKILL after 5 s. |
+| `ctx.processes.start(name, { command, args?, cwd?, env? })` | Starts it (in its own process group on Linux and macOS) → `{ name, pid, startedAt }`. The name is unique per extension and workspace; a running one fails `PROCESS_RUNNING`. Commands only (`READ_ONLY` in queries). |
+| `ctx.processes.stop(name)` | Linux and macOS: SIGTERM to its group, then SIGKILL after 5 s. Windows: `taskkill /PID <pid> /T /F` at once. |
 | `ctx.processes.list()` | This extension's processes in the workspace. |
 | `ctx.processes.log(name, { tail? })` | The last lines of its output. |
 
 - **Output.** stdout and stderr go to `logs/processes/<extension>/<name>.log`, capped at 10 MB with the oldest half dropped.
 - **Exit.** A process is recorded in SQLite. One that exits by itself triggers `kernel.process.exited` (§2.15).
-- **Stop.** On kvman stop, after the `kernel.stopping` handlers, every group gets SIGTERM, then SIGKILL at the 10 s mark.
-- **Crash.** At the next start, the kernel kills the leftover recorded groups that are still alive and clears their rows.
+- **Stop.** On kvman stop, after the `kernel.stopping` handlers, every process is stopped: SIGTERM to each group, then SIGKILL at the 10 s mark (Linux and macOS), or `taskkill /T /F` (Windows).
+- **Crash.** At the next start, the kernel kills the leftover recorded processes that are still alive (their groups, or their trees on Windows) and clears their rows.
 - **Hot reload** leaves processes running.
 - `kernel.processes.list` lists every process, for the UI.
 

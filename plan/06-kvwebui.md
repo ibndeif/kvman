@@ -1,6 +1,6 @@
 # 06 — kvwebui (namespace `kvwebui`)
 
-kvwebui is the web app, and it is an extension like any other. The kernel serves its `kvman.web` folder at `/` (§4.1). kvwebui builds the UI from other extensions' contributions, which it pulls; nothing is pushed.
+kvwebui is the web app, and it is an extension like any other. The kernel serves its `kvman.web` folder at `/` (§4.1). kvwebui builds the UI from other extensions' contributions, which it pulls; nothing is pushed. It holds no product concept: no chat, no agent. Pages, and what's on them, come from extensions, and the preset decides their order and the home page.
 
 ## 6.1 Stack
 
@@ -42,7 +42,8 @@ kvwebui is the web app, and it is an extension like any other. The kernel serves
 
 **Workspace.**
 - Each tab has a current workspace (default Home), remembered in `localStorage`. Every API call sends it as `workspaceId`.
-- Closing a workspace moves its tabs to Home.
+- **Start URL.** When the page opens with `?workspace=<id>` (§1.2), kvwebui makes that the tab's workspace and removes the parameter from the URL. The workspace is never otherwise part of a URL.
+- Closing a workspace moves its tabs to Home. A tab whose workspace was closed elsewhere learns it from a `NOT_FOUND` answer and moves to Home.
 
 ## 6.3 Contributions: `<namespace>.ui.get`
 
@@ -84,8 +85,8 @@ An extension contributes UI by registering the public query `<namespace>.ui.get`
 | `list` | `{ query, input, item: View, empty? }` |
 | `detail` | `{ query, input, fields: [{ field, title, format? }] }` |
 | `form` | `{ command, fixed?: { field: value \| ref }, submit, then? }` |
+| `link` | `{ text, params?, to: { page: '<ns>.<page>', params? } }`: navigation with no command; `params` fill the text, `to.params` fill the route |
 | `button` | `{ text, command, input, confirm?, style?: 'primary' \| 'secondary' \| 'danger', then? }` |
-| `chat` | `{ messages: { query, input }, send: { command, input } }` |
 | `custom` | `{ component: '<namespace>.<name>', props }` |
 
 **Component details.**
@@ -93,21 +94,20 @@ An extension contributes UI by registering the public query `<namespace>.ui.get`
 - **Forms.**
   - The fields come from the command's input JSON Schema (`kernel.extensions.list`), minus the `fixed` fields.
   - A field's label is the key `<command>.fields.<field>`, or else the field's description.
-- **`then`.** `'rerun'` (the default), `{ navigate: '<ns>.<page>', params? }`, or `{ toast: key, level? }`. Effects (§6.5) apply after `then`.
-- **Chat.**
-  - The messages query returns `[{ id, role: 'user' | 'assistant' | 'tool' | 'system', markdown, createdAt }]`.
-  - Send runs the command async with its input plus `{ text }`. Progress chunks whose `data` is `{ type: 'text', delta }` (from any source, ADR 0001, 79) append `delta` to a pending assistant bubble; chunks whose `data` is `{ type: 'component', component, props }` render inline as a `custom` component; a chunk `{ type: 'follow', jobId }` makes the chat follow that job in the same bubble; other chunks are ignored. Stop cancels the job.
-  - When the job ends, the messages query reruns.
+- **`then`.** `'rerun'` (the default), `{ navigate: '<ns>.<page>', params? }`, or `{ toast: key, level? }`. In `then`, `params` values may also be `{ "$output": field }`, a top-level field of the command's output. Effects (§6.5) apply after `then`.
 - **Custom.**
   - It loads `/web/<namespace>/components/<name>.js`, which default-exports a Vue component.
   - kvwebui provides `vue` through an import map, so extensions build with `vue` as an external.
-  - The component gets `props` and an injected `kvman` object: `exec`, `execAsync`, `stream(jobId)`, `follow(jobId)`, `t`, and `workspace`.
-  - `follow(jobId)`: inside a chat, it streams that job into a new pending assistant bubble (with Stop) and reruns the messages query when it ends. Elsewhere, it reruns the page's queries when the job ends.
+  - The component gets `props` and an injected `kvman` object: `exec`, `execAsync`, `stream(jobId)`, `follow(jobId)`, `t`, `workspace`, and `View`.
+  - `stream(jobId)` gives the job's stream events (§4.4): `progress` chunks as `{ source, data }`, then `result` or `problem`. What the chunks mean is up to the extensions that send and read them.
+  - `follow(jobId)` reruns the page's queries and applies the job's effects (§6.5) when the job ends.
+  - `View` is a component that renders a view tree with kvwebui's built-in components: `<View :view="{ type: 'markdown', text }" />`. Custom components use it for Markdown, so the sanitized renderer stays the only `v-html`.
 
 ## 6.5 Effects: extensions controlling the UI
 
-- **Adding effects.** A handler calls `ctx.exec('kvwebui.effect.add', effect)`. kvwebui stores the effect in its workspace store under the caller's `ctx.job.rootId`.
-- **Applying effects.** When a job the UI started ends (at the sync reply, or at the end of the stream for an async job), kvwebui calls `kvwebui.effect.take { jobId }`. That returns the job's effects, deletes them, and kvwebui applies them in order. A schedule deletes effects that aren't taken within 1 hour.
+- **Adding effects.** A handler calls `ctx.exec('kvwebui.effect.add', effect)`. kvwebui stores the effect in its global store under the caller's `ctx.job.rootId` (job ids are unique across workspaces).
+- **Applying effects.** When a job the UI started or follows ends (at the sync reply, or at the end of the stream for an async job), kvwebui calls `kvwebui.effect.take { jobId }`. That returns the job's effects, deletes them, and kvwebui applies them in order.
+- **Cleanup.** kvwebui's `kernel.started` handler schedules `kvwebui.effect.clean` hourly with the key `effect-clean` (§2.4). It deletes effects older than 1 hour.
 
 | Effect | Shape |
 |---|---|
@@ -120,7 +120,7 @@ An extension contributes UI by registering the public query `<namespace>.ui.get`
 
 | Page | Shows |
 |---|---|
-| **Settings** | Every key from `kernel.settings.list`, as a form built from its JSON Schema, with global or workspace scope and each value's source. A secrets section sets and deletes secrets but never shows a value. |
+| **Settings** | Every key from `kernel.settings.list`, as a form built from its JSON Schema, with the scopes the key allows and each value's source. A secrets section sets and deletes secrets but never shows a value. |
 | **Jobs** | `kernel.jobs.list` for the workspace, with status, and cancel for running jobs. |
 | **Extensions** | `kernel.extensions.list`, read-only. |
 
@@ -135,6 +135,7 @@ An extension contributes UI by registering the public query `<namespace>.ui.get`
 |---|---|---|
 | `kvwebui.effect.add` | command, public | an effect → `{}` |
 | `kvwebui.effect.take` | command, public | `{ jobId }` → `effect[]` |
+| `kvwebui.effect.clean` | command, private | `{}` → `{}` |
 
 | Setting | Default |
 |---|---|
@@ -142,4 +143,4 @@ An extension contributes UI by registering the public query `<namespace>.ui.get`
 | `kvwebui.home` | the first nav item's page |
 | `kvwebui.nav.order` | `[]` |
 | `kvwebui.nav.hidden` | `[]` |
-| `kvwebui.theme` | `system` (`light`, `dark`) |
+| `kvwebui.theme` | `system` (`light`, `dark`); global only |

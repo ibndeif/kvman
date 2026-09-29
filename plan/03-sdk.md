@@ -32,11 +32,12 @@ export default (ctx: Ctx) => {
 ```
 
 - The entry default-exports one function that receives the extension's `ctx`. It only registers, and it runs once per worker at load.
+- `@kvman/sdk` is a peerDependency; at runtime every extension shares the kernel's copy, and so its `z` (§2.9).
 - **Registrations.**
   - Commands and queries take `description`, `input`, `output`, `handle(input)`, and optionally `public` (default `false`) and `timeoutMs` (default 600 000).
   - Both may set `maxInputBytes` and `maxOutputBytes` (default 1 MiB, at most 32 MiB).
   - Commands also take `retries` (default 3).
-  - Settings take `description`, `schema`, and `default`.
+  - Settings take `description`, `schema`, `default`, and optionally `scopes` (`['global', 'workspace']` by default, or `['global']`; §2.8).
   - `ctx.registerHandler(point, { description, handle, retries?, timeoutMs? })` registers a handler for one of the kernel's points (§2.15).
   - Every name starts with the extension's namespace. Every description is required and is one sentence.
 
@@ -46,14 +47,14 @@ export default (ctx: Ctx) => {
 |---|---|
 | `ctx.exec(name, input)` | Runs a command or query now and resolves to its output. |
 | `ctx.execAsync(name, input)` | Queues a command and resolves to its job id. |
-| `ctx.schedule(name, input, { at: Date } \| { cron: string })` | Schedules a command and resolves to the schedule id. |
+| `ctx.schedule(name, input, { at: Date, key? } \| { cron: string, key? })` | Schedules a command and resolves to the schedule id. The same `key` again replaces that schedule (§2.4). |
 | `ctx.schedule.cancel(id)` | Deletes a schedule. |
 | `ctx.cancel(jobId)` | Cancels a job (§2.3). |
 | `ctx.problem(code, params?)` | Makes a Problem to throw. `code` is `<namespace>/UPPER_SNAKE`, and it is never retried. |
 
 **Typing calls to other extensions.**
 - The SDK declares empty `interface Commands {}` and `interface Queries {}`, which map each name to `{ input; output }`.
-- An extension augments them for its public names and ships the declaration in its package. A caller then gets typed input and output after `import type {} from '@kvman/kvai'`. This type-only import is allowed only when the other extension is a `kvman.dependencies` entry and a devDependency; runtime imports of another extension are forbidden.
+- An extension augments them for its public names and ships the declaration in its package. A caller then gets typed input and output after `import type {} from '@kvman/kvai'`. This type-only import is allowed only when the other extension is a `kvman.dependencies` entry and a devDependency. The only runtime import of another extension is a subpath it exports, and only from a declared dependency (§1.4).
 - A name that isn't declared takes and returns `unknown`.
 - There's no generator, and the kernel validates at runtime either way.
 
@@ -76,8 +77,12 @@ Every call returns a Promise, except the calls on a transaction's `tx`.
 
 | API | Calls |
 |---|---|
-| `ctx.store`, `ctx.store.global` | `kv.get/set/delete(key)`; `collection(name)` with `insert(doc)` → doc with `id`, `get(id)`, `find(filter, { limit })`, `update(id, patch)` → the document (shallow merge: top-level fields in `patch` replace the document's, and `null` is stored as `null`), `delete(id)`; `transaction((tx) => …)` |
+| `ctx.store`, `ctx.store.global` | `kv.get/set/delete(key)`; `collection(name)` with `insert(doc)` → doc with `id`, `get(id)`, `find(filter, { limit, order?: 'asc' \| 'desc' })`, `count(filter)`, `update(id, patch)` → the document (shallow merge: top-level fields in `patch` replace the document's, and `null` is stored as `null`), `delete(id)`; `transaction((tx) => …)` (§2.5) |
 | `ctx.files` | `write(name, data, type)` → File, `get(id)`, `read(id)` → Buffer, `path(id)`, `unlink(id)` |
 | `ctx.settings` | `get(key)`, `set(key, value, { scope: 'global' \| 'workspace' })` (own keys only) |
 | `ctx.secrets` | `get(name)`, `set(name, value)`, `delete(name)` |
 | `ctx.processes` | `start(name, { command, args?, cwd?, env? })`, `stop(name)`, `list()`, `log(name, { tail? })`: long-lived processes (§2.16) |
+
+## 3.5 Logging
+
+`ctx.log.debug/info/warn/error(message, fields?)` writes a line to `logs/kvman.log`, tagged with the extension and, inside a handler, the job id. `--log-level` sets the level (default `info`). `message` and `fields` never carry payloads, settings values, or secrets. `ctx.log` works outside a job too, for example in the entry function.

@@ -18,7 +18,7 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds 
    - `status: [{ id, query, input, text, order }]`
 
    Ids are local to the extension (full id `<namespace>.<id>`), and titles and texts are translation keys.
-7. **Routes.**
+7. **Routes.** (Refined by ADR 0008, 1: a one-time `?workspace=` start URL.)
    - A page's URL is `/<namespace>/<page>`, and a page may declare params (`/kvcoder/session/:sessionId`).
    - The preset's `kvwebui.home` names the page shown at `/`.
    - The current workspace is kvwebui state, not part of the URL.
@@ -35,13 +35,13 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds 
     - Action: `button` (a command and its input, an optional confirm, then rerun, navigate, or toast).
     - `chat`: a messages query and a send command; it streams the job's progress.
     - `custom`: a Vue component from an extension.
-11. **Custom Vue.**
+11. **Custom Vue.** (The `kvman` object also has `follow` and `View`: 32 and ADR 0008, 24.)
     - `{ type: 'custom', component: '<namespace>.<name>', props }` loads `/web/<namespace>/components/<name>.js`, which default-exports a Vue component.
     - kvwebui provides `vue` through an import map (one Vue instance); extensions build with `vue` as an external.
     - The component gets `props` plus an injected `kvman` object: `exec`, `execAsync`, `stream(jobId)`, `t`, `workspace`.
 12. **Type-only imports.** An extension may `import type` from another extension that is both a `kvman.dependencies` entry and a devDependency. Runtime imports of other extensions stay forbidden, and ESLint checks both. (This refines ADR 0001, 50.)
 13. **Invalid UI.** kvwebui validates every `<namespace>.ui.get` answer with zod at load. An extension whose answer is invalid, or whose `<namespace>.ui.get` fails, contributes nothing, and a dismissible error card lists the extension and its Problem. Other extensions are unaffected.
-14. **Chat.** `{ type: 'chat', messages: { query, input }, send: { command, input } }`.
+14. **Chat.** (Superseded by ADR 0008, 23: kvwebui has no chat.) `{ type: 'chat', messages: { query, input }, send: { command, input } }`.
     - The messages query returns `[{ id, role: 'user' | 'assistant' | 'tool' | 'system', markdown, createdAt }]`.
     - The send command runs async with its input plus `{ text }`. Progress chunks whose `data` is `{ type: 'text', delta }` (from any source, ADR 0001, 79) append `delta` to a pending assistant bubble; other chunks are ignored, and a Stop button cancels the job.
     - When the job ends, the messages query reruns.
@@ -100,6 +100,6 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds 
 28. **Status text.** `params` values may be `{ "$output": field }`, a top-level field of the status query's output (only in status items).
 29. **Nav.** One flat list, ordered by `kvwebui.nav.order`, then `order`. The built-in pages come at the bottom, after a divider.
 30. **Namespace.** kvwebui's namespace is `kvwebui` (supersedes `ui` in 3): its API is `kvwebui.effect.add` and `kvwebui.effect.take`, and its settings are `kvwebui.title`, `kvwebui.home`, `kvwebui.nav.order`, `kvwebui.nav.hidden`, and `kvwebui.theme`. The contribution convention `<namespace>.ui.get` is unchanged. `kernel.web.home` defaults to `kvwebui`.
-31. **Component chunks.** The `chat` component renders any progress chunk whose `data` is `{ type: 'component', component: '<ns>.<name>', props }` inline as a `custom` component (ADR 0004, 7; used by kvcoder's question card, ADR 0005, 8).
-32. **`kvman.follow(jobId)`.** The injected `kvman` object also has `follow(jobId)`. Inside a chat, it streams that job into a new pending assistant bubble (with Stop) and reruns the messages query when the job ends. Elsewhere, it only reruns the page's queries when the job ends.
-33. **Follow chunks.** The chat treats a progress chunk whose `data` is `{ type: 'follow', jobId }` like `kvman.follow(jobId)`, keeping the same assistant bubble. Chained harnesses (kvcoder steps) use it (ADR 0005, 2).
+31. **Component chunks.** (Superseded by ADR 0008, 23.) The `chat` component renders any progress chunk whose `data` is `{ type: 'component', component: '<ns>.<name>', props }` inline as a `custom` component (ADR 0004, 7; used by kvcoder's question card, ADR 0005, 8).
+32. **`kvman.follow(jobId)`.** (Changed by ADR 0008, 23: `follow` only reruns queries and applies effects.) The injected `kvman` object also has `follow(jobId)`. Inside a chat, it streams that job into a new pending assistant bubble (with Stop) and reruns the messages query when the job ends. Elsewhere, it only reruns the page's queries when the job ends.
+33. **Follow chunks.** (Superseded by ADR 0008, 23.) The chat treats a progress chunk whose `data` is `{ type: 'follow', jobId }` like `kvman.follow(jobId)`, keeping the same assistant bubble. Chained harnesses (kvcoder steps) use it (ADR 0005, 2).

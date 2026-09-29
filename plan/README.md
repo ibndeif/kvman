@@ -6,12 +6,12 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 |---|---|
 | `01-overview.md` | What kvman is, running it, the home folder, packages, core extensions |
 | `02-kernel.md` | Jobs, workers, failures, schedules, storage, workspaces, files, settings, secrets, extensions, presets, localization, kernel API, limits, start and stop |
-| `03-sdk.md` | The extension API (`ctx`) |
+| `03-sdk.md` | The extension API (`ctx`), including logging |
 | `04-http-api.md` | Routes, the envelope, security, the job stream |
 | `05-errors.md` | The Problem shape and the kernel's error codes |
-| `06-kvwebui.md` | The web app: frame, contributions, view trees, effects, built-in pages |
+| `06-kvwebui.md` | The web app: frame, contributions, view trees, custom components, effects, built-in pages |
 | `07-kvai.md` | LLM calls, providers, models |
-| `08-kvcoder.md` | The coding harness: sessions, steps, bash, connectors, sections, ask, subagents |
+| `08-kvcoder.md` | The coding harness: sessions, steps, the shell, connectors, sections, ask, subagents, its conversation UI |
 | `09-kvdev.md` | The development harness: connectors, scaffold, preview |
 | `10-testkit.md` | `createTestKernel` |
 | `11-presets.md` | The `coder` and `dev` presets |
@@ -24,5 +24,6 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `adr/0005-kvcoder.md` | Every kvcoder decision |
 | `adr/0006-kvdev-testkit-presets.md` | kvdev, the testkit, and the presets |
 | `adr/0007-milestones-and-testing.md` | Milestones, benchmarks, crash and UI testing, changesets |
+| `adr/0008-plan-review.md` | The full review before M1.1: running locally, platforms, and the fixes it made |
 
 The plan is complete. Implementation starts with M1.1.
