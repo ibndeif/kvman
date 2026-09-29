@@ -10,9 +10,9 @@ kvcoder is the app-building harness, built on kvai and kvwebui. Its agent has on
 
   ```
   { id, sessionId, turnId?, seq,
-    kind: 'user' | 'assistant' | 'toolResult' | 'notice' | 'summary',
+    kind: 'user' | 'assistant' | 'toolResult' | 'notice' | 'note' | 'summary',
     source?: { kind: 'user' } | { kind: 'extension', name } | { kind: 'subagent', sessionId },
-    content,            // a pi-ai message, a notice { code, params, text }, or a summary { text, coversThroughSeq }
+    content,            // a pi-ai message, a notice { code, params }, a note { key, params? }, or a summary { text, coversThroughSeq }
     fileIds?,           // attached images (user messages)
     model?, usage?: { input, output, cacheRead, cacheWrite, cost },
     durationMs?,        // the model call (assistant) or the run time (toolResult)
@@ -20,7 +20,9 @@ kvcoder is the app-building harness, built on kvai and kvwebui. Its agent has on
   ```
 - **A turn** records `{ id, startedAt, endedAt, durationMs, steps, usage, outcome: 'done' | 'cancelled' | 'failed' | 'interrupted' | 'maxSteps' }`. While suspended, it also holds its `pending` calls (`{ toolCallId, kind: 'question' | 'subagent' | 'approval', questionId?, childSessionId? }`) and the results already produced in that step. When the last pending call resolves, kvcoder appends all results in the model's call order and queues the next step.
 - **Totals.** The session keeps running totals of `usage` and `durationMs`, and a subagent's usage adds to its parent's. The conversation shows each turn's time, tokens, and cost under its last answer, and the session's totals in its header.
-- **Titles.** Until the first turn ends, the title is the first 60 characters of the first message. Then kvcoder asks `kvai.complete` (the session's model, no tools, `maxTokens` 30) for a 3–6 word title in the conversation's language. `kvcoder.session.rename` overrides it, and a renamed session is never retitled. A failed title call keeps the placeholder.
+- **Display-only messages.** A **notice** is kvcoder's own (a cancel, an interruption, a failed summary), shown as `kvcoder.notices.<code>` with its `params`. A **note** is added by any extension with `kvcoder.note.add` and shown as its translation key with `params`. Neither is sent to the model, and adding a note never starts a turn.
+- **Titles.** A title is a string, or `{ key }` for a translated title (the welcome session). Until the first turn ends, the title is the first 60 characters of the first user message. Then kvcoder asks `kvai.complete` (the session's model, no tools, `maxTokens` 30) for a 3–6 word title in the conversation's language. `kvcoder.session.rename` overrides it, and a renamed session is never retitled. A failed title call keeps the placeholder.
+- **Welcome.** kvcoder registers a `kernel.workspace.opened` handler (§2.15). When the `kvcoder.welcome` setting isn't `null`, it creates a session titled `{ key: 'kvcoder.welcome.title' }` and adds a note with that setting's key, so a new workspace opens with a greeting in the person's language. A preset sets its own key, or `null` for none.
 - **Model.** A session starts with `kvcoder.model` (or `kvai.defaultModel` when that is `null`) and `kvcoder.thinking`. `kvcoder.session.configure` changes either from the next step.
 - **Long histories.** `kvcoder.message.list` returns the newest `limit` messages, plus `omitted`, the number of older ones. The conversation shows "N earlier messages" and offers the export.
 - **Sending.**
@@ -152,7 +154,7 @@ ctx.registerHandler('kernel.started', {
 - **Calls.** For each occurrence, kvcoder queues one async job per registered handler. Inputs carry ids and totals, never message contents; a handler reads the messages with `kvcoder.message.list` if it needs them.
 - **Registration.** The `command` must be the caller's own public command. Each extension has at most one handler per point; registering again replaces it. Handlers are owned by the caller and cleared at each start, like connectors.
 - **Loop safety.** kvcoder stores the ids of the handler jobs it queues. A message injected by one of them (a job whose `ctx.job.rootId` is such an id) is stored but doesn't start a turn; the next turn sees it. Work that a handler queues with `execAsync` isn't recognized, so a handler must not inject from there.
-- **Access.** Every extension can use kvcoder's public API: read sessions, messages, and turns; create, configure, rename, delete, fork, and export sessions; inject messages; cancel turns. Only `message.send` and `question.answer` are for the person.
+- **Access.** Every extension can use kvcoder's public API: read sessions, messages, and turns; create, configure, rename, delete, fork, and export sessions; inject messages; add notes; cancel turns. Only `message.send` and `question.answer` are for the person.
 
 **Testing.** `runConnector(kernel, 'ext new \'{…}\'')` from `@kvman/kvcoder/testing`, used with `createTestKernel`, parses a line exactly as kvcoder does and returns `{ output, exitCode }`, including for `-h`, stdin JSON in both shells, and non-standalone lines.
 
@@ -196,6 +198,7 @@ subagent run '{ "task", "mode": "fresh" | "fork", "connectors"?: [names], "shell
 | `kvcoder.session.compact` | command | `{ sessionId }` → `{}` |
 | `kvcoder.message.send` | command, user only | `{ sessionId, text, fileIds? }` → `{}` |
 | `kvcoder.message.inject` | command | `{ sessionId, text, fileIds? }` → `{}`: starts a turn when the session is idle, unless it comes from a handler job (§8.4) |
+| `kvcoder.note.add` | command | `{ sessionId, key, params? }` → `{}`: a display-only note (§8.1); never starts a turn |
 | `kvcoder.message.list` | query | `{ sessionId, limit }` → `{ messages, omitted }` (the newest `limit`, in order) |
 | `kvcoder.turn.cancel` | command | `{ sessionId }` → `{}` |
 | `kvcoder.turn.list` | query | `{ sessionId, limit }` → `Turn[]`, newest first |
@@ -223,7 +226,7 @@ kvcoder owns its conversation UI. kvwebui only hosts it: kvcoder contributes pag
 - The **Chat** page `kvcoder.chat`: a session list (a `list` of `link`s to `kvcoder.session`) with a "New chat" button that runs `kvcoder.session.create`, then navigates to the new session (`then: { navigate: 'kvcoder.session', params: { sessionId: { "$output": "id" } } }`).
 - The `kvcoder.session` page, with a `sessionId` param: the session list and the conversation.
 - **The conversation** is kvcoder's custom component `kvcoder.conversation { sessionId }`. It:
-  - shows the messages from `kvcoder.message.list`, with "N earlier messages" and the export;
+  - shows the messages from `kvcoder.message.list`, with notices and notes translated, and "N earlier messages" with the export;
   - streams the running step (`kvman.stream`): text deltas into the pending answer, thinking deltas collapsed, component chunks inline, and follow chunks continuing in the same bubble;
   - reattaches to the running step after a reload, through the session's `stepJobId`;
   - shows pending questions from the turn record;
@@ -246,3 +249,4 @@ kvcoder owns its conversation UI. kvwebui only hosts it: kvcoder contributes pag
 | `kvcoder.compactAt` | 0.8 |
 | `kvcoder.connectors` | `[]` (binary connectors: `{ name, description, binary: { check, install? } }`) |
 | `kvcoder.sessions.keep` | 0 (keep all) |
+| `kvcoder.welcome` | `kvcoder.welcome.default`: a translation key, or `null` for no welcome |

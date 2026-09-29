@@ -6,7 +6,7 @@ kvwebui is the web app, and it is an extension like any other. The kernel serves
 
 - Vue 3 (Composition API, TypeScript), built with Vite into `extensions/kvwebui/dist/web`.
 - vue-router and Tailwind CSS, with logical properties only, so right-to-left works.
-- vue-i18n, loading `/api/locales/:lang` for `kernel.language`.
+- vue-i18n, loading `/api/locales/:lang` for `kernel.language`, with the fallbacks of §2.11.
 - `lucide-vue-next` for icons.
 - `markdown-it` with HTML disabled, its output sanitized with `DOMPurify`. `v-html` appears only in that one component.
 
@@ -28,7 +28,7 @@ kvwebui is the web app, and it is an extension like any other. The kernel serves
 **Top bar.**
 - The title is the `kvwebui.title` key.
 - **The workspace picker** lists `kernel.workspace.list`. "Open folder…" takes a typed absolute path for `kernel.workspace.open`.
-- A language switch sets `kernel.language`, and a theme switch sets `kvwebui.theme`.
+- A language switch lists the languages in `kernel.health.get` and sets `kernel.language`; kvwebui then reloads the catalog and sets the page direction (§2.11). A theme switch sets `kvwebui.theme`.
 
 **Nav.**
 - One flat list, ordered by `kvwebui.nav.order`, then by each item's `order`. Items in `kvwebui.nav.hidden` are left out.
@@ -96,11 +96,14 @@ An extension contributes UI by registering the public query `<namespace>.ui.get`
   - A field's label is the key `<command>.fields.<field>`, or else the field's description.
 - **`then`.** `'rerun'` (the default), `{ navigate: '<ns>.<page>', params? }`, or `{ toast: key, level? }`. In `then`, `params` values may also be `{ "$output": field }`, a top-level field of the command's output. Effects (§6.5) apply after `then`.
 - **Custom.**
-  - It loads `/web/<namespace>/components/<name>.js`, which default-exports a Vue component.
-  - kvwebui provides `vue` through an import map, so extensions build with `vue` as an external.
-  - The component gets `props` and an injected `kvman` object: `exec`, `execAsync`, `stream(jobId)`, `follow(jobId)`, `t`, `workspace`, and `View`.
+  - It loads `/web/<namespace>/components/<name>.js`, which default-exports a Vue component, and `components/<name>.css` beside it when that exists. The URL carries the extension's `revision` (§2.12), so after a hot reload a page refresh loads the new code.
+  - kvwebui provides `vue` through an import map, so extensions build with `vue` as an external. The kvdev scaffold sets this up (§9.2).
+  - **Styling.** kvwebui defines CSS variables for light and dark: `--kv-color-*` (background, surface, text, muted, border, primary, danger, warning, success), `--kv-space-*` (`sm`, `md`, `lg`), and `--kv-radius`. Extensions style with these variables and logical properties; kvwebui's Tailwind classes aren't available to them.
+  - **Types.** `@kvman/sdk/web` types the injected `kvman` object and view trees (§3.2).
+  - The component gets `props` and an injected `kvman` object: `exec`, `execAsync`, `stream(jobId)`, `follow(jobId)`, `navigate`, `toast`, `panel`, `t`, `workspace`, and `View`.
   - `stream(jobId)` gives the job's stream events (§4.4): `progress` chunks as `{ source, data }`, then `result` or `problem`. What the chunks mean is up to the extensions that send and read them.
   - `follow(jobId)` reruns the page's queries and applies the job's effects (§6.5) when the job ends.
+  - `navigate(page, params?)`, `toast(text, params?, level?)`, and `panel(id, open)` act at once in the browser, like the effects of the same name.
   - `View` is a component that renders a view tree with kvwebui's built-in components: `<View :view="{ type: 'markdown', text }" />`. Custom components use it for Markdown, so the sanitized renderer stays the only `v-html`.
 
 ## 6.5 Effects: extensions controlling the UI
@@ -120,9 +123,9 @@ An extension contributes UI by registering the public query `<namespace>.ui.get`
 
 | Page | Shows |
 |---|---|
-| **Settings** | Every key from `kernel.settings.list`, as a form built from its JSON Schema, with the scopes the key allows and each value's source. A secrets section sets and deletes secrets but never shows a value. |
+| **Settings** | Every key from `kernel.settings.list`, as a form built from its JSON Schema, with the scopes the key allows and each value's source. Each key shows `<key>.description`, or its English description. A secrets section sets and deletes secrets but never shows a value. |
 | **Jobs** | `kernel.jobs.list` for the workspace, with status, and cancel for running jobs. |
-| **Extensions** | `kernel.extensions.list`, read-only. |
+| **Extensions** | `kernel.extensions.list`, read-only, with `<name>.description` for each command and query, or its English description. |
 
 ## 6.7 Problems
 

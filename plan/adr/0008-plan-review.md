@@ -80,7 +80,7 @@ Status: accepted, 2026-09-30. A full review of the plan before M1.1, decided wit
 55. `kernel.port`, `kernel.workers`, and `kernel.workerConcurrency` apply at the next start.
 56. The testkit's fake clock drives the kernel's own timers (retries, schedules, retention, ids), not `Date` inside handlers. Testkit calls take `workspaceId`.
 57. A job the UI follows has its effects applied when it ends, like a job it started. Effects are kept in kvwebui's global store, keyed by root job id.
-58. `kernel.language` is `en` or `ar`.
+58. `kernel.language` is `en` or `ar`. (Changed by 72: an open list.)
 59. Connector output gets the same 30 KB truncation as shell output.
 60. A connector word inside a pipe, `&&`, or other shell syntax returns an error explaining that connector calls stand alone; it isn't run in the shell.
 61. A subagent uses its parent's model and thinking level.
@@ -92,3 +92,18 @@ Status: accepted, 2026-09-30. A full review of the plan before M1.1, decided wit
 67. A step job registers `timeoutMs` 1 200 000: parallel calls take up to 600 s, plus the model call.
 68. A hot reload starts fresh workers with the new code. Old workers take no new jobs and exit when their jobs end, since ES modules can't be unloaded.
 69. **Job point inputs** share one base shape, `{ jobId, rootId, name, caller, workspaceId }`: `kernel.job.failed` adds `problem` and `attempts`, and `kernel.job.cancelled` adds `reason`. (Refines ADR 0001, 84.)
+
+## Follow-up: translations, welcome messages, custom UI
+
+70. **Translating descriptions.** The UI looks up `<name>.description` for settings, commands, and queries, and `<owner namespace>.connectors.<name>.description` for connectors, falling back to the registered English description. A key missing in the current language falls back to `en`, then to the key itself. Text sent to the model stays English.
+71. **Notices and notes are display-only.** kvcoder stores a notice as `{ code, params }` and shows it as `kvcoder.notices.<code>`. Neither notices nor notes are sent to the model.
+72. **Open language list.** `kernel.language` is any language code (BCP 47, such as `fr` or `pt-BR`) for which a loaded catalog exists; anything else fails `VALIDATION_FAILED`. Catalogs are `locales/<lang>.json`. The language switch lists every language found in the loaded catalogs. Right-to-left languages are `ar`, `he`, `fa`, and `ur`. kvman's own packages ship `en` and `ar`. (Changes item 58.)
+73. **Notes.** A new kvcoder message kind, `note`, with content `{ key, params? }`, shown translated and never sent to the model. `kvcoder.note.add { sessionId, key, params? }` is public, returns `{}`, and doesn't start a turn.
+74. **Workspace opened.** A new kernel handler point, `kernel.workspace.opened { workspaceId }`, occurs only when a path becomes a workspace for the first time. Home counts as first opened on the first start of a new home. Its handler jobs run in that workspace.
+75. **kvcoder's welcome.** At `kernel.workspace.opened`, kvcoder creates a session titled with the key `kvcoder.welcome.title` and adds a note with the `kvcoder.welcome` setting's key. That setting defaults to `kvcoder.welcome.default`, and `null` turns it off. A session's `title` is therefore a string or `{ key }`.
+76. **Custom UI in this phase:**
+    - **Web scaffold.** `ext new { …, web: true }` adds a Vite library build (`vue` external) of `web/components/*.vue` into `dist/web/components/<name>.js` and `.css`, the `kvman.web` field, a sample component, and a sample page in `<namespace>.ui.get`. Its `web:watch` script rebuilds on change, and `preview start` runs it through `ctx.processes` for projects that have it.
+    - **CSS and theme tokens.** kvwebui defines CSS variables (`--kv-color-*`, `--kv-space-*`, `--kv-radius`) for light and dark, and loads `components/<name>.css` beside a component's JS. Extensions style with those variables and logical properties; kvwebui's Tailwind classes aren't available to them.
+    - **UI actions.** The injected `kvman` gains `navigate(page, params?)`, `toast(text, params?, level?)`, and `panel(id, open)`.
+    - **Web types.** `@kvman/sdk/web` exports the types of the injected `kvman` object and of view trees. It is types only and imports nothing but the SDK.
+    - **Reloads.** `kernel.extensions.list` gives each extension a `revision` that grows with every hot reload. kvwebui adds it to component URLs, so a page refresh loads the new code.

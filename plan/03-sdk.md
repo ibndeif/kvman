@@ -56,6 +56,7 @@ export default (ctx: Ctx) => {
 - The SDK declares empty `interface Commands {}` and `interface Queries {}`, which map each name to `{ input; output }`.
 - An extension augments them for its public names and ships the declaration in its package. A caller then gets typed input and output after `import type {} from '@kvman/kvai'`. This type-only import is allowed only when the other extension is a `kvman.dependencies` entry and a devDependency. The only runtime import of another extension is a subpath it exports, and only from a declared dependency (§1.4).
 - A name that isn't declared takes and returns `unknown`.
+- **Web types.** `@kvman/sdk/web` exports the types of kvwebui's injected `kvman` object and of view trees, for custom components (§6.4). It is types only.
 - There's no generator, and the kernel validates at runtime either way.
 
 ## 3.3 The current job

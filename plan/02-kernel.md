@@ -101,7 +101,7 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
   - Any extension reads any key with `ctx.settings.get(key)`.
   - An extension writes only its own keys, with `ctx.settings.set(key, value, { scope: 'global' | 'workspace' })`.
   - The user changes any key with `kernel.settings.set`.
-- The kernel's own keys are `kernel.port` (3737), `kernel.workers`, `kernel.workerConcurrency` (32), `kernel.language` (`en` or `ar`; default `en`), `kernel.jobs.retentionDays` (7), and `kernel.web.home` (`kvwebui`, §4.1). They are global only. `kernel.port`, `kernel.workers`, and `kernel.workerConcurrency` apply at the next start.
+- The kernel's own keys are `kernel.port` (3737), `kernel.workers`, `kernel.workerConcurrency` (32), `kernel.language` (default `en`, §2.11), `kernel.jobs.retentionDays` (7), and `kernel.web.home` (`kvwebui`, §4.1). They are global only. `kernel.port`, `kernel.workers`, and `kernel.workerConcurrency` apply at the next start.
 
 **Secrets.**
 - `ctx.secrets.get/set/delete(name)` belong to the calling extension and are home-wide. They're stored in `secrets.json`: mode 0600 on Linux and macOS, and protected by the user profile folder's access rules on Windows. Writes replace the file atomically.
@@ -174,9 +174,13 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 
 ## 2.11 Localization
 
-- The kernel and each extension ship `locales/en.json` and `locales/ar.json`, with keys under their namespace. Error texts are `<namespace>.errors.<CODE>`.
-- The kernel merges the catalogs and serves them at `GET /api/locales/:lang`.
-- The language is `kernel.language` (default `en`). Arabic is right-to-left, and the UI follows the setting.
+- **Catalogs.** The kernel and each extension ship `locales/<lang>.json` files, with keys under their namespace. kvman's own packages ship `en` and `ar`; an extension may ship any other language too.
+- **Conventions.**
+  - Error texts are `<namespace>.errors.<CODE>`.
+  - A setting's, command's, or query's translated description is `<name>.description`, and a form field's label is `<command>.fields.<field>`. When a key is missing, the UI shows the registered English description.
+- **Serving.** The kernel merges the catalogs per language and serves them at `GET /api/locales/:lang`. A key missing in a language falls back to `en`, then to the key itself.
+- **The language** is `kernel.language` (global, default `en`): any language code (BCP 47, such as `fr` or `pt-BR`) that a loaded catalog has; anything else fails `VALIDATION_FAILED`. The kernel lists the available languages in `kernel.health.get`. `ar`, `he`, `fa`, and `ur` are right-to-left, and the UI follows the setting.
+- Text sent to a model stays English; a harness asks the model to reply in `kernel.language`.
 
 ## 2.12 The kernel's own commands and queries
 
@@ -198,9 +202,9 @@ All are public. Types are in `@kvman/sdk`.
 | `kernel.files.get` | query | `{ id }` → `File` |
 | `kernel.files.list` | query | `{ limit }` → `File[]` in this workspace, newest first |
 | `kernel.files.unlink` | command | `{ id }` → `{}` |
-| `kernel.extensions.list` | query | `{}` → `[{ name, version, source, namespace, commands, queries, settings, handlers }]` (`source` is the preset's `bundled`, `npm:…`, or `path:…`); each command and query is `{ name, description, public, input, output }`, with `input` and `output` as JSON Schema |
+| `kernel.extensions.list` | query | `{}` → `[{ name, version, source, revision, namespace, commands, queries, settings, handlers }]` (`source` is the preset's `bundled`, `npm:…`, or `path:…`; `revision` starts at 0 and grows with each hot reload); each command and query is `{ name, description, public, input, output }`, with `input` and `output` as JSON Schema |
 | `kernel.processes.list` | query | `{}` → `[{ extension, workspaceId, name, pid, startedAt }]` (§2.16) |
-| `kernel.health.get` | query | `{}` → `{ version, preset, mode, workers, uptimeMs }` |
+| `kernel.health.get` | query | `{}` → `{ version, preset, mode, workers, uptimeMs, languages }` (`languages`: the codes the loaded catalogs have) |
 
 There is no sandbox in this phase, so extensions can call these too.
 
@@ -259,13 +263,14 @@ ctx.registerHandler('kernel.job.failed', {
 | `kernel.job.succeeded` | an async or scheduled job ends `succeeded` | `{ jobId, rootId, name, caller, workspaceId }` |
 | `kernel.job.cancelled` | any job ends `cancelled` | `{ jobId, rootId, name, caller, workspaceId, reason }` |
 | `kernel.process.exited` | a process from §2.16 exits by itself | `{ extension, workspaceId, name, exitCode, signal }` |
+| `kernel.workspace.opened` | a path becomes a workspace for the first time (Home: on the first start of a new home); reopening doesn't count | `{ workspaceId }` |
 | `kernel.started` | once per start, after every extension loads and before HTTP starts; again after a hot reload, for the reloaded extension and its dependents | `{}` |
 | `kernel.stopping` | at the start of shutdown | `{}` |
 
 The three job points share the base `{ jobId, rootId, name, caller, workspaceId }`. Handler inputs never include a job's input or output. An unknown point fails the load with `EXTENSION_INVALID`.
 
 - **Delivery.** Each occurrence queues one async job per registered handler, in the same SQLite transaction that records the job's end (for a sync job, which has no row, the transaction that inserts the handler jobs), so a crash never loses or duplicates a handler call.
-- **Handler jobs.** They are ordinary async jobs, with retries and timeouts. Their caller is `{ kind: 'kernel' }`, and their workspace is the job's (Home for `started` and `stopping`).
+- **Handler jobs.** They are ordinary async jobs, with retries and timeouts. Their caller is `{ kind: 'kernel' }`, and their workspace is the job's (the opened one for `workspace.opened`; Home for `started` and `stopping`).
 - **Loop safety.** Jobs started by a handler (the handler job and everything nested in it) never trigger handlers.
 - **Started.** kvman runs the `kernel.started` handlers before it starts HTTP, in dependency order, with a 10 s budget. A handler that fails is logged, and kvman still starts. Handlers still running when the budget ends keep running after HTTP starts. A `path:` hot reload runs the handlers of the reloaded extension and of every extension that depends on it again, in dependency order.
 - **Stopping.** `kernel.stopping` handlers run at the start of shutdown, before running jobs are aborted, within the 10 s budget. Unfinished ones are dropped, not resumed.

@@ -6,7 +6,7 @@ kvdev is the harness for developing kvman extensions and presets. It has no loop
 
 | Call | Kernel command | Does |
 |---|---|---|
-| `ext new '{ "name", "namespace", "folder" }'` | `kvdev.ext.new` | scaffolds a project (below), then runs `npm install` in it |
+| `ext new '{ "name", "namespace", "folder", "web"? }'` | `kvdev.ext.new` | scaffolds a project (below), then runs `npm install` in it |
 | `ext list` | `kvdev.ext.list` | the projects in the workspace folder (folders whose package.json has a `kvman` field) → `[{ folder, name, namespace, version }]` |
 | `ext check '{ "folder" }'` | `kvdev.ext.check` | runs `npx tsc --noEmit` and `npm run check` → `[{ file?, message, hint }]` |
 | `ext test '{ "folder" }'` | `kvdev.ext.test` | runs `npm test` → its results |
@@ -14,7 +14,7 @@ kvdev is the harness for developing kvman extensions and presets. It has no loop
 | `preset check '{ "file" }'` | `kvdev.preset.check` | validates the preset's schema and its references (extensions, settings, pages) |
 | `preview start '{ "extensions": [folders], "preset"?: file }'` | `kvdev.preview.start` | starts a preview kvman (§9.3) → `{ url }` |
 | `preview stop` / `preview status` | `kvdev.preview.stop` / `.status` | |
-| `docs get '{ "topic": "sdk" \| "views" \| "connectors" \| "presets" }'` | `kvdev.docs.get` | a guide as Markdown |
+| `docs get '{ "topic": "sdk" \| "views" \| "components" \| "i18n" \| "connectors" \| "presets" }'` | `kvdev.docs.get` | a guide as Markdown |
 
 ## 9.2 The scaffold
 
@@ -24,6 +24,12 @@ kvdev is the harness for developing kvman extensions and presets. It has no loop
 - `locales/en.json` and `locales/ar.json`;
 - `test/extension.test.ts`, a passing `node:test` test that uses `createTestKernel`;
 - `tsconfig.json` and `README.md`.
+
+With `web: true`, it also writes:
+- `web/components/Hello.vue`, a sample component styled with kvwebui's CSS variables and typed with `@kvman/sdk/web`;
+- a Vite library build (`vue` external) into `dist/web/components/<name>.js` and `.css`, the `kvman.web: "dist/web"` field, and the scripts `web:build` and `web:watch`;
+- a `<namespace>.ui.get` with a sample page that shows the component;
+- devDependencies `vite`, `@vitejs/plugin-vue`, and `vue`, pinned to the versions kvwebui uses.
 
 The toolchain comes from the project, so kvdev imports neither the kernel nor TypeScript. `npm run check` loads the extension in a test kernel and reports:
 - invalid registrations;
@@ -39,6 +45,8 @@ The toolchain comes from the project, so kvdev imports neither the kernel nor Ty
 - port 3738, or the next free one;
 - `--yes` and `--no-open`;
 - a generated preset: the dev extensions as `path:`, plus kvai and kvwebui (or the given preset, with the dev extensions added).
+
+For each project with a `web:watch` script, it also runs that script through `ctx.processes`, so component edits rebuild; a page refresh then shows them (§6.4).
 
 It returns the URL, which kvcoder's conversation shows as a link. `path:` hot reload applies edits live. `preview stop` ends it, and it also stops with the main kvman.
 

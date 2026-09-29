@@ -114,7 +114,9 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
   - Home (`home`), and `kernel.workspace.*`: remembered workspaces, closing as a pause (queued jobs and schedules wait; calls fail `NOT_FOUND`), and reopening by path.
   - The rest of `kernel.*` (settings with scopes, secrets with `set` sync only, jobs, files, extensions, and health, with JSON Schemas).
   - `ctx.settings.set` (own keys only, declared scopes), and `ctx.files` (`read`, `path`, and access rules).
-  - Locale catalogs merged per language.
+  - Locale catalogs merged per language (any `locales/<lang>.json`), with the `en`-then-key fallback, the open `kernel.language`, and `languages` in `kernel.health.get`.
+  - The `kernel.workspace.opened` point (first open only; Home on a new home).
+  - The `revision` of each extension in `kernel.extensions.list`.
   - `path:` hot reload: a recursive watch, fresh workers with the new code while the old ones drain, and the old code kept on failure.
   - Rerunning the `kernel.started` handlers of a hot-reloaded extension and of its dependents, in dependency order.
   - The process service (§2.16), with process groups on Linux and macOS and `taskkill /T /F` on Windows, `kernel.processes.list`, and the `kernel.process.exited` point.
@@ -123,7 +125,9 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
   - A closed workspace's queued job and due schedule wait, and run after it's reopened.
   - `kernel.secrets.list` never returns a value, and `kernel.secrets.set` with `async` fails `VALIDATION_FAILED`.
   - An edited `path:` extension serves new registrations while a running job finishes on the old code, and a broken edit keeps the old code.
-  - A reload of an extension reruns its dependents' `kernel.started` handlers.
+  - A reload of an extension reruns its dependents' `kernel.started` handlers, and raises its `revision`.
+  - Opening a new path triggers `kernel.workspace.opened` once; reopening it doesn't.
+  - An extension's `fr` catalog makes `fr` selectable, and a key missing in `fr` falls back to `en`, then to the key.
   - A started process logs its output, survives a hot reload, triggers `kernel.process.exited` when it exits, and a second start of the same name fails `PROCESS_RUNNING`.
 
 ### M1.7 HTTP
@@ -197,6 +201,7 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
   - `extensions/kvwebui`: the Vue app (Vite, vue-router, Tailwind, vue-i18n, lucide, markdown-it and DOMPurify).
   - The frame: top bar, nav, panels, and status bar.
   - Per-tab workspaces, the `?workspace=<id>` start URL, and moving a tab to Home when its workspace closes.
+  - The language switch from `kernel.health.get`, right-to-left for `ar`, `he`, `fa`, and `ur`, and translated descriptions with their English fallback.
   - Discovery through `<namespace>.ui.get`, with zod validation and error cards.
   - Routes with params, and `kvwebui.home`.
   - Every view component except `custom`, including `link` and `$output` in `then`.
@@ -209,6 +214,7 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
   - Forms are generated from JSON Schema, and a failed command marks fields.
   - A button whose `then` navigates with `$output` opens the created item's page, and a `link` navigates without a command.
   - Opening `/?workspace=<id>` sets the tab's workspace and drops the parameter.
+  - Switching the language re-renders the UI in it, and a setting without `<key>.description` shows its English description.
   - Arabic renders right-to-left (Playwright).
   - Markdown can't inject HTML.
 
@@ -216,10 +222,14 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
 
 - **Read:** `06` §6.4 (custom), §6.5.
 - **Build:**
-  - `custom` components through the import map, with the injected `kvman` (`exec`, `execAsync`, `stream`, `follow`, `t`, `workspace`, `View`).
+  - `custom` components through the import map, with their CSS files and the `revision` in their URLs, and the injected `kvman` (`exec`, `execAsync`, `stream`, `follow`, `navigate`, `toast`, `panel`, `t`, `workspace`, `View`).
+  - The theme CSS variables for light and dark.
+  - `@kvman/sdk/web` types.
   - `kvwebui.effect.add`, `kvwebui.effect.take` (for jobs the UI starts or follows), and `kvwebui.effect.clean` on a keyed hourly schedule.
 - **Done when:**
-  - A custom component shares kvwebui's Vue instance, streams a job's progress chunks, and renders Markdown through `View`.
+  - A custom component shares kvwebui's Vue instance, streams a job's progress chunks, renders Markdown through `View`, and its CSS loads.
+  - A component's `navigate`, `toast`, and `panel` act at once.
+  - A component styled with the variables follows a theme switch.
   - `follow` reruns the page's queries when the job ends.
   - Effects from a nested job apply once when the UI's job ends.
   - Restarting leaves one cleanup schedule, and effects older than an hour are cleaned.
@@ -236,7 +246,8 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
   - Section caps.
   - `ask` and `subagent` (fresh or fork, the parent's model, connector subsets, parallel, `--async`).
   - Compaction, cancel, interrupted steps through a `kernel.job.failed` handler, and retention (`kvcoder.sessions.keep`, keyed schedule).
-  - Message, turn, and session records with usage and time totals, titles, `omitted` counts, JSON export, fork, `session.configure`, and image `fileIds`.
+  - Message, turn, and session records with usage and time totals, titles (strings or keys), `omitted` counts, JSON export, fork, `session.configure`, and image `fileIds`.
+  - Display-only notices and notes (`kvcoder.note.add`), and the welcome session at `kernel.workspace.opened`.
   - Session points (`kvcoder.handler.*`), with handler-job ids so their injections don't start turns.
   - The UI: the Chat and session pages, the `kvcoder.conversation` component, the question and shell-result cards, the status item, and the Prompt tab.
   - Settings.
@@ -248,6 +259,7 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
   - A denied shell call reaches the model as denied.
   - An `--async` connector result arrives as a message and starts a turn.
   - A global section reaches a second workspace's prompt.
+  - Opening a new workspace creates the welcome session with its note, shown in the current language; notes and notices never reach the model.
   - Compaction keeps the last 10 messages.
   - Cancel stops children and questions.
   - An image attachment reaches an image model, and fails `VALIDATION_FAILED` for a text-only one.
@@ -259,10 +271,11 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
 
 - **Read:** `09`; `10`; `11`; `12` §12.3.
 - **Build:**
-  - `extensions/kvdev`: the `ext`, `preset`, `preview`, and `docs` connectors, the scaffold (with `kvman.source`), the preview kvman, and its global section.
+  - `extensions/kvdev`: the `ext`, `preset`, `preview`, and `docs` connectors, the scaffold (with `kvman.source`, and the web template), the preview kvman (running `web:watch`), and its global section.
   - `presets/coder.json` and `presets/dev.json`.
   - The cold-start and RSS benchmarks.
 - **Done when:**
   - In the `dev` preset, with the fake model, the agent scaffolds an extension whose own test passes. `ext list` shows it, `ext check` reports a planted missing description, the preview starts and shows the new page, and an edit to `src/index.ts` hot-reloads it with no build (Playwright).
+  - A `web: true` scaffold builds, its sample page shows the component in the preview, and a component edit shows after a refresh.
   - `kvman` with no flags starts the `coder` preset.
   - Every benchmark meets its target.
