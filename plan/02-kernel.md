@@ -272,7 +272,7 @@ The three job points share the base `{ jobId, rootId, name, caller, workspaceId 
 
 - **Delivery.** Each occurrence queues one async job per registered handler, in the same SQLite transaction that records the job's end (for a sync job, which has no row, the transaction that inserts the handler jobs), so a crash never loses or duplicates a handler call.
 - **Handler jobs.** They are ordinary async jobs, with retries and timeouts. Their caller is `{ kind: 'kernel' }`, and their workspace is the job's (the opened one for `workspace.opened`; Home for `started` and `stopping`).
-- **Loop safety.** Jobs started by a handler (the handler job and everything nested in it) never trigger handlers.
+- **Loop safety.** A handler job, its nested sync jobs, and every async job or schedule they create carry a `fromHandler` mark, inherited down the chain. Marked jobs never trigger handlers, so no chain can loop.
 - **Started.** kvman runs the `kernel.started` handlers before it starts HTTP, in dependency order, with a 10 s budget. A handler that fails is logged, and kvman still starts. Handlers still running when the budget ends keep running after HTTP starts. A `path:` hot reload runs the handlers of the reloaded extension and of every extension that depends on it again, in dependency order.
 - **Stopping.** `kernel.stopping` handlers run at the start of shutdown, before running jobs are aborted, within the 10 s budget. Unfinished ones are dropped, not resumed.
 

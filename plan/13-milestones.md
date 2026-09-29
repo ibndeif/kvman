@@ -103,7 +103,7 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
   - A failing job retries three times with 1, 2, and 4 s backoff (fake clock), then ends `failed`.
   - A cancelled job ends `cancelled` once its handler returns, and its nested sync job sees the abort.
   - A cron schedule runs at each due time, and a missed one runs once. Scheduling twice with the same key leaves one schedule.
-  - A failed sync job and a failed async job each queue one `kernel.job.failed` handler job. A handler that fails, or that runs a failing nested job, triggers no handlers. `kernel.started` runs once per start.
+  - A failed sync job and a failed async job each queue one `kernel.job.failed` handler job. A handler that fails, runs a failing nested job, or queues an async job or schedule that fails, triggers no handlers. `kernel.started` runs once per start.
   - Closing a test kernel mid-job fails the attempt with `INTERRUPTED`. On reopening, a job with retries left runs again, a job with `retries: 0` has ended `failed`, and a finished job never reruns.
   - The benchmark meets its target.
 

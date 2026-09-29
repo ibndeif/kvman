@@ -31,7 +31,7 @@ kvwebui is the web app, and it is an extension like any other. The kernel serves
 - A language switch lists the languages in `kernel.health.get` and sets `kernel.language`; kvwebui then reloads the catalog and sets the page direction (§2.11). A theme switch sets `kvwebui.theme`.
 
 **Nav.**
-- One flat list, ordered by `kvwebui.nav.order`, then by each item's `order`. Items in `kvwebui.nav.hidden` are left out.
+- One flat list, ordered by `kvwebui.nav.order`, then by each item's `order`, then by full nav id (`<namespace>.<id>`) alphabetically. Items in `kvwebui.nav.hidden` are left out.
 - Below a divider come the built-in pages: Settings, Jobs, and Extensions.
 
 **Panels.** One is open at a time, chosen from a strip of panel icons. The open panel is remembered per tab in `localStorage`, and panels show on every page.
@@ -144,7 +144,7 @@ An extension contributes UI by registering the public query `<namespace>.ui.get`
 
 | Setting | Default |
 |---|---|
-| `kvwebui.title` | `kvwebui.title.default` ("kvman") |
+| `kvwebui.title` | `kvwebui.title.default` ("kvman"); preset-only (`scopes: []`) |
 | `kvwebui.home` | none: required and preset-only (`scopes: []`), a full page id without params |
 | `kvwebui.nav.order` | `[]` |
 | `kvwebui.nav.hidden` | `[]` |
