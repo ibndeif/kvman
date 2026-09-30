@@ -9,7 +9,8 @@ await kernel.exec('notes.add', { text: 'hi' }, { as: '@acme/notes' });       // 
 await kernel.exec('notes.add', { text: 'hi' }, { workspaceId: ws.id });      // in a workspace (default Home)
 const jobId = await kernel.execAsync('notes.reindex', {});
 const job = await kernel.waitForJob(jobId);
-kernel.clock.advance(60_000);                                                // fake clock: the kernel's timers
+await kernel.clock.advance(60_000);                                          // fake clock: the kernel's timers
+await kernel.restart();                                                      // stop as Ctrl+C does, start again on the same home
 await kernel.close();
 ```
 
@@ -17,6 +18,7 @@ await kernel.close();
 - `settings` and `secrets` are set before the extensions load. `settings` are the run's preset settings, and `secrets` is `{ "<extension package>": { "<name>": "<value>" } }` (ADR 0009, 13).
 - A test kernel starts one worker unless `settings` set `kernel.workers` (ADR 0009, 10).
 - Its Home workspace is a temporary folder of its own, and `close()` removes it with the temporary home (ADR 0009, 11).
-- The fake clock drives the kernel's own timers: retries, schedules, retention, and ids. It doesn't change `Date` inside handlers.
+- The fake clock drives the kernel's own timers: retries, schedules, retention, and ids. It doesn't change `Date` inside handlers. `await kernel.clock.advance(ms)` resolves once no job is running or due (ADR 0009, 15).
+- `restart()` stops the test kernel as Ctrl+C does, then starts it again on the same home, Home folder, extensions, and settings; the fake clock carries over, and `restart({ stoppedForMs })` moves it while the kernel is stopped (ADR 0009, 16).
 - `exec` and `execAsync` take `{ as?, workspaceId? }`.
 - It may import `kernel` and `sdk` (§1.4). It is published as `@kvman/testkit` and depends on `@kvman/kernel`.

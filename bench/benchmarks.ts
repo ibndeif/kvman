@@ -1,4 +1,5 @@
 import type { Metrics, Target } from './rules.ts';
+import { execAsyncThroughput } from './exec-async.ts';
 import { execNoop } from './exec-noop.ts';
 import { storeFind } from './store-find.ts';
 
@@ -10,4 +11,4 @@ export type Benchmark = {
   measure: () => Promise<Metrics>;
 };
 
-export const benchmarks: readonly Benchmark[] = [storeFind, execNoop];
+export const benchmarks: readonly Benchmark[] = [storeFind, execNoop, execAsyncThroughput];

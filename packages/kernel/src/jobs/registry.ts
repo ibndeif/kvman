@@ -2,6 +2,7 @@ import { z, type CommandRegistration, type QueryRegistration, type SettingRegist
 import { kernelProblem } from '../problems.ts';
 import type { SettingDefinition } from '../settings/settings.ts';
 import type { JobKind } from './current-job.ts';
+import type { HandlerEntry } from './handlers.ts';
 
 // What the extensions registered in one worker, checked as they register (plan 02 §2.9, §2.13, 03 §3.1).
 
@@ -57,11 +58,12 @@ function invalid(owner: Owner, message: string, name: string): Error {
 export type Registry = {
   jobs: Map<string, Registration>;
   settings: Map<string, SettingDefinition>;
+  handlers: HandlerEntry[];
   sealed: boolean;
 };
 
 export function createRegistry(): Registry {
-  return { jobs: new Map(), settings: new Map(), sealed: false };
+  return { jobs: new Map(), settings: new Map(), handlers: [], sealed: false };
 }
 
 function checkName(registry: Registry, owner: Owner, name: string, taken: boolean): void {

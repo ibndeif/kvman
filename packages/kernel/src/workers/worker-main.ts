@@ -2,9 +2,9 @@ import { parentPort, workerData } from 'node:worker_threads';
 import { ProblemError, type Problem } from '@kvman/sdk';
 import { systemClock } from '../clock.ts';
 import { createExtensionCtx, type WorkerServices } from '../ctx/extension-ctx.ts';
+import { handlerSummaries } from '../jobs/handlers.ts';
 import { createIdGenerator } from '../ids.ts';
 import { createRegistry } from '../jobs/registry.ts';
-import { runJob } from '../jobs/run-job.ts';
 import { openLogFile } from '../logging/log-file.ts';
 import { kernelProblem } from '../problems.ts';
 import { openSecretsFile } from '../secrets/secrets-file.ts';
@@ -12,8 +12,9 @@ import { kernelSettingDefinitions } from '../settings/kernel-settings.ts';
 import { checkPresetSettings } from '../settings/preset-check.ts';
 import { createSettings } from '../settings/settings.ts';
 import { openConnection } from '../storage/database.ts';
+import { answerFromMain, createRootRunner } from './root-runner.ts';
 import { shareKernelSdk } from './sdk-resolution.ts';
-import { toWorkerSchema, workerSetupSchema, type RootJob, type SecretWrite, type ToMain, type WorkerExtension } from './protocol.ts';
+import { toWorkerSchema, workerSetupSchema, type ToMain, type WorkerExtension, type WorkerRequest } from './protocol.ts';
 
 // A worker thread: it loads every extension of the run, then runs the jobs the main thread sends it (plan 02 §2.2).
 
@@ -27,24 +28,33 @@ const send = (message: ToMain): void => port.postMessage(message);
 const logFile = openLogFile(setup.home, setup.logLevel);
 const registry = createRegistry();
 for (const definition of kernelSettingDefinitions()) registry.settings.set(definition.key, definition);
-const secretWrites = new Map<number, { resolve: () => void; reject: (error: Error) => void }>();
-let nextSecretWrite = 0;
+const answers = new Map<number, { resolve: (value: unknown) => void; reject: (error: Error) => void }>();
+let nextRequest = 0;
 
 const connection = openConnection(setup.database);
 const services: WorkerServices = {
-  connection,
+  environment: { registry, logger: logFile.logger, reportSyncEnd: (end) => send({ kind: 'sync-ended', end }) },
   ids: createIdGenerator(systemClock),
-  registry,
+  request: (request: WorkerRequest) =>
+    new Promise((resolve, reject) => {
+      nextRequest += 1;
+      answers.set(nextRequest, { resolve, reject });
+      send({ kind: 'request', requestId: nextRequest, request });
+    }),
+  connection,
   logger: logFile.logger,
   settings: createSettings({ connection, definitions: registry.settings, presetValues: setup.presetSettings, logger: logFile.logger }),
   secrets: openSecretsFile(setup.home),
-  writeSecret: (write: SecretWrite) =>
-    new Promise<void>((resolve, reject) => {
-      nextSecretWrite += 1;
-      secretWrites.set(nextSecretWrite, { resolve, reject });
-      send({ kind: 'write-secret', requestId: nextSecretWrite, write });
-    }),
+  sendProgress: (rootId, chunk) => send({ kind: 'progress', rootId, chunk }),
 };
+const roots = createRootRunner(services.environment, send);
+
+// The worker closes its own connection and log before it exits, so SQLite never sees a thread torn down under it.
+function stop(): void {
+  connection.close();
+  logFile.close();
+  process.exit(0);
+}
 
 function isEntry(value: unknown): value is (ctx: unknown) => void {
   return typeof value === 'function';
@@ -82,29 +92,16 @@ async function load(): Promise<void> {
       return;
     }
   }
-  send({ kind: 'ready' });
-}
-
-async function runRoot(requestId: number, job: RootJob): Promise<void> {
-  const request = { ...job, rootId: job.id, parent: undefined, signal: new AbortController().signal };
-  try {
-    send({ kind: 'result', requestId, output: await runJob(registry, services.logger, request) });
-  } catch (error) {
-    if (!(error instanceof ProblemError)) throw error;
-    send({ kind: 'problem', requestId, problem: error.problem });
-  }
+  const jobs = [...registry.jobs.values()].map((job) => ({ name: job.name, kind: job.kind, owner: job.owner, public: job.public, retries: job.retries }));
+  send({ kind: 'ready', summary: { jobs, handlers: handlerSummaries(registry) } });
 }
 
 port.on('message', (raw: unknown) => {
   const message = toWorkerSchema.parse(raw);
-  if (message.kind === 'run') {
-    void runRoot(message.requestId, message.job);
-    return;
-  }
-  const pending = secretWrites.get(message.requestId);
-  secretWrites.delete(message.requestId);
-  if (message.problem === undefined) pending?.resolve();
-  else pending?.reject(new ProblemError(message.problem));
+  if (message.kind === 'run') roots.run(message.requestId, message.job);
+  else if (message.kind === 'abort') roots.abort(message.requestId, message.reason);
+  else if (message.kind === 'answer') answerFromMain(answers, message);
+  else stop();
 });
 
 await load();

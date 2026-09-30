@@ -16,6 +16,7 @@ export type RunningJob = {
   caller: Caller;
   signal: AbortSignal;
   depth: number;
+  fromHandler: boolean;
 };
 
 const storage = new AsyncLocalStorage<RunningJob>();

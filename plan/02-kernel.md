@@ -43,11 +43,11 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 
 - A command may set `retries` (default 3) and `timeoutMs` (default 600 000, ten minutes). A query may set `timeoutMs`.
 - **Timeouts.** An attempt that runs past `timeoutMs` fails with `TIMEOUT`, and its signal is aborted.
-- **Async and scheduled jobs.** A thrown error, a timeout, a worker crash, or an interruption (`INTERRUPTED`: kvman stopped or died during the attempt) is retried after an exponential backoff (1 s, 2 s, 4 s, …) until the retries run out. Then the job ends `failed` with the last Problem. A Problem made with `ctx.problem(code)` ends the job `failed` at once, without a retry.
+- **Async and scheduled jobs.** A thrown error (`HANDLER_FAILED`), a timeout, a worker crash, or an interruption (`INTERRUPTED`: kvman stopped or died during the attempt) is retried after an exponential backoff (1 s, 2 s, 4 s, …) until the retries run out. Then the job ends `failed` with the last Problem. Every other Problem, including one made with `ctx.problem(code)` and a kernel Problem such as `VALIDATION_FAILED`, ends the job `failed` at once, without a retry (ADR 0009, 14).
 - **Sync jobs** are never retried; the caller gets the Problem.
 - Because an async job can run more than once, handlers are written to be safe to repeat.
 - **Unknown errors.** A thrown error that isn't a Problem becomes `HANDLER_FAILED`. Its message and stack go to the log, never to the caller.
-- **Cancel.** `ctx.cancel(jobId)` or `POST /api/jobs/:id/cancel` aborts the job's `ctx.job.signal`. The job ends `cancelled`, with no retry, when its handler settles after the abort, or at its timeout if it ignores the signal. Jobs it started with `ctx.exec` share its signal; jobs it started with `execAsync` don't. A sync HTTP call whose client disconnects is cancelled the same way.
+- **Cancel.** `ctx.cancel(jobId)` or `POST /api/jobs/:id/cancel` aborts the job's `ctx.job.signal`. A queued job ends `cancelled` at once; cancelling a finished job does nothing; an unknown id fails `NOT_FOUND` (ADR 0009, 17). The job ends `cancelled`, with no retry, when its handler settles after the abort, or at its timeout if it ignores the signal. Jobs it started with `ctx.exec` share its signal; jobs it started with `execAsync` don't. A sync HTTP call whose client disconnects is cancelled the same way.
 
 ## 2.4 Schedules
 
@@ -59,7 +59,7 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 
 ## 2.5 Storage
 
-- There is one SQLite database, `kvman.db`, in WAL mode with a busy timeout. The main thread and every worker each open their own better-sqlite3 connection.
+- There is one SQLite database, `kvman.db`, in WAL mode (`synchronous = NORMAL`, ADR 0009, 21) with a busy timeout. The main thread and every worker each open their own better-sqlite3 connection.
 - The kernel owns every table. Extensions never see SQL and have no migrations.
 - **Store API** (§3.4). Every call returns a Promise.
   - `ctx.store.kv` has `get`, `set`, and `delete`.
@@ -123,7 +123,7 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 
 **The SDK.** An extension lists `@kvman/sdk` as a peerDependency. The kernel resolves every extension's `@kvman/sdk` import to its own copy (a Node module resolve hook), so all extensions share one SDK and one zod. Extensions build their schemas with the SDK's `z`, never their own zod.
 
-**TypeScript entries.** `kvman.source` is optional. For a `path:` extension, the kernel loads `source` when it's present, with Node's type stripping (erasable syntax only: no enums, namespaces, or parameter properties); otherwise, and always for `bundled` and `npm:`, it loads `main`.
+**TypeScript entries.** `kvman.source` is optional. (The kernel turns off V8's wasm code GC at start, working around a V8 crash in the shared wasm code of Node's type stripper; ADR 0009, 20.) For a `path:` extension, the kernel loads `source` when it's present, with Node's type stripping (erasable syntax only: no enums, namespaces, or parameter properties); otherwise, and always for `bundled` and `npm:`, it loads `main`.
 
 **Web files.** An extension may add `"web": "<folder>"` to its `kvman` field, and the kernel serves that folder at `/web/<namespace>/` (§4.1). This is how kvwebui ships its app and how extensions ship Vue components.
 

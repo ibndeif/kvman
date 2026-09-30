@@ -51,10 +51,13 @@ CREATE TABLE IF NOT EXISTS jobs (
   problem TEXT,
   created_at TEXT NOT NULL,
   started_at TEXT,
-  ended_at TEXT
+  ended_at TEXT,
+  run_at TEXT NOT NULL,
+  from_handler INTEGER NOT NULL,
+  handler_extension TEXT
 ) WITHOUT ROWID;
 
-CREATE INDEX IF NOT EXISTS jobs_by_status ON jobs (status, id);
+CREATE INDEX IF NOT EXISTS jobs_by_status ON jobs (status, run_at, id);
 CREATE INDEX IF NOT EXISTS jobs_by_workspace ON jobs (workspace_id, id);
 
 CREATE TABLE IF NOT EXISTS schedules (
@@ -66,7 +69,9 @@ CREATE TABLE IF NOT EXISTS schedules (
   at TEXT,
   cron TEXT,
   next_run TEXT NOT NULL,
-  workspace_id TEXT NOT NULL
+  workspace_id TEXT NOT NULL,
+  retries INTEGER NOT NULL,
+  from_handler INTEGER NOT NULL
 ) WITHOUT ROWID;
 
 CREATE UNIQUE INDEX IF NOT EXISTS schedules_by_key ON schedules (owner, workspace_id, key) WHERE key IS NOT NULL;

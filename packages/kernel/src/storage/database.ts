@@ -12,7 +12,7 @@ export function openConnection(file: string): Connection {
   try {
     connection.pragma('journal_mode = WAL');
     connection.pragma(`busy_timeout = ${busyTimeoutMs}`);
-    connection.pragma('synchronous = FULL');
+    connection.pragma('synchronous = NORMAL');
     return connection;
   } catch (error) {
     connection.close();

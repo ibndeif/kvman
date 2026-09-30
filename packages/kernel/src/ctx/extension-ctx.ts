@@ -1,5 +1,4 @@
-import { problemCodeSchema, ProblemError, type Ctx, type CurrentJob, type Json, type OutputOf, type SettingsAccess, type SettingValueOf } from '@kvman/sdk';
-import type { IdGenerator } from '../ids.ts';
+import { jsonSchema, problemCodeSchema, ProblemError, type Ctx, type CurrentJob, type Json, type SettingsAccess, type SettingValueOf } from '@kvman/sdk';
 import type { KernelLogger, LogFields } from '../logging/logger.ts';
 import { kernelProblem } from '../problems.ts';
 import type { SecretsFile } from '../secrets/secrets-file.ts';
@@ -7,26 +6,23 @@ import type { Settings } from '../settings/settings.ts';
 import type { Connection } from '../storage/database.ts';
 import { createStore } from '../store/store.ts';
 import { currentJob, requireJob, requireWritable } from '../jobs/current-job.ts';
-import { registerJob, registerSetting, type Owner, type Registry } from '../jobs/registry.ts';
-import { runJob } from '../jobs/run-job.ts';
-import type { SecretWrite } from '../workers/protocol.ts';
+import { registerJob, registerSetting, type Owner } from '../jobs/registry.ts';
+import { registerHandler } from '../jobs/handlers.ts';
+import { progressLimitBytes } from '../limits.ts';
+import type { WorkerRequest } from '../workers/protocol.ts';
+import { jobCalls, type JobCallServices } from './job-calls.ts';
 
 // The `ctx` an extension's entry receives in a worker (plan 03). It grows milestone by milestone until it is the whole
 // `Ctx`; the calls not built yet are left out of its type rather than stubbed.
 
-export type ExtensionCtx = Omit<Ctx, 'registerHandler' | 'execAsync' | 'schedule' | 'cancel' | 'files' | 'processes' | 'settings'> & {
-  settings: Pick<SettingsAccess, 'get'>;
-};
+export type ExtensionCtx = Omit<Ctx, 'files' | 'processes' | 'settings'> & { settings: Pick<SettingsAccess, 'get'> };
 
-
-export type WorkerServices = {
+export type WorkerServices = JobCallServices & {
   connection: Connection;
-  ids: IdGenerator;
-  registry: Registry;
   logger: KernelLogger;
   settings: Settings;
   secrets: SecretsFile;
-  writeSecret: (write: SecretWrite) => Promise<void>;
+  sendProgress: (rootId: string, chunk: { source: string; data: Json }) => void;
 };
 
 function logWith(logger: KernelLogger, owner: Owner): Ctx['log'] {
@@ -49,23 +45,43 @@ function problemFor(owner: Owner, code: string, params: Readonly<Record<string, 
   return new ProblemError(params === undefined ? { code, message: code } : { code, message: code, params: { ...params } });
 }
 
+function progressOf(owner: Owner, services: WorkerServices, rootId: string): (data: Json) => void {
+  return (data) => {
+    if (!jsonSchema.safeParse(data).success) throw kernelProblem('VALIDATION_FAILED', 'A progress chunk must be JSON.');
+    if (Buffer.byteLength(JSON.stringify(data)) > progressLimitBytes) {
+      throw kernelProblem('TOO_LARGE', `A progress chunk is over ${progressLimitBytes} bytes of JSON.`, { limit: progressLimitBytes });
+    }
+    services.sendProgress(rootId, { source: owner.name, data });
+  };
+}
+
+function secretsOf(owner: Owner, services: WorkerServices): Ctx['secrets'] {
+  const write = async (call: string, request: WorkerRequest): Promise<void> => {
+    requireWritable(requireJob(call), call);
+    await services.request(request);
+  };
+  return {
+    get: async (name) => {
+      requireJob('ctx.secrets.get');
+      return services.secrets.get(owner.name, name);
+    },
+    set: (name, value) => write('ctx.secrets.set', { kind: 'write-secret', write: { action: 'set', extension: owner.name, name, value } }),
+    delete: (name) => write('ctx.secrets.delete', { kind: 'write-secret', write: { action: 'delete', extension: owner.name, name } }),
+  };
+}
+
 export function createExtensionCtx(owner: Owner, services: WorkerServices): ExtensionCtx {
-  const { registry, logger } = services;
+  const registry = services.environment.registry;
   return {
     registerCommand: (name, registration) => registerJob(registry, owner, 'command', name, registration),
     registerQuery: (name, registration) => registerJob(registry, owner, 'query', name, registration),
     registerSetting: (key, registration) => registerSetting(registry, owner, key, registration),
-    exec: async <Name extends string>(name: Name, input: unknown) => {
-      const parent = requireJob('ctx.exec');
-      const request = { id: services.ids(), rootId: parent.rootId, name, input, workspace: parent.workspace, parent, signal: parent.signal };
-      const output = await runJob(registry, logger, { ...request, caller: { kind: 'extension', name: owner.name } });
-      // The kernel checked the output against the registered schema; the declared type is the callee's promise.
-      return output as OutputOf<Name>;
-    },
+    registerHandler: (point, registration) => registerHandler(registry, owner, point, registration),
+    ...jobCalls(owner, services),
     problem: (code, params) => problemFor(owner, code, params),
     get job(): CurrentJob {
       const job = requireJob('ctx.job');
-      return { id: job.id, rootId: job.rootId, workspace: job.workspace, caller: job.caller, signal: job.signal, progress: () => undefined };
+      return { id: job.id, rootId: job.rootId, workspace: job.workspace, caller: job.caller, signal: job.signal, progress: progressOf(owner, services, job.rootId) };
     },
     get store() {
       const job = requireJob('ctx.store');
@@ -75,20 +91,7 @@ export function createExtensionCtx(owner: Owner, services: WorkerServices): Exte
       // The kernel checked the value against the key's schema; the declared type is the key owner's promise.
       get: async <Key extends string>(key: Key) => services.settings.resolve(key, requireJob('ctx.settings.get').workspace.id).value as SettingValueOf<Key>,
     },
-    secrets: {
-      get: async (name) => {
-        requireJob('ctx.secrets.get');
-        return services.secrets.get(owner.name, name);
-      },
-      set: async (name, value) => {
-        requireWritable(requireJob('ctx.secrets.set'), 'ctx.secrets.set');
-        await services.writeSecret({ action: 'set', extension: owner.name, name, value });
-      },
-      delete: async (name) => {
-        requireWritable(requireJob('ctx.secrets.delete'), 'ctx.secrets.delete');
-        await services.writeSecret({ action: 'delete', extension: owner.name, name });
-      },
-    },
-    log: logWith(logger, owner),
+    secrets: secretsOf(owner, services),
+    log: logWith(services.logger, owner),
   };
 }

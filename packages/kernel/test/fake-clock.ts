@@ -6,6 +6,7 @@ export function fakeClock(start = Date.parse('2026-09-30T03:00:00.000Z')): FakeC
   let time = start;
   return {
     now: () => time,
+    setTimer: () => () => undefined,
     advance: (milliseconds) => {
       time += milliseconds;
     },

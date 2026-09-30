@@ -64,3 +64,15 @@ export function useHarness(): Harness {
 export function entry(body: string): string {
   return `import { z, ProblemError, type Ctx } from '@kvman/sdk';\n\nexport default (ctx: Ctx): void => {\n${body}\n};\n`;
 }
+
+// Entry code shared by the async tests: a counter in the store, and waiting for the job's signal to abort.
+export const counting = `
+  const bump = async (key: string) => { const count = z.number().parse((await ctx.store.kv.get(key)) ?? 0) + 1; await ctx.store.kv.set(key, count); return count; };
+  const aborted = (signal: AbortSignal) => signal.aborted ? Promise.resolve() : new Promise((resolve) => signal.addEventListener('abort', resolve));
+  ctx.registerQuery(\`\${NAMESPACE}.count-get\`, { description: 'Reads a counter.', input: z.object({ key: z.string() }), output: z.unknown(), public: true,
+    handle: async (input) => (await ctx.store.kv.get(input.key)) ?? 0 });
+`;
+
+export function countingEntry(namespace: string, body: string): string {
+  return entry(counting.replaceAll('${NAMESPACE}', namespace) + body);
+}
