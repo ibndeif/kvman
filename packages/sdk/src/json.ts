@@ -3,11 +3,11 @@ import { z } from 'zod';
 /** A JSON value that is not an array or object. */
 export type JsonPrimitive = string | number | boolean | null;
 
-/** Any JSON value. */
-export type Json = JsonPrimitive | Json[] | { [key: string]: Json };
+/** Any JSON value; an object field may be `undefined` (as zod infers optional fields), which JSON leaves out. */
+export type Json = JsonPrimitive | Json[] | { [key: string]: Json | undefined };
 
-/** A JSON object. */
-export type JsonObject = { [key: string]: Json };
+/** A JSON object; a field may be `undefined`, which JSON leaves out. */
+export type JsonObject = { [key: string]: Json | undefined };
 
 /** Accepts any JSON value: finite numbers, strings, booleans, null, arrays, and plain objects. */
 export const jsonSchema: z.ZodType<Json> = z.lazy(() =>

@@ -33,3 +33,8 @@ Status: accepted, 2026-09-30. Questions that came up while building, decided wit
    - The `kernel.job.cancelled` point's `reason` is a string; `kernel.process.exited` gives `exitCode` and `signal`, each `null` when absent (as Node reports them).
    - A preset's `settings` is optional, and an unknown preset key fails `VALIDATION_FAILED`, like the manifest's `kvman` field.
    - Namespaces are lowercase with kebab-case words (`kvai`, `kv-ai`), matching the naming rule for names.
+   - The SDK's `Json` type lets an object field be `undefined`, which JSON leaves out, so schemas with optional fields (which zod infers as `field?: T | undefined`) fit the store, progress, and job calls.
+
+## M1.4 Extensions and workers
+
+9. **Versions.** kvman's packages start at 0.1.0, which signals pre-1.0 while nothing is published. The bundled extensions' `@kvman/sdk` peers and `kvman.dependencies`, the presets, and the kvdev scaffold use `^0.1.0`; the plan's examples are changed to match. 1.0.0 comes with the first stable release.

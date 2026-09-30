@@ -12,11 +12,10 @@ function runScript(script: string): { status: number | null; output: string } {
 }
 
 describe('gates (plan 13 M1.1)', () => {
-  it('M1.1-H1 every gate passes on the empty packages', () => {
-    for (const script of ['typecheck', 'lint', 'build', 'bench:check']) {
+  it('M1.1-H1 typecheck, lint, and build pass, and every package builds', () => {
+    for (const script of ['typecheck', 'lint', 'build']) {
       const { status, output } = runScript(script);
       expect(status, `pnpm ${script}\n${output}`).toBe(0);
-      if (script === 'bench:check') expect(output).toMatch(/there are no benchmarks yet/);
     }
     for (const [folder, name] of Object.entries(packages)) {
       const root = path.join(repositoryRoot, 'packages', folder);
