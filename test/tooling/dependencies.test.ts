@@ -45,7 +45,7 @@ describe('dependencies (CLAUDE.md §5, ADR 0009)', () => {
 
   it("M1.1-E31 the root devDependencies are exactly ADR 0009's tooling", () => {
     const tooling = versionsOf(readPackage('.'), 'devDependencies');
-    expect(Object.keys(tooling).sort()).toEqual(['@changesets/cli', '@types/node', 'eslint', 'typescript', 'typescript-eslint', 'vite', 'vitest']);
+    expect(Object.keys(tooling).sort()).toEqual(['@changesets/cli', '@types/node', 'eslint', 'eslint-plugin-vue', 'typescript', 'typescript-eslint', 'vite', 'vitest', 'vue-eslint-parser']);
     expect(tooling['typescript']).toBe('6.0.3');
   });
 });

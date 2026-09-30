@@ -1,5 +1,5 @@
 import type { z } from '@kvman/sdk';
-import type { modelAddSchema, modelRowSchema, providerAddSchema, providerRowSchema } from './schemas/catalog.ts';
+import type { defaultModelSchema, modelAddSchema, modelRowSchema, providerAddSchema, providerKeySetSchema, providerRowSchema } from './schemas/catalog.ts';
 import type { completeInputSchema, completeOutputSchema } from './schemas/complete.ts';
 import type { usageRowSchema, usageTotalSchema } from './usage/usage-totals.ts';
 
@@ -14,12 +14,16 @@ declare module '@kvman/sdk' {
     'kvai.complete': Call<typeof completeInputSchema, typeof completeOutputSchema>;
     'kvai.provider.add': Call<typeof providerAddSchema, Empty>;
     'kvai.provider.remove': { input: { id: string }; output: Record<string, never> };
+    'kvai.provider.key.set': Call<typeof providerKeySetSchema, Empty>;
+    'kvai.provider.key.delete': { input: { provider: string }; output: Record<string, never> };
     'kvai.model.add': Call<typeof modelAddSchema, Empty>;
     'kvai.model.remove': { input: { id: string }; output: Record<string, never> };
   }
   interface Queries {
     'kvai.provider.list': { input: Record<string, never>; output: z.output<typeof providerRowSchema>[] };
+    'kvai.provider.get': { input: { id: string }; output: z.output<typeof providerRowSchema> };
     'kvai.model.list': { input: { provider?: string }; output: z.output<typeof modelRowSchema>[] };
+    'kvai.model.default.get': { input: Record<string, never>; output: z.output<typeof defaultModelSchema> };
     'kvai.usage.get': { input: Record<string, never>; output: z.output<typeof usageRowSchema>[] };
     'kvai.usage.total.get': { input: Record<string, never>; output: z.output<typeof usageTotalSchema> };
   }

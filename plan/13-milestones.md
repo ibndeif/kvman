@@ -201,20 +201,23 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
 
 - **Read:** `06` §6.1–§6.4, §6.6–§6.8.
 - **Build:**
-  - `extensions/kvwebui`: the Vue app (Vite, vue-router, Tailwind, vue-i18n, lucide, markdown-it and DOMPurify).
-  - The frame: top bar, nav, panels, and status bar.
+  - `extensions/kvwebui`: the Vue app (Vite, vue-router, Tailwind, vue-i18n, `@lucide/vue`, markdown-it and DOMPurify, the IBM Plex fonts; ADR 0009, 66).
+  - The frame: top bar (workspace picker, language and theme menus), a collapsible nav, panels, the status bar with the health item, toasts, and dialogs.
   - Per-tab workspaces, the `?workspace=<id>` start URL, and moving a tab to Home when its workspace closes.
   - The language switch from `kernel.health.get`, right-to-left for `ar`, `he`, `fa`, and `ur`, and translated descriptions with their English fallback.
   - Discovery through `<namespace>.ui.get`, with zod validation and error cards.
   - Routes with params, and the preset's `kvwebui.home` (required, preset-only), with the `HOME_UNAVAILABLE` card on the Extensions page.
-  - Every view component except `custom`, including `link` and `$output` in `then`.
-  - The Settings (with each key's scopes), Jobs, and Extensions pages, and the `kvwebui.*` settings.
+  - Every view component except `custom` (there is no `tabs`), including `link`, `$output` in `then`, table search, "Show more", `rowLink`, `secondary` and `badges` columns, and the `boolean` format.
+  - The Settings (with each key's title and scopes, and the Secrets section) and Extensions pages, and the `kvwebui.*` settings. There is no Jobs page (ADR 0009, 69).
+  - `syncOnly` for extension commands (ADR 0009, 80).
+  - kvai's pages without `tabs`: Models, Provider, and Add a provider, with `kvai.provider.get`, `kvai.provider.key.set` and `.delete`, `kvai.model.default.get`, and the new row fields (ADR 0009, 79).
   - Theme.
   - Right-to-left.
 - **Done when:**
   - A test extension's pages, nav, panels, and status items render.
   - An invalid `ui.get` shows an error card while the others render.
-  - Forms are generated from JSON Schema, and a failed command marks fields.
+  - Forms are generated from JSON Schema (a `writeOnly` string is a password field), and a failed command marks fields.
+  - A sync-only command can't be queued, and kvai's provider page saves and removes a key without it reaching a job row.
   - A button whose `then` navigates with `$output` opens the created item's page, and a `link` navigates without a command.
   - Opening `/?workspace=<id>` sets the tab's workspace and drops the parameter.
   - `/` shows the preset's home page; a missing one shows the Extensions page with the `HOME_UNAVAILABLE` card; the Settings page shows `kvwebui.home` read-only.

@@ -10,8 +10,10 @@ export const busyTimeoutMs = 5000;
 export function openConnection(file: string): Connection {
   const connection = new Database(file);
   try {
-    connection.pragma('journal_mode = WAL');
+    // The timeout comes first: switching to WAL takes a lock, which another connection may hold after a crash while it
+    // recovers the WAL; without the timeout, that pragma fails at once with "database is locked".
     connection.pragma(`busy_timeout = ${busyTimeoutMs}`);
+    connection.pragma('journal_mode = WAL');
     connection.pragma('synchronous = NORMAL');
     return connection;
   } catch (error) {

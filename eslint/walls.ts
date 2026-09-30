@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { isExportedSubpathFile, isTestFile, type Unit, type Workspace } from './workspace.ts';
+import { isExportedSubpathFile, isTestFile, isToolingFile, type Unit, type Workspace } from './workspace.ts';
 
 // The import walls of plan 01 §1.4. Each check returns the reason an import breaks a wall, or undefined.
 
@@ -87,7 +87,7 @@ export function checkImport(workspace: Workspace, unit: Unit | string, use: Impo
   if (typeof unit === 'string') return `${unit} has no import wall; add it to eslint/walls.ts ${reference}`;
   const wall = unit.kind === 'extension' ? extensionWall : packageWalls[unit.folder];
   if (wall === undefined) return `${unit.label} has no import wall; add it to eslint/walls.ts ${reference}`;
-  const context = { unit, wall, use, inTest: isTestFile(unit, use.fromFile) };
+  const context = { unit, wall, use, inTest: isTestFile(unit, use.fromFile) || isToolingFile(unit, use.fromFile) };
   const subpathFile = isExportedSubpathFile(unit, use.fromFile);
   if (use.specifier.startsWith('.')) return checkRelative(context, subpathFile);
   if (use.specifier.startsWith('node:')) return checkNodeBuiltin(context, subpathFile);

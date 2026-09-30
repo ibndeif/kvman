@@ -28,9 +28,9 @@ describe('providers and models (07 §7.2)', () => {
     const builtIns = providers.filter((provider) => provider.builtIn).map((provider) => provider.id);
     expect(builtIns).toEqual(expect.arrayContaining(['anthropic', 'openai', 'google', 'openrouter', 'amazon-bedrock', 'google-vertex', 'openai-codex']));
     expect(builtIns).toHaveLength(42);
-    expect(providers).toContainEqual({ id: 'anthropic', title: 'Anthropic', builtIn: true, key: 'set' });
-    expect(providers).toContainEqual({ id: 'openai', title: 'OpenAI', builtIn: true, key: 'missing' });
-    expect(providers).toContainEqual({ id: 'fake', title: 'Fake', builtIn: false, key: 'missing' });
+    expect(providers).toContainEqual(expect.objectContaining({ id: 'anthropic', title: 'Anthropic', builtIn: true, status: 'ready' }));
+    expect(providers).toContainEqual(expect.objectContaining({ id: 'openai', title: 'OpenAI', builtIn: true, status: 'needsKey' }));
+    expect(providers).toContainEqual({ id: 'fake', title: 'Fake', builtIn: false, status: 'noKey', models: 2 });
     expect(JSON.stringify(providers)).not.toContain('sk-ant');
   });
 
@@ -59,12 +59,13 @@ describe('providers and models (07 §7.2)', () => {
       maxTokens: 8192,
       cost: { input: 1, output: 2, cacheRead: 0.5, cacheWrite: 1.5 },
       builtIn: false,
+      isDefault: false,
     });
     expect(new Set(all.map((model) => model.provider)).size).toBeGreaterThan(30);
     const fakeOnly = await kernel.exec('kvai.model.list', { provider: 'fake' });
     expect(fakeOnly.map((model) => model.id)).toEqual(['fake/m1', 'fake/m2']);
     const sonnet = all.find((model) => model.id === 'anthropic/claude-sonnet-5-5');
-    expect(Object.keys(sonnet ?? {}).sort()).toEqual(['builtIn', 'contextWindow', 'cost', 'id', 'input', 'maxTokens', 'name', 'provider', 'reasoning']);
+    expect(Object.keys(sonnet ?? {}).sort()).toEqual(['builtIn', 'contextWindow', 'cost', 'id', 'input', 'isDefault', 'maxTokens', 'name', 'provider', 'reasoning']);
     expect(all.every((model) => Object.values(model.cost).every((rate) => rate >= 0))).toBe(true);
     const router = 'openrouter/openrouter/auto';
     expect(all.map((model) => model.id)).not.toContain(router);

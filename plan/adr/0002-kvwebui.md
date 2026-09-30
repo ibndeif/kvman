@@ -27,7 +27,7 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds 
    - A button or form names a command.
    - After a command succeeds, every query on the page reruns.
 9. **Status items.** A status item's `text` key is filled from its query's output. The queries rerun after any command the UI runs, when a job the UI started ends, and every 30 s. The built-in items show the running-jobs count and the kernel's health.
-10. **Components (first version).**
+10. **Components (first version).** (`tabs` is removed: ADR 0009, 68.)
     - Layout: `stack` (vertical or horizontal), `tabs`, `card`.
     - Text: `heading`, `text`, `markdown` (sanitized).
     - Data: `table` (query, columns, row actions), `list` (query, item template), `detail` (query, fields).
@@ -45,7 +45,7 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds 
     - The messages query returns `[{ id, role: 'user' | 'assistant' | 'tool' | 'system', markdown, createdAt }]`.
     - The send command runs async with its input plus `{ text }`. Progress chunks whose `data` is `{ type: 'text', delta }` (from any source, ADR 0001, 79) append `delta` to a pending assistant bubble; other chunks are ignored, and a Stop button cancels the job.
     - When the job ends, the messages query reruns.
-15. **Built-in pages.**
+15. **Built-in pages.** (The Jobs page is removed: ADR 0009, 69.)
     - **Settings:** `kernel.settings.list` as JSON-Schema forms with global or workspace scope, and a secrets section that only sets or deletes values.
     - **Jobs:** `kernel.jobs.list`, with status and cancel.
     - **Extensions:** `kernel.extensions.list`, read-only.
@@ -56,7 +56,7 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds 
     - Each tab has its own, default Home, remembered in `localStorage` and sent as `workspaceId` on every call.
     - The picker lists `kernel.workspace.list`; "Open folder…" takes a typed absolute path.
     - Closing a workspace moves its tabs to Home.
-18. **UI dependencies.** `lucide-vue-next` for icons (nav items name a lucide icon). `markdown-it` with HTML disabled, its output passed through `DOMPurify`. `v-html` appears only in that one sanitized component.
+18. **UI dependencies.** (`@lucide/vue` replaces the deprecated `lucide-vue-next`: ADR 0009, 66.) `lucide-vue-next` for icons (nav items name a lucide icon). `markdown-it` with HTML disabled, its output passed through `DOMPurify`. `v-html` appears only in that one sanitized component.
 19. **Problems and theme.**
     - A failed command shows a toast with the translated `<ns>.errors.<CODE>`, plus field errors inside forms for `VALIDATION_FAILED`.
     - A failed query shows an error card in place of its component.

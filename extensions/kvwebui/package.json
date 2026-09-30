@@ -1,0 +1,55 @@
+{
+  "name": "@kvman/kvwebui",
+  "version": "0.1.0",
+  "private": true,
+  "description": "kvwebui: the kvman web app, built from what the extensions contribute.",
+  "type": "module",
+  "main": "dist/index.js",
+  "exports": {
+    ".": {
+      "@kvman/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "locales"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && vite build",
+    "typecheck": "tsc -p tsconfig.json && vue-tsc -p tsconfig.web.json"
+  },
+  "peerDependencies": {
+    "@kvman/sdk": "^0.1.0"
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-mono": "5.3.0",
+    "@fontsource/ibm-plex-sans": "5.3.0",
+    "@fontsource/ibm-plex-sans-arabic": "5.3.0",
+    "@lucide/vue": "1.49.0",
+    "dompurify": "3.4.16",
+    "markdown-it": "15.0.2",
+    "vue": "3.5.43",
+    "vue-i18n": "11.4.12",
+    "vue-router": "5.3.1"
+  },
+  "devDependencies": {
+    "@kvman/sdk": "workspace:*",
+    "@kvman/testkit": "workspace:*",
+    "@tailwindcss/vite": "4.3.3",
+    "@types/markdown-it": "14.2.0",
+    "@vitejs/plugin-vue": "6.0.9",
+    "@vue/test-utils": "2.5.1",
+    "happy-dom": "20.14.5",
+    "playwright": "1.63.0",
+    "tailwindcss": "4.3.3",
+    "vite": "8.3.1",
+    "vue-tsc": "3.3.11"
+  },
+  "kvman": {
+    "namespace": "kvwebui",
+    "source": "src/index.ts",
+    "web": "dist/web"
+  }
+}

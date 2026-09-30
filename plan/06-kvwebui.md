@@ -4,21 +4,21 @@ kvwebui is the web app, and it is an extension like any other. The kernel serves
 
 ## 6.1 Stack
 
-- Vue 3 (Composition API, TypeScript), built with Vite into `extensions/kvwebui/dist/web`.
+- Vue 3 (Composition API, TypeScript, single-file components), built with Vite into `extensions/kvwebui/dist/web`. The dependencies are listed, with versions, in ADR 0009, 66.
 - vue-router and Tailwind CSS, with logical properties only, so right-to-left works.
 - vue-i18n, loading `/api/locales/:lang` for `kernel.language`, with the fallbacks of §2.11.
-- `lucide-vue-next` for icons.
+- `@lucide/vue` for icons (the successor of the deprecated `lucide-vue-next`, with the same icon names).
+- The IBM Plex Sans, IBM Plex Sans Arabic, and IBM Plex Mono fonts, bundled into the app.
 - `markdown-it` with HTML disabled, its output sanitized with `DOMPurify`. `v-html` appears only in that one component.
 
 ## 6.2 The frame
 
 ```
-┌─ <ui.title> ──── [workspace ▾] [EN|ع] [☾] ─┐
+┌─ <ui.title> ─ [workspace ▾] ── [🌐 English ▾] [☀ ▾] ─┐
 │ nav      │        page         │ ▣ panel  │
 │ …        │                     │ strip    │
 │ ──────   │                     │          │
 │ Settings │                     │          │
-│ Jobs     │                     │          │
 │ Extensions                     │          │
 ├──────────┴─────────────────────┴──────────┤
 │ contributed status items    built-in items │
@@ -27,23 +27,26 @@ kvwebui is the web app, and it is an extension like any other. The kernel serves
 
 **Top bar.**
 - The title is the `kvwebui.title` key.
-- **The workspace picker** lists `kernel.workspace.list`. "Open folder…" takes a typed absolute path for `kernel.workspace.open`.
-- A language switch lists the languages in `kernel.health.get` and sets `kernel.language`; kvwebui then reloads the catalog and sets the page direction (§2.11). A theme switch sets `kvwebui.theme`.
+- **The workspace picker** lists `kernel.workspace.list`: each workspace's name and folder (Home is shown as "Home"), with a close button on each but Home (`kernel.workspace.close`). "Open a folder…" opens a dialog for a typed absolute path (`kernel.workspace.open`).
+- A language menu lists the languages in `kernel.health.get`, each named in itself, and sets `kernel.language`; kvwebui then reloads the catalog and sets the page direction (§2.11). A theme menu (System, Light, Dark) sets `kvwebui.theme`.
 
 **Nav.**
 - One flat list, ordered by `kvwebui.nav.order`, then by each item's `order`, then by full nav id (`<namespace>.<id>`) alphabetically. Items in `kvwebui.nav.hidden` are left out.
-- Below a divider come the built-in pages: Settings, Jobs, and Extensions.
+- Below a divider come the built-in pages: Settings (`kvwebui.settings`) and Extensions (`kvwebui.extensions`), at `/kvwebui/<page>`. They can be `kvwebui.home` and the target of a `navigate` or `link`, and they're outside `kvwebui.nav.order` and `kvwebui.nav.hidden`. There is no built-in Jobs page: an extension that wants one contributes it (ADR 0009, 69).
+- The nav can collapse to icons only, remembered in `localStorage`.
 
-**Panels.** One is open at a time, chosen from a strip of panel icons. The open panel is remembered per tab in `localStorage`, and panels show on every page.
+**Panels.** One is open at a time, chosen from a strip of panel icons. The open panel is remembered per tab, like the workspace, and panels show on every page.
 
 **Status bar.**
 - Contributed items sit on the start side, ordered by `order`.
-- The built-in items sit on the end side: the count of running jobs and the kernel's health.
+- The built-in item sits on the end side: kvman's version with a green dot, or a red "offline" while `kernel.health.get` fails (ADR 0009, 69).
+- A status item whose query fails shows a small error mark, with the translated Problem as its tooltip.
 
 **Workspace.**
-- Each tab has a current workspace (default Home), remembered in `localStorage`. Every API call sends it as `workspaceId`.
-- **Start URL.** When the page opens with `?workspace=<id>` (§1.2), kvwebui makes that the tab's workspace and removes the parameter from the URL. The workspace is never otherwise part of a URL.
-- Closing a workspace moves its tabs to Home. A tab whose workspace was closed elsewhere learns it from a `NOT_FOUND` answer and moves to Home.
+- Each browser tab has a current workspace (default Home). Every API call sends it as `workspaceId`. Reloading a tab keeps its workspace (`sessionStorage`), and a new tab opens in the workspace chosen last (`localStorage`) (ADR 0009, 74).
+- **Start URL.** When the page opens with `?workspace=<id>` (§1.2), kvwebui makes that the tab's workspace and removes the parameter from the URL. An id that isn't open falls back to Home. The workspace is never otherwise part of a URL.
+- Closing a workspace moves its tab to Home. A tab whose workspace was closed elsewhere learns it from a `NOT_FOUND` answer whose `params.workspaceId` is its workspace, and moves to Home with a toast.
+- The browser tab's title is `<page> · <workspace> · <app title>`.
 
 ## 6.3 Contributions: `<namespace>.ui.get`
 
@@ -61,12 +64,17 @@ An extension contributes UI by registering the public query `<namespace>.ui.get`
 - **Ids.** Ids are local to the extension; the full id is `<namespace>.<id>`. Titles and texts are translation keys.
 - **Loading.** kvwebui reads `kernel.extensions.list` when the browser loads, and calls every `<namespace>.ui.get`. It validates each answer with zod.
 - **Invalid UI.** An extension whose answer is invalid, or whose `<namespace>.ui.get` fails, contributes nothing. A dismissible error card lists the extension and its Problem, and the other extensions are unaffected. An answer is also invalid when:
-  - it names an unknown component or a query that isn't public;
-  - a nav item points at a page that has params.
+  - it names an unknown component or a query that isn't public (the kernel's own queries are public);
+  - a nav item points at a page that has params, or at a page that isn't one of the extension's own;
+  - an id repeats within `pages`, `nav`, `panels`, or `status`;
+  - an icon isn't a lucide name;
+  - a form's command isn't a known public command;
+  - a `$param` names a param its page doesn't declare (ADR 0009, 72).
+- A `link` or `navigate` to a page that doesn't exist shows a "page not found" card when it's followed.
 - **Routes.** A page's URL is `/<namespace>/<page>`, followed by its params in order: `params: ['sessionId']` gives `/kvcoder/session/:sessionId`. `kvwebui.home` names the page shown at `/`.
 - **The home page.** The preset decides it: `kvwebui.home` is required and preset-only (§2.8), so every preset that loads kvwebui names its home page, and the person can't change it in Settings.
   - When that page doesn't exist at load (its extension isn't loaded, its `ui.get` failed, or the page has params), `/` shows the built-in Extensions page with an error card: "Home page `<id>` isn't available" (`kvwebui.errors.HOME_UNAVAILABLE`), plus the Problem of the extension that should provide it, if any.
-- **Status items.** A status item's `params` values may be `{ "$output": field }`, read from its query's output. Its query reruns after any command the UI runs, when a job the UI started ends, and every 30 s.
+- **Status items.** A status item's `params` values may be `{ "$output": field }`, read from its query's output. Its query reruns after any command the UI runs, when a job the UI started ends, and every 30 s; so does the built-in health item.
 
 ## 6.4 View trees
 
@@ -78,25 +86,29 @@ An extension contributes UI by registering the public query `<namespace>.ui.get`
 | Component | Shape |
 |---|---|
 | `stack` | `{ direction: 'vertical' \| 'horizontal', gap?: 'sm' \| 'md' \| 'lg', children }` |
-| `tabs` | `{ tabs: [{ title, view }] }` |
 | `card` | `{ title?, children }` |
 | `heading` | `{ text, params?, level: 1 \| 2 \| 3 }` |
 | `text` | `{ text, params? }` |
 | `markdown` | `{ text, params? }` (translated Markdown) or `{ query, input, field }` (Markdown from data) |
-| `table` | `{ query, input, columns: [{ field, title, format?: 'text' \| 'number' \| 'date' \| 'bytes' }], rowActions?: button[], empty? }` |
+| `table` | `{ query, input, columns: column[], rowActions?: button[], rowLink?: { page: '<ns>.<page>', params? }, empty? }` |
 | `list` | `{ query, input, item: View, empty? }` |
-| `detail` | `{ query, input, fields: [{ field, title, format? }] }` |
+| `detail` | `{ query, input, fields: column[] }` |
 | `form` | `{ command, fixed?: { field: value \| ref }, submit, then? }` |
 | `link` | `{ text, params?, to: { page: '<ns>.<page>', params? } }`: navigation with no command; `params` fill the text, `to.params` fill the route |
 | `button` | `{ text, command, input, confirm?, style?: 'primary' \| 'secondary' \| 'danger', then? }` |
 | `custom` | `{ component: '<namespace>.<name>', props }` |
 
+There is no `tabs` component: an extension that wants tabs ships a custom component (ADR 0009, 68).
+
 **Component details.**
+- **Columns.** A table column or detail field is `{ field, title, format?: 'text' | 'number' | 'date' | 'bytes' | 'boolean', secondary?, badges? }`. `secondary` names a second field shown under the first as a muted line. `badges` maps values (matched as strings) to `{ text, tone: 'neutral' | 'info' | 'success' | 'warning' | 'danger' }`, shown as a colored badge with the translated text; a value with no mapping shows nothing. `boolean` shows a check mark or a dash (ADR 0009, 75–76).
+- **Tables.** `rowLink` makes each row open a page, with `$row` references in its params. Once a table has more than 10 rows, it shows a search box and its first 10 rows, and "Show more" adds 25.
 - **Data.** Table and list queries return arrays of objects.
 - **Forms.**
   - The fields come from the command's input JSON Schema (`kernel.extensions.list`), minus the `fixed` fields.
   - A field's label is the key `<command>.fields.<field>`, or else the field's description.
-- **`then`.** `'rerun'` (the default), `{ navigate: '<ns>.<page>', params? }`, or `{ toast: key, level? }`. In `then`, `params` values may also be `{ "$output": field }`, a top-level field of the command's output. Effects (§6.5) apply after `then`.
+  - Fields follow the schema: text, number, checkbox, select for an `enum`, one item per line for an array of strings or numbers, a group for a nested object, a password field for a `writeOnly` string, and a JSON text field for anything else. A top-level `anyOf` of objects gives one form with every variant's fields (ADR 0009, 70). A form clears after its command succeeds.
+- **`then`.** `'rerun'` (the default), `{ navigate: '<ns>.<page>', params? }`, or `{ toast: key, level? }` (level `success` by default). In `then`, `params` values may also be `{ "$output": field }`, a top-level field of the command's output. Effects (§6.5) apply after `then`.
 - **Custom.**
   - It loads `/web/<namespace>/components/<name>.js`, which default-exports a Vue component, and `components/<name>.css` beside it when that exists. The URL carries the extension's `revision` (§2.12), so after a hot reload a page refresh loads the new code.
   - kvwebui provides `vue` through an import map, so extensions build with `vue` as an external. The kvdev scaffold sets this up (§9.2).
@@ -125,14 +137,15 @@ An extension contributes UI by registering the public query `<namespace>.ui.get`
 
 | Page | Shows |
 |---|---|
-| **Settings** | Every key from `kernel.settings.list`, as a form built from its JSON Schema, with the scopes the key allows and each value's source. Preset-only keys are shown read-only. Each key shows `<key>.description`, or its English description. A secrets section sets and deletes secrets but never shows a value. |
-| **Jobs** | `kernel.jobs.list` for the workspace, with status, and cancel for running jobs. |
-| **Extensions** | `kernel.extensions.list`, read-only, with `<name>.description` for each command and query, or its English description. |
+| **Settings** (`kvwebui.settings`) | Every key from `kernel.settings.list`, grouped by namespace (kvman's own first; a group's heading is `<namespace>.title` with the namespace, or the namespace alone). Each key shows its title (`<key>.title`, else the key), its description (`<key>.description`, else its English description), and a control built from its JSON Schema, with "Applies to: All workspaces \| This workspace" among the scopes the key allows, a badge saying where the value comes from, and a reset for a value set in the chosen scope. Preset-only keys are shown locked. A Secrets section lists `kernel.secrets.list` masked, deletes a secret after a confirmation, and adds one (extension, name, and a password field), never showing a value (ADR 0009, 77). |
+| **Extensions** (`kvwebui.extensions`) | `kernel.extensions.list`, read-only: a card per extension with its name, version, source, and counts, which opens to list its commands and queries (with `<name>.description`, or the English description, and a "Public" badge), settings, and handlers; a search box filters commands and queries (ADR 0009, 78). |
 
 ## 6.7 Problems
 
-- A failed command shows a toast with the translated `<ns>.errors.<CODE>` and its params. Inside a form, `VALIDATION_FAILED` also marks the fields it names.
-- A failed query shows an error card in place of its component.
+- A failed command shows a toast with the translated `<ns>.errors.<CODE>` and its params. Inside a form, `VALIDATION_FAILED` also marks each field named by an issue path's first segment with `kvwebui.form.invalid` (ADR 0009, 71).
+- A failed query shows an error card in place of its component, with "Try again".
+- An error reads as a plain sentence, with a "Details" disclosure holding the code, the English message, and the params.
+- Toasts sit at the bottom end corner; `info` and `success` close after 5 s, `warning` and `error` stay until closed. A button's `confirm` opens an in-app dialog. Loading shows placeholder rows, and an empty table or list shows its `empty` text (default `kvwebui.empty`). Formats use `Intl` in the UI language (ADR 0009, 75).
 
 ## 6.8 kvwebui's API and settings
 

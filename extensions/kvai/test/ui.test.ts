@@ -6,7 +6,7 @@ import { kvaiFolder, useKvai } from './support/kvai-kernel.ts';
 
 const kvai = useKvai();
 
-const textFields = ['text', 'title', 'submit', 'empty', 'toast'];
+const textFields = ['text', 'title', 'submit', 'empty', 'toast', 'confirm'];
 
 // Every value under `field` in a view tree, at any depth.
 function valuesOf(tree: unknown, fields: readonly string[]): string[] {
@@ -23,17 +23,18 @@ const contributionsSchema = z.object({
 });
 
 describe('kvai.ui.get (07 §7.3)', () => {
-  it('M2.1-H7 contributes the Models page and the status item, naming only public calls and known texts', async () => {
+  it('M2.1-H7 contributes the Models, provider, and add pages and the status item, naming only public calls and known texts', async () => {
     const { kernel } = await kvai.start();
     const ui = contributionsSchema.parse(await kernel.exec('kvai.ui.get', {}));
-    expect(ui.pages.map((page) => page.id)).toEqual(['models']);
+    expect(ui.pages.map((page) => page.id)).toEqual(['models', 'provider', 'provider-add']);
     expect(ui.nav).toEqual([{ id: 'models', page: 'models', title: 'kvai.ui.models.nav', icon: 'brain', order: 50 }]);
     expect(ui.status).toEqual([
       { id: 'usage', query: 'kvai.usage.total.get', input: {}, text: 'kvai.ui.status.usage', params: { tokens: { $output: 'tokens' }, cost: { $output: 'cost' } }, order: 50 },
     ]);
-    const view = ui.pages[0]?.view;
-    expect(valuesOf(view, ['query'])).toEqual(['kvai.provider.list', 'kvai.model.list']);
-    expect(valuesOf(view, ['command'])).toEqual(['kernel.settings.set', 'kvai.provider.add', 'kvai.model.add']);
+    const view = ui.pages.map((page) => page.view);
+    expect(valuesOf(view, ['query'])).toEqual(['kvai.model.default.get', 'kvai.provider.list', 'kvai.provider.get', 'kvai.model.list']);
+    expect(valuesOf(view, ['command'])).toEqual(['kvai.provider.key.set', 'kvai.provider.key.delete', 'kernel.settings.set', 'kvai.provider.add', 'kvai.model.add']);
+    expect(JSON.stringify(view)).not.toContain('"tabs"');
     expect(JSON.stringify(view)).toContain(JSON.stringify({ key: 'kvai.defaultModel', value: { $row: 'id' }, scope: 'global' }));
 
     const kvaiInfo = (await kernel.exec('kernel.extensions.list', {})).find((extension) => extension.name === '@kvman/kvai');

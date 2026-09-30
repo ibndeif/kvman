@@ -52,5 +52,12 @@
   "kernel.files.unlink.fields.id": "الملف",
   "kernel.extensions.list.description": "يعرض إضافات هذا التشغيل وما تسجّله.",
   "kernel.processes.list.description": "يعرض العمليات طويلة الأمد الجارية.",
-  "kernel.health.get.description": "يصف kvman الجاري."
+  "kernel.health.get.description": "يصف kvman الجاري.",
+  "kernel.title": "kvman",
+  "kernel.port.title": "المنفذ",
+  "kernel.workers.title": "العمّال",
+  "kernel.workerConcurrency.title": "المهام لكل عامل",
+  "kernel.language.title": "اللغة",
+  "kernel.jobs.retentionDays.title": "أيام الاحتفاظ بالمهام المنتهية",
+  "kernel.web.home.title": "تطبيق الويب"
 }

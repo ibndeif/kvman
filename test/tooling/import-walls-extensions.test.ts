@@ -25,6 +25,11 @@ describe('extension import walls (plan 01 §1.4, 03 §3.2)', () => {
     await expectClean('imports-fast-check.ts', notesTest);
   });
 
+  it("M2.2-E23 a package's top-level config file may import its devDependencies, like a test", async () => {
+    await expectClean('imports-fast-check.ts', 'extensions/notes/vite.config.ts');
+    await expectBlocked('imports-fast-check.ts', 'extensions/notes/src/vite.config.ts', /does not declare "fast-check"/);
+  });
+
   it('M1.1-E14 another extension is type-imported only when it is a kvman.dependencies entry', async () => {
     await expectClean('type-imports-tasks.ts', notes);
     await expectBlocked('imports-tasks.ts', notes, /at runtime only through a subpath it exports/);

@@ -65,7 +65,7 @@ kvcoder is the app-building harness, built on kvai and kvwebui. Its agent has on
 | the same with `--async` | kvcoder's own job `kvcoder.connector.run` (which runs the command); prints `started <jobId>`. When it ends, the result is appended as a message, and starts a turn if the session is idle. |
 | `<connector> -h` / `<connector> <command> -h` (commands connectors) | the connector's commands with descriptions / that command's description, input and output JSON Schemas, and examples |
 | `ask …`, `subagent run …` | built-in connectors that suspend the turn (§8.5) |
-| `jobs list`, `jobs cancel <id>` | built-in connector commands for `--async` jobs |
+| `jobs list`, `jobs get <id>`, `jobs cancel <id>` | built-in connector commands for the `--async` jobs the agent started: list them, get one's status and details, or cancel one (ADR 0009, 81; detailed at M2.4) |
 | a connector word inside a pipe, `&&`, `;`, or other shell syntax | not run: the result explains that connector calls stand alone, with exit code 1 |
 | anything else, including binary connectors (`gh …`) | the real shell (below) |
 

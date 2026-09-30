@@ -1,0 +1,27 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "lib": [
+      "es2024",
+      "dom",
+      "dom.iterable"
+    ],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "types": [
+      "vite/client"
+    ],
+    "customConditions": [
+      "@kvman/source"
+    ],
+    "jsx": "preserve",
+    "rewriteRelativeImportExtensions": false
+  },
+  "include": [
+    "web/src",
+    "test/web",
+    "vite.config.ts",
+    "vitest.web.config.ts"
+  ]
+}

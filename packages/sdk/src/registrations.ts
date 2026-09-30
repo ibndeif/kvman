@@ -26,6 +26,8 @@ type JobRegistration<Input extends z.ZodType, Output extends z.ZodType> = {
 export type CommandRegistration<Input extends z.ZodType, Output extends z.ZodType> = JobRegistration<Input, Output> & {
   /** How many times a failed async attempt is retried (default 3). */
   retries?: number;
+  /** Whether it runs only as a sync call, so its input never lands in a job row (default `false`); required for a command that takes a secret. */
+  syncOnly?: boolean;
 };
 
 /** A query: a job that only reads. */

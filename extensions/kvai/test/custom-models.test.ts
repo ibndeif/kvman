@@ -10,7 +10,7 @@ describe('custom providers and models (07 §7.2, ADR 0009, 54–57)', () => {
     const { kernel, fake } = await kvai.start();
     await kernel.exec('kvai.provider.add', { id: 'fake', title: 'Renamed', api: 'openai-completions', baseUrl: fake.baseUrl, headers: { 'x-team': 'blue' } });
     const providers = await kernel.exec('kvai.provider.list', {});
-    expect(providers.filter((provider) => provider.id === 'fake')).toEqual([{ id: 'fake', title: 'Renamed', builtIn: false, key: 'missing' }]);
+    expect(providers.filter((provider) => provider.id === 'fake')).toEqual([{ id: 'fake', title: 'Renamed', builtIn: false, status: 'noKey', models: 2 }]);
     expect((await kernel.exec('kvai.model.list', { provider: 'fake' })).map((row) => row.id)).toEqual(['fake/m1', 'fake/m2']);
     fake.reply({ chunks: [{ text: 'ok' }] });
     await kernel.exec('kvai.complete', { model: 'fake/m1', messages: [userSays('hi')] });
@@ -32,7 +32,7 @@ describe('custom providers and models (07 §7.2, ADR 0009, 54–57)', () => {
     await kernel.exec('kvai.model.add', { provider: 'fake', id: 'm1', name: 'M1 again', ...model });
     const rows = await kernel.exec('kvai.model.list', { provider: 'fake' });
     expect(rows.filter((row) => row.id === 'fake/m1')).toEqual([
-      { id: 'fake/m1', name: 'M1 again', provider: 'fake', ...model, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, builtIn: false },
+      { id: 'fake/m1', name: 'M1 again', provider: 'fake', ...model, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, builtIn: false, isDefault: false },
     ]);
     fake.reply({ chunks: [{ text: 'free' }], usage: { input: 100, output: 50 } });
     const answer = await kernel.exec('kvai.complete', { model: 'fake/m1', messages: [userSays('hi')] });

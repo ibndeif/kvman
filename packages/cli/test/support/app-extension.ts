@@ -81,6 +81,7 @@ export default (ctx: Ctx): void => {
   });
   ctx.registerQuery('app.answer', { description: 'Answers 42.', public: true, input: empty, output: z.object({ answer: z.number() }), handle: () => ({ answer: 42 }) });
   ctx.registerCommand('app.hidden', { description: 'A private command.', input: empty, output: empty, handle: () => ({}) });
+  ctx.registerCommand('app.vault', { description: 'A sync-only command.', public: true, syncOnly: true, input: gate, output: empty, handle: () => ({}) });
   ctx.registerCommand('app.wait', { description: 'Counts a run, then waits at its gate.', public: true, input: gate, output: z.object({ runs: z.number() }), handle: waitAndCount });
   ctx.registerCommand('app.wait-once', { description: 'app.wait without retries.', public: true, retries: 0, input: gate, output: z.object({ runs: z.number() }), handle: waitAndCount });
   ctx.registerQuery('app.runs', {

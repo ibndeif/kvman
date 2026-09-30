@@ -93,6 +93,13 @@ export function isTestFile(unit: Unit, file: string): boolean {
   return path.relative(unit.root, file).split(path.sep)[0] === 'test' || file.endsWith('.test.ts');
 }
 
+// A package's own build or test tool config at its top level (`vite.config.ts`, `vitest.web.config.ts`): like a test,
+// it runs only at build or test time, so it may import devDependencies.
+export function isToolingFile(unit: Unit, file: string): boolean {
+  const inside = path.relative(unit.root, file);
+  return !inside.includes(path.sep) && inside.endsWith('.config.ts');
+}
+
 // A file that an extension's package.json exports under a subpath other than its root.
 export function isExportedSubpathFile(unit: Unit, file: string): boolean {
   if (unit.kind !== 'extension') return false;

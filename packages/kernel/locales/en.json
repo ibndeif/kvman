@@ -52,5 +52,12 @@
   "kernel.files.unlink.fields.id": "File",
   "kernel.extensions.list.description": "Lists the extensions of this run and what they register.",
   "kernel.processes.list.description": "Lists the running long-lived processes.",
-  "kernel.health.get.description": "Describes the running kvman."
+  "kernel.health.get.description": "Describes the running kvman.",
+  "kernel.title": "kvman",
+  "kernel.port.title": "Port",
+  "kernel.workers.title": "Workers",
+  "kernel.workerConcurrency.title": "Jobs per worker",
+  "kernel.language.title": "Language",
+  "kernel.jobs.retentionDays.title": "Days to keep finished jobs",
+  "kernel.web.home.title": "Web app"
 }

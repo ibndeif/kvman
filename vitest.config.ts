@@ -7,7 +7,17 @@ export default defineConfig({
   ssr: { resolve: { conditions: sourceConditions, externalConditions: ['@kvman/source'] } },
   test: {
     allowOnly: false,
-    include: ['test/**/*.test.ts', 'packages/*/test/**/*.test.ts', 'extensions/*/test/**/*.test.ts'],
-    exclude: ['**/node_modules/**', 'test/fixtures/**'],
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'node',
+          include: ['test/**/*.test.ts', 'packages/*/test/**/*.test.ts', 'extensions/*/test/**/*.test.ts'],
+          exclude: ['**/node_modules/**', 'test/fixtures/**', 'extensions/kvwebui/test/web/**', 'extensions/kvwebui/test/e2e/**'],
+        },
+      },
+      'extensions/kvwebui/vitest.web.config.ts',
+      'extensions/kvwebui/vitest.e2e.config.ts',
+    ],
   },
 });

@@ -26,7 +26,7 @@ export type KernelRegistrations = {
 export function kernelRegistrations(registry: Registry): KernelRegistrations {
   return {
     command: (name, { input, output }, description, handle, options) =>
-      registerJob(registry, kernelOwner, 'command', name, { description, input, output, handle, public: true }, options?.syncOnly ?? false),
+      registerJob(registry, kernelOwner, 'command', name, { description, input, output, handle, public: true, syncOnly: options?.syncOnly ?? false }),
     query: (name, { input, output }, description, handle) =>
       registerJob(registry, kernelOwner, 'query', name, { description, input, output, handle, public: true, maxOutputBytes: listOutputBytes }),
   };

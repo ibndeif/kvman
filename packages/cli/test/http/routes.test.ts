@@ -60,6 +60,14 @@ describe('the call routes (04 §4.1)', { timeout: 60_000 }, () => {
     expect(await calls.command('app.hidden', {})).toEqual(withoutJobId('NOT_PUBLIC'));
   });
 
+  it('M2.2-E19 a sync-only command answers a sync call, and refuses async: true without a job', async () => {
+    const world = sandbox();
+    const calls = api((await startKvman(world, ['--preset', world.appPreset()])).port);
+    expect(await calls.command('app.vault', { gate: 'x' })).toEqual({ ok: true, output: {}, jobId: expect.stringMatching(jobId) });
+    const queued = await calls.fetch('/api/commands/app.vault', { method: 'POST', body: JSON.stringify({ input: { gate: 'x' }, async: true }) });
+    expect(await queued.json()).toEqual(withoutJobId('VALIDATION_FAILED'));
+  });
+
   it('M1.7-E4 an input that fails its schema carries its jobId; a closed workspace is NOT_FOUND without one', async () => {
     const world = sandbox();
     const calls = api((await startKvman(world, ['--preset', world.appPreset()])).port);

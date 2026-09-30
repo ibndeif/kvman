@@ -3,6 +3,7 @@ import type { Ctx } from '@kvman/sdk';
 import { builtinCatalog, builtinModel } from '../catalog/builtin-catalog.ts';
 import type { CustomCatalog } from '../catalog/custom-catalog.ts';
 import { customModels } from '../catalog/custom-provider.ts';
+import { keySecretName } from '../catalog/provider-rows.ts';
 import { splitModelId } from '../schemas/catalog.ts';
 
 // What a call runs against (plan 07 §7.2, ADR 0009, 53): a pi-ai model with the key to send, or a delegate command.
@@ -17,7 +18,7 @@ const keylessPlaceholder = 'none';
 export async function resolveTarget(ctx: Ctx, catalog: CustomCatalog, fullId: string): Promise<Target> {
   const parts = splitModelId(fullId);
   if (parts === undefined) throw ctx.problem('kvai/MODEL_UNKNOWN', { model: fullId });
-  const secretKey = await ctx.secrets.get(`${parts.provider}.apiKey`);
+  const secretKey = await ctx.secrets.get(keySecretName(parts.provider));
   const custom = await catalog.provider(parts.provider);
   if (custom !== undefined) {
     const stored = await catalog.model(parts.provider, parts.model);

@@ -1,0 +1,147 @@
+@import 'tailwindcss';
+
+/* kvwebui's look (ADR 0009, 66, 75): a warm neutral ground, one ink-blue accent, and IBM Plex. Colors are variables, so
+   the `dark` class on <html> swaps them all; layouts use logical properties only, so right to left just works. */
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --font-sans: 'IBM Plex Sans', 'IBM Plex Sans Arabic', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --color-ground: var(--kvwebui-ground);
+  --color-surface: var(--kvwebui-surface);
+  --color-sunken: var(--kvwebui-sunken);
+  --color-ink: var(--kvwebui-ink);
+  --color-muted: var(--kvwebui-muted);
+  --color-line: var(--kvwebui-line);
+  --color-line-soft: var(--kvwebui-line-soft);
+  --color-primary: var(--kvwebui-primary);
+  --color-on-primary: var(--kvwebui-on-primary);
+  --color-accent-soft: var(--kvwebui-accent-soft);
+  --color-accent-ink: var(--kvwebui-accent-ink);
+  --color-neutral-soft: var(--kvwebui-neutral-soft);
+  --color-neutral-ink: var(--kvwebui-neutral-ink);
+  --color-success-soft: var(--kvwebui-success-soft);
+  --color-success-ink: var(--kvwebui-success-ink);
+  --color-warning-soft: var(--kvwebui-warning-soft);
+  --color-warning-ink: var(--kvwebui-warning-ink);
+  --color-danger: var(--kvwebui-danger);
+  --color-danger-soft: var(--kvwebui-danger-soft);
+  --color-danger-ink: var(--kvwebui-danger-ink);
+  --color-danger-line: var(--kvwebui-danger-line);
+  --color-toast: var(--kvwebui-toast);
+  --color-on-toast: var(--kvwebui-on-toast);
+  --color-online: var(--kvwebui-online);
+}
+
+:root {
+  --kvwebui-ground: #f6f5f1;
+  --kvwebui-surface: #ffffff;
+  --kvwebui-sunken: #fbfaf7;
+  --kvwebui-ink: #1d1c1a;
+  --kvwebui-muted: #6b675e;
+  --kvwebui-line: #e7e4dc;
+  --kvwebui-line-soft: #f0eee8;
+  --kvwebui-primary: #1f3a5f;
+  --kvwebui-on-primary: #ffffff;
+  --kvwebui-accent-soft: #e6ecf5;
+  --kvwebui-accent-ink: #1f3a5f;
+  --kvwebui-neutral-soft: #efede7;
+  --kvwebui-neutral-ink: #4f4c45;
+  --kvwebui-success-soft: #e3f1e7;
+  --kvwebui-success-ink: #1f6b3a;
+  --kvwebui-warning-soft: #fcebd9;
+  --kvwebui-warning-ink: #87460c;
+  --kvwebui-danger: #b4380e;
+  --kvwebui-danger-soft: #fcefe8;
+  --kvwebui-danger-ink: #5c2410;
+  --kvwebui-danger-line: #f2d2c2;
+  --kvwebui-toast: #1d1c1a;
+  --kvwebui-on-toast: #f4f2ec;
+  --kvwebui-online: #2f8a4f;
+}
+
+.dark {
+  --kvwebui-ground: #151513;
+  --kvwebui-surface: #1d1c1a;
+  --kvwebui-sunken: #1a1917;
+  --kvwebui-ink: #eceae4;
+  --kvwebui-muted: #a8a398;
+  --kvwebui-line: #34322d;
+  --kvwebui-line-soft: #292825;
+  --kvwebui-primary: #8fb0e8;
+  --kvwebui-on-primary: #0f1b2d;
+  --kvwebui-accent-soft: #243349;
+  --kvwebui-accent-ink: #cfe0ff;
+  --kvwebui-neutral-soft: #2c2a26;
+  --kvwebui-neutral-ink: #cfcbc2;
+  --kvwebui-success-soft: #1f3a2a;
+  --kvwebui-success-ink: #9fd8b0;
+  --kvwebui-warning-soft: #3d2a17;
+  --kvwebui-warning-ink: #f3c48c;
+  --kvwebui-danger: #ff9b73;
+  --kvwebui-danger-soft: #3a2017;
+  --kvwebui-danger-ink: #ffd9c9;
+  --kvwebui-danger-line: #5a3020;
+  --kvwebui-toast: #eceae4;
+  --kvwebui-on-toast: #1d1c1a;
+  --kvwebui-online: #5cc382;
+  color-scheme: dark;
+}
+
+html,
+body,
+#app {
+  block-size: 100%;
+}
+
+body {
+  background: var(--kvwebui-ground);
+  color: var(--kvwebui-ink);
+}
+
+/* Rendered Markdown (the only HTML kvwebui renders, sanitized). */
+.kvwebui-markdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.kvwebui-markdown :where(p, ul, ol, pre, blockquote, h1, h2, h3) {
+  margin: 0;
+}
+.kvwebui-markdown :where(ul, ol) {
+  padding-inline-start: 1.25rem;
+}
+.kvwebui-markdown :where(ul) {
+  list-style: disc;
+}
+.kvwebui-markdown :where(ol) {
+  list-style: decimal;
+}
+.kvwebui-markdown :where(a) {
+  color: var(--kvwebui-primary);
+  text-decoration: underline;
+}
+.kvwebui-markdown :where(code) {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--kvwebui-neutral-soft);
+  border-radius: 0.35rem;
+  padding-inline: 0.3rem;
+}
+.kvwebui-markdown :where(pre) {
+  background: var(--kvwebui-sunken);
+  border: 1px solid var(--kvwebui-line);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  overflow: auto;
+}
+.kvwebui-markdown :where(pre code) {
+  background: none;
+  padding: 0;
+}
+.kvwebui-markdown :where(blockquote) {
+  border-inline-start: 3px solid var(--kvwebui-line);
+  padding-inline-start: 0.9rem;
+  color: var(--kvwebui-muted);
+}

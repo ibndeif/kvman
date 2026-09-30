@@ -1,18 +1,70 @@
 import { z, type Ctx } from '@kvman/sdk';
 
-// kvai's UI contributions (plan 07 §7.3, plan 06 §6.3): the Models page and a status item with the workspace's tokens
-// and cost. Every text is a translation key; kvwebui checks view trees when it loads them.
+// kvai's UI contributions (plan 07 §7.3, plan 06 §6.3, ADR 0009, 79): the Models page, a page per provider, the Add a
+// provider page, and a status item with the workspace's tokens and cost. Every text is a translation key; kvwebui
+// checks view trees when it loads them.
 
 const text = (key: string) => ({ type: 'text', text: key });
+const providerParam = { $param: 'providerId' };
+const backToModels = { type: 'link', text: 'kvai.ui.back', to: { page: 'kvai.models' } };
 
-const column = (field: string, format: 'text' | 'number' = 'text') => ({ field, title: `kvai.ui.columns.${field}`, format });
+const providerStatus = {
+  ready: { text: 'kvai.ui.status.ready', tone: 'success' },
+  needsKey: { text: 'kvai.ui.status.needsKey', tone: 'warning' },
+  noKey: { text: 'kvai.ui.status.noKey', tone: 'neutral' },
+};
 
-const providersView = {
-  type: 'table',
-  query: 'kvai.provider.list',
-  input: {},
-  columns: [column('id'), column('title'), column('builtIn'), column('key')],
-  empty: 'kvai.ui.providers.empty',
+const defaultCard = {
+  type: 'card',
+  title: 'kvai.ui.default.title',
+  children: [
+    {
+      type: 'detail',
+      query: 'kvai.model.default.get',
+      input: {},
+      fields: [
+        { field: 'name', title: 'kvai.ui.columns.model', secondary: 'id' },
+        { field: 'ready', title: 'kvai.ui.columns.status', badges: { true: { text: 'kvai.ui.status.ready', tone: 'success' }, false: { text: 'kvai.ui.status.notReady', tone: 'warning' } } },
+      ],
+    },
+    text('kvai.ui.default.help'),
+  ],
+};
+
+const providersCard = {
+  type: 'card',
+  title: 'kvai.ui.providers.title',
+  children: [
+    {
+      type: 'table',
+      query: 'kvai.provider.list',
+      input: {},
+      columns: [
+        { field: 'title', title: 'kvai.ui.columns.provider', secondary: 'id' },
+        { field: 'models', title: 'kvai.ui.columns.models', format: 'number' },
+        { field: 'status', title: 'kvai.ui.columns.status', badges: providerStatus },
+      ],
+      rowLink: { page: 'kvai.provider', params: { providerId: { $row: 'id' } } },
+      empty: 'kvai.ui.providers.empty',
+    },
+  ],
+};
+
+const connectCard = {
+  type: 'card',
+  title: 'kvai.ui.connect.title',
+  children: [text('kvai.ui.connect.help'), { type: 'link', text: 'kvai.ui.connect.add', to: { page: 'kvai.provider-add' } }],
+};
+
+const modelsPage = {
+  id: 'models',
+  title: 'kvai.ui.models.title',
+  view: {
+    type: 'stack',
+    direction: 'vertical',
+    gap: 'lg',
+    children: [{ type: 'heading', text: 'kvai.ui.models.title', level: 1 }, text('kvai.ui.models.intro'), defaultCard, providersCard, connectCard],
+  },
 };
 
 const makeDefault = {
@@ -24,48 +76,87 @@ const makeDefault = {
   then: { toast: 'kvai.ui.models.defaultSet', level: 'success' },
 };
 
-const modelsView = {
-  type: 'table',
-  query: 'kvai.model.list',
-  input: {},
-  columns: [column('id'), column('name'), column('contextWindow', 'number'), column('maxTokens', 'number'), column('builtIn')],
-  rowActions: [makeDefault],
-  empty: 'kvai.ui.models.empty',
-};
-
-const addView = {
-  type: 'stack',
-  direction: 'vertical',
-  gap: 'lg',
+const keyCard = {
+  type: 'card',
+  title: 'kvai.ui.key.title',
   children: [
-    { type: 'card', title: 'kvai.ui.providers.add', children: [text('kvai.ui.providers.addHelp'), { type: 'form', command: 'kvai.provider.add', submit: 'kvai.ui.providers.addSubmit' }] },
-    { type: 'card', title: 'kvai.ui.models.add', children: [{ type: 'form', command: 'kvai.model.add', submit: 'kvai.ui.models.addSubmit' }] },
+    { type: 'form', command: 'kvai.provider.key.set', fixed: { provider: providerParam }, submit: 'kvai.ui.key.save', then: { toast: 'kvai.ui.key.saved' } },
+    text('kvai.ui.key.help'),
+    {
+      type: 'button',
+      text: 'kvai.ui.key.remove',
+      command: 'kvai.provider.key.delete',
+      input: { provider: providerParam },
+      confirm: 'kvai.ui.key.removeConfirm',
+      style: 'danger',
+      then: { toast: 'kvai.ui.key.removed' },
+    },
   ],
 };
 
-const modelsPage = {
-  id: 'models',
+const providerModelsCard = {
+  type: 'card',
   title: 'kvai.ui.models.title',
+  children: [
+    {
+      type: 'table',
+      query: 'kvai.model.list',
+      input: { provider: providerParam },
+      columns: [
+        { field: 'name', title: 'kvai.ui.columns.model', secondary: 'id' },
+        { field: 'reasoning', title: 'kvai.ui.columns.reasoning', format: 'boolean' },
+        { field: 'contextWindow', title: 'kvai.ui.columns.contextWindow', format: 'number' },
+        { field: 'isDefault', title: 'kvai.ui.columns.default', badges: { true: { text: 'kvai.ui.models.default', tone: 'info' } } },
+      ],
+      rowActions: [makeDefault],
+      empty: 'kvai.ui.models.empty',
+    },
+  ],
+};
+
+const providerPage = {
+  id: 'provider',
+  title: 'kvai.ui.provider.title',
+  params: ['providerId'],
   view: {
     type: 'stack',
     direction: 'vertical',
-    gap: 'md',
+    gap: 'lg',
     children: [
-      { type: 'heading', text: 'kvai.ui.models.title', level: 1 },
+      backToModels,
       {
-        type: 'tabs',
-        tabs: [
-          { title: 'kvai.ui.tabs.providers', view: providersView },
-          { title: 'kvai.ui.tabs.models', view: modelsView },
-          { title: 'kvai.ui.tabs.add', view: addView },
+        type: 'detail',
+        query: 'kvai.provider.get',
+        input: { id: providerParam },
+        fields: [
+          { field: 'title', title: 'kvai.ui.columns.provider', secondary: 'id' },
+          { field: 'status', title: 'kvai.ui.columns.status', badges: providerStatus },
         ],
       },
+      keyCard,
+      providerModelsCard,
+    ],
+  },
+};
+
+const addPage = {
+  id: 'provider-add',
+  title: 'kvai.ui.add.title',
+  view: {
+    type: 'stack',
+    direction: 'vertical',
+    gap: 'lg',
+    children: [
+      backToModels,
+      { type: 'heading', text: 'kvai.ui.add.title', level: 1 },
+      { type: 'card', title: 'kvai.ui.providers.add', children: [text('kvai.ui.providers.addHelp'), { type: 'form', command: 'kvai.provider.add', submit: 'kvai.ui.providers.addSubmit', then: { toast: 'kvai.ui.providers.added' } }] },
+      { type: 'card', title: 'kvai.ui.models.add', children: [{ type: 'form', command: 'kvai.model.add', submit: 'kvai.ui.models.addSubmit', then: { toast: 'kvai.ui.models.added' } }] },
     ],
   },
 };
 
 const contributions = {
-  pages: [modelsPage],
+  pages: [modelsPage, providerPage, addPage],
   nav: [{ id: 'models', page: 'models', title: 'kvai.ui.models.nav', icon: 'brain', order: 50 }],
   panels: [],
   status: [
@@ -82,7 +173,7 @@ const contributionsSchema = z.object({
 
 export function registerUi(ctx: Ctx): void {
   ctx.registerQuery('kvai.ui.get', {
-    description: "Gives kvai's UI: the Models page and the usage status item.",
+    description: "Gives kvai's UI: the Models, provider, and Add a provider pages, and the usage status item.",
     input: z.object({}),
     output: contributionsSchema,
     public: true,

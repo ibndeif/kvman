@@ -53,17 +53,21 @@ kvai.complete {
 
 **Adding the same id again.** A custom id replaces the provider or model; a replaced provider keeps its models. A built-in id fails with `kvai/BUILT_IN`. Removing an id that doesn't exist does nothing (ADR 0009, 57).
 
-**API keys.** A provider's key is the kvai secret `<provider>.apiKey`, set in kvwebui's Settings secrets section. Environment variables are not read. OAuth providers wait for a later phase. A built-in provider needs its key; a custom `api` provider sends it when set, and otherwise the placeholder `none`, which a local server ignores; a delegate never needs one (ADR 0009, 53).
+**API keys.** A provider's key is the kvai secret `<provider>.apiKey`, set on the provider's page (`kvai.provider.key.set`, sync only) or in kvwebui's Settings secrets section (ADR 0009, 79). Environment variables are not read. OAuth providers wait for a later phase. A built-in provider needs its key; a custom `api` provider sends it when set, and otherwise the placeholder `none`, which a local server ignores; a delegate never needs one (ADR 0009, 53).
 
 | Name | Kind | Input → output |
 |---|---|---|
 | `kvai.complete` | command | §7.1 |
-| `kvai.provider.list` | query | `{}` → `[{ id, title, builtIn, key: 'set' \| 'missing' }]` |
+| `kvai.provider.list` | query | `{}` → `[{ id, title, builtIn, status: 'ready' \| 'needsKey' \| 'noKey', models }]`: `ready` when its key is set, `needsKey` for a built-in without one, `noKey` for a custom provider without one; `models` is its model count (ADR 0009, 79) |
+| `kvai.provider.get` | query | `{ id }` → one provider row; an unknown id fails `kvai/PROVIDER_UNKNOWN` |
+| `kvai.provider.key.set` | command, sync only | `{ provider, key }` → `{}`: writes the secret `<provider>.apiKey`; `key` is `writeOnly`; an unknown provider fails `kvai/PROVIDER_UNKNOWN` |
+| `kvai.provider.key.delete` | command | `{ provider }` → `{}`: a missing key does nothing; an unknown provider fails `kvai/PROVIDER_UNKNOWN` |
 | `kvai.provider.add` | command | §7.2 → `{}` |
 | `kvai.provider.remove` | command | `{ id }` → `{}` (also removes its models) |
-| `kvai.model.list` | query | `{ provider? }` → `[{ id, name, provider, reasoning, input: ('text' \| 'image')[], contextWindow, maxTokens, cost, builtIn }]` |
+| `kvai.model.list` | query | `{ provider? }` → `[{ id, name, provider, reasoning, input: ('text' \| 'image')[], contextWindow, maxTokens, cost, builtIn, isDefault }]` |
 | `kvai.model.add` | command | `{ provider, id, name, reasoning, input, contextWindow, maxTokens, cost? }` → `{}` |
 | `kvai.model.remove` | command | `{ id }` → `{}` |
+| `kvai.model.default.get` | query | `{}` → `{ id, name, ready }`: `kvai.defaultModel` in the workspace, its name (`null` when unset or unknown), and whether its provider can be called (ADR 0009, 79) |
 | `kvai.usage.get` | query | `{}` → `[{ model, input, output, cacheRead, cacheWrite, cost }]` for the workspace |
 | `kvai.usage.total.get` | query | `{}` → `{ tokens, cost }` for the workspace, all models summed (ADR 0009, 60) |
 | `kvai.ui.get` | query | kvai's UI contributions (§7.3) |
@@ -74,12 +78,10 @@ All of these are public. Removing a built-in provider or model fails with `kvai/
 
 ## 7.3 UI
 
-`kvai.ui.get` contributes:
-- a **Models** page, with:
-  - the providers and their key state;
-  - each provider's models;
-  - forms to add a custom provider or model;
-  - a default-model picker: a row action on each model that calls `kernel.settings.set` for `kvai.defaultModel` (global).
+`kvai.ui.get` contributes (ADR 0009, 79):
+- a **Models** page (the nav item): the default model (a `detail` of `kvai.model.default.get`); the providers table, each row showing the provider's name with its id, its model count, and a status badge, and opening the provider's page; and a "Connect your own server" card linking to the add page.
+- a **Provider** page (`params: ['providerId']`): the provider and its status; an API key form (`kvai.provider.key.set`, with the provider fixed) and a Remove button (`kvai.provider.key.delete`, after a confirmation); and its models, each with its name and id, thinking, context window, a "Default" badge, and a "Make default" row action that calls `kernel.settings.set` for `kvai.defaultModel` (global).
+- an **Add a provider** page: the forms of `kvai.provider.add` and `kvai.model.add`.
 - a **status item** with the workspace's tokens and cost, from `kvai.usage.total.get` (ADR 0009, 60).
 
 ## 7.4 Testing

@@ -183,6 +183,7 @@ Registrations are sealed when the entry returns: a later `register*` call fails 
 - **Conventions.**
   - Error texts are `<namespace>.errors.<CODE>`.
   - A setting's, command's, or query's translated description is `<name>.description`, and a form field's label is `<command>.fields.<field>`. When a key is missing, the UI shows the registered English description.
+  - A setting's short title is `<key>.title`, and a namespace's display name is `<namespace>.title`; when either is missing, the UI shows the key or the namespace (ADR 0009, 77).
 - **Serving.** The kernel merges the catalogs per language and serves them at `GET /api/locales/:lang`. A key missing in a language falls back to `en` (the served catalog is `en` overlaid with the language), then to the key itself (the UI shows a missing key). A code no loaded catalog has fails `NOT_FOUND` (ADR 0009, 31).
 - **The language** is `kernel.language` (global, default `en`): any language code (BCP 47, such as `fr` or `pt-BR`) that a loaded catalog has; anything else fails `VALIDATION_FAILED`. The kernel lists the available languages in `kernel.health.get`. `ar`, `he`, `fa`, and `ur` are right-to-left, and the UI follows the setting.
 - Text sent to a model stays English; a harness asks the model to reply in `kernel.language`.

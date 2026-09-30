@@ -82,8 +82,21 @@ export const storedModelSchema = z.object({
 
 export type StoredModel = z.output<typeof storedModelSchema>;
 
-/** A row of `kvai.provider.list`. */
-export const providerRowSchema = z.object({ id: z.string(), title: z.string(), builtIn: z.boolean(), key: z.enum(['set', 'missing']) });
+/** Whether a provider can be called: its key is set, a built-in lacks one, or a custom one works without it (ADR 0009, 79). */
+export const providerStatusSchema = z.enum(['ready', 'needsKey', 'noKey']);
+
+export type ProviderStatus = z.output<typeof providerStatusSchema>;
+
+/** A row of `kvai.provider.list` and `kvai.provider.get`; `models` is its model count. */
+export const providerRowSchema = z.object({ id: z.string(), title: z.string(), builtIn: z.boolean(), status: providerStatusSchema, models: z.number().int() });
+
+export type ProviderRow = z.output<typeof providerRowSchema>;
+
+/** The input of `kvai.provider.key.set`: the key is write-only, so kvwebui shows a password field for it. */
+export const providerKeySetSchema = z.object({ provider: z.string().min(1), key: z.string().min(1).meta({ writeOnly: true }) });
+
+/** The answer of `kvai.model.default.get`. */
+export const defaultModelSchema = z.object({ id: z.string().nullable(), name: z.string().nullable(), ready: z.boolean() });
 
 /** A row of `kvai.model.list`; `id` is the full `<provider>/<model>`. */
 export const modelRowSchema = z.object({
@@ -96,6 +109,7 @@ export const modelRowSchema = z.object({
   maxTokens: z.number(),
   cost: costSchema,
   builtIn: z.boolean(),
+  isDefault: z.boolean(),
 });
 
 export type ModelRow = z.output<typeof modelRowSchema>;

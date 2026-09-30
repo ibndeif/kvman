@@ -45,6 +45,7 @@ const optionsSchema = z.object({
   public: z.boolean().optional(),
   timeoutMs: z.number().int().positive().optional(),
   retries: z.number().int().nonnegative().optional(),
+  syncOnly: z.boolean().optional(),
   maxInputBytes: z.number().int().positive().max(maximumBytes).optional(),
   maxOutputBytes: z.number().int().positive().max(maximumBytes).optional(),
 });
@@ -89,12 +90,12 @@ export function registerJob<Input extends z.ZodType, Output extends z.ZodType>(
   kind: JobKind,
   name: string,
   options: CommandRegistration<Input, Output> | QueryRegistration<Input, Output>,
-  syncOnly = false,
 ): void {
   checkName(registry, owner, name, registry.jobs.has(name));
   const parsed = optionsSchema.safeParse(options);
   if (!parsed.success) throw invalid(owner, `the registration of "${name}" is invalid (${z.prettifyError(parsed.error)}).`, name);
   const retries = 'retries' in options ? options.retries : undefined;
+  const syncOnly = 'syncOnly' in options ? options.syncOnly : undefined;
   registry.jobs.set(name, {
     kind,
     name,
@@ -111,7 +112,7 @@ export function registerJob<Input extends z.ZodType, Output extends z.ZodType>(
     retries: kind === 'command' ? (retries ?? defaultRetries) : 0,
     maxInputBytes: options.maxInputBytes ?? defaultBytes,
     maxOutputBytes: options.maxOutputBytes ?? defaultBytes,
-    syncOnly,
+    syncOnly: kind === 'command' && syncOnly === true,
   });
 }
 
