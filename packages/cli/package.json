@@ -3,18 +3,18 @@
   "version": "0.1.0",
   "description": "kvman, an app that works like a small operating system: a kernel runs extensions, and a preset shapes them.",
   "type": "module",
-  "exports": {
-    ".": {
-      "@kvman/source": "./src/index.ts",
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    }
-  },
   "files": [
     "dist"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json"
+  },
+  "bin": {
+    "kvman": "./dist/main.js"
+  },
+  "dependencies": {
+    "@kvman/kernel": "workspace:*",
+    "@kvman/sdk": "workspace:*"
   }
 }

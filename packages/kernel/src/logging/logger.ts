@@ -1,4 +1,4 @@
-import { pino, type DestinationStream, type Logger as PinoLogger } from 'pino';
+import { multistream, pino, type DestinationStream, type Logger as PinoLogger } from 'pino';
 import type { Json } from '@kvman/sdk';
 
 // The kernel's log (plan 01 §1.3). Lines never carry payloads, settings values, or secrets: callers pass only names,
@@ -24,6 +24,7 @@ function wrap(logger: PinoLogger): KernelLogger {
   };
 }
 
-export function createKernelLogger(destination: DestinationStream, level: LogLevel): KernelLogger {
-  return wrap(pino({ level, base: null }, destination));
+// Every record at `level` goes to each destination.
+export function createKernelLogger(destinations: readonly DestinationStream[], level: LogLevel): KernelLogger {
+  return wrap(pino({ level, base: null }, multistream(destinations.map((stream) => ({ stream, level })))));
 }

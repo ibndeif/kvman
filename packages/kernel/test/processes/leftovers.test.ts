@@ -35,6 +35,9 @@ describe('processes a crash left behind (02 §2.16)', () => {
       bundled: new Map(),
       mode: 'web',
       logLevel: 'error',
+      terminalLog: false,
+      startFolder: homeFolder,
+      trust: () => Promise.resolve(true),
     });
     await vi.waitFor(() => expect(isAlive(pid)).toBe(false), { timeout: 10_000, interval: 25 });
     await kernel.close();

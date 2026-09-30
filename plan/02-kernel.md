@@ -131,13 +131,13 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 
 **Sources** (named in the preset, §2.10):
 - `bundled`: a core extension shipped with kvman.
-- `npm:<exact version>`: the kernel runs `npm install --ignore-scripts --omit=dev <name>@<version>` into `extensions/<name>@<version>/`. npm must be on the PATH.
+- `npm:<exact version>`: the kernel runs `npm install --ignore-scripts --omit=dev --legacy-peer-deps --prefix extensions/<name>@<version> <name>@<version>` (skipping peers, since the kernel supplies `@kvman/sdk`). npm must be on the PATH. A failed install fails `EXTENSION_INVALID` and removes the partial folder (ADR 0009, 47).
 - `path:<folder>`: a local folder, relative to the preset file.
 
 **Trust.**
 - A non-bundled version is loaded only after it's accepted. At start, kvman lists the name, version, and source of each version not yet accepted, and asks y/N in the terminal.
 - `--yes` accepts them. Accepted versions are remembered in SQLite, and a new version asks again.
-- With no terminal and no `--yes`, kvman refuses to start.
+- With no terminal and no `--yes`, kvman refuses to start. Refusing, and any answer but `y`, fail `EXTENSION_INVALID`. A `path:` version is remembered by its absolute folder (ADR 0009, 48).
 
 **Loading.** Extensions load in dependency order. kvman stops with `EXTENSION_INVALID` (§2.14) when:
 - the manifest is invalid: no `main`, no `@kvman/sdk` in `peerDependencies`, or an unknown key in the `kvman` field (ADR 0009, 6);
@@ -250,7 +250,7 @@ Going over a limit fails loudly and never cuts anything off.
 4. kvman waits up to 10 s for handlers to return, then stops the workers. Every process from §2.16 is stopped (§2.16), with the kill at the 10 s mark.
 5. Async attempts that didn't finish fail with `INTERRUPTED`: a job with retries left stays queued and runs at the next start; one without ends `failed` (§2.3).
 
-A second Ctrl+C stops at once.
+SIGTERM stops the same way, and kvman exits 0. A second Ctrl+C or SIGTERM stops at once, with exit code 130 (ADR 0009, 50).
 
 ## 2.15 Handler points
 

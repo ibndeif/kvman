@@ -36,6 +36,9 @@ async function measure(): Promise<Record<string, number>> {
       bundled: new Map(),
       mode: 'web',
       logLevel: 'error',
+      terminalLog: false,
+      startFolder: homeFolder,
+      trust: () => Promise.resolve(true),
     });
     const http = await startHttp(kernel, { port: 0 });
     const call = async (): Promise<void> => {

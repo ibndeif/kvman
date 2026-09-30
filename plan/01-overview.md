@@ -13,12 +13,14 @@ kvman --help | --version
 
 - kvman is a **foreground app**. It starts the kernel and, in `web` mode, the HTTP server on `127.0.0.1:3737` (§4). It prints the URL, opens it in the browser, and stops on Ctrl+C (§2.14).
 - **The start folder.** kvman opens the folder it's started from as a workspace (§2.6), unless that folder is the user's home folder, which is Home. The printed URL is `http://127.0.0.1:<port>/?workspace=<id>`, and kvwebui starts the tab in that workspace.
-- **One kvman per home**, enforced by `kvman.lock`. When one is already running, a second `kvman` hands over: it reads the port from `kvman.lock`, calls the running kvman's `kernel.workspace.open` for its folder, prints and opens that workspace's URL, and exits 0. If its `--preset` or `--mode` differ from the running kvman's (`kernel.health.get`), it fails `KVMAN_RUNNING` instead.
+- **One kvman per home**, enforced by `kvman.lock`. When one is already running, a second `kvman` hands over: it reads the port from `kvman.lock`, calls the running kvman's `kernel.workspace.open` for its folder, prints and opens that workspace's URL, and exits 0. If a `--preset` or `--mode` it was given differs from the running kvman's (`kernel.health.get`; a preset is compared by its `name`), it fails `KVMAN_RUNNING` instead. A bare `kvman` hands over to whatever runs (ADR 0009, 44). A running kvman that is still starting, or doesn't answer, also fails `KVMAN_RUNNING` (ADR 0009, 43).
 - **Modes:** `web` now; `tui` comes later.
-- **Presets:** two are bundled. `coder` (the default) is the coding harness; `dev` is for developing extensions and presets. `--preset <name>` names a bundled preset or `<home>/presets/<name>.json` (a name that matches both fails `VALIDATION_FAILED`), and `--preset ./file.json` names a preset file.
+- **Presets:** two are bundled. `coder` (the default) is the coding harness; `dev` is for developing extensions and presets. `--preset <name>` names a bundled preset or `<home>/presets/<name>.json` (a name that matches both fails `VALIDATION_FAILED`), and `--preset ./file.json` names a preset file: a value with `/` or `\`, or ending in `.json`, is a file, relative to the start folder. An unknown name or a missing file fails `VALIDATION_FAILED` (ADR 0009, 45).
 - **Trust:** before loading, kvman lists every non-bundled extension version that hasn't been accepted before and asks y/N in the terminal. `--yes` accepts them without asking; with no terminal and no `--yes`, kvman refuses to start (§2.9).
-- **Browser.** kvman opens the URL with `xdg-open` (Linux), `open` (macOS), or `cmd /c start ""` (Windows). `--no-open` turns this off.
-- **Logs.** `--log-level` is `debug`, `info` (the default), `warn`, or `error`.
+- **Browser.** kvman opens the URL with `xdg-open` (Linux), `open` (macOS), or `cmd /c start ""` (Windows). `--no-open` turns this off. A browser that can't be opened logs a warning, and kvman keeps running (ADR 0009, 50).
+- **Logs.** `--log-level` is `debug`, `info` (the default), `warn`, or `error`. It filters `logs/kvman.log` and the terminal, which shows each record as one line (`HH:MM:SS LEVEL message`) on stderr; the URL and the trust prompt go to stdout. Terminal text is English (ADR 0009, 49).
+- **Port.** `--port` overrides `kernel.port`; `--port 0` lets the OS pick a free port (ADR 0009, 46).
+- **Exit codes.** A clean stop exits 0; a failed start exits 1; a second Ctrl+C or SIGTERM exits 130 at once (ADR 0009, 50).
 - **Platforms:** Linux, macOS, and Windows, natively.
 - There is no other `kvman` subcommand in this phase. Everything else goes through the web UI or the HTTP API (§4).
 - **Installing.** `npm i -g kvman`. The `kvman` package holds the kernel, the bundled extensions, and the bundled presets.
@@ -29,7 +31,7 @@ The default is `~/.kvman`; `--home <dir>` or `KVMAN_HOME` overrides it.
 
 | Path | Holds |
 |---|---|
-| `kvman.lock` | The running kvman's pid and port. A second kvman hands over to it (§1.2); a lock whose process isn't alive is replaced. |
+| `kvman.lock` | The running kvman's pid and, once it listens, its port: `{ "pid", "port" }` (ADR 0009, 43). A second kvman hands over to it (§1.2); a lock whose process isn't alive is replaced. |
 | `kvman.db` | The SQLite database (WAL): jobs, schedules, stores, settings, workspaces, files, accepted extensions. |
 | `files/<id>` | File contents (§2.7). |
 | `extensions/<name>@<version>/` | npm-installed extensions (§2.9). |

@@ -26,6 +26,8 @@ export type KernelWeb = {
   webFolders(): ReadonlyMap<string, string>;
   // The namespace whose web folder is served at `/` (`kernel.web.home`).
   webHome(): string;
+  // The `kernel.port` setting, which a kvman run listens on unless `--port` says otherwise.
+  port(): number;
   logger: KernelLogger;
 };
 
@@ -59,6 +61,7 @@ export function createKernelWeb({ connection, run, files, settings, ids, workspa
           .flatMap((extension) => (extension.manifest.kvman.web === undefined ? [] : [[extension.manifest.kvman.namespace, path.resolve(extension.folder, extension.manifest.kvman.web)] as const])),
       ),
     webHome: () => String(settings.resolve('kernel.web.home', homeWorkspaceId).value),
+    port: () => Number(settings.resolve('kernel.port', homeWorkspaceId).value),
     logger,
   };
 }

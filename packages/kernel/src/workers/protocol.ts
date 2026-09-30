@@ -61,6 +61,7 @@ export const workerSetupSchema = z.object({
   languages: z.array(z.string()),
   presetSettings: z.record(z.string(), jsonSchema),
   logLevel: z.enum(['debug', 'info', 'warn', 'error']),
+  terminalLog: z.boolean(),
   checkPresetSettings: z.boolean(),
 });
 

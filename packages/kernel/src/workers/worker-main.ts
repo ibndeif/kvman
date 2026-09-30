@@ -27,7 +27,7 @@ const port = parentPort;
 const setup = workerSetupSchema.parse(workerData);
 const send = (message: ToMain): void => port.postMessage(message);
 
-const logFile = openLogFile(setup.home, setup.logLevel);
+const logFile = openLogFile(setup.home, setup.logLevel, setup.terminalLog);
 const registry = createRegistry();
 for (const definition of kernelSettingDefinitions(setup.languages)) registry.settings.set(definition.key, definition);
 const answers = new Map<number, { resolve: (value: unknown) => void; reject: (error: Error) => void }>();

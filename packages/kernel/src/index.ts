@@ -6,3 +6,5 @@ export { systemClock, type Clock, type CancelTimer } from './clock.ts';
 export type { ProgressChunk } from './jobs/progress-hub.ts';
 export type { Catalog } from './localization/catalogs.ts';
 export { startHttp, type HttpServer } from './http/http-server.ts';
+export type { ExtensionVersion, TrustDecision } from './extensions/trust.ts';
+export { kernelVersion } from './kernel-version.ts';

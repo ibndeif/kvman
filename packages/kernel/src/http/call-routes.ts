@@ -33,7 +33,9 @@ async function run(kernel: Kernel, request: Request, name: string, call: CallBod
   }
   if (call.async) {
     try {
-      return answer({ jobId: await kernel.execAsync(name, call.input, options) });
+      const jobId = await kernel.execAsync(name, call.input, options);
+      kernel.web.logger.debug('An HTTP call queued a job.', { name, jobId });
+      return answer({ jobId });
     } catch (error) {
       return failure(problemOf(error));
     }
@@ -41,7 +43,9 @@ async function run(kernel: Kernel, request: Request, name: string, call: CallBod
   const jobId = kernel.web.newJobId();
   const stopWatching = cancelOnLeave(kernel, request, jobId);
   try {
-    return answer({ output: await kernel.exec(name, call.input, { ...options, jobId }), jobId });
+    const output = kernel.exec(name, call.input, { ...options, jobId });
+    kernel.web.logger.debug('An HTTP call started a job.', { name, jobId });
+    return answer({ output: await output, jobId });
   } catch (error) {
     return failure(problemOf(error), { jobId });
   } finally {
