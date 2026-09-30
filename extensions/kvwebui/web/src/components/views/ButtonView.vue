@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { problemOf } from '../../api/client.ts';
 import { applyThen } from '../../composables/then.ts';
 import { resolveValues, textParams, type Scope } from '../../contributions/references.ts';
 import type { ButtonView } from '../../contributions/views.ts';
-import { runCommand, showProblem, useKvwebui } from '../../state/kvwebui.ts';
+import { runCommand } from '../../state/commands.ts';
+import { showProblem, useKvwebui } from '../../state/kvwebui.ts';
 
 // A button runs its command (plan 06 §6.4), after an in-app confirmation when it has `confirm`; a failure shows a
-// toast with the translated Problem (§6.7).
+// toast with the translated Problem (§6.7), and the job's effects apply after either (§6.5).
 const props = defineProps<{ view: ButtonView; scope: Scope; small?: boolean }>();
 const state = useKvwebui();
 const { t } = useI18n();
@@ -18,9 +18,8 @@ const styles = { primary: 'border-primary bg-primary text-on-primary', secondary
 const click = async (): Promise<void> => {
   if (props.view.confirm !== undefined && !(await state.confirmations.ask(props.view.confirm, {}, props.view.style === 'danger'))) return;
   busy.value = true;
-  await runCommand(state, props.view.command, resolveValues(props.view.input, props.scope)).then(
-    (output) => applyThen(state, props.view.then, output, props.scope),
-    (error: unknown) => showProblem(state, problemOf(error)),
+  await runCommand(state, props.view.command, resolveValues(props.view.input, props.scope), (outcome) =>
+    outcome.ok ? applyThen(state, props.view.then, outcome.output, props.scope) : showProblem(state, outcome.problem),
   );
   busy.value = false;
 };

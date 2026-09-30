@@ -1,8 +1,9 @@
 import { jsonSchema, z, type Json } from '@kvman/sdk';
+import type { ButtonView, Format, PageLink, Tone, ToastLevel, View, ViewColumn, ViewThen } from '@kvman/sdk/web';
 
-// View trees (plan 06 §6.4): JSON trees of kvwebui's built-in components (`custom` comes with M2.3, so until then it's
-// an unknown component). Every text is a translation key, and inputs and params may hold `{ $param }`, `{ $row }`, or
-// (in `then`) `{ $output }` references, resolved when they're used.
+// View trees (plan 06 §6.4): JSON trees of kvwebui's built-in components and extensions' custom components, typed by
+// `@kvman/sdk/web`. Every text is a translation key, and inputs, params, and props may hold `{ $param }` and `{ $row }`
+// (and, in `then`, `{ $output }`) references, resolved when they're used.
 
 const kebab = '[a-z][a-z0-9]*(?:-[a-z0-9]+)*';
 
@@ -22,9 +23,7 @@ export const toneSchema = z.enum(['neutral', 'info', 'success', 'warning', 'dang
 export const toastLevelSchema = z.enum(['info', 'success', 'warning', 'error']);
 export const formatSchema = z.enum(['text', 'number', 'date', 'bytes', 'boolean']);
 
-export type Tone = z.output<typeof toneSchema>;
-export type ToastLevel = z.output<typeof toastLevelSchema>;
-export type Format = z.output<typeof formatSchema>;
+export type { Format, Tone, ToastLevel };
 
 export const columnSchema = z.object({
   field: z.string().min(1),
@@ -34,7 +33,7 @@ export const columnSchema = z.object({
   badges: z.record(z.string(), z.object({ text: textKey, tone: toneSchema })).exactOptional(),
 });
 
-export type Column = z.output<typeof columnSchema>;
+export type Column = ViewColumn;
 
 export const thenSchema = z.union([
   z.literal('rerun'),
@@ -42,11 +41,11 @@ export const thenSchema = z.union([
   z.object({ toast: textKey, level: toastLevelSchema.exactOptional() }),
 ]);
 
-export type Then = z.output<typeof thenSchema>;
+export type Then = ViewThen;
 
 export const pageLinkSchema = z.object({ page: fullPageIdSchema, params: values.exactOptional() });
 
-export type PageLink = z.output<typeof pageLinkSchema>;
+export type { PageLink };
 
 const buttonSchema = z.object({
   type: z.literal('button'),
@@ -59,22 +58,9 @@ const buttonSchema = z.object({
   then: thenSchema.exactOptional(),
 });
 
-export type ButtonView = z.output<typeof buttonSchema>;
+export type { ButtonView };
 
-type Text = { text: string; params?: Values };
-
-export type View =
-  | { type: 'stack'; direction: 'vertical' | 'horizontal'; gap?: 'sm' | 'md' | 'lg'; children: View[] }
-  | { type: 'card'; title?: string; children: View[] }
-  | ({ type: 'heading'; level: 1 | 2 | 3 } & Text)
-  | ({ type: 'text' } & Text)
-  | { type: 'markdown'; text?: string; params?: Values; query?: string; input?: Values; field?: string }
-  | { type: 'table'; query: string; input: Values; columns: Column[]; rowActions?: ButtonView[]; rowLink?: PageLink; empty?: string }
-  | { type: 'list'; query: string; input: Values; item: View; empty?: string }
-  | { type: 'detail'; query: string; input: Values; fields: Column[] }
-  | { type: 'form'; command: string; fixed?: Values; submit: string; then?: Then }
-  | ({ type: 'link'; to: PageLink } & Text)
-  | ButtonView;
+export type { View };
 
 export const viewSchema: z.ZodType<View> = z.lazy(() =>
   z.discriminatedUnion('type', [
@@ -102,5 +88,6 @@ export const viewSchema: z.ZodType<View> = z.lazy(() =>
     z.object({ type: z.literal('form'), command: callName, fixed: values.exactOptional(), submit: textKey, then: thenSchema.exactOptional() }),
     z.object({ type: z.literal('link'), text: textKey, params: values.exactOptional(), to: pageLinkSchema }),
     buttonSchema,
+    z.object({ type: z.literal('custom'), component: z.string().regex(new RegExp(`^${kebab}\\.${kebab}$`), 'A component is <namespace>.<name>.'), props: values }),
   ]),
 );

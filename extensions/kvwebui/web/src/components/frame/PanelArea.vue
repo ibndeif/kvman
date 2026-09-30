@@ -3,7 +3,8 @@ import { X } from '@lucide/vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { iconComponent } from '../../contributions/icons.ts';
-import { panelMemory, useKvwebui } from '../../state/kvwebui.ts';
+import { useKvwebui } from '../../state/kvwebui.ts';
+import { setPanel } from '../../state/panels.ts';
 import ViewNode from '../views/ViewNode.vue';
 
 // Panels (plan 06 §6.2): one open at a time, chosen from the strip, remembered per tab, shown on every page.
@@ -12,10 +13,7 @@ const { t } = useI18n();
 const panels = computed(() => state.registry.value.panels);
 const open = computed(() => panels.value.find((panel) => panel.id === state.panel.value));
 
-const choose = (id: string | null): void => {
-  state.panel.value = id;
-  panelMemory.write(id);
-};
+const choose = (id: string | null): void => setPanel(state, id);
 </script>
 
 <template>

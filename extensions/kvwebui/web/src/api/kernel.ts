@@ -18,5 +18,5 @@ export async function kernelQuery<Name extends keyof Queries>(api: Api, name: Na
 
 export async function kernelCommand<Name extends keyof Commands>(api: Api, name: Name, input: z.input<Commands[Name]['input']>): Promise<z.output<Commands[Name]['output']>> {
   const schemas: Commands[Name] = kernelCommandSchemas[name];
-  return schemas.output.parse(await api.command(name, input)) as z.output<Commands[Name]['output']>;
+  return schemas.output.parse((await api.command(name, input)).output) as z.output<Commands[Name]['output']>;
 }

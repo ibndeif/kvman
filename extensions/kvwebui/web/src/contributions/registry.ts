@@ -13,10 +13,10 @@ export type PanelEntry = { id: string; namespace: string; title: string; icon: s
 export type StatusEntry = { id: string; namespace: string; query: string; input: Values; text: string; params: Values; order: number };
 export type LoadFailure = { extension: string; namespace: string; problem: Problem };
 
-export type Registry = { pages: Map<string, PageEntry>; nav: NavEntry[]; panels: PanelEntry[]; status: StatusEntry[]; failures: LoadFailure[] };
+export type Registry = { pages: Map<string, PageEntry>; nav: NavEntry[]; panels: PanelEntry[]; status: StatusEntry[]; failures: LoadFailure[]; known: Known };
 
 export function emptyRegistry(): Registry {
-  return { pages: new Map(), nav: [], panels: [], status: [], failures: [] };
+  return { pages: new Map(), nav: [], panels: [], status: [], failures: [], known: knownCalls([], new Set()) };
 }
 
 export function knownCalls(extensions: readonly ExtensionInfo[], icons: ReadonlySet<string>): Known {
@@ -24,6 +24,7 @@ export function knownCalls(extensions: readonly ExtensionInfo[], icons: Readonly
   return {
     publicQueries: new Set([...Object.keys(kernelQuerySchemas), ...extensions.flatMap((extension) => publicNames(extension.queries))]),
     publicCommands: new Set([...Object.keys(kernelCommandSchemas), ...extensions.flatMap((extension) => publicNames(extension.commands))]),
+    namespaces: new Set(extensions.map((extension) => extension.namespace)),
     icons,
   };
 }
@@ -58,7 +59,7 @@ export async function loadRegistry(api: Api, extensions: readonly ExtensionInfo[
       return { extension, result };
     }),
   );
-  const registry = emptyRegistry();
+  const registry = { ...emptyRegistry(), known };
   for (const { extension, result } of answers) {
     if ('problem' in result) registry.failures.push({ extension: extension.name, namespace: extension.namespace, problem: result.problem });
     else add(registry, extension.namespace, result.contributions);

@@ -3,14 +3,14 @@ import type { Problem } from '@kvman/sdk';
 import { Lock } from '@lucide/vue';
 import { computed, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { problemOf } from '../../api/client.ts';
 import type { SettingInfo } from '../../api/kernel.ts';
 import { invalidFields } from '../../api/problem-text.ts';
 import { valueField } from '../../forms/fields.ts';
 import { buildInput, valueText, type FormValues } from '../../forms/values.ts';
 import { applyLanguage, applyTheme } from '../../state/appearance.ts';
 import { useI18nState } from '../../state/i18n.ts';
-import { runCommand, settingValue, showProblem, useKvwebui } from '../../state/kvwebui.ts';
+import { runCommand } from '../../state/commands.ts';
+import { settingValue, showProblem, useKvwebui } from '../../state/kvwebui.ts';
 import { reloadSettings } from '../../state/workspaces.ts';
 import FormField from '../views/FormField.vue';
 
@@ -55,10 +55,10 @@ const save = async (): Promise<void> => {
     invalid.value = ['value'];
     return;
   }
-  await runCommand(state, 'kernel.settings.set', { key: props.setting.key, value, scope: scope.value }).then(saved, (error: unknown) => fail(problemOf(error)));
+  await runCommand(state, 'kernel.settings.set', { key: props.setting.key, value, scope: scope.value }, (outcome) => (outcome.ok ? saved() : fail(outcome.problem)));
 };
 const resetValue = async (): Promise<void> => {
-  await runCommand(state, 'kernel.settings.reset', { key: props.setting.key, scope: scope.value }).then(saved, (error: unknown) => fail(problemOf(error)));
+  await runCommand(state, 'kernel.settings.reset', { key: props.setting.key, scope: scope.value }, (outcome) => (outcome.ok ? saved() : fail(outcome.problem)));
 };
 const set = (path: string, value: string | boolean): void => {
   values[path] = value;

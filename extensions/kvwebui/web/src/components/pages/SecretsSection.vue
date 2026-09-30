@@ -3,9 +3,9 @@ import { z } from '@kvman/sdk';
 import { KeyRound, Plus } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { problemOf } from '../../api/client.ts';
 import { useQuery } from '../../composables/use-query.ts';
-import { runCommand, showProblem, useKvwebui } from '../../state/kvwebui.ts';
+import { runCommand } from '../../state/commands.ts';
+import { showProblem, useKvwebui } from '../../state/kvwebui.ts';
 
 // The Secrets section (plan 06 §6.6): the secrets by name, masked, with Delete after a confirmation, and "Add a secret"
 // with a password field. A secret's value is never shown or kept after it's sent.
@@ -20,18 +20,18 @@ const value = ref('');
 
 const remove = async (secret: { extension: string; name: string }): Promise<void> => {
   if (!(await state.confirmations.ask('kvwebui.secrets.deleteConfirm', { name: secret.name }, true))) return;
-  await runCommand(state, 'kernel.secrets.delete', secret).catch((error: unknown) => showProblem(state, problemOf(error)));
+  await runCommand(state, 'kernel.secrets.delete', secret, (outcome) => {
+    if (!outcome.ok) showProblem(state, outcome.problem);
+  });
 };
 const add = async (): Promise<void> => {
-  await runCommand(state, 'kernel.secrets.set', { extension: extension.value, name: name.value.trim(), value: value.value }).then(
-    () => {
-      adding.value = false;
-      name.value = '';
-      value.value = '';
-      state.toasts.show({ text: 'kvwebui.secrets.saved', params: {}, level: 'success' });
-    },
-    (error: unknown) => showProblem(state, problemOf(error)),
-  );
+  await runCommand(state, 'kernel.secrets.set', { extension: extension.value, name: name.value.trim(), value: value.value }, (outcome) => {
+    if (!outcome.ok) return showProblem(state, outcome.problem);
+    adding.value = false;
+    name.value = '';
+    value.value = '';
+    state.toasts.show({ text: 'kvwebui.secrets.saved', params: {}, level: 'success' });
+  });
 };
 </script>
 

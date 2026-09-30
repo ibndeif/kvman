@@ -89,6 +89,26 @@
   color-scheme: dark;
 }
 
+/* The theme variables extensions style their custom components with (plan 06 §6.4, ADR 0009, 85). They're computed on
+   <html> from kvwebui's own colors, so they follow the `dark` class there too. */
+:root {
+  --kv-color-background: var(--kvwebui-ground);
+  --kv-color-surface: var(--kvwebui-surface);
+  --kv-color-text: var(--kvwebui-ink);
+  --kv-color-muted: var(--kvwebui-muted);
+  --kv-color-border: var(--kvwebui-line);
+  --kv-color-primary: var(--kvwebui-primary);
+  --kv-color-on-primary: var(--kvwebui-on-primary);
+  --kv-color-danger: var(--kvwebui-danger);
+  --kv-color-warning: var(--kvwebui-warning-ink);
+  --kv-color-success: var(--kvwebui-success-ink);
+  --kv-space-sm: 8px;
+  --kv-space-md: 16px;
+  --kv-space-lg: 24px;
+  --kv-radius: 12px;
+  --kv-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
 html,
 body,
 #app {

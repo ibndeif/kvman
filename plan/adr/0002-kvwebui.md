@@ -35,7 +35,7 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds 
     - Action: `button` (a command and its input, an optional confirm, then rerun, navigate, or toast).
     - `chat`: a messages query and a send command; it streams the job's progress.
     - `custom`: a Vue component from an extension.
-11. **Custom Vue.** (The `kvman` object also has `follow` and `View`: 32 and ADR 0008, 24.)
+11. **Custom Vue.** (The `kvman` object also has `follow` and `View`: 32 and ADR 0008, 24; its shapes: ADR 0009, 83.)
     - `{ type: 'custom', component: '<namespace>.<name>', props }` loads `/web/<namespace>/components/<name>.js`, which default-exports a Vue component.
     - kvwebui provides `vue` through an import map (one Vue instance); extensions build with `vue` as an external.
     - The component gets `props` plus an injected `kvman` object: `exec`, `execAsync`, `stream(jobId)`, `t`, `workspace`.
@@ -69,7 +69,7 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds 
     - `panel { panel: '<ns>.<id>', open }`
     - `refresh {}`
 
-    They're stored in kvwebui's workspace store. The public command `kvwebui.effect.take { jobId }` returns a job's effects and deletes them. A schedule deletes effects not taken within 1 hour.
+    They're stored in kvwebui's workspace store (now the global store, keyed by root job id: ADR 0008, 57; dated by that id: ADR 0009, 87). The public command `kvwebui.effect.take { jobId }` returns a job's effects and deletes them. A schedule deletes effects not taken within 1 hour.
 23. **Settings.** (The home page is now a required, preset-only setting: ADR 0008, 77.)
     - `kvwebui.title`: a translation key; default `kvwebui.title.default`, which is "kvman".
     - `kvwebui.home`: the full page id shown at `/`; default is the first nav item's page.

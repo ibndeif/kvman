@@ -20,8 +20,8 @@ function sources(folder: string): string[] {
 
 const placeholders = (text: string): string[] => [...text.matchAll(/\{(\w+)\}/g)].map((match) => match[1] ?? '').sort();
 
-// Names under `kvwebui.` that aren't texts: setting keys, page ids, and what a tab remembers.
-const notTexts = new Set(['kvwebui.home', 'kvwebui.nav.order', 'kvwebui.nav.hidden', 'kvwebui.theme', 'kvwebui.settings', 'kvwebui.extensions', 'kvwebui.workspace', 'kvwebui.panel', 'kvwebui.nav.collapsed']);
+// Names under `kvwebui.` that aren't texts: setting keys, page ids, what a tab remembers, and the commands the app calls.
+const notTexts = new Set(['kvwebui.home', 'kvwebui.nav.order', 'kvwebui.nav.hidden', 'kvwebui.theme', 'kvwebui.settings', 'kvwebui.extensions', 'kvwebui.workspace', 'kvwebui.panel', 'kvwebui.nav.collapsed', 'kvwebui.effect.take']);
 // The keys the sources build from a template.
 const built = ['global', 'workspace'].flatMap((scope) => [`kvwebui.settings.reset.${scope}`, `kvwebui.settings.scope.${scope}`, `kvwebui.settings.source.${scope}`]);
 const themes = ['system', 'light', 'dark'].map((theme) => `kvwebui.theme.${theme}`);

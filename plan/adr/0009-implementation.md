@@ -161,3 +161,21 @@ Decided with the product owner on 2026-09-30, after a design review of the scree
     - `kvai.model.list` rows gain `isDefault`.
 80. **Sync-only commands for extensions.** `registerCommand` takes `syncOnly?: boolean`, like the kernel's `kernel.secrets.set`: queueing or scheduling such a command (`execAsync`, `schedule`, or HTTP `async: true`) fails `VALIDATION_FAILED`, so its input never lands in a job row. A command that takes a secret must be sync only.
 81. **kvcoder's `jobs` connector** (changes `08` §8.5, detailed at M2.4). The agent can see the async jobs it started, and get their status and details or cancel them: `jobs list`, `jobs get <id>`, and `jobs cancel <id>`.
+
+## M2.3 kvwebui custom components and effects
+
+Decided with the product owner on 2026-10-01.
+
+82. **Custom props.** A `custom` view's `props` values may hold `{ "$param": name }` and `{ "$row": field }` references, resolved like inputs; an undeclared `$param` makes the answer invalid (72). `component` is `<namespace>.<name>`, both lowercase kebab case, and the namespace must be a loaded extension: one extension may show another's component. Whether the file exists is known only when it loads (84).
+83. **The injected `kvman`.** A component reads it with `inject('kvman')`, typed by `@kvman/sdk/web`'s `Kvman`.
+    - `exec(name, input)` and `execAsync(name, input)` return promises and reject with a `ProblemError`; kvwebui shows no toast for them. `exec` of a command counts as a command the UI ran: queries rerun and its effects apply; `exec` of a query doesn't.
+    - `stream(jobId)` is an async iterable of `{ type: 'progress', source, data }`, then one `{ type: 'result', output }` or `{ type: 'problem', problem }`, after which it ends. A stream a component opened closes when the component unmounts.
+    - `follow(jobId)` resolves once the job has ended and its reruns and effects are done.
+    - A job started with `execAsync` is followed as if by `follow`: when it ends, the page's queries and the status items rerun and its effects apply.
+    - `workspace` is a live, read-only ref: `workspace.value` is the tab's `{ id, name, path }` and changes on a switch. `@kvman/sdk/web` types it structurally (`{ readonly value: Workspace }`), since it imports nothing but the SDK. A switch doesn't remount the page (only a new URL does), so a component that keeps data watches `workspace`, as the built-in views rerun their queries.
+    - `toast(text, params?, level?)` defaults to `info`. `panel(id, open)` with an unknown panel does nothing; `navigate(page, params?)` to an unknown page shows the "page not found" card, like a link.
+    - `View` checks its tree like a `ui.get` view (its shape, public queries, known form commands, and custom namespaces); an invalid tree shows an error card with `VALIDATION_FAILED` and its issues.
+84. **A component that fails.** While its module loads, the component shows placeholder rows. A module that can't be loaded, has no default export, or throws (while rendering, or anywhere else it leaves an error uncaught) shows the error card with `kvwebui/COMPONENT_FAILED` (`params: { component }`; the English message says how it failed) in its place; the rest of the page keeps working. There is no "Try again", since the browser keeps a failed module until the page is refreshed.
+85. **Theme variables.** Besides the plan's `--kv-color-*` (background, surface, text, muted, border, primary, danger, warning, success), `--kv-space-sm/md/lg` (8, 16, and 24 px), and `--kv-radius` (12 px), kvwebui defines `--kv-color-on-primary` (text on primary) and `--kv-font-mono`, for light and dark.
+86. **Effects at a failed end.** kvwebui calls `kvwebui.effect.take` at every end of a job the UI started or follows, success or failure, and applies the effects in order. For a button or form they come after `then` (on success) or the error toast (on failure).
+87. **An effect's time.** Handlers see real time only (the testkit's clock doesn't reach `Date`), so kvwebui dates an effect by its root job id: job ids are UUIDv7, stamped from the kernel's clock. `kvwebui.effect.clean` deletes the effects whose root job id is more than 1 hour older than its own job id.

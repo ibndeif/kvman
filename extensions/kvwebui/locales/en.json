@@ -46,6 +46,7 @@
   "kvwebui.errors.details": "Details",
   "kvwebui.errors.retry": "Try again",
   "kvwebui.errors.HOME_UNAVAILABLE": "The home page, {page}, isn't available.",
+  "kvwebui.errors.COMPONENT_FAILED": "The part “{component}” couldn't be shown.",
   "kvwebui.errors.OFFLINE": "kvman didn't answer. Is it still running?",
   "kvwebui.notFound.title": "Page not found",
   "kvwebui.notFound.help": "No loaded extension has this page.",

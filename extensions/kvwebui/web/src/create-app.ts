@@ -2,17 +2,19 @@ import { createApp, type App as VueApp } from 'vue';
 import { createRouter, type Router, type RouterHistory } from 'vue-router';
 import App from './components/App.vue';
 import { routes } from './routes.ts';
+import type { ComponentLoader } from './state/components.ts';
 import { createI18nState, i18nKey, type I18nState } from './state/i18n.ts';
 import { createState, kvwebuiKey, type Kvwebui } from './state/kvwebui.ts';
 import { moveHome } from './state/workspaces.ts';
 
-// Makes the app: the browser build uses the page's history and `fetch`; tests give a memory history and a fake API.
+// Makes the app: the browser build uses the page's history, `fetch`, and the browser's component loader; tests give a
+// memory history, a fake API, and fixture components.
 
 export type KvwebuiApp = { app: VueApp; router: Router; state: Kvwebui; i18n: I18nState };
 
-export function createKvwebui(options: { history: RouterHistory; fetch: typeof fetch }): KvwebuiApp {
+export function createKvwebui(options: { history: RouterHistory; fetch: typeof fetch; components: ComponentLoader }): KvwebuiApp {
   const router = createRouter({ history: options.history, routes });
-  const state = createState(router, options.fetch);
+  const state = createState(router, options.fetch, options.components);
   const i18n = createI18nState();
   state.onWorkspaceGone = (workspaceId) => {
     void moveHome(state, workspaceId);

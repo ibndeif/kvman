@@ -1,4 +1,4 @@
-import { jsonSchema, z } from '@kvman/sdk';
+import { jsonSchema, z, type Problem } from '@kvman/sdk';
 import { localIdSchema, viewSchema, type View } from './views.ts';
 
 // The answer of `<namespace>.ui.get` (plan 06 §6.3), and the checks beyond its shape (ADR 0009, 72): an answer that
@@ -18,8 +18,8 @@ export type Contributions = z.output<typeof contributionsSchema>;
 
 export type Issue = { path: string; message: string };
 
-/** What an answer may name: the public queries and commands of the run (the kernel's included), and the icons. */
-export type Known = { publicQueries: ReadonlySet<string>; publicCommands: ReadonlySet<string>; icons: ReadonlySet<string> };
+/** What an answer may name: the public queries and commands of the run (the kernel's included), the loaded extensions' namespaces, and the icons. */
+export type Known = { publicQueries: ReadonlySet<string>; publicCommands: ReadonlySet<string>; namespaces: ReadonlySet<string>; icons: ReadonlySet<string> };
 
 // The `{ $param: name }` references anywhere in a JSON tree.
 function paramReferences(tree: unknown): string[] {
@@ -30,20 +30,20 @@ function paramReferences(tree: unknown): string[] {
   return entries.flatMap(([, value]) => paramReferences(value));
 }
 
-type Call = { path: string; name: string };
+type Named = { path: string; name: string };
 
-// The queries and commands a view names, with their paths.
-function callsOf(view: View, path: string): { queries: Call[]; commands: Call[] } {
-  const queries: Call[] = [];
-  const commands: Call[] = [];
+// The queries, commands, and custom components a view names, with their paths.
+function namesOf(view: View, path: string): { queries: Named[]; commands: Named[]; components: Named[] } {
+  const found: { queries: Named[]; commands: Named[]; components: Named[] } = { queries: [], commands: [], components: [] };
   const visit = (node: View, at: string): void => {
-    if ('query' in node && node.query !== undefined) queries.push({ path: `${at}.query`, name: node.query });
-    if (node.type === 'form') commands.push({ path: `${at}.command`, name: node.command });
+    if ('query' in node && node.query !== undefined) found.queries.push({ path: `${at}.query`, name: node.query });
+    if (node.type === 'form') found.commands.push({ path: `${at}.command`, name: node.command });
+    if (node.type === 'custom') found.components.push({ path: `${at}.component`, name: node.component });
     if (node.type === 'stack' || node.type === 'card') node.children.forEach((child, index) => visit(child, `${at}.children.${String(index)}`));
     if (node.type === 'list') visit(node.item, `${at}.item`);
   };
   visit(view, path);
-  return { queries, commands };
+  return found;
 }
 
 function duplicates(ids: readonly string[], part: string): Issue[] {
@@ -51,10 +51,11 @@ function duplicates(ids: readonly string[], part: string): Issue[] {
 }
 
 function viewIssues(view: View, path: string, params: readonly string[], known: Known): Issue[] {
-  const { queries, commands } = callsOf(view, path);
+  const { queries, commands, components } = namesOf(view, path);
   return [
     ...queries.filter((call) => !known.publicQueries.has(call.name)).map((call) => ({ path: call.path, message: `"${call.name}" isn't a public query.` })),
     ...commands.filter((call) => !known.publicCommands.has(call.name)).map((call) => ({ path: call.path, message: `"${call.name}" isn't a public command.` })),
+    ...components.filter((custom) => !known.namespaces.has(custom.name.split('.')[0] ?? '')).map((custom) => ({ path: custom.path, message: `"${custom.name}" isn't a loaded extension's component.` })),
     ...paramReferences(view)
       .filter((name) => !params.includes(name))
       .map((name) => ({ path, message: `The param "${name}" isn't declared.` })),
@@ -80,4 +81,12 @@ export function contributionIssues(answer: Contributions, known: Known): Issue[]
       .map((entry) => ({ path: entry.path, message: `"${entry.icon}" isn't a lucide icon.` })),
     ...answer.status.flatMap((item, index) => (known.publicQueries.has(item.query) ? [] : [{ path: `status.${String(index)}.query`, message: `"${item.query}" isn't a public query.` }])),
   ];
+}
+
+// A view tree a custom component gives `kvman.View` (ADR 0009, 83): checked like a `ui.get` view, on a page with `params`.
+export function checkView(tree: unknown, params: readonly string[], known: Known): { view: View } | { problem: Problem } {
+  const parsed = viewSchema.safeParse(tree);
+  const issues = parsed.success ? viewIssues(parsed.data, 'view', params, known) : parsed.error.issues.map((issue) => ({ path: ['view', ...issue.path.map(String)].join('.'), message: issue.message }));
+  if (!parsed.success || issues.length > 0) return { problem: { code: 'VALIDATION_FAILED', message: 'The view is invalid.', params: { issues } } };
+  return { view: parsed.data };
 }

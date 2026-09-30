@@ -3,11 +3,12 @@ import { afterEach, expect, vi } from 'vitest';
 import { createMemoryHistory } from 'vue-router';
 import { createKvwebui, type KvwebuiApp } from '../../../web/src/create-app.ts';
 import type { ExtensionInfo, FakeApi } from './fake-api.ts';
+import { createFakeComponents, type FakeComponents } from './fake-components.ts';
 
-// Mounts the whole app against a fake API, the way the browser opens it, and cleans up after each test: the app, the
-// tab's storage, and the page's language, direction, and theme.
+// Mounts the whole app against a fake API and fake components, the way the browser opens it, and cleans up after each
+// test: the app, the tab's storage, and the page's language, direction, and theme.
 
-export type Mounted = KvwebuiApp & { root: HTMLElement; text(): string; find<Found extends HTMLElement = HTMLElement>(selector: string): Found | null; findAll(selector: string): HTMLElement[]; settle(): Promise<void> };
+export type Mounted = KvwebuiApp & { components: FakeComponents; root: HTMLElement; text(): string; find<Found extends HTMLElement = HTMLElement>(selector: string): Found | null; findAll(selector: string): HTMLElement[]; settle(): Promise<void> };
 
 const mounted: Mounted[] = [];
 
@@ -26,8 +27,8 @@ export async function settle(): Promise<void> {
   for (let round = 0; round < 5; round += 1) await flushPromises();
 }
 
-export async function mountApp(api: FakeApi, path = '/'): Promise<Mounted> {
-  const kvwebui = createKvwebui({ history: createMemoryHistory(), fetch: api.fetch });
+export async function mountApp(api: FakeApi, path = '/', components = createFakeComponents()): Promise<Mounted> {
+  const kvwebui = createKvwebui({ history: createMemoryHistory(), fetch: api.fetch, components });
   await kvwebui.router.push(path);
   const root = document.createElement('div');
   document.body.append(root);
@@ -36,6 +37,7 @@ export async function mountApp(api: FakeApi, path = '/'): Promise<Mounted> {
   await settle();
   const app: Mounted = {
     ...kvwebui,
+    components,
     root,
     text: () => root.textContent ?? '',
     find: <Found extends HTMLElement = HTMLElement>(selector: string) => root.querySelector<Found>(selector),

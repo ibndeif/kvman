@@ -48,7 +48,7 @@ watchEffect(() => {
       <NavBar />
       <main class="flex min-w-0 grow flex-col gap-4 overflow-auto px-9 py-7">
         <LoadFailures />
-        <RouterView :key="`${route.fullPath}:${state.workspace.value}`" />
+        <RouterView :key="route.fullPath" />
       </main>
       <PanelArea />
     </div>

@@ -5,7 +5,9 @@ import { createApi, type Api } from '../api/client.ts';
 import type { ExtensionInfo, Health, SettingInfo } from '../api/kernel.ts';
 import { problemKey, problemParams } from '../api/problem-text.ts';
 import { emptyRegistry, type Registry } from '../contributions/registry.ts';
+import { createComponents, type ComponentLoader, type Components } from './components.ts';
 import { createConfirmations, type Confirmations } from './confirmations.ts';
+import { createJobStreams, type JobStreams } from './job-streams.ts';
 import { tabMemory } from './tab-memory.ts';
 import { createToasts, type Toasts } from './toasts.ts';
 
@@ -26,6 +28,10 @@ export type Kvwebui = {
   settings: ShallowRef<SettingInfo[]>;
   extensions: ShallowRef<ExtensionInfo[]>;
   registry: ShallowRef<Registry>;
+  components: Components;
+  jobs: JobStreams;
+  // The jobs the UI follows, each until its reruns and effects are done.
+  followed: Map<string, Promise<void>>;
   // Grows after each command the UI runs; the page's queries and the status items rerun when it changes.
   revision: Ref<number>;
   language: Ref<string>;
@@ -49,16 +55,18 @@ export const workspaceMemory = tabMemory('kvwebui.workspace');
 export const panelMemory = tabMemory('kvwebui.panel');
 const navCollapsedKey = 'kvwebui.nav.collapsed';
 
-export function createState(router: Router, fetcher: typeof fetch): Kvwebui {
+export function createState(router: Router, fetcher: typeof fetch, loader: ComponentLoader): Kvwebui {
   const workspace = ref(homeWorkspaceId);
+  const extensions = shallowRef<ExtensionInfo[]>([]);
+  const api = createApi({
+    fetch: fetcher,
+    workspaceId: () => workspace.value,
+    onProblem: (problem) => {
+      if (problem.code === 'NOT_FOUND' && problem.params?.['workspaceId'] === workspace.value && workspace.value !== homeWorkspaceId) state.onWorkspaceGone(workspace.value);
+    },
+  });
   const state: Kvwebui = {
-    api: createApi({
-      fetch: fetcher,
-      workspaceId: () => workspace.value,
-      onProblem: (problem) => {
-        if (problem.code === 'NOT_FOUND' && problem.params?.['workspaceId'] === workspace.value && workspace.value !== homeWorkspaceId) state.onWorkspaceGone(workspace.value);
-      },
-    }),
+    api,
     router,
     toasts: createToasts(),
     confirmations: createConfirmations(),
@@ -67,8 +75,11 @@ export function createState(router: Router, fetcher: typeof fetch): Kvwebui {
     health: shallowRef(),
     online: ref(true),
     settings: shallowRef([]),
-    extensions: shallowRef([]),
+    extensions,
     registry: shallowRef(emptyRegistry()),
+    components: createComponents(loader, (namespace) => extensions.value.find((extension) => extension.namespace === namespace)?.revision ?? 0),
+    jobs: createJobStreams(api),
+    followed: new Map(),
     revision: ref(0),
     language: ref('en'),
     booted: ref(false),
@@ -90,11 +101,4 @@ export function settingValue(state: Kvwebui, key: string): Json | undefined {
 
 export function showProblem(state: Kvwebui, problem: Problem, hint?: string): void {
   state.toasts.show({ text: problemKey(problem), params: problemParams(problem), level: 'error', ...(hint === undefined ? {} : { hint }) });
-}
-
-// Runs a command for the UI: on success, the page's queries and the status items rerun (plan 06 §6.3–§6.4).
-export async function runCommand(state: Kvwebui, name: string, input: Json): Promise<Json> {
-  const output = await state.api.command(name, input);
-  state.revision.value += 1;
-  return output;
 }

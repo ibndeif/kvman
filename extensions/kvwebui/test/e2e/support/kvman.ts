@@ -3,9 +3,10 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { writeDemo } from './demo-extension.ts';
 
 // A real kvman for Chromium (plan 12 §12.1): the CLI from its source, a temporary home and user folder, kvwebui
-// bundled, and the `notes` fixture extension by `path:`. Everything is stopped and removed by `close`.
+// bundled, and the `notes` and `demo` fixture extensions by `path:`. Everything is stopped and removed by `close`.
 
 const mainFile = fileURLToPath(new URL('../../../../../packages/cli/src/main.ts', import.meta.url));
 
@@ -45,7 +46,8 @@ function writeFixture(root: string, language: string): string {
   writeFileSync(path.join(notes, 'package.json'), JSON.stringify(manifest));
   writeFileSync(path.join(notes, 'index.ts'), notesEntry);
   for (const [name, catalog] of Object.entries(catalogs)) writeFileSync(path.join(notes, 'locales', `${name}.json`), JSON.stringify(catalog));
-  const preset = { name: 'e2e', extensions: { '@kvman/kvwebui': 'bundled', '@test/notes': 'path:./notes' }, settings: { 'kvwebui.home': 'notes.list', 'kernel.language': language } };
+  writeDemo(root);
+  const preset = { name: 'e2e', extensions: { '@kvman/kvwebui': 'bundled', '@test/notes': 'path:./notes', '@test/demo': 'path:./demo' }, settings: { 'kvwebui.home': 'notes.list', 'kernel.language': language } };
   const presetFile = path.join(root, 'e2e.json');
   writeFileSync(presetFile, JSON.stringify(preset));
   return presetFile;

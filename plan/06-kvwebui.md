@@ -79,7 +79,7 @@ An extension contributes UI by registering the public query `<namespace>.ui.get`
 ## 6.4 View trees
 
 - A view is a JSON tree of built-in components. Every text is a translation key, with optional `params`.
-- **References.** Inputs and `params` values may be `{ "$param": name }` (a route param) or `{ "$row": field }` (the current row, in table row actions and list items). There is no expression language.
+- **References.** Inputs, `params` values, and a `custom` view's `props` values may be `{ "$param": name }` (a route param) or `{ "$row": field }` (the current row, in table row actions and list items). There is no expression language (ADR 0009, 82).
 - **Queries and commands.** Data components name a public query, and actions name a command.
 - **Reruns.** After a command succeeds, every query on the page reruns.
 
@@ -96,7 +96,7 @@ An extension contributes UI by registering the public query `<namespace>.ui.get`
 | `form` | `{ command, fixed?: { field: value \| ref }, submit, then? }` |
 | `link` | `{ text, params?, to: { page: '<ns>.<page>', params? } }`: navigation with no command; `params` fill the text, `to.params` fill the route |
 | `button` | `{ text, command, input, confirm?, style?: 'primary' \| 'secondary' \| 'danger', then? }` |
-| `custom` | `{ component: '<namespace>.<name>', props }` |
+| `custom` | `{ component: '<namespace>.<name>', props }`: the namespace is a loaded extension's, and the name is lowercase kebab case (ADR 0009, 82) |
 
 There is no `tabs` component: an extension that wants tabs ships a custom component (ADR 0009, 68).
 
@@ -111,20 +111,23 @@ There is no `tabs` component: an extension that wants tabs ships a custom compon
 - **`then`.** `'rerun'` (the default), `{ navigate: '<ns>.<page>', params? }`, or `{ toast: key, level? }` (level `success` by default). In `then`, `params` values may also be `{ "$output": field }`, a top-level field of the command's output. Effects (§6.5) apply after `then`.
 - **Custom.**
   - It loads `/web/<namespace>/components/<name>.js`, which default-exports a Vue component, and `components/<name>.css` beside it when that exists. The URL carries the extension's `revision` (§2.12), so after a hot reload a page refresh loads the new code.
+  - While the module loads, placeholder rows show. A module that can't be loaded, has no default export, or throws an error it doesn't catch shows an error card with `kvwebui/COMPONENT_FAILED` (`params: { component }`) in its place, and the rest of the page keeps working (ADR 0009, 84).
   - kvwebui provides `vue` through an import map, so extensions build with `vue` as an external. The kvdev scaffold sets this up (§9.2).
-  - **Styling.** kvwebui defines CSS variables for light and dark: `--kv-color-*` (background, surface, text, muted, border, primary, danger, warning, success), `--kv-space-*` (`sm`, `md`, `lg`), and `--kv-radius`. Extensions style with these variables and logical properties; kvwebui's Tailwind classes aren't available to them.
+  - **Styling.** kvwebui defines CSS variables for light and dark: `--kv-color-*` (background, surface, text, muted, border, primary, on-primary, danger, warning, success), `--kv-space-*` (`sm`, `md`, `lg`: 8, 16, and 24 px), `--kv-radius` (12 px), and `--kv-font-mono` (ADR 0009, 85). Extensions style with these variables and logical properties; kvwebui's Tailwind classes aren't available to them.
   - **Types.** `@kvman/sdk/web` types the injected `kvman` object and view trees (§3.2).
-  - The component gets `props` and an injected `kvman` object: `exec`, `execAsync`, `stream(jobId)`, `follow(jobId)`, `navigate`, `toast`, `panel`, `t`, `workspace`, and `View`.
-  - `stream(jobId)` gives the job's stream events (§4.4): `progress` chunks as `{ source, data }`, then `result` or `problem`. What the chunks mean is up to the extensions that send and read them.
-  - `follow(jobId)` reruns the page's queries and applies the job's effects (§6.5) when the job ends.
-  - `navigate(page, params?)`, `toast(text, params?, level?)`, and `panel(id, open)` act at once in the browser, like the effects of the same name.
-  - `View` is a component that renders a view tree with kvwebui's built-in components: `<View :view="{ type: 'markdown', text }" />`. Custom components use it for Markdown, so the sanitized renderer stays the only `v-html`.
+  - The component gets `props` and an injected `kvman` object (`inject('kvman')`): `exec`, `execAsync`, `stream(jobId)`, `follow(jobId)`, `navigate`, `toast`, `panel`, `t`, `workspace`, and `View` (ADR 0009, 83).
+  - `exec(name, input)` and `execAsync(name, input)` return promises that reject with a `ProblemError`, without a toast. `exec` of a command counts as a command the UI ran: the page's queries rerun and its effects apply. A job started with `execAsync` is followed as by `follow`.
+  - `stream(jobId)` is an async iterable of the job's stream events (§4.4): `{ type: 'progress', source, data }`, then one `{ type: 'result', output }` or `{ type: 'problem', problem }`, after which it ends. What the chunks mean is up to the extensions that send and read them. A stream closes when the component that opened it unmounts.
+  - `follow(jobId)` reruns the page's queries and applies the job's effects (§6.5) when the job ends, and resolves then.
+  - `workspace` is a live, read-only ref: `workspace.value` is the tab's `{ id, name, path }`. A workspace switch doesn't remount the page.
+  - `navigate(page, params?)`, `toast(text, params?, level?)` (level `info` by default), and `panel(id, open)` act at once in the browser, like the effects of the same name. A `panel` with an unknown id does nothing; a `navigate` to an unknown page shows the "page not found" card.
+  - `View` is a component that renders a view tree with kvwebui's built-in components: `<View :view="{ type: 'markdown', text }" />`. Custom components use it for Markdown, so the sanitized renderer stays the only `v-html`. `View` checks its tree like a `ui.get` view; an invalid tree shows an error card with `VALIDATION_FAILED` and its issues.
 
 ## 6.5 Effects: extensions controlling the UI
 
 - **Adding effects.** A handler calls `ctx.exec('kvwebui.effect.add', effect)`. kvwebui stores the effect in its global store under the caller's `ctx.job.rootId` (job ids are unique across workspaces).
-- **Applying effects.** When a job the UI started or follows ends (at the sync reply, or at the end of the stream for an async job), kvwebui calls `kvwebui.effect.take { jobId }`. That returns the job's effects, deletes them, and kvwebui applies them in order.
-- **Cleanup.** kvwebui's `kernel.started` handler schedules `kvwebui.effect.clean` hourly with the key `effect-clean` (§2.4). It deletes effects older than 1 hour.
+- **Applying effects.** When a job the UI started or follows ends (at the sync reply, or at the end of the stream for an async job), in success or failure, kvwebui calls `kvwebui.effect.take { jobId }`. That returns the job's effects, deletes them, and kvwebui applies them in order: for a button or form, after `then` or the error toast (ADR 0009, 86).
+- **Cleanup.** kvwebui's `kernel.started` handler schedules `kvwebui.effect.clean` hourly with the key `effect-clean` (§2.4). It deletes effects older than 1 hour. An effect is dated by its root job id's UUIDv7 time, and "now" is the cleaning job id's, so both follow the kernel's clock (ADR 0009, 87).
 
 | Effect | Shape |
 |---|---|

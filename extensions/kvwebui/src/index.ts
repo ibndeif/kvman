@@ -1,7 +1,8 @@
 import { z, type Ctx } from '@kvman/sdk';
+import { registerEffects } from './effects/register-effects.ts';
 
-// kvwebui (plan 06): the web app, served from `dist/web`. The kernel side only declares kvwebui's settings (§6.8);
-// everything else runs in the browser.
+// kvwebui (plan 06): the web app, served from `dist/web`. The kernel side declares kvwebui's settings and keeps the
+// effects extensions add for the UI (§6.5, §6.8); everything else runs in the browser.
 
 // A full page id without params: `<namespace>.<page>` (plan 06 §6.3).
 const pageIdPattern = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
@@ -34,4 +35,5 @@ export default (ctx: Ctx): void => {
     default: 'system',
     scopes: ['global'],
   });
+  registerEffects(ctx);
 };

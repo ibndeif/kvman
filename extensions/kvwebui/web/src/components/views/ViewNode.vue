@@ -6,13 +6,14 @@ import type { View } from '../../contributions/views.ts';
 import { pageLocation } from '../../state/navigation.ts';
 import { useKvwebui } from '../../state/kvwebui.ts';
 import ButtonView from './ButtonView.vue';
+import CustomView from './CustomView.vue';
 import DetailView from './DetailView.vue';
 import FormView from './FormView.vue';
 import ListView from './ListView.vue';
 import MarkdownView from './MarkdownView.vue';
 import TableView from './TableView.vue';
 
-// Renders a view tree with kvwebui's built-in components (plan 06 §6.4). `scope` holds the route params and, inside a
+// Renders a view tree with kvwebui's built-in components and extensions' custom ones (plan 06 §6.4). `scope` holds the route params and, inside a
 // list item or row action, the current row.
 const props = defineProps<{ view: View; scope: Scope }>();
 const state = useKvwebui();
@@ -50,4 +51,5 @@ const headings = { 1: 'text-[26px] font-semibold tracking-tight', 2: 'text-base 
     {{ t(props.view.text, textParams(props.view.params, props.scope)) }}<ChevronRight class="size-4 rtl:-scale-x-100" aria-hidden="true" />
   </RouterLink>
   <ButtonView v-else-if="props.view.type === 'button'" :view="props.view" :scope="props.scope" />
+  <CustomView v-else-if="props.view.type === 'custom'" :view="props.view" :scope="props.scope" />
 </template>

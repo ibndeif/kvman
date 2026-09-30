@@ -1,14 +1,16 @@
 import { kernelQuerySchemas, z, type Json, type Problem, type Workspace } from '@kvman/sdk';
 import ar from '../../../locales/ar.json';
 import en from '../../../locales/en.json';
+import { createFakeJobs, type FakeJob, type FakeJobs } from './fake-jobs.ts';
 
 // A fake HTTP API for component tests: it answers the routes kvwebui calls (plan 04 §4.1) from a table of handlers,
-// records every command and query with its workspace, and keeps settings and workspaces like the kernel does.
+// records every command and query with its workspace and job id, keeps settings and workspaces like the kernel does,
+// serves job streams a test drives, and keeps the effects handlers add (plan 06 §6.5).
 
 export type SettingInfo = z.output<(typeof kernelQuerySchemas)['kernel.settings.list']['output']>[number];
 export type ExtensionInfo = z.output<(typeof kernelQuerySchemas)['kernel.extensions.list']['output']>[number];
-export type Call = { kind: 'commands' | 'queries'; name: string; input: Json; workspaceId: string };
-export type Handler = (input: Json, workspaceId: string) => Json | Promise<Json>;
+export type Call = { kind: 'commands' | 'queries'; name: string; input: Json; workspaceId: string; jobId: string; async: boolean };
+export type Handler = (input: Json, workspaceId: string, job: FakeJob) => Json | Promise<Json>;
 
 /** Thrown by a handler to answer with a Problem. */
 export class Failure extends Error {
@@ -53,17 +55,18 @@ export type FakeApi = {
   catalogs: Record<string, Record<string, string>>;
   languages: string[];
   offline: boolean;
+  jobs: FakeJobs;
   callsTo(name: string): Call[];
 };
 
-const bodySchema = z.object({ input: z.json(), workspaceId: z.string() });
+const bodySchema = z.object({ input: z.json(), workspaceId: z.string(), async: z.boolean().optional() });
 
 function envelope(data: Record<string, Json>): Response {
   return new Response(JSON.stringify({ ok: true, ...data }), { headers: { 'content-type': 'application/json' } });
 }
 
-function failure(problem: Problem): Response {
-  return new Response(JSON.stringify({ ok: false, problem, jobId: '01900000-0000-7000-8000-000000000000' }), { headers: { 'content-type': 'application/json' } });
+function failure(problem: Problem, jobId?: string): Response {
+  return new Response(JSON.stringify({ ok: false, problem, ...(jobId === undefined ? {} : { jobId }) }), { headers: { 'content-type': 'application/json' } });
 }
 
 function resolved(api: FakeApi, spec: SettingSpec, workspaceId: string): SettingInfo {
@@ -92,6 +95,7 @@ export function createFakeApi(options: { home?: string; extensions?: ExtensionIn
     },
     languages: ['en', 'ar'],
     offline: false,
+    jobs: createFakeJobs(),
     callsTo: (name) => api.calls.filter((call) => call.name === name),
   };
   installKernelHandlers(api);
@@ -103,20 +107,24 @@ export function createFakeApi(options: { home?: string; extensions?: ExtensionIn
       const catalog = api.catalogs[decodeURIComponent(locale[1] ?? '')];
       return catalog === undefined ? failure({ code: 'NOT_FOUND', message: 'No such language.' }) : envelope({ catalog });
     }
+    const stream = /^\/api\/jobs\/(.+)\/stream$/.exec(path);
+    if (stream !== null) return api.jobs.stream(decodeURIComponent(stream[1] ?? ''), init?.signal ?? undefined) ?? failure({ code: 'NOT_FOUND', message: 'No such job.' });
     const route = /^\/api\/(commands|queries)\/(.+)$/.exec(path);
     const kind = route?.[1] === 'commands' ? 'commands' : 'queries';
     const name = decodeURIComponent(route?.[2] ?? '');
     const body = bodySchema.parse(JSON.parse(String(init?.body)));
-    api.calls.push({ kind, name, input: body.input, workspaceId: body.workspaceId });
+    const job = api.jobs.create();
+    const async = body.async === true;
+    api.calls.push({ kind, name, input: body.input, workspaceId: body.workspaceId, jobId: job.id, async });
     if (!api.workspaces.some((workspace) => workspace.id === body.workspaceId)) return failure({ code: 'NOT_FOUND', message: 'No such workspace.', params: { workspaceId: body.workspaceId } });
     const handler = api.handlers.get(name);
     if (handler === undefined) return failure({ code: 'NOT_FOUND', message: `No ${name}.` });
     return Promise.resolve()
-      .then(() => handler(body.input, body.workspaceId))
+      .then(() => handler(body.input, body.workspaceId, job))
       .then(
-        (output) => envelope({ output, jobId: '01900000-0000-7000-8000-000000000001' }),
+        (output) => envelope(async ? { jobId: job.id } : { output, jobId: job.id }),
         (error: unknown) => {
-          if (error instanceof Failure) return failure(error.problem);
+          if (error instanceof Failure) return failure(error.problem, async ? undefined : job.id);
           throw error;
         },
       );
@@ -150,4 +158,10 @@ function installKernelHandlers(api: FakeApi): void {
     return {};
   });
   api.handlers.set('kernel.secrets.list', () => []);
+  api.handlers.set('kvwebui.effect.take', (input) => {
+    const jobId = z.object({ jobId: z.string() }).parse(input).jobId;
+    const effects = api.jobs.effects.get(jobId) ?? [];
+    api.jobs.effects.delete(jobId);
+    return effects;
+  });
 }

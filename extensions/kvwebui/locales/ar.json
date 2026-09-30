@@ -46,6 +46,7 @@
   "kvwebui.errors.details": "التفاصيل",
   "kvwebui.errors.retry": "أعد المحاولة",
   "kvwebui.errors.HOME_UNAVAILABLE": "الصفحة الرئيسية، {page}، غير متاحة.",
+  "kvwebui.errors.COMPONENT_FAILED": "تعذّر عرض الجزء “{component}”.",
   "kvwebui.errors.OFFLINE": "لم يستجب kvman. هل ما زال يعمل؟",
   "kvwebui.notFound.title": "الصفحة غير موجودة",
   "kvwebui.notFound.help": "لا توجد إضافة محمّلة تحتوي على هذه الصفحة.",

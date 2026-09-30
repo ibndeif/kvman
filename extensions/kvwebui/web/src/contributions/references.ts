@@ -1,10 +1,14 @@
 import type { Json } from '@kvman/sdk';
+import type { InjectionKey, Ref } from 'vue';
 import type { Values } from './views.ts';
 
 // References in view inputs and params (plan 06 §6.3–§6.4): `{ $param: name }` (a route param), `{ $row: field }` (the
 // current row), and `{ $output: field }` (a command's or status query's output). There is no expression language.
 
 export type Scope = { params?: Readonly<Record<string, string>>; row?: Json; output?: Json };
+
+// The scope of the custom component around a `kvman.View`, so its tree resolves the same references.
+export const viewScopeKey: InjectionKey<Readonly<Ref<Scope>>> = Symbol('kvwebui-view-scope');
 
 type Kind = '$param' | '$row' | '$output';
 
