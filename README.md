@@ -31,3 +31,4 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm bench:check
 | Milestone | What works |
 |---|---|
 | M1.1 Monorepo | The pnpm workspace with the empty packages `@kvman/sdk`, `@kvman/kernel`, `kvman` (the CLI), and `@kvman/testkit`; every gate; lint enforces the import walls and the 300-line limit. |
+| M1.2 SDK | `@kvman/sdk`: the `Ctx` types (registrations, typed `exec` through the `Commands`, `Queries`, and `Settings` maps, store, files, settings, secrets, processes, `ctx.log`), `z`, and the zod schemas for manifests, presets, Problems, job and file rows, workspaces, and the HTTP envelope. |

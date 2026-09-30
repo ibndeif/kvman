@@ -19,7 +19,7 @@ The kernel serves the API with Hono (`hono` and `@hono/node-server`) on `127.0.0
 - A query name on the commands route, or a command name on the queries route, fails `NOT_FOUND`.
 - A body over the target's `maxInputBytes` fails `TOO_LARGE`.
 - A sync call whose client disconnects is cancelled (§2.3).
-- **The envelope.** Every JSON answer is `{ ok: true, … }` or `{ ok: false, problem }`, with status 200. A command or query failure also carries its `jobId`: `{ ok: false, problem, jobId }`. The two exceptions: a file download returns raw content, and a body that isn't valid JSON gets 400.
+- **The envelope.** Every JSON answer is `{ ok: true, …data }` or `{ ok: false, problem, jobId? }`, with status 200. A command or query failure also carries its `jobId`: `{ ok: false, problem, jobId }`. The two exceptions: a file download returns raw content, and a body that isn't valid JSON gets 400.
 
 **Static files.**
 - `GET /web/<namespace>/<path>` serves a file from that extension's `kvman.web` folder. A path that leaves the folder, or a missing file, gets 404.

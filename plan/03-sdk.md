@@ -7,6 +7,8 @@ The SDK is the whole API an extension sees. It stays small and developer-friendl
 ```ts
 import { z, type Ctx } from '@kvman/sdk';
 
+const note = z.object({ text: z.string() });
+
 export default (ctx: Ctx) => {
   ctx.registerCommand('notes.add', {
     description: 'Adds a note to this workspace.',
@@ -14,7 +16,7 @@ export default (ctx: Ctx) => {
     output: z.object({ id: z.string() }),
     public: true,
     handle: async (input) => {
-      const note = await ctx.store.collection('notes').insert({ text: input.text });
+      const note = await ctx.store.collection('notes', note).insert({ text: input.text });
       return { id: note.id };
     },
   });
@@ -24,7 +26,7 @@ export default (ctx: Ctx) => {
     input: z.object({ limit: z.number().int().max(1000) }),
     output: z.array(z.object({ id: z.string(), text: z.string() })),
     public: true,
-    handle: (input) => ctx.store.collection('notes').find({}, { limit: input.limit }),
+    handle: (input) => ctx.store.collection('notes', note).find({}, { limit: input.limit }),
   });
 
   ctx.registerSetting('notes.greeting', { description: 'The greeting shown above notes.', schema: z.string(), default: 'Hello' });
@@ -50,7 +52,7 @@ export default (ctx: Ctx) => {
 | `ctx.schedule(name, input, { at: Date, key? } \| { cron: string, key? })` | Schedules a command and resolves to the schedule id. The same `key` again replaces that schedule (§2.4). |
 | `ctx.schedule.cancel(id)` | Deletes a schedule. |
 | `ctx.cancel(jobId)` | Cancels a job (§2.3). |
-| `ctx.problem(code, params?)` | Makes a Problem to throw. `code` is `<namespace>/UPPER_SNAKE`, and it is never retried. |
+| `ctx.problem(code, params?)` | Makes a `ProblemError` to throw (an `Error` carrying `.problem`). `code` is `<namespace>/UPPER_SNAKE`, and it is never retried. |
 
 **Typing calls to other extensions.**
 - The SDK declares empty `interface Commands {}` and `interface Queries {}`, which map each name to `{ input; output }`.
@@ -78,10 +80,10 @@ Every call returns a Promise, except the calls on a transaction's `tx`.
 
 | API | Calls |
 |---|---|
-| `ctx.store`, `ctx.store.global` | `kv.get/set/delete(key)`; `collection(name)` with `insert(doc)` → doc with `id`, `get(id)`, `find(filter, { limit, order?: 'asc' \| 'desc' })`, `count(filter)`, `update(id, patch)` → the document (shallow merge: top-level fields in `patch` replace the document's, and `null` is stored as `null`), `delete(id)`; `transaction((tx) => …)` (§2.5) |
-| `ctx.files` | `write(name, data, type)` → File, `get(id)`, `read(id)` → Buffer, `path(id)`, `unlink(id)` |
-| `ctx.settings` | `get(key)`, `set(key, value, { scope: 'global' \| 'workspace' })` (own keys only) |
-| `ctx.secrets` | `get(name)`, `set(name, value)`, `delete(name)` |
+| `ctx.store`, `ctx.store.global` | `kv.get/set/delete(key)` (`get` → the value or `undefined`); `collection(name, schema)` (ADR 0009, 4) with `insert(doc)` → doc with `id`, `get(id)` → the document or `undefined`, `find(filter, { limit, order?: 'asc' \| 'desc' })`, `count(filter)`, `update(id, patch)` → the document (shallow merge: top-level fields in `patch` replace the document's, and `null` is stored as `null`), `delete(id)`; `transaction((tx) => …)` (§2.5) |
+| `ctx.files` | `write(name, data, type)` (`data`: `Uint8Array` or string) → File, `get(id)`, `read(id)` → Buffer, `path(id)`, `unlink(id)` |
+| `ctx.settings` | `get(key)` (typed through the augmentable `Settings` map, like `Commands`; `unknown` for an undeclared key), `set(key, value, { scope: 'global' \| 'workspace' })` (own keys only) |
+| `ctx.secrets` | `get(name)` → the string or `undefined`, `set(name, value)`, `delete(name)` |
 | `ctx.processes` | `start(name, { command, args?, cwd?, env? })`, `stop(name)`, `list()`, `log(name, { tail? })`: long-lived processes (§2.16) |
 
 ## 3.5 Logging

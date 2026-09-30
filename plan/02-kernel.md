@@ -18,7 +18,7 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 - A name is registered once, as a command or a query, never both.
 - **Sync jobs** (`ctx.exec`, and HTTP calls without `async`) run at once on a worker and leave no row.
 - **Async and scheduled jobs** are rows in SQLite.
-  - A row has the id, command, input, workspace, caller, status, attempts, result or Problem, and times.
+  - A row is a `Job`: `{ id, name, input, workspaceId, caller, status, attempts, retries, output?, problem?, createdAt, startedAt?, endedAt? }`. Times in kernel rows are ISO 8601 strings (ADR 0009, 5).
   - The status is one of `queued`, `running`, `succeeded`, `failed`, or `cancelled`.
   - An attempt cut off by a stop or by kvman dying fails with `INTERRUPTED` and is retried like any failure (§2.3), so an unfinished row runs again after a restart if it has retries left.
 - Rows of finished jobs are deleted after `kernel.jobs.retentionDays` (default 7), at start and then hourly. Queued and running rows are never deleted.
@@ -63,8 +63,9 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 - The kernel owns every table. Extensions never see SQL and have no migrations.
 - **Store API** (§3.4). Every call returns a Promise.
   - `ctx.store.kv` has `get`, `set`, and `delete`.
-  - `ctx.store.collection(name)` holds JSON documents with kernel-assigned ids (UUIDv7), with `insert`, `get`, `find`, `count`, `update`, and `delete`.
-  - `find(filter, { limit, order? })` takes equality filters on top-level fields and a required `limit`, and returns documents by id: `order` is `'asc'` (the default, oldest first) or `'desc'`. `count(filter)` returns the number of matches.
+  - `ctx.store.collection(name, schema)` holds JSON documents with kernel-assigned ids (UUIDv7), with `insert`, `get`, `find`, `count`, `update`, and `delete`. `schema` is the zod schema of a document without its `id`: writes are checked against it, and reads parse through it, so a stored document that no longer fits fails `VALIDATION_FAILED` (ADR 0009, 4).
+  - `kv.get(key)` and `collection.get(id)` return `undefined` when nothing is stored there.
+  - `find(filter, { limit, order? })` takes equality filters on top-level fields (`string`, `number`, `boolean`, or `null` values) and a required `limit`, and returns documents by id: `order` is `'asc'` (the default, oldest first) or `'desc'`. `count(filter)` returns the number of matches.
   - `update` and `delete` of a missing id fail `NOT_FOUND`.
   - A document or a kv value is JSON of at most 16 MiB (`TOO_LARGE`).
 - **Scope.** `ctx.store` is the current job's workspace; `ctx.store.global` is home-wide. Both hold only the calling extension's data.
@@ -82,7 +83,7 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 
 ## 2.7 Files
 
-- Files are content the kernel keeps for extensions and uploads: `files/<id>` in the home, plus a row with the id, name, media type, size, owner (`{ kind: 'user' }` or an extension), workspace, and creation time.
+- Files are content the kernel keeps for extensions and uploads: `files/<id>` in the home, plus a `File` row `{ id, name, type, size, owner, workspaceId, createdAt }`, where `type` is the media type and `owner` is `{ kind: 'user' }` or `{ kind: 'extension', name }`.
 - Extensions use `ctx.files.write(name, data, type)`, `get(id)` (the row), `read(id)` (a Buffer), `path(id)` (the absolute path, for streaming), and `unlink(id)`. The user uploads with `POST /api/files` (§4.1).
 - **Access.**
   - Any extension can read any file of the job's workspace by id.
@@ -139,6 +140,7 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 - With no terminal and no `--yes`, kvman refuses to start.
 
 **Loading.** Extensions load in dependency order. kvman stops with `EXTENSION_INVALID` (§2.14) when:
+- the manifest is invalid: no `main`, no `@kvman/sdk` in `peerDependencies`, or an unknown key in the `kvman` field (ADR 0009, 6);
 - a dependency is missing or out of range (ranges are checked with `semver`);
 - the extension's `@kvman/sdk` peer range doesn't include the kernel's sdk version;
 - dependencies form a cycle (the message prints it, for example `@a/x → @b/y → @a/x`);

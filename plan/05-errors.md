@@ -1,6 +1,6 @@
 # 05 — Errors
 
-Every failure is a Problem: `{ code, message, params? }`.
+Every failure is a Problem: `{ code, message, params? }`, where `params` is a record of JSON values. In code, a Problem is thrown as a `ProblemError`, an `Error` carrying `.problem`.
 
 - Kernel codes are `UPPER_SNAKE`, from the table below.
 - Extension codes are `<namespace>/UPPER_SNAKE`, made with `ctx.problem(code, params)`.
