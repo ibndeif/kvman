@@ -25,5 +25,6 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `adr/0006-kvdev-testkit-presets.md` | kvdev, the testkit, and the presets |
 | `adr/0007-milestones-and-testing.md` | Milestones, benchmarks, crash and UI testing, changesets |
 | `adr/0008-plan-review.md` | The full review before M1.1: running locally, platforms, and the fixes it made |
+| `adr/0009-implementation.md` | Questions answered while building, milestone by milestone |
 
 The plan is complete. Implementation starts with M1.1.

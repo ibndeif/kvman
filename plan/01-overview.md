@@ -40,7 +40,7 @@ The default is `~/.kvman`; `--home <dir>` or `KVMAN_HOME` overrides it.
 
 ## 1.4 Packages
 
-A pnpm monorepo, Node 24, TypeScript strict. There is no CI in this phase: the gates run locally, on the developer's OS.
+A pnpm monorepo, Node 24, TypeScript 6.0 strict (ADR 0009). The tools are ESLint with typescript-eslint, Vitest, and Changesets. There is no CI in this phase: the gates run locally, on the developer's OS.
 
 | Package | Is | May import |
 |---|---|---|

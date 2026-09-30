@@ -1,0 +1,1 @@
+{ "name": "@kvman/kernel", "dependencies": { "@kvman/sdk": "workspace:*", "better-sqlite3": "13.0.3" }, "exports": { ".": "./src/index.ts" } }

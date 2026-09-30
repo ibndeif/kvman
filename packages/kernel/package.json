@@ -1,0 +1,20 @@
+{
+  "name": "@kvman/kernel",
+  "version": "0.0.0",
+  "description": "The kvman kernel: jobs, workers, storage, extensions, and HTTP.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "@kvman/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}

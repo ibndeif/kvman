@@ -1,0 +1,1 @@
+{ "name": "@kvman/other", "exports": { ".": "./src/index.ts", "./helper": "./src/helper.ts" }, "kvman": { "namespace": "other" } }

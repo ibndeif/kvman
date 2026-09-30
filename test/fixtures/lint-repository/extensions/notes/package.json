@@ -1,0 +1,1 @@
+{ "name": "@kvman/notes", "main": "dist/index.js", "dependencies": { "marked": "16.0.0" }, "devDependencies": { "@kvman/tasks": "workspace:*", "fast-check": "4.10.2" }, "peerDependencies": { "@kvman/sdk": "^1.0.0" }, "kvman": { "namespace": "notes", "dependencies": { "@kvman/tasks": "^1.0.0" } } }

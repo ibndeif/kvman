@@ -1,0 +1,1 @@
+{ "name": "@kvman/testkit", "dependencies": { "@kvman/kernel": "workspace:*", "@kvman/sdk": "workspace:*" }, "exports": { ".": "./src/index.ts" } }

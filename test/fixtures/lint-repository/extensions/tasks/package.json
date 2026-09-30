@@ -1,0 +1,1 @@
+{ "name": "@kvman/tasks", "main": "dist/index.js", "exports": { ".": { "@kvman/source": "./src/index.ts", "default": "./dist/index.js" }, "./connector": { "@kvman/source": "./src/connector.ts", "types": "./dist/connector.d.ts", "default": "./dist/connector.js" } }, "kvman": { "namespace": "tasks" } }
