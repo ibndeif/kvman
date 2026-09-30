@@ -1,4 +1,4 @@
-import { jsonSchema, type Json } from '@kvman/sdk';
+import { jsonSchema, type Json, type ProblemError } from '@kvman/sdk';
 import type { z } from '@kvman/sdk';
 import { documentLimitBytes } from '../limits.ts';
 import { kernelProblem } from '../problems.ts';
@@ -13,7 +13,7 @@ export function storedText(value: unknown, what: string): string {
   return text;
 }
 
-export function validationFailed(what: string, error: z.ZodError): Error {
+export function validationFailed(what: string, error: z.ZodError): ProblemError {
   const issues = error.issues.map((issue) => ({ path: issue.path.map(String).join('.'), message: issue.message }));
   return kernelProblem('VALIDATION_FAILED', `${what} is invalid.`, { issues });
 }

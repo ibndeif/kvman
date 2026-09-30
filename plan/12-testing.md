@@ -6,7 +6,7 @@
 |---|---|---|
 | Unit | vitest | pure modules (validation, argument parsing, prompt building, truncation) |
 | Kernel integration | vitest + `@kvman/testkit` | jobs, workers, storage, schedules, extensions, the `kernel.*` API |
-| HTTP | vitest + a real kvman child process | routes, the envelope, SSE, files, static files, Host/Origin |
+| HTTP | vitest + a real kvman child process | routes, the envelope, SSE, files, static files, Host/Origin (from M1.8, with the CLI; ADR 0009, 35) |
 | Crash | vitest + a real kvman child process | SIGKILL and restart invariants (§12.2) |
 | Components | vitest + `@vue/test-utils` (`happy-dom`) | kvwebui components and view rendering |
 | End to end | Playwright (Chromium) + a real kvman + the fake OpenAI server | kvcoder's conversation streaming, questions, subagents, right-to-left |

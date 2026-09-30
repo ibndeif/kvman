@@ -141,6 +141,7 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
   - Locales.
   - Static `kvman.web` folders, and `/` with the `index.html` fallback.
   - The HTTP benchmark.
+  - Unit tests of the pure parts; the route scenarios are written now and tested in M1.8, through the CLI (ADR 0009, 35).
 - **Done when:**
   - Every route answers as §4 says.
   - A foreign Host or Origin gets `FORBIDDEN_ORIGIN`.
@@ -163,7 +164,8 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
   - the trust prompt (`--yes`, and refusing without a terminal);
   - the port (`PORT_IN_USE`);
   - the start order and the Ctrl+C sequence (a second Ctrl+C stops at once);
-  - Pino logs to `logs/kvman.log`, with the short terminal log.
+  - Pino logs to `logs/kvman.log`, with the short terminal log;
+  - the HTTP route tests that M1.7 wrote (`milestones/M1.7-TEST-CASES.md`), run against the CLI (ADR 0009, 35).
 - **Done when:**
   - `kvman --preset <file>` started in a folder prints (and, without `--no-open`, opens) the URL of that folder's workspace.
   - A second kvman on the same home hands over its folder and exits 0; with a different preset it fails `KVMAN_RUNNING`.
@@ -175,6 +177,7 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
   - Ctrl+C fails unfinished attempts with `INTERRUPTED`, keeping jobs with retries left queued.
   - Logs contain no payloads, and `--log-level` filters them.
   - Crash invariants 1, 2, 4, and 6 hold (§12.2).
+  - Every M1.7 route scenario passes against a real kvman child process.
 
 ## M2 — Extensions
 

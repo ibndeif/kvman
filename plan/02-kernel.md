@@ -236,7 +236,7 @@ Going over a limit fails loudly and never cuts anything off.
 3. Read and validate the preset.
 4. Install missing npm extensions.
 5. Ask for trust.
-6. Start the workers, which load the extensions (`EXTENSION_INVALID`). In `web` mode, an extension whose namespace is `kernel.web.home` must declare `kvman.web` (`EXTENSION_INVALID` otherwise).
+6. Start the workers, which load the extensions (`EXTENSION_INVALID`). In `web` mode, the extension whose namespace is `kernel.web.home` must exist and declare `kvman.web` (`EXTENSION_INVALID` otherwise), checked where kvman starts HTTP (ADR 0009, 41).
 7. Check the preset's settings against the registered keys, including required keys (`VALIDATION_FAILED`, §2.8).
 8. Delete expired job rows. Attempts that were running when kvman last stopped or died fail with `INTERRUPTED` (§2.3). Then resume queued jobs and due schedules of open workspaces.
 9. Open the start folder as a workspace (§1.2).

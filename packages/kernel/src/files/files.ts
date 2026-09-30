@@ -1,4 +1,5 @@
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import { mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileSchema, type File } from '@kvman/sdk';
 import { isoTime, type Clock } from '../clock.ts';
@@ -14,6 +15,8 @@ export type FileOwner = File['owner'];
 
 export type NewFile = { name: string; data: Uint8Array | string; type: string; owner: FileOwner; workspaceId: string };
 
+export type AdoptedFile = Omit<NewFile, 'data'>;
+
 export type Files = {
   write(file: NewFile): File;
   get(id: string): File;
@@ -21,6 +24,10 @@ export type Files = {
   read(id: string): Buffer;
   path(id: string): string;
   unlink(id: string): void;
+  // A new temporary path in the files folder, for content streamed in (an upload), then `adopt`ed or removed.
+  temporaryPath(): string;
+  // Makes the content at a temporary path a file, moving it to `files/<id>`.
+  adopt(file: AdoptedFile, from: string): File;
 };
 
 type FileRow = { id: string; name: string; type: string; size: number; owner: string; workspace_id: string; created_at: string };
@@ -43,24 +50,39 @@ export function createFiles({ connection, home, ids, clock }: FilesOptions): Fil
     if (row === undefined) throw kernelProblem('NOT_FOUND', `There is no file ${id}.`, { id });
     return fileOfRow(row);
   };
+  const rowOf = ({ name, type, owner, workspaceId }: AdoptedFile, size: number): File => {
+    if (size > fileLimitBytes) throw kernelProblem('TOO_LARGE', `A file is over the limit of ${fileLimitBytes} bytes.`, { limit: fileLimitBytes });
+    const parsed = fileSchema.safeParse({ id: ids(), name, type, size, owner, workspaceId, createdAt: isoTime(clock) });
+    if (!parsed.success) throw validationFailed('The file', parsed.error);
+    return parsed.data;
+  };
+  // The content is in place at `files/<id>`; the row makes it a file, or the content goes.
+  const insert = (file: File): File => {
+    try {
+      connection
+        .prepare('INSERT INTO files (id, name, type, size, owner, workspace_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+        .run(file.id, file.name, file.type, file.size, JSON.stringify(file.owner), file.workspaceId, file.createdAt);
+    } catch (error) {
+      rmSync(contentPath(file.id), { force: true });
+      throw error;
+    }
+    return file;
+  };
   return {
-    write({ name, data, type, owner, workspaceId }) {
-      const size = sizeOf(data);
-      if (size > fileLimitBytes) throw kernelProblem('TOO_LARGE', `A file is over the limit of ${fileLimitBytes} bytes.`, { limit: fileLimitBytes });
-      const parsed = fileSchema.safeParse({ id: ids(), name, type, size, owner, workspaceId, createdAt: isoTime(clock) });
-      if (!parsed.success) throw validationFailed('The file', parsed.error);
-      const file = parsed.data;
+    write({ data, ...meta }) {
+      const file = rowOf(meta, sizeOf(data));
       mkdirSync(folder, { recursive: true });
       writeFileSync(contentPath(file.id), data, { flag: 'wx' });
-      try {
-        connection
-          .prepare('INSERT INTO files (id, name, type, size, owner, workspace_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
-          .run(file.id, file.name, file.type, file.size, JSON.stringify(file.owner), file.workspaceId, file.createdAt);
-      } catch (error) {
-        rmSync(contentPath(file.id), { force: true });
-        throw error;
-      }
-      return file;
+      return insert(file);
+    },
+    temporaryPath() {
+      mkdirSync(folder, { recursive: true });
+      return path.join(folder, `.upload-${randomUUID()}`);
+    },
+    adopt(meta, from) {
+      const file = rowOf(meta, statSync(from).size);
+      renameSync(from, contentPath(file.id));
+      return insert(file);
     },
     get,
     list: (workspaceId, limit) =>

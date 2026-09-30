@@ -99,7 +99,7 @@ async function load(): Promise<void> {
       return;
     }
   }
-  const jobs = [...registry.jobs.values()].map((job) => ({ name: job.name, kind: job.kind, owner: job.owner, public: job.public, retries: job.retries, syncOnly: job.syncOnly }));
+  const jobs = [...registry.jobs.values()].map((job) => ({ name: job.name, kind: job.kind, owner: job.owner, public: job.public, retries: job.retries, syncOnly: job.syncOnly, maxInputBytes: job.maxInputBytes }));
   send({ kind: 'ready', summary: { jobs, handlers: handlerSummaries(registry) } });
 }
 

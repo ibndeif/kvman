@@ -175,6 +175,21 @@ export async function startPool(options: PoolOptions): Promise<WorkerPool> {
     throw error;
   }
 
+  // A job still waiting for a slot never starts: it ends CANCELLED (or INTERRUPTED at shutdown), and a sync one
+  // reports its end for the kernel's handler points, as its worker would have.
+  const cancelQueued = (index: number, why: AbortReason): void => {
+    const [queued] = queue.splice(index, 1);
+    if (queued === undefined) return;
+    const problem = why === 'cancel' ? kernelProblem('CANCELLED', 'The job was cancelled.') : kernelProblem('INTERRUPTED', 'kvman stopped during the attempt.');
+    const { job } = queued;
+    if (!job.async && !job.fromHandler && why === 'cancel') {
+      const input = { jobId: job.id, rootId: job.id, name: job.name, caller: job.caller, workspaceId: job.workspace.id, reason: 'cancel' };
+      options.events.syncEnded({ point: 'kernel.job.cancelled', input, workspaceId: job.workspace.id });
+    }
+    queued.pending.reject(problem);
+    checkIdle();
+  };
+
   const locate = (jobId: string): { worker: PoolWorker; requestId: number } | undefined => {
     for (const worker of workers) {
       for (const [requestId, pending] of worker.running) if (pending.jobId === jobId) return { worker, requestId };
@@ -190,6 +205,11 @@ export async function startPool(options: PoolOptions): Promise<WorkerPool> {
         drain();
       }),
     abort: (jobId, why) => {
+      const waiting = queue.findIndex((queued) => queued.job.id === jobId);
+      if (waiting >= 0) {
+        cancelQueued(waiting, why);
+        return true;
+      }
       const found = locate(jobId);
       if (found === undefined) return false;
       found.worker.thread.postMessage({ kind: 'abort', requestId: found.requestId, reason: why });

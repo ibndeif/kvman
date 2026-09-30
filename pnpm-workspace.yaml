@@ -3,3 +3,5 @@ packages:
   - extensions/*
 allowBuilds:
   better-sqlite3: true
+minimumReleaseAgeExclude:
+  - hono@4.13.12

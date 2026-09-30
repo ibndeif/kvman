@@ -95,7 +95,7 @@ export const toWorkerSchema = z.discriminatedUnion('kind', [
 export type ToWorker = z.infer<typeof toWorkerSchema>;
 
 const summarySchema = z.object({
-  jobs: z.array(z.object({ name: z.string(), kind: z.enum(['command', 'query']), owner: z.string(), public: z.boolean(), retries: z.number().int(), syncOnly: z.boolean() })),
+  jobs: z.array(z.object({ name: z.string(), kind: z.enum(['command', 'query']), owner: z.string(), public: z.boolean(), retries: z.number().int(), syncOnly: z.boolean(), maxInputBytes: z.number().int() })),
   handlers: z.array(z.object({ point: z.string(), extension: z.string(), retries: z.number().int() })),
 });
 

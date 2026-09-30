@@ -9,6 +9,8 @@ import { createProgressHub, type ProgressChunk } from './jobs/progress-hub.ts';
 import { answerWorker, queuableCommand } from './kernel-requests.ts';
 import { runStartedHandlers, stopRun } from './kernel-lifecycle.ts';
 import { kernelVersion } from './kernel-version.ts';
+import { createKernelWeb, type KernelWeb } from './kernel-web.ts';
+import { createFiles } from './files/files.ts';
 import { kernelCatalogOwner, readOwnerCatalogs, type Catalog } from './localization/catalogs.ts';
 import { openLogFile } from './logging/log-file.ts';
 import type { KernelLogger, LogLevel } from './logging/logger.ts';
@@ -40,7 +42,8 @@ export type KernelOptions = {
   clock?: Clock;
 };
 
-export type ExecOptions = { caller: Caller; workspaceId: string };
+// `jobId` gives a sync call the id its caller already knows, as HTTP does to cancel it (plan 04).
+export type ExecOptions = { caller: Caller; workspaceId: string; jobId?: string };
 
 export type Kernel = {
   exec(name: string, input: unknown, options: ExecOptions): Promise<unknown>;
@@ -49,6 +52,7 @@ export type Kernel = {
   waitForJob(jobId: string): Promise<Job>;
   watchProgress(jobId: string, listener: (chunk: ProgressChunk) => void): () => void;
   catalog(language: string): Catalog;
+  web: KernelWeb;
   settled(): Promise<void>;
   close(): Promise<void>;
 };
@@ -60,7 +64,7 @@ function kernelSettings(connection: Connection, presetSettings: Record<string, J
   const definitions = new Map(kernelSettingDefinitions(languages).map((definition) => [definition.key, definition]));
   const settings = createSettings({ connection, definitions, presetValues: presetSettings, logger });
   const number = (key: string): number => z.number().parse(settings.resolve(key, homeWorkspaceId).value);
-  return { workers: number('kernel.workers'), concurrency: number('kernel.workerConcurrency'), retentionDays: number('kernel.jobs.retentionDays') };
+  return { settings, workers: number('kernel.workers'), concurrency: number('kernel.workerConcurrency'), retentionDays: number('kernel.jobs.retentionDays') };
 }
 
 export async function startKernel(options: KernelOptions): Promise<Kernel> {
@@ -135,8 +139,8 @@ export async function startKernel(options: KernelOptions): Promise<Kernel> {
     watcher = watchExtensions(run.folders(), logger, (changed) => reloadExtensions(run, dispatcher, logger, changed, stopping.signal));
     const activeWatcher = watcher;
     return {
-      exec: async (name, input, { caller, workspaceId }) =>
-        run.pool().run({ id: ids(), name, input, workspace: workspace(workspaceId), caller, async: false, fromHandler: false }),
+      exec: async (name, input, { caller, workspaceId, jobId }) =>
+        run.pool().run({ id: jobId ?? ids(), name, input, workspace: workspace(workspaceId), caller, async: false, fromHandler: false }),
       execAsync: async (name, input, { caller, workspaceId }) => {
         const { retries } = queuableCommand(run.pool().summary, name, caller);
         workspace(workspaceId);
@@ -146,6 +150,7 @@ export async function startKernel(options: KernelOptions): Promise<Kernel> {
       waitForJob: (jobId) => dispatcher.waitForJob(jobId),
       watchProgress: (jobId, listener) => hub.watch(jobId, listener),
       catalog: (language) => run.catalogs().catalog(language),
+      web: createKernelWeb({ connection, run, files: createFiles({ connection, home: options.home, ids, clock }), settings: settings.settings, ids, workspace, logger }),
       settled: () => dispatcher.settled(),
       close: async () => {
         stopping.abort();
