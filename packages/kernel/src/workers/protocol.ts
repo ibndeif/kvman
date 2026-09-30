@@ -1,4 +1,4 @@
-import { callerSchema, jsonSchema, problemSchema, workspaceSchema, z } from '@kvman/sdk';
+import { callerSchema, extensionSourceSchema, jsonSchema, problemSchema, workspaceSchema, z } from '@kvman/sdk';
 
 // The messages between the main thread and a worker, checked on arrival like any other boundary.
 
@@ -36,14 +36,29 @@ const workerRequestSchema = z.discriminatedUnion('kind', [
   }),
   z.object({ kind: z.literal('cancel-schedule'), id: z.string(), owner: z.string() }),
   z.object({ kind: z.literal('cancel-job'), jobId: z.string() }),
+  z.object({ kind: z.literal('open-workspace'), path: z.string() }),
+  z.object({ kind: z.literal('close-workspace'), workspaceId: z.string() }),
+  z.object({ kind: z.literal('health') }),
+  z.object({
+    kind: z.literal('start-process'),
+    extension: z.string(),
+    workspace: workspaceSchema,
+    name: z.string(),
+    options: z.object({ command: z.string(), args: z.array(z.string()), cwd: z.string().optional(), env: z.record(z.string(), z.string()) }),
+  }),
+  z.object({ kind: z.literal('stop-process'), extension: z.string(), workspaceId: z.string(), name: z.string() }),
 ]);
 
 export type WorkerRequest = z.infer<typeof workerRequestSchema>;
 
 export const workerSetupSchema = z.object({
   home: z.string(),
+  homeFolder: z.string(),
   database: z.string(),
-  extensions: z.array(z.object({ name: z.string(), namespace: z.string(), entryUrl: z.string() })),
+  extensions: z.array(
+    z.object({ name: z.string(), namespace: z.string(), entryUrl: z.string(), version: z.string(), source: extensionSourceSchema, revision: z.number().int() }),
+  ),
+  languages: z.array(z.string()),
   presetSettings: z.record(z.string(), jsonSchema),
   logLevel: z.enum(['debug', 'info', 'warn', 'error']),
   checkPresetSettings: z.boolean(),
@@ -80,7 +95,7 @@ export const toWorkerSchema = z.discriminatedUnion('kind', [
 export type ToWorker = z.infer<typeof toWorkerSchema>;
 
 const summarySchema = z.object({
-  jobs: z.array(z.object({ name: z.string(), kind: z.enum(['command', 'query']), owner: z.string(), public: z.boolean(), retries: z.number().int() })),
+  jobs: z.array(z.object({ name: z.string(), kind: z.enum(['command', 'query']), owner: z.string(), public: z.boolean(), retries: z.number().int(), syncOnly: z.boolean() })),
   handlers: z.array(z.object({ point: z.string(), extension: z.string(), retries: z.number().int() })),
 });
 

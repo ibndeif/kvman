@@ -22,6 +22,7 @@ export const handlerPoints = Object.keys(pointInputSchemas);
 export type HandlerEntry = {
   point: string;
   owner: string;
+  description: string;
   retries: number;
   timeoutMs: number;
   start: (input: unknown) => StartedJob;
@@ -54,6 +55,7 @@ export function registerHandler<Point extends HandlerPoint>(registry: Registry, 
   registry.handlers.push({
     point,
     owner: owner.name,
+    description: parsed.data.description,
     retries: registration.retries ?? 3,
     timeoutMs: registration.timeoutMs ?? 600_000,
     start: (input) => {

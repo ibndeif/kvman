@@ -1,7 +1,9 @@
-import { jobSchema, type Caller, type Job, type Problem } from '@kvman/sdk';
+import { jobSchema, type Caller, type Job, type JobStatus, type Problem } from '@kvman/sdk';
 import type { Clock } from '../clock.ts';
 import type { IdGenerator } from '../ids.ts';
 import type { Connection } from '../storage/database.ts';
+import { kernelProblem } from '../problems.ts';
+import { outsideClosed, type ClosedWorkspaces } from '../workspaces/workspaces.ts';
 
 // The rows of async and scheduled jobs (plan 02 §2.1), written only by the main thread (ADR 0009, 19).
 
@@ -70,6 +72,22 @@ export function jobOfRow(row: Row): Job {
   });
 }
 
+// A job of any workspace, by id (ADR 0009, 24); an unknown id fails NOT_FOUND.
+export function readJob(connection: Connection, id: string): Job {
+  const row = connection.prepare<[string], Row>('SELECT * FROM jobs WHERE id = ?').get(id);
+  if (row === undefined) throw kernelProblem('NOT_FOUND', `There is no job ${id}.`, { jobId: id });
+  return jobOfRow(row);
+}
+
+// A workspace's jobs, newest first, optionally of one status.
+export function listJobs(connection: Connection, workspaceId: string, status: JobStatus | undefined, limit: number): Job[] {
+  const rows =
+    status === undefined
+      ? connection.prepare<[string, number], Row>('SELECT * FROM jobs WHERE workspace_id = ? ORDER BY id DESC LIMIT ?').all(workspaceId, limit)
+      : connection.prepare<[string, string, number], Row>('SELECT * FROM jobs WHERE workspace_id = ? AND status = ? ORDER BY id DESC LIMIT ?').all(workspaceId, status, limit);
+  return rows.map(jobOfRow);
+}
+
 function claimedOfRow(row: Row): ClaimedJob {
   const job = jobOfRow(row);
   return {
@@ -87,7 +105,7 @@ function claimedOfRow(row: Row): ClaimedJob {
 
 export type JobRows = ReturnType<typeof createJobRows>;
 
-export function createJobRows(connection: Connection, clock: Clock, ids: IdGenerator) {
+export function createJobRows(connection: Connection, clock: Clock, ids: IdGenerator, closedWorkspaces: ClosedWorkspaces) {
   const byId = (id: string): Row | undefined => connection.prepare<[string], Row>('SELECT * FROM jobs WHERE id = ?').get(id);
   const end = (id: string, status: 'succeeded' | 'failed' | 'cancelled', output: unknown, problem: Problem | undefined): void => {
     connection
@@ -105,15 +123,16 @@ export function createJobRows(connection: Connection, clock: Clock, ids: IdGener
         .run(id, job.name, JSON.stringify(job.input), job.workspaceId, JSON.stringify(job.caller), job.retries, iso(clock.now()), iso(job.runAt), job.fromHandler ? 1 : 0, job.handlerExtension ?? null);
       return id;
     },
-    // Due queued jobs, first-in, first-out; while kvman stops, only the handlers of one point start.
+    // Due queued jobs of open workspaces, first-in, first-out; while kvman stops, only the handlers of one point start.
     claimDue(limit: number, onlyPoint: string | undefined): ClaimedJob[] {
       const now = iso(clock.now());
+      const closed = closedWorkspaces();
       const rows =
         onlyPoint === undefined
-          ? connection.prepare<[string, number], Row>("SELECT * FROM jobs WHERE status = 'queued' AND run_at <= ? ORDER BY id LIMIT ?").all(now, limit)
+          ? connection.prepare<unknown[], Row>(`SELECT * FROM jobs WHERE status = 'queued' AND run_at <= ?${outsideClosed('AND', closed)} ORDER BY id LIMIT ?`).all(now, ...closed, limit)
           : connection
-              .prepare<[string, string, number], Row>("SELECT * FROM jobs WHERE status = 'queued' AND run_at <= ? AND name = ? AND handler_extension IS NOT NULL ORDER BY id LIMIT ?")
-              .all(now, onlyPoint, limit);
+              .prepare<unknown[], Row>(`SELECT * FROM jobs WHERE status = 'queued' AND run_at <= ? AND name = ? AND handler_extension IS NOT NULL${outsideClosed('AND', closed)} ORDER BY id LIMIT ?`)
+              .all(now, onlyPoint, ...closed, limit);
       const start = connection.prepare("UPDATE jobs SET status = 'running', attempts = attempts + 1, started_at = ? WHERE id = ?");
       connection.transaction(() => {
         for (const row of rows) start.run(now, row.id);
@@ -138,7 +157,8 @@ export function createJobRows(connection: Connection, clock: Clock, ids: IdGener
       connection.prepare<[string], Row>("SELECT * FROM jobs WHERE status = 'queued' AND name = ? AND handler_extension IS NOT NULL ORDER BY id").all(point).map(claimedOfRow),
     running: (): ClaimedJob[] => connection.prepare<[], Row>("SELECT * FROM jobs WHERE status = 'running' ORDER BY id").all().map(claimedOfRow),
     earliestRunAt(): number | undefined {
-      const row = connection.prepare<[], { run_at: string | null }>("SELECT min(run_at) AS run_at FROM jobs WHERE status = 'queued'").get();
+      const closed = closedWorkspaces();
+      const row = connection.prepare<unknown[], { run_at: string | null }>(`SELECT min(run_at) AS run_at FROM jobs WHERE status = 'queued'${outsideClosed('AND', closed)}`).get(...closed);
       return row?.run_at === null || row === undefined ? undefined : Date.parse(row.run_at);
     },
     deleteFinishedBefore(time: number): number {

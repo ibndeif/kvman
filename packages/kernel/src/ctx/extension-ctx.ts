@@ -1,4 +1,5 @@
-import { jsonSchema, problemCodeSchema, ProblemError, type Ctx, type CurrentJob, type Json, type SettingsAccess, type SettingValueOf } from '@kvman/sdk';
+import { jsonSchema, problemCodeSchema, ProblemError, type Ctx, type CurrentJob, type Json } from '@kvman/sdk';
+import type { Files } from '../files/files.ts';
 import type { KernelLogger, LogFields } from '../logging/logger.ts';
 import { kernelProblem } from '../problems.ts';
 import type { SecretsFile } from '../secrets/secrets-file.ts';
@@ -10,15 +11,17 @@ import { registerJob, registerSetting, type Owner } from '../jobs/registry.ts';
 import { registerHandler } from '../jobs/handlers.ts';
 import { progressLimitBytes } from '../limits.ts';
 import type { WorkerRequest } from '../workers/protocol.ts';
+import { filesCalls } from './files-calls.ts';
 import { jobCalls, type JobCallServices } from './job-calls.ts';
+import { processesCalls } from './processes-calls.ts';
+import { settingsCalls } from './settings-calls.ts';
 
-// The `ctx` an extension's entry receives in a worker (plan 03). It grows milestone by milestone until it is the whole
-// `Ctx`; the calls not built yet are left out of its type rather than stubbed.
-
-export type ExtensionCtx = Omit<Ctx, 'files' | 'processes' | 'settings'> & { settings: Pick<SettingsAccess, 'get'> };
+// The `ctx` an extension's entry receives in a worker (plan 03).
 
 export type WorkerServices = JobCallServices & {
+  home: string;
   connection: Connection;
+  files: Files;
   logger: KernelLogger;
   settings: Settings;
   secrets: SecretsFile;
@@ -70,7 +73,7 @@ function secretsOf(owner: Owner, services: WorkerServices): Ctx['secrets'] {
   };
 }
 
-export function createExtensionCtx(owner: Owner, services: WorkerServices): ExtensionCtx {
+export function createExtensionCtx(owner: Owner, services: WorkerServices): Ctx {
   const registry = services.environment.registry;
   return {
     registerCommand: (name, registration) => registerJob(registry, owner, 'command', name, registration),
@@ -87,11 +90,10 @@ export function createExtensionCtx(owner: Owner, services: WorkerServices): Exte
       const job = requireJob('ctx.store');
       return createStore(services.connection, { extension: owner.name, workspaceId: job.workspace.id }, services.ids, () => requireWritable(job, 'A store write'));
     },
-    settings: {
-      // The kernel checked the value against the key's schema; the declared type is the key owner's promise.
-      get: async <Key extends string>(key: Key) => services.settings.resolve(key, requireJob('ctx.settings.get').workspace.id).value as SettingValueOf<Key>,
-    },
+    files: filesCalls(owner, services.files),
+    settings: settingsCalls(owner, registry, services.settings),
     secrets: secretsOf(owner, services),
+    processes: processesCalls(owner, services),
     log: logWith(services.logger, owner),
   };
 }

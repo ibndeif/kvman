@@ -84,6 +84,20 @@ CREATE TABLE IF NOT EXISTS workspaces (
   open INTEGER NOT NULL
 ) WITHOUT ROWID;
 
+CREATE TABLE IF NOT EXISTS processes (
+  extension TEXT NOT NULL,
+  workspace_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  pid INTEGER NOT NULL,
+  started_at TEXT NOT NULL,
+  PRIMARY KEY (extension, workspace_id, name)
+) WITHOUT ROWID;
+
+CREATE TABLE IF NOT EXISTS kernel_state (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+) WITHOUT ROWID;
+
 CREATE TABLE IF NOT EXISTS accepted_extensions (
   name TEXT NOT NULL,
   version TEXT NOT NULL,

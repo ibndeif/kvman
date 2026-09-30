@@ -26,6 +26,8 @@ export type Registration = {
   retries: number;
   maxInputBytes: number;
   maxOutputBytes: number;
+  // Runs only as a sync call: queueing or scheduling it fails VALIDATION_FAILED (`kernel.secrets.set`, plan 02 §2.8).
+  syncOnly: boolean;
 };
 
 export type Owner = { name: string; namespace: string };
@@ -80,6 +82,7 @@ export function registerJob<Input extends z.ZodType, Output extends z.ZodType>(
   kind: JobKind,
   name: string,
   options: CommandRegistration<Input, Output> | QueryRegistration<Input, Output>,
+  syncOnly = false,
 ): void {
   checkName(registry, owner, name, registry.jobs.has(name));
   const parsed = optionsSchema.safeParse(options);
@@ -101,6 +104,7 @@ export function registerJob<Input extends z.ZodType, Output extends z.ZodType>(
     retries: kind === 'command' ? (retries ?? defaultRetries) : 0,
     maxInputBytes: options.maxInputBytes ?? defaultBytes,
     maxOutputBytes: options.maxOutputBytes ?? defaultBytes,
+    syncOnly,
   });
 }
 

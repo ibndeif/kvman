@@ -4,6 +4,7 @@ import type { IdGenerator } from '../ids.ts';
 import type { NewJob } from '../jobs/job-rows.ts';
 import { kernelProblem } from '../problems.ts';
 import type { Connection } from '../storage/database.ts';
+import { outsideClosed, type ClosedWorkspaces } from '../workspaces/workspaces.ts';
 
 // Schedules (plan 02 §2.4): rows with the next run time, which croner computes for a cron. A key names a schedule per
 // extension and workspace, so scheduling again with it replaces the schedule and keeps its id.
@@ -52,7 +53,7 @@ function firstRun(timing: NewSchedule['timing'], now: number): number {
 
 export type ScheduleRows = ReturnType<typeof createScheduleRows>;
 
-export function createScheduleRows(connection: Connection, clock: Clock, ids: IdGenerator) {
+export function createScheduleRows(connection: Connection, clock: Clock, ids: IdGenerator, closedWorkspaces: ClosedWorkspaces) {
   return {
     upsert(schedule: NewSchedule): string {
       const nextRun = iso(firstRun(schedule.timing, clock.now()));
@@ -78,11 +79,12 @@ export function createScheduleRows(connection: Connection, clock: Clock, ids: Id
       const removed = connection.prepare('DELETE FROM schedules WHERE id = ? AND owner = ?').run(id, owner).changes;
       if (removed === 0) throw kernelProblem('NOT_FOUND', `There is no schedule ${id}.`, { id });
     },
-    // Queues the job of every schedule that is due, once, and moves each to its next run; a one-time schedule is
+    // Queues the job of every due schedule of an open workspace, once, and moves each to its next run; a one-time schedule is
     // deleted. Missed repeats are not replayed.
     queueDue(insert: (job: NewJob) => string): void {
       const now = clock.now();
-      const due = connection.prepare<[string], Row>('SELECT * FROM schedules WHERE next_run <= ? ORDER BY next_run, id').all(iso(now));
+      const closed = closedWorkspaces();
+      const due = connection.prepare<unknown[], Row>(`SELECT * FROM schedules WHERE next_run <= ?${outsideClosed('AND', closed)} ORDER BY next_run, id`).all(iso(now), ...closed);
       for (const row of due) {
         const input: unknown = JSON.parse(row.input);
         insert({ name: row.name, input, workspaceId: row.workspace_id, caller: { kind: 'extension', name: row.owner }, retries: row.retries, fromHandler: row.from_handler === 1, runAt: now });
@@ -92,7 +94,8 @@ export function createScheduleRows(connection: Connection, clock: Clock, ids: Id
       }
     },
     earliestNextRun(): number | undefined {
-      const row = connection.prepare<[], { next_run: string | null }>('SELECT min(next_run) AS next_run FROM schedules').get();
+      const closed = closedWorkspaces();
+      const row = connection.prepare<unknown[], { next_run: string | null }>(`SELECT min(next_run) AS next_run FROM schedules${outsideClosed('WHERE', closed)}`).get(...closed);
       return row?.next_run === null || row === undefined ? undefined : Date.parse(row.next_run);
     },
   };

@@ -21,6 +21,7 @@ function commandFor(services: JobCallServices, owner: Owner, name: string): Regi
   if (registration === undefined) throw kernelProblem('NOT_FOUND', `There is no command ${name}.`, { name });
   if (registration.kind !== 'command') throw kernelProblem('NOT_A_COMMAND', `${name} is a query; only commands can be queued or scheduled.`, { name });
   if (!registration.public && registration.owner !== owner.name) throw kernelProblem('NOT_PUBLIC', `${name} is private to ${registration.owner}.`, { name });
+  if (registration.syncOnly) throw kernelProblem('VALIDATION_FAILED', `${name} runs only as a sync call; it can't be queued or scheduled.`, { name });
   return registration;
 }
 

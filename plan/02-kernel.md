@@ -75,7 +75,7 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 
 - A workspace is a folder on disk, `{ id, name, path }`. The user's home folder is the built-in **Home** workspace, with the id `home`, which is always open.
 - Other folders are opened with `kernel.workspace.open`, and they can be listed and closed (§2.12). At start, kvman opens the folder it's started from (§1.2).
-- `kernel.workspace.open` needs an absolute path to an existing folder (`VALIDATION_FAILED` otherwise).
+- `kernel.workspace.open` needs an absolute path to an existing folder (`VALIDATION_FAILED` otherwise). The path is resolved with `realpath`, so a symlink or a trailing slash reopens the same workspace, and Home's own folder answers Home. A workspace's id is a UUIDv7, and its name is its folder's basename (ADR 0009, 22).
 - **Remembered.** Workspaces are kept across restarts until closed. Opening a path that was open before gets the same id, and so the same data.
 - **Closing pauses.** Closing a workspace removes it from the list. Its data stays; its queued jobs and schedules wait until it's opened again; its running jobs finish; and calls naming it fail `NOT_FOUND`.
 - Every job has a workspace. An HTTP call names it with `workspaceId`, defaulting to Home, and nested jobs inherit it.
@@ -86,8 +86,8 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 - Files are content the kernel keeps for extensions and uploads: `files/<id>` in the home, plus a `File` row `{ id, name, type, size, owner, workspaceId, createdAt }`, where `type` is the media type and `owner` is `{ kind: 'user' }` or `{ kind: 'extension', name }`.
 - Extensions use `ctx.files.write(name, data, type)`, `get(id)` (the row), `read(id)` (a Buffer), `path(id)` (the absolute path, for streaming), and `unlink(id)`. The user uploads with `POST /api/files` (§4.1).
 - **Access.**
-  - Any extension can read any file of the job's workspace by id.
-  - Only the owner can unlink a file. A user upload can be unlinked by the user or by any extension.
+  - Any extension can read any file of the job's workspace by id. A file of another workspace is `NOT_FOUND` (ADR 0009, 24).
+  - Only the owner can unlink a file. A user upload can be unlinked by the user or by any extension. Unlinking a file the caller doesn't own fails `NOT_PUBLIC`.
 - There is no deduplication and no garbage collection.
 
 ## 2.8 Settings and secrets
@@ -101,14 +101,14 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 - Preset values are checked once the extensions have loaded (§2.14): an unknown key, an invalid value, or a required key without a value stops kvman with `VALIDATION_FAILED`.
 - **Access.**
   - Any extension reads any key with `ctx.settings.get(key)`.
-  - An extension writes only its own keys, with `ctx.settings.set(key, value, { scope: 'global' | 'workspace' })`.
+  - An extension writes only its own keys, with `ctx.settings.set(key, value, { scope: 'global' | 'workspace' })`; another extension's key fails `NOT_PUBLIC` (ADR 0009, 24).
   - The user changes any key with `kernel.settings.set`.
 - The kernel's own keys are `kernel.port` (3737), `kernel.workers`, `kernel.workerConcurrency` (32), `kernel.language` (default `en`, §2.11), `kernel.jobs.retentionDays` (7), and `kernel.web.home` (`kvwebui`, §4.1). They are global only. `kernel.port`, `kernel.workers`, and `kernel.workerConcurrency` apply at the next start.
 
 **Secrets.**
 - `ctx.secrets.get/set/delete(name)` belong to the calling extension and are home-wide. They're stored in `secrets.json`: mode 0600 on Linux and macOS, and protected by the user profile folder's access rules on Windows. Writes replace the file atomically.
 - A secret is never written to SQLite, settings, job rows, logs, or any HTTP response. The user sets and deletes secrets with `kernel.secrets.*`, which never returns a value. `kernel.secrets.set` runs only as a sync call: `async` or a schedule fails `VALIDATION_FAILED`, so the value never lands in a job row.
-- In `kernel.secrets.*`, `extension` is the package name (as in `caller.name`).
+- In `kernel.secrets.*`, `extension` is the package name (as in `caller.name`) of an extension of the run (`NOT_FOUND` otherwise). Deleting a missing secret does nothing (ADR 0009, 29).
 
 ## 2.9 Extensions
 
@@ -144,7 +144,7 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 - a dependency is missing or out of range (ranges are checked with `semver`);
 - the extension's `@kvman/sdk` peer range doesn't include the kernel's sdk version;
 - dependencies form a cycle (the message prints it, for example `@a/x → @b/y → @a/x`);
-- two extensions claim one namespace;
+- two extensions claim one namespace, or an extension claims `kernel`, the kernel's own (ADR 0009, 32);
 - a registered name doesn't start with `<namespace>.`;
 - a name is registered twice;
 - a registration is invalid (for example, no description);
@@ -153,8 +153,8 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 Registrations are sealed when the entry returns: a later `register*` call fails `EXTENSION_INVALID` (ADR 0009, 12).
 
 **Hot reload.**
-- A `path:` extension's folder is watched (`node:fs` `watch`, recursive, ignoring `node_modules`). On a change, the kernel starts fresh workers, which load every extension with the new code. The old workers take no new jobs and exit when their running jobs end, so running jobs finish on the old code. (ES modules can't be unloaded, so a worker never reloads in place.)
-- A reload that fails keeps the previous code and workers, and logs the error.
+- A `path:` extension's folder is watched (`node:fs` `watch`, recursive, ignoring `node_modules`). Events are batched until 200 ms pass without one (ADR 0009, 26). On a change, the kernel starts fresh workers, which load every extension with the new code. The old workers take no new jobs and exit when their running jobs end, so running jobs finish on the old code. (ES modules can't be unloaded, so a worker never reloads in place.)
+- A reload that fails keeps the previous code and workers, and logs the error. It fails when the reloaded extension's own manifest breaks a start rule (its namespace, its sdk range, its own dependencies), or when its entry fails to load. Each reload logs `extension reloaded` or `extension reload failed`.
 - After a reload, the `kernel.started` handlers of the reloaded extension and of every extension that depends on it, directly or not, run again in dependency order (§2.15).
 - A reload doesn't touch the extensions that depend on it. If the new version no longer satisfies a dependent's range, or drops a name a dependent calls, the reload still applies, a warning is logged, and those calls fail `NOT_FOUND`. The start-time checks apply again at the next start.
 
@@ -179,11 +179,11 @@ Registrations are sealed when the entry returns: a later `register*` call fails 
 
 ## 2.11 Localization
 
-- **Catalogs.** The kernel and each extension ship `locales/<lang>.json` files, with keys under their namespace. kvman's own packages ship `en` and `ar`; an extension may ship any other language too.
+- **Catalogs.** The kernel and each extension ship `locales/<lang>.json` files: a flat JSON object of strings, `{ "<namespace>.x.y": "text" }`, with every key under the owner's namespace. An unreadable catalog, or a key outside the namespace, fails the load with `EXTENSION_INVALID` (ADR 0009, 25). kvman's own packages ship `en` and `ar`; an extension may ship any other language too. Placeholders use vue-i18n's `{name}` syntax.
 - **Conventions.**
   - Error texts are `<namespace>.errors.<CODE>`.
   - A setting's, command's, or query's translated description is `<name>.description`, and a form field's label is `<command>.fields.<field>`. When a key is missing, the UI shows the registered English description.
-- **Serving.** The kernel merges the catalogs per language and serves them at `GET /api/locales/:lang`. A key missing in a language falls back to `en`, then to the key itself.
+- **Serving.** The kernel merges the catalogs per language and serves them at `GET /api/locales/:lang`. A key missing in a language falls back to `en` (the served catalog is `en` overlaid with the language), then to the key itself (the UI shows a missing key). A code no loaded catalog has fails `NOT_FOUND` (ADR 0009, 31).
 - **The language** is `kernel.language` (global, default `en`): any language code (BCP 47, such as `fr` or `pt-BR`) that a loaded catalog has; anything else fails `VALIDATION_FAILED`. The kernel lists the available languages in `kernel.health.get`. `ar`, `he`, `fa`, and `ur` are right-to-left, and the UI follows the setting.
 - Text sent to a model stays English; a harness asks the model to reply in `kernel.language`.
 
@@ -195,23 +195,25 @@ All are public. Types are in `@kvman/sdk`.
 |---|---|---|
 | `kernel.workspace.open` | command | `{ path }` → `Workspace`: the existing one if that path is open, the remembered one if it was open before (§2.6) |
 | `kernel.workspace.close` | command | `{ workspaceId }` → `{}`: pauses it (§2.6); Home can't be closed (`VALIDATION_FAILED`) |
-| `kernel.workspace.list` | query | `{}` → the open `Workspace[]`, Home first |
+| `kernel.workspace.list` | query | `{}` → the open `Workspace[]`, Home first, then in the order they were first opened |
 | `kernel.settings.set` | command | `{ key, value, scope: 'global' \| 'workspace' }` → `{}` |
 | `kernel.settings.reset` | command | `{ key, scope }` → `{}` |
 | `kernel.settings.list` | query | `{}` → `[{ key, description, schema, scopes, value, source }]`, where `schema` is JSON Schema and `source` is `workspace`, `global`, `preset`, or `default` |
 | `kernel.secrets.set` | command | `{ extension, name, value }` → `{}`; sync only (§2.8) |
 | `kernel.secrets.delete` | command | `{ extension, name }` → `{}` |
 | `kernel.secrets.list` | query | `{}` → `[{ extension, name }]` (never values) |
-| `kernel.jobs.get` | query | `{ id }` → `Job` |
+| `kernel.jobs.get` | query | `{ id }` → `Job`, of any workspace |
 | `kernel.jobs.list` | query | `{ status?, limit }` → `Job[]` in this workspace, newest first |
-| `kernel.files.get` | query | `{ id }` → `File` |
+| `kernel.files.get` | query | `{ id }` → `File` of this workspace |
 | `kernel.files.list` | query | `{ limit }` → `File[]` in this workspace, newest first |
-| `kernel.files.unlink` | command | `{ id }` → `{}` |
-| `kernel.extensions.list` | query | `{}` → `[{ name, version, source, revision, namespace, commands, queries, settings, handlers }]` (`source` is the preset's `bundled`, `npm:…`, or `path:…`; `revision` starts at 0 and grows with each hot reload); each command and query is `{ name, description, public, input, output }`, with `input` and `output` as JSON Schema |
+| `kernel.files.unlink` | command | `{ id }` → `{}`: a file of this workspace, with the access rules of §2.7 |
+| `kernel.extensions.list` | query | `{}` → `[{ name, version, source, revision, namespace, commands, queries, settings, handlers }]` (`source` is the preset's `bundled`, `npm:…`, or `path:…`; `revision` starts at 0 and grows with each hot reload); each command and query, private ones too, is `{ name, description, public, input, output }`, with `input` and `output` as JSON Schema; each setting is `{ key, description, scopes }` and each handler `{ point, description }`; the kernel itself isn't listed (ADR 0009, 28) |
 | `kernel.processes.list` | query | `{}` → `[{ extension, workspaceId, name, pid, startedAt }]` (§2.16) |
-| `kernel.health.get` | query | `{}` → `{ version, preset, mode, workers, uptimeMs, languages }` (`languages`: the codes the loaded catalogs have) |
+| `kernel.health.get` | query | `{}` → `{ version, preset, mode, workers, uptimeMs, languages }`: kvman's version, the preset's name, `web`, the pool size, the uptime on the kernel's clock, and the codes the loaded catalogs have (ADR 0009, 29) |
 
 There is no sandbox in this phase, so extensions can call these too.
+
+**JSON Schema.** Schemas are converted with zod's `z.toJSONSchema`: inputs and settings in its `input` mode, outputs in its `output` mode. A part JSON Schema can't express becomes `{}` (ADR 0009, 23).
 
 ## 2.13 Limits
 
@@ -286,13 +288,16 @@ The process service is for long-lived child processes, such as kvdev's preview k
 
 | Call | Does |
 |---|---|
-| `ctx.processes.start(name, { command, args?, cwd?, env? })` | Starts it (in its own process group on Linux and macOS) → `{ name, pid, startedAt }`. The name is unique per extension and workspace; a running one fails `PROCESS_RUNNING`. Commands only (`READ_ONLY` in queries). |
-| `ctx.processes.stop(name)` | Linux and macOS: SIGTERM to its group, then SIGKILL after 5 s. Windows: `taskkill /PID <pid> /T /F` at once. |
+| `ctx.processes.start(name, { command, args?, cwd?, env? })` | Starts it (in its own process group on Linux and macOS) → `{ name, pid, startedAt }`. The name is unique per extension and workspace; a running one fails `PROCESS_RUNNING`. Commands only (`READ_ONLY` in queries). A command that can't start fails `VALIDATION_FAILED` (ADR 0009, 33). |
+| `ctx.processes.stop(name)` | Linux and macOS: SIGTERM to its group, then SIGKILL after 5 s. Windows: `taskkill /PID <pid> /T /F` at once. Commands only (ADR 0009, 34). |
 | `ctx.processes.list()` | This extension's processes in the workspace. |
 | `ctx.processes.log(name, { tail? })` | The last lines of its output. |
 
-- **Output.** stdout and stderr go to `logs/processes/<extension>/<name>.log`, capped at 10 MB with the oldest half dropped.
-- **Exit.** A process is recorded in SQLite. One that exits by itself triggers `kernel.process.exited` (§2.15).
+- **Options.** `cwd` defaults to the workspace folder, and a relative `cwd` resolves against it; `env` is merged over kvman's own environment (ADR 0009, 27).
+- **Names.** A process name is lowercase kebab case, such as `preview` (`VALIDATION_FAILED` otherwise; ADR 0009, 30).
+- **Output.** stdout and stderr go to `logs/processes/<extension>/<workspaceId>/<name>.log`, capped at 10 MB with the oldest half dropped. Each start truncates the log. `log`'s `tail` defaults to 100 lines; a name that never ran fails `NOT_FOUND`.
+- **Listing.** `list()` and `kernel.processes.list` show running processes only. `stop` of an unknown or exited name fails `NOT_FOUND`, and resolves once the process has exited.
+- **Exit.** A process is recorded in SQLite while it runs. One that exits by itself triggers `kernel.process.exited` (§2.15), whoever started it: a process isn't a job, so the `fromHandler` mark doesn't apply.
 - **Stop.** On kvman stop, after the `kernel.stopping` handlers, every process is stopped: SIGTERM to each group, then SIGKILL at the 10 s mark (Linux and macOS), or `taskkill /T /F` (Windows).
 - **Crash.** At the next start, the kernel kills the leftover recorded processes that are still alive (their groups, or their trees on Windows) and clears their rows.
 - **Hot reload** leaves processes running.

@@ -4,7 +4,7 @@ import { useTemporaryHomes } from '../temporary-home.ts';
 
 const newHome = useTemporaryHomes();
 
-const kernelTables = ['accepted_extensions', 'files', 'jobs', 'schedules', 'settings', 'store_documents', 'store_kv', 'workspaces'];
+const kernelTables = ['accepted_extensions', 'files', 'jobs', 'kernel_state', 'processes', 'schedules', 'settings', 'store_documents', 'store_kv', 'workspaces'];
 
 describe('the database (02 §2.5)', () => {
   it('M1.3-E1 kvman.db is in WAL mode with a busy timeout, has the kernel tables, and keeps its data', () => {

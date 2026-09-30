@@ -2,9 +2,11 @@ import { parentPort, workerData } from 'node:worker_threads';
 import { ProblemError, type Problem } from '@kvman/sdk';
 import { systemClock } from '../clock.ts';
 import { createExtensionCtx, type WorkerServices } from '../ctx/extension-ctx.ts';
+import { createFiles } from '../files/files.ts';
 import { handlerSummaries } from '../jobs/handlers.ts';
 import { createIdGenerator } from '../ids.ts';
 import { createRegistry } from '../jobs/registry.ts';
+import { registerKernelApi } from '../kernel-api/register-kernel-api.ts';
 import { openLogFile } from '../logging/log-file.ts';
 import { kernelProblem } from '../problems.ts';
 import { openSecretsFile } from '../secrets/secrets-file.ts';
@@ -27,21 +29,24 @@ const send = (message: ToMain): void => port.postMessage(message);
 
 const logFile = openLogFile(setup.home, setup.logLevel);
 const registry = createRegistry();
-for (const definition of kernelSettingDefinitions()) registry.settings.set(definition.key, definition);
+for (const definition of kernelSettingDefinitions(setup.languages)) registry.settings.set(definition.key, definition);
 const answers = new Map<number, { resolve: (value: unknown) => void; reject: (error: Error) => void }>();
 let nextRequest = 0;
 
 const connection = openConnection(setup.database);
+const ids = createIdGenerator(systemClock);
 const services: WorkerServices = {
   environment: { registry, logger: logFile.logger, reportSyncEnd: (end) => send({ kind: 'sync-ended', end }) },
-  ids: createIdGenerator(systemClock),
+  ids,
   request: (request: WorkerRequest) =>
     new Promise((resolve, reject) => {
       nextRequest += 1;
       answers.set(nextRequest, { resolve, reject });
       send({ kind: 'request', requestId: nextRequest, request });
     }),
+  home: setup.home,
   connection,
+  files: createFiles({ connection, home: setup.home, ids, clock: systemClock }),
   logger: logFile.logger,
   settings: createSettings({ connection, definitions: registry.settings, presetValues: setup.presetSettings, logger: logFile.logger }),
   secrets: openSecretsFile(setup.home),
@@ -74,6 +79,8 @@ function loadProblem(extension: WorkerExtension, error: unknown): Problem {
 }
 
 async function load(): Promise<void> {
+  const { homeFolder, extensions } = setup;
+  registerKernelApi(registry, { ...services, homeFolder, registry, extensions });
   for (const extension of setup.extensions) {
     try {
       await loadExtension(extension);
@@ -92,7 +99,7 @@ async function load(): Promise<void> {
       return;
     }
   }
-  const jobs = [...registry.jobs.values()].map((job) => ({ name: job.name, kind: job.kind, owner: job.owner, public: job.public, retries: job.retries }));
+  const jobs = [...registry.jobs.values()].map((job) => ({ name: job.name, kind: job.kind, owner: job.owner, public: job.public, retries: job.retries, syncOnly: job.syncOnly }));
   send({ kind: 'ready', summary: { jobs, handlers: handlerSummaries(registry) } });
 }
 

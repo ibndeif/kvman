@@ -56,10 +56,12 @@ function entryOf(source: ExtensionSource, folder: string, manifest: ExtensionMan
   return path.resolve(folder, entry);
 }
 
+export function readExtension(name: string, source: ExtensionSource, folders: ExtensionFolders): ReadExtension {
+  const folder = folderOf(name, source, folders);
+  const manifest = readManifest(name, folder);
+  return { name, source, folder, manifest, entryPath: entryOf(source, folder, manifest) };
+}
+
 export function readExtensions(preset: Preset, folders: ExtensionFolders): ReadExtension[] {
-  return Object.entries(preset.extensions).map(([name, source]) => {
-    const folder = folderOf(name, source, folders);
-    const manifest = readManifest(name, folder);
-    return { name, source, folder, manifest, entryPath: entryOf(source, folder, manifest) };
-  });
+  return Object.entries(preset.extensions).map(([name, source]) => readExtension(name, source, folders));
 }

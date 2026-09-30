@@ -3,6 +3,7 @@ export { z } from 'zod';
 export * from './ctx.ts';
 export * from './envelope.ts';
 export * from './json.ts';
+export * from './kernel-api.ts';
 export * from './manifest.ts';
 export * from './preset.ts';
 export * from './problem.ts';

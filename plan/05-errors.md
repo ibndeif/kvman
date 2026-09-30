@@ -11,7 +11,7 @@ Every failure is a Problem: `{ code, message, params? }`, where `params` is a re
 |---|---|
 | `VALIDATION_FAILED` | Input, output, a setting, the preset, or a request is invalid. |
 | `NOT_FOUND` | No such command, query, job, file, workspace, schedule, or setting. |
-| `NOT_PUBLIC` | A private name was called from outside its extension. |
+| `NOT_PUBLIC` | A private name was called from outside its extension, or another extension's setting or file was written (ADR 0009, 24). |
 | `NOT_A_COMMAND` | `execAsync` or `schedule` was given a query. |
 | `READ_ONLY` | A query tried to write, queue, schedule, or run a command. |
 | `NO_JOB` | A job-bound `ctx` call ran outside a handler. |

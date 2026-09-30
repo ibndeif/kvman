@@ -1,11 +1,13 @@
+import type { KernelCommands, KernelQueries } from './kernel-api.ts';
+
 /**
  * Public commands by name, each `{ input; output }`. An extension augments it for its public commands, so callers get
- * typed `ctx.exec` calls after `import type {} from '<that extension>'`.
+ * typed `ctx.exec` calls after `import type {} from '<that extension>'`. The kernel's are included.
  */
-export interface Commands {}
+export interface Commands extends KernelCommands {}
 
-/** Public queries by name, each `{ input; output }`, augmented like `Commands`. */
-export interface Queries {}
+/** Public queries by name, each `{ input; output }`, augmented like `Commands`; the kernel's are included. */
+export interface Queries extends KernelQueries {}
 
 /** Setting values by key, augmented like `Commands`, so `ctx.settings.get` is typed. */
 export interface Settings {}

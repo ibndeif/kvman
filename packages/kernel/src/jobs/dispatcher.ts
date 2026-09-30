@@ -29,6 +29,9 @@ type Outcome = { output: unknown } | { problem: Problem };
 
 export type Dispatcher = ReturnType<typeof createDispatcher>;
 
+// Queues one handler job per handler registered for a point, in the caller's transaction.
+export type Deliver = (point: string, input: Record<string, unknown>, workspaceId: string) => void;
+
 export function createDispatcher(options: DispatcherOptions) {
   const { connection, rows, schedules, clock } = options;
   let pool: WorkerPool | undefined;
@@ -166,6 +169,12 @@ export function createDispatcher(options: DispatcherOptions) {
       const ids = connection.transaction(() => deliver(point, input, workspaceId, extension))();
       tick();
       return ids;
+    },
+    // Runs `work` in one transaction with the handler jobs it delivers, then starts what is due.
+    deliverAlong<Result>(work: (deliverIn: Deliver) => Result): Result {
+      const result = connection.transaction(() => work((point, input, workspaceId) => void deliver(point, input, workspaceId)))();
+      tick();
+      return result;
     },
     deliverSyncEnd(end: SyncEnd): void {
       connection.transaction(() => deliver(end.point, end.input, end.workspaceId))();

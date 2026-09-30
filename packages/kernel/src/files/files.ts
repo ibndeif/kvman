@@ -17,6 +17,7 @@ export type NewFile = { name: string; data: Uint8Array | string; type: string; o
 export type Files = {
   write(file: NewFile): File;
   get(id: string): File;
+  list(workspaceId: string, limit: number): File[];
   read(id: string): Buffer;
   path(id: string): string;
   unlink(id: string): void;
@@ -33,11 +34,14 @@ function sizeOf(data: Uint8Array | string): number {
 export function createFiles({ connection, home, ids, clock }: FilesOptions): Files {
   const folder = path.join(home, 'files');
   const contentPath = (id: string): string => path.join(folder, id);
+  const fileOfRow = (row: FileRow): File => {
+    const owner: unknown = JSON.parse(row.owner);
+    return fileSchema.parse({ id: row.id, name: row.name, type: row.type, size: row.size, owner, workspaceId: row.workspace_id, createdAt: row.created_at });
+  };
   const get = (id: string): File => {
     const row = connection.prepare<[string], FileRow>('SELECT * FROM files WHERE id = ?').get(id);
     if (row === undefined) throw kernelProblem('NOT_FOUND', `There is no file ${id}.`, { id });
-    const owner: unknown = JSON.parse(row.owner);
-    return fileSchema.parse({ id: row.id, name: row.name, type: row.type, size: row.size, owner, workspaceId: row.workspace_id, createdAt: row.created_at });
+    return fileOfRow(row);
   };
   return {
     write({ name, data, type, owner, workspaceId }) {
@@ -59,6 +63,8 @@ export function createFiles({ connection, home, ids, clock }: FilesOptions): Fil
       return file;
     },
     get,
+    list: (workspaceId, limit) =>
+      connection.prepare<[string, number], FileRow>('SELECT * FROM files WHERE workspace_id = ? ORDER BY id DESC LIMIT ?').all(workspaceId, limit).map(fileOfRow),
     read: (id) => readFileSync(contentPath(get(id).id)),
     path: (id) => contentPath(get(id).id),
     unlink(id) {

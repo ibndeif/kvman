@@ -79,7 +79,7 @@ export async function createTestKernel(options: TestKernelOptions): Promise<Test
   const preset: Preset = { name: 'test', extensions, settings: { 'kernel.workers': 1, ...options.settings } };
   const clock = createFakeClock(Date.now());
   const start = async (): Promise<Kernel> => {
-    const started = await startKernel({ home, homeFolder, preset, presetFolder: process.cwd(), bundled: new Map(), logLevel: options.logLevel ?? 'debug', clock: clock.kernelClock });
+    const started = await startKernel({ home, homeFolder, preset, presetFolder: process.cwd(), bundled: new Map(), mode: 'web', logLevel: options.logLevel ?? 'debug', clock: clock.kernelClock });
     clock.settleWith(() => started.settled());
     return started;
   };

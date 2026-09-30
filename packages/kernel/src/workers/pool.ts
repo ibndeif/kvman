@@ -6,7 +6,8 @@ import { toMainSchema, type AbortReason, type RegistrySummary, type RootJob, typ
 
 // The main thread's pool of worker threads (plan 02 §2.2). Each worker runs up to `concurrency` root jobs at once;
 // nested sync calls run inside their root job and take no slot. A worker that dies fails its jobs `WORKER_CRASHED`,
-// and a replacement takes its place.
+// and a replacement takes its place. After a hot reload the old pool retires: its workers take no new jobs and exit
+// when their running jobs end (plan 02 §2.9).
 
 export type PoolEvents = {
   request: (request: WorkerRequest) => Promise<unknown>;
@@ -30,11 +31,12 @@ export type WorkerPool = {
   abortAll(reason: AbortReason): void;
   freeSlots(): number;
   idle(): Promise<void>;
+  retire(): Promise<void>;
   close(): Promise<void>;
 };
 
 type Pending = { jobId: string; resolve: (output: unknown) => void; reject: (error: Error) => void };
-type PoolWorker = { thread: Worker; running: Map<number, Pending> };
+type PoolWorker = { thread: Worker; running: Map<number, Pending>; exited: Promise<void>; stopAsked: boolean };
 type Queued = { job: RootJob; pending: Pending };
 
 // From source (development and tests) the worker is TypeScript and needs the source condition; built, it is JavaScript.
@@ -42,12 +44,13 @@ const fromSource = import.meta.url.endsWith('.ts');
 const workerFile = new URL(fromSource ? './worker-main.ts' : './worker-main.js', import.meta.url);
 const execArgv = fromSource ? ['--conditions=@kvman/source'] : [];
 
-// Asks a worker to close its connection and exit, and resolves when it has.
-function stopWorker(thread: Worker): Promise<void> {
-  return new Promise((resolve) => {
-    thread.once('exit', () => resolve());
-    thread.postMessage({ kind: 'stop' });
-  });
+// Asks a worker to close its connection and exit, once, and resolves when it has.
+function stopWorker(worker: PoolWorker): Promise<void> {
+  if (!worker.stopAsked) {
+    worker.stopAsked = true;
+    worker.thread.postMessage({ kind: 'stop' });
+  }
+  return worker.exited;
 }
 
 function reason(error: unknown): string {
@@ -59,7 +62,9 @@ export async function startPool(options: PoolOptions): Promise<WorkerPool> {
   const queue: Queued[] = [];
   let nextRequest = 0;
   let closing = false;
+  let retiring = false;
   let idleWaiters: (() => void)[] = [];
+  const retiredWaiters: (() => void)[] = [];
 
   const runningCount = (): number => workers.reduce((total, worker) => total + worker.running.size, 0);
   const checkIdle = (): void => {
@@ -67,6 +72,11 @@ export async function startPool(options: PoolOptions): Promise<WorkerPool> {
     const waiters = idleWaiters;
     idleWaiters = [];
     for (const resolve of waiters) resolve();
+  };
+
+  const releaseIdle = (): void => {
+    if (!retiring || queue.length > 0) return;
+    for (const worker of workers) if (worker.running.size === 0) void stopWorker(worker);
   };
 
   const drain = (): void => {
@@ -89,6 +99,7 @@ export async function startPool(options: PoolOptions): Promise<WorkerPool> {
     drain();
     options.events.slotFreed();
     checkIdle();
+    releaseIdle();
   };
 
   const answer = (worker: PoolWorker, requestId: number, request: WorkerRequest): void => {
@@ -119,7 +130,8 @@ export async function startPool(options: PoolOptions): Promise<WorkerPool> {
   const spawn = (checkPresetSettings: boolean): Promise<{ worker: PoolWorker; summary: RegistrySummary }> =>
     new Promise((resolve, reject) => {
       const thread = new Worker(workerFile, { workerData: { ...options.setup, checkPresetSettings }, execArgv });
-      const worker: PoolWorker = { thread, running: new Map() };
+      const exited = new Promise<void>((resolveExit) => thread.once('exit', () => resolveExit()));
+      const worker: PoolWorker = { thread, running: new Map(), exited, stopAsked: false };
       let ready = false;
       thread.on('message', (raw: unknown) => {
         const message = toMainSchema.parse(raw);
@@ -129,9 +141,10 @@ export async function startPool(options: PoolOptions): Promise<WorkerPool> {
           resolve({ worker, summary: message.summary });
           drain();
           options.events.slotFreed();
+          releaseIdle();
         } else if (message.kind === 'failed') {
           reject(new ProblemError(message.problem));
-          void stopWorker(thread);
+          void stopWorker(worker);
         } else receive(worker, message);
       });
       thread.on('error', (error) => options.logger.error('A worker thread failed.', { error: error.message, stack: error.stack ?? '' }));
@@ -144,7 +157,9 @@ export async function startPool(options: PoolOptions): Promise<WorkerPool> {
         failRunning(worker);
         options.events.slotFreed();
         checkIdle();
-        if (!closing) {
+        if (retiring && workers.length === 0) {
+          for (const resolve of retiredWaiters.splice(0)) resolve();
+        } else if (!closing && !retiring) {
           spawn(false).catch((error: unknown) => options.logger.error('A replacement worker could not start.', { reason: reason(error) }));
         }
       });
@@ -155,7 +170,7 @@ export async function startPool(options: PoolOptions): Promise<WorkerPool> {
   const first = started[0];
   if (failure !== undefined || first?.status !== 'fulfilled') {
     closing = true;
-    await Promise.all(workers.map((worker) => stopWorker(worker.thread)));
+    await Promise.all(workers.map((worker) => stopWorker(worker)));
     const error: unknown = failure?.reason;
     throw error;
   }
@@ -189,9 +204,15 @@ export async function startPool(options: PoolOptions): Promise<WorkerPool> {
       checkIdle();
       return done;
     },
+    retire: () => {
+      retiring = true;
+      const retired = workers.length === 0 ? Promise.resolve() : new Promise<void>((resolve) => retiredWaiters.push(resolve));
+      releaseIdle();
+      return retired;
+    },
     close: async () => {
       closing = true;
-      await Promise.all(workers.map((worker) => stopWorker(worker.thread)));
+      await Promise.all(workers.map((worker) => stopWorker(worker)));
     },
   };
 }

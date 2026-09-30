@@ -36,7 +36,7 @@ The default is `~/.kvman`; `--home <dir>` or `KVMAN_HOME` overrides it.
 | `secrets.json` | Secrets: mode 0600 on Linux and macOS; on Windows, the user profile folder's access rules protect it (§2.8). |
 | `presets/<name>.json` | The person's own presets (§1.2). |
 | `logs/kvman.log` | Pino JSON logs, which never contain payloads, settings values, or secrets. |
-| `logs/processes/<extension>/<name>.log` | Output of long-lived processes (§2.16), 10 MB each. |
+| `logs/processes/<extension>/<workspaceId>/<name>.log` | Output of long-lived processes (§2.16), 10 MB each. |
 
 ## 1.4 Packages
 
