@@ -1,11 +1,12 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { homeWorkspaceId, openSecretsFile, startKernel, type Kernel, type LogLevel } from '@kvman/kernel';
+import { homeWorkspaceId, openSecretsFile, startKernel, type Kernel, type LogLevel, type ProgressChunk } from '@kvman/kernel';
 import { z, type Caller, type CommandInputOf, type InputOf, type Job, type Json, type OutputOf, type Preset } from '@kvman/sdk';
 import { createFakeClock, type TestClock } from './fake-clock.ts';
 
 export type { TestClock } from './fake-clock.ts';
+export type { ProgressChunk } from '@kvman/kernel';
 
 /** What a test kernel starts with (plan 10). */
 export type TestKernelOptions = {
@@ -25,6 +26,8 @@ export type TestCallOptions = {
   as?: string;
   /** The workspace to run in (default Home). */
   workspaceId?: string;
+  /** Receives the progress chunks of the call's root job, `{ source, data }`, until it ends or the kernel stops. */
+  onProgress?: (chunk: ProgressChunk) => void;
 };
 
 /** A real kernel in-process, with a temporary home, a fake clock, and no HTTP. */
@@ -103,24 +106,44 @@ export async function createTestKernel(options: TestKernelOptions): Promise<Test
     throw error;
   }
   const context = (callOptions: TestCallOptions | undefined) => ({ caller: callerOf(callOptions), workspaceId: callOptions?.workspaceId ?? homeWorkspaceId });
+  // An async job's watch lasts until the kernel stops, since its attempts may run at any later time.
+  const asyncWatches: (() => void)[] = [];
+  const stopAsyncWatches = (): void => {
+    for (const stop of asyncWatches.splice(0)) stop();
+  };
   return {
     home,
     homeFolder,
     clock: clock.testClock,
     exec: async <Name extends string>(name: Name, input: InputOf<Name>, callOptions?: TestCallOptions) => {
-      const output = await kernel.exec(name, input, context(callOptions));
-      // The kernel checked the output against the registered schema; the declared type is the callee's promise.
-      return output as OutputOf<Name>;
+      const jobId = kernel.web.newJobId();
+      const onProgress = callOptions?.onProgress;
+      const stopWatching = onProgress === undefined ? undefined : kernel.watchProgress(jobId, onProgress);
+      try {
+        const output = await kernel.exec(name, input, { ...context(callOptions), jobId });
+        // The kernel checked the output against the registered schema; the declared type is the callee's promise.
+        return output as OutputOf<Name>;
+      } finally {
+        stopWatching?.();
+      }
     },
-    execAsync: (name, input, callOptions) => kernel.execAsync(name, input, context(callOptions)),
+    execAsync: async (name, input, callOptions) => {
+      const jobId = await kernel.execAsync(name, input, context(callOptions));
+      // Chunks come from a worker as messages, so none arrives before this continuation watches.
+      const onProgress = callOptions?.onProgress;
+      if (onProgress !== undefined) asyncWatches.push(kernel.watchProgress(jobId, onProgress));
+      return jobId;
+    },
     waitForJob: (jobId) => kernel.waitForJob(jobId),
     cancel: (jobId) => kernel.cancel(jobId),
     restart: async (restartOptions) => {
+      stopAsyncWatches();
       await kernel.close();
       clock.moveWhileStopped(restartOptions?.stoppedForMs ?? 0);
       kernel = await start();
     },
     close: async () => {
+      stopAsyncWatches();
       await kernel.close();
       rmSync(root, { recursive: true, force: true });
     },

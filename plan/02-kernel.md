@@ -93,7 +93,7 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 ## 2.8 Settings and secrets
 
 **Settings.**
-- An extension declares each key: `ctx.registerSetting('kvai.defaultModel', { description, schema, default?, scopes? })`. A key starts with the extension's namespace.
+- An extension declares each key: `ctx.registerSetting('kvai.defaultModel', { description, schema, default?, scopes? })`. A key starts with the extension's namespace, and its segments are lower camelCase (ADR 0009, 64).
 - **Scopes.** `scopes` is `['global', 'workspace']` (the default), `['global']`, or `[]`. Setting a key in a scope it doesn't have fails `VALIDATION_FAILED`. A key with `scopes: []` is **preset-only**: only the preset gives it a value, and the Settings page shows it read-only.
 - **Required keys.** A key registered without `default` must get its value from the preset; otherwise kvman stops at start with `VALIDATION_FAILED` (§2.14, step 7).
 - **Resolving a value.** A value comes from the workspace, else the global value, else the preset, else the default.

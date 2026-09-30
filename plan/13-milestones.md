@@ -186,9 +186,9 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
 - **Read:** `07`.
 - **Build:**
   - `extensions/kvai`: `kvai.complete` (pi-ai, deltas, failure codes including `kvai/NO_MODEL`, retries 0, 32 MiB input), providers and models (built-in, custom, delegate), keys from secrets, and usage totals with cache reads and writes.
-  - `kvai.ui.get`: the Models page and the status item.
+  - `kvai.ui.get`: the Models page and the status item (`kvai.usage.total.get`).
   - Locales.
-  - The fake OpenAI-compatible server test helper.
+  - The fake OpenAI-compatible server test helper (`@kvman/testkit/fake-openai`), and the testkit's `onProgress`.
 - **Done when:**
   - `kvai.complete` against the fake server streams text, thinking, and tool-call deltas to the root job and returns the message and usage.
   - A missing key, a missing model, an unknown model, a 429, and an over-long context fail with their codes.

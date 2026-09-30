@@ -46,6 +46,16 @@ describe('loading rules (02 §2.9)', () => {
     await startFails([{ ...noop('a'), entry: entry(command('a.do-it') + command('a.do-it')) }], /@test\/a: "a\.do-it" is registered twice/);
   });
 
+  it('M2.1-E23 a setting key has lower camelCase segments; a command name keeps kebab case', async () => {
+    const setting = (key: string) => `ctx.registerSetting('${key}', { description: 'Sets it.', schema: z.string(), default: 'x' });`;
+    const kernel = await harness.start([{ ...noop('a'), entry: entry(setting('a.defaultModel') + setting('a.shell.approval2')) }]);
+    const listed = await kernel.exec('kernel.settings.list', {});
+    expect(listed.map((info) => info.key)).toEqual(expect.arrayContaining(['a.defaultModel', 'a.shell.approval2']));
+    await startFails([{ ...noop('a'), entry: entry(setting('a.default-model')) }], /"a\.default-model" must be <namespace>\.<segment>… with lower camelCase segments/);
+    await startFails([{ ...noop('a'), entry: entry(setting('a.DefaultModel')) }], /"a\.DefaultModel" must be <namespace>\.<segment>… with lower camelCase segments/);
+    await startFails([{ ...noop('a'), entry: entry(command('a.doIt')) }], /"a\.doIt" must be <namespace>\.<segment>… in lowercase kebab case/);
+  });
+
   it('M1.4-E7 a registration without a description, or whose input is not a zod schema', async () => {
     const noDescription = "ctx.registerQuery('a.get', { input: z.object({}), output: z.object({}), handle: () => ({}) } as never);";
     await startFails([{ ...noop('a'), entry: entry(noDescription) }], /@test\/a: the registration of "a\.get" is invalid/);

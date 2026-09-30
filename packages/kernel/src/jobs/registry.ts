@@ -12,6 +12,8 @@ const maximumBytes = 32 * mebibyte;
 const defaultTimeoutMs = 600_000;
 const defaultRetries = 3;
 const namePattern = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*)+$/;
+// A setting key's segments are lower camelCase, such as `kvai.defaultModel` (ADR 0009, 64).
+const settingKeyPattern = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\.[a-z][a-zA-Z0-9]*)+$/;
 
 export type Registration = {
   kind: JobKind;
@@ -68,10 +70,15 @@ export function createRegistry(): Registry {
   return { jobs: new Map(), settings: new Map(), handlers: [], sealed: false };
 }
 
-function checkName(registry: Registry, owner: Owner, name: string, taken: boolean): void {
+type NameRule = { pattern: RegExp; segments: string };
+
+const jobNameRule: NameRule = { pattern: namePattern, segments: 'in lowercase kebab case' };
+const settingKeyRule: NameRule = { pattern: settingKeyPattern, segments: 'with lower camelCase segments' };
+
+function checkName(registry: Registry, owner: Owner, name: string, taken: boolean, rule: NameRule = jobNameRule): void {
   if (registry.sealed) throw invalid(owner, `"${name}" was registered after the entry returned; registrations are sealed.`, name);
-  if (!namePattern.test(name) || !name.startsWith(`${owner.namespace}.`)) {
-    throw invalid(owner, `"${name}" must be <namespace>.<segment>… in lowercase kebab case, starting with "${owner.namespace}.".`, name);
+  if (!rule.pattern.test(name) || !name.startsWith(`${owner.namespace}.`)) {
+    throw invalid(owner, `"${name}" must be <namespace>.<segment>… ${rule.segments}, starting with "${owner.namespace}.".`, name);
   }
   if (taken) throw invalid(owner, `"${name}" is registered twice.`, name);
 }
@@ -109,7 +116,7 @@ export function registerJob<Input extends z.ZodType, Output extends z.ZodType>(
 }
 
 export function registerSetting(registry: Registry, owner: Owner, key: string, options: SettingRegistration<z.ZodType>): void {
-  checkName(registry, owner, key, registry.settings.has(key));
+  checkName(registry, owner, key, registry.settings.has(key), settingKeyRule);
   const parsed = settingSchema.safeParse(options);
   if (!parsed.success) throw invalid(owner, `the setting "${key}" is invalid (${z.prettifyError(parsed.error)}).`, key);
   if (Object.hasOwn(options, 'default') && !options.schema.safeParse(options.default).success) {

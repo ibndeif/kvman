@@ -8,7 +8,7 @@ const owner = {
   namespace: 's',
   entry: entry(`
   ctx.registerSetting('s.color', { description: 'A color.', schema: z.string(), default: 'blue' });
-  ctx.registerSetting('s.global-only', { description: 'A global number.', schema: z.number(), default: 1, scopes: ['global'] });
+  ctx.registerSetting('s.globalOnly', { description: 'A global number.', schema: z.number(), default: 1, scopes: ['global'] });
   ctx.registerSetting('s.custom', { description: 'A custom value.', schema: z.custom((value) => typeof value === 'string'), default: 'x' });
   ctx.registerCommand('s.set', { description: 'Sets a key.', input: z.object({ key: z.string(), value: z.unknown(), scope: z.enum(['global', 'workspace']) }),
     output: z.object({}), public: true, handle: async (input) => { await ctx.settings.set(input.key, input.value, { scope: input.scope }); return {}; } });
@@ -65,7 +65,7 @@ describe('settings (02 §2.8, §2.12)', () => {
     await expect(kernel.exec('s.set', { key: 't.size', value: 4, scope: 'global' })).rejects.toMatchObject(problem('NOT_PUBLIC'));
     await expect(kernel.exec('s.set', { key: 's.nothing', value: 4, scope: 'global' })).rejects.toMatchObject(problem('NOT_FOUND'));
     await expect(kernel.exec('s.set-in-query', {})).rejects.toMatchObject(problem('READ_ONLY'));
-    await expect(kernel.exec('s.set', { key: 's.global-only', value: 2, scope: 'workspace' })).rejects.toMatchObject(problem('VALIDATION_FAILED'));
+    await expect(kernel.exec('s.set', { key: 's.globalOnly', value: 2, scope: 'workspace' })).rejects.toMatchObject(problem('VALIDATION_FAILED'));
     await expect(kernel.exec('s.set', { key: 's.color', value: 5, scope: 'global' })).rejects.toMatchObject(problem('VALIDATION_FAILED'));
   });
 

@@ -3,5 +3,9 @@ packages:
   - extensions/*
 allowBuilds:
   better-sqlite3: true
+  '@google/genai': false
+  protobufjs: false
 minimumReleaseAgeExclude:
   - hono@4.13.12
+  - '@earendil-works/pi-ai@0.99.1'
+  - '@earendil-works/pi-telemetry@0.99.1'

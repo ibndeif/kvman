@@ -20,5 +20,6 @@ await kernel.close();
 - Its Home workspace is a temporary folder of its own, and `close()` removes it with the temporary home (ADR 0009, 11).
 - The fake clock drives the kernel's own timers: retries, schedules, retention, and ids. It doesn't change `Date` inside handlers. `await kernel.clock.advance(ms)` resolves once no job is running or due (ADR 0009, 15).
 - `restart()` stops the test kernel as Ctrl+C does, then starts it again on the same home, Home folder, extensions, and settings; the fake clock carries over, and `restart({ stoppedForMs })` moves it while the kernel is stopped (ADR 0009, 16).
-- `exec` and `execAsync` take `{ as?, workspaceId? }`.
+- `exec` and `execAsync` take `{ as?, workspaceId?, onProgress? }`. `onProgress(chunk)` receives the progress chunks (`{ source, data }`) of that call's root job (ADR 0009, 61).
+- `@kvman/testkit/fake-openai` is the fake OpenAI-compatible streaming server of §7.4: `startFakeOpenAI()` → `{ baseUrl, reply(script), requests(), close() }` (ADR 0009, 62).
 - It may import `kernel` and `sdk` (§1.4). It is published as `@kvman/testkit` and depends on `@kvman/kernel`.

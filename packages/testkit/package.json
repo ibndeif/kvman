@@ -8,6 +8,11 @@
       "@kvman/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./fake-openai": {
+      "@kvman/source": "./src/fake-openai.ts",
+      "types": "./dist/fake-openai.d.ts",
+      "default": "./dist/fake-openai.js"
     }
   },
   "files": [
