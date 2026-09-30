@@ -115,10 +115,10 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 **Package.** An extension is a package whose `package.json` has `main` and a `kvman` field:
 
 ```json
-{ "name": "@kvman/kvcoder", "version": "1.0.0", "main": "dist/index.js",
-  "peerDependencies": { "@kvman/sdk": "^1.0.0" },
+{ "name": "@kvman/kvcoder", "version": "0.1.0", "main": "dist/index.js",
+  "peerDependencies": { "@kvman/sdk": "^0.1.0" },
   "kvman": { "namespace": "kvcoder", "source": "src/index.ts",
-             "dependencies": { "@kvman/kvai": "^1.0.0", "@kvman/kvwebui": "^1.0.0" } } }
+             "dependencies": { "@kvman/kvai": "^0.1.0", "@kvman/kvwebui": "^0.1.0" } } }
 ```
 
 **The SDK.** An extension lists `@kvman/sdk` as a peerDependency. The kernel resolves every extension's `@kvman/sdk` import to its own copy (a Node module resolve hook), so all extensions share one SDK and one zod. Extensions build their schemas with the SDK's `z`, never their own zod.
@@ -149,6 +149,8 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 - a name is registered twice;
 - a registration is invalid (for example, no description);
 - an entry throws.
+
+Registrations are sealed when the entry returns: a later `register*` call fails `EXTENSION_INVALID` (ADR 0009, 12).
 
 **Hot reload.**
 - A `path:` extension's folder is watched (`node:fs` `watch`, recursive, ignoring `node_modules`). On a change, the kernel starts fresh workers, which load every extension with the new code. The old workers take no new jobs and exit when their running jobs end, so running jobs finish on the old code. (ES modules can't be unloaded, so a worker never reloads in place.)

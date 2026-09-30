@@ -38,3 +38,7 @@ Status: accepted, 2026-09-30. Questions that came up while building, decided wit
 ## M1.4 Extensions and workers
 
 9. **Versions.** kvman's packages start at 0.1.0, which signals pre-1.0 while nothing is published. The bundled extensions' `@kvman/sdk` peers and `kvman.dependencies`, the presets, and the kvdev scaffold use `^0.1.0`; the plan's examples are changed to match. 1.0.0 comes with the first stable release.
+10. **Test workers.** `createTestKernel` uses `kernel.workers` 1 unless the test's `settings` set it; everything else is the kernel's default.
+11. **Test Home.** A test kernel's Home workspace is a temporary folder of its own, beside the temporary kvman home, and both are removed on `close()`. Tests never touch the user's files.
+12. **Registrations are sealed** when an extension's entry returns. A later `register*` call (for example, inside a handler) fails `EXTENSION_INVALID`, naming the extension, so every worker keeps the same registrations.
+13. **Testkit options.** `settings` are the test run's preset settings (so required keys can be set), and `secrets` is `{ "<extension package>": { "<name>": "<value>" } }`, written to the temporary `secrets.json` before the extensions load.

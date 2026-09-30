@@ -3,12 +3,12 @@ import { extensionManifestSchema } from '../src/index.ts';
 
 const manifest = {
   name: '@kvman/kvcoder',
-  version: '1.0.0',
+  version: '0.1.0',
   main: 'dist/index.js',
   scripts: { build: 'tsc' },
   devDependencies: { typescript: '6.0.3' },
-  peerDependencies: { '@kvman/sdk': '^1.0.0' },
-  kvman: { namespace: 'kvcoder', source: 'src/index.ts', dependencies: { '@kvman/kvai': '^1.0.0', '@kvman/kvwebui': '^1.0.0' } },
+  peerDependencies: { '@kvman/sdk': '^0.1.0' },
+  kvman: { namespace: 'kvcoder', source: 'src/index.ts', dependencies: { '@kvman/kvai': '^0.1.0', '@kvman/kvwebui': '^0.1.0' } },
 };
 
 function issuePaths(value: unknown): string[] {

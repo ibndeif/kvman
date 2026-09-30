@@ -1,9 +1,12 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { benchmarks } from './benchmarks.ts';
-import { checkResults, parseBaseline, recordBaseline, type Baseline, type Results, type Targets } from './rules.ts';
+import { checkResults, medianOfRounds, parseBaseline, recordBaseline, type Baseline, type Metrics, type Results, type Targets } from './rules.ts';
 
 // `pnpm bench:check` compares every benchmark with its targets and bench/baseline.json; `pnpm bench:record` rewrites it.
+// Each benchmark runs several rounds, and each metric is its median across them, so one noisy round decides nothing.
+
+const rounds = 5;
 
 const baselineFile = fileURLToPath(new URL('baseline.json', import.meta.url));
 
@@ -15,7 +18,9 @@ async function measureAll(): Promise<{ results: Results; targets: Targets }> {
   const results: Results = {};
   const targets: Targets = {};
   for (const benchmark of benchmarks) {
-    results[benchmark.name] = await benchmark.measure();
+    const measured: Metrics[] = [];
+    for (let round = 0; round < rounds; round += 1) measured.push(await benchmark.measure());
+    results[benchmark.name] = medianOfRounds(measured);
     targets[benchmark.name] = benchmark.targets;
     console.log(`${benchmark.name}: ${JSON.stringify(results[benchmark.name])}`);
   }

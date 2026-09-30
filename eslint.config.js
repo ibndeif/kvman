@@ -4,7 +4,7 @@ import { importWallsRule } from './eslint/import-walls-rule.ts';
 
 const testFiles = ['**/test/**', '**/*.test.ts'];
 const configFiles = ['*.config.js', '*.config.ts'];
-const extensionEntries = ['extensions/*/src/index.ts'];
+const extensionEntries = ['extensions/*/src/index.ts', 'packages/*/test/fixtures/extensions/*/index.ts'];
 
 const noDefaultExport = [
   { selector: 'ExportDefaultDeclaration', message: 'No default exports except an extension\'s entry (CLAUDE.md §5); export by name.' },

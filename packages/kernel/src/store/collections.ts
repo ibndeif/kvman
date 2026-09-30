@@ -4,7 +4,7 @@ import { kernelProblem } from '../problems.ts';
 import type { Connection } from '../storage/database.ts';
 import { filterSql, findOptions } from './filters.ts';
 import { storedText, validationFailed } from './json-values.ts';
-import type { ScopeKey } from './kv.ts';
+import type { ScopeKey, WriteGuard } from './kv.ts';
 
 // A collection of JSON documents, checked against its schema on write and parsed on read (ADR 0009, 4).
 
@@ -16,6 +16,7 @@ export function collectionOf<Document extends JsonObject>(
   name: string,
   schema: z.ZodType<Document>,
   ids: IdGenerator,
+  beforeWrite: WriteGuard,
 ): TransactionCollection<Document> {
   const where = 'extension = ? AND scope = ? AND collection = ?';
   const owner = [key.extension, key.scope, name] as const;
@@ -35,6 +36,7 @@ export function collectionOf<Document extends JsonObject>(
 
   return {
     insert(document) {
+      beforeWrite();
       const data = checked(document, `The document for ${name}`);
       const id = ids();
       const text = storedText(data, `The document for ${name}`);
@@ -58,6 +60,7 @@ export function collectionOf<Document extends JsonObject>(
       return connection.prepare<unknown[], { total: number }>(sql).get(...owner, ...condition.values)?.total ?? 0;
     },
     update(id, patch) {
+      beforeWrite();
       const row = rowOf(id);
       if (row === undefined) throw missing(id);
       const current: unknown = JSON.parse(row.data);
@@ -67,6 +70,7 @@ export function collectionOf<Document extends JsonObject>(
       return { ...merged, id };
     },
     delete(id) {
+      beforeWrite();
       const result = connection.prepare(`DELETE FROM store_documents WHERE ${where} AND id = ?`).run(...owner, id);
       if (result.changes === 0) throw missing(id);
     },

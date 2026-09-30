@@ -52,6 +52,18 @@ function metricFailures(benchmark: string, metrics: Metrics, targets: Record<str
   });
 }
 
+function median(values: readonly number[]): number {
+  const sorted = [...values].sort((left, right) => left - right);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 1 ? (sorted[middle] ?? 0) : ((sorted[middle - 1] ?? 0) + (sorted[middle] ?? 0)) / 2;
+}
+
+// Each metric's median across the rounds.
+export function medianOfRounds(rounds: readonly Metrics[]): Metrics {
+  const names = [...new Set(rounds.flatMap((round) => Object.keys(round)))];
+  return Object.fromEntries(names.map((name) => [name, median(rounds.flatMap((round) => round[name] ?? []))]));
+}
+
 // Every reason a check fails; an empty list passes.
 export function checkResults(results: Results, targets: Targets, baseline: Baseline | undefined): string[] {
   return Object.entries(results).flatMap(([benchmark, metrics]) => {

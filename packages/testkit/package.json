@@ -1,6 +1,6 @@
 {
   "name": "@kvman/testkit",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "createTestKernel: the real kvman kernel for extension tests.",
   "type": "module",
   "exports": {
@@ -16,5 +16,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@kvman/kernel": "workspace:*",
+    "@kvman/sdk": "workspace:*"
   }
 }

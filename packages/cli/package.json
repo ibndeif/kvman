@@ -1,6 +1,6 @@
 {
   "name": "kvman",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "kvman, an app that works like a small operating system: a kernel runs extensions, and a preset shapes them.",
   "type": "module",
   "exports": {

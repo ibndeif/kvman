@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkResults, parseBaseline, recordBaseline, type Baseline, type Targets } from '../../bench/rules.ts';
+import { checkResults, medianOfRounds, parseBaseline, recordBaseline, type Baseline, type Targets } from '../../bench/rules.ts';
 
 const targets: Targets = { exec: { p99Ms: { max: 5 } }, queue: { perSecond: { min: 500 } } };
 
@@ -27,5 +27,12 @@ describe('benchmark rules (plan 12 §12.3)', () => {
     const recorded = recordBaseline({ exec: { p99Ms: 1 } }, targets, new Date(0));
     expect(recorded).toEqual({ ok: true, baseline: { recordedAt: '1970-01-01T00:00:00.000Z', benchmarks: { exec: { p99Ms: 1 } } } });
     if (recorded.ok) expect(parseBaseline(JSON.stringify(recorded.baseline))).toEqual(recorded.baseline);
+  });
+});
+
+describe('benchmark rounds (plan 12 §12.3)', () => {
+  it('M1.4-E26 each metric is the median of its rounds', () => {
+    expect(medianOfRounds([{ p99Ms: 9 }, { p99Ms: 3 }, { p99Ms: 4 }, { p99Ms: 30 }, { p99Ms: 5 }])).toEqual({ p99Ms: 5 });
+    expect(medianOfRounds([{ perSecond: 400 }, { perSecond: 600 }])).toEqual({ perSecond: 500 });
   });
 });
