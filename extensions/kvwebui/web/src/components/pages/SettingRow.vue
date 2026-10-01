@@ -4,7 +4,7 @@ import { Lock } from '@lucide/vue';
 import { computed, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { SettingInfo } from '../../api/kernel.ts';
-import { invalidFields } from '../../api/problem-text.ts';
+import { firstIssueMessage } from '../../api/problem-text.ts';
 import { valueField } from '../../forms/fields.ts';
 import { buildInput, valueText, type FormValues } from '../../forms/values.ts';
 import { applyLanguage, applyTheme } from '../../state/appearance.ts';
@@ -24,10 +24,12 @@ const field = computed(() => valueField(props.setting.schema));
 const values = reactive<FormValues>({});
 const scope = ref<'global' | 'workspace'>('global');
 const invalid = ref<string[]>([]);
+const issue = ref<string | undefined>(undefined);
 const reset = (): void => {
   values['value'] = valueText(field.value, props.setting.value);
   scope.value = props.setting.source === 'workspace' ? 'workspace' : 'global';
   invalid.value = [];
+  issue.value = undefined;
 };
 watch(() => props.setting, reset, { immediate: true });
 
@@ -45,7 +47,9 @@ const saved = async (): Promise<void> => {
   if (typeof language === 'string' && language !== state.language.value) await applyLanguage(state, i18n, language);
 };
 const fail = (problem: Problem): void => {
-  invalid.value = problem.code === 'VALIDATION_FAILED' && invalidFields(problem).length > 0 ? ['value'] : [];
+  const rejected = problem.code === 'VALIDATION_FAILED';
+  invalid.value = rejected ? ['value'] : [];
+  issue.value = rejected ? firstIssueMessage(problem) : undefined;
   showProblem(state, problem);
 };
 const save = async (): Promise<void> => {
@@ -81,6 +85,7 @@ const set = (path: string, value: string | boolean): void => {
       </template>
       <template v-else>
         <FormField :field="field" command="kvwebui.settings" :values="values" :invalid="invalid" :set="set" bare />
+        <span v-if="issue" class="text-[12.5px] text-danger" data-test="setting-issue">{{ issue }}</span>
         <div v-if="props.setting.scopes.length === 2" role="group" :aria-label="t('kvwebui.settings.appliesTo')" class="flex gap-0.5 rounded-xl bg-neutral-soft p-0.75">
           <button
             v-for="choice in (['global', 'workspace'] as const)"

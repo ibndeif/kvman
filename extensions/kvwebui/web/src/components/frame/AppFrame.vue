@@ -46,7 +46,7 @@ watchEffect(() => {
     <TopBar :title="appTitle" />
     <div class="flex min-h-0 grow">
       <NavBar />
-      <main class="flex min-w-0 grow flex-col gap-4 overflow-auto px-9 py-7">
+      <main class="flex min-w-0 grow flex-col gap-4 overflow-auto px-4 py-5 md:px-9 md:py-7">
         <LoadFailures />
         <RouterView :key="route.fullPath" />
       </main>

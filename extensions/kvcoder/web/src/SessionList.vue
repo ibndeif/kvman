@@ -2,7 +2,7 @@
 import { Plus } from '@lucide/vue';
 import { computed, onUnmounted, shallowRef, watch } from 'vue';
 import type { Session } from '../../src/index.ts';
-import { titleText, toastProblem, useKvman } from './kvman.ts';
+import { pageLanguage, titleText, toastProblem, useKvman } from './kvman.ts';
 
 // The session list (ADR 0009, 104): translated titles, each chat's status, Today and Earlier, the open chat
 // highlighted, and "New chat", which opens the Chat page. It reads the list again every few seconds.
@@ -28,7 +28,7 @@ const groups = computed(() => {
 });
 const when = (session: Session): string => {
   const date = new Date(session.updatedAt);
-  return date.getTime() >= startOfToday() ? date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return date.getTime() >= startOfToday() ? date.toLocaleTimeString(pageLanguage(), { hour: '2-digit', minute: '2-digit' }) : date.toLocaleDateString(pageLanguage(), { month: 'short', day: 'numeric' });
 };
 
 const timer = setInterval(() => void load(), 5_000);

@@ -20,7 +20,7 @@ kvcoder is the app-building harness, built on kvai and kvwebui. Its agent has on
   ```
 - **A turn** records `{ id, startedAt, endedAt, durationMs, steps, usage, outcome: 'done' | 'cancelled' | 'failed' | 'interrupted' | 'maxSteps' }`. While suspended, it also holds its `pending` calls (`{ toolCallId, kind: 'question' | 'subagent' | 'approval', questionId?, question?, childSessionId? }`, where `question` is the `ask` input with its `kind`, or an approval's `{ command, description }`, ADR 0009, 102) and the results already produced in that step. When the last pending call resolves, kvcoder appends all results in the model's call order and queues the next step.
 - **Totals.** The session keeps running totals of `usage` and `durationMs`, and a subagent's usage adds to its parent's. The conversation shows each turn's time, tokens, and cost under its last answer, and the session's totals in its header.
-- **Display-only messages.** A **notice** is kvcoder's own (a cancel, an interruption, a failed summary), shown as `kvcoder.notices.<code>` with its `params`. A **note** is added by any extension with `kvcoder.note.add` and shown as its translation key with `params`. Neither is sent to the model, and adding a note never starts a turn.
+- **Display-only messages.** A **notice** is kvcoder's own (a cancel, an interruption, a failed summary), shown as `kvcoder.notices.<code>` with its `params`; a `STEP_FAILED` notice's params are `{ code, details }`, the Problem's code and params, and the UI translates them (ADR 0009, 133). A **note** is added by any extension with `kvcoder.note.add` and shown as its translation key with `params`. Neither is sent to the model, and adding a note never starts a turn.
 - **Titles.** A title is a string, or `{ key }` for a translated title (the welcome session). Until the first turn ends, the title is the first 60 characters of the first user message. Then kvcoder asks `kvai.complete` (the session's model, no tools, `maxTokens` 30) for a 3–6 word title in the conversation's language. `kvcoder.session.rename` overrides it, and a renamed session is never retitled. A failed title call keeps the placeholder.
 - **Welcome.** kvcoder registers a `kernel.workspace.opened` handler (§2.15). When the `kvcoder.welcome` setting isn't `null`, it creates a session titled `{ key: 'kvcoder.welcome.title' }` and adds a note with that setting's key, so a new workspace opens with a greeting in the person's language. A preset sets its own key, or `null` for none.
 - **Model.** A session starts with `kvcoder.model` (or `kvai.defaultModel` when that is `null`) and `kvcoder.thinking`. `kvcoder.session.configure` changes either from the next step; an unknown model fails that step (ADR 0009, 107).
@@ -238,14 +238,14 @@ kvcoder owns its conversation UI. kvwebui only hosts it: kvcoder contributes pag
   - streams the running step (`kvman.stream`): text deltas into the pending answer, thinking deltas collapsed, component chunks inline, and follow chunks continuing in the same bubble;
   - reattaches to the running step after a reload, through the session's `stepJobId`;
   - shows pending questions from the turn record;
-  - shows each turn's time, tokens, and cost, and the session's totals and model picker (`kvcoder.session.configure`) in its header;
+  - shows each turn's time, tokens, and cost, and the session's totals and model picker (`kvcoder.session.configure`) in its header; the picker groups models by provider title, for ready providers and the session's own model (ADR 0009, 136); times and numbers use the page's language (ADR 0009, 132);
   - has a send box with image attachments (`POST /api/files`, then `fileIds`), and a Stop button that runs `kvcoder.turn.cancel`;
   - renders Markdown through `kvman.View`;
   - streams a subagent's steps in its card (the `subagent` chunk), shows "Summarizing earlier messages…" between `compaction` chunks (ADR 0009, 99), and shows background results as a small card;
   - has its own tabs, Chat and **Prompt**; Prompt shows `kvcoder.prompt.get` with each section's owner, reach, and size, and a Copy button (kvwebui has no `tabs`, ADR 0009, 68 and 104);
   - has a menu with Rename, Fork into a new chat, Export as JSON, Summarize earlier messages now, and Delete (after a confirmation), and "Fork from here" on each message (ADR 0009, 104).
 - **Custom components:** the conversation, the session list (`kvcoder.sessions`), the question card (`kvcoder.question`; one reply's approvals share one card, with "Allow all"), and the shell-result card (the command, exit code, and collapsible output; `http://127.0.0.1:<port>…` and `http://localhost:<port>…` URLs in any output are links that open in a new tab, ADR 0009, 120).
-- A **status item** with the count of waiting sessions, from `kvcoder.session.count` (ADR 0009, 97).
+- A **status item** with the count of waiting sessions, from `kvcoder.session.count` (ADR 0009, 97); the conversation follows each step's job, so the count reruns when a step ends (ADR 0009, 131). The session list and the conversation sit side by side from 30 rem of conversation width, and stack below (ADR 0009, 130).
 
 **Settings.**
 

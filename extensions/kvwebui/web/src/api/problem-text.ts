@@ -22,3 +22,12 @@ export function invalidFields(problem: Problem): string[] {
     return typeof path === 'string' && path !== '' ? [path.split('.')[0] ?? path] : [];
   });
 }
+
+// The English message of a VALIDATION_FAILED Problem's first issue (plan 06 §6.7, ADR 0009, 135).
+export function firstIssueMessage(problem: Problem): string | undefined {
+  const issues = problem.params?.['issues'];
+  const first = Array.isArray(issues) ? issues[0] : undefined;
+  if (typeof first !== 'object' || first === null || Array.isArray(first)) return undefined;
+  const message = first['message'];
+  return typeof message === 'string' ? message : undefined;
+}

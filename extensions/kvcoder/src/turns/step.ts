@@ -1,5 +1,6 @@
 import { ProblemError, z, type Ctx, type Stored } from '@kvman/sdk';
 import type {} from '@kvman/kvai';
+import type { JsonValue } from '../connector-line.ts';
 import { runBinaryChecks } from '../calls/binary-checks.ts';
 import { shellTool } from '../calls/shell-tool.ts';
 import { sessionTools, shellFor, type SessionTools } from '../prompt/session-prompt.ts';
@@ -87,9 +88,15 @@ async function callModel(ctx: Ctx, session: Stored<SessionDoc>, turnId: string, 
     return { calls, seq };
   } catch (error) {
     if (!(error instanceof ProblemError) || ctx.job.signal.aborted) throw error;
-    await endTurn(ctx, session.id, turnId, 'failed', 'step', { code: 'STEP_FAILED', params: { code: error.problem.code } });
+    await endTurn(ctx, session.id, turnId, 'failed', 'step', { code: 'STEP_FAILED', params: { code: error.problem.code, details: failureDetails(error) } });
     return undefined;
   }
+}
+
+/** The failed call's Problem params, for the notice's translation (ADR 0009, 133). */
+function failureDetails(error: ProblemError): JsonValue {
+  const parsed = z.json().safeParse(error.problem.params ?? {});
+  return parsed.success ? parsed.data : {};
 }
 
 async function finishWithoutCalls(ctx: Ctx, sessionId: string, turnId: string, maxSteps: number): Promise<void> {

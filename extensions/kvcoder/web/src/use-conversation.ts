@@ -65,6 +65,7 @@ export function useConversation(kvman: Kvman, sessionId: () => string | undefine
     while (current !== undefined && !closed && !following.has(current)) {
       following.add(current);
       Object.assign(target, idleLive());
+      kvman.follow(current).catch(failed);
       let next: string | undefined;
       for await (const event of kvman.stream(current)) {
         const signal = applyEvent(target, event);

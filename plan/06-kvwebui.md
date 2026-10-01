@@ -33,7 +33,7 @@ kvwebui is the web app, and it is an extension like any other. The kernel serves
 **Nav.**
 - One flat list, ordered by `kvwebui.nav.order`, then by each item's `order`, then by full nav id (`<namespace>.<id>`) alphabetically. Items in `kvwebui.nav.hidden` are left out.
 - Below a divider come the built-in pages: Settings (`kvwebui.settings`) and Extensions (`kvwebui.extensions`), at `/kvwebui/<page>`. They can be `kvwebui.home` and the target of a `navigate` or `link`, and they're outside `kvwebui.nav.order` and `kvwebui.nav.hidden`. There is no built-in Jobs page: an extension that wants one contributes it (ADR 0009, 69).
-- The nav can collapse to icons only, remembered in `localStorage`.
+- The nav can collapse to icons only, remembered in `localStorage`. Below 768 px it is always the icon rail (68 px, as when collapsed), and its toggle opens the full nav as an overlay that closes when a page is picked (ADR 0009, 134).
 
 **Panels.** One is open at a time, chosen from a strip of panel icons. The open panel is remembered per tab, like the workspace, and panels show on every page.
 
@@ -85,7 +85,7 @@ An extension contributes UI by registering the public query `<namespace>.ui.get`
 
 | Component | Shape |
 |---|---|
-| `stack` | `{ direction: 'vertical' \| 'horizontal', gap?: 'sm' \| 'md' \| 'lg', children }` |
+| `stack` | `{ direction: 'vertical' \| 'horizontal', gap?: 'sm' \| 'md' \| 'lg', children }`; a horizontal stack takes the page's height and no more (ADR 0009, 130) |
 | `card` | `{ title?, children }` |
 | `heading` | `{ text, params?, level: 1 \| 2 \| 3 }` |
 | `text` | `{ text, params? }` |
@@ -145,7 +145,7 @@ There is no `tabs` component: an extension that wants tabs ships a custom compon
 
 ## 6.7 Problems
 
-- A failed command shows a toast with the translated `<ns>.errors.<CODE>` and its params. Inside a form, `VALIDATION_FAILED` also marks each field named by an issue path's first segment with `kvwebui.form.invalid` (ADR 0009, 71).
+- A failed command shows a toast with the translated `<ns>.errors.<CODE>` and its params. Inside a form, `VALIDATION_FAILED` also marks each field named by an issue path's first segment with `kvwebui.form.invalid` (ADR 0009, 71). A settings row that fails `VALIDATION_FAILED` shows the first issue's English message under its field (ADR 0009, 135).
 - A failed query shows an error card in place of its component, with "Try again".
 - An error reads as a plain sentence, with a "Details" disclosure holding the code, the English message, and the params.
 - Toasts sit at the bottom end corner; `info` and `success` close after 5 s, `warning` and `error` stay until closed. A button's `confirm` opens an in-app dialog. Loading shows placeholder rows, and an empty table or list shows its `empty` text (default `kvwebui.empty`). Formats use `Intl` in the UI language (ADR 0009, 75).

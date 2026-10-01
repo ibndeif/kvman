@@ -165,3 +165,18 @@ body {
   padding-inline-start: 0.9rem;
   color: var(--kvwebui-muted);
 }
+.kvwebui-markdown :where(table) {
+  display: block;
+  max-inline-size: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+.kvwebui-markdown :where(th, td) {
+  border: 1px solid var(--kvwebui-line);
+  padding: 0.35rem 0.75rem;
+  text-align: start;
+}
+.kvwebui-markdown :where(th) {
+  background: var(--kvwebui-sunken);
+  font-weight: 600;
+}

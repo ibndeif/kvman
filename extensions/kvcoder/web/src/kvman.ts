@@ -12,6 +12,9 @@ export function useKvman(): Kvman {
 
 export type Translate = Kvman['t'];
 
+/** The language kvwebui set on the page (ADR 0009, 132); formats follow it, not the browser's. */
+export const pageLanguage = (): string | undefined => (document.documentElement.lang === '' ? undefined : document.documentElement.lang);
+
 /** The fields of a JSON object, or none for anything else. */
 export function fields(value: unknown): Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value) ? Object.fromEntries(Object.entries(value)) : {};
@@ -36,8 +39,12 @@ export function problemOf(error: unknown): ShownProblem | undefined {
   if (!(error instanceof Error) || !('problem' in error)) return undefined;
   const problem = error.problem;
   if (typeof problem !== 'object' || problem === null || !('code' in problem) || typeof problem.code !== 'string') return undefined;
-  const raw = 'params' in problem && typeof problem.params === 'object' && problem.params !== null ? Object.entries(problem.params) : [];
-  return { code: problem.code, params: Object.fromEntries(raw.map(([key, value]) => [key, typeof value === 'string' ? value : JSON.stringify(value)])) };
+  return { code: problem.code, params: stringValues('params' in problem ? problem.params : undefined) };
+}
+
+/** The fields of a JSON object as strings (what a translation takes), or none for anything else. */
+export function stringValues(params: unknown): Record<string, string> {
+  return Object.fromEntries(Object.entries(fields(params)).map(([key, value]) => [key, typeof value === 'string' ? value : JSON.stringify(value)]));
 }
 
 /** Shows a failed call as a toast. */
@@ -48,8 +55,8 @@ export function toastProblem(kvman: Kvman, error: unknown): void {
 
 /** Tokens, cost, and time, in the UI language. */
 export function totals(t: Translate, usage: { input: number; output: number; cost: number }, durationMs: number): string {
-  const tokens = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 }).format(usage.input + usage.output);
-  const cost = new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(usage.cost);
+  const tokens = new Intl.NumberFormat(pageLanguage(), { notation: 'compact', maximumFractionDigits: 1 }).format(usage.input + usage.output);
+  const cost = new Intl.NumberFormat(pageLanguage(), { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(usage.cost);
   const seconds = Math.round(durationMs / 1000);
   const time = seconds < 60 ? t('kvcoder.ui.seconds', { count: seconds }) : t('kvcoder.ui.minutes', { count: Math.round(seconds / 60) });
   return t('kvcoder.ui.totals', { time, tokens, cost });

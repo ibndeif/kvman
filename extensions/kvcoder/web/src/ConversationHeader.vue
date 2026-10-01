@@ -3,13 +3,14 @@ import { Ellipsis } from '@lucide/vue';
 import { computed, onMounted, ref } from 'vue';
 import type { Session } from '../../src/index.ts';
 import { titleText, toastProblem, totals, useKvman } from './kvman.ts';
+import { modelGroups, type ModelGroup } from './model-groups.ts';
 
 // The conversation's header (plan 08 §8.7, ADR 0009, 104): the title, the session's totals, the model and thinking
 // picker, the Chat and Prompt tabs, and the chat's menu.
 const props = defineProps<{ session: Session; tab: 'chat' | 'prompt'; turns: number }>();
 const emit = defineEmits<{ tab: [tab: 'chat' | 'prompt']; changed: [] }>();
 const kvman = useKvman();
-const models = ref<{ id: string; name: string }[]>([]);
+const groups = ref<ModelGroup[]>([]);
 const menu = ref(false);
 const renaming = ref<string | null>(null);
 const confirming = ref(false);
@@ -18,7 +19,8 @@ const summary = computed(() => `${kvman.t('kvcoder.ui.turns', { count: props.tur
 
 onMounted(async () => {
   try {
-    models.value = (await kvman.exec('kvai.model.list', {})).map(({ id, name }) => ({ id, name }));
+    const [providers, models] = await Promise.all([kvman.exec('kvai.provider.list', {}), kvman.exec('kvai.model.list', {})]);
+    groups.value = modelGroups(providers, models, props.session.model);
   } catch (error) {
     toastProblem(kvman, error);
   }
@@ -60,12 +62,14 @@ const remove = () => run(async () => {
 <template>
   <header class="kvc-header">
     <div class="kvc-title">
-      <form v-if="renaming !== null" @submit.prevent="rename"><input v-model="renaming" class="kvc-box" :aria-label="kvman.t('kvcoder.ui.rename')" data-test="rename-input" @blur="rename" /></form>
+      <form v-if="renaming !== null" @submit.prevent="rename"><input v-model="renaming" class="kvc-field" :aria-label="kvman.t('kvcoder.ui.rename')" data-test="rename-input" @blur="rename" /></form>
       <strong v-else data-test="session-title">{{ titleText(kvman.t, props.session.title) }}</strong>
       <span class="kvc-muted" data-test="session-totals">{{ summary }}</span>
     </div>
     <select :value="props.session.model ?? ''" class="kvc-button" :aria-label="kvman.t('kvcoder.ui.model')" data-test="model-picker" @change="onModel">
-      <option v-for="model in models" :key="model.id" :value="model.id">{{ model.name }}</option>
+      <optgroup v-for="group in groups" :key="group.provider" :label="group.title">
+        <option v-for="model in group.models" :key="model.id" :value="model.id">{{ model.name }}</option>
+      </optgroup>
     </select>
     <select :value="props.session.thinking" class="kvc-button" :aria-label="kvman.t('kvcoder.ui.thinking')" data-test="thinking-picker" @change="onThinking">
       <option v-for="level in thinkingLevels" :key="level" :value="level">{{ kvman.t(`kvcoder.ui.thinkingLevels.${level}`) }}</option>

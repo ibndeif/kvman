@@ -2,7 +2,7 @@
 import { BellRing, NotebookText, ScrollText } from '@lucide/vue';
 import { computed } from 'vue';
 import type { Message } from '../../src/index.ts';
-import { problemKey, useKvman } from './kvman.ts';
+import { fields, problemKey, stringValues, useKvman } from './kvman.ts';
 import { isBackground, resultCard, textOf, thinkingOf } from './message-parts.ts';
 import ShellResult from './ShellResult.vue';
 
@@ -14,10 +14,10 @@ const text = computed(() => textOf(props.message.content['content']));
 const thinking = computed(() => thinkingOf(props.message));
 const card = computed(() => resultCard(props.message, props.commands));
 const notice = computed(() => {
-  const params = props.message.content['params'];
-  const code = typeof params === 'object' && params !== null && !Array.isArray(params) && typeof params['code'] === 'string' ? params['code'] : undefined;
-  const values = typeof params === 'object' && params !== null && !Array.isArray(params) ? Object.fromEntries(Object.entries(params)) : {};
-  return kvman.t(`kvcoder.notices.${String(props.message.content['code'])}`, { ...values, ...(code === undefined ? {} : { error: kvman.t(problemKey(code)) }) });
+  const params = fields(props.message.content['params']);
+  const code = typeof params['code'] === 'string' ? params['code'] : undefined;
+  const error = code === undefined ? {} : { error: kvman.t(problemKey(code), stringValues(params['details'])) };
+  return kvman.t(`kvcoder.notices.${String(props.message.content['code'])}`, { ...params, ...error });
 });
 const note = computed(() => {
   const params = props.message.content['params'];

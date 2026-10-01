@@ -59,7 +59,7 @@ describe('sessions (08 §8.6)', { timeout: 30_000 }, () => {
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'again' });
     await kernel.clock.advance(0);
     const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 10 });
-    expect(messages.at(-1)?.content).toEqual({ code: 'STEP_FAILED', params: { code: 'kvai/MODEL_UNKNOWN' } });
+    expect(messages.at(-1)?.content).toEqual({ code: 'STEP_FAILED', params: { code: 'kvai/MODEL_UNKNOWN', details: { model: 'fake/nope' } } });
     expect((await turnState(kernel, sessionId)).turn).toMatchObject({ outcome: 'failed' });
   });
 

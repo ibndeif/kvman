@@ -39,6 +39,8 @@ export type Kvwebui = {
   bootProblem: ShallowRef<Problem | undefined>;
   panel: Ref<string | null>;
   navCollapsed: Ref<boolean>;
+  // True below 768 px (ADR 0009, 134), where the nav is always the icon rail and opens as an overlay.
+  narrow: Ref<boolean>;
   // Called with the tab's workspace when an answer says it was closed elsewhere.
   onWorkspaceGone: (workspaceId: string) => void;
 };
@@ -54,6 +56,14 @@ export function useKvwebui(): Kvwebui {
 export const workspaceMemory = tabMemory('kvwebui.workspace');
 export const panelMemory = tabMemory('kvwebui.panel');
 const navCollapsedKey = 'kvwebui.nav.collapsed';
+const narrowQuery = '(max-width: 767px)';
+
+function watchNarrow(): Ref<boolean> {
+  const media = window.matchMedia(narrowQuery);
+  const narrow = ref(media.matches);
+  media.addEventListener('change', (event) => (narrow.value = event.matches));
+  return narrow;
+}
 
 export function createState(router: Router, fetcher: typeof fetch, loader: ComponentLoader): Kvwebui {
   const workspace = ref(homeWorkspaceId);
@@ -86,6 +96,7 @@ export function createState(router: Router, fetcher: typeof fetch, loader: Compo
     bootProblem: shallowRef(),
     panel: ref(panelMemory.read()),
     navCollapsed: ref(localStorage.getItem(navCollapsedKey) === 'true'),
+    narrow: watchNarrow(),
     onWorkspaceGone: () => undefined,
   };
   return state;

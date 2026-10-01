@@ -50,7 +50,7 @@ describe('compaction (08 §8.1)', { timeout: 30_000 }, () => {
     const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });
     expect(messages.filter((message) => message.kind === 'notice').map((message) => message.content)).toEqual([
       { code: 'SUMMARY_FAILED', params: { code: 'kvai/PROVIDER_ERROR' } },
-      { code: 'STEP_FAILED', params: { code: 'kvai/CONTEXT_TOO_LONG' } },
+      { code: 'STEP_FAILED', params: { code: 'kvai/CONTEXT_TOO_LONG', details: { model: 'fake/m1' } } },
     ]);
     await kernel.exec('kernel.settings.set', { key: 'kvcoder.compactAt', value: 0.8, scope: 'global' });
     fake.reply(says('BY HAND'));

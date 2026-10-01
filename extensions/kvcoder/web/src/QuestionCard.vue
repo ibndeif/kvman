@@ -51,7 +51,7 @@ function answerChoice(): Promise<void> {
     <div class="kvc-card-row" style="font-weight: 600"><CircleHelp :size="18" aria-hidden="true" />{{ prompt }}</div>
     <div class="kvc-card-body">
       <template v-if="kind === 'text'">
-        <input v-model="text" class="kvc-box" :placeholder="String(props.question['placeholder'] ?? '')" :aria-label="prompt" data-test="answer-text" />
+        <input v-model="text" class="kvc-field" :placeholder="String(props.question['placeholder'] ?? '')" :aria-label="prompt" data-test="answer-text" />
         <div class="kvc-actions">
           <button type="button" class="kvc-button" :disabled="busy" data-test="skip" @click="send({ dismissed: true })">{{ kvman.t('kvcoder.ui.skip') }}</button>
           <button type="button" class="kvc-button kvc-primary" :disabled="busy" data-test="answer" @click="send({ text })">{{ kvman.t('kvcoder.ui.answer') }}</button>
@@ -62,7 +62,7 @@ function answerChoice(): Promise<void> {
           <input :type="multiple ? 'checkbox' : 'radio'" :checked="selected.includes(option.id)" :name="props.questionId" @change="choose(option.id)" />
           <span style="display: flex; flex-direction: column"><span style="font-weight: 500">{{ option.label }}</span><span v-if="option.description" class="kvc-muted">{{ option.description }}</span></span>
         </label>
-        <input v-if="offersOther" v-model="other" class="kvc-box" :placeholder="kvman.t('kvcoder.ui.other')" :aria-label="kvman.t('kvcoder.ui.other')" data-test="answer-other" />
+        <input v-if="offersOther" v-model="other" class="kvc-field" :placeholder="kvman.t('kvcoder.ui.other')" :aria-label="kvman.t('kvcoder.ui.other')" data-test="answer-other" />
         <div class="kvc-actions">
           <button type="button" class="kvc-button" :disabled="busy" data-test="skip" @click="send({ dismissed: true })">{{ kvman.t('kvcoder.ui.skip') }}</button>
           <button type="button" class="kvc-button kvc-primary" :disabled="busy || (selected.length === 0 && other.trim() === '')" data-test="answer" @click="answerChoice">{{ kvman.t('kvcoder.ui.answer') }}</button>

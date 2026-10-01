@@ -26,7 +26,7 @@ const headings = { 1: 'text-[26px] font-semibold tracking-tight', 2: 'text-base 
   <div
     v-if="props.view.type === 'stack'"
     class="flex"
-    :class="[props.view.direction === 'vertical' ? 'flex-col' : 'flex-row flex-wrap items-center', gaps[props.view.gap ?? 'md']]"
+    :class="[props.view.direction === 'vertical' ? 'flex-col' : 'flex-row flex-wrap items-center grow min-h-0', gaps[props.view.gap ?? 'md']]"
   >
     <ViewNode v-for="(child, index) in props.view.children" :key="index" :view="child" :scope="props.scope" />
   </div>

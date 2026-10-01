@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { setting } from './support/fake-api.ts';
+import { fail, setting } from './support/fake-api.ts';
 import { click, mountApp, type } from './support/mount-app.ts';
 import { notesApi } from './support/notes.ts';
 
@@ -47,5 +47,25 @@ describe('the Settings page (06 §6.6, ADR 0009, 77)', () => {
     await click(document.querySelector<HTMLElement>('[data-test="confirm-ok"]'));
     expect(api.callsTo('kernel.secrets.delete').map((call) => call.input)).toEqual([{ extension: '@test/notes', name: 'token' }]);
     expect(app.findAll('[data-test="secret"]')).toEqual([]);
+  });
+});
+
+describe('a rejected setting (06 §6.7, ADR 0009, 135)', () => {
+  it('QA1-H6 and QA1-E5 shows the first issue under the field, and drops it once a value is saved', async () => {
+    const api = notesApi();
+    api.settings.push(setting('notes.pageSize', { type: 'integer', minimum: 0 }, ['global', 'workspace'], { default: 20 }));
+    api.handlers.set('kernel.settings.set', (input) => {
+      const value = typeof input === 'object' && input !== null && !Array.isArray(input) ? input['value'] : undefined;
+      return typeof value === 'number' && value < 0 ? fail('VALIDATION_FAILED', { issues: [{ path: '', message: 'Too small: expected number to be >=0' }] }) : {};
+    });
+    const app = await mountApp(api, '/kvwebui/settings');
+    const row = app.find('[data-test="setting-notes.pageSize"]');
+    await type(row?.querySelector<HTMLElement>('input') ?? null, '-5');
+    await click(row?.querySelector<HTMLElement>('[data-test="setting-save"]') ?? null);
+    expect(row?.querySelector('[data-test="setting-issue"]')?.textContent).toBe('Too small: expected number to be >=0');
+    expect(row?.querySelector('[data-test="field-invalid"]')).not.toBeNull();
+    await type(row?.querySelector<HTMLElement>('input') ?? null, '30');
+    await click(row?.querySelector<HTMLElement>('[data-test="setting-save"]') ?? null);
+    expect(row?.querySelector('[data-test="setting-issue"]')).toBeNull();
   });
 });

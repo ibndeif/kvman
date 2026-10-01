@@ -22,7 +22,7 @@ const choose = async (language: string, close: () => void): Promise<void> => {
   <DropdownMenu :label="t('kvwebui.language.label')" width="w-48">
     <template #trigger>
       <Globe class="size-4.5" aria-hidden="true" />
-      <span data-test="language-current">{{ languageName(state.language.value) }}</span>
+      <span class="hidden sm:inline" data-test="language-current">{{ languageName(state.language.value) }}</span>
     </template>
     <template #default="{ close }">
       <button
