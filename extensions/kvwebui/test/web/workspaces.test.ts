@@ -1,5 +1,6 @@
 import type { Json } from '@kvman/sdk';
 import { describe, expect, it } from 'vitest';
+import { fail } from './support/fake-api.ts';
 import { click, mountApp, type, type Mounted } from './support/mount-app.ts';
 import { notesApi, notesUi } from './support/notes.ts';
 
@@ -75,5 +76,16 @@ describe('workspaces in the browser (06 §6.2, ADR 0009, 74)', () => {
     expect(again.find('[data-test="panel-notes.tips"]')).not.toBeNull();
     await click(again.find('[data-test="panel-button-notes.tips"]'));
     expect(again.find('[data-test="panel-notes.tips"]')).toBeNull();
+  });
+
+  it('QA2-E1 a folder the kernel refuses shows its reason in the dialog', async () => {
+    const api = withWorkspaces();
+    api.handlers.set('kernel.workspace.open', () => fail('VALIDATION_FAILED', { path: 'relative/nope' }));
+    const app = await mountApp(api, '/notes/list');
+    await openPicker(app);
+    await click(app.find('[data-test="open-folder"]'));
+    await type(document.querySelector<HTMLElement>('[data-test="folder-path"]'), 'relative/nope');
+    await click(document.querySelector<HTMLElement>('[data-test="folder-open"]'));
+    expect(document.querySelector('[data-test="folder-issue"]')?.textContent).toBe('VALIDATION_FAILED happened.');
   });
 });

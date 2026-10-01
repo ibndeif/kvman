@@ -225,6 +225,7 @@ Going over a limit fails loudly and never cuts anything off.
 |---|---|---|
 | Job input or output | 1 MiB of JSON by default; a registration may set `maxInputBytes` and `maxOutputBytes` up to 32 MiB | `TOO_LARGE` |
 | Progress chunk | 64 KiB | `TOO_LARGE` |
+| Progress replay per running job | 256 KiB; the oldest chunks are dropped (ADR 0009, 139) | — |
 | File | 1 GiB | `TOO_LARGE` |
 | Store document or kv value | 16 MiB of JSON | `TOO_LARGE` |
 | `find` and `list` limits | required, at most 1000 | `VALIDATION_FAILED` |

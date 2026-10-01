@@ -11,11 +11,16 @@ const emit = defineEmits<{ close: [] }>();
 const state = useKvwebui();
 const { t } = useI18n();
 const path = ref('');
+const reason = ref<string | undefined>(undefined);
 
 const submit = async (): Promise<void> => {
   await openFolder(state, path.value.trim()).then(
     () => emit('close'),
-    (error: unknown) => showProblem(state, problemOf(error)),
+    (error: unknown) => {
+      const problem = problemOf(error);
+      reason.value = problem.code === 'VALIDATION_FAILED' ? problem.message : undefined;
+      showProblem(state, problem);
+    },
   );
 };
 </script>
@@ -27,6 +32,7 @@ const submit = async (): Promise<void> => {
       <label class="flex flex-col gap-1.5">
         <span class="font-medium">{{ t('kvwebui.workspace.folder') }}</span>
         <input v-model="path" type="text" required class="h-10 rounded-xl border border-line bg-surface px-3 font-mono text-[13px]" data-test="folder-path" />
+        <span v-if="reason" class="text-[13px] text-danger" data-test="folder-issue">{{ reason }}</span>
         <span class="text-[13px] text-muted">{{ t('kvwebui.workspace.folderHelp') }}</span>
       </label>
       <div class="flex justify-end gap-2.5">

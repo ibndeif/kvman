@@ -90,7 +90,7 @@ export async function startKernel(options: KernelOptions): Promise<Kernel> {
   const workspaces = createWorkspaces(connection, options.homeFolder, ids);
   const rows = createJobRows(connection, clock, ids, workspaces.closed);
   const schedules = createScheduleRows(connection, clock, ids, workspaces.closed);
-  const hub = createProgressHub();
+  const hub = createProgressHub((rootId) => dispatcher.waitForJob(rootId));
   const workspace = (id: string) => openWorkspaceOf(connection, options.homeFolder, id);
   const dispatcher = createDispatcher({ connection, rows, schedules, clock, logger, workspaceOf: workspace });
   const processes = createProcessService({ connection, home: options.home, clock, logger, platform: process.platform, deliverAlong: (work) => dispatcher.deliverAlong(work) });

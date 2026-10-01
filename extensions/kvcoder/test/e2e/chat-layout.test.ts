@@ -1,8 +1,8 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { chromium, type Browser, type Page } from 'playwright';
 import { z } from '@kvman/sdk';
-import { kvmanWorld, until, type KvmanWorld, type Running } from '../support/kvman-child.ts';
-import { says } from '../support/model-script.ts';
+import { childWait, kvmanWorld, until, type KvmanWorld, type Running } from '../support/kvman-child.ts';
+import { calls, says } from '../support/model-script.ts';
 
 let browser: Browser;
 let world: KvmanWorld | undefined;
@@ -79,28 +79,38 @@ describe('the chat page in Chromium (08 §8.7, ADR 0009, 130–137)', { timeout:
     await page.close();
   });
 
-  it('QA1-H2 the waiting count follows the steps with no reload', async () => {
+  it('QA1-H2 and QA2-H1 the waiting count follows the steps with no reload, even when the step ends at once', async () => {
     world = await kvmanWorld();
     const kvman = await world.start();
-    let release = (): void => undefined;
-    const begin = new Promise<void>((resolve) => (release = resolve));
-    const question = { id: 'ask-1', name: 'bash', arguments: { description: 'Ask.', command: `ask confirm '{"prompt":"Go on?"}'` } };
-    world.fake.reply({ chunks: [{ wait: begin }, { toolCall: question }] }, says('Done.'));
+    world.fake.reply(calls(`ask confirm '{"prompt":"Go on?"}'`), says('Done.'));
     const sessionId = sessionSchema.parse(await kvman.call('commands', 'kvcoder.session.create', { title: 'Waiting' })).id;
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
     await page.goto(`${kvman.origin}/kvcoder/session/${sessionId}`);
     await page.locator('[data-test="conversation"]').waitFor();
     const counted = (count: number) => page.waitForFunction(`document.querySelector('[data-test="status-bar"]')?.textContent?.includes(${JSON.stringify(`Waiting for you: ${String(count)}`)}) === true`, undefined, { timeout: 10_000 });
-    // The step's stream must be attached before the step ends, or the page has no job to follow (ADR 0009, 131).
-    const streamed = page.waitForRequest((request) => /\/api\/jobs\/[^/]+\/stream$/.test(new URL(request.url()).pathname));
     await page.locator('[data-test="composer-text"]').fill('Run it');
     await page.locator('[data-test="send"]').click();
-    await streamed;
-    release();
     await page.locator('[data-test="question-card"]').waitFor();
     await counted(1);
     await page.locator('[data-test="answer-yes"]').click();
     await counted(0);
+    await page.close();
+  });
+
+  it("QA2-H2 a page that attaches late still shows the answer's first words", async () => {
+    world = await kvmanWorld();
+    const kvman = await world.start();
+    let release = (): void => undefined;
+    const hold = new Promise<void>((resolve) => (release = resolve));
+    world.fake.reply({ chunks: [{ text: 'First words. ' }, { wait: hold }, { text: 'Last words.' }] });
+    const sessionId = sessionSchema.parse(await kvman.call('commands', 'kvcoder.session.create', { title: 'Late' })).id;
+    await kvman.call('commands', 'kvcoder.message.send', { sessionId, text: 'Say it' });
+    await vi.waitFor(() => expect(world?.fake.requests()).toHaveLength(1), childWait);
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    await page.goto(`${kvman.origin}/kvcoder/session/${sessionId}`);
+    await page.locator('[data-test="live-answer"]', { hasText: 'First words.' }).waitFor();
+    release();
+    await page.locator('[data-test="assistant-message"]', { hasText: 'First words. Last words.' }).waitFor();
     await page.close();
   });
 });

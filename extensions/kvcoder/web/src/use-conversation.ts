@@ -52,6 +52,8 @@ export function useConversation(kvman: Kvman, sessionId: () => string | undefine
       kvman.exec('kvcoder.message.list', { sessionId: id, limit: 200 }),
       kvman.exec('kvcoder.turn.list', { sessionId: id, limit: 50 }),
     ]);
+    // The status items count sessions by status, so they rerun when this one's changes (ADR 0009, 138).
+    if (session.value !== null && session.value.status !== found.status) kvman.refresh();
     session.value = found;
     messages.value = list.messages;
     omitted.value = list.omitted;

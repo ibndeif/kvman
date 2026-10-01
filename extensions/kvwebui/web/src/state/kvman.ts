@@ -45,6 +45,9 @@ export function createKvman(state: Kvwebui, t: Kvman['t'], View: Kvman['View']):
       },
     }),
     follow: (jobId) => follow(state, jobId),
+    refresh: () => {
+      state.revision.value += 1;
+    },
     navigate: (page, params) => {
       void state.router.push(pageLocation(state.registry.value, page, params ?? {}));
     },

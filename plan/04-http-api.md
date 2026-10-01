@@ -42,5 +42,5 @@ A Problem is `{ code, message, params? }` (§5). `message` is English for logs a
 `GET /api/jobs/:id/stream` is the only push channel. Only async and scheduled jobs have one; progress from a sync root job goes nowhere.
 
 - It sends each `ctx.job.progress(data)` chunk of the job and of every job nested in it as a `progress` event `{ source, data }`, then one `result` event (the output) or `problem` event (the Problem, `CANCELLED` for a cancelled job), then closes. Each event's `data:` is JSON. There is no heartbeat. An unknown id, or a sync job's, gets the envelope with `NOT_FOUND` (ADR 0009, 42).
-- Chunks aren't stored. A client that connects late sees only new chunks, and a finished job answers with its `result` or `problem` at once.
+- A running job keeps its last 256 KiB of progress chunks (the oldest dropped first), and a client that connects late gets them before the live ones. A finished job answers with its `result` or `problem` at once, without chunks (ADR 0009, 139).
 - Anything that must survive, such as an agent's messages, the extension keeps in its store.

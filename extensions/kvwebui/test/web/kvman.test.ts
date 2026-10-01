@@ -128,4 +128,13 @@ describe('the injected kvman (06 §6.4, ADR 0009, 83)', () => {
     expect(app.router.currentRoute.value.fullPath).toBe('/ghost/page');
     expect(app.find('[data-test="not-found"]')).not.toBeNull();
   });
+
+  it("QA2-H1 refresh reruns the page's queries now, and runs no command", async () => {
+    const { api, app } = await mountActions({ refresh: (kvman) => kvman.refresh() });
+    const lists = api.callsTo('notes.note.list').length;
+    const commands = api.calls.filter((call) => call.kind === 'commands').length;
+    await click(button(app, 'refresh'));
+    expect(api.callsTo('notes.note.list').length).toBe(lists + 1);
+    expect(api.calls.filter((call) => call.kind === 'commands').length).toBe(commands);
+  });
 });

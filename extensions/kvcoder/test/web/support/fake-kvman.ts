@@ -16,6 +16,7 @@ export type FakeKvman = {
   handle(name: string, handler: Handler): void;
   emit(jobId: string, event: StreamEvent): void;
   end(jobId: string): void;
+  refresh: ReturnType<typeof vi.fn>;
   navigate: ReturnType<typeof vi.fn>;
   toast: ReturnType<typeof vi.fn>;
   language: { value: string };
@@ -40,6 +41,7 @@ export function createFakeKvman(): FakeKvman {
     channels.set(jobId, found);
     return found;
   };
+  const refresh = vi.fn();
   const navigate = vi.fn();
   const toast = vi.fn();
   const exec = async (name: string, input: unknown): Promise<unknown> => {
@@ -67,6 +69,7 @@ export function createFakeKvman(): FakeKvman {
     execAsync: async (name: string, input: unknown) => String(await exec(name, input)),
     stream,
     follow: async () => undefined,
+    refresh,
     navigate,
     toast,
     panel: () => undefined,
@@ -88,6 +91,7 @@ export function createFakeKvman(): FakeKvman {
       found.ended = true;
       found.wake?.();
     },
+    refresh,
     navigate,
     toast,
     language,

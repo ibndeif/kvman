@@ -19,3 +19,12 @@ Found by driving a real `dev` kvman in Chromium. Each fix names the test that pr
 - **QA1-E3 A notice without details still reads.** *Given* a `STEP_FAILED` notice stored before this fix (params `{ code }` only), *when* it renders, *then* it shows the translated code and no error. (`extensions/kvcoder/test/web/notices.test.ts`)
 - **QA1-E4 The session list's time stays on one line.** *Given* a long title, *when* the list renders at 272 px, *then* the time's box is one line high. (`extensions/kvcoder/test/e2e/chat-layout.test.ts`)
 - **QA1-E5 A setting that is valid shows no issue.** *Given* the issue under QA1-H6, *when* the person saves `20`, *then* the message is gone. (`extensions/kvwebui/test/web/setting-row.test.ts`)
+
+# QA 2 — what QA 1 left (ADR 0009, 138–139)
+
+- **QA2-H1 Status items rerun on a status change.** *Given* an open chat, *when* a reload finds the session's status changed (for example idle to waiting), *then* `kvman.refresh()` runs once and the status bar updates, even when the step ended before the page attached its stream; a reload that finds the same status doesn't. `refresh()` reruns the page's queries and runs no command. (`extensions/kvcoder/test/web/status-refresh.test.ts`, `extensions/kvwebui/test/web/kvman.test.ts`, `extensions/kvcoder/test/e2e/chat-layout.test.ts`)
+- **QA2-H2 A late stream gets the chunks so far.** *Given* a running job that sent chunks 1 to 3, *when* a client connects, *then* it gets 1, 2, 3 and then the live ones; a page that opens mid-answer shows the first words. (`packages/kernel/test/http/progress-replay.test.ts`, `extensions/kvcoder/test/e2e/chat-layout.test.ts`)
+- **QA2-E1 A refused folder says why.** *Given* the open-folder dialog, *when* the kernel answers `VALIDATION_FAILED`, *then* the dialog shows the Problem's message under the field. (`extensions/kvwebui/test/web/workspaces.test.ts`)
+- **QA2-E2 The replay is bounded.** *Given* more than 256 KiB of chunks, *then* the oldest are dropped first and the newest is always kept. (`packages/kernel/test/http/progress-replay.test.ts`)
+- **QA2-E3 The buffer goes with the job.** *Given* a job that ended, or a sync job with no row, *then* its buffer is dropped and another job's stays. (`packages/kernel/test/http/progress-replay.test.ts`)
+

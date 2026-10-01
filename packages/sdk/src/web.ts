@@ -60,6 +60,8 @@ export type Kvman = {
   stream(jobId: string): AsyncIterable<StreamEvent>;
   /** Resolves when the job has ended, the page's queries have rerun, and its effects have applied. */
   follow(jobId: string): Promise<void>;
+  /** Reruns the page's queries and the status items now, as after a command the UI ran. */
+  refresh(): void;
   /** Opens a page by its full id. */
   navigate(page: string, params?: Record<string, string>): void;
   /** Shows a toast with a translated text (level `info` by default). */
