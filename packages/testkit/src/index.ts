@@ -44,6 +44,8 @@ export type TestKernel = {
   execAsync<Name extends string>(name: Name, input: CommandInputOf<Name>, options?: TestCallOptions): Promise<string>;
   /** Resolves with the job once it has ended. */
   waitForJob(jobId: string): Promise<Job>;
+  /** Receives a job's progress chunks from now on, as its HTTP stream does, until `stop` or the kernel stops. */
+  watch(jobId: string, onProgress: (chunk: ProgressChunk) => void): () => void;
   /** Cancels a job. */
   cancel(jobId: string): void;
   /** Stops the kernel as Ctrl+C does, moves the fake clock by `stoppedForMs` (default 0), then starts it again on the same home. */
@@ -135,6 +137,11 @@ export async function createTestKernel(options: TestKernelOptions): Promise<Test
       return jobId;
     },
     waitForJob: (jobId) => kernel.waitForJob(jobId),
+    watch: (jobId, onProgress) => {
+      const stop = kernel.watchProgress(jobId, onProgress);
+      asyncWatches.push(stop);
+      return stop;
+    },
     cancel: (jobId) => kernel.cancel(jobId),
     restart: async (restartOptions) => {
       stopAsyncWatches();

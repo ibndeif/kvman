@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { openConnection } from '../../src/storage/database.ts';
 import { useTemporaryHomes } from '../temporary-home.ts';
 import { note, storeOf } from './store-under-test.ts';
 
@@ -31,5 +32,29 @@ describe('transactions (02 §2.5)', () => {
     await expect(failing).rejects.toThrow('stop');
     expect(await store.collection('notes', note).count({})).toBe(1);
     expect(await store.global.kv.get('last')).not.toBe('rolled back');
+  });
+
+  it('M2.4-E63 a transaction holds the write lock from its start, so a read then a write never meets a stale snapshot', async () => {
+    const test = newHome();
+    const store = storeOf(test);
+    await store.kv.set('count', 1);
+    const other = openConnection(test.database);
+    other.pragma('busy_timeout = 0');
+    let refused = '';
+    try {
+      await store.transaction((tx) => {
+        const count = Number(tx.kv.get('count'));
+        try {
+          other.prepare("UPDATE store_kv SET value = '99' WHERE key = 'count'").run();
+        } catch (error) {
+          refused = error instanceof Error ? error.message : String(error);
+        }
+        tx.kv.set('count', count + 1);
+      });
+    } finally {
+      other.close();
+    }
+    expect(refused).toBe('database is locked');
+    expect(await store.kv.get('count')).toBe(2);
   });
 });

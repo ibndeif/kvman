@@ -9,27 +9,27 @@ kvcoder is the app-building harness, built on kvai and kvwebui. Its agent has on
 - **A message:**
 
   ```
-  { id, sessionId, turnId?, seq,
+  { id, sessionId, turnId?, seq,        // no seq, and queued: true, while it waits for the step (ADR 0009, 102)
     kind: 'user' | 'assistant' | 'toolResult' | 'notice' | 'note' | 'summary',
-    source?: { kind: 'user' } | { kind: 'extension', name } | { kind: 'subagent', sessionId },
+    source?: { kind: 'user' } | { kind: 'extension', name } | { kind: 'subagent', sessionId } | { kind: 'job', jobId },
     content,            // a pi-ai message, a notice { code, params }, a note { key, params? }, or a summary { text, coversThroughSeq }
     fileIds?,           // attached images (user messages)
     model?, usage?: { input, output, cacheRead, cacheWrite, cost },
     durationMs?,        // the model call (assistant) or the run time (toolResult)
     createdAt }
   ```
-- **A turn** records `{ id, startedAt, endedAt, durationMs, steps, usage, outcome: 'done' | 'cancelled' | 'failed' | 'interrupted' | 'maxSteps' }`. While suspended, it also holds its `pending` calls (`{ toolCallId, kind: 'question' | 'subagent' | 'approval', questionId?, childSessionId? }`) and the results already produced in that step. When the last pending call resolves, kvcoder appends all results in the model's call order and queues the next step.
+- **A turn** records `{ id, startedAt, endedAt, durationMs, steps, usage, outcome: 'done' | 'cancelled' | 'failed' | 'interrupted' | 'maxSteps' }`. While suspended, it also holds its `pending` calls (`{ toolCallId, kind: 'question' | 'subagent' | 'approval', questionId?, question?, childSessionId? }`, where `question` is the `ask` input with its `kind`, or an approval's `{ command, description }`, ADR 0009, 102) and the results already produced in that step. When the last pending call resolves, kvcoder appends all results in the model's call order and queues the next step.
 - **Totals.** The session keeps running totals of `usage` and `durationMs`, and a subagent's usage adds to its parent's. The conversation shows each turn's time, tokens, and cost under its last answer, and the session's totals in its header.
 - **Display-only messages.** A **notice** is kvcoder's own (a cancel, an interruption, a failed summary), shown as `kvcoder.notices.<code>` with its `params`. A **note** is added by any extension with `kvcoder.note.add` and shown as its translation key with `params`. Neither is sent to the model, and adding a note never starts a turn.
 - **Titles.** A title is a string, or `{ key }` for a translated title (the welcome session). Until the first turn ends, the title is the first 60 characters of the first user message. Then kvcoder asks `kvai.complete` (the session's model, no tools, `maxTokens` 30) for a 3–6 word title in the conversation's language. `kvcoder.session.rename` overrides it, and a renamed session is never retitled. A failed title call keeps the placeholder.
 - **Welcome.** kvcoder registers a `kernel.workspace.opened` handler (§2.15). When the `kvcoder.welcome` setting isn't `null`, it creates a session titled `{ key: 'kvcoder.welcome.title' }` and adds a note with that setting's key, so a new workspace opens with a greeting in the person's language. A preset sets its own key, or `null` for none.
-- **Model.** A session starts with `kvcoder.model` (or `kvai.defaultModel` when that is `null`) and `kvcoder.thinking`. `kvcoder.session.configure` changes either from the next step.
-- **Long histories.** `kvcoder.message.list` returns the newest `limit` messages, plus `omitted`, the number of older ones. The conversation shows "N earlier messages" and offers the export.
+- **Model.** A session starts with `kvcoder.model` (or `kvai.defaultModel` when that is `null`) and `kvcoder.thinking`. `kvcoder.session.configure` changes either from the next step; an unknown model fails that step (ADR 0009, 107).
+- **Long histories.** `kvcoder.message.list` returns the newest `limit` messages, plus `omitted`, the number of older ones. The conversation shows "N earlier messages" and offers the export (its file and shape: ADR 0009, 103).
 - **Sending.**
-  - `kvcoder.message.send` is for the person only. When the session is idle, it starts a turn and sends the chunk `{ type: 'follow', jobId }` for the first step, so the UI streams the turn. When a turn is running, the message steers it: the next step sees it.
-  - When the session is waiting, a message dismisses the pending questions and denies the pending approvals (the model sees "dismissed by the user" or "denied by the user"), is appended, and the next step runs.
+  - `kvcoder.message.send` is for the person only. When the session is idle, it starts a turn and sends the chunk `{ type: 'follow', jobId }` for the first step, so the UI streams the turn. When a turn is running, the message steers it: it waits in the session's queue (`message.list` returns it last, with `queued: true`) and is appended after the step's results, so the next step sees it (ADR 0009, 102).
+  - When the session is waiting, a message dismisses the pending questions and denies the pending approvals (the model sees "dismissed by the user" or "denied by the user"), is appended, and the next step runs. When the turn waits only on subagents, the message is queued instead, and the next step runs once they end (ADR 0009, 90).
   - `kvcoder.message.inject` does the same for extensions, and marks the message as coming from that extension.
-  - Both take `fileIds?`: kernel files that are images, for a model whose `input` includes `image`. Any other file, or an image for a text-only model, fails `VALIDATION_FAILED`. Images are read from the files at each step, not copied into the store.
+  - Both take `fileIds?`: kernel files that are images, for a model whose `input` includes `image`. Any other file (images are PNG, JPEG, GIF, or WebP), or an image for a text-only model, fails `VALIDATION_FAILED`; an image deleted later reaches the model as `[image <name> was deleted]` (ADR 0009, 103). Images are read from the files at each step, not copied into the store.
 - **Steps.** A turn is a chain of async jobs, one per step (§8.2). A step job registers `retries: 0` and `timeoutMs` 1 200 000. A step that continues the turn queues the next one, records it as `stepJobId`, and sends the progress chunk `{ type: 'follow', jobId }`, so the UI keeps streaming in one bubble.
 - **Statuses.** A session is `idle`, `running`, or `waiting`: suspended on a question, an approval, or subagents, with no job running.
 - **Cancel.** `kvcoder.turn.cancel` cancels:
@@ -38,13 +38,15 @@ kvcoder is the app-building harness, built on kvai and kvwebui. Its agent has on
   - its pending questions (a later answer fails `kvcoder/QUESTION_NOT_FOUND`).
 
   It then adds a notice and sets the session idle. `--async` connector jobs keep running and still report back.
-- **Interrupted steps.** A step cut off by a stop or a crash fails with `INTERRUPTED` or `WORKER_CRASHED`, and since it has no retries, it ends `failed` (§2.3). kvcoder registers a `kernel.job.failed` handler: when the failed job is a step, it ends the turn (`interrupted` for `INTERRUPTED`, else `failed`), adds a notice, and sets the session idle. The person sends a message to go on. Suspended turns survive restarts.
+- **Interrupted steps.** A step cut off by a stop or a crash fails with `INTERRUPTED` or `WORKER_CRASHED`, and since it has no retries, it ends `failed` (§2.3). kvcoder registers a `kernel.job.failed` handler: when the failed job is a step, it ends the turn (`interrupted` for `INTERRUPTED`, else `failed`), adds a notice, and sets the session idle; a subagent's interrupted step ends its parent's turn too. The handler queues nothing (ADR 0009, 95). The person sends a message to go on. Suspended turns survive restarts.
+- **Background results.** When an `--async` call or an async subagent ends, its result is appended as a `user` message with `source: { kind: 'job', jobId }` (or `{ kind: 'subagent', sessionId }`), read by the next step. It doesn't dismiss pending questions, and it starts a turn only when the session is idle; one that was interrupted or cancelled starts none (ADR 0009, 89 and 95).
+- **Errors.** `kvcoder/SESSION_NOT_FOUND`, `kvcoder/SESSION_BUSY` (compacting while a step runs), `kvcoder/JOB_NOT_FOUND`, `kvcoder/NAME_TAKEN`, and `kvcoder/QUESTION_NOT_FOUND` (ADR 0009, 92). Subagent sessions are for reading: every command that names one fails `VALIDATION_FAILED`, except `kvcoder.question.answer` (ADR 0009, 102).
 - **Delete.** `kvcoder.session.delete` cancels the session's turn and deletes its subagent sessions too.
 - **Compaction.** Before each step, tokens are estimated (characters / 4) against the model's window.
   - Above `kvcoder.compactAt`, kvai summarizes the older messages, the last 10 are kept whole, and a summary message is stored. Older messages stay visible but aren't sent.
   - `kvcoder.session.compact` compacts by hand.
   - A failed summary adds a notice and the step goes on; `kvai/CONTEXT_TOO_LONG` then ends the turn.
-- **Limits.** A turn ends with a notice after `kvcoder.maxSteps` steps. When `kvcoder.sessions.keep` is above 0, the oldest idle top-level sessions beyond it are deleted daily: creating a session schedules `kvcoder.session.prune` in its workspace with the key `session-prune` (§2.4). The default, 0, keeps every session.
+- **Limits.** A turn ends with a notice after `kvcoder.maxSteps` steps. When `kvcoder.sessions.keep` is above 0, the oldest idle top-level sessions beyond it are deleted daily: creating a session schedules `kvcoder.session.prune` in its workspace with the key `session-prune` (§2.4), daily at 03:00 (ADR 0009, 103). The default, 0, keeps every session.
 
 ## 8.2 A step
 
@@ -65,16 +67,18 @@ kvcoder is the app-building harness, built on kvai and kvwebui. Its agent has on
 | the same with `--async` | kvcoder's own job `kvcoder.connector.run` (which runs the command); prints `started <jobId>`. When it ends, the result is appended as a message, and starts a turn if the session is idle. |
 | `<connector> -h` / `<connector> <command> -h` (commands connectors) | the connector's commands with descriptions / that command's description, input and output JSON Schemas, and examples |
 | `ask …`, `subagent run …` | built-in connectors that suspend the turn (§8.5) |
-| `jobs list`, `jobs get <id>`, `jobs cancel <id>` | built-in connector commands for the `--async` jobs the agent started: list them, get one's status and details, or cancel one (ADR 0009, 81; detailed at M2.4) |
+| `jobs list`, `jobs get <id>`, `jobs cancel <id>` | built-in connector commands for the work this session started with `--async` (connector calls, and async subagents by their child session id): the newest 50 as `[{ id, kind, call, status, startedAt, endedAt? }]`, one row plus its `output` or `problem`, or a cancel (`{ "cancelled": true }`); another id fails `kvcoder/JOB_NOT_FOUND` (ADR 0009, 81 and 88) |
 | a connector word inside a pipe, `&&`, `;`, or other shell syntax | not run: the result explains that connector calls stand alone, with exit code 1 |
 | anything else, including binary connectors (`gh …`) | the real shell (below) |
 
-kvcoder parses a line the same way in both shells; single quotes are literal in both. A connector call may leave the JSON out (`preview stop`); its input is then `{}`.
+kvcoder parses a line the same way in both shells; single quotes are literal in both. A connector call may leave the JSON out (`preview stop`); its input is then `{}`. Both stdin forms are accepted on every OS, `--async` may stand anywhere after the connector word, and a call stands alone when it's one simple command (no pipe but the here-string's, no `&&`, `||`, `;`, `&`, redirection, `$( )`, backticks, or second line). Errors print `error <code>: <message>` with exit 1 (ADR 0009, 100).
+
+**What the model gets.** Every call returns plain text: the output (cut at 30 KB), then `[exit code N]`; a connector's output is its JSON indented by 2 spaces; a timeout adds `[timed out after N s; the process tree was killed]` and exits 124; a denied call returns `denied by the user`. The shell-result card's fields go in the toolResult's `details` (ADR 0009, 93).
 
 **The real shell.**
-- Linux and macOS: `bash -lc <command>`. Windows: `pwsh -NoProfile -Command <command>` when PowerShell 7 is on the PATH, otherwise `powershell.exe -NoProfile -Command <command>`. `kvcoder.shell.path` overrides the lookup on every OS. Calls run in the workspace folder.
+- Linux and macOS: `bash -lc <command>`. Windows: `pwsh -NoProfile -Command <command>` when PowerShell 7 is on the PATH, otherwise `powershell.exe -NoProfile -Command <command>`. `kvcoder.shell.path` overrides the lookup on every OS. Calls run in the workspace folder, with an empty stdin and kvman's environment (ADR 0009, 101).
 - **Approval.** With `kvcoder.shell.approval: 'ask'` (the default), the call first becomes an `ask confirm` question, and the turn suspends. A denied call returns "denied by the user".
-- **Timeout.** The default is 120 s; the model may ask for up to 600 s. On timeout or cancel, the process tree is killed: its group on Linux and macOS, `taskkill /PID <pid> /T /F` on Windows.
+- **Timeout.** The default is 120 s; the model may ask for up to 600 s (a larger `timeoutMs` is cut to 600 s, ADR 0009, 101). On timeout or cancel, the process tree is killed: its group on Linux and macOS, `taskkill /PID <pid> /T /F` on Windows.
 - **Output.** stdout and stderr are combined. Output over 30 KB keeps its first and last 15 KB around a `[… N bytes omitted …]` marker; connector results are cut the same way. The result includes the exit code.
 
 ## 8.4 Extending kvcoder
@@ -105,7 +109,7 @@ await ctx.exec('kvcoder.connector.register', {
 
 - **Two kinds.** A connector has exactly one of `commands` or `binary`.
 - **Commands connectors** run their commands through `ctx.exec`, with no shell. So validation, `--async`, cancel, retries, and timeouts are the kernel's. `-h` is built from each command's registered description and JSON Schema (through `kernel.extensions.list`) and its `examples`. A `command` must be a public command of the extension registering it, or the call fails with `VALIDATION_FAILED`.
-- **Binary connectors** are run by the agent in the real shell, and `-h` is the program's own. One is listed in the prompt only when its `check` passes; checks run at a session's first step (5 s timeout each), and the results are stored in the session record. The setting `kvcoder.connectors` adds binary connectors from the preset or the person.
+- **Binary connectors** are run by the agent in the real shell, and `-h` is the program's own. One is listed in the prompt only when its `check` passes; checks run at a session's first step (5 s timeout each, no approval, passing on exit 0), and the results are stored in the session record. The setting `kvcoder.connectors` adds binary connectors from the preset or the person.
 
 **Sections** are text in the system prompt. The owner pushes them whenever its data changes:
 
@@ -116,7 +120,8 @@ await ctx.exec('kvcoder.section.remove', { id: 'open-todos', sessionId });
 ```
 
 - **Reach.** A section with `global: true` is in every prompt of every workspace. One with `sessionId` is in that session's prompts only. One with neither is in every prompt of the job's workspace.
-- Caps: 16 KB per section, 64 KB in total (`TOO_LARGE`).
+- Caps: 16 KB per section, 64 KB in total (`TOO_LARGE`): `section.set` checks the global sections, the job's workspace's, and the session's together; a prompt build that still finds more leaves out the last sections by `order` and logs a warning (ADR 0009, 94).
+- **Ids** belong to their owner: two extensions may both have `guide`, and `section.remove` touches only the caller's (ADR 0009, 94).
 
 **Where entries live.** Connectors, session handlers, handler-job ids, and global sections are in kvcoder's global store. Sessions and the other sections are in the workspace store.
 
@@ -151,12 +156,12 @@ ctx.registerHandler('kernel.started', {
 | `kvcoder.turn.ended` | `{ sessionId, turnId, outcome, usage, durationMs }` |
 | `kvcoder.session.waiting` | `{ sessionId, kind: 'question' \| 'approval' \| 'subagent' }` |
 
-- **Calls.** For each occurrence, kvcoder queues one async job per registered handler. Inputs carry ids and totals, never message contents; a handler reads the messages with `kvcoder.message.list` if it needs them.
+- **Calls.** For each occurrence, kvcoder queues one async job per registered handler (its own `kvcoder.handler.run`, which runs the handler's command nested, ADR 0009, 110). Inputs carry ids and totals, never message contents; a handler reads the messages with `kvcoder.message.list` if it needs them.
 - **Registration.** The `command` must be the caller's own public command. Each extension has at most one handler per point; registering again replaces it. Handlers are owned by the caller and cleared at each start, like connectors.
 - **Loop safety.** kvcoder stores the ids of the handler jobs it queues. A message injected by one of them (a job whose `ctx.job.rootId` is such an id) is stored but doesn't start a turn; the next turn sees it. Work that a handler queues with `execAsync` isn't recognized, so a handler must not inject from there.
-- **Access.** Every extension can use kvcoder's public API: read sessions, messages, and turns; create, configure, rename, delete, fork, and export sessions; inject messages; add notes; cancel turns. Only `message.send` and `question.answer` are for the person.
+- **Access.** Every extension can use kvcoder's public API: read sessions, messages, and turns; create, configure, rename, delete, fork, and export sessions; inject messages; add notes; cancel turns. Only `message.send` and `question.answer` are for the person; an extension calling them fails `NOT_PUBLIC` (ADR 0009, 105).
 
-**Testing.** `runConnector(kernel, 'ext new \'{…}\'')` from `@kvman/kvcoder/testing`, used with `createTestKernel`, parses a line exactly as kvcoder does and returns `{ output, exitCode }`, including for `-h`, stdin JSON in both shells, and non-standalone lines.
+**Testing.** `runConnector(kernel, 'ext new \'{…}\'')` from `@kvman/kvcoder/testing`, used with `createTestKernel`, parses a line exactly as kvcoder does and returns `{ output, exitCode }`, including for `-h`, stdin JSON in both shells, and non-standalone lines. It runs connector lines only: `ask`, `subagent`, and `jobs` calls, and plain shell lines, return exit 1, and it never starts a shell (ADR 0009, 96).
 
 ## 8.5 Built-in connectors
 
@@ -184,6 +189,7 @@ subagent run '{ "task", "mode": "fresh" | "fork", "connectors"?: [names], "shell
   - Several runs in one reply run in parallel.
   - `--async` lets the parent continue; the answer arrives later as a message.
 - **Questions.** A child's approvals and questions show in the root session's conversation.
+- **Results.** A child that ends `done` returns its last answer's text; any other outcome returns `subagent ended <outcome>` and that text, with exit 1. An async run prints `started <childSessionId>`. Unknown `connectors`, or `subagent` among them, give an error result; with `shell: false`, real-shell calls and binary connectors are refused (ADR 0009, 102).
 
 ## 8.6 API
 
@@ -204,27 +210,29 @@ subagent run '{ "task", "mode": "fresh" | "fork", "connectors"?: [names], "shell
 | `kvcoder.turn.list` | query | `{ sessionId, limit }` → `Turn[]`, newest first |
 | `kvcoder.session.export` | command | `{ sessionId }` → `{ fileId }`: a kernel file `<title>.json` with `{ session, turns, messages }`, subagent sessions included |
 | `kvcoder.session.fork` | command | `{ sessionId, throughSeq? }` → `Session`: a copy of the messages (and the current summary) through `throughSeq` (default: all); per-session sections aren't copied |
-| `kvcoder.question.answer` | command, user only | `{ questionId, answer }` → `{ jobId }` |
+| `kvcoder.question.answer` | command, user only | `{ questionId, answer }` → `{ jobId }`: the next step's job, or `null` while other items of the step are pending (ADR 0009, 91) |
+| `kvcoder.session.count` | query | `{ status? }` → `{ count }` of top-level sessions, for the status item (ADR 0009, 97) |
 | `kvcoder.prompt.get` | query | `{ sessionId }` → the exact system prompt |
 | `kvcoder.connector.register` | command | `{ name, description, commands: [{ name, command, examples? }] }` or `{ name, description, binary: { check, install? } }` → `{}` |
-| `kvcoder.connector.unregister` | command | `{ name }` → `{}` (the owner only) |
+| `kvcoder.connector.unregister` | command | `{ name }` → `{}` (the owner only: another owner's fails `kvcoder/NAME_TAKEN`, a missing name does nothing, ADR 0009, 106) |
 | `kvcoder.connector.list` | query | `{}` → `[{ name, description, owner, kind: 'commands' \| 'binary', commands?, binary? }]` |
 | `kvcoder.section.set` | command | `{ id, title, order, content, global?, sessionId? }` → `{}` (`global` and `sessionId` exclude each other) |
 | `kvcoder.section.remove` | command | `{ id, global?, sessionId? }` → `{}` |
 | `kvcoder.section.list` | query | `{ sessionId? }` → `[{ id, title, order, owner, global, sessionId?, size }]` |
 | `kvcoder.handler.register` | command | `{ point, command }` → `{}` |
-| `kvcoder.handler.unregister` | command | `{ point }` → `{}` (the owner only) |
+| `kvcoder.handler.unregister` | command | `{ point }` → `{}`: removes the caller's own handler, if any (ADR 0009, 106) |
 | `kvcoder.handler.list` | query | `{}` → `[{ point, command, owner }]` |
 
-All are public, except the private jobs `kvcoder.turn.step`, `kvcoder.connector.run`, and `kvcoder.session.prune`. `Session`, `Message`, and `Turn` are as in §8.1.
+All are public, except the private jobs `kvcoder.turn.step`, `kvcoder.connector.run`, `kvcoder.session.prune`, `kvcoder.session.title` (ADR 0009, 99), and `kvcoder.handler.run` (ADR 0009, 110). `Session`, `Message`, and `Turn` are as in §8.1.
 
 ## 8.7 UI and settings
 
 kvcoder owns its conversation UI. kvwebui only hosts it: kvcoder contributes pages through `kvcoder.ui.get`, and the preset decides where they appear (the `coder` preset makes `kvcoder.chat` the home page).
 
 **UI.**
-- The **Chat** page `kvcoder.chat`: a session list (a `list` of `link`s to `kvcoder.session`) with a "New chat" button that runs `kvcoder.session.create`, then navigates to the new session (`then: { navigate: 'kvcoder.session', params: { sessionId: { "$output": "id" } } }`).
+- The **Chat** page `kvcoder.chat`: the session list and the conversation with no session, a large input that asks what to build; sending creates the chat (`kvcoder.session.create`, then `kvcoder.message.send`) and opens its page (ADR 0009, 104).
 - The `kvcoder.session` page, with a `sessionId` param: the session list and the conversation.
+- **The session list** is kvcoder's custom component `kvcoder.sessions`: translated titles, each session's status (running, or "Needs you" while waiting), times grouped into Today and Earlier, the open chat highlighted, and a "New chat" button back to the Chat page (ADR 0009, 104).
 - **The conversation** is kvcoder's custom component `kvcoder.conversation { sessionId }`. It:
   - shows the messages from `kvcoder.message.list`, with notices and notes translated, and "N earlier messages" with the export;
   - streams the running step (`kvman.stream`): text deltas into the pending answer, thinking deltas collapsed, component chunks inline, and follow chunks continuing in the same bubble;
@@ -232,10 +240,12 @@ kvcoder owns its conversation UI. kvwebui only hosts it: kvcoder contributes pag
   - shows pending questions from the turn record;
   - shows each turn's time, tokens, and cost, and the session's totals and model picker (`kvcoder.session.configure`) in its header;
   - has a send box with image attachments (`POST /api/files`, then `fileIds`), and a Stop button that runs `kvcoder.turn.cancel`;
-  - renders Markdown through `kvman.View`.
-- **Custom components:** the conversation, the question card (`kvcoder.question`), and the shell-result card (the command, exit code, and collapsible output).
-- A **status item** with the count of waiting sessions.
-- A **Prompt** tab showing `kvcoder.prompt.get`.
+  - renders Markdown through `kvman.View`;
+  - streams a subagent's steps in its card (the `subagent` chunk), shows "Summarizing earlier messages…" between `compaction` chunks (ADR 0009, 99), and shows background results as a small card;
+  - has its own tabs, Chat and **Prompt**; Prompt shows `kvcoder.prompt.get` with each section's owner, reach, and size, and a Copy button (kvwebui has no `tabs`, ADR 0009, 68 and 104);
+  - has a menu with Rename, Fork into a new chat, Export as JSON, Summarize earlier messages now, and Delete (after a confirmation), and "Fork from here" on each message (ADR 0009, 104).
+- **Custom components:** the conversation, the session list (`kvcoder.sessions`), the question card (`kvcoder.question`; one reply's approvals share one card, with "Allow all"), and the shell-result card (the command, exit code, and collapsible output).
+- A **status item** with the count of waiting sessions, from `kvcoder.session.count` (ADR 0009, 97).
 
 **Settings.**
 

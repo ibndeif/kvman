@@ -15,7 +15,7 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds,
    - `<connector> -h` lists the connector's commands with one-line descriptions, and `<connector> <command> -h` prints the input and output JSON Schemas.
    - The result is the output as JSON text. A Problem prints `error <code>: <message>` with exit code 1.
    - The prompt lists each connector's name and description only.
-7. **Async connector calls.** `--async` makes kvcoder queue its own job `kvcoder.connector.run`, which runs the command with `ctx.exec`, and prints `started <jobId>`. When that job ends, kvcoder appends the result to the session as a message, and starts a turn if the session is idle (otherwise the next step sees it). `jobs list` and `jobs cancel <id>` are built-in connector commands. Without `--async`, the call waits up to the command's own timeout.
+7. **Async connector calls.** (The `jobs` connector and background results: ADR 0009, 88 and 89.) `--async` makes kvcoder queue its own job `kvcoder.connector.run`, which runs the command with `ctx.exec`, and prints `started <jobId>`. When that job ends, kvcoder appends the result to the session as a message, and starts a turn if the session is idle (otherwise the next step sees it). `jobs list` and `jobs cancel <id>` are built-in connector commands. Without `--async`, the call waits up to the command's own timeout.
 8. **ask.** A built-in connector. The step records the question and suspends the turn, so no job runs. The chat shows the question card inline (a component chunk), and the session shows "waiting". The person's `kvcoder.question.answer` (user only) appends the answer as the bash result and queues the next step, which the card follows. A dismissal answers "dismissed by the user". kvinterviewer is removed: ADR 0004 and `plan/08-kvinterviewer.md` are superseded.
 9. **subagent** is a connector as well (a built-in one).
 10. **Sections.** (Superseded by 23.) `registerSection(ctx, { id, title, order, content: async ({ sessionId }) => string })`, from the same helper, adds a section to the extension's `<namespace>.kvcoder.get { sessionId }` answer.
@@ -52,7 +52,7 @@ Status: accepted, 2026-09-29. Decided with the product owner in question rounds,
     - `ask text '{ prompt, placeholder? }'` → `{ text }`
     - `ask choice '{ prompt, multiple, options: [{ id, label, description? }] (2–10), other? }'` → `{ selected, other? }`
     - `ask confirm '{ prompt, danger? }'` → `{ confirmed }`
-17. **UI.**
+17. **UI.** (Detailed in ADR 0009, 104: the Chat page starts a chat from its input, the session list and tabs are kvcoder's own.)
     - A Chat page `kvcoder.chat` (the coder preset's home): a session list with new-chat, and the `chat` component. There's also a `kvcoder.session` page with a `sessionId` param.
     - A status item with the count of waiting sessions.
     - Custom components: the question card and a bash-result card.

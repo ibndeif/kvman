@@ -256,7 +256,7 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
   - Message, turn, and session records with usage and time totals, titles (strings or keys), `omitted` counts, JSON export, fork, `session.configure`, and image `fileIds`.
   - Display-only notices and notes (`kvcoder.note.add`), and the welcome session at `kernel.workspace.opened`.
   - Session points (`kvcoder.handler.*`), with handler-job ids so their injections don't start turns.
-  - The UI: the Chat and session pages, the `kvcoder.conversation` component, the question and shell-result cards, the status item, and the Prompt tab.
+  - The UI: the Chat and session pages, the `kvcoder.conversation` and `kvcoder.sessions` components, the question and shell-result cards, the status item, and the Prompt tab (ADR 0009, 104).
   - Settings.
   - The prompt-build benchmark.
 - **Done when:**

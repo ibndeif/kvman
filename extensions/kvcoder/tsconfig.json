@@ -1,0 +1,20 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": [
+      "node"
+    ],
+    "customConditions": [
+      "@kvman/source"
+    ]
+  },
+  "include": [
+    "src",
+    "test",
+    "vitest.e2e.config.ts"
+  ],
+  "exclude": [
+    "test/web"
+  ]
+}

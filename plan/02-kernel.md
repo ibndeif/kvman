@@ -23,7 +23,7 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
   - An attempt cut off by a stop or by kvman dying fails with `INTERRUPTED` and is retried like any failure (§2.3), so an unfinished row runs again after a restart if it has retries left.
 - Rows of finished jobs are deleted after `kernel.jobs.retentionDays` (default 7), at start and then hourly. Queued and running rows are never deleted.
 - **Validation.** The kernel checks a job's input against the registration's zod `input` before it runs, and its output against `output` after. A mismatch fails with `VALIDATION_FAILED`.
-- **Ordering.** Queued jobs start first-in, first-out and run in parallel. The kernel keeps no other ordering; an extension that needs one-at-a-time (such as one agent turn per session) guards it in its own store.
+- **Ordering.** Queued jobs start first-in, first-out and run in parallel. A job a handler queues with `execAsync` starts only after the handler has its id (ADR 0009, 112). The kernel keeps no other ordering; an extension that needs one-at-a-time (such as one agent turn per session) guards it in its own store.
 - **Depth.** A chain of sync `ctx.exec` calls deeper than 16 fails with `TOO_DEEP`. An async job starts a new chain.
 - **Where nested jobs run.** A nested sync `ctx.exec` runs on the calling job's worker and takes no extra slot, so a busy pool can't deadlock.
 - **Caller.** A job's caller is `{ kind: 'user' }` for an HTTP call, `{ kind: 'extension', name }` for a call from an extension's handler, or `{ kind: 'kernel' }` for a handler job (§2.15). A scheduled job's caller is the extension that scheduled it.
@@ -69,7 +69,7 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
   - `update` and `delete` of a missing id fail `NOT_FOUND`.
   - A document or a kv value is JSON of at most 16 MiB (`TOO_LARGE`).
 - **Scope.** `ctx.store` is the current job's workspace; `ctx.store.global` is home-wide. Both hold only the calling extension's data.
-- **Atomicity.** Each call commits on its own. `ctx.store.transaction(fn)` runs `fn(tx)` in one SQLite transaction. `tx` has the store's shape (including `tx.global`), but its calls are synchronous, so the lock is never held across an `await`. If `fn` returns a Promise, the transaction is rolled back and fails with `VALIDATION_FAILED`.
+- **Atomicity.** Each call commits on its own. `ctx.store.transaction(fn)` runs `fn(tx)` in one SQLite transaction. `tx` has the store's shape (including `tx.global`), but its calls are synchronous, so the lock is never held across an `await`. If `fn` returns a Promise, the transaction is rolled back and fails with `VALIDATION_FAILED`. A transaction takes the write lock when it starts (ADR 0009, 111).
 
 ## 2.6 Workspaces
 

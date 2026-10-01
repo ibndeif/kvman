@@ -10,6 +10,11 @@
       "@kvman/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./messages": {
+      "@kvman/source": "./src/schemas/messages.ts",
+      "types": "./dist/schemas/messages.d.ts",
+      "default": "./dist/schemas/messages.js"
     }
   },
   "files": [

@@ -27,8 +27,13 @@ async function measure(): Promise<Record<string, number>> {
   return withBenchHome(async (root) => {
     const folder = path.join(root, 'noop');
     writeNoopExtension(folder);
+    // The kernel's home goes on the disk, in this benchmark's home; later benchmarks get the temporary folder back.
+    const temporary = process.env['TMPDIR'];
     process.env['TMPDIR'] = root;
-    const kernel = await createTestKernel({ extensions: [folder], logLevel: 'error', settings: { 'kernel.workers': 3 } });
+    const kernel = await createTestKernel({ extensions: [folder], logLevel: 'error', settings: { 'kernel.workers': 3 } }).finally(() => {
+      if (temporary === undefined) delete process.env['TMPDIR'];
+      else process.env['TMPDIR'] = temporary;
+    });
     try {
       const start = performance.now();
       const ids = await Promise.all(Array.from({ length: jobCount }, () => kernel.execAsync('noop.run', {})));

@@ -70,6 +70,11 @@ export default defineConfig(
     rules: { 'vue/no-v-html': 'off' },
   },
   {
+    // A custom component's file name is its public name, `<namespace>.<name>` (plan 06 §6.4), such as kvcoder.sessions.
+    files: ['extensions/*/web/components/*.vue'],
+    rules: { 'vue/multi-word-component-names': 'off' },
+  },
+  {
     files: testFiles,
     rules: { 'no-restricted-properties': ['error', ...focusedOrSkippedTests] },
   },

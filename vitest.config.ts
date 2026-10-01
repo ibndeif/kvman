@@ -13,11 +13,13 @@ export default defineConfig({
         test: {
           name: 'node',
           include: ['test/**/*.test.ts', 'packages/*/test/**/*.test.ts', 'extensions/*/test/**/*.test.ts'],
-          exclude: ['**/node_modules/**', 'test/fixtures/**', 'extensions/kvwebui/test/web/**', 'extensions/kvwebui/test/e2e/**'],
+          exclude: ['**/node_modules/**', 'test/fixtures/**', 'extensions/*/test/web/**', 'extensions/*/test/e2e/**', 'extensions/*/test/crash/**'],
         },
       },
       'extensions/kvwebui/vitest.web.config.ts',
       'extensions/kvwebui/vitest.e2e.config.ts',
+      'extensions/kvcoder/vitest.web.config.ts',
+      'extensions/kvcoder/vitest.e2e.config.ts',
     ],
   },
 });

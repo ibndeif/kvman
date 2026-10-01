@@ -1,0 +1,47 @@
+/* kvcoder's components (plan 06 §6.4): styled with kvwebui's theme variables and logical properties only. */
+.kvc-conversation { display: flex; flex-direction: column; flex: 1 1 auto; min-inline-size: 0; block-size: 100%; background: var(--kv-color-surface); color: var(--kv-color-text); }
+.kvc-header { display: flex; align-items: center; gap: var(--kv-space-sm); padding-block: 12px; padding-inline: var(--kv-space-lg); border-block-end: 1px solid var(--kv-color-border); flex-wrap: wrap; }
+.kvc-title { display: flex; flex-direction: column; flex: 1 1 auto; min-inline-size: 0; }
+.kvc-title strong { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kvc-muted { color: var(--kv-color-muted); font-size: 12.5px; }
+.kvc-tabs { display: flex; gap: 2px; padding: 3px; border: 1px solid var(--kv-color-border); border-radius: 10px; }
+.kvc-tab { border: 0; border-radius: 7px; background: transparent; color: var(--kv-color-muted); font: inherit; padding-block: 4px; padding-inline: 12px; cursor: pointer; }
+.kvc-tab[aria-selected='true'] { background: var(--kv-color-background); color: var(--kv-color-text); font-weight: 500; }
+.kvc-scroll { flex: 1 1 auto; overflow-y: auto; }
+.kvc-column { box-sizing: border-box; inline-size: 100%; max-inline-size: 800px; margin-inline: auto; padding: var(--kv-space-md) var(--kv-space-lg); display: flex; flex-direction: column; gap: var(--kv-space-md); }
+.kvc-user { align-self: flex-end; max-inline-size: 80%; background: var(--kv-color-background); border-radius: 16px; border-end-end-radius: 4px; padding-block: 10px; padding-inline: 14px; white-space: pre-wrap; }
+.kvc-queued { background: transparent; border: 1px dashed var(--kv-color-border); }
+.kvc-answer { display: flex; flex-direction: column; gap: var(--kv-space-sm); }
+.kvc-card { border: 1px solid var(--kv-color-border); border-radius: var(--kv-radius); background: var(--kv-color-background); overflow: hidden; }
+.kvc-card-row { display: flex; align-items: center; gap: 10px; padding-block: 9px; padding-inline: 12px; }
+.kvc-card-body { padding-block: 10px; padding-inline: 14px; border-block-start: 1px solid var(--kv-color-border); display: flex; flex-direction: column; gap: var(--kv-space-sm); }
+.kvc-mono { font-family: var(--kv-font-mono); font-size: 12.5px; overflow-wrap: anywhere; }
+.kvc-output { margin: 0; padding: 10px 14px; background: var(--kv-color-text); color: var(--kv-color-surface); font-family: var(--kv-font-mono); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; max-block-size: 320px; overflow-y: auto; }
+.kvc-chip { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding-block: 2px; padding-inline: 8px; font-size: 12px; font-weight: 500; white-space: nowrap; border: 1px solid var(--kv-color-border); }
+.kvc-ok { color: var(--kv-color-success); }
+.kvc-warn { color: var(--kv-color-warning); }
+.kvc-danger { color: var(--kv-color-danger); }
+.kvc-notice { display: flex; align-items: center; gap: var(--kv-space-sm); color: var(--kv-color-muted); font-size: 13px; }
+.kvc-notice::before, .kvc-notice::after { content: ''; flex: 1 1 auto; block-size: 1px; background: var(--kv-color-border); }
+.kvc-ask { border-color: var(--kv-color-warning); }
+.kvc-option { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--kv-color-border); border-radius: 10px; cursor: pointer; }
+.kvc-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-block-size: 36px; padding-inline: 14px; border-radius: 10px; border: 1px solid var(--kv-color-border); background: var(--kv-color-surface); color: var(--kv-color-text); font: inherit; font-weight: 500; cursor: pointer; }
+.kvc-button:disabled { opacity: 0.5; cursor: default; }
+.kvc-primary { background: var(--kv-color-primary); border-color: var(--kv-color-primary); color: var(--kv-color-on-primary); }
+.kvc-ghost { border-color: transparent; background: transparent; }
+.kvc-actions { display: flex; gap: var(--kv-space-sm); justify-content: flex-end; flex-wrap: wrap; }
+.kvc-composer { padding-block: 12px 18px; padding-inline: var(--kv-space-lg); }
+.kvc-box { box-sizing: border-box; max-inline-size: 760px; margin-inline: auto; border: 1px solid var(--kv-color-border); border-radius: 16px; background: var(--kv-color-surface); padding: 10px 12px; display: flex; flex-direction: column; gap: var(--kv-space-sm); }
+.kvc-box textarea { border: 0; resize: none; background: transparent; color: inherit; font: inherit; min-block-size: 44px; outline: none; }
+.kvc-start { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; gap: var(--kv-space-lg); padding: var(--kv-space-lg); }
+.kvc-start h1 { margin: 0; text-align: center; font-size: 26px; font-weight: 600; }
+.kvc-sessions { box-sizing: border-box; inline-size: 272px; flex: 0 0 auto; display: flex; flex-direction: column; gap: 2px; padding: 14px 12px; border-inline-end: 1px solid var(--kv-color-border); overflow-y: auto; }
+.kvc-session { display: flex; align-items: center; gap: 10px; min-block-size: 44px; padding-inline: 10px; border-radius: 10px; border: 0; background: transparent; color: inherit; font: inherit; text-align: start; cursor: pointer; }
+.kvc-session[aria-current='page'] { background: var(--kv-color-background); font-weight: 500; }
+.kvc-session span:first-child { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kvc-group { font-size: 12px; font-weight: 600; color: var(--kv-color-muted); padding-block: 12px 4px; padding-inline: 10px; }
+.kvc-spin { inline-size: 14px; block-size: 14px; border-radius: 50%; border: 2px solid var(--kv-color-border); border-block-start-color: var(--kv-color-primary); animation: kvc-spin 0.9s linear infinite; flex: 0 0 auto; }
+.kvc-menu { position: absolute; inset-inline-end: 0; inset-block-start: 100%; z-index: 10; min-inline-size: 220px; display: flex; flex-direction: column; padding: 6px; border: 1px solid var(--kv-color-border); border-radius: 12px; background: var(--kv-color-surface); box-shadow: 0 12px 32px rgb(0 0 0 / 0.14); }
+.kvc-menu button { justify-content: flex-start; }
+.kvc-prompt { margin: 0; padding: var(--kv-space-md); border: 1px solid var(--kv-color-border); border-radius: var(--kv-radius); background: var(--kv-color-background); font-family: var(--kv-font-mono); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+@keyframes kvc-spin { to { transform: rotate(360deg); } }

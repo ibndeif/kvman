@@ -56,13 +56,15 @@ function runTransaction<Result>(connection: Connection, owner: StoreOwner, ids: 
     ...syncScope(connection, { extension: owner.extension, scope: owner.workspaceId }, ids, beforeWrite),
     global: syncScope(connection, { extension: owner.extension, scope: globalScope }, ids, beforeWrite),
   };
+  // IMMEDIATE takes the write lock at the start, waiting out the busy timeout: a deferred transaction that read first
+  // fails at once with "database is locked" when it writes after another connection committed (WAL's stale snapshot).
   return connection.transaction(() => {
     const result = fn(tx);
     if (isThenable(result)) {
       throw kernelProblem('VALIDATION_FAILED', 'A transaction callback must be synchronous; it returned a Promise, so nothing was stored.');
     }
     return result;
-  })();
+  }).immediate();
 }
 
 export function createStore(connection: Connection, owner: StoreOwner, ids: IdGenerator, beforeWrite: WriteGuard = anyWrite): Store {

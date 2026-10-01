@@ -160,6 +160,13 @@ export function createDispatcher(options: DispatcherOptions) {
       tick();
       return id;
     },
+    // For a job a handler queues: it starts on the next turn of the event loop, after the reply with its id has gone to
+    // the worker, so a handler that reports the id (kvcoder's follow chunk) always does so before the new job runs.
+    queueAfterReply(job: NewJob): string {
+      const id = rows.insert(job);
+      setImmediate(tick);
+      return id;
+    },
     deliver(point: string, input: Record<string, unknown>, workspaceId: string): string[] {
       const ids = connection.transaction(() => deliver(point, input, workspaceId))();
       tick();

@@ -27,7 +27,7 @@ export async function answerWorker(services: KernelRequestServices, request: Wor
       else services.secrets.delete(request.write.extension, request.write.name);
       return null;
     case 'queue-job':
-      return services.dispatcher.queue({ ...request, runAt: services.clock.now() });
+      return services.dispatcher.queueAfterReply({ ...request, runAt: services.clock.now() });
     case 'schedule': {
       const { kind: _kind, ...schedule } = request;
       const id = services.schedules.upsert(schedule);
