@@ -247,6 +247,27 @@ importers:
         specifier: 3.3.11
         version: 3.3.11(typescript@6.0.3)
 
+  extensions/kvdev:
+    devDependencies:
+      '@kvman/kvai':
+        specifier: workspace:*
+        version: link:../kvai
+      '@kvman/kvcoder':
+        specifier: workspace:*
+        version: link:../kvcoder
+      '@kvman/kvwebui':
+        specifier: workspace:*
+        version: link:../kvwebui
+      '@kvman/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+      '@kvman/testkit':
+        specifier: workspace:*
+        version: link:../../packages/testkit
+      playwright:
+        specifier: 1.63.0
+        version: 1.63.0
+
   extensions/kvwebui:
     dependencies:
       '@fontsource/ibm-plex-mono':

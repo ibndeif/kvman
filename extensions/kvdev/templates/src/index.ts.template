@@ -1,0 +1,25 @@
+import { z, type Ctx } from '@kvman/sdk';
+
+// The __NAMESPACE__ extension. A kvman that loads this folder as `path:` reloads it on every save, with no build.
+export default (ctx: Ctx): void => {
+  ctx.registerQuery('__NAMESPACE__.greeting.get', {
+    description: 'Gives the greeting.',
+    public: true,
+    input: z.object({}),
+    output: z.object({ text: z.string() }),
+    handle: () => ({ text: 'Hello from __NAMESPACE__!' }),
+  });
+
+  ctx.registerQuery('__NAMESPACE__.ui.get', {
+    description: 'Gives the pages and navigation of __NAMESPACE__.',
+    public: true,
+    input: z.object({}),
+    output: z.json(),
+    handle: () => ({
+      pages: [{ id: 'hello', title: '__NAMESPACE__.pages.hello', view: __PAGE_VIEW__ }],
+      nav: [{ id: 'hello', page: 'hello', title: '__NAMESPACE__.pages.hello', icon: 'puzzle', order: 50 }],
+      panels: [],
+      status: [],
+    }),
+  });
+};

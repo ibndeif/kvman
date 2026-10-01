@@ -281,6 +281,7 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
   - `extensions/kvdev`: the `ext`, `preset`, `preview`, and `docs` connectors, the scaffold (with `kvman.source`, and the web template), the preview kvman (running `web:watch`), and its global section.
   - `presets/coder.json` and `presets/dev.json`.
   - The cold-start and RSS benchmarks.
+  - Also (ADR 0009, 113–126): the testkit's `kvman-check` bin; workers see the main thread's `process.argv`; links in kvcoder's result cards; the in-test registry for the scaffold's packages.
 - **Done when:**
   - In the `dev` preset, with the fake model, the agent scaffolds an extension whose own test passes. `ext list` shows it, `ext check` reports a planted missing description, the preview starts and shows the new page, and an edit to `src/index.ts` hot-reloads it with no build (Playwright).
   - A `web: true` scaffold builds, its sample page shows the component in the preview, and a component edit shows after a refresh.

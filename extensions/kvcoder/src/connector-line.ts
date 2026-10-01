@@ -253,7 +253,8 @@ export const builtinHelp: Readonly<Record<(typeof builtinConnectors)[number], st
 };
 
 const connectorListSchema = z.array(z.object({ name: z.string(), description: z.string(), kind: z.enum(['commands', 'binary']), commands: z.array(z.object({ name: z.string(), command: z.string(), examples: z.array(z.object({ description: z.string(), input: z.json() })) })).exactOptional() }));
-const extensionsSchema = z.array(z.object({ commands: z.array(z.object({ name: z.string(), description: z.string(), input: z.json(), output: z.json() })) }));
+const callInfoSchema = z.object({ name: z.string(), description: z.string(), input: z.json(), output: z.json() });
+const extensionsSchema = z.array(z.object({ commands: z.array(callInfoSchema), queries: z.array(callInfoSchema) }));
 
 /** The test kernel `runConnector` needs: `@kvman/testkit`'s, with kvcoder loaded. */
 export type ConnectorKernel = { exec(name: string, input: Record<string, Json>, options?: { as?: string; workspaceId?: string }): Promise<unknown> };
@@ -272,7 +273,7 @@ export async function runConnector(kernel: ConnectorKernel, line: string, option
   const connector = connectors.find((candidate) => candidate.name === parsed.connector);
   const deps: CallDeps = {
     exec: (name, input) => kernel.exec(name, input, call),
-    commands: async () => extensionsSchema.parse(await kernel.exec('kernel.extensions.list', {}, call)).flatMap((extension) => extension.commands),
+    commands: async () => extensionsSchema.parse(await kernel.exec('kernel.extensions.list', {}, call)).flatMap((extension) => [...extension.commands, ...extension.queries]),
   };
   return runCommandsCall(deps, { name: parsed.connector, description: connector?.description ?? '', commands: connector?.commands ?? [] }, parsed.words, parsed.stdin);
 }

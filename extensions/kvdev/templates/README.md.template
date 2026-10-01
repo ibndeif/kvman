@@ -1,0 +1,10 @@
+# __NAME__
+
+A kvman extension, namespace `__NAMESPACE__`.
+
+- `src/index.ts` registers its commands, queries, and settings. A kvman that loads this folder as `path:` (a preset entry `"__NAME__": "path:<folder>"`) reloads it on every save, with no build.
+- `locales/en.json` and `locales/ar.json` hold its texts.
+- `npm test` runs `test/` against a real kernel (`@kvman/testkit`).
+- `npm run check` loads it in a test kernel and reports what kvman would refuse or show untranslated.
+- `npm run build` compiles `dist/`, for publishing.
+__WEB_README__

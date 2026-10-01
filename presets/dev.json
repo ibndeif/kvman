@@ -1,0 +1,15 @@
+{
+  "name": "dev",
+  "extensions": {
+    "@kvman/kvai": "bundled",
+    "@kvman/kvwebui": "bundled",
+    "@kvman/kvcoder": "bundled",
+    "@kvman/kvdev": "bundled"
+  },
+  "settings": {
+    "kvwebui.title": "kvdev.app.title",
+    "kvwebui.home": "kvcoder.chat",
+    "kvai.defaultModel": "anthropic/claude-sonnet-5-5",
+    "kvcoder.shell.approval": "ask"
+  }
+}

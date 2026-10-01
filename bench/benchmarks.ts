@@ -1,7 +1,9 @@
 import type { Metrics, Target } from './rules.ts';
 import { execAsyncThroughput } from './exec-async.ts';
 import { execNoop } from './exec-noop.ts';
+import { coldStart } from './cold-start.ts';
 import { httpNoop } from './http-noop.ts';
+import { idleRss } from './idle-rss.ts';
 import { kvcoderPrompt } from './kvcoder-prompt.ts';
 import { storeFind } from './store-find.ts';
 
@@ -13,4 +15,4 @@ export type Benchmark = {
   measure: () => Promise<Metrics>;
 };
 
-export const benchmarks: readonly Benchmark[] = [storeFind, execNoop, execAsyncThroughput, httpNoop, kvcoderPrompt];
+export const benchmarks: readonly Benchmark[] = [storeFind, execNoop, execAsyncThroughput, httpNoop, kvcoderPrompt, coldStart, idleRss];

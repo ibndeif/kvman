@@ -63,6 +63,7 @@ export const workerSetupSchema = z.object({
   logLevel: z.enum(['debug', 'info', 'warn', 'error']),
   terminalLog: z.boolean(),
   checkPresetSettings: z.boolean(),
+  mainArgv: z.array(z.string()),
 });
 
 export type WorkerSetup = z.infer<typeof workerSetupSchema>;

@@ -25,6 +25,8 @@ shareKernelSdk();
 if (parentPort === null) throw new Error('worker-main runs only as a worker thread');
 const port = parentPort;
 const setup = workerSetupSchema.parse(workerData);
+// A handler sees the main thread's `process.argv`, so `process.argv[1]` is kvman's entry file (ADR 0009, 114).
+process.argv.splice(0, process.argv.length, ...setup.mainArgv);
 const send = (message: ToMain): void => port.postMessage(message);
 
 const logFile = openLogFile(setup.home, setup.logLevel, setup.terminalLog);

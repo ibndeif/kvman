@@ -7,7 +7,7 @@ import { callTimeout } from '../calls/shell-command.ts';
 import { shellArgsSchema } from '../calls/shell-tool.ts';
 import { createChild, startChild, subagentCall } from '../calls/subagent.ts';
 import type { SessionTools } from '../prompt/session-prompt.ts';
-import { loadedExtensions } from '../registry/loaded.ts';
+import { callInfos, isQuery, loadedExtensions } from '../registry/loaded.ts';
 import type { HeldResult, JsonValue, SessionDoc } from '../schemas/records.ts';
 import { now } from '../sessions/session-lookup.ts';
 import { records } from '../store/collections.ts';
@@ -55,8 +55,11 @@ async function connectorOutcome(env: CallEnv, call: ToolCall, line: string, pars
   const connector = tools.connectors.find((candidate) => candidate.name === parsed.connector);
   const commands = connector?.commands ?? [];
   const target = parsed.async ? commands.find((command) => command.name === parsed.words[0]) : undefined;
-  if (target !== undefined && parsed.words[1] !== '-h') return asyncOutcome(env, call, line, target.command, parsed);
-  const deps = { exec: (name: string, input: Record<string, JsonValue>) => ctx.exec(name, input), commands: async () => (await loadedExtensions(ctx)).flatMap((extension) => extension.commands) };
+  if (target !== undefined && parsed.words[1] !== '-h') {
+    if (isQuery(await loadedExtensions(ctx), target.command)) return result(call.id, errorOutput({ code: 'VALIDATION_FAILED', message: `${parsed.connector} ${target.name} reads only, so it can't run with --async.` }));
+    return asyncOutcome(env, call, line, target.command, parsed);
+  }
+  const deps = { exec: (name: string, input: Record<string, JsonValue>) => ctx.exec(name, input), commands: async () => callInfos(await loadedExtensions(ctx)) };
   return result(call.id, await runCommandsCall(deps, { name: parsed.connector, description: connector?.description ?? '', commands }, parsed.words, parsed.stdin));
 }
 

@@ -1,0 +1,33 @@
+import { describe, expect, it } from 'vitest';
+import { checkExtension } from '../../src/check/check-extension.ts';
+import { cleanCatalog, cleanSource, useProjects } from './projects.ts';
+
+const project = useProjects();
+const finding = (file: string, message: string) => ({ file, message, hint: expect.any(String), warning: false });
+
+describe('missing locale keys (02 §2.11, ADR 0009, 116)', () => {
+  it('M2.5-E19 a key one catalog lacks, a ui.get key, the namespace title, and a setting title are findings', async () => {
+    const source = cleanSource
+      .replace("title: 'notes.pages.hello', view: { type: 'markdown'", "title: 'notes.pages.hello', view: { type: 'stack', direction: 'vertical', children: [{ type: 'heading', level: 1, text: 'notes.pages.heading' }, { type: 'markdown'")
+      .replace("field: 'text' } }]", "field: 'text' }] } }]")
+      .replace('};\n', "  ctx.registerSetting('notes.color', { description: 'The color.', schema: z.string(), default: 'blue', scopes: ['global'] });\n};\n");
+    const findings = await checkExtension(project({ source, locales: { en: { ...cleanCatalog, 'notes.extra': 'Extra' }, ar: { 'notes.pages.hello': 'مرحبا', 'notes.only-ar': 'فقط' } } }));
+    expect(findings).toEqual([
+      finding('locales/en.json', 'locales/en.json lacks notes.only-ar, which locales/ar.json has.'),
+      finding('locales/en.json', 'locales/en.json lacks notes.color.title (used by the Settings page).'),
+      finding('locales/en.json', 'locales/en.json lacks notes.pages.heading (used by notes.ui.get).'),
+      finding('locales/ar.json', 'locales/ar.json lacks notes.extra, which locales/en.json has.'),
+      finding('locales/ar.json', 'locales/ar.json lacks notes.title, which locales/en.json has.'),
+      finding('locales/ar.json', 'locales/ar.json lacks notes.color.title (used by the Settings page).'),
+      finding('locales/ar.json', 'locales/ar.json lacks notes.pages.heading (used by notes.ui.get).'),
+    ]);
+  });
+
+  it('M2.5-E19 a missing namespace title is a finding in every catalog', async () => {
+    const findings = await checkExtension(project({ source: cleanSource, locales: { en: { 'notes.pages.hello': 'Hello' }, ar: { 'notes.pages.hello': 'مرحبا' } } }));
+    expect(findings).toEqual([
+      finding('locales/en.json', 'locales/en.json lacks notes.title (used by the Settings and Extensions pages).'),
+      finding('locales/ar.json', 'locales/ar.json lacks notes.title (used by the Settings and Extensions pages).'),
+    ]);
+  });
+});

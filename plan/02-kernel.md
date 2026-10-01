@@ -32,6 +32,7 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 
 - The kernel starts a pool of `worker_threads`. The size is the `kernel.workers` setting: default CPU cores − 1, minimum 1.
 - Every worker loads every extension of the run. Any job runs on any free worker.
+- A worker's `process.argv` is the main thread's, copied in when it starts, so `process.argv[1]` is kvman's entry file in every handler (ADR 0009, 114).
 - A worker runs up to `kernel.workerConcurrency` jobs at once (default 32), since handlers mostly wait on I/O. A job that hogs the CPU slows only its own worker.
 - **The current job.** A worker tracks each running job with `AsyncLocalStorage`. Inside a handler, `ctx.store`, `ctx.files`, `ctx.settings`, `ctx.secrets`, and the job calls use that job's workspace and caller, and `ctx.job` describes it (§3.3). Calling any of these outside a job fails with `NO_JOB`.
 - Handlers keep no in-memory state between jobs. Anything that must last goes in the store.

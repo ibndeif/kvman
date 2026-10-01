@@ -1,0 +1,42 @@
+<script setup lang="ts">
+import { inject, ref } from 'vue';
+import type { Kvman } from '@kvman/sdk/web';
+
+// A custom component (kvman plan 06 §6.4): kvwebui's CSS variables and logical properties for its look, and the
+// injected kvman for its texts.
+const kvman = inject<Kvman>('kvman');
+const count = ref(0);
+</script>
+
+<template>
+  <div class="hello">
+    <p class="hello-text">{{ kvman?.t('__NAMESPACE__.hello.text') }}</p>
+    <button type="button" class="hello-button" @click="count += 1">{{ kvman?.t('__NAMESPACE__.hello.count', { count }) }}</button>
+  </div>
+</template>
+
+<style scoped>
+.hello {
+  display: flex;
+  align-items: center;
+  gap: var(--kv-space-md);
+  padding: var(--kv-space-md);
+  border: 1px solid var(--kv-color-border);
+  border-radius: var(--kv-radius);
+  background: var(--kv-color-surface);
+  color: var(--kv-color-text);
+}
+.hello-text {
+  margin: 0;
+  flex: 1 1 auto;
+}
+.hello-button {
+  padding-block: var(--kv-space-sm);
+  padding-inline: var(--kv-space-md);
+  border: 0;
+  border-radius: var(--kv-radius);
+  background: var(--kv-color-primary);
+  color: var(--kv-color-on-primary);
+  cursor: pointer;
+}
+</style>

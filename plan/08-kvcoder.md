@@ -108,7 +108,7 @@ await ctx.exec('kvcoder.connector.register', {
 ```
 
 - **Two kinds.** A connector has exactly one of `commands` or `binary`.
-- **Commands connectors** run their commands through `ctx.exec`, with no shell. So validation, `--async`, cancel, retries, and timeouts are the kernel's. `-h` is built from each command's registered description and JSON Schema (through `kernel.extensions.list`) and its `examples`. A `command` must be a public command of the extension registering it, or the call fails with `VALIDATION_FAILED`.
+- **Commands connectors** run their commands through `ctx.exec`, with no shell. So validation, `--async`, cancel, retries, and timeouts are the kernel's. `-h` is built from each command's registered description and JSON Schema (through `kernel.extensions.list`) and its `examples`. A `command` must be a public command or query of the extension registering it, or the call fails with `VALIDATION_FAILED`; a query can't run with `--async` (ADR 0009, 129).
 - **Binary connectors** are run by the agent in the real shell, and `-h` is the program's own. One is listed in the prompt only when its `check` passes; checks run at a session's first step (5 s timeout each, no approval, passing on exit 0), and the results are stored in the session record. The setting `kvcoder.connectors` adds binary connectors from the preset or the person.
 
 **Sections** are text in the system prompt. The owner pushes them whenever its data changes:
@@ -244,7 +244,7 @@ kvcoder owns its conversation UI. kvwebui only hosts it: kvcoder contributes pag
   - streams a subagent's steps in its card (the `subagent` chunk), shows "Summarizing earlier messages…" between `compaction` chunks (ADR 0009, 99), and shows background results as a small card;
   - has its own tabs, Chat and **Prompt**; Prompt shows `kvcoder.prompt.get` with each section's owner, reach, and size, and a Copy button (kvwebui has no `tabs`, ADR 0009, 68 and 104);
   - has a menu with Rename, Fork into a new chat, Export as JSON, Summarize earlier messages now, and Delete (after a confirmation), and "Fork from here" on each message (ADR 0009, 104).
-- **Custom components:** the conversation, the session list (`kvcoder.sessions`), the question card (`kvcoder.question`; one reply's approvals share one card, with "Allow all"), and the shell-result card (the command, exit code, and collapsible output).
+- **Custom components:** the conversation, the session list (`kvcoder.sessions`), the question card (`kvcoder.question`; one reply's approvals share one card, with "Allow all"), and the shell-result card (the command, exit code, and collapsible output; `http://127.0.0.1:<port>…` and `http://localhost:<port>…` URLs in any output are links that open in a new tab, ADR 0009, 120).
 - A **status item** with the count of waiting sessions, from `kvcoder.session.count` (ADR 0009, 97).
 
 **Settings.**

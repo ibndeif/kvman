@@ -19,7 +19,7 @@ export type PoolEvents = {
 export type PoolOptions = {
   size: number;
   concurrency: number;
-  setup: Omit<WorkerSetup, 'checkPresetSettings'>;
+  setup: Omit<WorkerSetup, 'checkPresetSettings' | 'mainArgv'>;
   logger: KernelLogger;
   events: PoolEvents;
 };
@@ -129,7 +129,7 @@ export async function startPool(options: PoolOptions): Promise<WorkerPool> {
 
   const spawn = (checkPresetSettings: boolean): Promise<{ worker: PoolWorker; summary: RegistrySummary }> =>
     new Promise((resolve, reject) => {
-      const thread = new Worker(workerFile, { workerData: { ...options.setup, checkPresetSettings }, execArgv });
+      const thread = new Worker(workerFile, { workerData: { ...options.setup, checkPresetSettings, mainArgv: process.argv }, execArgv });
       const exited = new Promise<void>((resolveExit) => thread.once('exit', () => resolveExit()));
       const worker: PoolWorker = { thread, running: new Map(), exited, stopAsked: false };
       let ready = false;

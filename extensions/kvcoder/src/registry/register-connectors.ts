@@ -4,7 +4,7 @@ import { invalid } from '../problems.ts';
 import { readSettings } from '../register-settings.ts';
 import { connectorRegisterSchema, exampleSchema, type ConnectorDoc } from '../schemas/registry.ts';
 import { records, txRecords } from '../store/collections.ts';
-import { callerExtension, loadedExtensions, ownsPublicCommand } from './loaded.ts';
+import { callerExtension, loadedExtensions, ownsPublicCall } from './loaded.ts';
 
 // Connectors (plan 08 §8.4): words the agent types in its shell, registered by other extensions, kept in kvcoder's
 // global store for one run, and owned by their registering extension.
@@ -52,8 +52,8 @@ async function register(ctx: Ctx, input: z.output<typeof connectorRegisterSchema
   if (builtinConnectors.some((name) => name === input.name)) throw ctx.problem('kvcoder/NAME_TAKEN', { name: input.name, owner: '@kvman/kvcoder' });
   if ('commands' in input) {
     const extensions = await loadedExtensions(ctx);
-    const foreign = input.commands.find((command) => !ownsPublicCommand(extensions, owner, command.command));
-    if (foreign !== undefined) throw invalid(`${foreign.command} isn't a public command of ${owner}.`, { command: foreign.command });
+    const foreign = input.commands.find((command) => !ownsPublicCall(extensions, owner, command.command));
+    if (foreign !== undefined) throw invalid(`${foreign.command} isn't a public command or query of ${owner}.`, { command: foreign.command });
   }
   const doc: Omit<ConnectorDoc, 'owner'> =
     'commands' in input

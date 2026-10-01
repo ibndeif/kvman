@@ -23,4 +23,5 @@ await kernel.close();
 - `exec` and `execAsync` take `{ as?, workspaceId?, onProgress? }`. `onProgress(chunk)` receives the progress chunks (`{ source, data }`) of that call's root job (ADR 0009, 61).
 - `kernel.watch(jobId, onProgress)` → `stop` receives any job's progress chunks from then on, as its HTTP stream does (ADR 0009, 108).
 - `@kvman/testkit/fake-openai` is the fake OpenAI-compatible streaming server of §7.4: `startFakeOpenAI()` → `{ baseUrl, reply(script), requests(), close() }` (ADR 0009, 62).
+- **`kvman-check`** is the testkit's bin, the kvdev scaffold's `check` script (§9.2): run in a project, it loads the extension in a test kernel and prints its findings, or with `--json` the `[{ file?, message, hint }]` array; it exits 1 on an error and 0 with only warnings (ADR 0009, 116).
 - It may import `kernel` and `sdk` (§1.4). It is published as `@kvman/testkit` and depends on `@kvman/kernel`.

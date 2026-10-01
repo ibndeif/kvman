@@ -1,0 +1,10 @@
+{
+  "kvdev.title": "kvdev",
+  "kvdev.app.title": "kvman Dev",
+  "kvdev.errors.FOLDER_NOT_EMPTY": "That folder isn't empty; choose a new or empty folder.",
+  "kvdev.errors.FILE_EXISTS": "That file already exists.",
+  "kvdev.errors.NOT_A_PROJECT": "That folder isn't an extension project (no package.json with a kvman field).",
+  "kvdev.errors.NPM_FAILED": "npm failed.",
+  "kvdev.errors.NO_FREE_PORT": "No port from 3738 to 3837 is free for the preview.",
+  "kvdev.errors.PREVIEW_FAILED": "The preview kvman didn't start."
+}
