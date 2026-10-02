@@ -151,6 +151,8 @@
   "kvcoder.job.list.description": "أحدث ٥٠ مهمة خلفية في المحادثة (عمليات، واستدعاءات موصلات بـ --async، ووكلاء فرعيون)، والجارية منها أولًا.",
   "kvcoder.job.get.description": "مهمة خلفية واحدة في المحادثة مع مخرجاتها: آخر ١٠٠ سطر من عملية، أو مخرجات استدعاء موصل، أو نتيجة وكيل فرعي.",
   "kvcoder.job.cancel.description": "يوقف عملية خلفية جارية، أو يلغي استدعاء موصل أو وكيلًا فرعيًا بدأته المحادثة بـ --async.",
+  "kvcoder.artifact.list.description": "يسرد مستندات المحادثة، الأحدث تغييرًا أولًا.",
+  "kvcoder.artifact.get.description": "يعطي مستندًا واحدًا من المحادثة مع محتواه.",
   "kvcoder.ui.jobs.title": "المهام الخلفية",
   "kvcoder.ui.jobs.running": "{count} قيد التشغيل",
   "kvcoder.ui.jobs.minutes": "{minutes} د {seconds} ث",
@@ -165,5 +167,13 @@
   "kvcoder.ui.jobs.inBackground": "تعمل في الخلفية",
   "kvcoder.ui.jobs.background": "خلفية",
   "kvcoder.notices.STEP_FAILED_REASON": "توقف الدور: {error} {reason}",
-  "kvcoder.ui.activity.retrying": "إعادة المحاولة… ({attempt} من {of})"
+  "kvcoder.ui.activity.retrying": "إعادة المحاولة… ({attempt} من {of})",
+  "kvcoder.ui.artifacts.title": "المستندات",
+  "kvcoder.ui.artifacts.open": "فتح",
+  "kvcoder.ui.artifacts.close": "إغلاق",
+  "kvcoder.ui.artifacts.version": "الإصدار {version}",
+  "kvcoder.ui.artifacts.toggle": "المستندات ({count})",
+  "kvcoder.ui.artifacts.frameLabel": "معاينة {title}",
+  "kvcoder.ui.artifacts.format.markdown": "ماركداون",
+  "kvcoder.ui.artifacts.format.html": "HTML"
 }

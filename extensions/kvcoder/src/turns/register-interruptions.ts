@@ -1,5 +1,5 @@
 import type { Ctx } from '@kvman/sdk';
-import { resultText } from '../connector-line.ts';
+import { resultText } from '../result-text.ts';
 import { records } from '../store/collections.ts';
 import { appendBackground, backgroundText } from './background.ts';
 import { endTurn } from './end-turn.ts';

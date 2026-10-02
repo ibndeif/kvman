@@ -1,4 +1,5 @@
 import type { Ctx } from '@kvman/sdk';
+import { registerArtifacts } from './artifacts/register-artifacts.ts';
 import { registerConnectorRun } from './calls/connector-run.ts';
 import { registerProcessHandlers, interruptLeftovers } from './jobs/process-handlers.ts';
 import { registerJobs } from './jobs/register-jobs.ts';
@@ -31,6 +32,7 @@ export default (ctx: Ctx): void => {
   registerConnectorRun(ctx);
   registerInterruptions(ctx);
   registerJobs(ctx);
+  registerArtifacts(ctx);
   registerProcessHandlers(ctx);
   registerConnectors(ctx);
   registerSections(ctx);

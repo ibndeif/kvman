@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { errorOutput, jsonOutput, resultText, truncate } from '../../src/connector-line.ts';
+import { errorOutput, jsonOutput } from '../../src/connector-line.ts';
+import { resultText, truncate } from '../../src/result-text.ts';
 
 describe('call results (ADR 0009, 93)', () => {
   it('M2.4-E28 output over 30 KB keeps its first and last 15 KB around the marker', () => {

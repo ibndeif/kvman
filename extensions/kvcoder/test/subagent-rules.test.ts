@@ -2,13 +2,13 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { calls, says, systemPrompt, toolResults } from './support/model-script.ts';
+import { artifactCommand, calls, says, systemPrompt, toolResults } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
 
 describe('subagent rules (08 §8.5, ADR 0009, 102)', { timeout: 30_000 }, () => {
-  it("M2.4-E43, QA4-E18, and QA5-E7 a child's connectors are a subset of its parent's: never subagent, always ask, and shell: false refuses the shell", async () => {
+  it("M2.4-E43, QA4-E18, QA5-E7, and QA6-E21 a child's connectors are a subset of its parent's: never subagent, always ask, and shell: false refuses the shell", async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
     fake.reply(
@@ -37,6 +37,7 @@ describe('subagent rules (08 §8.5, ADR 0009, 102)', { timeout: 30_000 }, () => 
     expect(prompt).not.toContain('- subagent: ');
     expect(prompt).not.toContain('- fs: ');
     expect(prompt).toContain('Connectors come first.');
+    expect(prompt).toContain('If another agent gave you your task, do that task and return the result');
     expect(prompt).toContain('## Connectors\nUse these before the shell, whenever one covers the task.\n- todo: Keep a todo list.');
   });
 
@@ -88,5 +89,16 @@ describe('subagent rules (08 §8.5, ADR 0009, 102)', { timeout: 30_000 }, () => 
     await expect(kernel.exec('kvcoder.message.list', { sessionId: childId, limit: 10 })).resolves.toMatchObject({ omitted: 0 });
     await expect(kernel.exec('kvcoder.turn.list', { sessionId: childId, limit: 10 })).resolves.toHaveLength(1);
     await expect(kernel.exec('kvcoder.prompt.get', { sessionId: childId })).resolves.toMatchObject({ prompt: expect.stringContaining('kvman Coder') as unknown });
+  });
+
+  it("QA6-E10 a child that wasn't given artifact can't use it, and its prompt has no artifact line", async () => {
+    const { kernel, fake } = await kvcoder.start();
+    const sessionId = await newSession(kernel);
+    fake.reply(calls(`subagent run '{"task":"Limited","mode":"fresh","connectors":["jobs"]}'`), calls(artifactCommand('write', { id: 'plan', title: 'Plan', content: 'x' })), says('limited done'), says('parent done'));
+    await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
+    await kernel.clock.advance(0);
+    expect(toolResults(fake, 2)).toEqual(["error VALIDATION_FAILED: artifact isn't available in this subagent.\n[exit code 1]"]);
+    expect(systemPrompt(fake, 1)).not.toContain('- artifact: ');
+    expect(await kernel.exec('kvcoder.artifact.list', { sessionId })).toEqual([]);
   });
 });

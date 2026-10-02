@@ -28,6 +28,7 @@ const dynamic = [
   ...['idle', 'running', 'waiting'].map((status) => `kvcoder.ui.status.${status}`),
   ...['off', 'minimal', 'low', 'medium', 'high'].map((level) => `kvcoder.ui.thinkingLevels.${level}`),
   ...['global', 'workspace', 'session'].map((reach) => `kvcoder.ui.reach.${reach}`),
+  ...['markdown', 'html'].map((format) => `kvcoder.ui.artifacts.format.${format}`),
   'kvcoder.ui.today',
   'kvcoder.ui.earlier',
 ];

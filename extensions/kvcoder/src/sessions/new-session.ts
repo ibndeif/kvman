@@ -42,7 +42,7 @@ export async function deleteSessionTree(ctx: Ctx, sessionId: string): Promise<vo
   const store = records(ctx.store);
   await dropProcesses(ctx, sessionId);
   for (const child of await store.sessions.find({ parentId: sessionId }, { limit: 1000 })) await deleteSessionTree(ctx, child.id);
-  for (const collection of [store.messages, store.queued, store.turns, store.questions, store.background, store.sections]) {
+  for (const collection of [store.messages, store.queued, store.turns, store.questions, store.background, store.sections, store.artifacts]) {
     for (let found = await collection.find({ sessionId }, { limit: 1000 }); found.length > 0; found = await collection.find({ sessionId }, { limit: 1000 })) {
       for (const document of found) await collection.delete(document.id);
     }

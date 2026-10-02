@@ -1,5 +1,6 @@
 import { ProblemError, z, type Ctx } from '@kvman/sdk';
-import { errorOutput, jsonOutput, resultText, type CallResult } from '../connector-line.ts';
+import { errorOutput, jsonOutput, type CallResult } from '../connector-line.ts';
+import { resultText } from '../result-text.ts';
 import { appendBackground, backgroundText } from '../turns/background.ts';
 
 // `--async` connector calls (plan 08 §8.3): kvcoder's own job runs the command; when it ends, the result is appended

@@ -24,6 +24,11 @@ export function fsCommand(command: 'write' | 'edit', input: unknown): string {
   return `fs ${command} <<'EOF'\n${JSON.stringify(input)}\nEOF`;
 }
 
+/** An `artifact` call with its JSON on stdin, as the model types it. */
+export function artifactCommand(command: 'write' | 'edit' | 'get', input: unknown): string {
+  return `artifact ${command} <<'EOF'\n${JSON.stringify(input)}\nEOF`;
+}
+
 /** A reply of plain text. */
 export function says(text: string): FakeReply {
   return { chunks: [{ text }] };

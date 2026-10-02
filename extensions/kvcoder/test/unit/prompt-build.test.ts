@@ -34,7 +34,7 @@ describe('the prompt builder (08 §8.2)', () => {
     ]);
   });
 
-  it('QA5-H1, QA5-H2, QA5-H6, and QA5-E1 the base prompt puts connectors first and gives the working method, in both shells', () => {
+  it('QA5-H1, QA5-H6, QA5-E1, QA6-H22, and QA6-E22 the base prompt puts connectors first and gives the expert workflow, in both shells', () => {
     const base = { workspacePath: '/w', language: 'en', sections: [], connectors: [] };
     for (const [platform, toolName] of [['linux', 'bash'], ['win32', 'powershell']] as const) {
       const { prompt } = buildPrompt({ ...base, platform, toolName });
@@ -43,12 +43,23 @@ describe('the prompt builder (08 §8.2)', () => {
       expect(prompt).toContain('Use the shell only for what no connector does.');
       expect(prompt).toContain('(a heredoc in bash, a here-string in PowerShell)');
       expect(prompt).toContain('Run `<connector> -h` to see what one does. Add --async to run it in the background');
-      expect(prompt).toContain('Look before you change: read the files first, then make the smallest change that does the job.');
-      expect(prompt).toContain("Check your work with the project's own check or tests before you say it is done.");
-      expect(prompt).toContain('The calls of one reply run at the same time, so put calls that depend on each other in separate replies.');
-      expect(prompt).toContain('call `ask`');
-      expect(prompt).toContain('Keep replies short: say what you did and what is left.');
       expect(prompt).not.toContain('20 years');
+      for (const phrase of [
+        'Scale the process to the task',
+        'Never assume or invent names, paths, APIs, or behavior',
+        'all the questions in one reply, each with your recommended option first',
+        'Write the plan as the artifact `plan`',
+        '(☐ to do, ☑ done)',
+        'call `ask confirm` on the plan before you start',
+        'tick the step off with `artifact edit`',
+        'a UI/UX designer for screens, a reviewer for a fresh look at your changes',
+        'Brief it with its role, the goal, the facts it needs, its limits, and what to return.',
+        'If another agent gave you your task, do that task and return the result',
+        'in an artifact, not in a reply.',
+        'The calls of one reply run at the same time, so put calls that depend on each other in separate replies.',
+        'To put a question to the person (a choice, a yes or no, a free answer), call `ask`.',
+        'Keep replies short: say what you did and what is left.',
+      ]) expect(prompt, phrase).toContain(phrase);
     }
   });
 
@@ -58,7 +69,7 @@ describe('the prompt builder (08 §8.2)', () => {
     expect(prompt).not.toContain('Use these before the shell');
   });
 
-  it('QA5-E4 sections that total exactly 64 KB are all kept: the base prompt does not count toward the cap', () => {
+  it('QA5-E4 and QA6-E23 sections that total exactly 64 KB are all kept: the base prompt does not count toward the cap', () => {
     const built = buildPrompt({ workspacePath: '/w', language: 'en', platform: 'linux', toolName: 'bash', sections: [section('a', 1, 32 * 1024), section('b', 2, 32 * 1024)], connectors: [] });
     expect(built.left).toEqual([]);
     expect([...built.included].map((kept) => kept.id)).toEqual(['a', 'b']);

@@ -1,6 +1,7 @@
 import { ProblemError, type Ctx, type Stored } from '@kvman/sdk';
 import { delay } from '../delay.ts';
-import { errorOutput, resultLines } from '../connector-line.ts';
+import { errorOutput } from '../connector-line.ts';
+import { resultLines } from '../result-text.ts';
 import type { ShellCommand } from '../calls/shell-command.ts';
 import { now } from '../sessions/session-lookup.ts';
 import { records } from '../store/collections.ts';

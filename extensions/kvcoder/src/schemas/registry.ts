@@ -2,7 +2,7 @@ import { z } from '@kvman/sdk';
 
 // What other extensions register with kvcoder (plan 08 §8.4), kept in its own store.
 
-const kebab = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
+export const kebab = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 
 /** A connector or connector command name: lowercase kebab case (ADR 0009, 100). */
 export const wordSchema = z.string().regex(kebab, 'Use lowercase kebab case, such as todo or open-items.');

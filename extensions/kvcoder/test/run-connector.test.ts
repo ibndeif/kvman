@@ -38,4 +38,12 @@ describe('runConnector (08 §8.4, ADR 0009, 96)', { timeout: 30_000 }, () => {
     expect(await runConnector(kernel, 'echo todo')).toEqual({ exitCode: 1, output: 'not a connector call' });
     expect(await kernel.exec('todo.item.list', {})).toEqual([]);
   });
+
+  it('QA6-H6 artifact -h is answered, and a real call runs only inside a turn', async () => {
+    const { kernel } = await kvcoder.start();
+    const help = await runConnector(kernel, 'artifact -h');
+    expect(help.exitCode).toBe(0);
+    expect(help.output).toMatch(/^artifact: Show the person a document/);
+    expect(await runConnector(kernel, `artifact get '{"id":"plan"}'`)).toEqual({ exitCode: 1, output: 'artifact runs only inside a turn' });
+  });
 });

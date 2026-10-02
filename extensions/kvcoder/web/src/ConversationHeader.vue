@@ -8,9 +8,10 @@ import JobsChip from './JobsChip.vue';
 import ModelPicker from './ModelPicker.vue';
 
 // The conversation's header (plan 08 §8.7, ADR 0009, 104): the title, the session's totals, the model and thinking
-// pickers, the Running chip (ADR 0009, 153), the Chat and Prompt tabs, and the chat's menu.
-const props = defineProps<{ session: Session; tab: 'chat' | 'prompt'; turns: number }>();
-const emit = defineEmits<{ tab: [tab: 'chat' | 'prompt']; changed: [] }>();
+// pickers, the Running chip (ADR 0009, 153), the artifacts button (ADR 0009, 182), the Chat and Prompt tabs, and the
+// chat's menu.
+const props = withDefaults(defineProps<{ session: Session; tab: 'chat' | 'prompt'; turns: number; artifacts?: number; artifactsOpen?: boolean }>(), { artifacts: 0, artifactsOpen: false });
+const emit = defineEmits<{ tab: [tab: 'chat' | 'prompt']; changed: []; toggleArtifacts: [] }>();
 const kvman = useKvman();
 const groups = ref<ModelGroup[]>([]);
 const menu = ref(false);
@@ -68,6 +69,7 @@ const remove = () => run(async () => {
       <span class="kvc-muted" data-test="session-totals">{{ summary }}</span>
     </div>
     <JobsChip :session-id="props.session.id" :stamp="props.session.updatedAt" />
+    <button v-if="props.artifacts > 0" type="button" class="kvc-button" :aria-pressed="props.artifactsOpen" data-test="artifacts-toggle" @click="emit('toggleArtifacts')">{{ kvman.t('kvcoder.ui.artifacts.toggle', { count: props.artifacts }) }}</button>
     <ModelPicker :groups="groups" :current="props.session.model ?? null" @pick="(model) => configure({ model })" />
     <select :value="props.session.thinking" class="kvc-button" :aria-label="kvman.t('kvcoder.ui.thinking')" data-test="thinking-picker" @change="onThinking">
       <option v-for="level in thinkingLevels" :key="level" :value="level">{{ kvman.t(`kvcoder.ui.thinkingLevels.${level}`) }}</option>

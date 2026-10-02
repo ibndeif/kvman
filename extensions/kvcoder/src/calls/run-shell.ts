@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { cutOutput, outputKept, outputLimit, resultLines } from '../connector-line.ts';
+import { cutOutput, outputKept, outputLimit, resultLines } from '../result-text.ts';
 import { treeKill, type ShellCommand } from './shell-command.ts';
 
 // One real shell call (plan 08 §8.3): in the workspace folder, with an empty stdin, stdout and stderr combined, and

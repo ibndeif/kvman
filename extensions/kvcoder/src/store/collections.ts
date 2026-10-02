@@ -1,5 +1,5 @@
 import type { Store, Transaction } from '@kvman/sdk';
-import { backgroundDocSchema, messageDocSchema, processDocSchema, questionDocSchema, queuedDocSchema, sessionDocSchema, turnDocSchema } from '../schemas/records.ts';
+import { artifactDocSchema, backgroundDocSchema, messageDocSchema, processDocSchema, questionDocSchema, queuedDocSchema, sessionDocSchema, turnDocSchema } from '../schemas/records.ts';
 import { connectorDocSchema, handlerDocSchema, handlerJobDocSchema, sectionDocSchema } from '../schemas/registry.ts';
 
 // kvcoder's collections (plan 08 §8.4 "Where entries live"): sessions and their records, and workspace sections, in
@@ -13,6 +13,7 @@ export function records(store: Store) {
     queued: store.collection('queued', queuedDocSchema),
     turns: store.collection('turns', turnDocSchema),
     questions: store.collection('questions', questionDocSchema),
+    artifacts: store.collection('artifacts', artifactDocSchema),
     background: store.collection('background', backgroundDocSchema),
     sections: store.collection('sections', sectionDocSchema),
     globalSections: store.global.collection('sections', sectionDocSchema),
@@ -31,6 +32,7 @@ export function txRecords(tx: Transaction) {
     queued: tx.collection('queued', queuedDocSchema),
     turns: tx.collection('turns', turnDocSchema),
     questions: tx.collection('questions', questionDocSchema),
+    artifacts: tx.collection('artifacts', artifactDocSchema),
     background: tx.collection('background', backgroundDocSchema),
     sections: tx.collection('sections', sectionDocSchema),
     globalSections: tx.global.collection('sections', sectionDocSchema),

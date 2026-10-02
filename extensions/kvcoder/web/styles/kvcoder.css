@@ -1,5 +1,15 @@
 /* kvcoder's components (plan 06 §6.4): styled with kvwebui's theme variables and logical properties only. */
-.kvc-conversation { display: flex; flex-direction: column; flex: 1 1 0; align-self: stretch; min-inline-size: min(100%, 30rem); min-block-size: 24rem; background: var(--kv-color-surface); color: var(--kv-color-text); }
+.kvc-workspace { display: flex; flex: 1 1 0; align-self: stretch; min-inline-size: min(100%, 30rem); min-block-size: 24rem; position: relative; container-type: inline-size; }
+.kvc-conversation { display: flex; flex-direction: column; flex: 1 1 0; min-inline-size: 0; background: var(--kv-color-surface); color: var(--kv-color-text); }
+.kvc-artifact-panel { display: flex; flex-direction: column; background: var(--kv-color-surface); border-inline-start: 1px solid var(--kv-color-border); flex: 0 0 min(40%, 32rem); min-inline-size: 0; }
+.kvc-artifact-head { display: flex; align-items: center; gap: var(--kv-space-sm); padding-block: 12px; padding-inline: var(--kv-space-lg); border-block-end: 1px solid var(--kv-color-border); flex-wrap: wrap; }
+.kvc-artifact-tabs { display: flex; gap: 2px; padding: 3px; border: 1px solid var(--kv-color-border); border-radius: 10px; flex: 1 1 auto; min-inline-size: 0; overflow-x: auto; }
+.kvc-artifact-title { flex: 1 1 auto; min-inline-size: 0; font-size: 15px; font-weight: 600; }
+.kvc-artifact-body { flex: 1 1 auto; min-block-size: 0; overflow: auto; padding-block: var(--kv-space-md); padding-inline: var(--kv-space-lg); }
+.kvc-artifact-frame { inline-size: 100%; block-size: 100%; border: 0; background: #fff; }
+@container (max-inline-size: 48rem) {
+  .kvc-artifact-panel { position: absolute; inset-block: 0; inset-inline-end: 0; inline-size: min(100%, 32rem); z-index: 5; box-shadow: 0 12px 32px rgb(0 0 0 / 0.14); }
+}
 .kvc-header { display: flex; align-items: center; gap: var(--kv-space-sm); padding-block: 12px; padding-inline: var(--kv-space-lg); border-block-end: 1px solid var(--kv-color-border); flex-wrap: wrap; position: relative; }
 .kvc-title { display: flex; flex-direction: column; flex: 1 1 auto; min-inline-size: 0; }
 .kvc-title strong { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

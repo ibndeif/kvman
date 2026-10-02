@@ -1,7 +1,8 @@
 import { z } from '@kvman/sdk';
-import { builtinHelp, callInput, errorOutput, jsonOutput, resultText, type CallResult } from '../connector-line.ts';
+import { builtinHelp, callInput, errorOutput, jsonOutput, type CallResult } from '../connector-line.ts';
 import type { JsonValue } from '../connector-line.ts';
 import { invalid } from '../problems.ts';
+import { resultText } from '../result-text.ts';
 import type { QuestionDoc } from '../schemas/records.ts';
 
 // The `ask` connector (plan 08 §8.5): a question suspends the turn until the person answers; the answer becomes the

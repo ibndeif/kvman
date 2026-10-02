@@ -16,7 +16,7 @@ export type JsonValue = z.output<ReturnType<typeof z.json>>;
 export type CallResult = { output: string; exitCode: number };
 
 /** The connectors kvcoder runs itself. */
-export const builtinConnectors = ['ask', 'subagent', 'jobs', 'fs'] as const;
+export const builtinConnectors = ['ask', 'subagent', 'jobs', 'fs', 'artifact'] as const;
 
 const headMarkers = new Set(['|', '&', ';', '(']);
 const operators = new Set(['|', '&', ';', '(', ')', '<', '>']);
@@ -107,33 +107,6 @@ export function parseLine(line: string, connectors: ReadonlySet<string>): Parsed
   return refused === undefined ? { kind: 'shell' } : { kind: 'refused', connector: refused };
 }
 
-/** Output over this many bytes is cut. */
-export const outputLimit = 30 * 1024;
-/** The bytes kept at each end of cut output. */
-export const outputKept = 15 * 1024;
-
-/** The first and last bytes of cut output around the marker. */
-export function cutOutput(head: Buffer, omitted: number, tail: Buffer): string {
-  return `${head.toString('utf8')}\n[… ${omitted} bytes omitted …]\n${tail.toString('utf8')}`;
-}
-
-/** Cuts text over 30 KB to its first and last 15 KB around an explicit marker. */
-export function truncate(text: string): string {
-  const bytes = Buffer.from(text, 'utf8');
-  if (bytes.length <= outputLimit) return text;
-  return cutOutput(bytes.subarray(0, outputKept), bytes.length - 2 * outputKept, bytes.subarray(bytes.length - outputKept));
-}
-
-/** The text a call returns to the model: the output (already cut, trailing newlines dropped), then any notes, then its exit code (ADR 0009, 93). */
-export function resultLines(output: string, exitCode: number, notes: readonly string[] = []): string {
-  return [output.replace(/[\r\n]+$/, ''), ...notes, `[exit code ${exitCode}]`].filter((part) => part !== '').join('\n');
-}
-
-/** The same, cutting the output first. */
-export function resultText(output: string, exitCode: number, notes: readonly string[] = []): string {
-  return resultLines(truncate(output), exitCode, notes);
-}
-
 /** A Problem as a connector call prints it. */
 export function errorOutput(problem: Pick<Problem, 'code' | 'message'>): CallResult {
   return { output: `error ${problem.code}: ${problem.message}`, exitCode: 1 };
@@ -176,6 +149,7 @@ export type CommandInfo = { name: string; description: string; input: Json; outp
 
 /** What running a commands connector needs: a way to run a command, and the registered commands. */
 export type CallDeps = { exec(name: string, input: Record<string, Json>): Promise<unknown>; commands(): Promise<readonly CommandInfo[]> };
+
 
 const quoted = (json: string): string => `'${json.replaceAll("'", "'\\''")}'`;
 
@@ -261,6 +235,21 @@ export const builtinHelp: Readonly<Record<(typeof builtinConnectors)[number], st
     'the file exactly once, as it was before the call (whitespace and line breaks included), and edits must not overlap. If',
     'one fails, nothing is written. Put several changes to one file in one call. Paths are relative to the workspace folder',
     'and may not leave it. Give the JSON on stdin with a heredoc, so the text needs no shell quoting.',
+  ].join('\n'),
+  artifact: [
+    'artifact: Show the person a document beside the chat: a plan, a report, a design, or a page.',
+    '',
+    'Commands:',
+    `  write  ${quoted('{ "id", "title", "format"?, "content" }')} → { "id", "version", "created", "bytes" }`,
+    `  edit   ${quoted('{ "id", "edits": [{ "oldText", "newText" }] }')} → { "id", "version", "replacements", "firstChangedLine" }`,
+    `  get    ${quoted('{ "id" }')} → { "id", "title", "format", "version", "content" }`,
+    '',
+    '"write" creates the artifact or replaces it. "edit" needs an existing artifact: each oldText must match the content exactly',
+    'once, as it was before the call, and edits must not overlap; if one fails, nothing changes. The id is lowercase kebab case',
+    '(up to 50 characters), such as plan; the title is up to 100 characters; the format is "markdown" (the default) or "html";',
+    'the content is up to 64 KB, and a chat holds up to 20 artifacts. An "html" artifact is one self-contained page: its scripts',
+    'run, but it can load nothing from the network (no external scripts, styles, images, or fonts: use inline CSS and JS, data:',
+    'images, or inline SVG) and can\'t reach the rest of the app. Give long content on stdin with a heredoc, so it needs no shell quoting.',
   ].join('\n'),
 };
 

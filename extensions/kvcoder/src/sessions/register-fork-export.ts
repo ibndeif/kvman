@@ -51,7 +51,10 @@ export function registerForkExport(ctx: Ctx): void {
     handle: async ({ sessionId }) => {
       const session = await ownSession(ctx, sessionId);
       const children = await records(ctx.store).sessions.find({ parentId: sessionId }, { limit: 1000 });
-      const data = { ...(await sessionExport(ctx, sessionId)), subagents: await Promise.all(children.map((child) => sessionExport(ctx, child.id))) };
+      const artifacts = (await records(ctx.store).artifacts.find({ sessionId }, { limit: 1000 }))
+        .sort((first, second) => first.createdAt.localeCompare(second.createdAt) || first.artifactId.localeCompare(second.artifactId))
+        .map((doc) => ({ id: doc.artifactId, title: doc.title, format: doc.format, version: doc.version, content: doc.content, createdAt: doc.createdAt, updatedAt: doc.updatedAt }));
+      const data = { ...(await sessionExport(ctx, sessionId)), artifacts, subagents: await Promise.all(children.map((child) => sessionExport(ctx, child.id))) };
       const file = await ctx.files.write(exportName(session.title, sessionId), JSON.stringify(data, null, 2), 'application/json');
       return { fileId: file.id };
     },

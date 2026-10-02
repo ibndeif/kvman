@@ -139,6 +139,19 @@ export const processDocSchema = z.object({
   reported: z.boolean(),
 });
 
+// A document shown beside the chat (plan 08 §8.5, ADR 0009, 175): `sessionId` is the chat's own id, `artifactId`
+// names it within the chat, and only the latest content is kept.
+export const artifactDocSchema = z.object({
+  sessionId: z.string(),
+  artifactId: z.string(),
+  title: z.string(),
+  format: z.enum(['markdown', 'html']),
+  content: z.string(),
+  version: z.number().int().min(1),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
 export type SessionDoc = z.output<typeof sessionDocSchema>;
 export type MessageDoc = z.output<typeof messageDocSchema>;
 export type QueuedDoc = z.output<typeof queuedDocSchema>;
@@ -147,6 +160,7 @@ export type Pending = z.output<typeof pendingSchema>;
 export type HeldResult = z.output<typeof heldResultSchema>;
 export type QuestionDoc = z.output<typeof questionDocSchema>;
 export type BackgroundDoc = z.output<typeof backgroundDocSchema>;
+export type ArtifactDoc = z.output<typeof artifactDocSchema>;
 export type ProcessDoc = z.output<typeof processDocSchema>;
 export type Usage = z.output<typeof usageSchema>;
 export type Outcome = z.output<typeof outcomeSchema>;

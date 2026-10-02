@@ -1,6 +1,9 @@
 import type { Ctx, Stored } from '@kvman/sdk';
-import { builtinConnectors, callInput, errorOutput, parseLine, refusedText, resultText, runCommandsCall, type CallResult } from '../connector-line.ts';
+import { builtinConnectors, callInput, errorOutput, parseLine, refusedText, runCommandsCall, type CallResult } from '../connector-line.ts';
 import { askCall, type QuestionKind } from '../calls/ask.ts';
+import { resultText } from '../result-text.ts';
+import { artifactCall } from '../calls/artifact-connector.ts';
+import { chatIdOf } from '../artifacts/artifact-records.ts';
 import { fsCall } from '../calls/fs-connector.ts';
 import { jobsCall } from '../calls/jobs.ts';
 import { runShellCall } from '../calls/run-shell-call.ts';
@@ -54,6 +57,10 @@ async function connectorOutcome(env: CallEnv, call: ToolCall, line: string, pars
   }
   if (parsed.connector === 'jobs') return result(call.id, await jobsCall(ctx, session.id, parsed.words));
   if (parsed.connector === 'fs') return result(call.id, await fsCall(ctx, parsed.words, parsed.stdin));
+  if (parsed.connector === 'artifact') {
+    const done = await artifactCall(ctx, chatIdOf(session), parsed.words, parsed.stdin);
+    return result(call.id, done, done.details);
+  }
   if (parsed.connector === 'subagent') {
     const run = subagentCall(parsed.words, parsed.stdin, tools.allowed);
     if ('output' in run) return result(call.id, run);

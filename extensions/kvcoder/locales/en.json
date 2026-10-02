@@ -151,6 +151,8 @@
   "kvcoder.job.list.description": "A chat's newest 50 background jobs (processes, --async connector calls, and subagents), running ones first.",
   "kvcoder.job.get.description": "One background job of a chat with its output: a process's last 100 lines, a connector call's output, or a subagent's result.",
   "kvcoder.job.cancel.description": "Stops a running background process, or cancels a connector call or subagent a chat started with --async.",
+  "kvcoder.artifact.list.description": "Lists the artifacts of a chat, newest change first.",
+  "kvcoder.artifact.get.description": "Gives one artifact of a chat with its content.",
   "kvcoder.ui.jobs.title": "Background jobs",
   "kvcoder.ui.jobs.running": "{count} running",
   "kvcoder.ui.jobs.minutes": "{minutes} min {seconds} s",
@@ -165,5 +167,13 @@
   "kvcoder.ui.jobs.inBackground": "Runs in the background",
   "kvcoder.ui.jobs.background": "Background",
   "kvcoder.notices.STEP_FAILED_REASON": "The turn stopped: {error} {reason}",
-  "kvcoder.ui.activity.retrying": "Retrying… ({attempt} of {of})"
+  "kvcoder.ui.activity.retrying": "Retrying… ({attempt} of {of})",
+  "kvcoder.ui.artifacts.title": "Artifacts",
+  "kvcoder.ui.artifacts.open": "Open",
+  "kvcoder.ui.artifacts.close": "Close",
+  "kvcoder.ui.artifacts.version": "Version {version}",
+  "kvcoder.ui.artifacts.toggle": "Artifacts ({count})",
+  "kvcoder.ui.artifacts.frameLabel": "Preview of {title}",
+  "kvcoder.ui.artifacts.format.markdown": "Markdown",
+  "kvcoder.ui.artifacts.format.html": "HTML"
 }

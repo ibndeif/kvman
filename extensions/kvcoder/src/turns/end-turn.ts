@@ -1,5 +1,5 @@
 import type { Ctx, Stored } from '@kvman/sdk';
-import { resultText } from '../connector-line.ts';
+import { resultText } from '../result-text.ts';
 import type { JsonValue } from '../connector-line.ts';
 import { firePoint } from '../registry/session-points.ts';
 import type { Outcome, SessionDoc } from '../schemas/records.ts';
