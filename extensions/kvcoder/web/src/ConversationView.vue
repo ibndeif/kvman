@@ -1,19 +1,23 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { ArrowDown } from '@lucide/vue';
+import { computed, ref, useTemplateRef } from 'vue';
 import type { Message } from '../../src/index.ts';
 import ArtifactPanel from './ArtifactPanel.vue';
 import MessageComposer from './MessageComposer.vue';
+import ChatStart from './ChatStart.vue';
 import ConversationHeader from './ConversationHeader.vue';
 import { toastProblem, totals, useKvman } from './kvman.ts';
 import ActivityLine from './ActivityLine.vue';
 import { callInfos } from './message-parts.ts';
 import MessageItem from './MessageItem.vue';
 import PendingCards from './PendingCards.vue';
+import RecoveryActions from './RecoveryActions.vue';
 import PromptTab from './PromptTab.vue';
 import SubagentCard from './SubagentCard.vue';
 import { useAnswers } from './use-answers.ts';
 import { useArtifacts } from './use-artifacts.ts';
 import { useConversation } from './use-conversation.ts';
+import { useFollowLatest } from './use-follow-latest.ts';
 
 // kvcoder's conversation (plan 08 §8.7): without a session it is the Chat page's start, whose first message creates
 // the chat; with one, the messages, the running step, the pending questions and subagents, the artifact panel, and
@@ -26,6 +30,7 @@ const { session, messages, omitted, turns, live, children } = conversation;
 const artifacts = useArtifacts(kvman, () => props.sessionId, () => session.value?.updatedAt, (error) => toastProblem(kvman, error));
 const panelShown = computed(() => artifacts.open.value && artifacts.shown.value !== undefined);
 const calls = computed(() => callInfos(messages.value));
+const recoverableNotices = new Set(['STEP_FAILED', 'REPLY_LOST', 'INTERRUPTED']);
 const running = computed(() => session.value?.status === 'running');
 const pending = computed(() => (session.value?.status === 'waiting' ? (turns.value[0]?.pending ?? []) : []));
 
@@ -42,11 +47,11 @@ const turnTotals = computed(() => {
 });
 
 async function send(message: { text: string; fileIds: string[] }): Promise<void> {
+  if (props.sessionId === undefined) return;
   try {
-    const sessionId = props.sessionId ?? (await kvman.exec('kvcoder.session.create', {})).id;
-    await kvman.exec('kvcoder.message.send', { sessionId, text: message.text, ...(message.fileIds.length > 0 ? { fileIds: message.fileIds } : {}) });
-    if (props.sessionId === undefined) kvman.navigate('kvcoder.session', { sessionId });
-    else await conversation.refresh();
+    await kvman.exec('kvcoder.message.send', { sessionId: props.sessionId, text: message.text, ...(message.fileIds.length > 0 ? { fileIds: message.fileIds } : {}) });
+    follow.resume();
+    await conversation.refresh();
   } catch (error) {
     toastProblem(kvman, error);
   }
@@ -65,6 +70,12 @@ async function stop(): Promise<void> {
 // An answered question or approval leaves the conversation at once (ADR 0009, 141, 142).
 const answers = useAnswers(kvman, (ran) => conversation.refresh(ran));
 const waitingOnYou = computed(() => pending.value.filter((item) => item.questionId === null || !answers.hidden.value.has(String(item.questionId))));
+const recoverable = computed(() => {
+  const last = messages.value.at(-1);
+  return session.value?.status === 'idle' && last?.kind === 'notice' && recoverableNotices.has(String(last.content['code']));
+});
+const list = useTemplateRef<HTMLElement>('list');
+const follow = useFollowLatest(list, () => [messages.value, live.text, live.thinking, live.calls.length, live.summarizing, running.value, pending.value, children.size, answers.hidden.value], () => props.sessionId);
 
 async function exportEarlier(): Promise<void> {
   if (props.sessionId === undefined) return;
@@ -82,31 +93,31 @@ const key = (message: Message): string => message.id;
 <template>
   <div class="kvc-workspace">
     <section class="kvc-conversation" data-test="conversation">
-      <div v-if="props.sessionId === undefined" class="kvc-start">
-        <h1>{{ kvman.t('kvcoder.ui.startHeading', { workspace: kvman.workspace.value.name }) }}</h1>
-        <MessageComposer :running="false" :placeholder="kvman.t('kvcoder.ui.startPlaceholder')" @send="send" />
-        <p class="kvc-muted" style="text-align: center; margin: 0">{{ kvman.t('kvcoder.ui.startHint') }}</p>
-      </div>
+      <ChatStart v-if="props.sessionId === undefined" />
       <template v-else-if="session">
         <ConversationHeader :session="session" :tab="tab" :turns="turns.length" :artifacts="artifacts.list.value.length" :artifacts-open="artifacts.open.value" @tab="tab = $event" @changed="conversation.refresh()" @toggle-artifacts="artifacts.toggle()" />
-        <div class="kvc-scroll">
-          <PromptTab v-if="tab === 'prompt'" :session-id="session.id" />
-          <div v-else class="kvc-column">
-            <button v-if="omitted > 0" type="button" class="kvc-button" style="align-self: center" data-test="earlier" @click="exportEarlier">{{ kvman.t('kvcoder.ui.earlierMessages', { count: omitted }) }}</button>
-            <template v-for="message in messages" :key="key(message)">
-              <MessageItem :message="message" :calls="calls" @open-artifact="artifacts.openArtifact($event)" />
-              <span v-if="turnTotals.has(message.id)" class="kvc-muted" data-test="turn-totals">{{ turnTotals.get(message.id) }}</span>
-            </template>
+        <div class="kvc-scrollport">
+          <div ref="list" class="kvc-scroll" @scroll="follow.onScroll">
+            <PromptTab v-if="tab === 'prompt'" :session-id="session.id" />
+            <div v-else class="kvc-column">
+              <button v-if="omitted > 0" type="button" class="kvc-button" style="align-self: center" data-test="earlier" @click="exportEarlier">{{ kvman.t('kvcoder.ui.earlierMessages', { count: omitted }) }}</button>
+              <template v-for="message in messages" :key="key(message)">
+                <MessageItem :message="message" :calls="calls" @open-artifact="artifacts.openArtifact($event)" />
+                <span v-if="turnTotals.has(message.id)" class="kvc-muted" data-test="turn-totals">{{ turnTotals.get(message.id) }}</span>
+              </template>
+              <RecoveryActions v-if="recoverable" :session-id="session.id" @sent="follow.resume(); conversation.refresh()" />
             <div v-if="live.summarizing" class="kvc-notice" data-test="summarizing">{{ kvman.t('kvcoder.ui.summarizing') }}</div>
-            <div v-if="running && (live.text !== '' || live.thinking !== '')" class="kvc-answer" data-test="live-answer">
-              <details v-if="live.thinking !== ''" :open="live.text === '' && live.calls.length === 0" data-test="live-thinking"><summary class="kvc-muted">{{ kvman.t('kvcoder.ui.thinkingNow') }}</summary><p class="kvc-muted" style="white-space: pre-wrap">{{ live.thinking }}</p></details>
-              <component :is="kvman.View" v-if="live.text !== ''" :view="{ type: 'markdown', text: 'kvcoder.markdown', params: { text: live.text } }" />
+              <div v-if="running && (live.text !== '' || live.thinking !== '')" class="kvc-answer" data-test="live-answer">
+                <details v-if="live.thinking !== ''" :open="live.text === '' && live.calls.length === 0" data-test="live-thinking"><summary class="kvc-muted">{{ kvman.t('kvcoder.ui.thinkingNow') }}</summary><p class="kvc-muted" style="white-space: pre-wrap">{{ live.thinking }}</p></details>
+                <component :is="kvman.View" v-if="live.text !== ''" :view="{ type: 'markdown', text: 'kvcoder.markdown', params: { text: live.text } }" />
+              </div>
+              <ActivityLine v-if="running" :live="live" />
+              <SubagentCard v-for="[id, child] in children" :key="id" :child="child" :hidden="answers.hidden.value" @answer="answers.answer" @decide="answers.decide" />
+              <PendingCards :pending="pending" :hidden="answers.hidden.value" @answer="answers.answer" @decide="answers.decide" />
+              <p v-if="waitingOnYou.some((item) => item.kind !== 'subagent')" class="kvc-muted" style="text-align: center; margin: 0">{{ kvman.t('kvcoder.ui.messageDismisses') }}</p>
             </div>
-            <ActivityLine v-if="running" :live="live" />
-            <SubagentCard v-for="[id, child] in children" :key="id" :child="child" :hidden="answers.hidden.value" @answer="answers.answer" @decide="answers.decide" />
-            <PendingCards :pending="pending" :hidden="answers.hidden.value" @answer="answers.answer" @decide="answers.decide" />
-            <p v-if="waitingOnYou.some((item) => item.kind !== 'subagent')" class="kvc-muted" style="text-align: center; margin: 0">{{ kvman.t('kvcoder.ui.messageDismisses') }}</p>
           </div>
+          <button v-if="follow.away.value" type="button" class="kvc-button kvc-jump" data-test="jump-to-latest" @click="follow.resume"><ArrowDown :size="16" aria-hidden="true" />{{ kvman.t('kvcoder.ui.jumpToLatest') }}</button>
         </div>
         <MessageComposer :running="running" :placeholder="kvman.t('kvcoder.ui.placeholder')" @send="send" @stop="stop" />
       </template>

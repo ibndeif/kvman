@@ -45,7 +45,7 @@ describe('fork and export (08 §8.6, ADR 0009, 103)', { timeout: 30_000 }, () =>
   });
 
   it('M2.4-E8 export writes the session, its turns and messages, and its subagents to a file named from the title', async () => {
-    const { kernel, fake } = await kvcoder.start();
+    const { kernel, fake } = await kvcoder.start({ settings: { 'kvcoder.welcome': 'kvcoder.welcome.default' } });
     const sessionId = (await kernel.exec('kvcoder.session.create', { title: 'Plan: a/b "c" <d>*' })).id;
     await turns(kernel, fake, sessionId, 1);
     const { fileId } = await kernel.exec('kvcoder.session.export', { sessionId });

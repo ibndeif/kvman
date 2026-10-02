@@ -110,4 +110,18 @@ describe('the live view of a running step (08 §8.7, ADR 0009, 142, 143)', () =>
     expect(activity(wrapper).attributes('data-phase')).toBe('writing');
     wrapper.unmount();
   });
+
+  it('QA9-H11 a call with a description and no title yet shows the derived title and the description', async () => {
+    const fake = createFakeKvman();
+    serve(fake, running());
+    const wrapper = await mounted(ConversationView, fake, { sessionId: 's1' });
+    const description = 'D'.repeat(80);
+    fake.emit('j1', kvai({ type: 'toolcall', name: 'bash' }));
+    fake.emit('j1', kvai({ type: 'toolcall', name: 'bash', arguments: { description } }));
+    await flushPromises();
+    expect(activity(wrapper).find('[data-test="activity-title"]').text()).toBe(`${'D'.repeat(60)}…`);
+    expect(activity(wrapper).find('[data-test="activity-description"]').text()).toBe(description);
+    expect(activity(wrapper).find('[data-test="activity-title"]').text()).not.toContain('Preparing');
+    wrapper.unmount();
+  });
 });

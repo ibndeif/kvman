@@ -25,4 +25,9 @@ describe('which provider failures may pass (07 §7.1, ADR 0009, 154)', () => {
     for (const reason of ['Request timed out.', 'Connection error.', 'fetch failed', 'read ECONNRESET', 'connect ETIMEDOUT 104.18.2.115:443', 'getaddrinfo ENOTFOUND openrouter.ai', 'getaddrinfo EAI_AGAIN openrouter.ai', 'socket hang up', 'The service is overloaded']) expect(isTransient(reason)).toBe(true);
     for (const reason of ['400: {"message":"Bad request"}', '401: Invalid key', 'The model does not support images.', '']) expect(isTransient(reason)).toBe(false);
   });
+
+  it('QA10-H3 and QA10-E1 an HTTP 408, 409, or 425 is transient, other 4xx are not, and a status only counts at the start', () => {
+    for (const reason of ['408: Request Timeout', '409: Conflict, try again', '425: Too Early']) expect(isTransient(reason), reason).toBe(true);
+    for (const reason of ['400: Bad request', '401: Invalid key', '403: This model needs a confirmation', '404: No such model', '422: Unprocessable', 'The 408 widgets failed']) expect(isTransient(reason), reason).toBe(false);
+  });
 });

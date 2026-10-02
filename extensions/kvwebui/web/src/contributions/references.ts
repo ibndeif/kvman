@@ -67,12 +67,21 @@ export function formattedOutput(value: Json): { name: string; format: unknown } 
   return typeof name === 'string' && format !== undefined && Object.keys(rest).length === 0 ? { name, format } : undefined;
 }
 
+// In RTL text the currency's letters and sign are reordered (`0.0070 US$` shows as `$US 0.0070`), so the amount is
+// set apart as an LTR run (ADR 0009, 197).
+const rightToLeftScripts = new Set(['Arab', 'Hebr', 'Thaa', 'Syrc', 'Nkoo', 'Adlm']);
+
+function isolated(text: string, language: string): string {
+  const script = new Intl.Locale(language).maximize().script;
+  return script !== undefined && rightToLeftScripts.has(script) ? `\u2066${text}\u2069` : text;
+}
+
 function formatNumber(amount: number, format: OutputFormat, language: string): string {
   if (format === 'compact') return new Intl.NumberFormat(language, { notation: 'compact', maximumFractionDigits: 1 }).format(amount);
   const currency = { style: 'currency', currency: 'USD' } as const;
-  if (amount === 0 || amount >= 0.01) return new Intl.NumberFormat(language, currency).format(amount);
+  if (amount === 0 || amount >= 0.01) return isolated(new Intl.NumberFormat(language, currency).format(amount), language);
   // Under a cent: four decimals, and one significant digit when four would show zero.
-  return new Intl.NumberFormat(language, amount < 0.0001 ? { ...currency, maximumSignificantDigits: 1 } : { ...currency, minimumFractionDigits: 4 }).format(amount);
+  return isolated(new Intl.NumberFormat(language, amount < 0.0001 ? { ...currency, maximumSignificantDigits: 1 } : { ...currency, minimumFractionDigits: 4 }).format(amount), language);
 }
 
 const asText = (value: Json): string => (typeof value === 'string' ? value : JSON.stringify(value));

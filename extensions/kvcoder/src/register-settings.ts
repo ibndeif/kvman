@@ -24,7 +24,7 @@ export function registerSettings(ctx: Ctx): void {
   ctx.registerSetting('kvcoder.compactAt', { description: "The share of the model's context window above which older messages are summarized.", schema: settingSchemas.compactAt, default: 0.8 });
   ctx.registerSetting('kvcoder.connectors', { description: 'Binary connectors to add: programs the agent runs in the real shell.', schema: settingSchemas.connectors, default: [] });
   ctx.registerSetting('kvcoder.sessions.keep', { description: 'How many top-level sessions to keep per workspace; 0 keeps every session.', schema: settingSchemas.keep, default: 0 });
-  ctx.registerSetting('kvcoder.welcome', { description: "The translation key of a new workspace's welcome note; null for no welcome.", schema: settingSchemas.welcome, default: 'kvcoder.welcome.default' });
+  ctx.registerSetting('kvcoder.welcome', { description: "The translation key of a new workspace's welcome note; null (the default) for no welcome.", schema: settingSchemas.welcome, default: null });
 }
 
 /** The settings a step reads, parsed. */

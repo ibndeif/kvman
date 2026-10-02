@@ -1,4 +1,5 @@
 import type { Message } from '../../src/index.ts';
+import { callTitle } from './call-title.ts';
 
 // Reading the parts of stored messages: an answer's text, thinking, and tool calls; a tool result's text and card.
 
@@ -29,8 +30,9 @@ export function thinkingOf(message: Message): string {
 export type CallInfo = { command: string; title?: string; description?: string };
 
 function labels(source: Record<string, unknown>): { title?: string; description?: string } {
-  const { title, description } = source;
-  return { ...(typeof title === 'string' ? { title } : {}), ...(typeof description === 'string' ? { description } : {}) };
+  const description = typeof source['description'] === 'string' && source['description'].trim() !== '' ? source['description'] : undefined;
+  const title = callTitle(typeof source['title'] === 'string' ? source['title'] : undefined, description);
+  return { ...(title === undefined ? {} : { title }), ...(description === undefined ? {} : { description }) };
 }
 
 export function callInfos(messages: readonly Message[]): Map<string, CallInfo> {

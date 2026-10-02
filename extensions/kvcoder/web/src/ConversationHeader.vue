@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { Ellipsis } from '@lucide/vue';
-import { computed, onMounted, ref } from 'vue';
+import { computed, ref } from 'vue';
 import type { Session } from '../../src/index.ts';
 import { titleText, toastProblem, totals, useKvman } from './kvman.ts';
-import { modelGroups, type ModelGroup } from './model-groups.ts';
+import type { Thinking } from './model-groups.ts';
 import JobsChip from './JobsChip.vue';
-import ModelPicker from './ModelPicker.vue';
+import ModelControls from './ModelControls.vue';
+import { rememberModel } from './remember-model.ts';
+import { useModelGroups } from './use-model-groups.ts';
 
 // The conversation's header (plan 08 §8.7, ADR 0009, 104): the title, the session's totals, the model and thinking
 // pickers, the Running chip (ADR 0009, 153), the artifacts button (ADR 0009, 182), the Chat and Prompt tabs, and the
@@ -13,21 +15,12 @@ import ModelPicker from './ModelPicker.vue';
 const props = withDefaults(defineProps<{ session: Session; tab: 'chat' | 'prompt'; turns: number; artifacts?: number; artifactsOpen?: boolean }>(), { artifacts: 0, artifactsOpen: false });
 const emit = defineEmits<{ tab: [tab: 'chat' | 'prompt']; changed: []; toggleArtifacts: [] }>();
 const kvman = useKvman();
-const groups = ref<ModelGroup[]>([]);
 const menu = ref(false);
 const renaming = ref<string | null>(null);
 const confirming = ref(false);
-const thinkingLevels = ['off', 'minimal', 'low', 'medium', 'high'] as const;
 const summary = computed(() => `${kvman.t('kvcoder.ui.turns', { count: props.turns })} · ${totals(kvman.t, props.session.usage, props.session.durationMs)}`);
 
-onMounted(async () => {
-  try {
-    const [providers, models] = await Promise.all([kvman.exec('kvai.provider.list', {}), kvman.exec('kvai.model.list', {})]);
-    groups.value = modelGroups(providers, models, props.session.model);
-  } catch (error) {
-    toastProblem(kvman, error);
-  }
-});
+const groups = useModelGroups(kvman, () => props.session.model, (error) => toastProblem(kvman, error));
 
 async function run(action: () => Promise<void>): Promise<void> {
   menu.value = false;
@@ -40,7 +33,10 @@ async function run(action: () => Promise<void>): Promise<void> {
 }
 
 const sessionId = () => props.session.id;
-const configure = (change: { model?: string; thinking?: (typeof thinkingLevels)[number] }) => run(async () => void (await kvman.exec('kvcoder.session.configure', { sessionId: sessionId(), ...change })));
+const configure = (change: { model?: string; thinking?: Thinking }) => run(async () => {
+  await kvman.exec('kvcoder.session.configure', { sessionId: sessionId(), ...change });
+  if (change.model !== undefined) await rememberModel(kvman, change.model);
+});
 const rename = () => run(async () => {
   const title = renaming.value?.trim() ?? '';
   renaming.value = null;
@@ -51,8 +47,6 @@ const exportFile = () => run(async () => {
   const { fileId } = await kvman.exec('kvcoder.session.export', { sessionId: sessionId() });
   window.location.assign(`/api/files/${encodeURIComponent(fileId)}?workspaceId=${encodeURIComponent(kvman.workspace.value.id)}`);
 });
-const selected = (event: Event): string => (event.target instanceof HTMLSelectElement ? event.target.value : '');
-const onThinking = (event: Event) => configure({ thinking: thinkingLevels.find((level) => level === selected(event)) ?? 'medium' });
 const compact = () => run(async () => void (await kvman.exec('kvcoder.session.compact', { sessionId: sessionId() })));
 const remove = () => run(async () => {
   confirming.value = false;
@@ -70,10 +64,7 @@ const remove = () => run(async () => {
     </div>
     <JobsChip :session-id="props.session.id" :stamp="props.session.updatedAt" />
     <button v-if="props.artifacts > 0" type="button" class="kvc-button" :aria-pressed="props.artifactsOpen" data-test="artifacts-toggle" @click="emit('toggleArtifacts')">{{ kvman.t('kvcoder.ui.artifacts.toggle', { count: props.artifacts }) }}</button>
-    <ModelPicker :groups="groups" :current="props.session.model ?? null" @pick="(model) => configure({ model })" />
-    <select :value="props.session.thinking" class="kvc-button" :aria-label="kvman.t('kvcoder.ui.thinking')" data-test="thinking-picker" @change="onThinking">
-      <option v-for="level in thinkingLevels" :key="level" :value="level">{{ kvman.t(`kvcoder.ui.thinkingLevels.${level}`) }}</option>
-    </select>
+    <ModelControls :groups="groups" :model="props.session.model ?? null" :thinking="props.session.thinking" @model="(model) => configure({ model })" @thinking="(thinking) => configure({ thinking })" />
     <div class="kvc-tabs" role="tablist">
       <button type="button" role="tab" class="kvc-tab" :aria-selected="props.tab === 'chat'" data-test="tab-chat" @click="emit('tab', 'chat')">{{ kvman.t('kvcoder.ui.chatTab') }}</button>
       <button type="button" role="tab" class="kvc-tab" :aria-selected="props.tab === 'prompt'" data-test="tab-prompt" @click="emit('tab', 'prompt')">{{ kvman.t('kvcoder.ui.promptTab') }}</button>

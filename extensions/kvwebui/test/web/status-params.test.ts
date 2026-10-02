@@ -28,14 +28,15 @@ describe('status item params and inputs (06 §6.3, ADR 0009, 146, 147)', () => {
   it('QA3-H9 numbers follow the UI language', () => {
     const scope = { output: usage };
     const params = { tokens: { $output: 'tokens', format: 'compact' }, cost: { $output: 'cost', format: 'usd' } };
-    expect(textParams(params, scope, 'ar')).toEqual({ tokens: new Intl.NumberFormat('ar', { notation: 'compact', maximumFractionDigits: 1 }).format(3572), cost: new Intl.NumberFormat('ar', { style: 'currency', currency: 'USD', minimumFractionDigits: 4 }).format(0.0004181) });
+    expect(textParams(params, scope, 'ar')).toEqual({ tokens: new Intl.NumberFormat('ar', { notation: 'compact', maximumFractionDigits: 1 }).format(3572), cost: `\u2066${new Intl.NumberFormat('ar', { style: 'currency', currency: 'USD', minimumFractionDigits: 4 }).format(0.0004181)}\u2069` });
     expect(textParams({ plain: { $output: 'tokens' } }, scope, 'ar')).toEqual({ plain: '3572' });
   });
 
   it('QA3-E9 costs read well at any size', () => {
     const cost = (value: number, language = 'en') => textParams({ cost: { $output: 'cost', format: 'usd' } }, { output: { cost: value } }, language)['cost'];
     expect([cost(0), cost(1.5), cost(0.0004181), cost(0.00004344), cost(0.5), cost(0.009)]).toEqual(['$0.00', '$1.50', '$0.0004', '$0.00004', '$0.50', '$0.0090']);
-    expect(cost(0.0004181, 'ar')).toBe(new Intl.NumberFormat('ar', { style: 'currency', currency: 'USD', minimumFractionDigits: 4 }).format(0.0004181));
+    expect(cost(0.0004181, 'ar')).toBe(`\u2066${new Intl.NumberFormat('ar', { style: 'currency', currency: 'USD', minimumFractionDigits: 4 }).format(0.0004181)}\u2069`);
+    expect(cost(0.007, 'ar')).toMatch(/^\u2066.*0\.0070.*US\$.*\u2069$/u);
   });
 
   it('QA3-E10 an item that reads a route param is hidden, and its query isn\'t run, on a page without it', async () => {

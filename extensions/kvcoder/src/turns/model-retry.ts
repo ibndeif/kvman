@@ -2,10 +2,10 @@ import { ProblemError, type Ctx, type InputOf, type OutputOf } from '@kvman/sdk'
 import type {} from '@kvman/kvai';
 import { delay } from '../delay.ts';
 
-// A step's model call, tried again when it fails for a temporary reason (plan 08 §8.2, ADR 0009, 154 and 155): three
-// tries in all, after 1 s and then 4 s. Any other failure, and a stop, end it at once.
+// A step's model call, tried again when it fails for a temporary reason (plan 08 §8.2, ADR 0009, 154, 155, and 203):
+// four tries in all, after 1 s, 4 s, and then 15 s. Any other failure, and a stop, end it at once.
 
-const waitsMs = [1_000, 4_000] as const;
+const waitsMs = [1_000, 4_000, 15_000] as const;
 
 const transient = (error: ProblemError): boolean => error.problem.code === 'kvai/RATE_LIMITED' || (error.problem.code === 'kvai/PROVIDER_ERROR' && error.problem.params?.['transient'] === true);
 

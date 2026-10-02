@@ -34,14 +34,13 @@ describe('sessions (08 §8.6)', { timeout: 30_000 }, () => {
 
   it('M2.4-E4 session.list gives top-level sessions newest first, its limit is at most 1000, and session.count counts by status', async () => {
     const { kernel, fake } = await kvcoder.start();
-    const [welcome] = await kernel.exec('kvcoder.session.list', { limit: 10 });
     const first = await newSession(kernel);
     const second = await newSession(kernel);
     fake.reply(calls(`ask text '{"prompt":"?"}'`), calls(`subagent run '{"task":"t","mode":"fresh"}'`), says('child'));
     await kernel.exec('kvcoder.message.send', { sessionId: first, text: 'go' });
     await kernel.clock.advance(0);
-    expect((await kernel.exec('kvcoder.session.list', { limit: 10 })).map((session) => session.id)).toEqual([second, first, welcome?.id]);
-    expect(await kernel.exec('kvcoder.session.count', {})).toEqual({ count: 3 });
+    expect((await kernel.exec('kvcoder.session.list', { limit: 10 })).map((session) => session.id)).toEqual([second, first]);
+    expect(await kernel.exec('kvcoder.session.count', {})).toEqual({ count: 2 });
     expect(await kernel.exec('kvcoder.session.count', { status: 'waiting' })).toEqual({ count: 1 });
     await expect(kernel.exec('kvcoder.session.list', { limit: 1001 })).rejects.toMatchObject({ problem: { code: 'VALIDATION_FAILED' } });
   });

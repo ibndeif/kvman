@@ -29,7 +29,8 @@ describe('the conversation shows its messages (08 §8.7)', () => {
     expect(wrapper.findAll('[data-test="markdown"]').map((node) => node.text())).toContain('Running the tests.');
     const shell = wrapper.find('[data-test="shell-result"]');
     expect(shell.text()).toContain('npm test');
-    expect(shell.find('[data-test="exit-code"]').text()).toBe('exit 1');
+    expect(shell.classes()).toContain('kvc-failed');
+    expect(shell.find('[data-test="exit-code"]').exists()).toBe(false);
     expect(shell.find('[data-test="shell-output"]').exists()).toBe(false);
     await shell.find('button').trigger('click');
     expect(shell.find('[data-test="shell-output"]').text()).toBe('FAIL 1');

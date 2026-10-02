@@ -6,9 +6,9 @@ import type { Ctx, ProblemError } from '@kvman/sdk';
 
 const rateLimitPattern = /^429\b|rate.?limit|too many requests/i;
 const reasonLimit = 1000;
-// A second try may fix these (ADR 0009, 154): an HTTP 5xx (pi-ai's reason starts with the status), overloaded or
-// unavailable providers, timeouts, and dropped or refused connections.
-const transientPattern = /^5\d\d\b|timed? ?out|timeout|connection error|econn(?:reset|refused|aborted)|etimedout|enotfound|eai_again|fetch failed|socket hang up|overloaded|service unavailable|bad gateway/i;
+// A second try may fix these (ADR 0009, 154 and 203): an HTTP 408, 409, 425, or 5xx (pi-ai's reason starts with the
+// status), overloaded or unavailable providers, timeouts, and dropped or refused connections.
+const transientPattern = /^(?:408|409|425|5\d\d)\b|timed? ?out|timeout|connection error|econn(?:reset|refused|aborted)|etimedout|enotfound|eai_again|fetch failed|socket hang up|overloaded|service unavailable|bad gateway/i;
 
 /** Whether a provider's failure text is one a second try may fix. */
 export const isTransient = (reason: string): boolean => transientPattern.test(reason);

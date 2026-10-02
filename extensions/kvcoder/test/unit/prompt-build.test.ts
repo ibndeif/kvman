@@ -12,7 +12,7 @@ describe('the prompt builder (08 §8.2)', () => {
     expect(windows).toContain('on Windows');
     expect(windows).toContain('Your one tool is powershell: it runs a PowerShell command.');
     expect(windows.endsWith("## Connectors\nUse these before the shell, whenever one covers the task.\n- todo: Keep a todo list. Help: `todo -h` lists its commands; `todo <command> -h` shows a command's input, output, and examples.")).toBe(true);
-    expect(windows).toContain('To put a question to the person (a choice, a yes or no, a free answer), call `ask`. A reply with no tool call ends your turn, so never end one by promising something still to come');
+    expect(windows).toContain('To put a question to the person (a choice, a yes or no, a free answer), call `ask`.');
     const big = [section('a', 1, 30_000), section('b', 2, 30_000), section('c', 3, 10_000), section('d', 4, 4_000)];
     const built = buildPrompt({ ...base, platform: 'linux', toolName: 'bash', sections: big });
     expect(built.left.map((left) => left.id)).toEqual(['c']);
@@ -62,6 +62,15 @@ describe('the prompt builder (08 §8.2)', () => {
         'Keep replies short: say what you did and what is left.',
       ]) expect(prompt, phrase).toContain(phrase);
     }
+  });
+
+  it('QA9-H18 and QA10-H1 the base prompt ends its working method with the call-or-final-answer rule, and never makes a call that does nothing', () => {
+    const { prompt } = buildPrompt({ workspacePath: '/w', language: 'en', platform: 'linux', toolName: 'bash', sections: [], connectors: [] });
+    const rule = 'Say what you are about to do in the same reply as the call that does it, and never make a call that does nothing, such as `true`, just to keep going. A reply with no tool call is your final answer and ends the turn: when work remains, your reply must contain the call that does the next piece. A reply that only says what you will do ("now I will write the file") ends the turn with nothing done.';
+    expect(prompt).toContain(rule);
+    expect(prompt).not.toContain('never end one by promising');
+    const method = prompt.split('How you work.')[1] ?? '';
+    expect(method.trimEnd().endsWith(rule)).toBe(true);
   });
 
   it('QA5-E2 a prompt with no connectors has no index and no lead line', () => {

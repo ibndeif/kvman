@@ -28,3 +28,6 @@ export function searchGroups(groups: readonly ModelGroup[], query: string): Foun
   const kept = groups.map((group) => ({ ...group, models: group.models.filter(matches) })).filter((group) => group.models.length > 0);
   return { groups: kept, shown: kept.reduce((sum, group) => sum + group.models.length, 0), total: groups.reduce((sum, group) => sum + group.models.length, 0) };
 }
+
+export const thinkingLevels = ['off', 'minimal', 'low', 'medium', 'high'] as const;
+export type Thinking = (typeof thinkingLevels)[number];

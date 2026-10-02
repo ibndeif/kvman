@@ -2,7 +2,7 @@
 import { BellRing, Info, NotebookText, ScrollText } from '@lucide/vue';
 import { computed } from 'vue';
 import type { Message } from '../../src/index.ts';
-import { failureReason, fields, problemKey, stringValues, useKvman } from './kvman.ts';
+import { failureReason, fields, isolateValue, problemKey, stringValues, useKvman } from './kvman.ts';
 import { artifactOf, isBackground, isKvcoderHint, resultCard, textOf, thinkingOf, type CallInfo } from './message-parts.ts';
 import ArtifactCard from './ArtifactCard.vue';
 import ShellResult from './ShellResult.vue';
@@ -19,10 +19,11 @@ const artifact = computed(() => artifactOf(props.message));
 const notice = computed(() => {
   const params = fields(props.message.content['params']);
   const code = typeof params['code'] === 'string' ? params['code'] : undefined;
-  const error = code === undefined ? {} : { error: kvman.t(problemKey(code), stringValues(params['details'])) };
+  const isolatedDetails = Object.fromEntries(Object.entries(stringValues(params['details'])).map(([name, value]) => [name, isolateValue(value)]));
+  const error = code === undefined ? {} : { error: kvman.t(problemKey(code), isolatedDetails) };
   const reason = failureReason(params['details']);
   const key = String(props.message.content['code']);
-  return kvman.t(`kvcoder.notices.${reason === undefined || key !== 'STEP_FAILED' ? key : 'STEP_FAILED_REASON'}`, { ...params, ...error, ...(reason === undefined ? {} : { reason }) });
+  return kvman.t(`kvcoder.notices.${reason === undefined || key !== 'STEP_FAILED' ? key : 'STEP_FAILED_REASON'}`, { ...params, ...error, ...(reason === undefined ? {} : { reason: isolateValue(reason) }) });
 });
 const note = computed(() => {
   const params = props.message.content['params'];
@@ -52,7 +53,7 @@ const markdown = (body: string) => ({ type: 'markdown' as const, text: 'kvcoder.
     </span>
     <span v-if="props.message.queued" class="kvc-muted" style="display: block" data-test="queued">{{ kvman.t('kvcoder.ui.queued') }}</span>
   </div>
-  <div v-else-if="props.message.kind === 'assistant'" class="kvc-answer" data-test="assistant-message">
+  <div v-else-if="props.message.kind === 'assistant' && (thinking !== '' || text !== '')" class="kvc-answer" data-test="assistant-message">
     <details v-if="thinking !== ''" data-test="thinking"><summary class="kvc-muted">{{ kvman.t('kvcoder.ui.thought') }}</summary><p class="kvc-muted" style="white-space: pre-wrap">{{ thinking }}</p></details>
     <component :is="kvman.View" v-if="text !== ''" :view="markdown(text)" />
   </div>

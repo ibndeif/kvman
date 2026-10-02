@@ -49,11 +49,20 @@ export function stringValues(params: unknown): Record<string, string> {
 
 const reasonLimit = 200;
 
-/** The provider's reason in a failed call's details, cut to 200 characters (ADR 0009, 156). */
+const providerMessagePattern = /^(\d{3}:)?\s*\{.*?"message"\s*:\s*"((?:[^"\\]|\\.)*)"/s;
+
+// A provider's JSON error body is shown as its message, with the status before it (ADR 0009, 210).
+function readable(reason: string): string {
+  const found = providerMessagePattern.exec(reason);
+  return found?.[2] === undefined ? reason : `${found[1] === undefined ? '' : `${found[1]} `}${found[2].replaceAll('\\"', '"')}`;
+}
+
+/** The provider's reason in a failed call's details, as its message, cut to 200 characters (ADR 0009, 156 and 210). */
 export function failureReason(details: unknown): string | undefined {
   const { reason } = fields(details);
   if (typeof reason !== 'string' || reason.trim() === '') return undefined;
-  return reason.length > reasonLimit ? `${reason.slice(0, reasonLimit)}…` : reason;
+  const text = readable(reason);
+  return text.length > reasonLimit ? `${text.slice(0, reasonLimit)}…` : text;
 }
 
 /** Shows a failed call as a toast. */
@@ -62,11 +71,26 @@ export function toastProblem(kvman: Kvman, error: unknown): void {
   kvman.toast(problem === undefined ? 'kvcoder.ui.failed' : problemKey(problem.code), problem?.params ?? {}, 'error');
 }
 
+// In RTL text the currency's letters and sign are reordered (`0.0070 US$` shows as `$US 0.0070`), so the amount is
+// set apart as an LTR run (ADR 0009, 197).
+const rightToLeftScripts = new Set(['Arab', 'Hebr', 'Thaa', 'Syrc', 'Nkoo', 'Adlm']);
+
+function isRtl(language: string | undefined): boolean {
+  const script = language === undefined ? undefined : new Intl.Locale(language).maximize().script;
+  return script !== undefined && rightToLeftScripts.has(script);
+}
+
+const isolated = (text: string, language: string | undefined): string => (isRtl(language) ? `\u2066${text}\u2069` : text);
+
+/** A name or a provider's message set apart as a run of its own, so it keeps its order inside RTL text (ADR 0009, 210). */
+export const isolateValue = (text: string): string => (isRtl(pageLanguage()) ? `\u2068${text}\u2069` : text);
+
 /** US dollars in the UI language: two decimals, four under one cent, one significant digit under 0.0001 (ADR 0009, 147). */
 export function formatCost(amount: number): string {
+  const language = pageLanguage();
   const currency = { style: 'currency', currency: 'USD' } as const;
-  if (amount === 0 || amount >= 0.01) return new Intl.NumberFormat(pageLanguage(), currency).format(amount);
-  return new Intl.NumberFormat(pageLanguage(), amount < 0.0001 ? { ...currency, maximumSignificantDigits: 1 } : { ...currency, minimumFractionDigits: 4 }).format(amount);
+  if (amount === 0 || amount >= 0.01) return isolated(new Intl.NumberFormat(language, currency).format(amount), language);
+  return isolated(new Intl.NumberFormat(language, amount < 0.0001 ? { ...currency, maximumSignificantDigits: 1 } : { ...currency, minimumFractionDigits: 4 }).format(amount), language);
 }
 
 /** Tokens, cost, and time, in the UI language. */

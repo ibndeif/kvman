@@ -70,6 +70,9 @@ describe("the conversation's actions (08 §8.7, ADR 0009, 104)", () => {
 
   it("M2.4-E58 the Chat page's input creates a session, sends the message, and opens the session page", async () => {
     const fake = createFakeKvman();
+    fake.handle('kernel.settings.list', () => [{ key: 'kvai.defaultModel', value: 'fake/m1' }]);
+    fake.handle('kvai.provider.list', () => [{ id: 'fake', title: 'Fake', status: 'noKey' }]);
+    fake.handle('kvai.model.list', () => [{ id: 'fake/m1', name: 'M1', provider: 'fake' }]);
     fake.handle('kvcoder.session.create', () => session({ id: 's9', title: '' }));
     fake.handle('kvcoder.message.send', ok);
     const wrapper = await mounted(ConversationView, fake);
@@ -77,7 +80,7 @@ describe("the conversation's actions (08 §8.7, ADR 0009, 104)", () => {
     await wrapper.find('[data-test="composer-text"]').setValue('Make a notes page');
     await wrapper.find('[data-test="composer-text"]').trigger('keydown', { key: 'Enter' });
     await flushPromises();
-    expect(fake.calls).toEqual([{ name: 'kvcoder.session.create', input: {} }, { name: 'kvcoder.message.send', input: { sessionId: 's9', text: 'Make a notes page' } }]);
+    expect(fake.calls.slice(3)).toEqual([{ name: 'kvcoder.session.create', input: {} }, { name: 'kvcoder.message.send', input: { sessionId: 's9', text: 'Make a notes page' } }]);
     expect(fake.navigate).toHaveBeenCalledWith('kvcoder.session', { sessionId: 's9' });
     wrapper.unmount();
   });

@@ -59,7 +59,7 @@ describe('what a person sees while a step runs, in Chromium (08 §8.7, ADR 0009,
   it("QA3-H8 and QA3-H10 the status bar shows the workspace folder (the home folder as ~) and the open chat's tokens and cost, and QA3-E10 the chat item is gone off a chat page", async () => {
     world = await kvmanWorld();
     const kvman = await world.start();
-    world.fake.reply({ chunks: [{ text: 'Hello.' }], usage: { input: 4200, output: 1100 } });
+    world.fake.reply({ chunks: [{ text: 'Hello. '.repeat(70) }], usage: { input: 4200, output: 1100 } });
     const sessionId = sessionSchema.parse(await kvman.call('commands', 'kvcoder.session.create', { title: 'Costs' })).id;
     await kvman.call('commands', 'kvcoder.message.send', { sessionId, text: 'Hi' });
     await until(() => kvman.call('queries', 'kvcoder.session.get', { sessionId }), sessionSchema, (session) => session.status === 'idle');

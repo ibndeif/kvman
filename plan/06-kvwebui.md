@@ -9,6 +9,7 @@ kvwebui is the web app, and it is an extension like any other. The kernel serves
 - vue-i18n, loading `/api/locales/:lang` for `kernel.language`, with the fallbacks of §2.11.
 - `@lucide/vue` for icons (the successor of the deprecated `lucide-vue-next`, with the same icon names).
 - The IBM Plex Sans, IBM Plex Sans Arabic, and IBM Plex Mono fonts, bundled into the app.
+- Every enabled clickable control (button, link, summary, select, checkbox) shows `cursor: pointer`, which the CSS reset removes from buttons (ADR 0009, 209).
 - `markdown-it` with HTML disabled, its output sanitized with `DOMPurify`. `v-html` appears only in that one component.
 
 ## 6.2 The frame

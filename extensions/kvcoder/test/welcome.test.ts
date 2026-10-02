@@ -9,8 +9,8 @@ import { requestMessages, says } from './support/model-script.ts';
 const kvcoder = useKvcoder();
 
 describe('the welcome session (08 §8.1, ADR 0008, 73–75)', { timeout: 30_000 }, () => {
-  it('M2.4-H8 a new workspace gets the welcome session and its note once, and notes and notices never reach the model', async () => {
-    const { kernel, fake, root } = await kvcoder.start();
+  it('M2.4-H8 and QA9-E1 with kvcoder.welcome set, a new workspace gets the welcome session and its note once, and notes and notices never reach the model', async () => {
+    const { kernel, fake, root } = await kvcoder.start({ settings: { 'kvcoder.welcome': 'kvcoder.welcome.default' } });
     const home = await kernel.exec('kvcoder.session.list', { limit: 10 });
     expect(home).toEqual([expect.objectContaining({ title: { key: 'kvcoder.welcome.title' }, status: 'idle' })]);
     const folder = mkdtempSync(path.join(root, 'project-'));
@@ -38,7 +38,15 @@ describe('the welcome session (08 §8.1, ADR 0008, 73–75)', { timeout: 30_000 
     expect(requestMessages(fake).filter((message) => message.role !== 'system' && message.role !== 'developer').map((message) => `${message.role}:${String(message.content)}`)).toEqual(['user:first', 'user:second']);
   });
 
-  it('M2.4-E52 kvcoder.welcome: null creates no welcome session', async () => {
+  it('M2.4-E52 and QA9-H1 kvcoder.welcome is null by default: Home and a new workspace have no session', async () => {
+    const { kernel, root } = await kvcoder.start();
+    expect(await kernel.exec('kvcoder.session.list', { limit: 10 })).toEqual([]);
+    const opened = await kernel.exec('kernel.workspace.open', { path: mkdtempSync(path.join(root, 'project-')) });
+    await kernel.clock.advance(0);
+    expect(await kernel.exec('kvcoder.session.list', { limit: 10 }, { workspaceId: opened.id })).toEqual([]);
+  });
+
+  it('M2.4-E52 an explicit null creates no welcome session either', async () => {
     const { kernel } = await kvcoder.start({ settings: { 'kvcoder.welcome': null } });
     expect(await kernel.exec('kvcoder.session.list', { limit: 10 })).toEqual([]);
   });

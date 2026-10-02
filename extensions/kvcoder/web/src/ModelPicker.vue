@@ -6,7 +6,7 @@ import { searchGroups, type ModelGroup } from './model-groups.ts';
 
 // The model picker (plan 08 §8.7, ADR 0009, 140): a button that opens a searchable list of the models, grouped by
 // provider. Every word typed must be in a model's name or id; arrows and Enter pick, Esc and a click outside close.
-const props = defineProps<{ groups: ModelGroup[]; current: string | null }>();
+const props = defineProps<{ groups: ModelGroup[]; current: string | null; empty?: string | undefined }>();
 const emit = defineEmits<{ pick: [modelId: string] }>();
 const kvman = useKvman();
 const open = ref(false);
@@ -18,7 +18,7 @@ const panel = useTemplateRef<HTMLElement>('panel');
 
 const found = computed(() => searchGroups(props.groups, query.value));
 const models = computed(() => found.value.groups.flatMap((group) => group.models));
-const label = computed(() => props.groups.flatMap((group) => group.models).find((model) => model.id === props.current)?.name ?? props.current ?? '');
+const label = computed(() => props.groups.flatMap((group) => group.models).find((model) => model.id === props.current)?.name ?? props.current ?? props.empty ?? '');
 const indexOf = (modelId: string): number => models.value.findIndex((model) => model.id === modelId);
 
 function close(): void {

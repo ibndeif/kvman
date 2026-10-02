@@ -5,7 +5,7 @@ import { useKvman } from './kvman.ts';
 
 // The send box (plan 08 §8.7): Enter sends, Shift+Enter starts a new line; images are uploaded to the kernel's files
 // (`POST /api/files`) and sent as `fileIds`; while a step runs, Stop cancels the turn.
-const props = defineProps<{ running: boolean; placeholder: string }>();
+const props = defineProps<{ running: boolean; placeholder: string; blocked?: boolean | undefined }>();
 const emit = defineEmits<{ send: [message: { text: string; fileIds: string[] }]; stop: [] }>();
 const kvman = useKvman();
 const text = ref('');
@@ -34,7 +34,7 @@ async function upload(event: Event): Promise<void> {
 
 function send(): void {
   const body = text.value.trim();
-  if (body === '' || uploading.value) return;
+  if (body === '' || uploading.value || props.blocked === true) return;
   emit('send', { text: body, fileIds: files.value.map((file) => file.id) });
   text.value = '';
   files.value = [];
@@ -59,7 +59,7 @@ function onKey(event: KeyboardEvent): void {
         <button type="button" class="kvc-button" :aria-label="kvman.t('kvcoder.ui.attach')" :disabled="uploading" @click="picker?.click()"><Paperclip :size="16" /></button>
         <span class="kvc-muted" style="flex: 1 1 auto">{{ kvman.t('kvcoder.ui.enterSends') }}</span>
         <button v-if="props.running" type="button" class="kvc-button" data-test="stop" @click="emit('stop')"><Square :size="14" />{{ kvman.t('kvcoder.ui.stop') }}</button>
-        <button type="button" class="kvc-button kvc-primary" :aria-label="kvman.t('kvcoder.ui.send')" :disabled="text.trim() === '' || uploading" data-test="send" @click="send"><ArrowUp :size="16" /></button>
+        <button type="button" class="kvc-button kvc-primary" :aria-label="kvman.t('kvcoder.ui.send')" :disabled="text.trim() === '' || uploading || props.blocked === true" data-test="send" @click="send"><ArrowUp :size="16" /></button>
       </div>
     </div>
   </div>

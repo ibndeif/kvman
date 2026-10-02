@@ -60,4 +60,11 @@ describe("kvcoder's catalogs (02 §2.11)", { timeout: 30_000 }, () => {
     expect(needed).toContain('kvcoder.ui.newChat');
     expect(needed.filter((key) => en[key] === undefined)).toEqual([]);
   });
+
+  it('QA10-E9 en and ar have the recovery texts, and the job list keeps its exit-code text', () => {
+    for (const language of ['en', 'ar'] as const) {
+      const texts = catalog(language);
+      for (const key of ['kvcoder.ui.retry', 'kvcoder.ui.chooseAnotherModel', 'kvcoder.ui.continueText', 'kvcoder.ui.exitCode']) expect(texts[key], `${language} ${key}`).toBeTypeOf('string');
+    }
+  });
 });
