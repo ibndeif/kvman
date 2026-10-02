@@ -40,12 +40,12 @@ describe('subagent rules (08 §8.5, ADR 0009, 102)', { timeout: 30_000 }, () => 
   it("QA4-E13 a child that wasn't given files can't use it, and one that was can", async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    fake.reply(calls(`subagent run '{"task":"Limited","mode":"fresh","connectors":["jobs"]}'`), calls(`files write '{"path":"a.txt","content":"x"}'`), says('limited done'), says('parent done'));
+    fake.reply(calls(`subagent run '{"task":"Limited","mode":"fresh","connectors":["jobs"]}'`), calls(`fs write '{"path":"a.txt","content":"x"}'`), says('limited done'), says('parent done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
-    expect(toolResults(fake, 2)).toEqual(["error VALIDATION_FAILED: files isn't available in this subagent.\n[exit code 1]"]);
+    expect(toolResults(fake, 2)).toEqual(["error VALIDATION_FAILED: fs isn't available in this subagent.\n[exit code 1]"]);
     expect(existsSync(path.join(kernel.homeFolder, 'a.txt'))).toBe(false);
-    fake.reply(calls(`subagent run '{"task":"Full","mode":"fresh","connectors":["files"]}'`), calls(`files write '{"path":"b.txt","content":"x"}'`), says('full done'), says('parent done'));
+    fake.reply(calls(`subagent run '{"task":"Full","mode":"fresh","connectors":["fs"]}'`), calls(`fs write '{"path":"b.txt","content":"x"}'`), says('full done'), says('parent done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'again' });
     await kernel.clock.advance(0);
     expect(toolResults(fake, 6)[0]).toMatch(/^\{\n {2}"path": "b.txt",\n {2}"created": true/);

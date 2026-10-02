@@ -16,7 +16,7 @@ export type JsonValue = z.output<ReturnType<typeof z.json>>;
 export type CallResult = { output: string; exitCode: number };
 
 /** The connectors kvcoder runs itself. */
-export const builtinConnectors = ['ask', 'subagent', 'jobs', 'files'] as const;
+export const builtinConnectors = ['ask', 'subagent', 'jobs', 'fs'] as const;
 
 const headMarkers = new Set(['|', '&', ';', '(']);
 const operators = new Set(['|', '&', ';', '(', ')', '<', '>']);
@@ -250,8 +250,8 @@ export const builtinHelp: Readonly<Record<(typeof builtinConnectors)[number], st
     "  get <id>     one job's status, and its output (a process's last 100 lines) or problem",
     '  cancel <id>  cancels one; a process is stopped',
   ].join('\n'),
-  files: [
-    'files: Create, replace, or edit a file inside the workspace folder.',
+  fs: [
+    'fs: Create, replace, or edit a file inside the workspace folder.',
     '',
     'Commands:',
     `  write  ${quoted('{ "path", "content" }')} → { "path", "created", "bytes" }`,

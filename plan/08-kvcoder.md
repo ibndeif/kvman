@@ -67,7 +67,7 @@ kvcoder is the app-building harness, built on kvai and kvwebui. Its agent has on
 | the same with `--async` | kvcoder's own job `kvcoder.connector.run` (which runs the command); prints `started <jobId>`. When it ends, the result is appended as a message, and starts a turn if the session is idle. |
 | `<connector> -h` / `<connector> <command> -h` (commands connectors) | the connector's commands with descriptions / that command's description, input and output JSON Schemas, and examples |
 | `ask …`, `subagent run …` | built-in connectors that suspend the turn (§8.5) |
-| `files write '<json>'`, `files edit '<json>'` | built-in connector commands that create, replace, or edit a file inside the workspace folder, run by kvcoder in the step after the same approval as a shell call (§8.5, ADR 0009, 157 and 161) |
+| `fs write '<json>'`, `fs edit '<json>'` | built-in connector commands that create, replace, or edit a file inside the workspace folder, run by kvcoder in the step after the same approval as a shell call (§8.5, ADR 0009, 157 and 161) |
 | `jobs list`, `jobs get <id>`, `jobs cancel <id>` | built-in connector commands for the work this session started with `--async` (connector calls, and async subagents by their child session id) or with `mode: 'async'` (background processes by their id): the newest 50 as `[{ id, kind, call, status, startedAt, endedAt?, exitCode? }]`, one row plus its `output` (a process's last 100 lines) or `problem`, or a cancel (`{ "cancelled": true }`, `false` for a process that has already ended); another id fails `kvcoder/JOB_NOT_FOUND` (ADR 0009, 81, 88, and 151) |
 | a connector word inside a pipe, `&&`, `;`, or other shell syntax | not run: the result explains that connector calls stand alone, with exit code 1 |
 | anything else, including binary connectors (`gh …`) | the real shell (below) |
@@ -78,7 +78,7 @@ kvcoder parses a line the same way in both shells; single quotes are literal in 
 
 **The real shell.**
 - Linux and macOS: `bash -lc <command>`. Windows: `pwsh -NoProfile -Command <command>` when PowerShell 7 is on the PATH, otherwise `powershell.exe -NoProfile -Command <command>`. `kvcoder.shell.path` overrides the lookup on every OS. Calls run in the workspace folder, with an empty stdin and kvman's environment (ADR 0009, 101).
-- **Approval.** It covers real shell calls and `files` calls (`files -h` never asks), and `kvcoder.shell.approval` is `auto` (the default) or `ask` (ADR 0009, 161). With `auto`, a call whose `risky` is `true` asks and any other runs at once; with `ask`, every call asks. A call that asks first becomes an `ask confirm` question, and the turn suspends. A denied call returns "denied by the user".
+- **Approval.** It covers real shell calls and `fs` calls (`fs -h` never asks), and `kvcoder.shell.approval` is `auto` (the default) or `ask` (ADR 0009, 161). With `auto`, a call whose `risky` is `true` asks and any other runs at once; with `ask`, every call asks. A call that asks first becomes an `ask confirm` question, and the turn suspends. A denied call returns "denied by the user".
 - **Timeout.** The default is 120 s; the model may ask for up to 600 s (a larger `timeoutMs` is cut to 600 s, ADR 0009, 101). On timeout or cancel, the process tree is killed: its group on Linux and macOS, `taskkill /PID <pid> /T /F` on Windows.
 - **Sync or async.** `mode` is `'sync'` (the default) or `'async'` (ADR 0009, 149). A sync call is as described here. An async call needs the same approval, then starts the command in the real shell through the kernel's process service (`ctx.processes.start`, in the workspace folder; plan 02 §2.16), waits 1 s for its first output, and returns `started <id>`, the output so far, and `[exit code 0]` (plus `[the process has already ended; jobs get <id> has its output]` when it has). It has no timeout, so `timeoutMs` is ignored.
 - **Background jobs.** An async process is a job of the chat (ADR 0009, 150). Its status is `running`, `succeeded`, `failed`, `cancelled`, or `interrupted`, and kvcoder records each way it ends: the `kernel.process.exited` handler for an exit by itself, its own stop for `jobs cancel` and the person's Stop, a `kernel.stopping` handler when kvman stops, and a `kernel.started` handler for a kvman that died. The records are in kvcoder's global store, since the last two handlers run in Home. An exit by itself and the person's stop add a background message with the outcome and the last 20 lines of output at once; an `interrupted` one is reported at the chat's next message. None starts a turn (a handler's jobs carry the `fromHandler` mark, plan 02 §2.15). It runs until it ends or is stopped; deleting the chat stops it, and a turn's Stop button doesn't.
@@ -165,7 +165,7 @@ ctx.registerHandler('kernel.started', {
 - **Loop safety.** kvcoder stores the ids of the handler jobs it queues. A message injected by one of them (a job whose `ctx.job.rootId` is such an id) is stored but doesn't start a turn; the next turn sees it. Work that a handler queues with `execAsync` isn't recognized, so a handler must not inject from there.
 - **Access.** Every extension can use kvcoder's public API: read sessions, messages, and turns; create, configure, rename, delete, fork, and export sessions; inject messages; add notes; cancel turns. Only `message.send` and `question.answer` are for the person; an extension calling them fails `NOT_PUBLIC` (ADR 0009, 105).
 
-**Testing.** `runConnector(kernel, 'ext new \'{…}\'')` from `@kvman/kvcoder/testing`, used with `createTestKernel`, parses a line exactly as kvcoder does and returns `{ output, exitCode }`, including for `-h`, stdin JSON in both shells, and non-standalone lines. It runs connector lines only: `ask`, `subagent`, `jobs`, and `files` calls, and plain shell lines, return exit 1, and it never starts a shell (ADR 0009, 96).
+**Testing.** `runConnector(kernel, 'ext new \'{…}\'')` from `@kvman/kvcoder/testing`, used with `createTestKernel`, parses a line exactly as kvcoder does and returns `{ output, exitCode }`, including for `-h`, stdin JSON in both shells, and non-standalone lines. It runs connector lines only: `ask`, `subagent`, `jobs`, and `fs` calls, and plain shell lines, return exit 1, and it never starts a shell (ADR 0009, 96).
 
 ## 8.5 Built-in connectors
 
@@ -195,16 +195,16 @@ subagent run '{ "task", "mode": "fresh" | "fork", "connectors"?: [names], "shell
 - **Questions.** A child's approvals and questions show in the root session's conversation.
 - **Results.** A child that ends `done` returns its last answer's text; any other outcome returns `subagent ended <outcome>` and that text, with exit 1. An async run prints `started <childSessionId>`. Unknown `connectors`, or `subagent` among them, give an error result; with `shell: false`, real-shell calls and binary connectors are refused (ADR 0009, 102).
 
-**files** writes and edits files inside the workspace folder (ADR 0009, 157 to 160):
+**fs** writes and edits files inside the workspace folder (ADR 0009, 157 to 160):
 
 | Call | Result |
 |---|---|
-| `files write '{ "path", "content" }'` | creates the file and its parent folders, or replaces it: `{ "path", "created", "bytes" }` |
-| `files edit '{ "path", "edits": [{ "oldText", "newText" }] }'` | replaces text in an existing file: `{ "path", "replacements", "firstChangedLine" }` |
+| `fs write '{ "path", "content" }'` | creates the file and its parent folders, or replaces it: `{ "path", "created", "bytes" }` |
+| `fs edit '{ "path", "edits": [{ "oldText", "newText" }] }'` | replaces text in an existing file: `{ "path", "replacements", "firstChangedLine" }` |
 
 - **Paths.** A relative `path` resolves against the workspace folder; an absolute one works when it is inside it. A path that leaves the folder, through `..` or a symlink, fails `VALIDATION_FAILED` and writes nothing.
 - **Matching.** Every `oldText` is matched exactly against the file as it was before the call, must be non-empty and occur once, and must not overlap another one; the edits apply together. If any check fails, or the result equals the file, nothing is written and the error names the edit and why. A missing file fails `NOT_FOUND`; a file that isn't valid UTF-8 text is refused. CRLF line endings and a leading BOM are kept.
-- **Order.** Calls on the same file run one after another, in the model's order when they start together. Unknown keys fail `VALIDATION_FAILED`, and `files -h` lists the commands.
+- **Order.** Calls on the same file run one after another, in the model's order when they start together. Unknown keys fail `VALIDATION_FAILED`, and `fs -h` lists the commands.
 
 ## 8.6 API
 

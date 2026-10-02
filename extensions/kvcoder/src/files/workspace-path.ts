@@ -2,7 +2,7 @@ import { lstat, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { invalid } from '../problems.ts';
 
-// Where `files` may write (plan 08 §8.5, ADR 0009, 158): inside the workspace folder, after symlinks are resolved. A
+// Where `fs` may write (plan 08 §8.5, ADR 0009, 158): inside the workspace folder, after symlinks are resolved. A
 // path that doesn't exist yet is resolved on its nearest existing ancestor.
 
 const isMissing = (error: unknown): boolean => error instanceof Error && 'code' in error && (error.code === 'ENOENT' || error.code === 'ENOTDIR');

@@ -1,6 +1,6 @@
 import { invalid } from '../problems.ts';
 
-// The text side of `files edit` (plan 08 §8.5, ADR 0009, 159): every edit is matched exactly, once, against the file as
+// The text side of `fs edit` (plan 08 §8.5, ADR 0009, 159): every edit is matched exactly, once, against the file as
 // it was, the edits are applied together, and the file's BOM and first line ending are kept.
 
 export type TextEdit = { oldText: string; newText: string };

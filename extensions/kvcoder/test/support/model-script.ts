@@ -19,9 +19,9 @@ export function calls(...commands: readonly ShellCallSpec[]): FakeReply {
   };
 }
 
-/** A `files` call with its JSON on stdin, as the model types it. */
-export function filesCommand(command: 'write' | 'edit', input: unknown): string {
-  return `files ${command} <<'EOF'\n${JSON.stringify(input)}\nEOF`;
+/** An `fs` call with its JSON on stdin, as the model types it. */
+export function fsCommand(command: 'write' | 'edit', input: unknown): string {
+  return `fs ${command} <<'EOF'\n${JSON.stringify(input)}\nEOF`;
 }
 
 /** A reply of plain text. */

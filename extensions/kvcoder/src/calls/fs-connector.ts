@@ -8,7 +8,7 @@ import { inOrder } from '../files/file-queue.ts';
 import { lexicalPath, resolveInWorkspace } from '../files/workspace-path.ts';
 import { invalid, notFound } from '../problems.ts';
 
-// The `files` connector (plan 08 §8.5, ADR 0009, 157 to 160): `write` creates or replaces a file, `edit` replaces text
+// The `fs` connector (plan 08 §8.5, ADR 0009, 157 to 160): `write` creates or replaces a file, `edit` replaces text
 // in one, both inside the workspace folder. It runs in the step, after the approval the shell's calls get.
 
 const filePath = z.string().min(1);
@@ -76,13 +76,13 @@ async function run(ctx: Ctx, command: 'write' | 'edit', input: Record<string, un
   }
 }
 
-/** A `files` call: its result now, after the calls before it on the same file. */
-export function filesCall(ctx: Ctx, words: readonly string[], stdin: string | null): Promise<CallResult> {
-  if (words.length === 1 && words[0] === '-h') return Promise.resolve({ output: builtinHelp.files, exitCode: 0 });
-  const call = callInput(words, stdin, 'files');
+/** An `fs` call: its result now, after the calls before it on the same file. */
+export function fsCall(ctx: Ctx, words: readonly string[], stdin: string | null): Promise<CallResult> {
+  if (words.length === 1 && words[0] === '-h') return Promise.resolve({ output: builtinHelp.fs, exitCode: 0 });
+  const call = callInput(words, stdin, 'fs');
   if ('output' in call) return Promise.resolve(call);
   const command = call.command;
-  if (command !== 'write' && command !== 'edit') return Promise.resolve(errorOutput({ code: 'NOT_FOUND', message: `files has no command ${command}; run \`files -h\`.` }));
+  if (command !== 'write' && command !== 'edit') return Promise.resolve(errorOutput({ code: 'NOT_FOUND', message: `fs has no command ${command}; run \`fs -h\`.` }));
   const parsed = inputSchemas[command].safeParse(call.input);
   if (!parsed.success) return Promise.resolve(errorOutput({ code: 'VALIDATION_FAILED', message: parsed.error.issues.map((issue) => `${issue.path.join('.') || 'input'}: ${issue.message}`).join('; ') }));
   return inOrder(lexicalPath(ctx.job.workspace.path, parsed.data.path), () => run(ctx, command, parsed.data));
