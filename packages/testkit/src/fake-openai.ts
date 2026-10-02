@@ -3,12 +3,11 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 // A scripted OpenAI-compatible streaming server on 127.0.0.1 (plan 07 §7.4, ADR 0009, 62). Each queued reply answers one
 // `POST /v1/chat/completions`, in order, as Chat Completions server-sent events or as an error status.
 
-/** A piece of a scripted stream: text, thinking, a whole tool call, or a pause until the promise settles. */
-export type FakeChunk =
-  | { text: string }
-  | { thinking: string }
-  | { toolCall: { id: string; name: string; arguments: Record<string, unknown> } }
-  | { wait: Promise<void> };
+/** A tool call: its arguments in one piece, or as the pieces of their JSON text (which together are valid JSON). */
+export type FakeToolCall = { id: string; name: string } & ({ arguments: Record<string, unknown> } | { argumentPieces: readonly string[] });
+
+/** A piece of a scripted stream: text, thinking, a tool call, or a pause until the promise settles. */
+export type FakeChunk = { text: string } | { thinking: string } | { toolCall: FakeToolCall } | { wait: Promise<void> };
 
 /** The tokens the fake server reports, counted as pi-ai counts them: `input` excludes cache reads and writes. */
 export type FakeUsage = { input: number; output: number; cacheRead?: number; cacheWrite?: number };
@@ -57,11 +56,14 @@ function usageEvent(usage: FakeUsage): unknown {
   };
 }
 
-function deltaOf(chunk: Exclude<FakeChunk, { wait: Promise<void> }>, toolIndex: number): Record<string, unknown> {
-  if ('text' in chunk) return { content: chunk.text };
-  if ('thinking' in chunk) return { reasoning_content: chunk.thinking };
+function deltasOf(chunk: Exclude<FakeChunk, { wait: Promise<void> }>, toolIndex: number): Record<string, unknown>[] {
+  if ('text' in chunk) return [{ content: chunk.text }];
+  if ('thinking' in chunk) return [{ reasoning_content: chunk.thinking }];
   const call = chunk.toolCall;
-  return { tool_calls: [{ index: toolIndex, id: call.id, type: 'function', function: { name: call.name, arguments: JSON.stringify(call.arguments) } }] };
+  const pieces = 'arguments' in call ? [JSON.stringify(call.arguments)] : call.argumentPieces;
+  return pieces.map((piece, position) => ({
+    tool_calls: [{ index: toolIndex, ...(position === 0 ? { id: call.id, type: 'function' } : {}), function: { ...(position === 0 ? { name: call.name } : {}), arguments: piece } }],
+  }));
 }
 
 async function stream(response: ServerResponse, request: FakeRequest, reply: Extract<FakeReply, { chunks: unknown }>): Promise<void> {
@@ -77,7 +79,7 @@ async function stream(response: ServerResponse, request: FakeRequest, reply: Ext
       if (request.state === 'aborted') return;
       continue;
     }
-    send(chunkEvent(deltaOf(chunk, toolIndex), null));
+    for (const delta of deltasOf(chunk, toolIndex)) send(chunkEvent(delta, null));
     if ('toolCall' in chunk) toolIndex += 1;
   }
   send(chunkEvent({}, reply.finish ?? (toolIndex > 0 ? 'tool_calls' : 'stop')));

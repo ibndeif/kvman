@@ -15,27 +15,29 @@ const models = [
   { id: 'locked/l2', name: 'L2', provider: 'locked' },
 ];
 
-async function headerFor(model: string) {
+async function openedFor(model: string) {
   const fake = createFakeKvman();
   fake.handle('kvai.provider.list', () => providers);
   fake.handle('kvai.model.list', () => models);
-  return mounted(ConversationHeader, fake, { session: session({ model }), tab: 'chat', turns: 1 });
+  const wrapper = await mounted(ConversationHeader, fake, { session: session({ model }), tab: 'chat', turns: 1 });
+  await wrapper.find('[data-test="model-picker"]').trigger('click');
+  return wrapper;
 }
 
-describe("the header's model picker (ADR 0009, 136)", () => {
+describe("the header's model picker (ADR 0009, 136, 140)", () => {
   it('QA1-H7 groups the models of callable providers by provider title', async () => {
-    const wrapper = await headerFor('fake/m1');
-    const groups = wrapper.findAll('[data-test="model-picker"] optgroup');
-    expect(groups.map((group) => group.attributes('label'))).toEqual(['Fake', 'Zed AI']);
-    expect(wrapper.findAll('[data-test="model-picker"] option').map((option) => option.text())).toEqual(['M1', 'Z1']);
+    const wrapper = await openedFor('fake/m1');
+    expect(wrapper.findAll('[data-test="model-group"]').map((group) => group.text())).toEqual(['Fake', 'Zed AI']);
+    expect(wrapper.findAll('[role="option"]').map((option) => option.text())).toEqual(['M1', 'Z1']);
     wrapper.unmount();
   });
 
   it("QA1-E2 the session's own model stays listed when its provider has no key", async () => {
-    const wrapper = await headerFor('locked/l2');
-    expect(wrapper.findAll('[data-test="model-picker"] optgroup').map((group) => group.attributes('label'))).toEqual(['Fake', 'Locked', 'Zed AI']);
-    expect(wrapper.findAll('[data-test="model-picker"] option').map((option) => option.text())).toEqual(['M1', 'L2', 'Z1']);
-    expect((wrapper.find('[data-test="model-picker"]').element as HTMLSelectElement).value).toBe('locked/l2');
+    const wrapper = await openedFor('locked/l2');
+    expect(wrapper.findAll('[data-test="model-group"]').map((group) => group.text())).toEqual(['Fake', 'Locked', 'Zed AI']);
+    expect(wrapper.findAll('[role="option"]').map((option) => option.text())).toEqual(['M1', 'L2', 'Z1']);
+    expect(wrapper.find('[data-test="model-locked/l2"]').attributes('aria-selected')).toBe('true');
+    expect(wrapper.find('[data-test="model-picker"]').text()).toBe('L2');
     wrapper.unmount();
   });
 });

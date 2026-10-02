@@ -8,7 +8,7 @@ let counter = 0;
 /** A reply that calls the shell tool once with `command`. */
 export function calls(command: string): FakeReply {
   counter += 1;
-  return { chunks: [{ toolCall: { id: `call-${String(counter)}`, name: 'bash', arguments: { description: 'A walkthrough step.', command } } }] };
+  return { chunks: [{ toolCall: { id: `call-${String(counter)}`, name: 'bash', arguments: { title: 'A walkthrough step', description: 'A walkthrough step.', command } } }] };
 }
 
 /** A reply of plain text. */

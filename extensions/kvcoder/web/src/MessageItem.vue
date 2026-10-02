@@ -3,16 +3,16 @@ import { BellRing, NotebookText, ScrollText } from '@lucide/vue';
 import { computed } from 'vue';
 import type { Message } from '../../src/index.ts';
 import { fields, problemKey, stringValues, useKvman } from './kvman.ts';
-import { isBackground, resultCard, textOf, thinkingOf } from './message-parts.ts';
+import { isBackground, resultCard, textOf, thinkingOf, type CallInfo } from './message-parts.ts';
 import ShellResult from './ShellResult.vue';
 
 // One stored message (plan 08 §8.7): the person's text and images, an answer in Markdown with its thinking folded, a
 // tool result's card, kvcoder's notices and other extensions' notes translated, a summary, and background results.
-const props = defineProps<{ message: Message; commands: ReadonlyMap<string, string> }>();
+const props = defineProps<{ message: Message; calls: ReadonlyMap<string, CallInfo> }>();
 const kvman = useKvman();
 const text = computed(() => textOf(props.message.content['content']));
 const thinking = computed(() => thinkingOf(props.message));
-const card = computed(() => resultCard(props.message, props.commands));
+const card = computed(() => resultCard(props.message, props.calls));
 const notice = computed(() => {
   const params = fields(props.message.content['params']);
   const code = typeof params['code'] === 'string' ? params['code'] : undefined;
@@ -45,7 +45,7 @@ const markdown = (body: string) => ({ type: 'markdown' as const, text: 'kvcoder.
     <details v-if="thinking !== ''" data-test="thinking"><summary class="kvc-muted">{{ kvman.t('kvcoder.ui.thought') }}</summary><p class="kvc-muted" style="white-space: pre-wrap">{{ thinking }}</p></details>
     <component :is="kvman.View" v-if="text !== ''" :view="markdown(text)" />
   </div>
-  <ShellResult v-else-if="props.message.kind === 'toolResult'" :command="card.command" :exit-code="card.exitCode" :duration-ms="card.durationMs" :output="card.output" />
+  <ShellResult v-else-if="props.message.kind === 'toolResult'" :command="card.command" :title="card.title" :description="card.description" :exit-code="card.exitCode" :duration-ms="card.durationMs" :output="card.output" />
   <div v-else-if="props.message.kind === 'notice'" class="kvc-notice" data-test="notice">{{ notice }}</div>
   <div v-else-if="props.message.kind === 'note'" class="kvc-card kvc-card-row" role="note" data-test="note"><NotebookText :size="18" aria-hidden="true" />{{ note }}</div>
   <details v-else-if="props.message.kind === 'summary'" class="kvc-card" data-test="summary">

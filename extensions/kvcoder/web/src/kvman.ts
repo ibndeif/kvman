@@ -53,10 +53,17 @@ export function toastProblem(kvman: Kvman, error: unknown): void {
   kvman.toast(problem === undefined ? 'kvcoder.ui.failed' : problemKey(problem.code), problem?.params ?? {}, 'error');
 }
 
+/** US dollars in the UI language: two decimals, four under one cent, one significant digit under 0.0001 (ADR 0009, 147). */
+export function formatCost(amount: number): string {
+  const currency = { style: 'currency', currency: 'USD' } as const;
+  if (amount === 0 || amount >= 0.01) return new Intl.NumberFormat(pageLanguage(), currency).format(amount);
+  return new Intl.NumberFormat(pageLanguage(), amount < 0.0001 ? { ...currency, maximumSignificantDigits: 1 } : { ...currency, minimumFractionDigits: 4 }).format(amount);
+}
+
 /** Tokens, cost, and time, in the UI language. */
 export function totals(t: Translate, usage: { input: number; output: number; cost: number }, durationMs: number): string {
   const tokens = new Intl.NumberFormat(pageLanguage(), { notation: 'compact', maximumFractionDigits: 1 }).format(usage.input + usage.output);
-  const cost = new Intl.NumberFormat(pageLanguage(), { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(usage.cost);
+  const cost = formatCost(usage.cost);
   const seconds = Math.round(durationMs / 1000);
   const time = seconds < 60 ? t('kvcoder.ui.seconds', { count: seconds }) : t('kvcoder.ui.minutes', { count: Math.round(seconds / 60) });
   return t('kvcoder.ui.totals', { time, tokens, cost });

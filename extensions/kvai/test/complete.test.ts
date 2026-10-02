@@ -20,6 +20,7 @@ describe('kvai.complete (07 §7.1)', () => {
       { type: 'text', delta: 'Hel' },
       { type: 'text', delta: 'lo' },
       { type: 'toolcall', name: 'bash' },
+      { type: 'toolcall', name: 'bash', arguments: { command: 'ls' } },
     ]);
     const cost = (15 * m1Cost.input + 7 * m1Cost.output + 10 * m1Cost.cacheRead + 5 * m1Cost.cacheWrite) / 1_000_000;
     expect(output).toMatchObject({ stopReason: 'toolUse', usage: { input: 15, output: 7, cacheRead: 10, cacheWrite: 5 } });

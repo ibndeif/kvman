@@ -4,7 +4,7 @@ import { useKvcoder } from './support/kvcoder-kernel.ts';
 const kvcoder = useKvcoder();
 
 describe("kvcoder's UI contributions (08 §8.7, ADR 0009, 104)", { timeout: 30_000 }, () => {
-  it('M2.4-E54 the Chat and session pages, the nav item, and the waiting status item', async () => {
+  it('M2.4-E54 and QA3-H10 the Chat and session pages, the nav item, and the waiting and open-chat status items', async () => {
     const { kernel } = await kvcoder.start();
     const answer = await kernel.exec('kvcoder.ui.get', {});
     expect(answer).toMatchObject({
@@ -13,10 +13,14 @@ describe("kvcoder's UI contributions (08 §8.7, ADR 0009, 104)", { timeout: 30_0
         { id: 'session', params: ['sessionId'], view: { children: [{ component: 'kvcoder.sessions', props: { sessionId: { $param: 'sessionId' } } }, { component: 'kvcoder.conversation', props: { sessionId: { $param: 'sessionId' } } }] } },
       ],
       nav: [{ id: 'chat', page: 'chat', icon: 'message-square' }],
-      status: [{ id: 'waiting', query: 'kvcoder.session.count', input: { status: 'waiting' }, text: 'kvcoder.status.waiting', params: { count: { $output: 'count' } } }],
+      status: [
+        { id: 'waiting', query: 'kvcoder.session.count', input: { status: 'waiting' }, text: 'kvcoder.status.waiting', params: { count: { $output: 'count' } } },
+        { id: 'chat', query: 'kvcoder.session.get', input: { sessionId: { $param: 'sessionId' } }, text: 'kvcoder.status.chat', params: { input: { $output: 'usage.input', format: 'compact' }, output: { $output: 'usage.output', format: 'compact' }, cost: { $output: 'usage.cost', format: 'usd' } } },
+      ],
     });
     const info = (await kernel.exec('kernel.extensions.list', {})).find((extension) => extension.name === '@kvman/kvcoder');
     expect(info?.queries.find((query) => query.name === 'kvcoder.session.count')?.public).toBe(true);
+    expect(info?.queries.find((query) => query.name === 'kvcoder.session.get')?.public).toBe(true);
     expect(info?.queries.find((query) => query.name === 'kvcoder.ui.get')?.public).toBe(true);
   });
 });

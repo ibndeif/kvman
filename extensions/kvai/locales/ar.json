@@ -45,7 +45,7 @@
   "kvai.ui.models.addSubmit": "إضافة النموذج",
   "kvai.ui.models.makeDefault": "اجعله الافتراضي",
   "kvai.ui.models.defaultSet": "تم ضبط النموذج الافتراضي.",
-  "kvai.ui.status.usage": "{tokens} رمز، {cost} دولار أمريكي",
+  "kvai.ui.status.usage": "مساحة العمل {tokens} رمز · {cost}",
   "kvai.title": "النماذج",
   "kvai.defaultModel.title": "النموذج الافتراضي",
   "kvai.provider.get.description": "يعطي مزوّدًا واحدًا، مع جاهزيته وعدد نماذجه.",

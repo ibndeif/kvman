@@ -4,17 +4,23 @@ import type { Turn } from '../../src/index.ts';
 import ApprovalsCard, { type Approval } from './ApprovalsCard.vue';
 import { fields } from './kvman.ts';
 import QuestionCard from './QuestionCard.vue';
+import type { Answer, Decision } from './use-answers.ts';
 
-// A waiting turn's questions, and its approvals grouped in one card (plan 08 §8.5, ADR 0009, 104).
-const props = defineProps<{ pending: Turn['pending'] }>();
-const emit = defineEmits<{ answered: [jobId: string | null] }>();
-const questions = computed(() => props.pending.filter((item) => item.kind === 'question' && item.questionId !== null).map((item) => ({ questionId: String(item.questionId), question: fields(item.question) })));
+// A waiting turn's questions, and its approvals grouped in one card (plan 08 §8.5, ADR 0009, 104). Items the person has
+// answered stay out while the answer is on its way (ADR 0009, 141).
+const props = defineProps<{ pending: Turn['pending']; hidden?: ReadonlySet<string> | undefined }>();
+const emit = defineEmits<{ answer: [answer: Answer]; decide: [decision: Decision] }>();
+const open = (item: Turn['pending'][number]): boolean => item.questionId !== null && props.hidden?.has(String(item.questionId)) !== true;
+const questions = computed(() => props.pending.filter((item) => item.kind === 'question' && open(item)).map((item) => ({ questionId: String(item.questionId), question: fields(item.question) })));
 const approvals = computed<Approval[]>(() =>
-  props.pending.filter((item) => item.kind === 'approval' && item.questionId !== null).map((item) => ({ questionId: String(item.questionId), command: String(fields(item.question)['command'] ?? ''), description: String(fields(item.question)['description'] ?? '') })),
+  props.pending.filter((item) => item.kind === 'approval' && open(item)).map((item) => {
+    const question = fields(item.question);
+    return { questionId: String(item.questionId), title: String(question['title'] ?? ''), command: String(question['command'] ?? ''), description: String(question['description'] ?? '') };
+  }),
 );
 </script>
 
 <template>
-  <QuestionCard v-for="item in questions" :key="item.questionId" :question-id="item.questionId" :question="item.question" @answered="(jobId) => emit('answered', jobId)" />
-  <ApprovalsCard v-if="approvals.length > 0" :approvals="approvals" @answered="(jobId) => emit('answered', jobId)" />
+  <QuestionCard v-for="item in questions" :key="item.questionId" :question-id="item.questionId" :question="item.question" @answer="(answer) => emit('answer', answer)" />
+  <ApprovalsCard v-if="approvals.length > 0" :approvals="approvals" @decide="(decision) => emit('decide', decision)" />
 </template>

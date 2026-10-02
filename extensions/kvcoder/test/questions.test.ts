@@ -29,11 +29,11 @@ describe('questions and approvals (08 §8.1, §8.5)', { timeout: 30_000 }, () =>
   it('M2.4-H5 a denied shell call reaches the model as denied', async () => {
     const { kernel, fake } = await kvcoder.start(approvals);
     const sessionId = await newSession(kernel);
-    fake.reply({ chunks: [{ toolCall: { id: 't1', name: 'bash', arguments: { command: 'touch made.txt', description: 'Make a file.' } } }] }, says('ok'));
+    fake.reply({ chunks: [{ toolCall: { id: 't1', name: 'bash', arguments: { title: 'Make a file', command: 'touch made.txt', description: 'Make a file.' } } }] }, says('ok'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     const { turn } = await turnState(kernel, sessionId);
-    expect(turn?.pending).toEqual([{ toolCallId: 't1', kind: 'approval', questionId: expect.any(String) as unknown, question: { command: 'touch made.txt', description: 'Make a file.', timeoutMs: 120_000 }, childSessionId: null }]);
+    expect(turn?.pending).toEqual([{ toolCallId: 't1', kind: 'approval', questionId: expect.any(String) as unknown, question: { title: 'Make a file', command: 'touch made.txt', description: 'Make a file.', timeoutMs: 120_000 }, childSessionId: null }]);
     await kernel.exec('kvcoder.question.answer', { questionId: String(turn?.pending[0]?.questionId), answer: { confirmed: false } });
     await kernel.clock.advance(0);
     expect(toolResults(fake)).toEqual(['denied by the user']);

@@ -4,9 +4,15 @@ import type { Message } from '../../src/index.ts';
 
 type Block = Record<string, unknown>;
 
+function record(value: unknown): Record<string, unknown> | undefined {
+  return typeof value === 'object' && value !== null && !Array.isArray(value) ? Object.fromEntries(Object.entries(value)) : undefined;
+}
+
 function blocks(content: unknown): Block[] {
-  if (!Array.isArray(content)) return [];
-  return content.flatMap((block: unknown) => (typeof block === 'object' && block !== null && !Array.isArray(block) ? [Object.fromEntries(Object.entries(block))] : []));
+  return Array.isArray(content) ? content.flatMap((block: unknown) => {
+    const found = record(block);
+    return found === undefined ? [] : [found];
+  }) : [];
 }
 
 /** The text of a message's content: a string, or its text blocks. */
@@ -19,32 +25,44 @@ export function thinkingOf(message: Message): string {
   return blocks(message.content['content']).flatMap((block) => (block['type'] === 'thinking' && typeof block['thinking'] === 'string' ? [block['thinking']] : [])).join('\n');
 }
 
-/** The commands an answer called, by tool call id. */
-export function callCommands(messages: readonly Message[]): Map<string, string> {
-  const commands = new Map<string, string>();
+/** What an answer's tool call said, by tool call id: the command, and the title and description for the person (ADR 0009, 143). */
+export type CallInfo = { command: string; title?: string; description?: string };
+
+function labels(source: Record<string, unknown>): { title?: string; description?: string } {
+  const { title, description } = source;
+  return { ...(typeof title === 'string' ? { title } : {}), ...(typeof description === 'string' ? { description } : {}) };
+}
+
+export function callInfos(messages: readonly Message[]): Map<string, CallInfo> {
+  const infos = new Map<string, CallInfo>();
   for (const message of messages) {
     if (message.kind !== 'assistant') continue;
     for (const block of blocks(message.content['content'])) {
-      const args = block['arguments'];
-      if (block['type'] === 'toolCall' && typeof block['id'] === 'string' && typeof args === 'object' && args !== null && 'command' in args && typeof args.command === 'string') commands.set(block['id'], args.command);
+      const args = record(block['arguments']);
+      if (block['type'] === 'toolCall' && typeof block['id'] === 'string' && typeof args?.['command'] === 'string') infos.set(block['id'], { command: args['command'], ...labels(args) });
     }
   }
-  return commands;
+  return infos;
 }
 
-export type ResultCard = { command: string; exitCode?: number; durationMs?: number; output: string };
+export type ResultCard = { command: string; title?: string; description?: string; exitCode?: number; durationMs?: number; output: string };
 
-/** A tool result as its card shows it: the shell's details, or the command and the result text. */
-export function resultCard(message: Message, commands: ReadonlyMap<string, string>): ResultCard {
-  const details = message.content['details'];
+/** A tool result as its card shows it: the shell's details, or the call's own words and the result text. */
+export function resultCard(message: Message, calls: ReadonlyMap<string, CallInfo>): ResultCard {
+  const details = record(message.content['details']);
   const text = textOf(message.content['content']);
   const exit = /\[exit code (\d+)\]$/.exec(text);
-  const command = commands.get(String(message.content['toolCallId'])) ?? '';
-  if (typeof details === 'object' && details !== null && !Array.isArray(details)) {
-    const output = typeof details['output'] === 'string' ? details['output'] : text;
-    return { command: typeof details['command'] === 'string' ? details['command'] : command, output, ...(typeof details['exitCode'] === 'number' ? { exitCode: details['exitCode'] } : {}), ...(typeof details['durationMs'] === 'number' ? { durationMs: details['durationMs'] } : {}) };
+  const call = calls.get(String(message.content['toolCallId']));
+  if (details !== undefined) {
+    return {
+      command: typeof details['command'] === 'string' ? details['command'] : (call?.command ?? ''),
+      output: typeof details['output'] === 'string' ? details['output'] : text,
+      ...labels(details),
+      ...(typeof details['exitCode'] === 'number' ? { exitCode: details['exitCode'] } : {}),
+      ...(typeof details['durationMs'] === 'number' ? { durationMs: details['durationMs'] } : {}),
+    };
   }
-  return { command, output: text.replace(/\n?\[exit code \d+\]$/, ''), ...(exit === null ? {} : { exitCode: Number(exit[1]) }) };
+  return { command: call?.command ?? '', output: text.replace(/\n?\[exit code \d+\]$/, ''), ...(call === undefined ? {} : labels(call)), ...(exit === null ? {} : { exitCode: Number(exit[1]) }) };
 }
 
 /** Whether a user message is a background result (ADR 0009, 89). */

@@ -1,5 +1,6 @@
-// The model picker's groups (plan 08 §8.7, ADR 0009, 136): the models of providers that can be called, under each
-// provider's title, in title order; the session's own model is listed whatever its provider's status.
+// The model picker's groups (plan 08 §8.7, ADR 0009, 136, 140): the models of providers that can be called, under each
+// provider's title, in title order; the session's own model is listed whatever its provider's status. A search keeps
+// the models whose name or id has every word typed.
 
 export type ProviderRow = { id: string; title: string; status: 'ready' | 'needsKey' | 'noKey' };
 export type ModelRow = { id: string; name: string; provider: string };
@@ -16,4 +17,14 @@ export function modelGroups(providers: readonly ProviderRow[], models: readonly 
     groups.set(model.provider, group);
   }
   return [...groups.values()].sort((first, second) => first.title.localeCompare(second.title));
+}
+
+export type Found = { groups: ModelGroup[]; shown: number; total: number };
+
+/** The groups' models that match every word of `query` in their name or id, case-insensitively. */
+export function searchGroups(groups: readonly ModelGroup[], query: string): Found {
+  const words = query.toLowerCase().split(/\s+/).filter((word) => word !== '');
+  const matches = (model: { id: string; name: string }): boolean => words.every((word) => `${model.name} ${model.id}`.toLowerCase().includes(word));
+  const kept = groups.map((group) => ({ ...group, models: group.models.filter(matches) })).filter((group) => group.models.length > 0);
+  return { groups: kept, shown: kept.reduce((sum, group) => sum + group.models.length, 0), total: groups.reduce((sum, group) => sum + group.models.length, 0) };
 }

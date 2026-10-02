@@ -29,7 +29,7 @@ describe('kvai.ui.get (07 §7.3)', () => {
     expect(ui.pages.map((page) => page.id)).toEqual(['models', 'provider', 'provider-add']);
     expect(ui.nav).toEqual([{ id: 'models', page: 'models', title: 'kvai.ui.models.nav', icon: 'brain', order: 50 }]);
     expect(ui.status).toEqual([
-      { id: 'usage', query: 'kvai.usage.total.get', input: {}, text: 'kvai.ui.status.usage', params: { tokens: { $output: 'tokens' }, cost: { $output: 'cost' } }, order: 50 },
+      { id: 'usage', query: 'kvai.usage.total.get', input: {}, text: 'kvai.ui.status.usage', params: { tokens: { $output: 'tokens', format: 'compact' }, cost: { $output: 'cost', format: 'usd' } }, order: 50 },
     ]);
     const view = ui.pages.map((page) => page.view);
     expect(valuesOf(view, ['query'])).toEqual(['kvai.model.default.get', 'kvai.provider.list', 'kvai.provider.get', 'kvai.model.list']);

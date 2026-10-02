@@ -13,7 +13,7 @@ describe('steering (08 §8.1, ADR 0009, 90 and 102)', { timeout: 30_000 }, () =>
   it("M2.4-E15 a message sent while a step runs is queued, then appended after the step's results", async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    const held = heldReply({ toolCall: { id: 'c1', name: 'bash', arguments: { command: 'echo a', description: 'x' } } });
+    const held = heldReply({ toolCall: { id: 'c1', name: 'bash', arguments: { title: 'x', command: 'echo a', description: 'x' } } });
     fake.reply(held.reply, says('ok'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await vi.waitFor(() => expect(fake.requests()).toHaveLength(1), wait);

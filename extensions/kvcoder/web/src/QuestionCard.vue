@@ -2,12 +2,13 @@
 import { CircleHelp } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import type { Json } from '@kvman/sdk';
-import { fields, toastProblem, useKvman } from './kvman.ts';
+import type { Answer } from './use-answers.ts';
+import { fields, useKvman } from './kvman.ts';
 
 // The question card (plan 08 §8.5): an `ask` text, choice, or confirm question, answered or skipped by the person.
 type Option = { id: string; label: string; description?: string };
 const props = defineProps<{ questionId: string; question: Record<string, unknown> }>();
-const emit = defineEmits<{ answered: [jobId: string | null] }>();
+const emit = defineEmits<{ answer: [answer: Answer] }>();
 const kvman = useKvman();
 const kind = computed(() => String(props.question['kind'] ?? 'text'));
 const prompt = computed(() => String(props.question['prompt'] ?? ''));
@@ -22,17 +23,10 @@ const offersOther = computed(() => props.question['other'] === true);
 const text = ref('');
 const selected = ref<string[]>([]);
 const other = ref('');
-const busy = ref(false);
 
-async function send(answer: Json): Promise<void> {
-  busy.value = true;
-  try {
-    emit('answered', (await kvman.exec('kvcoder.question.answer', { questionId: props.questionId, answer })).jobId);
-  } catch (error) {
-    toastProblem(kvman, error);
-  } finally {
-    busy.value = false;
-  }
+// The card only says what the person answered; the conversation sends it, so the card can leave at once (ADR 0009, 141).
+function send(answer: Json): void {
+  emit('answer', { questionId: props.questionId, answer });
 }
 
 function choose(id: string): void {
@@ -40,9 +34,9 @@ function choose(id: string): void {
   if (!multiple.value) other.value = '';
 }
 
-function answerChoice(): Promise<void> {
+function answerChoice(): void {
   const typed = other.value.trim();
-  return send({ selected: typed !== '' && !multiple.value ? [] : selected.value, ...(typed === '' ? {} : { other: typed }) });
+  send({ selected: typed !== '' && !multiple.value ? [] : selected.value, ...(typed === '' ? {} : { other: typed }) });
 }
 </script>
 
@@ -53,8 +47,8 @@ function answerChoice(): Promise<void> {
       <template v-if="kind === 'text'">
         <input v-model="text" class="kvc-field" :placeholder="String(props.question['placeholder'] ?? '')" :aria-label="prompt" data-test="answer-text" />
         <div class="kvc-actions">
-          <button type="button" class="kvc-button" :disabled="busy" data-test="skip" @click="send({ dismissed: true })">{{ kvman.t('kvcoder.ui.skip') }}</button>
-          <button type="button" class="kvc-button kvc-primary" :disabled="busy" data-test="answer" @click="send({ text })">{{ kvman.t('kvcoder.ui.answer') }}</button>
+          <button type="button" class="kvc-button" data-test="skip" @click="send({ dismissed: true })">{{ kvman.t('kvcoder.ui.skip') }}</button>
+          <button type="button" class="kvc-button kvc-primary" data-test="answer" @click="send({ text })">{{ kvman.t('kvcoder.ui.answer') }}</button>
         </div>
       </template>
       <template v-else-if="kind === 'choice'">
@@ -64,13 +58,13 @@ function answerChoice(): Promise<void> {
         </label>
         <input v-if="offersOther" v-model="other" class="kvc-field" :placeholder="kvman.t('kvcoder.ui.other')" :aria-label="kvman.t('kvcoder.ui.other')" data-test="answer-other" />
         <div class="kvc-actions">
-          <button type="button" class="kvc-button" :disabled="busy" data-test="skip" @click="send({ dismissed: true })">{{ kvman.t('kvcoder.ui.skip') }}</button>
-          <button type="button" class="kvc-button kvc-primary" :disabled="busy || (selected.length === 0 && other.trim() === '')" data-test="answer" @click="answerChoice">{{ kvman.t('kvcoder.ui.answer') }}</button>
+          <button type="button" class="kvc-button" data-test="skip" @click="send({ dismissed: true })">{{ kvman.t('kvcoder.ui.skip') }}</button>
+          <button type="button" class="kvc-button kvc-primary" :disabled="selected.length === 0 && other.trim() === ''" data-test="answer" @click="answerChoice">{{ kvman.t('kvcoder.ui.answer') }}</button>
         </div>
       </template>
       <div v-else class="kvc-actions">
-        <button type="button" class="kvc-button" :disabled="busy" data-test="answer-no" @click="send({ confirmed: false })">{{ kvman.t('kvcoder.ui.no') }}</button>
-        <button type="button" class="kvc-button kvc-primary" :class="{ 'kvc-danger': props.question['danger'] === true }" :disabled="busy" data-test="answer-yes" @click="send({ confirmed: true })">{{ kvman.t('kvcoder.ui.yes') }}</button>
+        <button type="button" class="kvc-button" data-test="answer-no" @click="send({ confirmed: false })">{{ kvman.t('kvcoder.ui.no') }}</button>
+        <button type="button" class="kvc-button kvc-primary" :class="{ 'kvc-danger': props.question['danger'] === true }" data-test="answer-yes" @click="send({ confirmed: true })">{{ kvman.t('kvcoder.ui.yes') }}</button>
       </div>
     </div>
   </section>

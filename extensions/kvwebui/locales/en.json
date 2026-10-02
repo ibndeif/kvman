@@ -33,6 +33,7 @@
   "kvwebui.panel.close": "Close the panel",
   "kvwebui.panel.strip": "Panels",
   "kvwebui.status.offline": "offline",
+  "kvwebui.status.workspace": "Workspace folder",
   "kvwebui.cancel": "Cancel",
   "kvwebui.confirm": "Confirm",
   "kvwebui.close": "Close",

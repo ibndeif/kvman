@@ -73,6 +73,6 @@ export function shellResultText(run: ShellRun, timeoutMs: number): string {
 }
 
 /** The shell-result card's fields, kept in the toolResult's `details`. */
-export function shellDetails(command: string, run: ShellRun): Record<string, string | number | boolean> {
-  return { command, exitCode: run.exitCode, output: run.output, durationMs: run.durationMs, ...(run.timedOut ? { timedOut: true } : {}) };
+export function shellDetails(call: { title?: string | undefined; description?: string | undefined; command: string }, run: ShellRun): Record<string, string | number | boolean> {
+  return { ...(call.title === undefined ? {} : { title: call.title }), ...(call.description === undefined ? {} : { description: call.description }), command: call.command, exitCode: run.exitCode, output: run.output, durationMs: run.durationMs, ...(run.timedOut ? { timedOut: true } : {}) };
 }

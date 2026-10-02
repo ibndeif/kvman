@@ -1,0 +1,32 @@
+# QA 3 — a real model in the running app (ADR 0009, 140–147)
+
+Found by using the `coder` preset by hand and then driving it in Chromium against OpenRouter (`openrouter/z-ai/glm-5.3-flash` only). The unit and end-to-end tests below use kvman's fake OpenAI server, never a real model.
+
+## Happy path
+
+- **QA3-H1 The model picker searches.** *Given* two ready providers with 6 models, *when* the person opens the picker and types `glm fl`, *then* only the models whose name or id has both words show, under their provider groups, with "N of 6 models"; Down then Enter picks one and runs `kvcoder.session.configure` with its id. (`extensions/kvcoder/test/web/model-search.test.ts`)
+- **QA3-H2 An answer is felt at once.** *Given* a waiting session with a question card, *when* the person answers and the command is still running, *then* the card is already gone, and it never shows twice; when the command ends, the conversation reads the session. (`extensions/kvcoder/test/web/answer-feedback.test.ts`, and `extensions/kvcoder/test/e2e/live-chat.test.ts` in Chromium)
+- **QA3-H3 The activity line follows the step.** *Given* a running step, *when* no chunk has come, *then* the line reads "Waiting for the model…" with seconds that grow with the clock; a thinking chunk makes it "Thinking…", a text chunk "Writing…", and a tool call chunk the call's title and description. It is gone when the step ends. (`extensions/kvcoder/test/web/live-view.test.ts`)
+- **QA3-H4 Thinking shows open while it streams.** *Given* thinking deltas, *when* they arrive, *then* the thinking block is open with the text so far; when answer text starts it folds; a stored answer's thinking is folded. (`extensions/kvcoder/test/web/live-view.test.ts`)
+- **QA3-H5 A tool call shows its title and description.** *Given* a `toolcall` chunk with `{ title, description }`, *when* it arrives, *then* the activity line shows both; the approval card and the result card show the title, the description, and the command. (`extensions/kvcoder/test/web/live-view.test.ts`, `extensions/kvcoder/test/web/question-card.test.ts`, `extensions/kvcoder/test/web/conversation-messages.test.ts`)
+- **QA3-H6 The shell tool needs a title.** *Given* the `bash` tool, *then* its schema lists `title`, `description`, `command` in that order and requires all three; a call with a title runs, an approval's question and the result's details carry `title` and `description`. (`extensions/kvcoder/test/shell-title.test.ts`)
+- **QA3-H7 kvai streams a call's arguments as they complete.** *Given* a model call whose tool arguments arrive in pieces, *when* it streams, *then* the chunks are `{ type: 'toolcall', name }`, then one with `arguments` each time another key completes (never the one being written), then the full set at the end. (`extensions/kvai/test/toolcall-arguments.test.ts`)
+- **QA3-H8 The status bar starts with the workspace's path.** *Given* a workspace under the person's home folder, *when* any page shows, *then* the first status item reads `~/…` with the full path as its tooltip, and it follows a workspace switch. (`extensions/kvwebui/test/web/status-bar.test.ts`)
+- **QA3-H9 Status params format.** *Given* an item whose params are `{ $output: 'tokens', format: 'compact' }` and `{ $output: 'cost', format: 'usd' }`, *when* the output is `{ tokens: 3572, cost: 0.0004181 }`, *then* it reads "3.6K" and "$0.0004"; with the page in Arabic the numbers follow Arabic `Intl`; `usage.input` reads a nested field. (`extensions/kvwebui/test/web/status-params.test.ts`)
+- **QA3-H10 The open chat's tokens and cost are in the status bar.** *Given* a chat page, *when* it shows, *then* the bar reads "Chat ↑ 4.2K ↓ 1.1K · $0.0012" from that chat's usage, and it updates when a step ends. (`extensions/kvcoder/test/web/status-chat.test.ts`, `extensions/kvcoder/test/e2e/live-chat.test.ts`)
+
+## Edge cases
+
+- **QA3-E1 A search with no match says so.** *When* the text matches nothing, *then* "No models match" shows and Enter does nothing. (`extensions/kvcoder/test/web/model-search.test.ts`)
+- **QA3-E2 The picker closes cleanly.** *When* the person presses Esc or clicks outside, *then* it closes with the model unchanged and focus returns to the button; the session's own model (its provider has no key) is listed and checked. (`extensions/kvcoder/test/web/model-search.test.ts`)
+- **QA3-E3 A failed answer brings the card back.** *When* `kvcoder.question.answer` fails, *then* the card returns enabled and the toast shows. (`extensions/kvcoder/test/web/answer-feedback.test.ts`)
+- **QA3-E4 An answer someone else took drops the card quietly.** *When* the answer fails `NOT_FOUND`, *then* no toast shows, the card is gone, and the conversation reads the session. (`extensions/kvcoder/test/web/answer-feedback.test.ts`)
+- **QA3-E5 A stored call with no title shows its command.** *Given* a message from before this change, *then* the result card's header is the command and no description line shows. (`extensions/kvcoder/test/web/conversation-messages.test.ts`)
+- **QA3-E6 The activity line survives a reload.** *Given* a reloaded page on a running step, *then* it shows "Waiting for the model…" and picks up the replayed chunks (ADR 139). (`extensions/kvcoder/test/web/live-view.test.ts`)
+- **QA3-E7 A call without a title is invalid.** *Given* a `bash` call with `command` and `description` only, *then* the tool result is a `VALIDATION_FAILED` error naming `title` and nothing runs. (`extensions/kvcoder/test/shell-title.test.ts`)
+- **QA3-E8 Arguments are never half-written.** *Given* a string argument still streaming, *then* no chunk holds it. (`extensions/kvai/test/toolcall-arguments.test.ts`)
+- **QA3-E9 Costs read well at any size.** *Then* 0 is `$0.00`, 1.5 is `$1.50`, 0.0004181 is `$0.0004`, 0.00004344 is `$0.00004`, in `en` and `ar`. (`extensions/kvwebui/test/web/status-params.test.ts`)
+- **QA3-E10 A status item without its param is hidden.** *Given* the chat item on a page with no `sessionId`, *then* it isn't shown and its query doesn't run. (`extensions/kvwebui/test/web/status-params.test.ts`)
+- **QA3-E11 The path of the home folder itself is `~`.** *And* a path outside it shows in full; a Windows path under the home folder shows `~\…`. (`extensions/kvwebui/test/web/status-bar.test.ts`)
+
+QA1-H7 and QA1-E2 (the picker groups and keeps the session's own model) now check the popover's groups and options, in `extensions/kvcoder/test/web/model-picker.test.ts`.

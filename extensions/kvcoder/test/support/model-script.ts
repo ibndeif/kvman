@@ -11,7 +11,7 @@ export function calls(...commands: readonly (string | { command: string; timeout
     chunks: commands.map((entry) => {
       const call = typeof entry === 'string' ? { command: entry } : entry;
       counter += 1;
-      return { toolCall: { id: `call-${counter}`, name: 'bash', arguments: { description: 'A test call.', ...call } } };
+      return { toolCall: { id: `call-${counter}`, name: 'bash', arguments: { title: 'A test step', description: 'A test call.', ...call } } };
     }),
   };
 }

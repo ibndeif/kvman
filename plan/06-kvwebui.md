@@ -38,7 +38,7 @@ kvwebui is the web app, and it is an extension like any other. The kernel serves
 **Panels.** One is open at a time, chosen from a strip of panel icons. The open panel is remembered per tab, like the workspace, and panels show on every page.
 
 **Status bar.**
-- Contributed items sit on the start side, ordered by `order`.
+- The start side begins with the current workspace's folder (the home folder as `~`, the full path as its tooltip, cut with an ellipsis when the bar is full), then the contributed items, ordered by `order` (ADR 0009, 145).
 - The built-in item sits on the end side: kvman's version with a green dot, or a red "offline" while `kernel.health.get` fails (ADR 0009, 69).
 - A status item whose query fails shows a small error mark, with the translated Problem as its tooltip.
 
@@ -74,7 +74,7 @@ An extension contributes UI by registering the public query `<namespace>.ui.get`
 - **Routes.** A page's URL is `/<namespace>/<page>`, followed by its params in order: `params: ['sessionId']` gives `/kvcoder/session/:sessionId`. `kvwebui.home` names the page shown at `/`.
 - **The home page.** The preset decides it: `kvwebui.home` is required and preset-only (§2.8), so every preset that loads kvwebui names its home page, and the person can't change it in Settings.
   - When that page doesn't exist at load (its extension isn't loaded, its `ui.get` failed, or the page has params), `/` shows the built-in Extensions page with an error card: "Home page `<id>` isn't available" (`kvwebui.errors.HOME_UNAVAILABLE`), plus the Problem of the extension that should provide it, if any.
-- **Status items.** A status item's `params` values may be `{ "$output": field }`, read from its query's output. Its query reruns after any command the UI runs, when a job the UI started ends, and every 30 s; so does the built-in health item.
+- **Status items.** A status item's `params` values may be `{ "$output": field, "format"?: "compact" | "usd" }`, read from its query's output: `field` may be a dotted path (`usage.input`), and `format` shows a compact number or US dollars in the UI language (ADR 0009, 146). Its `input` may use `{ "$param": name }`, read from the current page's route params; on a page without that param the item isn't shown. Its query reruns after any command the UI runs, when a job the UI started ends, and every 30 s; so does the built-in health item.
 
 ## 6.4 View trees
 

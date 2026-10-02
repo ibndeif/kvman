@@ -84,6 +84,10 @@ export const pendingSchema = z.object({
   childSessionId: z.string().nullable(),
 });
 
+// An approved shell call: its command and timeout, with the title and description the model wrote for the person (old
+// approvals have neither, ADR 0009, 143).
+export const shellRunSchema = z.object({ title: z.string().exactOptional(), description: z.string().exactOptional(), command: z.string(), timeoutMs: z.number().int().positive() });
+
 // A call's result kept in the turn until the step's calls all resolve; `run` is an approved shell call the next step
 // runs before it appends the results.
 export const heldResultSchema = z.object({
@@ -91,7 +95,7 @@ export const heldResultSchema = z.object({
   text: z.string(),
   details: z.json().nullable(),
   isError: z.boolean(),
-  run: z.object({ command: z.string(), timeoutMs: z.number().int().positive() }).nullable(),
+  run: shellRunSchema.nullable(),
 });
 
 export const turnDocSchema = z.object({

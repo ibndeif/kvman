@@ -32,7 +32,8 @@ describe("the conversation's actions (08 §8.7, ADR 0009, 104)", () => {
     await flushPromises();
     expect(fake.calls.map((call) => call.name)).toContain('kvcoder.turn.cancel');
 
-    await wrapper.find('[data-test="model-picker"]').setValue('fake/m2');
+    await wrapper.find('[data-test="model-picker"]').trigger('click');
+    await wrapper.find('[data-test="model-fake/m2"]').trigger('click');
     await wrapper.find('[data-test="thinking-picker"]').setValue('high');
     await flushPromises();
     expect(fake.calls.filter((call) => call.name === 'kvcoder.session.configure').map((call) => call.input)).toEqual([{ sessionId: 's1', model: 'fake/m2' }, { sessionId: 's1', thinking: 'high' }]);

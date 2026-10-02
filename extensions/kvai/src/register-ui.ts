@@ -160,7 +160,7 @@ const contributions = {
   nav: [{ id: 'models', page: 'models', title: 'kvai.ui.models.nav', icon: 'brain', order: 50 }],
   panels: [],
   status: [
-    { id: 'usage', query: 'kvai.usage.total.get', input: {}, text: 'kvai.ui.status.usage', params: { tokens: { $output: 'tokens' }, cost: { $output: 'cost' } }, order: 50 },
+    { id: 'usage', query: 'kvai.usage.total.get', input: {}, text: 'kvai.ui.status.usage', params: { tokens: { $output: 'tokens', format: 'compact' }, cost: { $output: 'cost', format: 'usd' } }, order: 50 },
   ],
 };
 

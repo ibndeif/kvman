@@ -1,4 +1,5 @@
-import { jsonSchema, z, type Problem } from '@kvman/sdk';
+import { jsonSchema, z, type Json, type Problem } from '@kvman/sdk';
+import { formattedOutput, outputFormats, paramNames } from './references.ts';
 import { localIdSchema, viewSchema, type View } from './views.ts';
 
 // The answer of `<namespace>.ui.get` (plan 06 §6.3), and the checks beyond its shape (ADR 0009, 72): an answer that
@@ -20,15 +21,6 @@ export type Issue = { path: string; message: string };
 
 /** What an answer may name: the public queries and commands of the run (the kernel's included), the loaded extensions' namespaces, and the icons. */
 export type Known = { publicQueries: ReadonlySet<string>; publicCommands: ReadonlySet<string>; namespaces: ReadonlySet<string>; icons: ReadonlySet<string> };
-
-// The `{ $param: name }` references anywhere in a JSON tree.
-function paramReferences(tree: unknown): string[] {
-  if (Array.isArray(tree)) return tree.flatMap(paramReferences);
-  if (typeof tree !== 'object' || tree === null) return [];
-  const entries = Object.entries(tree);
-  if (entries.length === 1 && entries[0]?.[0] === '$param' && typeof entries[0][1] === 'string') return [entries[0][1]];
-  return entries.flatMap(([, value]) => paramReferences(value));
-}
 
 type Named = { path: string; name: string };
 
@@ -56,10 +48,18 @@ function viewIssues(view: View, path: string, params: readonly string[], known: 
     ...queries.filter((call) => !known.publicQueries.has(call.name)).map((call) => ({ path: call.path, message: `"${call.name}" isn't a public query.` })),
     ...commands.filter((call) => !known.publicCommands.has(call.name)).map((call) => ({ path: call.path, message: `"${call.name}" isn't a public command.` })),
     ...components.filter((custom) => !known.namespaces.has(custom.name.split('.')[0] ?? '')).map((custom) => ({ path: custom.path, message: `"${custom.name}" isn't a loaded extension's component.` })),
-    ...paramReferences(view)
+    ...paramNames(view)
       .filter((name) => !params.includes(name))
       .map((name) => ({ path, message: `The param "${name}" isn't declared.` })),
   ];
+}
+
+// A status param's `format` must be one kvwebui knows (ADR 0009, 146).
+function formatIssues(params: Record<string, Json>, path: string): Issue[] {
+  return Object.entries(params).flatMap(([name, value]) => {
+    const format = formattedOutput(value)?.format;
+    return format === undefined || outputFormats.some((known) => known === format) ? [] : [{ path: `${path}.${name}.format`, message: `"${String(format)}" isn't a format (${outputFormats.join(' or ')}).` }];
+  });
 }
 
 export function contributionIssues(answer: Contributions, known: Known): Issue[] {
@@ -80,6 +80,7 @@ export function contributionIssues(answer: Contributions, known: Known): Issue[]
       .filter((entry) => !known.icons.has(entry.icon))
       .map((entry) => ({ path: entry.path, message: `"${entry.icon}" isn't a lucide icon.` })),
     ...answer.status.flatMap((item, index) => (known.publicQueries.has(item.query) ? [] : [{ path: `status.${String(index)}.query`, message: `"${item.query}" isn't a public query.` }])),
+    ...answer.status.flatMap((item, index) => formatIssues(item.params ?? {}, `status.${String(index)}.params`)),
   ];
 }
 

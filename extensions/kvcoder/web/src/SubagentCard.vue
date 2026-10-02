@@ -4,10 +4,11 @@ import { computed } from 'vue';
 import type { Child } from './use-conversation.ts';
 import { titleText, useKvman } from './kvman.ts';
 import PendingCards from './PendingCards.vue';
+import type { Answer, Decision } from './use-answers.ts';
 
 // A subagent's card (ADR 0009, 104): its task, status, the text it is streaming, and its own questions and approvals.
-const props = defineProps<{ child: Child }>();
-const emit = defineEmits<{ answered: [jobId: string | null] }>();
+const props = defineProps<{ child: Child; hidden?: ReadonlySet<string> | undefined }>();
+const emit = defineEmits<{ answer: [answer: Answer]; decide: [decision: Decision] }>();
 const kvman = useKvman();
 const status = computed(() => kvman.t(`kvcoder.ui.status.${props.child.session.status}`));
 </script>
@@ -22,7 +23,7 @@ const status = computed(() => kvman.t(`kvcoder.ui.status.${props.child.session.s
     </div>
     <div v-if="props.child.live.text !== '' || (props.child.turn?.pending.length ?? 0) > 0" class="kvc-card-body">
       <p v-if="props.child.live.text !== ''" class="kvc-muted" style="margin: 0; white-space: pre-wrap">{{ props.child.live.text }}</p>
-      <PendingCards :pending="props.child.turn?.pending ?? []" @answered="(jobId) => emit('answered', jobId)" />
+      <PendingCards :pending="props.child.turn?.pending ?? []" :hidden="props.hidden" @answer="(answer) => emit('answer', answer)" @decide="(decision) => emit('decide', decision)" />
     </div>
   </section>
 </template>
