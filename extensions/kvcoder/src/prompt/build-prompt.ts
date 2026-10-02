@@ -10,7 +10,7 @@ export type PromptInput = {
   toolName: 'bash' | 'powershell';
   language: string;
   sections: readonly Section[];
-  connectors: readonly { name: string; description: string }[];
+  connectors: readonly { name: string; description: string; kind: 'commands' | 'binary' | 'builtin' }[];
 };
 
 export type BuiltPrompt = { prompt: string; included: ReadonlySet<Section>; left: readonly Section[] };
@@ -33,6 +33,14 @@ function basePrompt(input: PromptInput): string {
   ].join('\n');
 }
 
+// A connector's entry: its owner's description, then how to get its help (ADR 0009, 164).
+function connectorLine(connector: PromptInput['connectors'][number]): string {
+  const description = /[.!?)]$/.test(connector.description.trimEnd()) ? connector.description.trimEnd() : `${connector.description.trimEnd()}.`;
+  const name = connector.name;
+  const help = connector.kind === 'commands' ? `Help: \`${name} -h\` lists its commands; \`${name} <command> -h\` shows a command's input, output, and examples.` : `Help: \`${name} -h\`.`;
+  return `- ${name}: ${description} ${help}`;
+}
+
 function keptSections(sections: readonly Section[]): { kept: Section[]; left: Section[] } {
   const kept: Section[] = [];
   const left: Section[] = [];
@@ -51,6 +59,6 @@ function keptSections(sections: readonly Section[]): { kept: Section[]; left: Se
 export function buildPrompt(input: PromptInput): BuiltPrompt {
   const { kept, left } = keptSections(input.sections);
   const parts = [basePrompt(input), ...kept.map((section) => `## ${section.title}\n${section.content}`)];
-  if (input.connectors.length > 0) parts.push(['## Connectors', ...input.connectors.map((connector) => `- ${connector.name}: ${connector.description}`)].join('\n'));
+  if (input.connectors.length > 0) parts.push(['## Connectors', ...input.connectors.map(connectorLine)].join('\n'));
   return { prompt: parts.join('\n\n'), included: new Set(kept), left };
 }

@@ -19,6 +19,8 @@ The product owner asked for a file-system connector inspired by pi's `write` and
 - **QA4-H13 The default is `auto`.** *Given* no setting, *then* `kvcoder.shell.approval` reads `auto`, and the `dev` preset still gives `ask`. (`extensions/kvdev/test/e2e/presets.test.ts`)
 - **QA4-H14 The prompt says how to ask.** *Then* the base prompt tells the model to call `ask` to put a question to the person and not to end a reply by promising something still to come. (`extensions/kvcoder/test/unit/prompt-build.test.ts`, `extensions/kvcoder/test/prompt.test.ts`)
 - **QA4-H15 The connector index names the built-ins' commands.** *Then* it lists `ask` with `text, choice, confirm`, `subagent` with `run`, `jobs` with `list, get, cancel`, and `fs` with `write, edit`, while a registered connector shows only its own description. (`extensions/kvcoder/test/prompt.test.ts`)
+- **QA4-H16 Every connector entry says how to get help.** *Then* a registered commands connector's entry ends with its `-h` and `<command> -h` hint, and a built-in's and a binary connector's with `Help: `<name> -h`.`; a description without final punctuation gets a `.` first. (`extensions/kvcoder/test/unit/prompt-build.test.ts`, `extensions/kvcoder/test/prompt.test.ts`)
+- **QA4-H17 A built-in's description says what it is for and when to use it.** *Then* the index entries of `ask`, `subagent`, `jobs`, and `fs` each contain a sentence starting with `Use it` (or `Use write`) that names when to reach for it, and their commands. (`extensions/kvcoder/test/prompt.test.ts`)
 
 ## Edge cases
 

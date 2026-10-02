@@ -33,7 +33,7 @@ describe('subagent rules (08 §8.5, ADR 0009, 102)', { timeout: 30_000 }, () => 
     expect(child[3]).toMatch(/^ask: Ask the person/);
     const prompt = systemPrompt(fake, 1);
     expect(prompt).toContain('- todo: Keep a todo list.');
-    expect(prompt).toContain('- ask: Ask the person a question and wait for the answer (commands: text, choice, confirm).');
+    expect(prompt).toContain('- ask: Put a question to the person and wait for the answer.');
     expect(prompt).not.toContain('- subagent: ');
     expect(prompt).not.toContain('- fs: ');
   });
