@@ -5,7 +5,8 @@ import { useKvman } from './kvman.ts';
 import { searchGroups, type ModelGroup } from './model-groups.ts';
 
 // The model picker (plan 08 §8.7, ADR 0009, 140): a button that opens a searchable list of the models, grouped by
-// provider. Every word typed must be in a model's name or id; arrows and Enter pick, Esc and a click outside close.
+// provider. Every word typed must be in a model's name or id; arrows and Enter pick, Esc and a click outside close. The
+// list opens at its button and is moved only as far as it takes to stay inside the conversation (ADR 0009, 211).
 const props = defineProps<{ groups: ModelGroup[]; current: string | null; empty?: string | undefined }>();
 const emit = defineEmits<{ pick: [modelId: string] }>();
 const kvman = useKvman();
@@ -15,6 +16,7 @@ const highlight = ref(0);
 const trigger = useTemplateRef<HTMLButtonElement>('trigger');
 const search = useTemplateRef<HTMLInputElement>('search');
 const panel = useTemplateRef<HTMLElement>('panel');
+const gutterPx = 24;
 
 const found = computed(() => searchGroups(props.groups, query.value));
 const models = computed(() => found.value.groups.flatMap((group) => group.models));
@@ -31,8 +33,19 @@ async function show(): Promise<void> {
   highlight.value = Math.max(indexOf(props.current ?? ''), 0);
   open.value = true;
   await nextTick();
+  keepInside();
   search.value?.focus();
   scrollToHighlight();
+}
+
+function keepInside(): void {
+  const list = panel.value;
+  const bounds = trigger.value?.closest('.kvc-conversation')?.getBoundingClientRect();
+  if (list === null || bounds === undefined) return;
+  const box = list.getBoundingClientRect();
+  const start = bounds.left + gutterPx - box.left;
+  const end = bounds.right - gutterPx - box.right;
+  list.style.translate = `${start > 0 ? start : end < 0 ? end : 0}px 0`;
 }
 
 function scrollToHighlight(): void {

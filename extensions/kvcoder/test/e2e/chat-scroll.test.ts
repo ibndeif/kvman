@@ -26,7 +26,7 @@ const colorsSchema = z.object({ background: z.string(), text: z.string() });
 const listSchema = z.object({ scrollable: z.boolean(), overflow: z.string() });
 const edgeSchema = z.object({ left: z.number(), right: z.number() });
 const edgesSchema = z.object({ title: edgeSchema, description: edgeSchema, command: edgeSchema });
-const fitSchema = z.object({ popoverLeft: z.number(), popoverRight: z.number(), conversationLeft: z.number(), conversationRight: z.number(), sideways: z.object({ document: z.boolean(), main: z.boolean(), conversation: z.boolean() }) });
+const fitSchema = z.object({ buttonLeft: z.number(), buttonRight: z.number(), popoverLeft: z.number(), popoverRight: z.number(), conversationLeft: z.number(), conversationRight: z.number(), sideways: z.object({ document: z.boolean(), main: z.boolean(), conversation: z.boolean() }) });
 const upwardSchema = z.object({ popoverBottom: z.number(), buttonTop: z.number(), sideways: z.boolean() });
 
 // Page expressions are strings: they run in Chromium, where the DOM is, not in this Node process.
@@ -44,7 +44,10 @@ const fitExpression = `(() => {
   const conversation = document.querySelector('.kvc-conversation');
   const box = conversation.getBoundingClientRect();
   const main = document.querySelector('main');
+  const button = document.querySelector('.kvc-header [data-test="model-picker"]').getBoundingClientRect();
   return {
+    buttonLeft: button.left,
+    buttonRight: button.right,
     popoverLeft: popover.left,
     popoverRight: popover.right,
     conversationLeft: box.left,
@@ -218,6 +221,22 @@ describe('a long chat in Chromium (08 §8.7, ADR 0009, 195–199)', { timeout: 1
         expect(found.popoverLeft, `${language} ${String(width)} popover start`).toBeGreaterThanOrEqual(found.conversationLeft - 1);
         expect(found.popoverRight, `${language} ${String(width)} popover end`).toBeLessThanOrEqual(found.conversationRight + 1);
         expect(found.sideways, `${language} ${String(width)} sideways scroll`).toEqual({ document: false, main: false, conversation: false });
+        await page.close();
+      }
+    }
+  });
+
+  it('QA10-H15 the model popover opens at its button, at any width, in either language', async () => {
+    const { kvman, sessionId } = await chatWith(says('Hi.'));
+    for (const language of ['en', 'ar'] as const) {
+      await kvman.call('commands', 'kernel.settings.set', { key: 'kernel.language', value: language, scope: 'global' });
+      for (const width of [1280, 800, 600, 400]) {
+        const page = await openChat(kvman, sessionId, { width, height: 800 });
+        await page.locator('.kvc-header [data-test="model-picker"]').click();
+        await page.locator('[data-test="model-popover"]').waitFor();
+        const found = fitSchema.parse(await page.evaluate(fitExpression));
+        expect(found.popoverLeft, `${language} ${String(width)} button start`).toBeLessThanOrEqual(found.buttonLeft + 1);
+        expect(found.popoverRight, `${language} ${String(width)} button end`).toBeGreaterThanOrEqual(found.buttonRight - 1);
         await page.close();
       }
     }
