@@ -7,6 +7,7 @@ import { notFound, tooLarge } from '../problems.ts';
 import { kebab } from '../schemas/registry.ts';
 import { now } from '../sessions/session-lookup.ts';
 import { records, txRecords } from '../store/collections.ts';
+import { artifactFormats, contentFor, detectFormat } from '../artifacts/artifact-format.ts';
 import { artifactCountLimit, assertWithinLimit } from '../artifacts/artifact-records.ts';
 import { withBody } from './write-body.ts';
 
@@ -18,7 +19,7 @@ const idMessage = 'An artifact id is lowercase kebab case, such as plan or login
 const artifactId = z.string().max(50, idMessage).regex(kebab, idMessage);
 
 const inputSchemas = {
-  write: z.strictObject({ id: artifactId, title: z.string().min(1).max(100), format: z.enum(['markdown', 'html']).optional().default('markdown'), content: z.string().min(1) }),
+  write: z.strictObject({ id: artifactId, title: z.string().min(1).max(100), format: z.enum(artifactFormats).exactOptional(), content: z.string().min(1) }),
   edit: z.strictObject({ id: artifactId, edits: z.array(z.strictObject({ oldText: z.string(), newText: z.string() })).min(1) }),
   get: z.strictObject({ id: artifactId }),
 };
@@ -33,20 +34,22 @@ const failed = (problem: Pick<Problem, 'code' | 'message'>): Done => ({ ...error
 const missing = (id: string): ProblemError => notFound(`The artifact ${id} doesn't exist.`, { id });
 
 async function writeArtifact(ctx: Ctx, chatId: string, input: WriteInput): Promise<Done> {
+  const format = input.format ?? detectFormat(input.content);
   const stored = await ctx.store.transaction((tx) => {
-    assertWithinLimit(input.id, input.content);
+    const content = contentFor(format, input.content);
+    assertWithinLimit(input.id, content);
     const artifacts = txRecords(tx).artifacts;
     const existing = artifacts.find({ sessionId: chatId, artifactId: input.id }, { limit: 1 })[0];
     const stamp = now();
     if (existing === undefined) {
       if (artifacts.count({ sessionId: chatId }) >= artifactCountLimit) throw tooLarge(`The chat holds at most ${artifactCountLimit} artifacts.`, artifactCountLimit);
-      artifacts.insert({ sessionId: chatId, artifactId: input.id, title: input.title, format: input.format, content: input.content, version: 1, createdAt: stamp, updatedAt: stamp });
-      return { version: 1, created: true };
+      artifacts.insert({ sessionId: chatId, artifactId: input.id, title: input.title, format, content, version: 1, createdAt: stamp, updatedAt: stamp });
+      return { version: 1, created: true, bytes: Buffer.byteLength(content) };
     }
-    artifacts.update(existing.id, { title: input.title, format: input.format, content: input.content, version: existing.version + 1, updatedAt: stamp });
-    return { version: existing.version + 1, created: false };
+    artifacts.update(existing.id, { title: input.title, format, content, version: existing.version + 1, updatedAt: stamp });
+    return { version: existing.version + 1, created: false, bytes: Buffer.byteLength(content) };
   });
-  return { ...jsonOutput({ id: input.id, version: stored.version, created: stored.created, bytes: Buffer.byteLength(input.content) }), details: { artifact: { id: input.id, title: input.title, format: input.format, version: stored.version } } };
+  return { ...jsonOutput({ id: input.id, version: stored.version, created: stored.created, bytes: stored.bytes }), details: { artifact: { id: input.id, title: input.title, format, version: stored.version } } };
 }
 
 async function editArtifact(ctx: Ctx, chatId: string, input: EditInput): Promise<Done> {
@@ -55,8 +58,9 @@ async function editArtifact(ctx: Ctx, chatId: string, input: EditInput): Promise
     const existing = artifacts.find({ sessionId: chatId, artifactId: input.id }, { limit: 1 })[0];
     if (existing === undefined) throw missing(input.id);
     const edited = applyEdits(existing.content, input.edits);
-    assertWithinLimit(input.id, edited.text);
-    artifacts.update(existing.id, { content: edited.text, version: existing.version + 1, updatedAt: now() });
+    const text = contentFor(existing.format, edited.text);
+    assertWithinLimit(input.id, text);
+    artifacts.update(existing.id, { content: text, version: existing.version + 1, updatedAt: now() });
     return { version: existing.version + 1, title: existing.title, format: existing.format, replacements: edited.replacements, firstChangedLine: edited.firstChangedLine };
   });
   return {

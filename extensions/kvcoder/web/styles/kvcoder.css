@@ -6,6 +6,7 @@
 .kvc-artifact-tabs { display: flex; gap: 2px; padding: 3px; border: 1px solid var(--kv-color-border); border-radius: 10px; flex: 1 1 auto; min-inline-size: 0; overflow-x: auto; }
 .kvc-artifact-title { flex: 1 1 auto; min-inline-size: 0; font-size: 15px; font-weight: 600; }
 .kvc-artifact-body { flex: 1 1 auto; min-block-size: 0; overflow: auto; padding-block: var(--kv-space-md); padding-inline: var(--kv-space-lg); }
+.kvc-artifact-source { margin: 0; font-family: var(--kv-font-mono); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .kvc-artifact-frame { inline-size: 100%; block-size: 100%; border: 0; background: #fff; }
 @container (max-inline-size: 48rem) {
   .kvc-artifact-panel { position: absolute; inset-block: 0; inset-inline-end: 0; inline-size: min(100%, 32rem); z-index: 5; box-shadow: 0 12px 32px rgb(0 0 0 / 0.14); }
@@ -16,7 +17,7 @@
 .kvc-muted { color: var(--kv-color-muted); font-size: 12.5px; }
 .kvc-tabs { display: flex; gap: 2px; padding: 3px; border: 1px solid var(--kv-color-border); border-radius: 10px; }
 .kvc-tab { border: 0; border-radius: 7px; background: transparent; color: var(--kv-color-muted); font: inherit; padding-block: 4px; padding-inline: 12px; cursor: pointer; }
-.kvc-tab[aria-selected='true'] { background: var(--kv-color-background); color: var(--kv-color-text); font-weight: 500; }
+.kvc-tab[aria-selected='true'], .kvc-tab[aria-pressed='true'] { background: var(--kv-color-background); color: var(--kv-color-text); font-weight: 500; }
 .kvc-scrollport { position: relative; flex: 1 1 auto; min-block-size: 0; display: flex; flex-direction: column; }
 .kvc-scroll { flex: 1 1 auto; min-block-size: 0; overflow-y: auto; }
 .kvc-jump { position: absolute; inset-block-end: 12px; inset-inline: 0; margin-inline: auto; inline-size: max-content; box-shadow: 0 4px 16px rgb(0 0 0 / 0.16); }
@@ -43,6 +44,7 @@
 .kvc-ask { border-color: var(--kv-color-warning); }
 .kvc-option { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--kv-color-border); border-radius: 10px; cursor: pointer; }
 .kvc-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-block-size: 36px; padding-inline: 14px; border-radius: 10px; border: 1px solid var(--kv-color-border); background: var(--kv-color-surface); color: var(--kv-color-text); font: inherit; font-weight: 500; cursor: pointer; }
+a.kvc-button { text-decoration: none; color: inherit; }
 .kvc-button:disabled { opacity: 0.5; cursor: default; }
 .kvc-primary { background: var(--kv-color-primary); border-color: var(--kv-color-primary); color: var(--kv-color-on-primary); }
 .kvc-ghost { border-color: transparent; background: transparent; }

@@ -67,4 +67,11 @@ describe("kvcoder's catalogs (02 §2.11)", { timeout: 30_000 }, () => {
       for (const key of ['kvcoder.ui.retry', 'kvcoder.ui.chooseAnotherModel', 'kvcoder.ui.continueText', 'kvcoder.ui.exitCode']) expect(texts[key], `${language} ${key}`).toBeTypeOf('string');
     }
   });
+
+  it('QA12-E7 en and ar have the artifact panel texts: View, Preview, Source, the URL format, Open in a new tab, and the refusal line', () => {
+    for (const language of ['en', 'ar'] as const) {
+      const texts = catalog(language);
+      for (const key of ['kvcoder.ui.artifacts.view', 'kvcoder.ui.artifacts.preview', 'kvcoder.ui.artifacts.source', 'kvcoder.ui.artifacts.format.url', 'kvcoder.ui.artifacts.openUrl', 'kvcoder.ui.artifacts.urlRefused']) expect(texts[key], `${language} ${key}`).toBeTypeOf('string');
+    }
+  });
 });

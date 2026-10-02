@@ -52,8 +52,8 @@ declare module '@kvman/sdk' {
     'kvcoder.connector.list': { input: Empty; output: ConnectorRow[] };
     'kvcoder.section.list': { input: { sessionId?: string }; output: { id: string; title: string; order: number; owner: string; global: boolean; sessionId?: string; size: number }[] };
     'kvcoder.handler.list': { input: Empty; output: { point: Point; command: string; owner: string }[] };
-    'kvcoder.artifact.list': { input: SessionId; output: { id: string; title: string; format: 'markdown' | 'html'; version: number; size: number; updatedAt: string }[] };
-    'kvcoder.artifact.get': { input: { sessionId: string; id: string }; output: { id: string; title: string; format: 'markdown' | 'html'; version: number; content: string; createdAt: string; updatedAt: string } };
+    'kvcoder.artifact.list': { input: SessionId; output: { id: string; title: string; format: 'markdown' | 'html' | 'url'; version: number; size: number; updatedAt: string }[] };
+    'kvcoder.artifact.get': { input: { sessionId: string; id: string }; output: { id: string; title: string; format: 'markdown' | 'html' | 'url'; version: number; content: string; createdAt: string; updatedAt: string } };
   }
   interface Settings {
     'kvcoder.model': string | null;

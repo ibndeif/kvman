@@ -186,6 +186,12 @@
   "kvcoder.ui.artifacts.version": "الإصدار {version}",
   "kvcoder.ui.artifacts.toggle": "المستندات ({count})",
   "kvcoder.ui.artifacts.frameLabel": "معاينة {title}",
+  "kvcoder.ui.artifacts.view": "العرض",
+  "kvcoder.ui.artifacts.preview": "معاينة",
+  "kvcoder.ui.artifacts.source": "المصدر",
   "kvcoder.ui.artifacts.format.markdown": "ماركداون",
-  "kvcoder.ui.artifacts.format.html": "HTML"
+  "kvcoder.ui.artifacts.format.html": "HTML",
+  "kvcoder.ui.artifacts.format.url": "رابط",
+  "kvcoder.ui.artifacts.openUrl": "فتح في تبويب جديد",
+  "kvcoder.ui.artifacts.urlRefused": "لا يمكن عرض هذا العنوان هنا: تُعرض فقط الصفحات على localhost أو 127.0.0.1، وليس kvman نفسه."
 }

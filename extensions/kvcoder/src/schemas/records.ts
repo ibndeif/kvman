@@ -1,4 +1,5 @@
 import { z } from '@kvman/sdk';
+import { artifactFormats } from '../artifacts/artifact-format.ts';
 import type { JsonValue } from '../connector-line.ts';
 
 export type { JsonValue };
@@ -146,7 +147,7 @@ export const artifactDocSchema = z.object({
   sessionId: z.string(),
   artifactId: z.string(),
   title: z.string(),
-  format: z.enum(['markdown', 'html']),
+  format: z.enum(artifactFormats),
   content: z.string(),
   version: z.number().int().min(1),
   createdAt: z.string(),

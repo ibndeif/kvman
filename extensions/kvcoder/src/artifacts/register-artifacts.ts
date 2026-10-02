@@ -2,12 +2,13 @@ import { z, type Ctx } from '@kvman/sdk';
 import { notFound } from '../problems.ts';
 import { findSession } from '../sessions/session-lookup.ts';
 import { records } from '../store/collections.ts';
+import { artifactFormats } from './artifact-format.ts';
 import { chatIdOf } from './artifact-records.ts';
 
 // The person's view of a chat's artifacts (plan 08 §8.6, ADR 0009, 176): list and read. Only the agent writes, and a
 // subagent session answers with the artifacts of the chat at its root.
 
-const formatSchema = z.enum(['markdown', 'html']);
+const formatSchema = z.enum(artifactFormats);
 
 export function registerArtifacts(ctx: Ctx): void {
   ctx.registerQuery('kvcoder.artifact.list', {

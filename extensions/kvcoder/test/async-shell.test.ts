@@ -48,15 +48,13 @@ describe('async shell calls (08 §8.3, ADR 0009, 149 to 151)', { timeout: 60_000
     const { kernel, fake, sessionId, jobId } = await started('echo first; sleep 2; echo last; exit 3');
     const [running = ''] = await say(kernel, fake, sessionId, `jobs get ${jobId}`);
     expect(jobSchema.parse(JSON.parse(running.replace(/\n\[exit code 0\]$/, '')))).toMatchObject({ status: 'running', output: 'first' });
-    await vi.waitFor(async () => {
-      const [ended = ''] = await say(kernel, fake, sessionId, `jobs get ${jobId}`);
-      expect(jobSchema.parse(JSON.parse(ended.replace(/\n\[exit code 0\]$/, '')))).toMatchObject({ status: 'failed', exitCode: 3, output: 'first\nlast' });
-    }, wait);
+    await vi.waitFor(async () => expect(await kernel.exec('kvcoder.job.get', { sessionId, id: jobId })).toMatchObject({ status: 'failed', exitCode: 3 }), wait);
+    const [ended = ''] = await say(kernel, fake, sessionId, `jobs get ${jobId}`);
+    expect(jobSchema.parse(JSON.parse(ended.replace(/\n\[exit code 0\]$/, '')))).toMatchObject({ status: 'failed', exitCode: 3, output: 'first\nlast' });
     const ok = await started('echo done');
-    await vi.waitFor(async () => {
-      const [ended = ''] = await say(ok.kernel, ok.fake, ok.sessionId, `jobs get ${ok.jobId}`);
-      expect(jobSchema.parse(JSON.parse(ended.replace(/\n\[exit code 0\]$/, '')))).toMatchObject({ status: 'succeeded', exitCode: 0 });
-    }, wait);
+    await vi.waitFor(async () => expect(await ok.kernel.exec('kvcoder.job.get', { sessionId: ok.sessionId, id: ok.jobId })).toMatchObject({ status: 'succeeded', exitCode: 0 }), wait);
+    const [done = ''] = await say(ok.kernel, ok.fake, ok.sessionId, `jobs get ${ok.jobId}`);
+    expect(jobSchema.parse(JSON.parse(done.replace(/\n\[exit code 0\]$/, '')))).toMatchObject({ status: 'succeeded', exitCode: 0 });
   });
 
   it('QA3-H14 the agent stops its process with jobs cancel, once', async () => {

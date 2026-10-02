@@ -78,7 +78,7 @@ export function isBackground(message: Message): boolean {
   return message.kind === 'user' && (message.source?.kind === 'job' || message.source?.kind === 'subagent');
 }
 
-export type ArtifactRef = { id: string; title: string; format: 'markdown' | 'html'; version: number };
+export type ArtifactRef = { id: string; title: string; format: 'markdown' | 'html' | 'url'; version: number };
 
 /** An artifact write or edit result's card details (ADR 0009, 177), or nothing for any other message. */
 export function artifactOf(message: Message): ArtifactRef | undefined {
@@ -89,6 +89,6 @@ export function artifactOf(message: Message): ArtifactRef | undefined {
   if (found === undefined) return undefined;
   const { id, title, format, version } = found;
   if (typeof id !== 'string' || typeof title !== 'string' || typeof version !== 'number') return undefined;
-  if (format !== 'markdown' && format !== 'html') return undefined;
+  if (format !== 'markdown' && format !== 'html' && format !== 'url') return undefined;
   return { id, title, format, version };
 }

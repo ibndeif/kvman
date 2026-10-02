@@ -186,6 +186,12 @@
   "kvcoder.ui.artifacts.version": "Version {version}",
   "kvcoder.ui.artifacts.toggle": "Artifacts ({count})",
   "kvcoder.ui.artifacts.frameLabel": "Preview of {title}",
+  "kvcoder.ui.artifacts.view": "View",
+  "kvcoder.ui.artifacts.preview": "Preview",
+  "kvcoder.ui.artifacts.source": "Source",
   "kvcoder.ui.artifacts.format.markdown": "Markdown",
-  "kvcoder.ui.artifacts.format.html": "HTML"
+  "kvcoder.ui.artifacts.format.html": "HTML",
+  "kvcoder.ui.artifacts.format.url": "URL",
+  "kvcoder.ui.artifacts.openUrl": "Open in a new tab",
+  "kvcoder.ui.artifacts.urlRefused": "This address can't be shown here: only pages on localhost or 127.0.0.1, and never kvman itself, are."
 }

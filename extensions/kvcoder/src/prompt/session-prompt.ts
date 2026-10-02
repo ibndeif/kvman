@@ -15,7 +15,7 @@ const builtinDescriptions: Record<(typeof builtinConnectors)[number], string> = 
   subagent: 'Hand a self-contained task to a helper agent. Use it to research or build a separate part in parallel, or in the background while you go on (command: run).',
   jobs: 'Check on background work you started, a server from mode "async" or a --async call. Use it to see its status or output, or to stop it (commands: list, get, cancel).',
   fs: 'Create and change files in the workspace folder. Use it for every file you create or change: write for a new file or a full rewrite, giving the content as the raw heredoc body after `{"path"}`, one file per call, and edit for exact text replacements in an existing file (commands: write, edit).',
-  artifact: 'Show the person something to read or see: a plan, a report, a design, or an HTML page. Use it for anything longer than a few lines instead of pasting it into a reply, and keep your plan in the artifact `plan`. Give the content as the raw heredoc body after the JSON (commands: write, edit, get).',
+  artifact: 'Show the person something to read or see: a plan, a report, a design, an HTML page, or the localhost address of an app you are running (format url). Use it for anything longer than a few lines instead of pasting it into a reply, and keep your plan in the artifact `plan`. Give the content as the raw heredoc body after the JSON (commands: write, edit, get).',
 };
 
 export type SessionTools = {
