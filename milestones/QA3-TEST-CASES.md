@@ -14,6 +14,7 @@ Found by using the `coder` preset by hand and then driving it in Chromium agains
 - **QA3-H8 The status bar starts with the workspace's path.** *Given* a workspace under the person's home folder, *when* any page shows, *then* the first status item reads `~/…` with the full path as its tooltip, and it follows a workspace switch. (`extensions/kvwebui/test/web/status-bar.test.ts`)
 - **QA3-H9 Status params format.** *Given* an item whose params are `{ $output: 'tokens', format: 'compact' }` and `{ $output: 'cost', format: 'usd' }`, *when* the output is `{ tokens: 3572, cost: 0.0004181 }`, *then* it reads "3.6K" and "$0.0004"; with the page in Arabic the numbers follow Arabic `Intl`; `usage.input` reads a nested field. (`extensions/kvwebui/test/web/status-params.test.ts`)
 - **QA3-H10 The open chat's tokens and cost are in the status bar.** *Given* a chat page, *when* it shows, *then* the bar reads "Chat ↑ 4.2K ↓ 1.1K · $0.0012" from that chat's usage, and it updates when a step ends. (`extensions/kvcoder/test/web/status-chat.test.ts`, `extensions/kvcoder/test/e2e/live-chat.test.ts`)
+- **QA3-H11 A call ends when its shell exits.** *Given* the command `sleep 30 & echo $! > bg.pid; echo started`, *when* it runs, *then* the result is `started`, the line `[background processes were stopped when the command ended]`, and `[exit code 0]`, it comes back in well under the 30 s, and the `sleep` process is gone. (`extensions/kvcoder/test/shell-background.test.ts`)
 
 ## Edge cases
 
@@ -28,5 +29,8 @@ Found by using the `coder` preset by hand and then driving it in Chromium agains
 - **QA3-E9 Costs read well at any size.** *Then* 0 is `$0.00`, 1.5 is `$1.50`, 0.0004181 is `$0.0004`, 0.00004344 is `$0.00004`, in `en` and `ar`. (`extensions/kvwebui/test/web/status-params.test.ts`)
 - **QA3-E10 A status item without its param is hidden.** *Given* the chat item on a page with no `sessionId`, *then* it isn't shown and its query doesn't run. (`extensions/kvwebui/test/web/status-params.test.ts`)
 - **QA3-E11 The path of the home folder itself is `~`.** *And* a path outside it shows in full; a Windows path under the home folder shows `~\…`. (`extensions/kvwebui/test/web/status-bar.test.ts`)
+- **QA3-E12 A call that leaves nothing behind has no note.** *Given* `echo hi`, *then* the result is `hi` and `[exit code 0]` with no background line; a call that times out shows only its timeout line. (`extensions/kvcoder/test/shell-background.test.ts`)
+- **QA3-E13 Output written before the shell exits is kept.** *Given* `sleep 30 & echo before; exit 3`, *then* the result has `before`, the background line, and `[exit code 3]`. (`extensions/kvcoder/test/shell-background.test.ts`)
+- **QA3-E14 A process outside the group can't hold the call.** *Given* `setsid sleep 30 &` that has left the shell's group by the time `echo up` runs, *then* the call ends within a few seconds of the shell's exit with `up` and no background line, since the group was empty. (`extensions/kvcoder/test/shell-background.test.ts`)
 
 QA1-H7 and QA1-E2 (the picker groups and keeps the session's own model) now check the popover's groups and options, in `extensions/kvcoder/test/web/model-picker.test.ts`.

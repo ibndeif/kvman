@@ -1,22 +1,13 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
+import { alive } from './support/alive.ts';
 import { wait } from './support/wait.ts';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { calls, says, toolResults } from './support/model-script.ts';
 import { fileExists, newSession, turnState } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
-
-function alive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    if (error instanceof Error && 'code' in error && error.code === 'ESRCH') return false;
-    throw error;
-  }
-}
 
 // The commands here are bash, the Linux and macOS branch; the Windows branch's lookup, arguments, and tree kill are
 // covered in unit/shell-command.test.ts.
