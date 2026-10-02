@@ -45,7 +45,7 @@ export function callInfos(messages: readonly Message[]): Map<string, CallInfo> {
   return infos;
 }
 
-export type ResultCard = { command: string; title?: string; description?: string; exitCode?: number; durationMs?: number; output: string };
+export type ResultCard = { command: string; title?: string; description?: string; exitCode?: number; durationMs?: number; output: string; background?: boolean };
 
 /** A tool result as its card shows it: the shell's details, or the call's own words and the result text. */
 export function resultCard(message: Message, calls: ReadonlyMap<string, CallInfo>): ResultCard {
@@ -60,6 +60,7 @@ export function resultCard(message: Message, calls: ReadonlyMap<string, CallInfo
       ...labels(details),
       ...(typeof details['exitCode'] === 'number' ? { exitCode: details['exitCode'] } : {}),
       ...(typeof details['durationMs'] === 'number' ? { durationMs: details['durationMs'] } : {}),
+      ...(details['mode'] === 'async' ? { background: true } : {}),
     };
   }
   return { command: call?.command ?? '', output: text.replace(/\n?\[exit code \d+\]$/, ''), ...(call === undefined ? {} : labels(call)), ...(exit === null ? {} : { exitCode: Number(exit[1]) }) };

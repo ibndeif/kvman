@@ -33,7 +33,7 @@ describe('questions and approvals (08 §8.1, §8.5)', { timeout: 30_000 }, () =>
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     const { turn } = await turnState(kernel, sessionId);
-    expect(turn?.pending).toEqual([{ toolCallId: 't1', kind: 'approval', questionId: expect.any(String) as unknown, question: { title: 'Make a file', command: 'touch made.txt', description: 'Make a file.', timeoutMs: 120_000 }, childSessionId: null }]);
+    expect(turn?.pending).toEqual([{ toolCallId: 't1', kind: 'approval', questionId: expect.any(String) as unknown, question: { title: 'Make a file', command: 'touch made.txt', description: 'Make a file.', mode: 'sync', timeoutMs: 120_000 }, childSessionId: null }]);
     await kernel.exec('kvcoder.question.answer', { questionId: String(turn?.pending[0]?.questionId), answer: { confirmed: false } });
     await kernel.clock.advance(0);
     expect(toolResults(fake)).toEqual(['denied by the user']);

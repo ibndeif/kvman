@@ -86,7 +86,7 @@ export const pendingSchema = z.object({
 
 // An approved shell call: its command and timeout, with the title and description the model wrote for the person (old
 // approvals have neither, ADR 0009, 143).
-export const shellRunSchema = z.object({ title: z.string().exactOptional(), description: z.string().exactOptional(), command: z.string(), timeoutMs: z.number().int().positive() });
+export const shellRunSchema = z.object({ title: z.string().exactOptional(), description: z.string().exactOptional(), command: z.string(), mode: z.enum(['sync', 'async']).exactOptional(), timeoutMs: z.number().int().positive() });
 
 // A call's result kept in the turn until the step's calls all resolve; `run` is an approved shell call the next step
 // runs before it appends the results.
@@ -123,6 +123,22 @@ export const questionDocSchema = z.object({
 // Background work a session started with `--async` (ADR 0009, 88): a job id, or a child session id.
 export const backgroundDocSchema = z.object({ sessionId: z.string(), ref: z.string(), kind: z.enum(['connector', 'subagent']), call: z.string(), startedAt: z.string() });
 
+// A background process a session started with `mode: 'async'` (ADR 0009, 150). It lives in the global store, since the
+// handlers for kvman stopping and starting run in Home. It is running until `end` is set; `reported` says whether the
+// session has been told how it ended.
+export const processDocSchema = z.object({
+  workspaceId: z.string(),
+  sessionId: z.string(),
+  title: z.string(),
+  call: z.string(),
+  startedAt: z.string(),
+  endedAt: z.string().exactOptional(),
+  end: z.enum(['exited', 'agent', 'person', 'interrupted']).exactOptional(),
+  exitCode: z.number().int().nullable().exactOptional(),
+  signal: z.string().nullable().exactOptional(),
+  reported: z.boolean(),
+});
+
 export type SessionDoc = z.output<typeof sessionDocSchema>;
 export type MessageDoc = z.output<typeof messageDocSchema>;
 export type QueuedDoc = z.output<typeof queuedDocSchema>;
@@ -131,6 +147,7 @@ export type Pending = z.output<typeof pendingSchema>;
 export type HeldResult = z.output<typeof heldResultSchema>;
 export type QuestionDoc = z.output<typeof questionDocSchema>;
 export type BackgroundDoc = z.output<typeof backgroundDocSchema>;
+export type ProcessDoc = z.output<typeof processDocSchema>;
 export type Usage = z.output<typeof usageSchema>;
 export type Outcome = z.output<typeof outcomeSchema>;
 export type Source = z.output<typeof sourceSchema>;

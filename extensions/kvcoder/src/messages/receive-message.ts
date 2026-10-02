@@ -1,5 +1,6 @@
 import type { Ctx, Stored } from '@kvman/sdk';
 import { dismissedText } from '../calls/ask.ts';
+import { reportInterrupted } from '../jobs/process-report.ts';
 import { invalid } from '../problems.ts';
 import type { SessionDoc, Source } from '../schemas/records.ts';
 import { now } from '../sessions/session-lookup.ts';
@@ -28,6 +29,7 @@ export async function checkedFiles(ctx: Ctx, session: Stored<SessionDoc>, fileId
 export type Incoming = { text: string; fileIds: readonly string[]; source: Source; mayStart: boolean };
 
 export async function receiveMessage(ctx: Ctx, session: Stored<SessionDoc>, incoming: Incoming): Promise<void> {
+  await reportInterrupted(ctx, session.id);
   const fileNames = await checkedFiles(ctx, session, incoming.fileIds);
   const files = incoming.fileIds.length === 0 ? { fileIds: null, fileNames: null } : { fileIds: [...incoming.fileIds], fileNames };
   const next = await ctx.store.transaction((tx) => {

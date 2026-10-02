@@ -4,10 +4,11 @@ import { computed, onMounted, ref } from 'vue';
 import type { Session } from '../../src/index.ts';
 import { titleText, toastProblem, totals, useKvman } from './kvman.ts';
 import { modelGroups, type ModelGroup } from './model-groups.ts';
+import JobsChip from './JobsChip.vue';
 import ModelPicker from './ModelPicker.vue';
 
 // The conversation's header (plan 08 §8.7, ADR 0009, 104): the title, the session's totals, the model and thinking
-// pickers, the Chat and Prompt tabs, and the chat's menu.
+// pickers, the Running chip (ADR 0009, 153), the Chat and Prompt tabs, and the chat's menu.
 const props = defineProps<{ session: Session; tab: 'chat' | 'prompt'; turns: number }>();
 const emit = defineEmits<{ tab: [tab: 'chat' | 'prompt']; changed: [] }>();
 const kvman = useKvman();
@@ -66,6 +67,7 @@ const remove = () => run(async () => {
       <strong v-else data-test="session-title">{{ titleText(kvman.t, props.session.title) }}</strong>
       <span class="kvc-muted" data-test="session-totals">{{ summary }}</span>
     </div>
+    <JobsChip :session-id="props.session.id" :stamp="props.session.updatedAt" />
     <ModelPicker :groups="groups" :current="props.session.model ?? null" @pick="(model) => configure({ model })" />
     <select :value="props.session.thinking" class="kvc-button" :aria-label="kvman.t('kvcoder.ui.thinking')" data-test="thinking-picker" @change="onThinking">
       <option v-for="level in thinkingLevels" :key="level" :value="level">{{ kvman.t(`kvcoder.ui.thinkingLevels.${level}`) }}</option>

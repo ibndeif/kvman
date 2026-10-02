@@ -26,7 +26,7 @@ async function beginStep(ctx: Ctx, sessionId: string, turnId: string, maxSteps: 
   const found = await currentTurn(ctx, sessionId, turnId);
   if (found === undefined || found.session.status !== 'running') return undefined;
   const { turn } = found;
-  const held = turn.calls.length === 0 ? [] : await Promise.all(turn.results.map(async (result) => runApproved(ctx, { shell: await shellFor(ctx) }, result)));
+  const held = turn.calls.length === 0 ? [] : await Promise.all(turn.results.map(async (result) => runApproved(ctx, { shell: await shellFor(ctx) }, sessionId, result)));
   const steps = await ctx.store.transaction((tx) => {
     const store = txRecords(tx);
     const live = liveTurn(store, sessionId, turnId);

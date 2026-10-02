@@ -15,7 +15,7 @@ const questions = computed(() => props.pending.filter((item) => item.kind === 'q
 const approvals = computed<Approval[]>(() =>
   props.pending.filter((item) => item.kind === 'approval' && open(item)).map((item) => {
     const question = fields(item.question);
-    return { questionId: String(item.questionId), title: String(question['title'] ?? ''), command: String(question['command'] ?? ''), description: String(question['description'] ?? '') };
+    return { questionId: String(item.questionId), title: String(question['title'] ?? ''), command: String(question['command'] ?? ''), description: String(question['description'] ?? ''), mode: question['mode'] === 'async' ? 'async' : 'sync' };
   }),
 );
 </script>

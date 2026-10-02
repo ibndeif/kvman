@@ -4,8 +4,8 @@ import { useKvman } from './kvman.ts';
 import type { Decision } from './use-answers.ts';
 
 // One reply's approvals share a card (ADR 0009, 104): Allow or Deny each command, or Allow all. Each shows the call's
-// title and description, and the command under them (ADR 143). The card only says what was decided (ADR 141).
-export type Approval = { questionId: string; title: string; command: string; description: string };
+// title and description, and the command under them (ADR 143); an async command says it runs in the background (ADR 149). The card only says what was decided (ADR 141).
+export type Approval = { questionId: string; title: string; command: string; description: string; mode?: 'sync' | 'async' };
 const props = defineProps<{ approvals: Approval[] }>();
 const emit = defineEmits<{ decide: [decision: Decision] }>();
 const kvman = useKvman();
@@ -20,6 +20,7 @@ const decide = (approvals: readonly Approval[], confirmed: boolean): void => emi
         <span v-if="item.title" style="font-weight: 600" data-test="call-title">{{ item.title }}</span>
         <span class="kvc-muted" data-test="call-description">{{ item.description }}</span>
         <span class="kvc-mono" :class="{ 'kvc-muted': item.title }" data-test="call-command">{{ item.command }}</span>
+        <span v-if="item.mode === 'async'" class="kvc-chip" style="align-self: flex-start" data-test="call-background">{{ kvman.t('kvcoder.ui.jobs.inBackground') }}</span>
       </span>
       <button type="button" class="kvc-button" data-test="deny" @click="decide([item], false)">{{ kvman.t('kvcoder.ui.deny') }}</button>
       <button type="button" class="kvc-button kvc-primary" data-test="allow" @click="decide([item], true)">{{ kvman.t('kvcoder.ui.allow') }}</button>

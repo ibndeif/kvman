@@ -15,6 +15,7 @@ type Connector =
 type ConnectorRow = { name: string; description: string; owner: string; kind: 'commands' | 'binary'; commands?: { name: string; command: string; examples: Example[] }[]; binary?: Binary };
 type Point = 'kvcoder.session.created' | 'kvcoder.session.deleted' | 'kvcoder.session.forked' | 'kvcoder.turn.started' | 'kvcoder.turn.ended' | 'kvcoder.session.waiting';
 type Place = { global?: boolean; sessionId?: string };
+type JobRow = { id: string; kind: 'process' | 'connector' | 'subagent'; title: string; call: string; status: string; startedAt: string; endedAt?: string; exitCode?: number; links: string[] };
 type Send = { sessionId: string; text: string; fileIds?: string[] };
 
 declare module '@kvman/sdk' {
@@ -30,6 +31,7 @@ declare module '@kvman/sdk' {
     'kvcoder.message.inject': { input: Send; output: Empty };
     'kvcoder.note.add': { input: { sessionId: string; key: string; params?: Record<string, Json> }; output: Empty };
     'kvcoder.turn.cancel': { input: SessionId; output: Empty };
+    'kvcoder.job.cancel': { input: { sessionId: string; id: string }; output: Empty };
     'kvcoder.question.answer': { input: { questionId: string; answer: Json }; output: { jobId: string | null } };
     'kvcoder.connector.register': { input: Connector; output: Empty };
     'kvcoder.connector.unregister': { input: { name: string }; output: Empty };
@@ -43,6 +45,8 @@ declare module '@kvman/sdk' {
     'kvcoder.session.get': { input: SessionId; output: Session };
     'kvcoder.session.count': { input: { status?: Status }; output: { count: number } };
     'kvcoder.message.list': { input: { sessionId: string; limit: number }; output: { messages: Message[]; omitted: number } };
+    'kvcoder.job.list': { input: SessionId; output: JobRow[] };
+    'kvcoder.job.get': { input: { sessionId: string; id: string }; output: JobRow & { output?: Json; problem?: Json } };
     'kvcoder.turn.list': { input: { sessionId: string; limit: number }; output: Turn[] };
     'kvcoder.prompt.get': { input: SessionId; output: { prompt: string; sections: { id: string; title: string; owner: string; reach: 'global' | 'workspace' | 'session'; size: number; included: boolean }[] } };
     'kvcoder.connector.list': { input: Empty; output: ConnectorRow[] };

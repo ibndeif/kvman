@@ -1,9 +1,9 @@
 import type { Store, Transaction } from '@kvman/sdk';
-import { backgroundDocSchema, messageDocSchema, questionDocSchema, queuedDocSchema, sessionDocSchema, turnDocSchema } from '../schemas/records.ts';
+import { backgroundDocSchema, messageDocSchema, processDocSchema, questionDocSchema, queuedDocSchema, sessionDocSchema, turnDocSchema } from '../schemas/records.ts';
 import { connectorDocSchema, handlerDocSchema, handlerJobDocSchema, sectionDocSchema } from '../schemas/registry.ts';
 
 // kvcoder's collections (plan 08 §8.4 "Where entries live"): sessions and their records, and workspace sections, in
-// the workspace store; connectors, session handlers, handler-job ids, and global sections in the global store.
+// the workspace store; connectors, session handlers, handler-job ids, global sections, and background processes in the global store.
 
 /** The collections through the store's Promise calls. */
 export function records(store: Store) {
@@ -16,6 +16,7 @@ export function records(store: Store) {
     background: store.collection('background', backgroundDocSchema),
     sections: store.collection('sections', sectionDocSchema),
     globalSections: store.global.collection('sections', sectionDocSchema),
+    processes: store.global.collection('processes', processDocSchema),
     connectors: store.global.collection('connectors', connectorDocSchema),
     handlers: store.global.collection('handlers', handlerDocSchema),
     handlerJobs: store.global.collection('handler-jobs', handlerJobDocSchema),
@@ -33,6 +34,7 @@ export function txRecords(tx: Transaction) {
     background: tx.collection('background', backgroundDocSchema),
     sections: tx.collection('sections', sectionDocSchema),
     globalSections: tx.global.collection('sections', sectionDocSchema),
+    processes: tx.global.collection('processes', processDocSchema),
     connectors: tx.global.collection('connectors', connectorDocSchema),
     handlers: tx.global.collection('handlers', handlerDocSchema),
     handlerJobs: tx.global.collection('handler-jobs', handlerJobDocSchema),

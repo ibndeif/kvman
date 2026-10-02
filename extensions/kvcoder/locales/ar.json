@@ -147,5 +147,21 @@
   "kvcoder.connectors.description": "موصلات ثنائية إضافية: برامج يشغّلها الوكيل في الصدفة الحقيقية.",
   "kvcoder.sessions.keep.title": "المحادثات المحفوظة",
   "kvcoder.sessions.keep.description": "عدد المحادثات المحفوظة لكل مساحة عمل؛ الصفر يحفظ كل المحادثات.",
-  "kvcoder.welcome.description": "مفتاح ترجمة ملاحظة الترحيب لمساحة العمل الجديدة؛ القيمة الفارغة بلا ترحيب."
+  "kvcoder.welcome.description": "مفتاح ترجمة ملاحظة الترحيب لمساحة العمل الجديدة؛ القيمة الفارغة بلا ترحيب.",
+  "kvcoder.job.list.description": "أحدث ٥٠ مهمة خلفية في المحادثة (عمليات، واستدعاءات موصلات بـ --async، ووكلاء فرعيون)، والجارية منها أولًا.",
+  "kvcoder.job.get.description": "مهمة خلفية واحدة في المحادثة مع مخرجاتها: آخر ١٠٠ سطر من عملية، أو مخرجات استدعاء موصل، أو نتيجة وكيل فرعي.",
+  "kvcoder.job.cancel.description": "يوقف عملية خلفية جارية، أو يلغي استدعاء موصل أو وكيلًا فرعيًا بدأته المحادثة بـ --async.",
+  "kvcoder.ui.jobs.title": "المهام الخلفية",
+  "kvcoder.ui.jobs.running": "{count} قيد التشغيل",
+  "kvcoder.ui.jobs.minutes": "{minutes} د {seconds} ث",
+  "kvcoder.ui.jobs.logs": "السجل",
+  "kvcoder.ui.jobs.stop": "إيقاف",
+  "kvcoder.ui.jobs.noOutput": "لا مخرجات بعد.",
+  "kvcoder.ui.jobs.status.running": "قيد التشغيل",
+  "kvcoder.ui.jobs.status.succeeded": "تمت",
+  "kvcoder.ui.jobs.status.failed": "فشلت",
+  "kvcoder.ui.jobs.status.cancelled": "أُوقفت",
+  "kvcoder.ui.jobs.status.interrupted": "انقطعت",
+  "kvcoder.ui.jobs.inBackground": "تعمل في الخلفية",
+  "kvcoder.ui.jobs.background": "خلفية"
 }

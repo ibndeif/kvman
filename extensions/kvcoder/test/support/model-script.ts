@@ -5,8 +5,11 @@ import type { FakeOpenAI, FakeReply } from '@kvman/testkit/fake-openai';
 
 let counter = 0;
 
+/** A shell call: its command, or the command with the tool's other fields. */
+export type ShellCallSpec = string | { command: string; mode?: 'sync' | 'async'; timeoutMs?: number };
+
 /** A reply that calls the shell tool once per command, in order. */
-export function calls(...commands: readonly (string | { command: string; timeoutMs?: number })[]): FakeReply {
+export function calls(...commands: readonly ShellCallSpec[]): FakeReply {
   return {
     chunks: commands.map((entry) => {
       const call = typeof entry === 'string' ? { command: entry } : entry;

@@ -38,6 +38,8 @@ ${gateCode}
     handle: async (input) => { await ctx.exec('kvcoder.message.inject', input); return {}; } });
   ctx.registerCommand('todo.react', { description: 'Injects a message from a session handler.', input: z.object({ sessionId: z.string() }), output: z.object({}), public: true,
     handle: async ({ sessionId }) => { await ctx.exec('kvcoder.message.inject', { sessionId, text: 'from a handler' }); return {}; } });
+  ctx.registerCommand('todo.process.start', { description: 'Starts a process that prints and exits by itself.', input: z.object({ name: z.string() }), output: z.object({}), public: true,
+    handle: async ({ name }) => { await ctx.processes.start(name, { command: 'sh', args: ['-c', 'echo other; exit 4'] }); return {}; } });
   ctx.registerHandler('kernel.started', {
     description: 'Registers the todo connector with kvcoder.',
     handle: async () => {

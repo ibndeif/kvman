@@ -45,7 +45,7 @@ const markdown = (body: string) => ({ type: 'markdown' as const, text: 'kvcoder.
     <details v-if="thinking !== ''" data-test="thinking"><summary class="kvc-muted">{{ kvman.t('kvcoder.ui.thought') }}</summary><p class="kvc-muted" style="white-space: pre-wrap">{{ thinking }}</p></details>
     <component :is="kvman.View" v-if="text !== ''" :view="markdown(text)" />
   </div>
-  <ShellResult v-else-if="props.message.kind === 'toolResult'" :command="card.command" :title="card.title" :description="card.description" :exit-code="card.exitCode" :duration-ms="card.durationMs" :output="card.output" />
+  <ShellResult v-else-if="props.message.kind === 'toolResult'" :command="card.command" :title="card.title" :description="card.description" :exit-code="card.exitCode" :duration-ms="card.durationMs" :output="card.output" :background="card.background" />
   <div v-else-if="props.message.kind === 'notice'" class="kvc-notice" data-test="notice">{{ notice }}</div>
   <div v-else-if="props.message.kind === 'note'" class="kvc-card kvc-card-row" role="note" data-test="note"><NotebookText :size="18" aria-hidden="true" />{{ note }}</div>
   <details v-else-if="props.message.kind === 'summary'" class="kvc-card" data-test="summary">

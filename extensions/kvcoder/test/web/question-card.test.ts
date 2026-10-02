@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import ApprovalsCard from '../../web/src/ApprovalsCard.vue';
+import PendingCards from '../../web/src/PendingCards.vue';
 import QuestionCard from '../../web/src/QuestionCard.vue';
+import ShellResult from '../../web/src/ShellResult.vue';
 import { createFakeKvman } from './support/fake-kvman.ts';
 import { mounted } from './support/fixtures.ts';
 
@@ -47,5 +49,18 @@ describe('question cards (08 §8.5, ADR 0009, 104, 141, 143)', () => {
     expect(row.find('[data-test="call-title"]').text()).toBe('Install the packages');
     expect(row.find('[data-test="call-description"]').text()).toBe('Installs what package.json lists.');
     expect(row.find('[data-test="call-command"]').text()).toBe('npm ci');
+  });
+
+  it('QA3-H19 an async approval says it runs in the background, and a sync one does not', async () => {
+    const pending = (mode: string) => [{ toolCallId: 'c1', kind: 'approval' as const, questionId: `a-${mode}`, question: { title: 'Start the server', command: 'python3 -m http.server 8000', description: 'Serves the app.', mode, timeoutMs: 120_000 }, childSessionId: null }];
+    const asyncCard = await mounted(PendingCards, createFakeKvman(), { pending: pending('async') });
+    expect(asyncCard.find('[data-test="call-background"]').text()).toBe('Runs in the background');
+    const syncCard = await mounted(PendingCards, createFakeKvman(), { pending: pending('sync') });
+    expect(syncCard.find('[data-test="call-background"]').exists()).toBe(false);
+  });
+
+  it("QA3-H19 the result card of an async call is marked 'Background'", async () => {
+    const card = await mounted(ShellResult, createFakeKvman(), { command: 'npm run dev', output: 'started j1', exitCode: 0, background: true });
+    expect(card.find('[data-test="call-background"]').text()).toBe('Background');
   });
 });

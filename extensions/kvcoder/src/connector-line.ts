@@ -243,12 +243,12 @@ export const builtinHelp: Readonly<Record<(typeof builtinConnectors)[number], st
     'parallel. Add --async to go on at once; the answer arrives later as a message.',
   ].join('\n'),
   jobs: [
-    'jobs: The background work this chat started with --async.',
+    'jobs: The background work this chat started with --async, or with bash mode "async" (a server or other long-running command).',
     '',
     'Commands:',
     '  list         the newest 50, newest first',
-    "  get <id>     one job's status, and its output or problem",
-    '  cancel <id>  cancels one',
+    "  get <id>     one job's status, and its output (a process's last 100 lines) or problem",
+    '  cancel <id>  cancels one; a process is stopped',
   ].join('\n'),
 };
 

@@ -147,5 +147,21 @@
   "kvcoder.connectors.description": "Binary connectors to add: programs the agent runs in the real shell.",
   "kvcoder.sessions.keep.title": "Chats to keep",
   "kvcoder.sessions.keep.description": "How many top-level sessions to keep per workspace; 0 keeps every session.",
-  "kvcoder.welcome.description": "The translation key of a new workspace's welcome note; null for no welcome."
+  "kvcoder.welcome.description": "The translation key of a new workspace's welcome note; null for no welcome.",
+  "kvcoder.job.list.description": "A chat's newest 50 background jobs (processes, --async connector calls, and subagents), running ones first.",
+  "kvcoder.job.get.description": "One background job of a chat with its output: a process's last 100 lines, a connector call's output, or a subagent's result.",
+  "kvcoder.job.cancel.description": "Stops a running background process, or cancels a connector call or subagent a chat started with --async.",
+  "kvcoder.ui.jobs.title": "Background jobs",
+  "kvcoder.ui.jobs.running": "{count} running",
+  "kvcoder.ui.jobs.minutes": "{minutes} min {seconds} s",
+  "kvcoder.ui.jobs.logs": "Logs",
+  "kvcoder.ui.jobs.stop": "Stop",
+  "kvcoder.ui.jobs.noOutput": "No output yet.",
+  "kvcoder.ui.jobs.status.running": "Running",
+  "kvcoder.ui.jobs.status.succeeded": "Done",
+  "kvcoder.ui.jobs.status.failed": "Failed",
+  "kvcoder.ui.jobs.status.cancelled": "Stopped",
+  "kvcoder.ui.jobs.status.interrupted": "Interrupted",
+  "kvcoder.ui.jobs.inBackground": "Runs in the background",
+  "kvcoder.ui.jobs.background": "Background"
 }

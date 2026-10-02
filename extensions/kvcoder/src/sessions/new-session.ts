@@ -1,4 +1,5 @@
 import { z, type Ctx, type Stored } from '@kvman/sdk';
+import { dropProcesses } from '../jobs/process-run.ts';
 import { firePoint } from '../registry/session-points.ts';
 import { settingSchemas } from '../register-settings.ts';
 import type { SessionDoc, Title } from '../schemas/records.ts';
@@ -39,6 +40,7 @@ export async function newSession(ctx: Ctx, title: Title | undefined): Promise<St
 /** Deletes a session's records, and its subagent sessions' (plan 08 §8.1). */
 export async function deleteSessionTree(ctx: Ctx, sessionId: string): Promise<void> {
   const store = records(ctx.store);
+  await dropProcesses(ctx, sessionId);
   for (const child of await store.sessions.find({ parentId: sessionId }, { limit: 1000 })) await deleteSessionTree(ctx, child.id);
   for (const collection of [store.messages, store.queued, store.turns, store.questions, store.background, store.sections]) {
     for (let found = await collection.find({ sessionId }, { limit: 1000 }); found.length > 0; found = await collection.find({ sessionId }, { limit: 1000 })) {

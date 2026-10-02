@@ -1,6 +1,6 @@
 /* kvcoder's components (plan 06 §6.4): styled with kvwebui's theme variables and logical properties only. */
 .kvc-conversation { display: flex; flex-direction: column; flex: 1 1 0; align-self: stretch; min-inline-size: min(100%, 30rem); min-block-size: 24rem; background: var(--kv-color-surface); color: var(--kv-color-text); }
-.kvc-header { display: flex; align-items: center; gap: var(--kv-space-sm); padding-block: 12px; padding-inline: var(--kv-space-lg); border-block-end: 1px solid var(--kv-color-border); flex-wrap: wrap; }
+.kvc-header { display: flex; align-items: center; gap: var(--kv-space-sm); padding-block: 12px; padding-inline: var(--kv-space-lg); border-block-end: 1px solid var(--kv-color-border); flex-wrap: wrap; position: relative; }
 .kvc-title { display: flex; flex-direction: column; flex: 1 1 auto; min-inline-size: 0; }
 .kvc-title strong { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .kvc-muted { color: var(--kv-color-muted); font-size: 12.5px; }
@@ -65,3 +65,12 @@
 .kvc-model-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .kvc-none, .kvc-count { margin: 0; padding-inline: 10px; }
 @keyframes kvc-spin { to { transform: rotate(360deg); } }
+.kvc-dot { inline-size: 8px; block-size: 8px; border-radius: 50%; background: var(--kv-color-success); flex: 0 0 auto; }
+.kvc-jobs-panel { inset-inline-start: auto; inset-inline-end: 0; inline-size: min(32rem, 100%); max-block-size: 70vh; overflow-y: auto; }
+.kvc-job { display: flex; flex-direction: column; gap: 6px; padding: 8px; border-radius: 8px; border: 1px solid var(--kv-color-border); }
+.kvc-job-head { display: flex; align-items: center; gap: 8px; justify-content: space-between; min-inline-size: 0; }
+.kvc-job-title { font-weight: 600; flex: 1 1 auto; min-inline-size: 0; }
+.kvc-job-head > .kvc-muted, .kvc-job-head > .kvc-chip { flex: 0 0 auto; white-space: nowrap; }
+.kvc-job-links { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.kvc-job-links .kvc-link { color: var(--kv-color-primary); text-decoration: underline; text-underline-offset: 2px; }
+.kvc-job .kvc-output { border-radius: 8px; }

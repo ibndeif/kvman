@@ -2,7 +2,7 @@ import type { Ctx, Stored } from '@kvman/sdk';
 import { builtinConnectors, callInput, errorOutput, parseLine, refusedText, resultText, runCommandsCall, type CallResult } from '../connector-line.ts';
 import { askCall, type QuestionKind } from '../calls/ask.ts';
 import { jobsCall } from '../calls/jobs.ts';
-import { runShell, shellDetails, shellResultText } from '../calls/run-shell.ts';
+import { runShellCall } from '../calls/run-shell-call.ts';
 import { callTimeout } from '../calls/shell-command.ts';
 import { shellArgsSchema } from '../calls/shell-tool.ts';
 import { createChild, startChild, subagentCall } from '../calls/subagent.ts';
@@ -30,9 +30,9 @@ const result = (toolCallId: string, call: CallResult, details: JsonValue = null)
   held: { toolCallId, text: resultText(call.output, call.exitCode), details, isError: call.exitCode !== 0, run: null },
 });
 
-async function shellOutcome(env: CallEnv, call: ToolCall, labelled: { title: string; description: string; command: string }, timeoutMs: number): Promise<CallOutcome> {
-  const run = await runShell(env.tools.shell, labelled.command, env.ctx.job.workspace.path, timeoutMs, env.ctx.job.signal);
-  return { kind: 'result', held: { toolCallId: call.id, text: shellResultText(run, timeoutMs), details: shellDetails(labelled, run), isError: run.exitCode !== 0, run: null } };
+async function shellOutcome(env: CallEnv, call: ToolCall, shell: { title: string; description: string; command: string; mode?: 'sync' | 'async' | undefined }, timeoutMs: number): Promise<CallOutcome> {
+  const run = await runShellCall(env.ctx, env.session.id, env.tools.shell, { ...shell, timeoutMs });
+  return { kind: 'result', held: { toolCallId: call.id, ...run, run: null } };
 }
 
 async function connectorOutcome(env: CallEnv, call: ToolCall, line: string, parsed: { connector: string; words: string[]; stdin: string | null; async: boolean }): Promise<CallOutcome> {
@@ -84,13 +84,12 @@ export async function evaluateCall(env: CallEnv, call: ToolCall): Promise<CallOu
   if (parsed.kind === 'call') return connectorOutcome(env, call, line, parsed);
   if (!env.session.shell) return result(call.id, errorOutput({ code: 'VALIDATION_FAILED', message: 'shell calls are off for this subagent' }));
   const timeoutMs = callTimeout(args.data.timeoutMs);
-  if (env.approval === 'ask') return { kind: 'question', questionKind: 'approval', question: { title: args.data.title, command: line, description: args.data.description, timeoutMs } };
+  if (env.approval === 'ask') return { kind: 'question', questionKind: 'approval', question: { title: args.data.title, command: line, description: args.data.description, mode: args.data.mode ?? 'sync', timeoutMs } };
   return shellOutcome(env, call, args.data, timeoutMs);
 }
 
 /** Runs an approved shell call held in the turn. */
-export async function runApproved(ctx: Ctx, tools: Pick<SessionTools, 'shell'>, held: HeldResult): Promise<HeldResult> {
+export async function runApproved(ctx: Ctx, tools: Pick<SessionTools, 'shell'>, sessionId: string, held: HeldResult): Promise<HeldResult> {
   if (held.run === null) return held;
-  const run = await runShell(tools.shell, held.run.command, ctx.job.workspace.path, held.run.timeoutMs, ctx.job.signal);
-  return { toolCallId: held.toolCallId, text: shellResultText(run, held.run.timeoutMs), details: shellDetails(held.run, run), isError: run.exitCode !== 0, run: null };
+  return { toolCallId: held.toolCallId, ...(await runShellCall(ctx, sessionId, tools.shell, held.run)), run: null };
 }

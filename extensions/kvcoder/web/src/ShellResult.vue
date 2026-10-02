@@ -6,7 +6,7 @@ import { outputParts } from './output-links.ts';
 
 // The shell-result card (plan 08 §8.7, ADR 0009, 143): the call's title and description (the command when it has none),
 // its exit code and time, and its output, folded until opened.
-const props = defineProps<{ command: string; title?: string | undefined; description?: string | undefined; exitCode?: number | undefined; durationMs?: number | undefined; output?: string | undefined; running?: boolean | undefined }>();
+const props = defineProps<{ command: string; title?: string | undefined; description?: string | undefined; exitCode?: number | undefined; durationMs?: number | undefined; output?: string | undefined; running?: boolean | undefined; background?: boolean | undefined }>();
 const kvman = useKvman();
 const open = ref(false);
 const parts = computed(() => outputParts(props.output ?? ''));
@@ -24,6 +24,7 @@ const seconds = computed(() => (props.durationMs === undefined ? '' : kvman.t('k
         <span class="kvc-mono kvc-muted kvc-oneline" data-test="call-command">{{ props.command }}</span>
       </span>
       <span v-else class="kvc-mono" style="flex: 1 1 auto; text-align: start" data-test="call-command">{{ props.command }}</span>
+      <span v-if="props.background" class="kvc-chip" data-test="call-background">{{ kvman.t('kvcoder.ui.jobs.background') }}</span>
       <span class="kvc-muted">{{ seconds }}</span>
       <span v-if="props.exitCode !== undefined" class="kvc-chip" :class="props.exitCode === 0 ? 'kvc-ok' : 'kvc-warn'" data-test="exit-code">{{ kvman.t('kvcoder.ui.exitCode', { code: props.exitCode }) }}</span>
     </button>

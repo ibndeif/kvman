@@ -31,7 +31,7 @@ describe("the shell tool's title and description (08 §8.2, ADR 0009, 143)", { t
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     const { turn } = await turnState(kernel, sessionId);
-    expect(turn?.pending[0]?.question).toEqual({ title: 'Make a file', command: 'echo hi', description: 'Creates made.txt so the person can see it.', timeoutMs: 120_000 });
+    expect(turn?.pending[0]?.question).toEqual({ title: 'Make a file', command: 'echo hi', description: 'Creates made.txt so the person can see it.', mode: 'sync', timeoutMs: 120_000 });
     await kernel.exec('kvcoder.question.answer', { questionId: String(turn?.pending[0]?.questionId), answer: { confirmed: true } });
     await kernel.clock.advance(0);
     const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });
@@ -55,5 +55,22 @@ describe("the shell tool's title and description (08 §8.2, ADR 0009, 143)", { t
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     expect(toolResults(fake)).toEqual([expect.stringMatching(/^error VALIDATION_FAILED: The call's arguments are invalid: title: .*\n\[exit code 1\]$/) as unknown]);
+  });
+
+  it('QA3-H19 an async call asks with mode async, and allowing it starts a background job', async () => {
+    if (process.platform === 'win32') throw new Error('These calls are bash; Windows runs PowerShell.');
+    const { kernel, fake } = await kvcoder.start({ settings: { 'kvcoder.shell.approval': 'ask' } });
+    const sessionId = await newSession(kernel);
+    fake.reply({ chunks: [{ toolCall: { ...labelled, arguments: { ...labelled.arguments, command: 'sleep 30', mode: 'async' } } }] }, says('ok'));
+    await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
+    await kernel.clock.advance(0);
+    const { turn } = await turnState(kernel, sessionId);
+    expect(turn?.pending[0]?.question).toMatchObject({ command: 'sleep 30', mode: 'async' });
+    await kernel.exec('kvcoder.question.answer', { questionId: String(turn?.pending[0]?.questionId), answer: { confirmed: true } });
+    await kernel.clock.advance(0);
+    const [job] = await kernel.exec('kvcoder.job.list', { sessionId });
+    expect(job).toMatchObject({ kind: 'process', title: 'Make a file', status: 'running' });
+    const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });
+    expect(messages.find((message) => message.kind === 'toolResult')?.content['details']).toMatchObject({ mode: 'async', jobId: job?.id, exitCode: 0 });
   });
 });
