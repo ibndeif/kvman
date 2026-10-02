@@ -1,5 +1,6 @@
 import { z, type Ctx, type Stored } from '@kvman/sdk';
 import { builtinHelp, callInput, errorOutput, type CallResult } from '../connector-line.ts';
+import { invalidInput } from './invalid-input.ts';
 import { firePoint } from '../registry/session-points.ts';
 import type { SessionDoc } from '../schemas/records.ts';
 import { now } from '../sessions/session-lookup.ts';
@@ -23,7 +24,7 @@ export function subagentCall(words: readonly string[], stdin: string | null, all
   if ('output' in call) return call;
   if (call.command !== 'run') return errorOutput({ code: 'NOT_FOUND', message: `subagent has no command ${call.command}; run \`subagent -h\`.` });
   const parsed = runSchema.safeParse(call.input);
-  if (!parsed.success) return errorOutput({ code: 'VALIDATION_FAILED', message: parsed.error.issues.map((issue) => `${issue.path.join('.') || 'input'}: ${issue.message}`).join('; ') });
+  if (!parsed.success) return invalidInput('subagent', 'run', parsed.error.issues);
   const refused = (parsed.data.connectors ?? []).find((name) => name === 'subagent' || !allowed.has(name));
   if (refused !== undefined) return errorOutput({ code: 'VALIDATION_FAILED', message: `A subagent can't have the connector ${refused}.` });
   return parsed.data;

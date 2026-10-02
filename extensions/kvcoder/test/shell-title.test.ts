@@ -8,13 +8,13 @@ import { newSession, turnState } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
 
-const wireToolSchema = z.object({ function: z.object({ name: z.string(), parameters: z.object({ properties: z.record(z.string(), z.unknown()), required: z.array(z.string()) }) }) });
+const wireToolSchema = z.object({ function: z.object({ name: z.string(), parameters: z.object({ properties: z.record(z.string(), z.looseObject({ description: z.string().optional() })), required: z.array(z.string()) }) }) });
 const requestSchema = z.object({ tools: z.array(wireToolSchema) });
 
 const labelled = { id: 'c1', name: 'bash', arguments: { title: 'Make a file', description: 'Creates made.txt so the person can see it.', command: 'echo hi', risky: false } };
 
 describe("the shell tool's title and description (08 §8.2, ADR 0009, 143)", { timeout: 30_000 }, () => {
-  it('QA3-H6 and QA4-H8 the tool lists title, description, command, and risky in that order, with risky before mode, all four required', async () => {
+  it('QA3-H6, QA4-H8, and QA11-H2 the tool lists title, description, command, and risky in that order, with risky before mode, and only command required', async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
     fake.reply(says('ok'));
@@ -23,7 +23,9 @@ describe("the shell tool's title and description (08 §8.2, ADR 0009, 143)", { t
     const [tool] = requestSchema.parse(fake.requests()[0]?.body).tools;
     expect(tool?.function.name).toBe('bash');
     expect(Object.keys(tool?.function.parameters.properties ?? {})).toEqual(['title', 'description', 'command', 'risky', 'mode', 'timeoutMs']);
-    expect(tool?.function.parameters.required).toEqual(['title', 'description', 'command', 'risky']);
+    expect(tool?.function.parameters.required).toEqual(['command']);
+    for (const name of ['title', 'description']) expect(tool?.function.parameters.properties[name]?.description, name).toMatch(/^Optional\./);
+    expect(tool?.function.parameters.properties['risky']?.description).toContain('Left out, it counts as true.');
   });
 
   it('QA3-H6 an approval asks with the title, and the result keeps the title and description', async () => {
@@ -74,24 +76,27 @@ describe("the shell tool's title and description (08 §8.2, ADR 0009, 143)", { t
     expect(turn?.pending[0]?.question).toMatchObject({ title: 'Lists the files here.', command: 'ls' });
   });
 
-  it('QA7-E1 a call with neither a title nor a description fails naming both, and nothing runs', async () => {
+  it('QA11-H1 a call with only a command runs, and its result holds no title or description', async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    fake.reply({ chunks: [{ toolCall: { id: 'c1', name: 'bash', arguments: { command: 'touch never.txt', risky: false } } }] }, says('ok'));
+    fake.reply({ chunks: [{ toolCall: { id: 'c1', name: 'bash', arguments: { command: 'touch bare.txt', risky: false } } }] }, says('ok'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
-    expect(toolResults(fake)).toEqual([expect.stringMatching(/^error VALIDATION_FAILED: The call's arguments are invalid: title: .*\(it must be two to six words.*; description: .*\(it must be one sentence.*Call bash again with every argument it needs: title, description, command, and risky\.\n\[exit code 1\]$/) as unknown]);
-    expect(existsSync(path.join(kernel.homeFolder, 'never.txt'))).toBe(false);
+    expect(existsSync(path.join(kernel.homeFolder, 'bare.txt'))).toBe(true);
+    const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 20 });
+    const details = messages.find((message) => message.kind === 'toolResult')?.content['details'];
+    expect(details).toMatchObject({ command: 'touch bare.txt' });
+    expect(details).not.toHaveProperty('title');
+    expect(details).not.toHaveProperty('description');
   });
 
-  it('QA4-H8, QA7-E2, and QA7-H6 a call without risky is invalid, never defaulted, says what risky must be, and nothing runs', async () => {
+  it('QA11-E1 a call without a command fails naming it, asks for the call again, and nothing runs', async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    fake.reply({ chunks: [{ toolCall: { id: 'c1', name: 'bash', arguments: { title: 'No risk', description: 'No risky field.', command: 'touch never.txt' } } }] }, says('ok'));
+    fake.reply({ chunks: [{ toolCall: { id: 'c1', name: 'bash', arguments: { title: 'No command', description: 'Has no command.', risky: false } } }] }, says('ok'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
-    expect(toolResults(fake)).toEqual([expect.stringMatching(/^error VALIDATION_FAILED: The call's arguments are invalid: risky: .*\(it must be true or false: true when the call could lose or damage.*Call bash again with every argument it needs: title, description, command, and risky\.\n\[exit code 1\]$/) as unknown]);
-    expect(existsSync(path.join(kernel.homeFolder, 'never.txt'))).toBe(false);
+    expect(toolResults(fake)).toEqual([expect.stringMatching(/^error VALIDATION_FAILED: The call's arguments are invalid: command: .*\(it must be the command to run\)\. Call bash again with the arguments fixed\.\n\[exit code 1\]$/)]);
   });
 
   it('QA3-H19 an async call asks with mode async, and allowing it starts a background job', async () => {

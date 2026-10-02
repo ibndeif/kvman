@@ -40,10 +40,11 @@ const asks = (env: CallEnv, args: ShellArgs): boolean => env.approval === 'ask' 
 const isHelp = (words: readonly string[]): boolean => words.length === 1 && words[0] === '-h';
 
 function approval(args: ShellArgs, line: string, mode: 'sync' | 'async', timeoutMs: number): CallOutcome {
-  return { kind: 'question', questionKind: 'approval', question: { title: args.title, command: line, description: args.description, mode, timeoutMs } };
+  const words = { ...(args.title === undefined ? {} : { title: args.title }), ...(args.description === undefined ? {} : { description: args.description }) };
+  return { kind: 'question', questionKind: 'approval', question: { ...words, command: line, mode, timeoutMs } };
 }
 
-async function shellOutcome(env: CallEnv, call: ToolCall, shell: { title: string; description: string; command: string; mode?: 'sync' | 'async' | undefined }, timeoutMs: number): Promise<CallOutcome> {
+async function shellOutcome(env: CallEnv, call: ToolCall, shell: { title?: string | undefined; description?: string | undefined; command: string; mode?: 'sync' | 'async' | undefined }, timeoutMs: number): Promise<CallOutcome> {
   const run = await runShellCall(env.ctx, env.session.id, env.tools.shell, { ...shell, timeoutMs });
   return { kind: 'result', held: { toolCallId: call.id, ...run, run: null } };
 }
@@ -94,7 +95,7 @@ export async function evaluateCall(env: CallEnv, call: ToolCall): Promise<CallOu
   if (call.name !== env.tools.shell.toolName || !args.success) {
     const tool = env.tools.shell.toolName;
     const problems = args.success ? `the tool is ${tool}, not ${call.name}` : args.problems;
-    const again = args.success ? '' : ` Call ${tool} again with every argument it needs: title, description, command, and risky.`;
+    const again = args.success ? '' : ` Call ${tool} again with the arguments fixed.`;
     return result(call.id, errorOutput({ code: 'VALIDATION_FAILED', message: `The call's arguments are invalid: ${problems}.${again}` }));
   }
   const line = args.data.command;

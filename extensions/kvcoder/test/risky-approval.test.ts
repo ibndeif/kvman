@@ -98,4 +98,24 @@ describe('risky calls ask, the others run (08 §8.3, ADR 0009, 161)', { timeout:
     expect(existsSync(home(kernel, 'never.txt'))).toBe(false);
     expect((await turnState(kernel, sessionId)).turn).toMatchObject({ outcome: 'cancelled' });
   });
+
+  it('QA11-H4 and QA11-E4 under auto a call without risky waits for the person; risky false runs at once; under ask both wait', async () => {
+    const world = await kvcoder.start({ settings: { 'kvcoder.shell.approval': 'auto' } });
+    const sessionId = await newSession(world.kernel);
+    world.fake.reply({ chunks: [{ toolCall: { id: 'c1', name: 'bash', arguments: { command: 'touch unmarked.txt' } } }, { toolCall: { id: 'c2', name: 'bash', arguments: { command: 'touch marked.txt', risky: false } } }] }, says('ok'));
+    await world.kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
+    await world.kernel.clock.advance(0);
+    const { session, turn } = await turnState(world.kernel, sessionId);
+    expect(session.status).toBe('waiting');
+    expect(turn?.pending[0]?.question).toMatchObject({ command: 'touch unmarked.txt', mode: 'sync' });
+    expect(turn?.pending[0]?.question).not.toHaveProperty('title');
+    expect(existsSync(home(world.kernel, 'marked.txt'))).toBe(true);
+    expect(existsSync(home(world.kernel, 'unmarked.txt'))).toBe(false);
+    await answer(world.kernel, sessionId, 0, true);
+    expect(existsSync(home(world.kernel, 'unmarked.txt'))).toBe(true);
+
+    const asking = await started({ 'kvcoder.shell.approval': 'ask' }, { command: 'touch one.txt', risky: false }, 'touch two.txt');
+    expect((await turnState(asking.kernel, asking.sessionId)).turn?.pending.map((item) => item.kind)).toEqual(['approval', 'approval']);
+  });
 });
+

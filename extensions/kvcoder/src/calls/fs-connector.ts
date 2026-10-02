@@ -3,6 +3,7 @@ import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { ProblemError, z, type Ctx } from '@kvman/sdk';
 import { builtinHelp, callInput, errorOutput, jsonOutput, type CallResult } from '../connector-line.ts';
+import { invalidInput } from './invalid-input.ts';
 import { applyEdits } from '../files/edit-text.ts';
 import { inOrder } from '../files/file-queue.ts';
 import { lexicalPath, resolveInWorkspace } from '../files/workspace-path.ts';
@@ -87,6 +88,6 @@ export function fsCall(ctx: Ctx, words: readonly string[], stdin: string | null)
   const command = call.command;
   if (command !== 'write' && command !== 'edit') return Promise.resolve(errorOutput({ code: 'NOT_FOUND', message: `fs has no command ${command}; run \`fs -h\`.` }));
   const parsed = inputSchemas[command].safeParse(call.input);
-  if (!parsed.success) return Promise.resolve(errorOutput({ code: 'VALIDATION_FAILED', message: parsed.error.issues.map((issue) => `${issue.path.join('.') || 'input'}: ${issue.message}`).join('; ') }));
+  if (!parsed.success) return Promise.resolve(invalidInput('fs', command, parsed.error.issues));
   return inOrder(lexicalPath(ctx.job.workspace.path, parsed.data.path), () => run(ctx, command, parsed.data));
 }

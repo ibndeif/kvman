@@ -30,21 +30,35 @@ describe("a shell call's arguments (08 §8.2, ADR 0009, 186)", () => {
   });
 
   it('QA7-H6 each argument error says what the field must be', () => {
-    expect(problemsOf({ ...call, description: undefined as never })).toMatch(/^title: .*\(it must be two to six words in the imperative, for the person\); description: .*\(it must be one sentence saying what the command does and why, for the person\)$/);
     expect(problemsOf({ ...call, command: 5 })).toMatch(/^command: .*\(it must be the command to run\)$/);
     expect(problemsOf({ ...call, risky: 'no' })).toMatch(/^risky: .*\(it must be true or false: true when the call could lose or damage something that isn't your own work, or reaches outside the workspace\)$/);
     expect(problemsOf({ ...call, mode: 'fast' })).toMatch(/^mode: .*\(it must be "sync" or "async"\)$/);
     expect(problemsOf({ ...call, timeoutMs: -1 })).toMatch(/^timeoutMs: .*\(it must be a positive whole number of milliseconds\)$/);
   });
 
-  it('QA7-E1 with no description there is nothing to derive from: both are named', () => {
-    const problems = problemsOf({ command: 'ls', risky: false });
-    expect(problems).toMatch(/^title: /);
-    expect(problems).toContain('; description: ');
-    expect(problemsOf({ description: '', command: 'ls', risky: false })).toMatch(/^title: .*; description: /);
+  it('QA11-H3 a blank title and description are missing, and a call with neither parses', () => {
+    const bare = parseShellArgs({ command: 'ls' });
+    expect(bare).toEqual({ success: true, data: { command: 'ls', risky: true } });
+    const blank = parseShellArgs({ title: '  ', description: '', command: 'ls', risky: false });
+    expect(blank).toEqual({ success: true, data: { command: 'ls', risky: false } });
+    expect(titleOf({ title: '  ', description: 'Lists the files.', command: 'ls' })).toBe('Lists the files.');
   });
 
-  it('QA7-E2 risky is never defaulted', () => {
-    expect(problemsOf({ title: 'List', description: 'Lists.', command: 'ls' })).toMatch(/^risky: /);
+  it('QA11-E1 command is still required, and the error ends by asking for the call again', () => {
+    for (const args of [{ title: 'List', description: 'Lists.', risky: false }, { title: 'List', command: '', risky: false }]) {
+      expect(problemsOf(args), JSON.stringify(args)).toMatch(/^command: .*\(it must be the command to run\)$/);
+    }
+  });
+
+  it('QA11-E2 a wrong type is still an error naming the field', () => {
+    expect(problemsOf({ ...call, title: 5 })).toMatch(/^title: /);
+    expect(problemsOf({ ...call, description: false })).toMatch(/^description: /);
+  });
+
+  it('QA11-E3 risky false is kept, and a missing risky counts as true', () => {
+    const kept = parseShellArgs({ ...call, risky: false });
+    expect(kept.success && kept.data.risky).toBe(false);
+    const missing = parseShellArgs({ command: 'ls', title: 'List', description: 'Lists.' });
+    expect(missing.success && missing.data.risky).toBe(true);
   });
 });

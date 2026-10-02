@@ -28,7 +28,7 @@ describe('what a person sees while a step runs, in Chromium (08 §8.7, ADR 0009,
     const kvman = await world.start();
     let release = (): void => undefined;
     const hold = new Promise<void>((resolve) => (release = resolve));
-    const pieces = ['{"title":"Create the todo file","description":"Writes todo.txt so you can see it.",', '"command":"echo hi"}'];
+    const pieces = ['{"title":"Create the todo file","description":"Writes todo.txt so you can see it.","risky":false,', '"command":"echo hi"}'];
     world.fake.reply(calls(`ask confirm '{"prompt":"Go on?"}'`), { chunks: [{ toolCall: { id: 'c9', name: 'bash', argumentPieces: pieces } }, { wait: hold }] }, says('Done.'));
     const sessionId = sessionSchema.parse(await kvman.call('commands', 'kvcoder.session.create', { title: 'Live' })).id;
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });

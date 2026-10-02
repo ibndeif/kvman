@@ -18,7 +18,7 @@ export type Answers = {
   decide(decision: Decision): Promise<void>;
 };
 
-const allowedCall = (approval: Approval): LiveCall => ({ name: 'bash', title: approval.title === '' ? approval.command : approval.title, ...(approval.description === '' ? {} : { description: approval.description }), complete: true });
+const allowedCall = (approval: Approval): LiveCall => ({ name: 'bash', title: approval.title ?? approval.command, ...(approval.description === undefined ? {} : { description: approval.description }), complete: true });
 
 export function useAnswers(kvman: Kvman, refresh: (ran: readonly LiveCall[]) => Promise<void>): Answers {
   const hidden = ref(new Set<string>());

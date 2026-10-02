@@ -1,5 +1,6 @@
 import { z } from '@kvman/sdk';
 import { builtinHelp, callInput, errorOutput, jsonOutput, type CallResult } from '../connector-line.ts';
+import { invalidInput } from './invalid-input.ts';
 import type { JsonValue } from '../connector-line.ts';
 import { invalid } from '../problems.ts';
 import { resultText } from '../result-text.ts';
@@ -35,7 +36,7 @@ export function askCall(words: readonly string[], stdin: string | null): { kind:
   const kind = call.command;
   if (kind !== 'text' && kind !== 'choice' && kind !== 'confirm') return errorOutput({ code: 'NOT_FOUND', message: `ask has no command ${kind}; run \`ask -h\`.` });
   const parsed = askSchemas[kind].safeParse(call.input);
-  if (!parsed.success) return errorOutput({ code: 'VALIDATION_FAILED', message: parsed.error.issues.map((issue) => `${issue.path.join('.') || 'input'}: ${issue.message}`).join('; ') });
+  if (!parsed.success) return invalidInput('ask', kind, parsed.error.issues);
   return { kind, question: call.input };
 }
 

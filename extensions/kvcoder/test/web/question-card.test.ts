@@ -51,6 +51,22 @@ describe('question cards (08 §8.5, ADR 0009, 104, 141, 143)', () => {
     expect(row.find('[data-test="call-command"]').text()).toBe('npm ci');
   });
 
+  it('QA11-H5 an approval with only a command shows the command, with no empty title or description line, and PendingCards builds it from the stored question', async () => {
+    const card = await mounted(ApprovalsCard, createFakeKvman(), { approvals: [{ questionId: 'a1', command: 'npm ci' }] });
+    const row = card.find('[data-test="approval-a1"]');
+    expect(row.find('[data-test="call-title"]').exists()).toBe(false);
+    expect(row.find('[data-test="call-description"]').exists()).toBe(false);
+    expect(row.find('[data-test="call-command"]').text()).toBe('npm ci');
+
+    const pending = await mounted(PendingCards, createFakeKvman(), { pending: [{ toolCallId: 'c1', kind: 'approval', questionId: 'a2', question: { command: 'ls -la', mode: 'sync', timeoutMs: 120000 }, childSessionId: null }] });
+    expect(pending.find('[data-test="approval-a2"] [data-test="call-command"]').text()).toBe('ls -la');
+    expect(pending.find('[data-test="approval-a2"] [data-test="call-title"]').exists()).toBe(false);
+
+    const described = await mounted(PendingCards, createFakeKvman(), { pending: [{ toolCallId: 'c2', kind: 'approval', questionId: 'a3', question: { description: 'Lists the files.', command: 'ls', mode: 'sync', timeoutMs: 120000 }, childSessionId: null }] });
+    expect(described.find('[data-test="approval-a3"] [data-test="call-title"]').text()).toBe('Lists the files.');
+    expect(described.find('[data-test="approval-a3"] [data-test="call-description"]').exists()).toBe(false);
+  });
+
   it('QA3-H19 an async approval says it runs in the background, and a sync one does not', async () => {
     const pending = (mode: string) => [{ toolCallId: 'c1', kind: 'approval' as const, questionId: `a-${mode}`, question: { title: 'Start the server', command: 'python3 -m http.server 8000', description: 'Serves the app.', mode, timeoutMs: 120_000 }, childSessionId: null }];
     const asyncCard = await mounted(PendingCards, createFakeKvman(), { pending: pending('async') });

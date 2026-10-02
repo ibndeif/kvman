@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import type { Turn } from '../../src/index.ts';
 import ApprovalsCard, { type Approval } from './ApprovalsCard.vue';
+import { callTitle } from './call-title.ts';
 import { fields } from './kvman.ts';
 import QuestionCard from './QuestionCard.vue';
 import type { Answer, Decision } from './use-answers.ts';
@@ -15,7 +16,10 @@ const questions = computed(() => props.pending.filter((item) => item.kind === 'q
 const approvals = computed<Approval[]>(() =>
   props.pending.filter((item) => item.kind === 'approval' && open(item)).map((item) => {
     const question = fields(item.question);
-    return { questionId: String(item.questionId), title: String(question['title'] ?? ''), command: String(question['command'] ?? ''), description: String(question['description'] ?? ''), mode: question['mode'] === 'async' ? 'async' : 'sync' };
+    const given = (name: string): string | undefined => (typeof question[name] === 'string' && question[name] !== '' ? String(question[name]) : undefined);
+    const title = callTitle(given('title'), given('description'));
+    const description = given('description');
+    return { questionId: String(item.questionId), command: String(question['command'] ?? ''), mode: question['mode'] === 'async' ? 'async' : 'sync', ...(title === undefined ? {} : { title }), ...(description === undefined ? {} : { description }) };
   }),
 );
 </script>

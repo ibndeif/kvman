@@ -1,5 +1,6 @@
 import { ProblemError, z, type Ctx, type Problem } from '@kvman/sdk';
 import { builtinHelp, callInput, errorOutput, jsonOutput, type CallResult, type JsonValue } from '../connector-line.ts';
+import { invalidInput } from './invalid-input.ts';
 import { applyEdits } from '../files/edit-text.ts';
 import { inOrder } from '../files/file-queue.ts';
 import { notFound, tooLarge } from '../problems.ts';
@@ -91,6 +92,6 @@ export function artifactCall(ctx: Ctx, chatId: string, words: readonly string[],
   const command = call.command;
   if (command !== 'write' && command !== 'edit' && command !== 'get') return Promise.resolve(failed({ code: 'NOT_FOUND', message: `artifact has no command ${command}; run \`artifact -h\`.` }));
   const parsed = inputSchemas[command].safeParse(call.input);
-  if (!parsed.success) return Promise.resolve(failed({ code: 'VALIDATION_FAILED', message: parsed.error.issues.map((issue) => `${issue.path.join('.') || 'input'}: ${issue.message}`).join('; ') }));
+  if (!parsed.success) return Promise.resolve({ ...invalidInput('artifact', command, parsed.error.issues), details: null });
   return inOrder(`artifact:${chatId}:${parsed.data.id}`, () => run(ctx, chatId, command, parsed.data));
 }
