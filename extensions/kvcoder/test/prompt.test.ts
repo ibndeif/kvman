@@ -31,7 +31,7 @@ describe('the prompt (08 §8.2, §8.4)', { timeout: 30_000 }, () => {
     expect(prompt).toContain('## Connectors\nUse these before the shell, whenever one covers the task.\n');
   });
 
-  it("M2.4-E53, QA4-H15, QA4-H16, QA4-H17, QA5-H1, QA5-H3, QA5-H5, QA5-E3, QA6-H22, and QA6-H23 the base prompt names the shell, the OS, the language, and the workspace folder; then sections by order; then the connector index", async () => {
+  it("M2.4-E53, QA4-H15, QA4-H16, QA4-H17, QA5-H1, QA5-H3, QA5-H5, QA5-E3, QA6-H22, QA6-H23, and QA8-H5 the base prompt names the shell, the OS, the language, and the workspace folder; then sections by order; then the connector index", async () => {
     const { kernel, fake } = await kvcoder.start({ settings: { 'kernel.language': 'ar' } });
     const sessionId = await newSession(kernel);
     await kernel.exec('kvcoder.section.set', { id: 'later', title: 'Later', order: 30, content: 'L' }, { as: '@test/todo' });
@@ -50,10 +50,11 @@ describe('the prompt (08 §8.2, §8.4)', { timeout: 30_000 }, () => {
     expect(prompt).toContain('- ask: Put a question to the person and wait for the answer. Use it when you need a decision, a missing detail, or a go-ahead before a risky step, instead of guessing (commands: text, choice, confirm). Help: `ask -h`.');
     expect(prompt).toContain('- subagent: Hand a self-contained task to a helper agent. Use it to research or build a separate part in parallel, or in the background while you go on (command: run). Help: `subagent -h`.');
     expect(prompt).toContain('- jobs: Check on background work you started, a server from mode "async" or a --async call. Use it to see its status or output, or to stop it (commands: list, get, cancel). Help: `jobs -h`.');
-    expect(prompt).toContain('- fs: Create and change files in the workspace folder. Use it for every file you create or change: write for a new file or a full rewrite, and edit for exact text replacements in an existing file (commands: write, edit). Help: `fs -h`.');
+    expect(prompt).toContain('- fs: Create and change files in the workspace folder. Use it for every file you create or change: write for a new file or a full rewrite, giving the content as the raw heredoc body after `{"path"}`, one file per call, and edit for exact text replacements in an existing file (commands: write, edit). Help: `fs -h`.');
     expect(prompt).toContain('Connectors come first. A connector is a word kvcoder runs itself');
     expect(prompt).toContain('Write the plan as the artifact `plan`');
-    expect(prompt).toContain('- artifact: Show the person something to read or see: a plan, a report, a design, or an HTML page. Use it for anything longer than a few lines instead of pasting it into a reply, and keep your plan in the artifact `plan` (commands: write, edit, get). Help: `artifact -h`.');
+    expect(prompt).toContain('Write each file in its own call, with its content as the raw heredoc body of `fs write`.');
+    expect(prompt).toContain('- artifact: Show the person something to read or see: a plan, a report, a design, or an HTML page. Use it for anything longer than a few lines instead of pasting it into a reply, and keep your plan in the artifact `plan`. Give the content as the raw heredoc body after the JSON (commands: write, edit, get). Help: `artifact -h`.');
     expect(prompt).toContain('## Connectors\nUse these before the shell, whenever one covers the task.\n- todo: Keep a todo list.');
     expect(prompt).toContain("- todo: Keep a todo list. Help: `todo -h` lists its commands; `todo <command> -h` shows a command's input, output, and examples.\n");
     const order = ['## Mine', '## Everywhere', '## Later', '## Connectors', '- todo: Keep a todo list.', '- ask: ', '- subagent: ', '- jobs: '].map((part) => prompt.indexOf(part));

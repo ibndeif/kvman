@@ -104,6 +104,7 @@ export const turnDocSchema = z.object({
   endedAt: z.string().nullable(),
   durationMs: z.number().nonnegative(),
   steps: z.number().int().nonnegative(),
+  lost: z.number().int().nonnegative().default(0),
   usage: usageSchema,
   outcome: outcomeSchema.nullable(),
   calls: z.array(z.object({ toolCallId: z.string(), toolName: z.string() })),

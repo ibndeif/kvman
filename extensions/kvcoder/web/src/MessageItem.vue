@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { BellRing, NotebookText, ScrollText } from '@lucide/vue';
+import { BellRing, Info, NotebookText, ScrollText } from '@lucide/vue';
 import { computed } from 'vue';
 import type { Message } from '../../src/index.ts';
 import { failureReason, fields, problemKey, stringValues, useKvman } from './kvman.ts';
-import { artifactOf, isBackground, resultCard, textOf, thinkingOf, type CallInfo } from './message-parts.ts';
+import { artifactOf, isBackground, isKvcoderHint, resultCard, textOf, thinkingOf, type CallInfo } from './message-parts.ts';
 import ArtifactCard from './ArtifactCard.vue';
 import ShellResult from './ShellResult.vue';
 
@@ -37,6 +37,12 @@ const markdown = (body: string) => ({ type: 'markdown' as const, text: 'kvcoder.
     <details>
       <summary class="kvc-card-row"><BellRing :size="16" aria-hidden="true" />{{ kvman.t(props.message.source?.kind === 'subagent' ? 'kvcoder.ui.helperFinished' : 'kvcoder.ui.backgroundFinished') }}</summary>
       <pre class="kvc-output">{{ text }}</pre>
+    </details>
+  </div>
+  <div v-else-if="isKvcoderHint(props.message)" class="kvc-card" data-test="kvcoder-hint">
+    <details>
+      <summary class="kvc-card-row"><Info :size="16" aria-hidden="true" />{{ kvman.t('kvcoder.ui.toModel') }}</summary>
+      <div class="kvc-card-body kvc-muted">{{ text }}</div>
     </details>
   </div>
   <div v-else-if="props.message.kind === 'user'" class="kvc-user" :class="{ 'kvc-queued': props.message.queued }" data-test="user-message">

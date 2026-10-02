@@ -34,7 +34,7 @@ describe('the prompt builder (08 §8.2)', () => {
     ]);
   });
 
-  it('QA5-H1, QA5-H6, QA5-E1, QA6-H22, and QA6-E22 the base prompt puts connectors first and gives the expert workflow, in both shells', () => {
+  it('QA5-H1, QA5-H6, QA5-E1, QA6-H22, QA6-E22, and QA8-H5 the base prompt puts connectors first and gives the expert workflow, in both shells', () => {
     const base = { workspacePath: '/w', language: 'en', sections: [], connectors: [] };
     for (const [platform, toolName] of [['linux', 'bash'], ['win32', 'powershell']] as const) {
       const { prompt } = buildPrompt({ ...base, platform, toolName });
@@ -52,6 +52,7 @@ describe('the prompt builder (08 §8.2)', () => {
         '(☐ to do, ☑ done)',
         'call `ask confirm` on the plan before you start',
         'tick the step off with `artifact edit`',
+        'Write each file in its own call, with its content as the raw heredoc body of `fs write`.',
         'a UI/UX designer for screens, a reviewer for a fresh look at your changes',
         'Brief it with its role, the goal, the facts it needs, its limits, and what to return.',
         'If another agent gave you your task, do that task and return the result',

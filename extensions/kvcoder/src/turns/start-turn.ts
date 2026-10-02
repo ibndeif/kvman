@@ -10,7 +10,7 @@ import { noUsage } from './history.ts';
 
 /** Opens a turn on an idle session inside a transaction, and marks the session running. */
 export function openTurn(tx: TxRecords, session: Stored<SessionDoc>): string {
-  const turn = tx.turns.insert({ sessionId: session.id, startedAt: now(), endedAt: null, durationMs: 0, steps: 0, usage: noUsage(), outcome: null, calls: [], pending: [], results: [] });
+  const turn = tx.turns.insert({ sessionId: session.id, startedAt: now(), endedAt: null, durationMs: 0, steps: 0, lost: 0, usage: noUsage(), outcome: null, calls: [], pending: [], results: [] });
   tx.sessions.update(session.id, { status: 'running', turnId: turn.id, stepJobId: null, updatedAt: now() });
   return turn.id;
 }

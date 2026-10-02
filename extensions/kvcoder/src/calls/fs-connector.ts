@@ -7,6 +7,7 @@ import { applyEdits } from '../files/edit-text.ts';
 import { inOrder } from '../files/file-queue.ts';
 import { lexicalPath, resolveInWorkspace } from '../files/workspace-path.ts';
 import { invalid, notFound } from '../problems.ts';
+import { withBody } from './write-body.ts';
 
 // The `fs` connector (plan 08 §8.5, ADR 0009, 157 to 160): `write` creates or replaces a file, `edit` replaces text
 // in one, both inside the workspace folder. It runs in the step, after the approval the shell's calls get.
@@ -79,7 +80,9 @@ async function run(ctx: Ctx, command: 'write' | 'edit', input: Record<string, un
 /** An `fs` call: its result now, after the calls before it on the same file. */
 export function fsCall(ctx: Ctx, words: readonly string[], stdin: string | null): Promise<CallResult> {
   if (words.length === 1 && words[0] === '-h') return Promise.resolve({ output: builtinHelp.fs, exitCode: 0 });
-  const call = callInput(words, stdin, 'fs');
+  const body = withBody(words, stdin);
+  if ('output' in body) return Promise.resolve(body);
+  const call = callInput(body.words, body.stdin, 'fs');
   if ('output' in call) return Promise.resolve(call);
   const command = call.command;
   if (command !== 'write' && command !== 'edit') return Promise.resolve(errorOutput({ code: 'NOT_FOUND', message: `fs has no command ${command}; run \`fs -h\`.` }));

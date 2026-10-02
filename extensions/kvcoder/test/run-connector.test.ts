@@ -46,4 +46,10 @@ describe('runConnector (08 §8.4, ADR 0009, 96)', { timeout: 30_000 }, () => {
     expect(help.output).toMatch(/^artifact: Show the person a document/);
     expect(await runConnector(kernel, `artifact get '{"id":"plan"}'`)).toEqual({ exitCode: 1, output: 'artifact runs only inside a turn' });
   });
+
+  it('QA8-H5 the help of fs and artifact shows a write with its content as the raw heredoc body', async () => {
+    const { kernel } = await kvcoder.start();
+    expect((await runConnector(kernel, 'fs -h')).output).toContain(`fs write '{ "path": "index.html" }' <<'EOF'\n  …the file, exactly as it should be…\n  EOF`);
+    expect((await runConnector(kernel, 'artifact -h')).output).toContain(`artifact write '{ "id": "design", "title": "Design", "format": "html" }' <<'EOF'\n  …the page, exactly as it should be…\n  EOF`);
+  });
 });

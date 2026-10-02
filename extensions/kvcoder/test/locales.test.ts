@@ -23,7 +23,7 @@ function webKeys(): string[] {
 }
 
 const codes = ['NAME_TAKEN', 'QUESTION_NOT_FOUND', 'SESSION_NOT_FOUND', 'SESSION_BUSY', 'JOB_NOT_FOUND'];
-const notices = ['CANCELLED', 'INTERRUPTED', 'STEP_FAILED', 'MAX_STEPS', 'SUMMARY_FAILED'];
+const notices = ['CANCELLED', 'INTERRUPTED', 'STEP_FAILED', 'MAX_STEPS', 'SUMMARY_FAILED', 'REPLY_LOST'];
 const dynamic = [
   ...['idle', 'running', 'waiting'].map((status) => `kvcoder.ui.status.${status}`),
   ...['off', 'minimal', 'low', 'medium', 'high'].map((level) => `kvcoder.ui.thinkingLevels.${level}`),

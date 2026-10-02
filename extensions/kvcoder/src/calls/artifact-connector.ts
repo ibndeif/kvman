@@ -7,6 +7,7 @@ import { kebab } from '../schemas/registry.ts';
 import { now } from '../sessions/session-lookup.ts';
 import { records, txRecords } from '../store/collections.ts';
 import { artifactCountLimit, assertWithinLimit } from '../artifacts/artifact-records.ts';
+import { withBody } from './write-body.ts';
 
 // The `artifact` connector (plan 08 §8.5, ADR 0009, 173 to 176): `write` creates or replaces the chat's document,
 // `edit` replaces text in one, `get` reads one. It runs in the step, with no approval asked.
@@ -83,7 +84,9 @@ async function run(ctx: Ctx, chatId: string, command: 'write' | 'edit' | 'get', 
 /** An `artifact` call of the chat `chatId`: its result now, after the calls before it on the same artifact. */
 export function artifactCall(ctx: Ctx, chatId: string, words: readonly string[], stdin: string | null): Promise<Done> {
   if (words.length === 1 && words[0] === '-h') return Promise.resolve({ output: builtinHelp.artifact, exitCode: 0, details: null });
-  const call = callInput(words, stdin, 'artifact');
+  const body = withBody(words, stdin);
+  if ('output' in body) return Promise.resolve({ ...body, details: null });
+  const call = callInput(body.words, body.stdin, 'artifact');
   if ('output' in call) return Promise.resolve({ ...call, details: null });
   const command = call.command;
   if (command !== 'write' && command !== 'edit' && command !== 'get') return Promise.resolve(failed({ code: 'NOT_FOUND', message: `artifact has no command ${command}; run \`artifact -h\`.` }));

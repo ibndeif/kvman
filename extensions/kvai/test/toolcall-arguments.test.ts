@@ -30,4 +30,15 @@ describe('kvai.complete streams a tool call as its arguments complete (07 §7.1,
     expect(deltas.slice(0, -1)).toEqual([{ type: 'toolcall', name: 'bash' }]);
     expect(deltas.at(-1)).toEqual({ type: 'toolcall', name: 'bash', arguments: { title: 'Only a title that grows and grows' } });
   });
+
+  it('QA8-H9 and QA8-E12 a string value over 16 KiB is reported as null, one of exactly 16 KiB is not, and the answer keeps the whole value', async () => {
+    const { kernel, fake } = await kvai.start();
+    const big = 'x'.repeat(16 * 1024 + 1);
+    const exact = 'y'.repeat(16 * 1024);
+    fake.reply({ chunks: [{ toolCall: { id: 'call_1', name: 'bash', argumentPieces: [`{"title":"Write it","command":"${big}","description":"${exact}"}`] } }] });
+    const chunks: ProgressChunk[] = [];
+    const answer = await kernel.exec('harness.turn', { model: 'fake/m1', messages: [userSays('go')], tools: [bash] }, { onProgress: (chunk) => chunks.push(chunk) });
+    expect(kvaiDeltas(chunks).at(-1)).toEqual({ type: 'toolcall', name: 'bash', arguments: { title: 'Write it', command: null, description: exact } });
+    expect(JSON.stringify(answer)).toContain(big);
+  });
 });

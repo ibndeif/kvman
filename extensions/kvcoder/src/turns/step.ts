@@ -4,13 +4,15 @@ import type { JsonValue } from '../connector-line.ts';
 import { runBinaryChecks } from '../calls/binary-checks.ts';
 import { shellTool } from '../calls/shell-tool.ts';
 import { sessionTools, shellFor, type SessionTools } from '../prompt/session-prompt.ts';
+import { ownerName } from '../jobs/process-records.ts';
 import { activeConnectors } from '../registry/register-connectors.ts';
 import { readSettings } from '../register-settings.ts';
 import type { SessionDoc, Usage } from '../schemas/records.ts';
 import { records, txRecords, type TxRecords } from '../store/collections.ts';
 import { compact } from './compaction.ts';
 import { endTurn } from './end-turn.ts';
-import { addUsage, appendMessage, appendQueued } from './history.ts';
+import { addUsage, appendMessage, appendQueued, userContent } from './history.ts';
+import { lostHint, lostRetries, lostTokens, repairedCalls } from './lost-reply.ts';
 import { modelMessages, sentHistory } from './model-context.ts';
 import { completeWithRetries } from './model-retry.ts';
 import { evaluateCall, runApproved, type ToolCall } from './run-calls.ts';
@@ -67,26 +69,29 @@ function addCallUsage(store: TxRecords, session: Stored<SessionDoc>, turnId: str
 
 const toolCallSchema = z.object({ type: z.literal('toolCall'), id: z.string(), name: z.string(), arguments: z.record(z.string(), z.json()) });
 
-async function callModel(ctx: Ctx, session: Stored<SessionDoc>, turnId: string, tools: SessionTools): Promise<{ calls: ToolCall[]; seq: number } | undefined> {
+async function callModel(ctx: Ctx, session: Stored<SessionDoc>, turnId: string, tools: SessionTools): Promise<{ calls: ToolCall[]; seq: number; lost: number | undefined } | undefined> {
   const messages = await modelMessages(ctx, await sentHistory(ctx, session.id, session.nextSeq));
   const started = Date.now();
   try {
     const answer = await completeWithRetries(ctx, { ...(session.model === null ? {} : { model: session.model }), systemPrompt: tools.built.prompt, messages, tools: [shellTool(tools.shell.toolName)], thinking: session.thinking });
     const durationMs = Date.now() - started;
+    const { blocks, broken } = repairedCalls(answer.message.content);
+    const message = { ...answer.message, content: blocks };
     const seq = await ctx.store.transaction((tx) => {
       const store = txRecords(tx);
       const live = liveTurn(store, session.id, turnId);
       if (live === undefined) return undefined;
-      const stored = appendMessage(store, live.session, { kind: 'assistant', content: answer.message, turnId, model: answer.message.provider + '/' + answer.message.model, usage: answer.usage, durationMs });
+      const stored = appendMessage(store, live.session, { kind: 'assistant', content: message, turnId, model: message.provider + '/' + message.model, usage: answer.usage, durationMs });
       addCallUsage(store, live.session, turnId, answer.usage);
       return stored.seq;
     });
     if (seq === undefined) return undefined;
-    const calls = answer.message.content.flatMap((block) => {
+    const calls = blocks.flatMap((block) => {
       const parsed = toolCallSchema.safeParse(block);
       return parsed.success ? [{ id: parsed.data.id, name: parsed.data.name, arguments: parsed.data.arguments }] : [];
     });
-    return { calls, seq };
+    const lost = calls.length > 0 ? undefined : broken > 0 ? answer.usage.output : lostTokens(blocks, { output: answer.usage.output, reasoning: message.usage.reasoning });
+    return { calls, seq, lost };
   } catch (error) {
     if (!(error instanceof ProblemError) || ctx.job.signal.aborted) throw error;
     await endTurn(ctx, session.id, turnId, 'failed', 'step', { code: 'STEP_FAILED', params: { code: error.problem.code, details: failureDetails(error) } });
@@ -100,14 +105,24 @@ function failureDetails(error: ProblemError): JsonValue {
   return parsed.success ? parsed.data : {};
 }
 
-async function finishWithoutCalls(ctx: Ctx, sessionId: string, turnId: string, maxSteps: number): Promise<void> {
-  const appended = await ctx.store.transaction((tx) => {
+// What follows a reply with no call (plan 08 §8.2): the turn ends, or goes on with the messages that arrived, or, when the
+// reply was lost on the way, goes on after a hint to the model, at most `lostRetries` times in a turn (ADR 0009, 188).
+async function finishWithoutCalls(ctx: Ctx, sessionId: string, turnId: string, maxSteps: number, lost: number | undefined): Promise<void> {
+  const after = await ctx.store.transaction((tx) => {
     const store = txRecords(tx);
     const live = liveTurn(store, sessionId, turnId);
-    return live === undefined ? undefined : appendQueued(store, live.session, turnId);
+    if (live === undefined) return undefined;
+    if (lost !== undefined && live.turn.lost >= lostRetries) return { action: 'give-up' as const, tokens: lost };
+    if (lost !== undefined) {
+      store.turns.update(turnId, { lost: live.turn.lost + 1 });
+      appendMessage(store, live.session, { kind: 'user', content: userContent(lostHint(lost)), turnId, source: { kind: 'extension', name: ownerName } });
+    }
+    const appended = appendQueued(store, live.session, turnId);
+    return { action: lost !== undefined || appended > 0 ? ('continue' as const) : ('end' as const), tokens: 0 };
   });
-  if (appended === undefined) return;
-  if (appended > 0) await continueTurn(ctx, sessionId, turnId, maxSteps);
+  if (after === undefined) return;
+  if (after.action === 'give-up') await endTurn(ctx, sessionId, turnId, 'failed', 'step', { code: 'REPLY_LOST', params: { tokens: after.tokens } });
+  else if (after.action === 'continue') await continueTurn(ctx, sessionId, turnId, maxSteps);
   else await endTurn(ctx, sessionId, turnId, 'done', 'step');
 }
 
@@ -122,7 +137,7 @@ async function runStep(ctx: Ctx, sessionId: string, turnId: string): Promise<voi
   const answer = await callModel(ctx, session, turnId, tools);
   if (answer === undefined) return;
   if (answer.calls.length === 0) {
-    await finishWithoutCalls(ctx, sessionId, turnId, settings.maxSteps);
+    await finishWithoutCalls(ctx, sessionId, turnId, settings.maxSteps, answer.lost);
     return;
   }
   const env = { ctx, session, tools, approval: settings.approval, answerSeq: answer.seq };

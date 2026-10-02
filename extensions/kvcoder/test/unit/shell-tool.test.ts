@@ -11,6 +11,7 @@ describe("the shell tool's description (08 §8.2, ADR 0009, 167 and 172)", () =>
       expect(tool.description).toContain(`For example, \`${connectorExample}\` creates a file.`);
       expect(tool.description).toContain('Use a connector instead of the shell whenever one covers the task, and the shell for the rest.');
       expect(tool.description).toContain("`<connector> -h` lists a connector's commands.");
+      expect(tool.description).toContain('Give a whole file or document as the raw heredoc body after the JSON, so it needs no escaping.');
       expect(tool.parameters.properties.command.description).toBe('The shell command, or a connector call.');
     }
   });

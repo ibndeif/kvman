@@ -234,7 +234,12 @@ export const builtinHelp: Readonly<Record<(typeof builtinConnectors)[number], st
     '"write" creates the file and its folders, or replaces it. "edit" needs an existing text file: each oldText must match',
     'the file exactly once, as it was before the call (whitespace and line breaks included), and edits must not overlap. If',
     'one fails, nothing is written. Put several changes to one file in one call. Paths are relative to the workspace folder',
-    'and may not leave it. Give the JSON on stdin with a heredoc, so the text needs no shell quoting.',
+    'and may not leave it.',
+    '',
+    'Give a whole file as the raw body of a heredoc, with only the path in JSON, so it needs no escaping, one file per call:',
+    `  fs write ${quoted('{ "path": "index.html" }')} <<'EOF'`,
+    '  …the file, exactly as it should be…',
+    '  EOF',
   ].join('\n'),
   artifact: [
     'artifact: Show the person a document beside the chat: a plan, a report, a design, or a page.',
@@ -249,7 +254,12 @@ export const builtinHelp: Readonly<Record<(typeof builtinConnectors)[number], st
     '(up to 50 characters), such as plan; the title is up to 100 characters; the format is "markdown" (the default) or "html";',
     'the content is up to 64 KB, and a chat holds up to 20 artifacts. An "html" artifact is one self-contained page: its scripts',
     'run, but it can load nothing from the network (no external scripts, styles, images, or fonts: use inline CSS and JS, data:',
-    'images, or inline SVG) and can\'t reach the rest of the app. Give long content on stdin with a heredoc, so it needs no shell quoting.',
+    'images, or inline SVG) and can\'t reach the rest of the app.',
+    '',
+    'Give the content as the raw body of a heredoc, with the rest in JSON, so it needs no escaping:',
+    `  artifact write ${quoted('{ "id": "design", "title": "Design", "format": "html" }')} <<'EOF'`,
+    '  …the page, exactly as it should be…',
+    '  EOF',
   ].join('\n'),
 };
 

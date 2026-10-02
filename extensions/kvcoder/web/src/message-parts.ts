@@ -66,6 +66,11 @@ export function resultCard(message: Message, calls: ReadonlyMap<string, CallInfo
   return { command: call?.command ?? '', output: text.replace(/\n?\[exit code \d+\]$/, ''), ...(call === undefined ? {} : labels(call)), ...(exit === null ? {} : { exitCode: Number(exit[1]) }) };
 }
 
+/** Whether a user message is kvcoder's own word to the model, such as the hint after a lost reply (ADR 0009, 188). */
+export function isKvcoderHint(message: Message): boolean {
+  return message.kind === 'user' && message.source?.kind === 'extension' && message.source.name === '@kvman/kvcoder';
+}
+
 /** Whether a user message is a background result (ADR 0009, 89). */
 export function isBackground(message: Message): boolean {
   return message.kind === 'user' && (message.source?.kind === 'job' || message.source?.kind === 'subagent');

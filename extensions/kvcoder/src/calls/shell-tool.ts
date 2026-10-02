@@ -62,7 +62,7 @@ export function shellTool(name: 'bash' | 'powershell') {
       '',
       "Connectors come first. A connector is a word kvcoder runs itself, listed in the system prompt, and it is typed here too: `<connector> <command> '<json>'`, alone on its line (no pipes, &&, ;, or redirection around it). For example, `" +
         connectorExample +
-        '` creates a file. Use a connector instead of the shell whenever one covers the task, and the shell for the rest. `<connector> -h` lists a connector\'s commands.',
+        '` creates a file. Use a connector instead of the shell whenever one covers the task, and the shell for the rest. `<connector> -h` lists a connector\'s commands. Give a whole file or document as the raw heredoc body after the JSON, so it needs no escaping.',
     ].join('\n'),
     parameters: {
       type: 'object',

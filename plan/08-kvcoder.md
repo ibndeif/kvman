@@ -58,8 +58,8 @@ kvcoder is the app-building harness, built on kvai and kvwebui. Its agent has on
    - the connector index, under a lead line that says to use the connectors before the shell: each registered connector's name and description (binary connectors only when their check passed), and after the description of a built-in connector, its commands; kvcoder ends every entry with how to get its help, `<name> -h` (and `<name> <command> -h` for a commands connector, ADR 0009, 163, 164, and 167).
 2. **Call the model.** `kvai.complete` with the session's model and thinking level, its messages (after the summary), and the one tool, `bash { title, description, command, risky, mode?, timeoutMs? }` (or `powershell` with the same input on Windows): the tool's own description explains connectors with a one-line example and repeats that a connector is used instead of the shell whenever one covers the task (ADR 0009, 167 and 172); `title` is two to six words in the imperative and `description` one sentence for the person, both required in the tool's schema and shown in the UI (ADR 0009, 143); a call that leaves out `title` gets the first 60 characters of its `description` (with `…` when cut) and runs, and any other invalid argument fails `VALIDATION_FAILED` with a message that says what the field must be (ADR 0009, 186); `risky` is required: `true` when the call could lose or damage something that isn't the model's own work, or reaches outside the workspace (ADR 0009, 161). Deltas stream to the UI. A call that fails `kvai/RATE_LIMITED`, or `kvai/PROVIDER_ERROR` with `transient: true`, is tried up to 3 times in all, after 1 s and then 4 s, with the chunk `{ type: 'retry', attempt, of }` before each retry; any other failure ends the turn at once (ADR 0009, 155).
 3. **Handle the answer.**
-   - **Tool calls.** All calls of the reply start together (§8.3). Shell calls that need approval are asked together, and the turn suspends until every pending item is answered. Then kvcoder appends the results in the model's call order and queues the next step.
-   - **No calls.** The session goes idle, unless messages arrived while the step ran, in which case another step runs.
+   - **Tool calls.** A call the provider sent without an id gets one, and a call without a name is dropped, so a stored reply never holds a broken call; a reply left with no call by such a drop is a lost reply (ADR 0009, 192). All calls of the reply start together (§8.3). Shell calls that need approval are asked together, and the turn suspends until every pending item is answered. Then kvcoder appends the results in the model's call order and queues the next step.
+   - **No calls.** The session goes idle, unless messages arrived while the step ran, in which case another step runs. A reply with no call that was lost on the way (under 400 characters of text, and more than 150 output tokens that its text and its reasoning don't explain, ADR 0009, 191) is not an ending: kvcoder adds a message telling the model so and to send the content in smaller pieces, and runs another step, at most twice in a turn; the next one ends the turn `failed` with the notice `REPLY_LOST` (ADR 0009, 188).
 
 ## 8.3 How a shell call runs
 
@@ -203,9 +203,10 @@ subagent run '{ "task", "mode": "fresh" | "fork", "connectors"?: [names], "shell
 
 | Call | Result |
 |---|---|
-| `fs write '{ "path", "content" }'` | creates the file and its parent folders, or replaces it: `{ "path", "created", "bytes" }` |
+| `fs write '{ "path", "content" }'`, or `fs write '{ "path" }'` with the content as the heredoc body | creates the file and its parent folders, or replaces it: `{ "path", "created", "bytes" }` |
 | `fs edit '{ "path", "edits": [{ "oldText", "newText" }] }'` | replaces text in an existing file: `{ "path", "replacements", "firstChangedLine" }` |
 
+- **Content as the body.** A `write` may leave `content` out of its JSON and give it as the heredoc body, raw and unescaped, as `cat` would write it (every line ends with a line break; an empty body is empty); `content` in the JSON together with a body fails `VALIDATION_FAILED`. Use it for whole files: a model that must JSON-escape a large file inside a heredoc inside a call often loses the call (ADR 0009, 187, 188).
 - **Paths.** A relative `path` resolves against the workspace folder; an absolute one works when it is inside it. A path that leaves the folder, through `..` or a symlink, fails `VALIDATION_FAILED` and writes nothing.
 - **Matching.** Every `oldText` is matched exactly against the file as it was before the call, must be non-empty and occur once, and must not overlap another one; the edits apply together. If any check fails, or the result equals the file, nothing is written and the error names the edit and why. A missing file fails `NOT_FOUND`; a file that isn't valid UTF-8 text is refused. CRLF line endings and a leading BOM are kept.
 - **Order.** Calls on the same file run one after another, in the model's order when they start together. Unknown keys fail `VALIDATION_FAILED`, and `fs -h` lists the commands.
@@ -214,11 +215,12 @@ subagent run '{ "task", "mode": "fresh" | "fork", "connectors"?: [names], "shell
 
 | Call | Result |
 |---|---|
-| `artifact write '{ "id", "title", "format"?, "content" }'` | creates the artifact, or replaces it (title, format, and content): `{ "id", "version", "created", "bytes" }` |
+| `artifact write '{ "id", "title", "format"?, "content" }'`, or the same without `content` and with it as the heredoc body | creates the artifact, or replaces it (title, format, and content): `{ "id", "version", "created", "bytes" }` |
 | `artifact edit '{ "id", "edits": [{ "oldText", "newText" }] }'` | replaces text in an existing artifact: `{ "id", "version", "replacements", "firstChangedLine" }` |
 | `artifact get '{ "id" }'` | `{ "id", "title", "format", "version", "content" }` |
 
 - **Shape.** `id` is lowercase kebab case, up to 50 characters, and names the artifact within its chat (`plan` is the plan, §8.2). `title` is 1 to 100 characters. `format` is `markdown` (the default) or `html`. `content` is text up to 64 KB (`TOO_LARGE`, `params.limit`). A chat holds at most 20 artifacts: creating the 21st fails `TOO_LARGE`. `version` starts at 1 and rises with every write or edit; only the latest content is kept. An unknown `id` in `edit` or `get` fails `NOT_FOUND`; unknown keys, a bad `id`, or a bad `format` fail `VALIDATION_FAILED`.
+- **Content as the body.** `artifact write` takes its content as the heredoc body in the same way as `fs write`, the content left out of the JSON (ADR 0009, 187); a whole HTML page is best given this way.
 - **Edits** follow the matching rules of `fs edit`: every `oldText` is matched exactly once against the content as it was, edits don't overlap, and nothing is written when a check fails, the edits change nothing, or the result would pass 64 KB.
 - **Order and ownership.** Calls on the same artifact run one after another, in the model's order when they start together. An artifact belongs to its chat; a subagent's belongs to the chat at its root, so the person sees a helper's report. No approval is asked.
 - **HTML.** An `html` artifact is shown in an isolated frame (§8.7): its scripts run, but it can't load from or reach the network, kvman's page, or the person's browser data.
