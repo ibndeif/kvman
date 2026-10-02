@@ -1,4 +1,5 @@
 import { z } from '@kvman/sdk';
+import type { JsonValue } from '../connector-line.ts';
 import { maxTimeoutMs } from './shell-command.ts';
 
 // The agent's one tool (plan 08 §8.2): `bash { title, description, command, risky, mode?, timeoutMs? }`, or `powershell` on Windows.
@@ -13,6 +14,41 @@ export const shellArgsSchema = z.object({
 });
 
 export type ShellArgs = z.output<typeof shellArgsSchema>;
+
+// What each argument must be, as a failed call says it (ADR 0009, 186).
+const requirements: Record<string, string> = {
+  title: 'two to six words in the imperative, for the person',
+  description: 'one sentence saying what the command does and why, for the person',
+  command: 'the command to run',
+  risky: "true or false: true when the call could lose or damage something that isn't your own work, or reaches outside the workspace",
+  mode: '"sync" or "async"',
+  timeoutMs: 'a positive whole number of milliseconds',
+};
+
+const titleLimit = 60;
+
+// A call that leaves out its title gets the start of its description, so it runs instead of failing (ADR 0009, 186).
+function withTitle(args: Record<string, JsonValue>): Record<string, JsonValue> {
+  const { title, description } = args;
+  if (typeof title === 'string' && title.trim() !== '') return args;
+  if (typeof description !== 'string' || description.trim() === '') return args;
+  const text = description.trim();
+  return { ...args, title: text.length > titleLimit ? `${text.slice(0, titleLimit)}…` : text };
+}
+
+export type ParsedShellArgs = { success: true; data: ShellArgs } | { success: false; problems: string };
+
+/** A call's arguments, with a missing title derived, or what is wrong with them and what each field must be. */
+export function parseShellArgs(raw: Record<string, JsonValue>): ParsedShellArgs {
+  const parsed = shellArgsSchema.safeParse(withTitle(raw));
+  if (parsed.success) return { success: true, data: parsed.data };
+  const problems = parsed.error.issues.map((issue) => {
+    const field = String(issue.path[0] ?? 'arguments');
+    const needed = requirements[field];
+    return `${issue.path.join('.') || 'arguments'}: ${issue.message}${needed === undefined ? '' : ` (it must be ${needed})`}`;
+  });
+  return { success: false, problems: problems.join('; ') };
+}
 
 /** The connector call the tool's description shows: one line, so it reads the same in bash and in PowerShell. */
 export const connectorExample = 'fs write \'{"path":"notes/todo.md","content":"- one\\n"}\'';

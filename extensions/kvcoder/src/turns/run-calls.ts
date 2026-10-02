@@ -8,7 +8,7 @@ import { fsCall } from '../calls/fs-connector.ts';
 import { jobsCall } from '../calls/jobs.ts';
 import { runShellCall } from '../calls/run-shell-call.ts';
 import { callTimeout } from '../calls/shell-command.ts';
-import { shellArgsSchema, type ShellArgs } from '../calls/shell-tool.ts';
+import { parseShellArgs, type ShellArgs } from '../calls/shell-tool.ts';
 import { createChild, startChild, subagentCall } from '../calls/subagent.ts';
 import type { SessionTools } from '../prompt/session-prompt.ts';
 import { callInfos, isQuery, loadedExtensions } from '../registry/loaded.ts';
@@ -90,10 +90,12 @@ async function asyncOutcome(env: CallEnv, call: ToolCall, line: string, command:
 }
 
 export async function evaluateCall(env: CallEnv, call: ToolCall): Promise<CallOutcome> {
-  const args = shellArgsSchema.safeParse(call.arguments);
+  const args = parseShellArgs(call.arguments);
   if (call.name !== env.tools.shell.toolName || !args.success) {
-    const problems = args.success ? `the tool is ${env.tools.shell.toolName}, not ${call.name}` : args.error.issues.map((issue) => `${issue.path.join('.') || 'arguments'}: ${issue.message}`).join('; ');
-    return result(call.id, errorOutput({ code: 'VALIDATION_FAILED', message: `The call's arguments are invalid: ${problems}.` }));
+    const tool = env.tools.shell.toolName;
+    const problems = args.success ? `the tool is ${tool}, not ${call.name}` : args.problems;
+    const again = args.success ? '' : ` Call ${tool} again with every argument it needs: title, description, command, and risky.`;
+    return result(call.id, errorOutput({ code: 'VALIDATION_FAILED', message: `The call's arguments are invalid: ${problems}.${again}` }));
   }
   const line = args.data.command;
   const words = new Set([...builtinConnectors, ...env.tools.connectors.filter((connector) => connector.kind === 'commands').map((connector) => connector.name)]);
