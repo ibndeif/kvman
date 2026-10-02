@@ -18,4 +18,14 @@ describe("a failed step's notice (08 §8.1, ADR 0009, 133)", () => {
   it('QA1-E3 a notice stored without details still reads', async () => {
     expect(await noticeText({ code: 'kvai/RATE_LIMITED' })).toBe('The turn stopped: kvai.errors.RATE_LIMITED');
   });
+
+  it('QA3-H24 says why the call failed, after the sentence', async () => {
+    expect(await noticeText({ code: 'kvcoder/NAME_TAKEN', details: { name: 'todo', owner: '@kvman/other', reason: 'Request timed out.' } })).toBe('The turn stopped: The name todo belongs to @kvman/other. Request timed out.');
+  });
+
+  it('QA3-E26 cuts a long reason at 200 characters, and a failure with no reason reads as before', async () => {
+    const text = await noticeText({ code: 'kvcoder/NAME_TAKEN', details: { name: 'todo', owner: '@kvman/other', reason: 'x'.repeat(500) } });
+    expect(text).toBe(`The turn stopped: The name todo belongs to @kvman/other. ${'x'.repeat(200)}…`);
+    expect(await noticeText({ code: 'kvcoder/NAME_TAKEN', details: { name: 'todo', owner: '@kvman/other', reason: '  ' } })).toBe('The turn stopped: The name todo belongs to @kvman/other.');
+  });
 });

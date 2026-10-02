@@ -2,7 +2,7 @@
 import { BellRing, NotebookText, ScrollText } from '@lucide/vue';
 import { computed } from 'vue';
 import type { Message } from '../../src/index.ts';
-import { fields, problemKey, stringValues, useKvman } from './kvman.ts';
+import { failureReason, fields, problemKey, stringValues, useKvman } from './kvman.ts';
 import { isBackground, resultCard, textOf, thinkingOf, type CallInfo } from './message-parts.ts';
 import ShellResult from './ShellResult.vue';
 
@@ -17,7 +17,9 @@ const notice = computed(() => {
   const params = fields(props.message.content['params']);
   const code = typeof params['code'] === 'string' ? params['code'] : undefined;
   const error = code === undefined ? {} : { error: kvman.t(problemKey(code), stringValues(params['details'])) };
-  return kvman.t(`kvcoder.notices.${String(props.message.content['code'])}`, { ...params, ...error });
+  const reason = failureReason(params['details']);
+  const key = String(props.message.content['code']);
+  return kvman.t(`kvcoder.notices.${reason === undefined || key !== 'STEP_FAILED' ? key : 'STEP_FAILED_REASON'}`, { ...params, ...error, ...(reason === undefined ? {} : { reason }) });
 });
 const note = computed(() => {
   const params = props.message.content['params'];

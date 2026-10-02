@@ -1,4 +1,5 @@
 import { ProblemError, type Ctx, type Stored } from '@kvman/sdk';
+import { delay } from '../delay.ts';
 import { errorOutput, resultLines } from '../connector-line.ts';
 import type { ShellCommand } from '../calls/shell-command.ts';
 import { now } from '../sessions/session-lookup.ts';
@@ -14,16 +15,6 @@ import type { ProcessDoc } from '../schemas/records.ts';
 const startupWindowMs = 1_000;
 const firstOutputLines = 100;
 
-function wait(ms: number, signal: AbortSignal): Promise<void> {
-  return new Promise((resolve) => {
-    const timer = setTimeout(resolve, ms);
-    signal.addEventListener('abort', () => {
-      clearTimeout(timer);
-      resolve();
-    }, { once: true });
-  });
-}
-
 export type AsyncRun = { text: string; output: string; jobId: string; isError: boolean };
 
 export async function startProcess(ctx: Ctx, sessionId: string, shell: ShellCommand, labelled: { title: string; command: string }): Promise<AsyncRun> {
@@ -37,7 +28,7 @@ export async function startProcess(ctx: Ctx, sessionId: string, shell: ShellComm
     const failed = errorOutput(error.problem);
     return { text: resultLines(failed.output, failed.exitCode), output: failed.output, jobId: '', isError: true };
   }
-  await wait(startupWindowMs, ctx.job.signal);
+  await delay(startupWindowMs, ctx.job.signal);
   const output = await outputTail(ctx, doc.id, firstOutputLines);
   const running = (await ctx.processes.list()).some((process) => process.name === processName(doc.id));
   const ended = running ? [] : [`[the process has already ended; jobs get ${doc.id} has its output]`];

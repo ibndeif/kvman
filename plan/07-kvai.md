@@ -36,7 +36,7 @@ kvai.complete {
   | `kvai/MODEL_UNKNOWN` | No such model. |
   | `kvai/RATE_LIMITED` | The provider rate-limited the call. |
   | `kvai/CONTEXT_TOO_LONG` | The context doesn't fit the model. |
-  | `kvai/PROVIDER_ERROR` | Any other provider failure, including a failed delegate call (its code in `params.cause`). |
+  | `kvai/PROVIDER_ERROR` | Any other provider failure, including a failed delegate call (its code in `params.cause`). `params.transient` says whether a second try may fix it: an HTTP 5xx, overloaded or unavailable, a timeout, a dropped or refused connection, or a DNS failure; `kvai/RATE_LIMITED` is always transient (ADR 0009, 154). |
   | `kvai/PROVIDER_UNKNOWN` | `kvai.model.add` names no known provider (ADR 0009, 55). |
 
 - **Usage.** Each call adds its tokens (input, output, cache reads, cache writes) and cost to the workspace's per-model totals.

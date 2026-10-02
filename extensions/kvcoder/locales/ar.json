@@ -163,5 +163,7 @@
   "kvcoder.ui.jobs.status.cancelled": "أُوقفت",
   "kvcoder.ui.jobs.status.interrupted": "انقطعت",
   "kvcoder.ui.jobs.inBackground": "تعمل في الخلفية",
-  "kvcoder.ui.jobs.background": "خلفية"
+  "kvcoder.ui.jobs.background": "خلفية",
+  "kvcoder.notices.STEP_FAILED_REASON": "توقف الدور: {error} {reason}",
+  "kvcoder.ui.activity.retrying": "إعادة المحاولة… ({attempt} من {of})"
 }

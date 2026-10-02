@@ -26,7 +26,7 @@ const seconds = computed(() => Math.max(0, Math.floor((now.value - props.live.st
           <span v-if="call.description" class="kvc-muted" data-test="activity-description">{{ call.description }}</span>
         </span>
       </template>
-      <span v-else style="font-weight: 500" data-test="activity-title">{{ kvman.t(`kvcoder.ui.activity.${phase}`) }}</span>
+      <span v-else style="font-weight: 500" data-test="activity-title">{{ kvman.t(`kvcoder.ui.activity.${phase}`, props.live.retry ?? {}) }}</span>
     </span>
     <span v-if="props.live.calls.length > 0" class="kvc-muted" data-test="activity-phase">{{ kvman.t(`kvcoder.ui.activity.${phase}`) }}</span>
     <span class="kvc-muted" data-test="activity-seconds">{{ kvman.t('kvcoder.ui.seconds', { count: seconds }) }}</span>

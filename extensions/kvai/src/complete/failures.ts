@@ -6,6 +6,12 @@ import type { Ctx, ProblemError } from '@kvman/sdk';
 
 const rateLimitPattern = /^429\b|rate.?limit|too many requests/i;
 const reasonLimit = 1000;
+// A second try may fix these (ADR 0009, 154): an HTTP 5xx (pi-ai's reason starts with the status), overloaded or
+// unavailable providers, timeouts, and dropped or refused connections.
+const transientPattern = /^5\d\d\b|timed? ?out|timeout|connection error|econn(?:reset|refused|aborted)|etimedout|enotfound|eai_again|fetch failed|socket hang up|overloaded|service unavailable|bad gateway/i;
+
+/** Whether a provider's failure text is one a second try may fix. */
+export const isTransient = (reason: string): boolean => transientPattern.test(reason);
 
 export function redacted(text: string, secretKey: string | undefined): string {
   const hidden = secretKey === undefined || secretKey === '' ? text : text.replaceAll(secretKey, '[secret]');
@@ -16,5 +22,5 @@ export function failedCall(ctx: Ctx, fullId: string, message: AssistantMessage, 
   if (isContextOverflow(message, model.contextWindow)) return ctx.problem('kvai/CONTEXT_TOO_LONG', { model: fullId });
   const reason = message.errorMessage ?? '';
   if (rateLimitPattern.test(reason)) return ctx.problem('kvai/RATE_LIMITED', { model: fullId });
-  return ctx.problem('kvai/PROVIDER_ERROR', { model: fullId, reason: redacted(reason, secretKey) });
+  return ctx.problem('kvai/PROVIDER_ERROR', { model: fullId, reason: redacted(reason, secretKey), transient: isTransient(reason) });
 }

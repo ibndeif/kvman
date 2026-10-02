@@ -12,6 +12,7 @@ import { compact } from './compaction.ts';
 import { endTurn } from './end-turn.ts';
 import { addUsage, appendMessage, appendQueued } from './history.ts';
 import { modelMessages, sentHistory } from './model-context.ts';
+import { completeWithRetries } from './model-retry.ts';
 import { evaluateCall, runApproved, type ToolCall } from './run-calls.ts';
 import { appendResults, continueTurn, liveTurn, settleCalls } from './settle-calls.ts';
 import { currentTurn } from './start-turn.ts';
@@ -70,7 +71,7 @@ async function callModel(ctx: Ctx, session: Stored<SessionDoc>, turnId: string, 
   const messages = await modelMessages(ctx, await sentHistory(ctx, session.id, session.nextSeq));
   const started = Date.now();
   try {
-    const answer = await ctx.exec('kvai.complete', { ...(session.model === null ? {} : { model: session.model }), systemPrompt: tools.built.prompt, messages, tools: [shellTool(tools.shell.toolName)], thinking: session.thinking });
+    const answer = await completeWithRetries(ctx, { ...(session.model === null ? {} : { model: session.model }), systemPrompt: tools.built.prompt, messages, tools: [shellTool(tools.shell.toolName)], thinking: session.thinking });
     const durationMs = Date.now() - started;
     const seq = await ctx.store.transaction((tx) => {
       const store = txRecords(tx);

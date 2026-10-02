@@ -93,4 +93,21 @@ describe('the live view of a running step (08 §8.7, ADR 0009, 142, 143)', () =>
     expect(second?.find('[data-test="call-command"]').text()).toBe('ls -la');
     wrapper.unmount();
   });
+
+  it('QA3-H23 a retry chunk shows "Retrying… (2 of 3)" until the model answers again', async () => {
+    const fake = createFakeKvman();
+    serve(fake, running());
+    const wrapper = await mounted(ConversationView, fake, { sessionId: 's1' });
+    fake.emit('j1', progress('@kvman/kvcoder', { type: 'retry', attempt: 2, of: 3 } as never));
+    await flushPromises();
+    expect(activity(wrapper).attributes('data-phase')).toBe('retrying');
+    expect(activity(wrapper).find('[data-test="activity-title"]').text()).toBe('Retrying… (2 of 3)');
+    fake.emit('j1', progress('@kvman/kvcoder', { type: 'retry', attempt: 3, of: 3 } as never));
+    await flushPromises();
+    expect(activity(wrapper).find('[data-test="activity-title"]').text()).toBe('Retrying… (3 of 3)');
+    fake.emit('j1', kvai({ type: 'text', delta: 'Here it is.' }));
+    await flushPromises();
+    expect(activity(wrapper).attributes('data-phase')).toBe('writing');
+    wrapper.unmount();
+  });
 });

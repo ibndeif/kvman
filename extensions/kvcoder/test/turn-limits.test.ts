@@ -27,10 +27,10 @@ describe('turn limits and failures (08 §8.1)', { timeout: 30_000 }, () => {
   it('M2.4-E19 and QA1-H4 a failing model call ends the turn failed with a notice naming the code and keeping the Problem params', async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    fake.reply({ status: 429, body: { error: { message: 'Rate limit reached', type: 'rate_limit' } } });
+    fake.reply({ status: 400, body: { error: { message: 'Bad request', type: 'invalid_request_error' } } });
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
-    expect(await lastNotice(kernel, sessionId)).toEqual({ code: 'STEP_FAILED', params: { code: 'kvai/RATE_LIMITED', details: { model: 'fake/m1' } } });
+    expect(await lastNotice(kernel, sessionId)).toEqual({ code: 'STEP_FAILED', params: { code: 'kvai/PROVIDER_ERROR', details: { model: 'fake/m1', reason: expect.stringContaining('Bad request') as unknown, transient: false } } });
     const { session, turn } = await turnState(kernel, sessionId);
     expect(session.status).toBe('idle');
     expect(turn).toMatchObject({ outcome: 'failed' });

@@ -47,6 +47,15 @@ export function stringValues(params: unknown): Record<string, string> {
   return Object.fromEntries(Object.entries(fields(params)).map(([key, value]) => [key, typeof value === 'string' ? value : JSON.stringify(value)]));
 }
 
+const reasonLimit = 200;
+
+/** The provider's reason in a failed call's details, cut to 200 characters (ADR 0009, 156). */
+export function failureReason(details: unknown): string | undefined {
+  const { reason } = fields(details);
+  if (typeof reason !== 'string' || reason.trim() === '') return undefined;
+  return reason.length > reasonLimit ? `${reason.slice(0, reasonLimit)}…` : reason;
+}
+
 /** Shows a failed call as a toast. */
 export function toastProblem(kvman: Kvman, error: unknown): void {
   const problem = problemOf(error);

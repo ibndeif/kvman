@@ -163,5 +163,7 @@
   "kvcoder.ui.jobs.status.cancelled": "Stopped",
   "kvcoder.ui.jobs.status.interrupted": "Interrupted",
   "kvcoder.ui.jobs.inBackground": "Runs in the background",
-  "kvcoder.ui.jobs.background": "Background"
+  "kvcoder.ui.jobs.background": "Background",
+  "kvcoder.notices.STEP_FAILED_REASON": "The turn stopped: {error} {reason}",
+  "kvcoder.ui.activity.retrying": "Retrying… ({attempt} of {of})"
 }
