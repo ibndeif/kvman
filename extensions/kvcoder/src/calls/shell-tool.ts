@@ -17,7 +17,7 @@ export type ShellArgs = z.output<typeof shellArgsSchema>;
 export function shellTool(name: 'bash' | 'powershell') {
   return {
     name,
-    description: `Runs one ${name === 'bash' ? 'bash' : 'PowerShell'} command in the workspace folder and returns its combined output and exit code. Connector calls are typed here too, each standing alone on its line.`,
+    description: `Runs one ${name === 'bash' ? 'bash' : 'PowerShell'} command in the workspace folder and returns its combined output and exit code. Connector calls are typed here too, each standing alone on its line; use a connector instead of the shell whenever one covers the task.`,
     parameters: {
       type: 'object',
       properties: {

@@ -14,7 +14,7 @@ const builtinDescriptions: Record<(typeof builtinConnectors)[number], string> = 
   ask: 'Put a question to the person and wait for the answer. Use it when you need a decision, a missing detail, or a go-ahead before a risky step, instead of guessing (commands: text, choice, confirm).',
   subagent: 'Hand a self-contained task to a helper agent. Use it to research or build a separate part in parallel, or in the background while you go on (command: run).',
   jobs: 'Check on background work you started, a server from mode "async" or a --async call. Use it to see its status or output, or to stop it (commands: list, get, cancel).',
-  fs: 'Create and change files in the workspace folder. Use write for a new file or a full rewrite, and edit for exact text replacements in an existing file (commands: write, edit).',
+  fs: 'Create and change files in the workspace folder. Use it for every file you create or change: write for a new file or a full rewrite, and edit for exact text replacements in an existing file (commands: write, edit).',
 };
 
 export type SessionTools = {

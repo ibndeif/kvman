@@ -8,7 +8,7 @@ import { readDoc } from './docs/register-docs.ts';
 const connectors = [
   {
     name: 'ext',
-    description: 'Create, list, check, and test kvman extension projects in the workspace.',
+    description: 'Create, list, check, and test kvman extension projects in the workspace. Use it for any work on an extension, and run check, then test, after changing one.',
     commands: [
       { name: 'new', command: 'kvdev.ext.new', examples: [{ description: 'Scaffold a notes extension', input: { name: 'notes', namespace: 'notes', folder: 'notes' } }, { description: 'Scaffold one with a Vue component', input: { name: 'cards', namespace: 'cards', folder: 'cards', web: true } }] },
       { name: 'list', command: 'kvdev.ext.list' },
@@ -18,7 +18,7 @@ const connectors = [
   },
   {
     name: 'preset',
-    description: 'Write and check kvman presets.',
+    description: 'Write and check kvman presets. Use it to create a preset file, and to check it before running it.',
     commands: [
       { name: 'new', command: 'kvdev.preset.new', examples: [{ description: 'Write a preset for a notes app', input: { name: 'notes-app', file: 'notes-app.json' } }] },
       { name: 'check', command: 'kvdev.preset.check', examples: [{ description: 'Check that preset', input: { file: 'notes-app.json' } }] },
@@ -26,7 +26,7 @@ const connectors = [
   },
   {
     name: 'preview',
-    description: 'Run extension projects in a separate kvman with a temporary home.',
+    description: 'Run extension projects in a separate kvman with a temporary home. Use it to show the person a project working, and stop it when you are done.',
     commands: [
       { name: 'start', command: 'kvdev.preview.start', examples: [{ description: 'Preview the notes project', input: { extensions: ['notes'] } }] },
       { name: 'stop', command: 'kvdev.preview.stop' },
@@ -35,7 +35,7 @@ const connectors = [
   },
   {
     name: 'docs',
-    description: 'Read the kvman development guides.',
+    description: 'Read the kvman development guides. Use it before you write an extension, a preset, a view, or a component.',
     commands: [{ name: 'get', command: 'kvdev.docs.get', examples: [{ description: 'Read the SDK guide', input: { topic: 'sdk' } }] }],
   },
 ];

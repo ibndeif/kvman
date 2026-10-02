@@ -6,7 +6,7 @@ import { newSession } from './support/turns.ts';
 const kvcoder = useKvcoder();
 
 describe('the prompt (08 §8.2, §8.4)', { timeout: 30_000 }, () => {
-  it('M2.4-E36 binary checks run at the first step and are stored; only passing ones are listed; a setting entry with a registered name is ignored', async () => {
+  it('M2.4-E36 and QA5-E5 binary checks run at the first step and are stored; only passing ones are listed; a setting entry with a registered name is ignored', async () => {
     const settings = {
       'kvcoder.connectors': [
         { name: 'works', description: 'A program that is there.', binary: { check: 'true' } },
@@ -28,9 +28,10 @@ describe('the prompt (08 §8.2, §8.4)', { timeout: 30_000 }, () => {
     expect(prompt).toContain('- gh: GitHub CLI. Help: `gh -h`.');
     expect(prompt).not.toContain('- missing:');
     expect(prompt).not.toContain('Clashes');
+    expect(prompt).toContain('## Connectors\nUse these before the shell, whenever one covers the task.\n');
   });
 
-  it("M2.4-E53 and QA4-H15, QA4-H16, and QA4-H17 the base prompt names the shell, the OS, the language, and the workspace folder; then sections by order; then the connector index", async () => {
+  it("M2.4-E53, QA4-H15, QA4-H16, QA4-H17, QA5-H1, QA5-H3, QA5-H5, and QA5-E3 the base prompt names the shell, the OS, the language, and the workspace folder; then sections by order; then the connector index", async () => {
     const { kernel, fake } = await kvcoder.start({ settings: { 'kernel.language': 'ar' } });
     const sessionId = await newSession(kernel);
     await kernel.exec('kvcoder.section.set', { id: 'later', title: 'Later', order: 30, content: 'L' }, { as: '@test/todo' });
@@ -49,7 +50,9 @@ describe('the prompt (08 §8.2, §8.4)', { timeout: 30_000 }, () => {
     expect(prompt).toContain('- ask: Put a question to the person and wait for the answer. Use it when you need a decision, a missing detail, or a go-ahead before a risky step, instead of guessing (commands: text, choice, confirm). Help: `ask -h`.');
     expect(prompt).toContain('- subagent: Hand a self-contained task to a helper agent. Use it to research or build a separate part in parallel, or in the background while you go on (command: run). Help: `subagent -h`.');
     expect(prompt).toContain('- jobs: Check on background work you started, a server from mode "async" or a --async call. Use it to see its status or output, or to stop it (commands: list, get, cancel). Help: `jobs -h`.');
-    expect(prompt).toContain('- fs: Create and change files in the workspace folder. Use write for a new file or a full rewrite, and edit for exact text replacements in an existing file (commands: write, edit). Help: `fs -h`.');
+    expect(prompt).toContain('- fs: Create and change files in the workspace folder. Use it for every file you create or change: write for a new file or a full rewrite, and edit for exact text replacements in an existing file (commands: write, edit). Help: `fs -h`.');
+    expect(prompt).toContain('Connectors come first. A connector is a word kvcoder runs itself');
+    expect(prompt).toContain('## Connectors\nUse these before the shell, whenever one covers the task.\n- todo: Keep a todo list.');
     expect(prompt).toContain("- todo: Keep a todo list. Help: `todo -h` lists its commands; `todo <command> -h` shows a command's input, output, and examples.\n");
     const order = ['## Mine', '## Everywhere', '## Later', '## Connectors', '- todo: Keep a todo list.', '- ask: ', '- subagent: ', '- jobs: '].map((part) => prompt.indexOf(part));
     expect(order.every((index) => index > 0)).toBe(true);

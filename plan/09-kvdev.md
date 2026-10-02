@@ -16,6 +16,7 @@ kvdev is the harness for developing kvman extensions and presets. It has no loop
 | `preview stop` / `preview status` | `kvdev.preview.stop` / `.status` | `{}` / `{ running: false }` or `{ running: true, url, extensions, startedAt }` |
 | `docs get '{ "topic": "sdk" \| "views" \| "components" \| "i18n" \| "connectors" \| "presets" }'` | `kvdev.docs.get` | a guide as Markdown |
 
+- **Descriptions.** Each connector's `description` says what it is for and when to use it (ADR 0009, 170): `ext` for any work on an extension, running `check`, then `test`, after changing one; `preset` to create a preset file and check it before running it; `preview` to show the person a project working, stopping it when done; `docs` before writing an extension, preset, view, or component.
 - **Folders.** Every `folder` and `file` resolves against the workspace folder and must stay inside it (`VALIDATION_FAILED`). `ext check` and `ext test` of a folder whose package.json has no `kvman` field fail `kvdev/NOT_A_PROJECT` (ADR 0009, 121, 126).
 - **`ext new`.** `name` is an npm package name (lowercase, with an optional `@scope/`), and `namespace` follows the kernel's namespace rule. The folder must not exist or must be empty (`kvdev/FOLDER_NOT_EMPTY`). A failed `npm install` fails `kvdev/NPM_FAILED` with the last lines of its output and keeps the written files; `npm` or `npx` missing from the PATH fails `kvdev/NPM_FAILED` too (ADR 0009, 121, 126).
 - **`ext list`** walks the workspace folder, itself included (`.`), skipping `node_modules` and dot-folders, and doesn't look inside a project it found (ADR 0009, 126).
@@ -65,4 +66,4 @@ It returns `{ url }` once the preview answers `kernel.health.get`; after 30 s, o
 
 ## 9.4 Sections
 
-kvdev adds one global section to kvcoder's prompt (§8.4), `guide` with order 20, set at each kvdev start: a short guide to extensions, connectors, and presets, pointing to `docs get` for details and to `ext list` for the workspace's projects. The guides and the section are English, as text for a model is (§2.11, ADR 0009, 126).
+kvdev adds one global section to kvcoder's prompt (§8.4), `guide` with order 20, set at each kvdev start: a short guide to extensions, connectors, and presets, pointing to `docs get` for details and to `ext list` for the workspace's projects. It says to use the `ext`, `preset`, `preview`, and `docs` connectors for everything they cover and the shell for the rest, and to edit a project's files with `fs` (ADR 0009, 170). The guides and the section are English, as text for a model is (§2.11, ADR 0009, 126).
