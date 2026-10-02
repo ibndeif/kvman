@@ -9,10 +9,10 @@ const kvcoder = useKvcoder();
 const wireToolSchema = z.object({ function: z.object({ name: z.string(), parameters: z.object({ properties: z.record(z.string(), z.unknown()), required: z.array(z.string()) }) }) });
 const requestSchema = z.object({ tools: z.array(wireToolSchema) });
 
-const labelled = { id: 'c1', name: 'bash', arguments: { title: 'Make a file', description: 'Creates made.txt so the person can see it.', command: 'echo hi' } };
+const labelled = { id: 'c1', name: 'bash', arguments: { title: 'Make a file', description: 'Creates made.txt so the person can see it.', command: 'echo hi', risky: false } };
 
 describe("the shell tool's title and description (08 §8.2, ADR 0009, 143)", { timeout: 30_000 }, () => {
-  it('QA3-H6 the tool lists title, description, and command in that order, all required', async () => {
+  it('QA3-H6 and QA4-H8 the tool lists title, description, command, and risky in that order, with risky before mode, all four required', async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
     fake.reply(says('ok'));
@@ -20,8 +20,8 @@ describe("the shell tool's title and description (08 §8.2, ADR 0009, 143)", { t
     await kernel.clock.advance(0);
     const [tool] = requestSchema.parse(fake.requests()[0]?.body).tools;
     expect(tool?.function.name).toBe('bash');
-    expect(Object.keys(tool?.function.parameters.properties ?? {}).slice(0, 3)).toEqual(['title', 'description', 'command']);
-    expect(tool?.function.parameters.required).toEqual(['title', 'description', 'command']);
+    expect(Object.keys(tool?.function.parameters.properties ?? {})).toEqual(['title', 'description', 'command', 'risky', 'mode', 'timeoutMs']);
+    expect(tool?.function.parameters.required).toEqual(['title', 'description', 'command', 'risky']);
   });
 
   it('QA3-H6 an approval asks with the title, and the result keeps the title and description', async () => {
@@ -55,6 +55,15 @@ describe("the shell tool's title and description (08 §8.2, ADR 0009, 143)", { t
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     expect(toolResults(fake)).toEqual([expect.stringMatching(/^error VALIDATION_FAILED: The call's arguments are invalid: title: .*\n\[exit code 1\]$/) as unknown]);
+  });
+
+  it('QA4-H8 a call without risky is an invalid call, and nothing runs', async () => {
+    const { kernel, fake } = await kvcoder.start();
+    const sessionId = await newSession(kernel);
+    fake.reply({ chunks: [{ toolCall: { id: 'c1', name: 'bash', arguments: { title: 'No risk', description: 'No risky field.', command: 'touch never.txt' } } }] }, says('ok'));
+    await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
+    await kernel.clock.advance(0);
+    expect(toolResults(fake)).toEqual([expect.stringMatching(/^error VALIDATION_FAILED: The call's arguments are invalid: risky: .*\n\[exit code 1\]$/) as unknown]);
   });
 
   it('QA3-H19 an async call asks with mode async, and allowing it starts a background job', async () => {

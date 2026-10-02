@@ -29,7 +29,7 @@ describe('questions and approvals (08 §8.1, §8.5)', { timeout: 30_000 }, () =>
   it('M2.4-H5 a denied shell call reaches the model as denied', async () => {
     const { kernel, fake } = await kvcoder.start(approvals);
     const sessionId = await newSession(kernel);
-    fake.reply({ chunks: [{ toolCall: { id: 't1', name: 'bash', arguments: { title: 'Make a file', command: 'touch made.txt', description: 'Make a file.' } } }] }, says('ok'));
+    fake.reply({ chunks: [{ toolCall: { id: 't1', name: 'bash', arguments: { title: 'Make a file', command: 'touch made.txt', description: 'Make a file.', risky: false } } }] }, says('ok'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     const { turn } = await turnState(kernel, sessionId);

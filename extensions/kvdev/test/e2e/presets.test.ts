@@ -18,7 +18,7 @@ async function presetSettings(call: (route: 'queries', name: string, input: unkn
 }
 
 describe('the bundled presets (11)', () => {
-  it('M2.5-H3 kvman with no preset flag starts the coder preset', async () => {
+  it('M2.5-H3 and QA4-H13 kvman with no preset flag starts the coder preset, whose shell approval is the default auto', async () => {
     world = kvmanWorld();
     const kvman = await world.start([]);
     expect(healthSchema.parse(await kvman.call('queries', 'kernel.health.get', {})).preset).toBe('coder');
@@ -27,10 +27,11 @@ describe('the bundled presets (11)', () => {
       ['@kvman/kvwebui', 'bundled'],
       ['@kvman/kvcoder', 'bundled'],
     ]);
-    expect(await presetSettings(kvman.call, ['kvwebui.title', 'kvwebui.home', 'kvai.defaultModel'])).toEqual({
+    expect(await presetSettings(kvman.call, ['kvwebui.title', 'kvwebui.home', 'kvai.defaultModel', 'kvcoder.shell.approval'])).toEqual({
       'kvwebui.title': expect.objectContaining({ value: 'kvcoder.app.title', source: 'preset' }),
       'kvwebui.home': expect.objectContaining({ value: 'kvcoder.chat', source: 'preset' }),
       'kvai.defaultModel': expect.objectContaining({ value: 'anthropic/claude-sonnet-5-5', source: 'preset' }),
+      'kvcoder.shell.approval': expect.objectContaining({ value: 'auto', source: 'default' }),
     });
   });
 

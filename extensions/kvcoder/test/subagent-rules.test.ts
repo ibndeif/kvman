@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { calls, says, systemPrompt, toolResults } from './support/model-script.ts';
@@ -35,10 +37,25 @@ describe('subagent rules (08 §8.5, ADR 0009, 102)', { timeout: 30_000 }, () => 
     expect(prompt).not.toContain('- subagent: ');
   });
 
+  it("QA4-E13 a child that wasn't given files can't use it, and one that was can", async () => {
+    const { kernel, fake } = await kvcoder.start();
+    const sessionId = await newSession(kernel);
+    fake.reply(calls(`subagent run '{"task":"Limited","mode":"fresh","connectors":["jobs"]}'`), calls(`files write '{"path":"a.txt","content":"x"}'`), says('limited done'), says('parent done'));
+    await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
+    await kernel.clock.advance(0);
+    expect(toolResults(fake, 2)).toEqual(["error VALIDATION_FAILED: files isn't available in this subagent.\n[exit code 1]"]);
+    expect(existsSync(path.join(kernel.homeFolder, 'a.txt'))).toBe(false);
+    fake.reply(calls(`subagent run '{"task":"Full","mode":"fresh","connectors":["files"]}'`), calls(`files write '{"path":"b.txt","content":"x"}'`), says('full done'), says('parent done'));
+    await kernel.exec('kvcoder.message.send', { sessionId, text: 'again' });
+    await kernel.clock.advance(0);
+    expect(toolResults(fake, 6)[0]).toMatch(/^\{\n {2}"path": "b.txt",\n {2}"created": true/);
+    expect(existsSync(path.join(kernel.homeFolder, 'b.txt'))).toBe(true);
+  });
+
   it('M2.4-E45 a child that ends maxSteps returns "subagent ended maxSteps" with exit 1', async () => {
     const { kernel, fake } = await kvcoder.start({ settings: { 'kvcoder.maxSteps': 2 } });
     const sessionId = await newSession(kernel);
-    fake.reply(calls(`subagent run '{"task":"Loop","mode":"fresh"}'`), calls('echo 1'), { chunks: [{ text: 'still going' }, { toolCall: { id: 'x', name: 'bash', arguments: { title: 'Again', command: 'echo 2', description: 'Again.' } } }] }, says('parent done'));
+    fake.reply(calls(`subagent run '{"task":"Loop","mode":"fresh"}'`), calls('echo 1'), { chunks: [{ text: 'still going' }, { toolCall: { id: 'x', name: 'bash', arguments: { title: 'Again', command: 'echo 2', description: 'Again.', risky: false } } }] }, says('parent done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     expect(toolResults(fake, 3)).toEqual(['subagent ended maxSteps\nstill going\n[exit code 1]']);

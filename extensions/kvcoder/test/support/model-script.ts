@@ -6,7 +6,7 @@ import type { FakeOpenAI, FakeReply } from '@kvman/testkit/fake-openai';
 let counter = 0;
 
 /** A shell call: its command, or the command with the tool's other fields. */
-export type ShellCallSpec = string | { command: string; mode?: 'sync' | 'async'; timeoutMs?: number };
+export type ShellCallSpec = string | { command: string; risky?: boolean; mode?: 'sync' | 'async'; timeoutMs?: number };
 
 /** A reply that calls the shell tool once per command, in order. */
 export function calls(...commands: readonly ShellCallSpec[]): FakeReply {
@@ -14,9 +14,14 @@ export function calls(...commands: readonly ShellCallSpec[]): FakeReply {
     chunks: commands.map((entry) => {
       const call = typeof entry === 'string' ? { command: entry } : entry;
       counter += 1;
-      return { toolCall: { id: `call-${counter}`, name: 'bash', arguments: { title: 'A test step', description: 'A test call.', ...call } } };
+      return { toolCall: { id: `call-${counter}`, name: 'bash', arguments: { title: 'A test step', description: 'A test call.', risky: false, ...call } } };
     }),
   };
+}
+
+/** A `files` call with its JSON on stdin, as the model types it. */
+export function filesCommand(command: 'write' | 'edit', input: unknown): string {
+  return `files ${command} <<'EOF'\n${JSON.stringify(input)}\nEOF`;
 }
 
 /** A reply of plain text. */

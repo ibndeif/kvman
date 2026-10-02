@@ -138,7 +138,7 @@
   "kvcoder.maxSteps.title": "الخطوات لكل دور",
   "kvcoder.maxSteps.description": "أقصى عدد خطوات للدور قبل أن يتوقف.",
   "kvcoder.shell.approval.title": "موافقة الصدفة",
-  "kvcoder.shell.approval.description": "هل يُسأل الشخص قبل كل استدعاء حقيقي للصدفة.",
+  "kvcoder.shell.approval.description": "هل يُسأل الشخص قبل استدعاءات الصدفة والملفات: التي يعدّها النموذج خطرة فقط (auto)، أو كلها (ask).",
   "kvcoder.shell.path.title": "برنامج الصدفة",
   "kvcoder.shell.path.description": "برنامج الصدفة؛ القيمة الفارغة تبحث عن bash، أو pwsh ثم powershell.exe على ويندوز.",
   "kvcoder.compactAt.title": "التلخيص عند",

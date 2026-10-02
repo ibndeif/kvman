@@ -14,7 +14,7 @@ describe('runConnector (08 §8.4, ADR 0009, 96)', { timeout: 30_000 }, () => {
     expect(add.output).toContain('todo add: Adds a todo item.\n\nInput (JSON Schema):\n{');
     expect(add.output).toContain('"text": {\n      "type": "string"');
     expect(add.output).toContain("Examples:\n  # Add an item\n  todo add '{\"text\":\"it'\\''s done\"}'");
-    for (const builtin of ['ask', 'subagent', 'jobs']) expect((await runConnector(kernel, `${builtin} -h`)).output).toMatch(new RegExp(`^${builtin}: `));
+    for (const builtin of ['ask', 'subagent', 'jobs', 'files']) expect((await runConnector(kernel, `${builtin} -h`)).output).toMatch(new RegExp(`^${builtin}: `));
   });
 
   it('M2.4-E33 a call prints its output as JSON, or an error line with exit 1', async () => {
@@ -34,6 +34,7 @@ describe('runConnector (08 §8.4, ADR 0009, 96)', { timeout: 30_000 }, () => {
     expect(await runConnector(kernel, `todo add '{"text":"a"}' | cat`)).toEqual({ exitCode: 1, output: expect.stringContaining('connector calls stand alone') as unknown });
     expect(await runConnector(kernel, `ask text '{"prompt":"?"}'`)).toEqual({ exitCode: 1, output: 'ask runs only inside a turn' });
     expect(await runConnector(kernel, 'jobs list')).toEqual({ exitCode: 1, output: 'jobs runs only inside a turn' });
+    expect(await runConnector(kernel, `files write '{"path":"a.txt","content":"x"}'`)).toEqual({ exitCode: 1, output: 'files runs only inside a turn' });
     expect(await runConnector(kernel, 'echo todo')).toEqual({ exitCode: 1, output: 'not a connector call' });
     expect(await kernel.exec('todo.item.list', {})).toEqual([]);
   });

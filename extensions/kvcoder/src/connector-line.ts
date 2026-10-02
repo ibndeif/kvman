@@ -16,7 +16,7 @@ export type JsonValue = z.output<ReturnType<typeof z.json>>;
 export type CallResult = { output: string; exitCode: number };
 
 /** The connectors kvcoder runs itself. */
-export const builtinConnectors = ['ask', 'subagent', 'jobs'] as const;
+export const builtinConnectors = ['ask', 'subagent', 'jobs', 'files'] as const;
 
 const headMarkers = new Set(['|', '&', ';', '(']);
 const operators = new Set(['|', '&', ';', '(', ')', '<', '>']);
@@ -249,6 +249,18 @@ export const builtinHelp: Readonly<Record<(typeof builtinConnectors)[number], st
     '  list         the newest 50, newest first',
     "  get <id>     one job's status, and its output (a process's last 100 lines) or problem",
     '  cancel <id>  cancels one; a process is stopped',
+  ].join('\n'),
+  files: [
+    'files: Create, replace, or edit a file inside the workspace folder.',
+    '',
+    'Commands:',
+    `  write  ${quoted('{ "path", "content" }')} → { "path", "created", "bytes" }`,
+    `  edit   ${quoted('{ "path", "edits": [{ "oldText", "newText" }] }')} → { "path", "replacements", "firstChangedLine" }`,
+    '',
+    '"write" creates the file and its folders, or replaces it. "edit" needs an existing text file: each oldText must match',
+    'the file exactly once, as it was before the call (whitespace and line breaks included), and edits must not overlap. If',
+    'one fails, nothing is written. Put several changes to one file in one call. Paths are relative to the workspace folder',
+    'and may not leave it. Give the JSON on stdin with a heredoc, so the text needs no shell quoting.',
   ].join('\n'),
 };
 

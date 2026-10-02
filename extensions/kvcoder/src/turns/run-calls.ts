@@ -1,10 +1,11 @@
 import type { Ctx, Stored } from '@kvman/sdk';
 import { builtinConnectors, callInput, errorOutput, parseLine, refusedText, resultText, runCommandsCall, type CallResult } from '../connector-line.ts';
 import { askCall, type QuestionKind } from '../calls/ask.ts';
+import { filesCall } from '../calls/files.ts';
 import { jobsCall } from '../calls/jobs.ts';
 import { runShellCall } from '../calls/run-shell-call.ts';
 import { callTimeout } from '../calls/shell-command.ts';
-import { shellArgsSchema } from '../calls/shell-tool.ts';
+import { shellArgsSchema, type ShellArgs } from '../calls/shell-tool.ts';
 import { createChild, startChild, subagentCall } from '../calls/subagent.ts';
 import type { SessionTools } from '../prompt/session-prompt.ts';
 import { callInfos, isQuery, loadedExtensions } from '../registry/loaded.ts';
@@ -13,8 +14,9 @@ import { now } from '../sessions/session-lookup.ts';
 import { records } from '../store/collections.ts';
 
 // How one call of a reply runs (plan 08 §8.3): a connector call through kvcoder, a connector word in shell syntax
-// refused, and anything else in the real shell, after approval when `kvcoder.shell.approval` is `ask`. A call either
-// returns its result now, or waits on the person or on a subagent.
+// refused, and anything else in the real shell. A real shell call and a `files` call ask the person first when
+// `kvcoder.shell.approval` is `ask`, or when the model marked the call risky (ADR 0009, 161). A call either returns
+// its result now, or waits on the person or on a subagent.
 
 export type ToolCall = { id: string; name: string; arguments: Record<string, JsonValue> };
 
@@ -30,6 +32,14 @@ const result = (toolCallId: string, call: CallResult, details: JsonValue = null)
   held: { toolCallId, text: resultText(call.output, call.exitCode), details, isError: call.exitCode !== 0, run: null },
 });
 
+const asks = (env: CallEnv, args: ShellArgs): boolean => env.approval === 'ask' || args.risky;
+
+const isHelp = (words: readonly string[]): boolean => words.length === 1 && words[0] === '-h';
+
+function approval(args: ShellArgs, line: string, mode: 'sync' | 'async', timeoutMs: number): CallOutcome {
+  return { kind: 'question', questionKind: 'approval', question: { title: args.title, command: line, description: args.description, mode, timeoutMs } };
+}
+
 async function shellOutcome(env: CallEnv, call: ToolCall, shell: { title: string; description: string; command: string; mode?: 'sync' | 'async' | undefined }, timeoutMs: number): Promise<CallOutcome> {
   const run = await runShellCall(env.ctx, env.session.id, env.tools.shell, { ...shell, timeoutMs });
   return { kind: 'result', held: { toolCallId: call.id, ...run, run: null } };
@@ -43,6 +53,7 @@ async function connectorOutcome(env: CallEnv, call: ToolCall, line: string, pars
     return 'output' in asked ? result(call.id, asked) : { kind: 'question', questionKind: asked.kind, question: asked.question };
   }
   if (parsed.connector === 'jobs') return result(call.id, await jobsCall(ctx, session.id, parsed.words));
+  if (parsed.connector === 'files') return result(call.id, await filesCall(ctx, parsed.words, parsed.stdin));
   if (parsed.connector === 'subagent') {
     const run = subagentCall(parsed.words, parsed.stdin, tools.allowed);
     if ('output' in run) return result(call.id, run);
@@ -81,15 +92,23 @@ export async function evaluateCall(env: CallEnv, call: ToolCall): Promise<CallOu
   const words = new Set([...builtinConnectors, ...env.tools.connectors.filter((connector) => connector.kind === 'commands').map((connector) => connector.name)]);
   const parsed = parseLine(line, words);
   if (parsed.kind === 'refused') return result(call.id, { output: refusedText(parsed.connector), exitCode: 1 });
-  if (parsed.kind === 'call') return connectorOutcome(env, call, line, parsed);
-  if (!env.session.shell) return result(call.id, errorOutput({ code: 'VALIDATION_FAILED', message: 'shell calls are off for this subagent' }));
   const timeoutMs = callTimeout(args.data.timeoutMs);
-  if (env.approval === 'ask') return { kind: 'question', questionKind: 'approval', question: { title: args.data.title, command: line, description: args.data.description, mode: args.data.mode ?? 'sync', timeoutMs } };
+  if (parsed.kind === 'call') {
+    const files = parsed.connector === 'files' && env.tools.allowed.has('files') && !isHelp(parsed.words);
+    return files && asks(env, args.data) ? approval(args.data, line, 'sync', timeoutMs) : connectorOutcome(env, call, line, parsed);
+  }
+  if (!env.session.shell) return result(call.id, errorOutput({ code: 'VALIDATION_FAILED', message: 'shell calls are off for this subagent' }));
+  if (asks(env, args.data)) return approval(args.data, line, args.data.mode ?? 'sync', timeoutMs);
   return shellOutcome(env, call, args.data, timeoutMs);
 }
 
-/** Runs an approved shell call held in the turn. */
+/** Runs an approved shell or `files` call held in the turn. */
 export async function runApproved(ctx: Ctx, tools: Pick<SessionTools, 'shell'>, sessionId: string, held: HeldResult): Promise<HeldResult> {
   if (held.run === null) return held;
+  const line = parseLine(held.run.command, new Set(['files']));
+  if (line.kind === 'call') {
+    const done = await filesCall(ctx, line.words, line.stdin);
+    return { toolCallId: held.toolCallId, text: resultText(done.output, done.exitCode), details: null, isError: done.exitCode !== 0, run: null };
+  }
   return { toolCallId: held.toolCallId, ...(await runShellCall(ctx, sessionId, tools.shell, held.run)), run: null };
 }

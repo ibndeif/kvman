@@ -138,7 +138,7 @@
   "kvcoder.maxSteps.title": "Steps per turn",
   "kvcoder.maxSteps.description": "The most steps a turn takes before it stops.",
   "kvcoder.shell.approval.title": "Shell approval",
-  "kvcoder.shell.approval.description": "Whether each real shell call asks the person first.",
+  "kvcoder.shell.approval.description": "Whether shell and file calls ask the person first: only the ones the model marks risky (auto), or every one (ask).",
   "kvcoder.shell.path.title": "Shell program",
   "kvcoder.shell.path.description": "The shell program to run; null finds bash, or pwsh then powershell.exe on Windows.",
   "kvcoder.compactAt.title": "Summarize at",

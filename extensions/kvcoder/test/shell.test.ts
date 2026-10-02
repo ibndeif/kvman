@@ -65,7 +65,7 @@ describe('the real shell (08 §8.3)', { timeout: 30_000 }, () => {
     posixShell();
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    fake.reply({ chunks: [{ toolCall: { id: 'a', name: 'bash', arguments: { title: 'No command', description: 'No command.' } } }, { toolCall: { id: 'b', name: 'python', arguments: { title: 'x', command: 'ls', description: 'x' } } }] }, says('ok'));
+    fake.reply({ chunks: [{ toolCall: { id: 'a', name: 'bash', arguments: { title: 'No command', description: 'No command.' } } }, { toolCall: { id: 'b', name: 'python', arguments: { title: 'x', command: 'ls', description: 'x', risky: false } } }] }, says('ok'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     const [missing, wrong] = toolResults(fake);
