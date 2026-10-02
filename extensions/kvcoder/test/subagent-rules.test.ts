@@ -8,7 +8,7 @@ import { newSession, turnState } from './support/turns.ts';
 const kvcoder = useKvcoder();
 
 describe('subagent rules (08 §8.5, ADR 0009, 102)', { timeout: 30_000 }, () => {
-  it("M2.4-E43 a child's connectors are a subset of its parent's: never subagent, always ask, and shell: false refuses the shell", async () => {
+  it("M2.4-E43 and QA4-E18 a child's connectors are a subset of its parent's: never subagent, always ask, and shell: false refuses the shell", async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
     fake.reply(
@@ -33,8 +33,9 @@ describe('subagent rules (08 §8.5, ADR 0009, 102)', { timeout: 30_000 }, () => 
     expect(child[3]).toMatch(/^ask: Ask the person/);
     const prompt = systemPrompt(fake, 1);
     expect(prompt).toContain('- todo: Keep a todo list.');
-    expect(prompt).toContain('- ask: ');
+    expect(prompt).toContain('- ask: Ask the person a question and wait for the answer (commands: text, choice, confirm).');
     expect(prompt).not.toContain('- subagent: ');
+    expect(prompt).not.toContain('- fs: ');
   });
 
   it("QA4-E13 a child that wasn't given files can't use it, and one that was can", async () => {

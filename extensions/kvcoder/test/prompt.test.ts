@@ -30,7 +30,7 @@ describe('the prompt (08 §8.2, §8.4)', { timeout: 30_000 }, () => {
     expect(prompt).not.toContain('Clashes');
   });
 
-  it("M2.4-E53 the base prompt names the shell, the OS, the language, and the workspace folder; then sections by order; then the connector index", async () => {
+  it("M2.4-E53 and QA4-H15 the base prompt names the shell, the OS, the language, and the workspace folder; then sections by order; then the connector index", async () => {
     const { kernel, fake } = await kvcoder.start({ settings: { 'kernel.language': 'ar' } });
     const sessionId = await newSession(kernel);
     await kernel.exec('kvcoder.section.set', { id: 'later', title: 'Later', order: 30, content: 'L' }, { as: '@test/todo' });
@@ -46,6 +46,11 @@ describe('the prompt (08 §8.2, §8.4)', { timeout: 30_000 }, () => {
     expect(prompt).toContain('Reply in Arabic (ar) unless the person writes in another language.');
     const tool = process.platform === 'win32' ? 'powershell: it runs a PowerShell command' : 'bash: it runs a bash command';
     expect(prompt).toContain(`Your one tool is ${tool}. Each call starts in the workspace folder, so cd doesn't carry over to the next call.`);
+    expect(prompt).toContain('- ask: Ask the person a question and wait for the answer (commands: text, choice, confirm).');
+    expect(prompt).toContain('- subagent: Run helper agents on tasks, in parallel or in the background (command: run).');
+    expect(prompt).toContain('- jobs: List, check, or cancel the background work this chat started (commands: list, get, cancel).');
+    expect(prompt).toContain('- fs: Create, replace, or edit files inside the workspace folder (commands: write, edit).');
+    expect(prompt).toContain('- todo: Keep a todo list.\n');
     const order = ['## Mine', '## Everywhere', '## Later', '## Connectors', '- todo: Keep a todo list.', '- ask: ', '- subagent: ', '- jobs: '].map((part) => prompt.indexOf(part));
     expect(order.every((index) => index > 0)).toBe(true);
     expect([...order].sort((first, second) => first - second)).toEqual(order);

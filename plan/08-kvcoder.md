@@ -51,9 +51,9 @@ kvcoder is the app-building harness, built on kvai and kvwebui. Its agent has on
 ## 8.2 A step
 
 1. **Build the prompt**, in this order:
-   - the base prompt: English, telling the model to reply in `kernel.language` unless the person writes in another language. It names the shell and the OS, and says each shell call starts in the workspace folder, so `cd` doesn't carry over;
+   - the base prompt: English, telling the model to reply in `kernel.language` unless the person writes in another language. It names the shell and the OS, says each shell call starts in the workspace folder, so `cd` doesn't carry over, and tells the model to call `ask` to put a question to the person, since a reply with no tool call ends its turn (ADR 0009, 163);
    - the sections, by `order` (§8.4);
-   - the connector index: each registered connector's name and description (binary connectors only when their check passed).
+   - the connector index: each registered connector's name and description (binary connectors only when their check passed), and after the description of a built-in connector, its commands (ADR 0009, 163).
 2. **Call the model.** `kvai.complete` with the session's model and thinking level, its messages (after the summary), and the one tool, `bash { title, description, command, risky, mode?, timeoutMs? }` (or `powershell` with the same input on Windows): `title` is two to six words in the imperative and `description` one sentence for the person, both required and shown in the UI (ADR 0009, 143); `risky` is required: `true` when the call could lose or damage something that isn't the model's own work, or reaches outside the workspace (ADR 0009, 161). Deltas stream to the UI. A call that fails `kvai/RATE_LIMITED`, or `kvai/PROVIDER_ERROR` with `transient: true`, is tried up to 3 times in all, after 1 s and then 4 s, with the chunk `{ type: 'retry', attempt, of }` before each retry; any other failure ends the turn at once (ADR 0009, 155).
 3. **Handle the answer.**
    - **Tool calls.** All calls of the reply start together (§8.3). Shell calls that need approval are asked together, and the turn suspends until every pending item is answered. Then kvcoder appends the results in the model's call order and queues the next step.

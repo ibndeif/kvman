@@ -11,10 +11,10 @@ import { buildPrompt, type BuiltPrompt } from './build-prompt.ts';
 // always `ask` (plan 08 §8.5); binary connectors count once their check passed (plan 08 §8.4).
 
 const builtinDescriptions: Record<(typeof builtinConnectors)[number], string> = {
-  ask: 'Ask the person a question and wait for the answer.',
-  subagent: 'Run helper agents on tasks, in parallel or in the background.',
-  jobs: 'List, check, or cancel the background work this chat started.',
-  fs: 'Create, replace, or edit files inside the workspace folder.',
+  ask: 'Ask the person a question and wait for the answer (commands: text, choice, confirm).',
+  subagent: 'Run helper agents on tasks, in parallel or in the background (command: run).',
+  jobs: 'List, check, or cancel the background work this chat started (commands: list, get, cancel).',
+  fs: 'Create, replace, or edit files inside the workspace folder (commands: write, edit).',
 };
 
 export type SessionTools = {

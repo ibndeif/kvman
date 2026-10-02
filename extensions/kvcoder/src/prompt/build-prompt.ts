@@ -29,6 +29,7 @@ function basePrompt(input: PromptInput): string {
     `Reply in ${languageName(input.language)} unless the person writes in another language.`,
     `Your one tool is ${input.toolName}: it runs a ${shell} command. Each call starts in the workspace folder, so cd doesn't carry over to the next call.`,
     'Some words are connectors, which kvcoder runs itself: `<connector> <command> \'<json>\'`, or the JSON on stdin (a heredoc in bash, a here-string in PowerShell). A connector call stands alone on its line. Add --async to run it in the background: it prints the job id at once, and the result arrives later as a message. Run `<connector> -h` to see what a connector does.',
+    'To put a question to the person (a choice, a yes or no, a free answer), call `ask`. A reply with no tool call ends your turn, so never end one by promising something still to come ("now the question:"): make the call in the same reply, or say what you need.',
   ].join('\n');
 }
 

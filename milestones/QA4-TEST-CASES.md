@@ -17,6 +17,8 @@ The product owner asked for a file-system connector inspired by pi's `write` and
 - **QA4-H11 An `fs` call follows the same approval.** *Given* `auto`, *then* a `fs write` with `risky: false` runs at once and one with `risky: true` waits; denying it writes nothing and returns `denied by the user`; allowing it writes. (`extensions/kvcoder/test/risky-approval.test.ts`)
 - **QA4-H12 Two edits of one file in one reply both land.** *Given* a reply with two `fs edit` calls on the same file, *then* both changes are in the file, whichever the order of their reads. (`extensions/kvcoder/test/fs-connector.test.ts`)
 - **QA4-H13 The default is `auto`.** *Given* no setting, *then* `kvcoder.shell.approval` reads `auto`, and the `dev` preset still gives `ask`. (`extensions/kvdev/test/e2e/presets.test.ts`)
+- **QA4-H14 The prompt says how to ask.** *Then* the base prompt tells the model to call `ask` to put a question to the person and not to end a reply by promising something still to come. (`extensions/kvcoder/test/unit/prompt-build.test.ts`, `extensions/kvcoder/test/prompt.test.ts`)
+- **QA4-H15 The connector index names the built-ins' commands.** *Then* it lists `ask` with `text, choice, confirm`, `subagent` with `run`, `jobs` with `list, get, cancel`, and `fs` with `write, edit`, while a registered connector shows only its own description. (`extensions/kvcoder/test/prompt.test.ts`)
 
 ## Edge cases
 
@@ -37,3 +39,4 @@ The product owner asked for a file-system connector inspired by pi's `write` and
 - **QA4-E15 Other built-in connectors never ask.** *Given* `ask`, *then* `jobs list` returns at once. (`extensions/kvcoder/test/risky-approval.test.ts`)
 - **QA4-E16 A risky async call asks too.** *Given* `auto` and `mode: 'async'` with `risky: true`, *then* it waits for approval and starts only when allowed. (`extensions/kvcoder/test/risky-approval.test.ts`)
 - **QA4-E17 An `fs` call cancelled with the turn writes nothing.** *Given* a turn cancelled while a `fs write` waits for approval, *then* the file doesn't exist. (`extensions/kvcoder/test/risky-approval.test.ts`)
+- **QA4-E18 A subagent's index lists only its connectors' commands.** *Given* a subagent without `fs`, *then* its prompt has no `fs` line and still has `ask` with its commands. (`extensions/kvcoder/test/subagent-rules.test.ts`)
