@@ -29,6 +29,7 @@
   "kernel.workspace.close.fields.workspaceId": "Workspace",
   "kernel.workspace.list.description": "Lists the open workspaces.",
   "kernel.folder.list.description": "Lists the sub-folders of a folder on this machine.",
+  "kernel.folder.create.description": "Makes a folder inside a folder on this machine.",
   "kernel.settings.set.description": "Sets a setting.",
   "kernel.settings.set.fields.key": "Setting",
   "kernel.settings.set.fields.value": "Value",

@@ -1,25 +1,26 @@
-import { readdir, realpath, stat } from 'node:fs/promises';
+import { mkdir, readdir, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
-import { kernelQuerySchemas } from '@kvman/sdk';
+import { kernelCommandSchemas, kernelQuerySchemas } from '@kvman/sdk';
 import { kernelProblem } from '../problems.ts';
+import { folderNameProblem } from './folder-name.ts';
 import type { KernelApiServices } from './kernel-api-services.ts';
 import type { KernelRegistrations } from './kernel-registrations.ts';
 
-// `kernel.folder.list` (plan 02 §2.12, ADR 0009, 219): the sub-folders of a folder, for choosing a workspace folder. It
-// reads names on this machine and nothing else: no file is listed, nothing is opened or recorded.
+// `kernel.folder.list` and `kernel.folder.create` (plan 02 §2.12, ADR 0009, 219, 222, and 223): the sub-folders of a folder,
+// for choosing a workspace folder, and one new folder inside one. Listing reads names and nothing else; creating makes a
+// single folder and records nothing.
 
 const folderLimit = 1000;
 
+const unreadable = (folder: string, error: unknown): Error => kernelProblem('VALIDATION_FAILED', `The folder can't be read (${error instanceof Error ? error.message : String(error)}).`, { path: folder });
+
 async function realFolder(folder: string): Promise<string> {
   if (!path.isAbsolute(folder)) throw kernelProblem('VALIDATION_FAILED', 'A folder path must be absolute.', { path: folder });
-  try {
-    const real = await realpath(folder);
-    if ((await stat(real)).isDirectory()) return real;
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    throw kernelProblem('VALIDATION_FAILED', `The folder can't be read (${reason}).`, { path: folder });
-  }
-  throw kernelProblem('VALIDATION_FAILED', 'A folder path must be a folder.', { path: folder });
+  const real = await realpath(folder).catch((error: unknown) => {
+    throw unreadable(folder, error);
+  });
+  if (!(await stat(real)).isDirectory()) throw kernelProblem('VALIDATION_FAILED', 'A folder path must be a folder.', { path: folder });
+  return real;
 }
 
 async function isFolder(entry: { isDirectory(): boolean; isSymbolicLink(): boolean }, location: string): Promise<boolean> {
@@ -32,21 +33,24 @@ export function registerFolderApi(api: KernelRegistrations, services: KernelApiS
   api.query('kernel.folder.list', kernelQuerySchemas['kernel.folder.list'], 'Lists the sub-folders of a folder on this machine.', async (input) => {
     const folder = await realFolder(input.path ?? services.homeFolder);
     const entries = await readdir(folder, { withFileTypes: true }).catch((error: unknown) => {
-      throw kernelProblem('VALIDATION_FAILED', `The folder can't be read (${error instanceof Error ? error.message : String(error)}).`, { path: folder });
+      throw unreadable(folder, error);
     });
     const shown = entries.filter((entry) => input.hidden === true || !entry.name.startsWith('.')).sort((first, second) => first.name.localeCompare(second.name));
-    const folders: { name: string; path: string }[] = [];
-    let truncated = false;
-    for (const entry of shown) {
-      const location = path.join(folder, entry.name);
-      if (!(await isFolder(entry, location))) continue;
-      if (folders.length === folderLimit) {
-        truncated = true;
-        break;
-      }
-      folders.push({ name: entry.name, path: location });
-    }
+    const checked = await Promise.all(shown.map(async (entry) => ({ entry, folder: await isFolder(entry, path.join(folder, entry.name)) })));
+    const folders = checked.filter((found) => found.folder).map(({ entry }) => ({ name: entry.name, path: path.join(folder, entry.name) }));
     const parent = path.dirname(folder);
-    return { path: folder, parent: parent === folder ? null : parent, folders, truncated };
+    return { path: folder, parent: parent === folder ? null : parent, folders: folders.slice(0, folderLimit), truncated: folders.length > folderLimit };
+  });
+  api.command('kernel.folder.create', kernelCommandSchemas['kernel.folder.create'], 'Makes a folder inside a folder on this machine.', async (input) => {
+    const name = input.name.trim();
+    const reason = folderNameProblem(name);
+    if (reason !== undefined) throw kernelProblem('VALIDATION_FAILED', reason, { name });
+    const parent = await realFolder(input.path);
+    const made = path.join(parent, name);
+    await mkdir(made).catch((error: unknown) => {
+      const exists = error instanceof Error && 'code' in error && error.code === 'EEXIST';
+      throw kernelProblem('VALIDATION_FAILED', exists ? `A folder or file named ${name} already exists here.` : `The folder can't be made (${error instanceof Error ? error.message : String(error)}).`, { path: made });
+    });
+    return { path: await realpath(made) };
   });
 }

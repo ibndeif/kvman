@@ -55,7 +55,7 @@ describe('kernel.folder.list (02 §2.12, ADR 0009, 219)', () => {
     expect((await kernel.exec('kernel.folder.list', { path: root })).parent).toBe(path.dirname(real));
   });
 
-  it('QA13-E3 a symlink to a folder is a folder, and a symlink to a file or to nothing is not', async () => {
+  it('QA13-E3 and QA14-E5 a symlink to a folder is a folder, and a symlink to a file or to nothing is not, in name order with the parallel checks', async () => {
     const kernel = await harness.start([]);
     const { root, real } = tree();
     symlinkSync(path.join(root, 'a'), path.join(root, 'to-folder'));

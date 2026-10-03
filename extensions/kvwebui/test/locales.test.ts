@@ -47,4 +47,11 @@ describe("kvwebui's catalogs (02 §2.11)", () => {
       for (const key of ['kvwebui.workspace.openThis', 'kvwebui.workspace.up', 'kvwebui.workspace.showHidden', 'kvwebui.workspace.noFolders', 'kvwebui.workspace.truncated', 'kvwebui.workspace.folderHelp']) expect(texts[key], `${language} ${key}`).toBeTypeOf('string');
     }
   });
+
+  it('QA14-E10 en and ar have the folder browser texts of the places, the filter, Back, and New folder', () => {
+    for (const language of ['en', 'ar']) {
+      const texts = catalog(language);
+      for (const key of ['places', 'back', 'filter', 'noMatch', 'alreadyOpen', 'newFolder', 'newFolderName', 'create', 'pathLabel']) expect(texts[`kvwebui.workspace.${key}`], `${language} ${key}`).toBeTypeOf('string');
+    }
+  });
 });

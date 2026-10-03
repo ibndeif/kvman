@@ -73,6 +73,7 @@ export const healthSchema = z.strictObject({
 export const kernelCommandSchemas = {
   'kernel.workspace.open': { input: z.strictObject({ path: z.string().min(1) }), output: workspaceSchema },
   'kernel.workspace.close': { input: z.strictObject({ workspaceId: z.string().min(1) }), output: emptySchema },
+  'kernel.folder.create': { input: z.strictObject({ path: z.string().min(1), name: z.string() }), output: z.strictObject({ path: z.string() }) },
   'kernel.settings.set': { input: z.strictObject({ key: z.string().min(1), value: jsonSchema, scope: scopeSchema }), output: emptySchema },
   'kernel.settings.reset': { input: z.strictObject({ key: z.string().min(1), scope: scopeSchema }), output: emptySchema },
   'kernel.secrets.set': { input: z.strictObject({ extension: z.string().min(1), name: z.string().min(1), value: z.string() }), output: emptySchema },
