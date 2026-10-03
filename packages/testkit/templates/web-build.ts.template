@@ -1,0 +1,26 @@
+import { readdirSync, rmSync } from 'node:fs';
+import vue from '@vitejs/plugin-vue';
+import { build } from 'vite';
+
+// Each web/components/<Name>.vue builds on its own into dist/web/components/<name>.js and <name>.css, the two files
+// kvwebui loads for the custom component `__NAMESPACE__.<name>`; `vue` comes from kvwebui's import map. With
+// `--watch` (npm run web:watch), each rebuilds when it changes, and a page refresh shows it.
+const watch = process.argv.includes('--watch');
+const kebab = (name: string): string => name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+
+if (!watch) rmSync('dist/web', { recursive: true, force: true });
+for (const file of readdirSync('web/components').filter((entry) => entry.endsWith('.vue'))) {
+  const name = kebab(file.slice(0, -'.vue'.length));
+  await build({
+    configFile: false,
+    logLevel: 'warn',
+    plugins: [vue()],
+    build: {
+      outDir: 'dist/web/components',
+      emptyOutDir: false,
+      watch: watch ? {} : null,
+      lib: { entry: `web/components/${file}`, formats: ['es'], fileName: () => `${name}.js`, cssFileName: name },
+      rolldownOptions: { external: ['vue'] },
+    },
+  });
+}

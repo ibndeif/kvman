@@ -1,0 +1,13 @@
+# __NAME__
+
+This folder is the kvman extension `__NAME__` (namespace `__NAMESPACE__`).
+
+- Read `docs/` first: the platform guides `sdk.md`, `i18n.md`, and `presets.md`.
+- For the docs of the extensions this one builds on, run `kvman-docs list` and `kvman-docs get <extension> <topic>`; they need a running kvman.
+- Keep this extension's own docs in `extension-docs/`; they are served by `__NAMESPACE__.docs.list` and `__NAMESPACE__.docs.get`.
+- After every change, run `npm run check` and `npm test`.
+- `src/index.ts` is loaded directly by a kvman that has this folder as a `path:` extension, so there is no build step while developing.
+- Never edit `dist/` or `node_modules/`.
+- User-facing text is always a translation key with `en` and `ar` entries in `locales/`.
+- Names are `<namespace>.<segment>`, lowercase kebab-case segments.
+__WEB_AGENTS__

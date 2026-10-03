@@ -1,0 +1,8 @@
+# Using __NAMESPACE__
+
+__NAME__ is a kvman extension (namespace `__NAMESPACE__`). Its public queries are:
+
+- `__NAMESPACE__.greeting.get` gives the greeting.
+- `__NAMESPACE__.ui.get` gives its pages and navigation.
+- `__NAMESPACE__.docs.list` lists these documentation pages.
+- `__NAMESPACE__.docs.get` gives one page by topic.

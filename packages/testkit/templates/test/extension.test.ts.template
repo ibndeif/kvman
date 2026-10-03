@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { createTestKernel } from '@kvman/testkit';
+
+test('__NAMESPACE__.greeting.get gives the greeting', async () => {
+  const kernel = await createTestKernel({ extensions: ['./'] });
+  try {
+    assert.deepEqual(await kernel.exec('__NAMESPACE__.greeting.get', {}), { text: 'Hello from __NAMESPACE__!' });
+  } finally {
+    await kernel.close();
+  }
+});
+
+test('__NAMESPACE__.docs.list and __NAMESPACE__.docs.get serve the usage page', async () => {
+  const kernel = await createTestKernel({ extensions: ['./'] });
+  try {
+    assert.deepEqual(await kernel.exec('__NAMESPACE__.docs.list', {}), [{ topic: 'usage', title: 'Using __NAMESPACE__' }]);
+    const page = await kernel.exec('__NAMESPACE__.docs.get', { topic: 'usage' });
+    assert.equal(page.topic, 'usage');
+    assert.equal(page.title, 'Using __NAMESPACE__');
+    assert.ok(page.markdown.startsWith('# Using __NAMESPACE__'));
+    await assert.rejects(kernel.exec('__NAMESPACE__.docs.get', { topic: 'no-such-page' }));
+  } finally {
+    await kernel.close();
+  }
+});

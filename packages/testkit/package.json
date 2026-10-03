@@ -16,10 +16,13 @@
     }
   },
   "bin": {
-    "kvman-check": "./dist/check-bin.js"
+    "kvman-check": "./dist/check-bin.js",
+    "kvman-new": "./dist/new/new-bin.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "docs",
+    "templates"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

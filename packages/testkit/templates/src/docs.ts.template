@@ -1,0 +1,46 @@
+import { readdirSync, readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { ProblemError } from '@kvman/sdk';
+
+// The documentation pages of __NAMESPACE__ (plan 09 §9.5): the Markdown files in `extension-docs/`, served by
+// `__NAMESPACE__.docs.list` and `__NAMESPACE__.docs.get`. The folder sits next to this module, from `src/` and
+// from `dist/`.
+
+const pagesFolder = fileURLToPath(new URL('../extension-docs/', import.meta.url));
+
+const topicPattern = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+
+function notFound(topic: string): ProblemError {
+  return new ProblemError({ code: 'NOT_FOUND', message: `There is no documentation page ${topic}.` });
+}
+
+function titleOf(topic: string, markdown: string): string {
+  for (const line of markdown.split('\n')) {
+    if (line.startsWith('# ')) return line.slice('# '.length);
+  }
+  return topic;
+}
+
+/** Lists the documentation pages, sorted by topic. */
+export function listDocs(): { topic: string; title: string }[] {
+  return readdirSync(pagesFolder)
+    .filter((entry) => entry.endsWith('.md'))
+    .map((entry) => entry.slice(0, -'.md'.length))
+    .filter((topic) => topicPattern.test(topic))
+    .sort()
+    .map((topic) => ({ topic, title: titleOf(topic, readFileSync(path.join(pagesFolder, `${topic}.md`), 'utf8')) }));
+}
+
+/** Gives one documentation page; an unknown or invalid topic is `NOT_FOUND`. */
+export function getDoc(topic: string): { topic: string; title: string; markdown: string } {
+  if (!topicPattern.test(topic)) throw notFound(topic);
+  let markdown: string;
+  try {
+    markdown = readFileSync(path.join(pagesFolder, `${topic}.md`), 'utf8');
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') throw notFound(topic);
+    throw error;
+  }
+  return { topic, title: titleOf(topic, markdown), markdown };
+}
