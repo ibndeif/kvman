@@ -265,7 +265,11 @@ importers:
         specifier: 3.3.11
         version: 3.3.11(typescript@6.0.3)
 
-  extensions/kvdev:
+  extensions/kvcustomizer:
+    dependencies:
+      '@kvman/testkit':
+        specifier: workspace:*
+        version: link:../../packages/testkit
     devDependencies:
       '@kvman/kvai':
         specifier: workspace:*
@@ -279,9 +283,6 @@ importers:
       '@kvman/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
-      '@kvman/testkit':
-        specifier: workspace:*
-        version: link:../../packages/testkit
       playwright:
         specifier: 1.63.0
         version: 1.63.0

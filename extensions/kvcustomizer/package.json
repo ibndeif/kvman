@@ -1,0 +1,45 @@
+{
+  "name": "@kvman/kvcustomizer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "kvcustomizer: the kvcoder extension for customizing kvman, building extensions and presets and managing the running app.",
+  "type": "module",
+  "main": "dist/index.js",
+  "exports": {
+    ".": {
+      "@kvman/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "docs",
+    "locales"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "@kvman/sdk": "^0.1.0"
+  },
+  "devDependencies": {
+    "@kvman/kvai": "workspace:*",
+    "@kvman/kvcoder": "workspace:*",
+    "@kvman/kvwebui": "workspace:*",
+    "@kvman/sdk": "workspace:*",
+    "playwright": "1.63.0"
+  },
+  "kvman": {
+    "namespace": "kvcustomizer",
+    "source": "src/index.ts",
+    "dependencies": {
+      "@kvman/kvai": "^0.1.0",
+      "@kvman/kvcoder": "^0.1.0"
+    }
+  },
+  "dependencies": {
+    "@kvman/testkit": "workspace:*"
+  }
+}

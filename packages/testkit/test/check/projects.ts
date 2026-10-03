@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach } from 'vitest';
 
-// Extension projects for `kvman-check`, laid out as the kvdev scaffold lays them out (plan 09 §9.2): `src/index.ts` as
+// Extension projects for `kvman-check`, laid out as the kvman-new scaffold lays them out (plan 09 §9.2): `src/index.ts` as
 // `kvman.source`, and `locales/en.json` and `ar.json`. Each is written to a temporary folder removed after the test.
 
 export type Project = { namespace?: string; source: string; locales?: Record<string, Record<string, string>> };

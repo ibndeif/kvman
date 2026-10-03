@@ -13,7 +13,8 @@
       "@kvman/source": "./src/fake-openai.ts",
       "types": "./dist/fake-openai.d.ts",
       "default": "./dist/fake-openai.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "bin": {
     "kvman-check": "./dist/check-bin.js",
