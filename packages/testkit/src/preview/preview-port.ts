@@ -16,9 +16,9 @@ function isPortFree(port: number): Promise<boolean> {
 }
 
 /** The first free preview port, or `NO_FREE_PORT` when 3738 to 3837 are all taken. */
-export async function previewPort(): Promise<number> {
+export async function previewPort(isFree: (port: number) => Promise<boolean> = isPortFree): Promise<number> {
   for (let port = firstPreviewPort; port <= lastPreviewPort; port += 1) {
-    if (await isPortFree(port)) return port;
+    if (await isFree(port)) return port;
   }
   throw new BinFailure('NO_FREE_PORT', 'Ports 3738 to 3837 are all taken; stop something that listens on one.');
 }

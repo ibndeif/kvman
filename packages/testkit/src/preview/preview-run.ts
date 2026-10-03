@@ -116,9 +116,15 @@ function waitForSignals(): SignalWaiter {
 async function answers(url: string): Promise<boolean> {
   let response: Response;
   try {
-    response = await fetch(`${url}api/queries/kernel.health.get`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"input":{}}' });
+    response = await fetch(`${url}api/queries/kernel.health.get`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{"input":{}}',
+      signal: AbortSignal.timeout(pollEveryMs * 5),
+    });
   } catch (error) {
-    if (error instanceof TypeError) return false;
+    // A refused connection is a TypeError; a preview that accepts and never replies ends the attempt with a TimeoutError.
+    if (error instanceof TypeError || (error instanceof DOMException && error.name === 'TimeoutError')) return false;
     throw error;
   }
   if (!response.ok) return false;
