@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { ProblemError, z, type Problem } from '@kvman/sdk';
 import { createTestKernel, type TestKernel } from '../index.ts';
+import { docsFindings } from './docs-findings.ts';
 import { fieldFindings } from './field-descriptions.ts';
 import type { CheckedFinding } from './finding.ts';
 import { localeFindings, type RequiredKey } from './locale-keys.ts';
@@ -10,7 +11,7 @@ import { uiKeys } from './ui-keys.ts';
 
 // `kvman-check` (plan 09 §9.2, ADR 0009, 116): it loads the project's extension alone in a test kernel and reports a
 // refused load (one problem at a time, since a load stops at its first error), public input fields with no
-// description, missing locale keys, and timer warnings.
+// description, missing locale keys, docs-pair warnings, and timer warnings.
 
 const manifestSchema = z.object({ name: z.string(), kvman: z.object({}).loose() }).loose();
 
@@ -42,6 +43,7 @@ async function loadedFindings(kernel: TestKernel, folder: string, name: string):
   const required: RequiredKey[] = [{ key: `${namespace}.title`, usedBy: 'the Settings and Extensions pages' }];
   for (const setting of extension.settings) required.push({ key: `${setting.key}.title`, usedBy: 'the Settings page' });
   const findings: CheckedFinding[] = fieldFindings([...extension.commands, ...extension.queries]);
+  findings.push(...(await docsFindings(kernel, namespace, extension.queries)));
   if (extension.queries.some((query) => query.name === `${namespace}.ui.get`)) {
     const answer = await uiAnswer(kernel, namespace);
     if ('failure' in answer) findings.push(answer.failure);
