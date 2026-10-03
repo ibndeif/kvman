@@ -30,7 +30,7 @@ describe('providers and models (07 §7.2)', () => {
     expect(builtIns).toHaveLength(42);
     expect(providers).toContainEqual(expect.objectContaining({ id: 'anthropic', title: 'Anthropic', builtIn: true, status: 'ready' }));
     expect(providers).toContainEqual(expect.objectContaining({ id: 'openai', title: 'OpenAI', builtIn: true, status: 'needsKey' }));
-    expect(providers).toContainEqual({ id: 'fake', title: 'Fake', builtIn: false, status: 'noKey', models: 2 });
+    expect(providers).toContainEqual({ id: 'fake', title: 'Fake', builtIn: false, status: 'noKey', models: 2, connection: null, signIn: false, apiKey: true });
     expect(JSON.stringify(providers)).not.toContain('sk-ant');
   });
 

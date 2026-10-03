@@ -70,7 +70,7 @@ describe('delegate providers (07 §7.2, ADR 0009, 57)', () => {
     const { kernel } = await kvai.start({}, [harness, relay]);
     await kernel.exec('kvai.provider.add', { id: 'relay', title: 'Relay', delegate: 'relay.complete' });
     await kernel.exec('kvai.model.add', { provider: 'relay', id: 'r1', name: 'R1', ...model, input: ['text'] });
-    expect(await kernel.exec('kvai.provider.list', {})).toContainEqual({ id: 'relay', title: 'Relay', builtIn: false, status: 'noKey', models: 1 });
+    expect(await kernel.exec('kvai.provider.list', {})).toContainEqual({ id: 'relay', title: 'Relay', builtIn: false, status: 'noKey', models: 1, connection: null, signIn: false, apiKey: true });
     await expect(kernel.exec('kvai.complete', { model: 'relay/r1', messages: [userSays('hi')] })).resolves.toMatchObject({ stopReason: 'stop' });
   });
 });

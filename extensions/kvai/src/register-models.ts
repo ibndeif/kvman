@@ -2,7 +2,7 @@ import type { Model, Api } from '@earendil-works/pi-ai';
 import { z, type Ctx } from '@kvman/sdk';
 import { builtinCatalog, builtinModel, builtinModels } from './catalog/builtin-catalog.ts';
 import type { CustomCatalog } from './catalog/custom-catalog.ts';
-import { keySecretName, modelName } from './catalog/provider-rows.ts';
+import { keySecretName, modelName, oauthSecretName } from './catalog/provider-rows.ts';
 import { defaultModelSchema, modelAddSchema, modelRowSchema, splitModelId, type ModelRow, type StoredModel } from './schemas/catalog.ts';
 
 // The model admin API and the default model (plan 07 §7.2, ADR 0009, 54–55, 79). Built-in models come from pi-ai and
@@ -61,7 +61,7 @@ function registerModelCatalog(ctx: Ctx, catalog: CustomCatalog): void {
   });
 }
 
-// Whether the default model can be called: it exists, and its provider has a key or needs none.
+// Whether the default model can be called: it exists, and its provider is connected or is custom.
 async function defaultModel(ctx: Ctx, catalog: CustomCatalog): Promise<z.output<typeof defaultModelSchema>> {
   const id = await ctx.settings.get('kvai.defaultModel');
   if (id === null) return { id: null, name: null, ready: false };
@@ -69,7 +69,9 @@ async function defaultModel(ctx: Ctx, catalog: CustomCatalog): Promise<z.output<
   const provider = splitModelId(id)?.provider;
   if (name === null || provider === undefined) return { id, name, ready: false };
   const custom = (await catalog.provider(provider)) !== undefined;
-  return { id, name, ready: custom || (await ctx.secrets.get(keySecretName(provider))) !== undefined };
+  const connected =
+    (await ctx.secrets.get(keySecretName(provider))) !== undefined || (await ctx.secrets.get(oauthSecretName(provider))) !== undefined;
+  return { id, name, ready: custom || connected };
 }
 
 export function registerModels(ctx: Ctx, catalog: CustomCatalog): void {

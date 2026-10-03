@@ -31,13 +31,18 @@ kvai.complete {
 
   | Code | When |
   |---|---|
-  | `kvai/KEY_MISSING` | A built-in provider's key isn't set (ADR 0009, 53). |
+  | `kvai/KEY_MISSING` | A built-in provider has neither an API key nor a sign-in (ADR 0009, 53 and 228). |
   | `kvai/NO_MODEL` | No `model` was given and `kvai.defaultModel` is `null`. |
   | `kvai/MODEL_UNKNOWN` | No such model. |
   | `kvai/RATE_LIMITED` | The provider rate-limited the call. |
   | `kvai/CONTEXT_TOO_LONG` | The context doesn't fit the model. |
   | `kvai/PROVIDER_ERROR` | Any other provider failure, including a failed delegate call (its code in `params.cause`). `params.transient` says whether a second try may fix it: an HTTP 408, 409, 425, or 5xx, overloaded or unavailable, a timeout, a dropped or refused connection, or a DNS failure; `kvai/RATE_LIMITED` is always transient (ADR 0009, 154 and 203). |
-  | `kvai/PROVIDER_UNKNOWN` | `kvai.model.add` names no known provider (ADR 0009, 55). |
+  | `kvai/PROVIDER_UNKNOWN` | `kvai.model.add` or a provider command names no known provider (ADR 0009, 55). |
+  | `kvai/SIGNIN_EXPIRED` | A provider connected by sign-in refused to refresh it (`params.provider`); not transient: the person signs in again (ADR 0009, 235). |
+  | `kvai/SIGNIN_UNSUPPORTED` | `kvai.provider.signin.start` names a provider with no sign-in (ADR 0009, 230). |
+  | `kvai/SIGNIN_FAILED` | A sign-in failed (`params: { provider, reason }`, ADR 0009, 230 and 233). |
+  | `kvai/SIGNIN_NOT_WAITING` | `kvai.provider.signin.answer` names a provider whose sign-in isn't waiting for an answer (ADR 0009, 231). |
+  | `kvai/KEY_UNSUPPORTED` | `kvai.provider.key.set` names a provider that takes no API key (ADR 0009, 229). |
 
 - **Usage.** Each call adds its tokens (input, output, cache reads, cache writes) and cost to the workspace's per-model totals.
 
@@ -53,15 +58,24 @@ kvai.complete {
 
 **Adding the same id again.** A custom id replaces the provider or model; a replaced provider keeps its models. A built-in id fails with `kvai/BUILT_IN`. Removing an id that doesn't exist does nothing (ADR 0009, 57).
 
-**API keys.** A provider's key is the kvai secret `<provider>.apiKey`, set on the provider's page (`kvai.provider.key.set`, sync only) or in kvwebui's Settings secrets section (ADR 0009, 79). Environment variables are not read. OAuth providers wait for a later phase. A built-in provider needs its key; a custom `api` provider sends it when set, and otherwise the placeholder `none`, which a local server ignores; a delegate never needs one (ADR 0009, 53).
+**API keys.** A provider's key is the kvai secret `<provider>.apiKey`, set on the provider's page (`kvai.provider.key.set`, sync only) or in kvwebui's Settings secrets section (ADR 0009, 79). Environment variables are not read. A built-in provider needs its key or a sign-in; a custom `api` provider sends its key when set, and otherwise the placeholder `none`, which a local server ignores; a delegate never needs one (ADR 0009, 53).
+
+**Plan sign-ins (OAuth).** A built-in provider that pi-ai has an OAuth flow for (ChatGPT Plus/Pro, Claude Pro/Max, GitHub Copilot, and the others, `signIn: true` in its row) can be connected by signing in with the person's plan instead of a key (ADR 0009, 226–237).
+- **One credential.** A provider is connected by an API key or by a sign-in, never both: saving a key deletes the sign-in, and signing in deletes the key. The sign-in is the secret `<provider>.oauth` (pi-ai's credential as JSON); tokens are never logged, stored elsewhere, returned, or left in a failure's reason.
+- **The flow.** `kvai.provider.signin.start { provider }` is a command the UI starts with `execAsync` (`retries: 0`, `timeoutMs` 300 000). It streams `{ source: '@kvman/kvai', data }` chunks: `{ type: 'auth_url', url }`, `{ type: 'device_code', userCode, verificationUri, expiresInSeconds? }`, `{ type: 'prompt', kind: 'text' | 'select' | 'manual_code', message, placeholder?, options? }` (the job then waits for `kvai.provider.signin.answer`), and `{ type: 'progress' }`. Its browser flows listen on `127.0.0.1` only while the sign-in runs (port 1455 for ChatGPT), and when that fails the person pastes the redirect URL as the answer to a `manual_code` prompt. A `PI_OAUTH_CALLBACK_HOST` other than loopback fails the sign-in.
+- **Using it.** A call refreshes an expiring token itself, one worker at a time per provider (a lease in the global store). A refresh the provider rejects fails `kvai/SIGNIN_EXPIRED`, and one that fails for a temporary reason fails `kvai/PROVIDER_ERROR` with `transient: true`.
 
 | Name | Kind | Input → output |
 |---|---|---|
 | `kvai.complete` | command | §7.1 |
-| `kvai.provider.list` | query | `{}` → `[{ id, title, builtIn, status: 'ready' \| 'needsKey' \| 'noKey', models }]`: `ready` when its key is set, `needsKey` for a built-in without one, `noKey` for a custom provider without one; `models` is its model count (ADR 0009, 79) |
+| `kvai.provider.list` | query | `{}` → `[{ id, title, builtIn, status: 'ready' \| 'needsKey' \| 'noKey', models, connection: 'apiKey' \| 'oauth' \| null, signIn, apiKey }]`: `ready` when `connection` isn't `null` (its key is set or it is signed in), `needsKey` for a built-in without either, `noKey` for a custom provider without a key; `models` is its model count; `signIn` says it offers a sign-in, and `apiKey` that it takes a key (`false` for `openai-codex`) (ADR 0009, 79 and 229) |
 | `kvai.provider.get` | query | `{ id }` → one provider row; an unknown id fails `kvai/PROVIDER_UNKNOWN` |
-| `kvai.provider.key.set` | command, sync only | `{ provider, key }` → `{}`: writes the secret `<provider>.apiKey`; `key` is `writeOnly`; an unknown provider fails `kvai/PROVIDER_UNKNOWN` |
+| `kvai.provider.key.set` | command, sync only | `{ provider, key }` → `{}`: writes the secret `<provider>.apiKey` and deletes the provider's sign-in; `key` is `writeOnly`; an unknown provider fails `kvai/PROVIDER_UNKNOWN`, and a provider that takes no key `kvai/KEY_UNSUPPORTED` |
 | `kvai.provider.key.delete` | command | `{ provider }` → `{}`: a missing key does nothing; an unknown provider fails `kvai/PROVIDER_UNKNOWN` |
+| `kvai.provider.disconnect` | command | `{ provider }` → `{}`: deletes the provider's key and its sign-in; a provider with neither does nothing; an unknown provider fails `kvai/PROVIDER_UNKNOWN` (ADR 0009, 226) |
+| `kvai.provider.signin.start` | command | `{ provider }` → `{}`: signs in with the person's plan (§7.2); a provider with no sign-in fails `kvai/SIGNIN_UNSUPPORTED`, a failed one `kvai/SIGNIN_FAILED` (ADR 0009, 230) |
+| `kvai.provider.signin.answer` | command, sync only | `{ provider, answer }` → `{}`: answers the prompt a sign-in waits at; none waiting fails `kvai/SIGNIN_NOT_WAITING` (ADR 0009, 231) |
+| `kvai.provider.signin.cancel` | command | `{ provider }` → `{}`: cancels the provider's running sign-in; none running does nothing (ADR 0009, 232) |
 | `kvai.provider.add` | command | §7.2 → `{}` |
 | `kvai.provider.remove` | command | `{ id }` → `{}` (also removes its models) |
 | `kvai.model.list` | query | `{ provider? }` → `[{ id, name, provider, reasoning, input: ('text' \| 'image')[], contextWindow, maxTokens, cost, builtIn, isDefault }]` |
@@ -80,7 +94,7 @@ All of these are public. Removing a built-in provider or model fails with `kvai/
 
 `kvai.ui.get` contributes (ADR 0009, 79):
 - a **Models** page (the nav item): the default model (a `detail` of `kvai.model.default.get`); the providers table, each row showing the provider's name with its id, its model count, and a status badge, and opening the provider's page; and a "Connect your own server" card linking to the add page.
-- a **Provider** page (`params: ['providerId']`): the provider and its status; an API key form (`kvai.provider.key.set`, with the provider fixed) and a Remove button (`kvai.provider.key.delete`, after a confirmation); and its models, each with its name and id, thinking, context window, a "Default" badge, and a "Make default" row action that calls `kernel.settings.set` for `kvai.defaultModel` (global).
+- a **Provider** page (`params: ['providerId']`): the provider and its status; the connection card, the custom component `kvai.connection` (ADR 0009, 237): how the provider is connected, an API key form (`kvai.provider.key.set`) when it takes one, "Sign in with your plan" when it offers one (the sign-in's link, device code, and prompts shown on the card, with Cancel), a Disconnect button while connected (`kvai.provider.disconnect`), and Remove provider for a custom provider (`kvai.provider.remove`); and its models, each with its name and id, thinking, context window, a "Default" badge, and a "Make default" row action that calls `kernel.settings.set` for `kvai.defaultModel` (global).
 - an **Add a provider** page: the forms of `kvai.provider.add` and `kvai.model.add`.
 - a **status item** with the workspace's tokens and cost, from `kvai.usage.total.get` (ADR 0009, 60).
 

@@ -18,6 +18,7 @@ export default defineConfig({
       },
       'extensions/kvwebui/vitest.web.config.ts',
       'extensions/kvwebui/vitest.e2e.config.ts',
+      'extensions/kvai/vitest.web.config.ts',
       'extensions/kvcoder/vitest.web.config.ts',
       'extensions/kvcoder/vitest.e2e.config.ts',
       'extensions/kvdev/vitest.e2e.config.ts',

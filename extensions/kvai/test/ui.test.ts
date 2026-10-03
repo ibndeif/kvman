@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { z } from '@kvman/sdk';
@@ -33,7 +33,7 @@ describe('kvai.ui.get (07 §7.3)', () => {
     ]);
     const view = ui.pages.map((page) => page.view);
     expect(valuesOf(view, ['query'])).toEqual(['kvai.model.default.get', 'kvai.provider.list', 'kvai.provider.get', 'kvai.model.list']);
-    expect(valuesOf(view, ['command'])).toEqual(['kvai.provider.key.set', 'kvai.provider.key.delete', 'kernel.settings.set', 'kvai.provider.add', 'kvai.model.add']);
+    expect(valuesOf(view, ['command'])).toEqual(['kernel.settings.set', 'kvai.provider.add', 'kvai.model.add']);
     expect(JSON.stringify(view)).not.toContain('"tabs"');
     expect(JSON.stringify(view)).toContain(JSON.stringify({ key: 'kvai.defaultModel', value: { $row: 'id' }, scope: 'global' }));
 
@@ -45,5 +45,50 @@ describe('kvai.ui.get (07 §7.3)', () => {
     const catalog = z.record(z.string(), z.string()).parse(JSON.parse(readFileSync(path.join(kvaiFolder, 'locales', 'en.json'), 'utf8')));
     const texts = [...valuesOf(ui, textFields), ...ui.nav.map((item) => item.title)];
     expect(texts.filter((key) => catalog[key] === undefined)).toEqual([]);
+  });
+
+  it('QA15-H13 the provider page holds the connection component and its texts exist in both languages', async () => {
+    const { kernel } = await kvai.start();
+    const ui = contributionsSchema.parse(await kernel.exec('kvai.ui.get', {}));
+    const provider = ui.pages.find((page) => page.id === 'provider');
+    expect(JSON.stringify(provider?.view)).toContain(
+      JSON.stringify({ type: 'custom', component: 'kvai.connection', props: { providerId: { $param: 'providerId' } } }),
+    );
+    expect(JSON.stringify(provider?.view)).not.toContain('kvai.provider.key.set');
+    expect(JSON.stringify(provider?.view)).not.toContain('kvai.provider.key.delete');
+
+    expect(existsSync(path.join(kvaiFolder, 'web', 'components', 'connection.vue'))).toBe(true);
+    expect(readFileSync(path.join(kvaiFolder, 'web-build.config.ts'), 'utf8')).toContain('connection');
+    const manifest = JSON.parse(readFileSync(path.join(kvaiFolder, 'package.json'), 'utf8')) as { kvman?: { web?: string } };
+    expect(manifest.kvman?.web).toBe('dist/web');
+
+    const en = z.record(z.string(), z.string()).parse(JSON.parse(readFileSync(path.join(kvaiFolder, 'locales', 'en.json'), 'utf8')));
+    const ar = z.record(z.string(), z.string()).parse(JSON.parse(readFileSync(path.join(kvaiFolder, 'locales', 'ar.json'), 'utf8')));
+    const keys = [
+      'kvai.ui.connection.title',
+      'kvai.ui.connection.loading',
+      'kvai.ui.connection.connectedKey',
+      'kvai.ui.connection.connectedPlan',
+      'kvai.ui.connection.notConnected',
+      'kvai.ui.connection.noKeyLocal',
+      'kvai.ui.connection.signin',
+      'kvai.ui.connection.signinTerms',
+      'kvai.ui.connection.openSignin',
+      'kvai.ui.connection.finishInTab',
+      'kvai.ui.connection.enterCodeAt',
+      'kvai.ui.connection.manualCodeHelp',
+      'kvai.ui.connection.send',
+      'kvai.ui.connection.working',
+      'kvai.ui.connection.signedIn',
+      'kvai.ui.connection.cancel',
+      'kvai.ui.connection.disconnect',
+      'kvai.ui.connection.disconnectConfirm',
+      'kvai.ui.connection.disconnected',
+      'kvai.ui.connection.removeProvider',
+      'kvai.ui.connection.removeConfirm',
+      'kvai.ui.connection.removed',
+    ];
+    expect(keys.filter((key) => en[key] === undefined)).toEqual([]);
+    expect(keys.filter((key) => ar[key] === undefined)).toEqual([]);
   });
 });

@@ -13,14 +13,14 @@ const transientPattern = /^(?:408|409|425|5\d\d)\b|timed? ?out|timeout|connectio
 /** Whether a provider's failure text is one a second try may fix. */
 export const isTransient = (reason: string): boolean => transientPattern.test(reason);
 
-export function redacted(text: string, secretKey: string | undefined): string {
-  const hidden = secretKey === undefined || secretKey === '' ? text : text.replaceAll(secretKey, '[secret]');
+export function redacted(text: string, secrets: readonly string[]): string {
+  const hidden = secrets.filter((secret) => secret !== '').reduce((shown, secret) => shown.replaceAll(secret, '[secret]'), text);
   return hidden.slice(0, reasonLimit);
 }
 
-export function failedCall(ctx: Ctx, fullId: string, message: AssistantMessage, model: Model<Api>, secretKey: string | undefined): ProblemError {
+export function failedCall(ctx: Ctx, fullId: string, message: AssistantMessage, model: Model<Api>, secrets: readonly string[]): ProblemError {
   if (isContextOverflow(message, model.contextWindow)) return ctx.problem('kvai/CONTEXT_TOO_LONG', { model: fullId });
   const reason = message.errorMessage ?? '';
   if (rateLimitPattern.test(reason)) return ctx.problem('kvai/RATE_LIMITED', { model: fullId });
-  return ctx.problem('kvai/PROVIDER_ERROR', { model: fullId, reason: redacted(reason, secretKey), transient: isTransient(reason) });
+  return ctx.problem('kvai/PROVIDER_ERROR', { model: fullId, reason: redacted(reason, secrets), transient: isTransient(reason) });
 }

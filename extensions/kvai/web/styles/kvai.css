@@ -1,0 +1,24 @@
+/* kvai's connection card (plan 06 §6.4): styled with kvwebui's theme variables and logical properties only. */
+.kvai-card { display: flex; flex-direction: column; gap: var(--kv-space-sm); border: 1px solid var(--kv-color-border); border-radius: var(--kv-radius); background: var(--kv-color-surface); color: var(--kv-color-text); padding-block: var(--kv-space-md); padding-inline: var(--kv-space-lg); }
+.kvai-title { margin-block: 0; font-size: 15px; font-weight: 600; }
+.kvai-line { display: flex; align-items: center; gap: var(--kv-space-sm); flex-wrap: wrap; }
+.kvai-badge { display: inline-flex; align-items: center; border-radius: 999px; padding-block: 2px; padding-inline: 8px; font-size: 12px; font-weight: 500; white-space: nowrap; border: 1px solid var(--kv-color-border); }
+.kvai-badge[data-tone='success'] { color: var(--kv-color-success); }
+.kvai-badge[data-tone='warning'] { color: var(--kv-color-warning); }
+.kvai-badge[data-tone='danger'] { color: var(--kv-color-danger); }
+.kvai-text { margin-block: 0; font-size: 13.5px; }
+.kvai-muted { color: var(--kv-color-muted); font-size: 12.5px; }
+.kvai-field { display: flex; flex-direction: column; gap: var(--kv-space-sm); }
+.kvai-label { font-size: 13px; font-weight: 500; }
+.kvai-input { box-sizing: border-box; inline-size: 100%; border: 1px solid var(--kv-color-border); border-radius: 10px; background: var(--kv-color-surface); color: inherit; font: inherit; padding-block: 8px; padding-inline: 12px; }
+.kvai-mono { font-family: var(--kv-font-mono); font-size: 13px; overflow-wrap: anywhere; direction: ltr; unicode-bidi: isolate; user-select: all; }
+.kvai-actions { display: flex; gap: var(--kv-space-sm); justify-content: flex-start; flex-wrap: wrap; }
+.kvai-column { flex-direction: column; align-items: stretch; }
+.kvai-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-block-size: 36px; padding-inline: 14px; border-radius: 10px; border: 1px solid var(--kv-color-border); background: var(--kv-color-surface); color: var(--kv-color-text); font: inherit; font-weight: 500; cursor: pointer; }
+.kvai-button:disabled { opacity: 0.5; cursor: default; }
+.kvai-primary { background: var(--kv-color-primary); border-color: var(--kv-color-primary); color: var(--kv-color-on-primary); }
+.kvai-danger { color: var(--kv-color-danger); }
+.kvai-confirm { display: flex; flex-direction: column; gap: var(--kv-space-sm); border: 1px solid var(--kv-color-border); border-radius: var(--kv-radius); background: var(--kv-color-background); padding-block: var(--kv-space-sm); padding-inline: var(--kv-space-md); }
+.kvai-signin { display: flex; flex-direction: column; gap: var(--kv-space-sm); }
+.kvai-error { margin-block: 0; font-size: 13px; color: var(--kv-color-danger); }
+.kvai-signin a { color: var(--kv-color-primary); text-decoration: underline; text-underline-offset: 2px; }

@@ -1,7 +1,7 @@
 import { z, type Ctx } from '@kvman/sdk';
 import { builtinCatalog } from './catalog/builtin-catalog.ts';
 import type { CustomCatalog } from './catalog/custom-catalog.ts';
-import { keySecretName, providerExists, providerRow, providerRows } from './catalog/provider-rows.ts';
+import { keySecretName, oauthSecretName, providerExists, providerRow, providerRows } from './catalog/provider-rows.ts';
 import { providerAddSchema, providerKeySetSchema, providerRowSchema } from './schemas/catalog.ts';
 
 // The provider admin API (plan 07 §7.2, ADR 0009, 52–57, 79). Built-ins come from pi-ai and can't be added, replaced,
@@ -67,7 +67,9 @@ function registerProviderKeys(ctx: Ctx, catalog: CustomCatalog): void {
     syncOnly: true,
     handle: async (input) => {
       await knownProvider(ctx, catalog, input.provider);
+      if ((await providerRow(ctx, catalog, input.provider)).apiKey === false) throw ctx.problem('kvai/KEY_UNSUPPORTED', { provider: input.provider });
       await ctx.secrets.set(keySecretName(input.provider), input.key);
+      await ctx.secrets.delete(oauthSecretName(input.provider));
       return {};
     },
   });
@@ -79,6 +81,18 @@ function registerProviderKeys(ctx: Ctx, catalog: CustomCatalog): void {
     handle: async (input) => {
       await knownProvider(ctx, catalog, input.provider);
       await ctx.secrets.delete(keySecretName(input.provider));
+      return {};
+    },
+  });
+  ctx.registerCommand('kvai.provider.disconnect', {
+    description: "Disconnects a provider by deleting its API key and sign-in.",
+    input: providerInput,
+    output: empty,
+    public: true,
+    handle: async (input) => {
+      await knownProvider(ctx, catalog, input.provider);
+      await ctx.secrets.delete(keySecretName(input.provider));
+      await ctx.secrets.delete(oauthSecretName(input.provider));
       return {};
     },
   });

@@ -199,6 +199,9 @@ importers:
       '@earendil-works/pi-ai':
         specifier: 0.99.1
         version: 0.99.1(@aws-sdk/credential-provider-node@3.972.84)(@smithy/signature-v4@5.7.4)(ws@8.22.0)(zod@4.6.5)
+      vue:
+        specifier: 3.5.43
+        version: 3.5.43(typescript@6.0.3)
     devDependencies:
       '@kvman/sdk':
         specifier: workspace:*
@@ -206,6 +209,21 @@ importers:
       '@kvman/testkit':
         specifier: workspace:*
         version: link:../../packages/testkit
+      '@vitejs/plugin-vue':
+        specifier: 6.0.9
+        version: 6.0.9(vite@8.3.1(@types/node@24.19.0)(jiti@2.7.0)(yaml@2.9.1))(vue@3.5.43(typescript@6.0.3))
+      '@vue/test-utils':
+        specifier: 2.5.1
+        version: 2.5.1(@vue/compiler-dom@3.5.43)(@vue/server-renderer@3.5.43)(vue@3.5.43(typescript@6.0.3))
+      happy-dom:
+        specifier: 20.14.5
+        version: 20.14.5
+      vite:
+        specifier: 8.3.1
+        version: 8.3.1(@types/node@24.19.0)(jiti@2.7.0)(yaml@2.9.1)
+      vue-tsc:
+        specifier: 3.3.11
+        version: 3.3.11(typescript@6.0.3)
 
   extensions/kvcoder:
     dependencies:

@@ -16,6 +16,10 @@ declare module '@kvman/sdk' {
     'kvai.provider.remove': { input: { id: string }; output: Record<string, never> };
     'kvai.provider.key.set': Call<typeof providerKeySetSchema, Empty>;
     'kvai.provider.key.delete': { input: { provider: string }; output: Record<string, never> };
+    'kvai.provider.disconnect': { input: { provider: string }; output: Record<string, never> };
+    'kvai.provider.signin.start': { input: { provider: string }; output: Record<string, never> };
+    'kvai.provider.signin.answer': { input: { provider: string; answer: string }; output: Record<string, never> };
+    'kvai.provider.signin.cancel': { input: { provider: string }; output: Record<string, never> };
     'kvai.model.add': Call<typeof modelAddSchema, Empty>;
     'kvai.model.remove': { input: { id: string }; output: Record<string, never> };
   }
@@ -46,3 +50,6 @@ export type AssistantMessage = CompleteOutput['message'];
 
 /** A delta kvai streams to the root job as `{ source: '@kvman/kvai', data }`. */
 export type { Delta } from './schemas/complete.ts';
+
+/** A chunk kvai streams to a sign-in's job as `{ source: '@kvman/kvai', data }`. */
+export type { SigninEvent, SigninOption } from './signin/signin-events.ts';

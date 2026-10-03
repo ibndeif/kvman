@@ -22,21 +22,28 @@
     "locales"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.build.json && node web-build.config.ts",
+    "typecheck": "tsc -p tsconfig.json && vue-tsc -p tsconfig.web.json"
   },
   "peerDependencies": {
     "@kvman/sdk": "^0.1.0"
   },
   "devDependencies": {
     "@kvman/sdk": "workspace:*",
-    "@kvman/testkit": "workspace:*"
+    "@kvman/testkit": "workspace:*",
+    "@vitejs/plugin-vue": "6.0.9",
+    "@vue/test-utils": "2.5.1",
+    "happy-dom": "20.14.5",
+    "vite": "8.3.1",
+    "vue-tsc": "3.3.11"
   },
   "kvman": {
     "namespace": "kvai",
-    "source": "src/index.ts"
+    "source": "src/index.ts",
+    "web": "dist/web"
   },
   "dependencies": {
-    "@earendil-works/pi-ai": "0.99.1"
+    "@earendil-works/pi-ai": "0.99.1",
+    "vue": "3.5.43"
   }
 }

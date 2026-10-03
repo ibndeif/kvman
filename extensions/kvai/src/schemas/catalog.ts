@@ -87,8 +87,22 @@ export const providerStatusSchema = z.enum(['ready', 'needsKey', 'noKey']);
 
 export type ProviderStatus = z.output<typeof providerStatusSchema>;
 
+/** How a provider is connected: by an API key, by a plan sign-in, or not at all (ADR 0009, 229). */
+export const providerConnectionSchema = z.enum(['apiKey', 'oauth']).nullable();
+
+export type ProviderConnection = z.output<typeof providerConnectionSchema>;
+
 /** A row of `kvai.provider.list` and `kvai.provider.get`; `models` is its model count. */
-export const providerRowSchema = z.object({ id: z.string(), title: z.string(), builtIn: z.boolean(), status: providerStatusSchema, models: z.number().int() });
+export const providerRowSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  builtIn: z.boolean(),
+  status: providerStatusSchema,
+  models: z.number().int(),
+  connection: providerConnectionSchema,
+  signIn: z.boolean(),
+  apiKey: z.boolean(),
+});
 
 export type ProviderRow = z.output<typeof providerRowSchema>;
 

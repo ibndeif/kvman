@@ -28,11 +28,11 @@ describe("kvai's provider keys and default model (07 §7.2, ADR 0009, 79–80)",
     await kernel.exec('kvai.provider.add', { id: 'relay', title: 'Relay', delegate: 'harness.turn' });
     const rows = await kernel.exec('kvai.provider.list', {});
     const anthropicModels = (await kernel.exec('kvai.model.list', { provider: 'anthropic' })).length;
-    expect(rows).toContainEqual({ id: 'anthropic', title: 'Anthropic', builtIn: true, status: 'ready', models: anthropicModels });
+    expect(rows).toContainEqual({ id: 'anthropic', title: 'Anthropic', builtIn: true, status: 'ready', models: anthropicModels, connection: 'apiKey', signIn: true, apiKey: true });
     expect(rows).toContainEqual(expect.objectContaining({ id: 'openai', status: 'needsKey' }));
-    expect(rows).toContainEqual({ id: 'fake', title: 'Fake', builtIn: false, status: 'noKey', models: 2 });
-    expect(rows).toContainEqual({ id: 'relay', title: 'Relay', builtIn: false, status: 'noKey', models: 0 });
-    expect(await kernel.exec('kvai.provider.get', { id: 'fake' })).toEqual({ id: 'fake', title: 'Fake', builtIn: false, status: 'noKey', models: 2 });
+    expect(rows).toContainEqual({ id: 'fake', title: 'Fake', builtIn: false, status: 'noKey', models: 2, connection: null, signIn: false, apiKey: true });
+    expect(rows).toContainEqual({ id: 'relay', title: 'Relay', builtIn: false, status: 'noKey', models: 0, connection: null, signIn: false, apiKey: true });
+    expect(await kernel.exec('kvai.provider.get', { id: 'fake' })).toEqual({ id: 'fake', title: 'Fake', builtIn: false, status: 'noKey', models: 2, connection: null, signIn: false, apiKey: true });
     await expect(kernel.exec('kvai.provider.get', { id: 'nowhere' })).rejects.toMatchObject(problem('kvai/PROVIDER_UNKNOWN', { provider: 'nowhere' }));
     await expect(kernel.exec('kvai.provider.key.set', { provider: 'nowhere', key })).rejects.toMatchObject(problem('kvai/PROVIDER_UNKNOWN', { provider: 'nowhere' }));
     await expect(kernel.exec('kvai.provider.key.delete', { provider: 'nowhere' })).rejects.toMatchObject(problem('kvai/PROVIDER_UNKNOWN', { provider: 'nowhere' }));

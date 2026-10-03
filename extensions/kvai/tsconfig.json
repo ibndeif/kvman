@@ -2,8 +2,18 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
-    "types": ["node"],
-    "customConditions": ["@kvman/source"]
+    "types": [
+      "node"
+    ],
+    "customConditions": [
+      "@kvman/source"
+    ]
   },
-  "include": ["src", "test"]
+  "include": [
+    "src",
+    "test"
+  ],
+  "exclude": [
+    "test/web"
+  ]
 }

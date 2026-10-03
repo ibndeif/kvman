@@ -10,7 +10,7 @@ describe('custom providers and models (07 §7.2, ADR 0009, 54–57)', () => {
     const { kernel, fake } = await kvai.start();
     await kernel.exec('kvai.provider.add', { id: 'fake', title: 'Renamed', api: 'openai-completions', baseUrl: fake.baseUrl, headers: { 'x-team': 'blue' } });
     const providers = await kernel.exec('kvai.provider.list', {});
-    expect(providers.filter((provider) => provider.id === 'fake')).toEqual([{ id: 'fake', title: 'Renamed', builtIn: false, status: 'noKey', models: 2 }]);
+    expect(providers.filter((provider) => provider.id === 'fake')).toEqual([{ id: 'fake', title: 'Renamed', builtIn: false, status: 'noKey', models: 2, connection: null, signIn: false, apiKey: true }]);
     expect((await kernel.exec('kvai.model.list', { provider: 'fake' })).map((row) => row.id)).toEqual(['fake/m1', 'fake/m2']);
     fake.reply({ chunks: [{ text: 'ok' }] });
     await kernel.exec('kvai.complete', { model: 'fake/m1', messages: [userSays('hi')] });

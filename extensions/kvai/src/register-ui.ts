@@ -76,22 +76,10 @@ const makeDefault = {
   then: { toast: 'kvai.ui.models.defaultSet', level: 'success' },
 };
 
-const keyCard = {
-  type: 'card',
-  title: 'kvai.ui.key.title',
-  children: [
-    { type: 'form', command: 'kvai.provider.key.set', fixed: { provider: providerParam }, submit: 'kvai.ui.key.save', then: { toast: 'kvai.ui.key.saved' } },
-    text('kvai.ui.key.help'),
-    {
-      type: 'button',
-      text: 'kvai.ui.key.remove',
-      command: 'kvai.provider.key.delete',
-      input: { provider: providerParam },
-      confirm: 'kvai.ui.key.removeConfirm',
-      style: 'danger',
-      then: { toast: 'kvai.ui.key.removed' },
-    },
-  ],
+const connectionCard = {
+  type: 'custom',
+  component: 'kvai.connection',
+  props: { providerId: providerParam },
 };
 
 const providerModelsCard = {
@@ -133,7 +121,7 @@ const providerPage = {
           { field: 'status', title: 'kvai.ui.columns.status', badges: providerStatus },
         ],
       },
-      keyCard,
+      connectionCard,
       providerModelsCard,
     ],
   },

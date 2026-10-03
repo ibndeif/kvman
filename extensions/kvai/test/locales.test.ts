@@ -12,7 +12,7 @@ function catalog(language: string): Record<string, string> {
   return catalogSchema.parse(JSON.parse(readFileSync(path.join(kvaiFolder, 'locales', `${language}.json`), 'utf8')));
 }
 
-const codes = ['KEY_MISSING', 'NO_MODEL', 'MODEL_UNKNOWN', 'RATE_LIMITED', 'CONTEXT_TOO_LONG', 'PROVIDER_ERROR', 'PROVIDER_UNKNOWN', 'BUILT_IN'];
+const codes = ['SIGNIN_EXPIRED', 'SIGNIN_UNSUPPORTED', 'SIGNIN_FAILED', 'SIGNIN_NOT_WAITING', 'KEY_MISSING', 'NO_MODEL', 'MODEL_UNKNOWN', 'RATE_LIMITED', 'CONTEXT_TOO_LONG', 'PROVIDER_ERROR', 'PROVIDER_UNKNOWN', 'BUILT_IN', 'KEY_UNSUPPORTED'];
 
 // The top-level fields of a JSON Schema object, or of each object in its `anyOf`.
 const schemaSchema = z.object({
@@ -49,5 +49,14 @@ describe("kvai's catalogs (02 §2.11)", () => {
     expect(needed).toContain('kvai.defaultModel.description');
     expect(needed).toContain('kvai.provider.add.fields.delegate');
     expect(needed.filter((key) => en[key] === undefined)).toEqual([]);
+  });
+
+  it('QA15-H13 the connection keys exist in both languages with the same placeholders', () => {
+    const en = catalog('en');
+    const ar = catalog('ar');
+    const keys = Object.keys(en).filter((key) => key.startsWith('kvai.ui.connection.'));
+    expect(keys.length).toBeGreaterThan(0);
+    expect(keys.filter((key) => ar[key] === undefined)).toEqual([]);
+    for (const key of keys) expect(placeholders(ar[key] ?? ''), key).toEqual(placeholders(en[key] ?? ''));
   });
 });
