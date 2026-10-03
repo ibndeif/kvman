@@ -176,7 +176,11 @@ Registrations are sealed when the entry returns: a later `register*` call fails 
 - A preset is the whole app for one run: which extensions load, and the preset-level value of any setting.
 - The app's UI shape is kvwebui's own settings; the kernel knows no UI concept.
 - A preset is validated at start, and its settings again once the extensions have loaded (§2.8). An invalid preset stops kvman with `VALIDATION_FAILED`.
-- Bundled presets: `coder` (the default) and `dev`. A person's own presets live in `<home>/presets/` (§1.2).
+- The one bundled preset is `coder` (the default). A person's own presets live in `<home>/presets/` (§1.2); one named like a bundled preset replaces it (ADR 0010, 4).
+- **Editing.** A preset is changed by writing its file, and a change applies at the next start; nothing is installed, loaded, or trusted by the edit itself (ADR 0010, 5):
+  - the file written is the person's: `<home>/presets/<name>.json` for a home preset, the given file for `--preset ./file.json`, and for the bundled preset its copy at `<home>/presets/<name>.json`, made at the first edit;
+  - `npm install` and the trust question happen at the next start, as for any preset (§2.9);
+  - `kernel.settings.set` still changes a setting at once and is not an edit of the preset.
 
 ## 2.11 Localization
 
@@ -212,6 +216,9 @@ All are public. Types are in `@kvman/sdk`.
 | `kernel.files.list` | query | `{ limit }` → `File[]` in this workspace, newest first |
 | `kernel.files.unlink` | command | `{ id }` → `{}`: a file of this workspace, with the access rules of §2.7 |
 | `kernel.extensions.list` | query | `{}` → `[{ name, version, source, revision, namespace, commands, queries, settings, handlers }]` (`source` is the preset's `bundled`, `npm:…`, or `path:…`; `revision` starts at 0 and grows with each hot reload); each command and query, private ones too, is `{ name, description, public, input, output }`, with `input` and `output` as JSON Schema; each setting is `{ key, description, scopes }` and each handler `{ point, description }`; the kernel itself isn't listed (ADR 0009, 28) |
+| `kernel.preset.get` | query | `{}` → `{ name, origin: 'bundled' \| 'home' \| 'file', file?, extensions, settings }`: the running preset as stored now, so after an edit it shows the change before the restart; `file` is the file an edit writes (absent for `bundled` until the first edit) (ADR 0010, 5) |
+| `kernel.extensions.install` | command | `{ name, source }` → `{ file, restartRequired: true }`: adds `name` to the preset's `extensions`; `source` is `bundled` (only for a bundled extension's name; any other name fails `VALIDATION_FAILED`), `npm:<exact version>`, or `path:<folder>`. A bad source, or a `name` already in the preset, fails `VALIDATION_FAILED` (ADR 0010, 5) |
+| `kernel.extensions.uninstall` | command | `{ name }` → `{ file, restartRequired: true }`: removes `name` from the preset's `extensions`. `NOT_FOUND` when it isn't there; `VALIDATION_FAILED`, naming the dependents, when another extension of the preset depends on it (ADR 0010, 5) |
 | `kernel.processes.list` | query | `{}` → `[{ extension, workspaceId, name, pid, startedAt }]` (§2.16) |
 | `kernel.health.get` | query | `{}` → `{ version, preset, mode, workers, uptimeMs, languages }`: kvman's version, the preset's name, `web`, the pool size, the uptime on the kernel's clock, and the codes the loaded catalogs have (ADR 0009, 29) |
 
@@ -289,7 +296,7 @@ The three job points share the base `{ jobId, rootId, name, caller, workspaceId 
 
 ## 2.16 Processes
 
-The process service is for long-lived child processes, such as kvdev's preview kvman. Short ones, such as a kvcoder shell call, stay plain `node:child_process` inside their job.
+The process service is for long-lived child processes, such as kvcustomizer's preview kvman. Short ones, such as a kvcoder shell call, stay plain `node:child_process` inside their job.
 
 | Call | Does |
 |---|---|

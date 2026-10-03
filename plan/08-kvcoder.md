@@ -95,13 +95,13 @@ Other extensions extend kvcoder by calling its public commands. kvcoder keeps wh
 **A connector** is a word the agent can type in the shell. There are two kinds.
 
 ```ts
-// A commands connector: `ext new '<json>'` runs kvdev's own public command.
+// A commands connector: `ext new '<json>'` runs kvcustomizer's own public command.
 await ctx.exec('kvcoder.connector.register', {
   name: 'ext',                                   // the word the agent types
   description: 'Create and test kvman extensions.',
   commands: [{
     name: 'new',                                 // the second word: ext new '<json>'
-    command: 'kvdev.ext.new',                    // your own public command
+    command: 'kvcustomizer.ext.new',                    // your own public command
     examples: [{ description: 'Scaffold a notes extension', input: { name: 'notes', namespace: 'notes', folder: './notes' } }],
   }],
 });
@@ -140,7 +140,7 @@ await ctx.exec('kvcoder.section.remove', { id: 'open-todos', sessionId });
 
   ```ts
   ctx.registerHandler('kernel.started', {
-    description: 'Registers kvdev connectors with kvcoder.',
+    description: 'Registers kvcustomizer connectors with kvcoder.',
     handle: () => ctx.exec('kvcoder.connector.register', { … }),
   });
   ```

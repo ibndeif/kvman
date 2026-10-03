@@ -276,6 +276,8 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
 
 ### M2.5 kvdev, presets, and the walkthrough
 
+*Changed after this milestone by ADR 0010: kvdev is now kvcustomizer (`09`), the scaffold, guides, and preview are testkit bins, the `dev` preset is gone and `coder` loads kvcustomizer, and the kernel gains `kernel.preset.get`, `kernel.extensions.install`, and `kernel.extensions.uninstall`.*
+
 - **Read:** `09`; `10`; `11`; `12` §12.3.
 - **Build:**
   - `extensions/kvdev`: the `ext`, `preset`, `preview`, and `docs` connectors, the scaffold (with `kvman.source`, and the web template), the preview kvman (running `web:watch`), and its global section.

@@ -12,9 +12,9 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `06-kvwebui.md` | The web app: frame, contributions, view trees, custom components, effects, built-in pages |
 | `07-kvai.md` | LLM calls, providers, models |
 | `08-kvcoder.md` | The coding harness: sessions, steps, the shell, connectors, sections, ask, subagents, its conversation UI |
-| `09-kvdev.md` | The development harness: connectors, scaffold, preview |
+| `09-kvcustomizer.md` | The kvcoder extension that customizes kvman: connectors, scaffold, preview, guides |
 | `10-testkit.md` | `createTestKernel` |
-| `11-presets.md` | The `coder` and `dev` presets |
+| `11-presets.md` | The bundled `coder` preset |
 | `12-testing.md` | Test layers, crash invariants, benchmarks |
 | `13-milestones.md` | The 13 milestones: Read, Build, Done when |
 | `adr/0001-kernel.md` | Every kernel decision, with the product owner's answers |
@@ -22,9 +22,10 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `adr/0003-kvai.md` | Every kvai decision |
 | `adr/0004-kvinterviewer.md` | kvinterviewer (superseded by 0005) |
 | `adr/0005-kvcoder.md` | Every kvcoder decision |
-| `adr/0006-kvdev-testkit-presets.md` | kvdev, the testkit, and the presets |
+| `adr/0006-kvdev-testkit-presets.md` | kvdev (now kvcustomizer, ADR 0010), the testkit, and the presets |
 | `adr/0007-milestones-and-testing.md` | Milestones, benchmarks, crash and UI testing, changesets |
 | `adr/0008-plan-review.md` | The full review before M1.1: running locally, platforms, and the fixes it made |
 | `adr/0009-implementation.md` | Questions answered while building, milestone by milestone |
+| `adr/0010-kvcustomizer.md` | kvdev becomes kvcustomizer: extension development for any harness, managing kvman, the `dev` preset removed |
 
 The plan is complete. Implementation starts with M1.1.

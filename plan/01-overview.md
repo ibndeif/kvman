@@ -15,7 +15,7 @@ kvman --help | --version
 - **The start folder.** kvman opens the folder it's started from as a workspace (§2.6), unless that folder is the user's home folder, which is Home. The printed URL is `http://127.0.0.1:<port>/?workspace=<id>`, and kvwebui starts the tab in that workspace.
 - **One kvman per home**, enforced by `kvman.lock`. When one is already running, a second `kvman` hands over: it reads the port from `kvman.lock`, calls the running kvman's `kernel.workspace.open` for its folder, prints and opens that workspace's URL, and exits 0. If a `--preset` or `--mode` it was given differs from the running kvman's (`kernel.health.get`; a preset is compared by its `name`), it fails `KVMAN_RUNNING` instead. A bare `kvman` hands over to whatever runs (ADR 0009, 44). A running kvman that is still starting, or doesn't answer, also fails `KVMAN_RUNNING` (ADR 0009, 43).
 - **Modes:** `web` now; `tui` comes later.
-- **Presets:** two are bundled. `coder` (the default) is the coding harness; `dev` is for developing extensions and presets. `--preset <name>` names a bundled preset or `<home>/presets/<name>.json` (a name that matches both fails `VALIDATION_FAILED`), and `--preset ./file.json` names a preset file: a value with `/` or `\`, or ending in `.json`, is a file, relative to the start folder. An unknown name or a missing file fails `VALIDATION_FAILED` (ADR 0009, 45).
+- **Presets:** one is bundled: `coder` (the default), the coding harness, which also customizes kvman (§9). `--preset <name>` names a bundled preset or `<home>/presets/<name>.json` (a person's preset replaces a bundled one of the same name, ADR 0010, 4), and `--preset ./file.json` names a preset file: a value with `/` or `\`, or ending in `.json`, is a file, relative to the start folder. An unknown name or a missing file fails `VALIDATION_FAILED` (ADR 0009, 45).
 - **Trust:** before loading, kvman lists every non-bundled extension version that hasn't been accepted before and asks y/N in the terminal. `--yes` accepts them without asking; with no terminal and no `--yes`, kvman refuses to start (§2.9).
 - **Browser.** kvman opens the URL with `xdg-open` (Linux), `open` (macOS), or `cmd /c start ""` (Windows). `--no-open` turns this off. A browser that can't be opened logs a warning, and kvman keeps running (ADR 0009, 50).
 - **Logs.** `--log-level` is `debug`, `info` (the default), `warn`, or `error`. It filters `logs/kvman.log` and the terminal, which shows each record as one line (`HH:MM:SS LEVEL message`) on stderr; the URL and the trust prompt go to stdout. Terminal text is English (ADR 0009, 49).
@@ -49,9 +49,9 @@ A pnpm monorepo, Node 24, TypeScript 6.0 strict (ADR 0009). The tools are ESLint
 | `packages/sdk` | The extension API: `ctx` types, zod, and the shared shapes (preset, extension manifest, Problem, job, envelope). Published as `@kvman/sdk`. | `zod` |
 | `packages/kernel` | Everything the kernel does, including HTTP. Published as `@kvman/kernel`, at the root version. | `sdk`, its declared dependencies |
 | `packages/cli` | The `kvman` bin; it runs the kernel in the same process. Published as `kvman`, with the bundled extensions and presets inside. | `kernel`, `sdk` |
-| `packages/testkit` | `createTestKernel` for tests (§10). Published as `@kvman/testkit`. | `kernel`, `sdk` |
-| `extensions/*` | kvai, kvwebui, kvcoder, kvdev. Not published on their own. | `sdk`, their own npm dependencies; never `kernel`; another extension only when it is a `kvman.dependencies` entry: `import type`, or a runtime import of a subpath it exports (such a subpath may import only `sdk` and holds no state) |
-| `presets/` | `coder.json`, `dev.json`. | — |
+| `packages/testkit` | `createTestKernel` for tests, and the bins that build and check extensions for any harness: `kvman-check`, `kvman-new`, `kvman-preset`, `kvman-preview` (§10). Published as `@kvman/testkit`. | `kernel`, `sdk` |
+| `extensions/*` | kvai, kvwebui, kvcoder, kvcustomizer. Not published on their own. | `sdk`, their own npm dependencies; never `kernel`; another extension only when it is a `kvman.dependencies` entry: `import type`, or a runtime import of a subpath it exports (such a subpath may import only `sdk` and holds no state) |
+| `presets/` | `coder.json`. | — |
 
 Extensions list `@kvman/sdk` as a peerDependency, and every extension shares the kernel's own copy (§2.9). At runtime, extensions talk to each other only through `ctx.exec` and the other job calls (§3). Type-only imports exist for typed calls (§3.2). An extension may export subpaths that its dependents import (ADR 0001, 89). To let others register things with it, an extension exposes public commands and keeps what it receives in its own store (ADR 0001, 91).
 
@@ -62,7 +62,7 @@ Each is designed in its own round, after the kernel.
 - **kvai**: LLM calls, providers, and models. The pi-ai package's providers and models come by default, and other extensions can add theirs. Agents, tools, and loops are built by the extensions that need them (§7).
 - **kvwebui**: the Vue web app, plus a `kvwebui.*` API other extensions use to shape the UI.
 - **kvcoder**: the app-building harness on kvai and kvwebui. Its agent has one shell tool (bash, or PowerShell on Windows); connectors (including the built-in `ask` and `subagent`) and sections extend it. Its conversation UI is its own (§8).
-- **kvdev**: the harness for developing kvman extensions and presets.
+- **kvcustomizer**: the kvcoder extension for customizing kvman: it adds connectors and a prompt for developing extensions and presets, and for managing the running app (§9, ADR 0010).
 
 ## 1.6 Principles for this phase
 
