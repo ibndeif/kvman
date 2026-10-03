@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { kernelQuerySchemas, presetSchema, ProblemError, z, type Json, type Preset } from '@kvman/sdk';
+import { healthSchema, kernelQuerySchemas, presetSchema, ProblemError, z, type Json, type Preset } from '@kvman/sdk';
 import { callQuery } from '../running/call-query.ts';
 import { KvmanUnreachableError, type RunningKvman } from '../running/running-kvman.ts';
 import { presetReach, type PresetReach } from './preset-reach.ts';
@@ -83,8 +83,21 @@ function toFindings(file: string, problems: { message: string; hint: string }[])
   return problems.map((problem) => ({ file, ...problem }));
 }
 
+// A kvman that was found counts as running only once it answers; a refused connection means it doesn't.
+async function answering(found: RunningKvman | undefined): Promise<RunningKvman | undefined> {
+  if (found === undefined) return undefined;
+  try {
+    await callQuery(found, 'kernel.health.get', {}, healthSchema);
+    return found;
+  } catch (error) {
+    if (error instanceof KvmanUnreachableError) return undefined;
+    throw error;
+  }
+}
+
 /** Checks the preset in `file`: `file` resolves against the current working folder and stays as given in findings. */
-export async function checkPreset(file: string, running: RunningKvman | undefined): Promise<PresetCheck> {
+export async function checkPreset(file: string, found: RunningKvman | undefined): Promise<PresetCheck> {
+  const running = await answering(found);
   const absolute = path.resolve(file);
   const read = readPreset(absolute);
   if ('problems' in read) return { findings: toFindings(file, read.problems), running: running !== undefined };

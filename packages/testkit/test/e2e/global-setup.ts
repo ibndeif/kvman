@@ -7,7 +7,7 @@ import { packMirror, repositoryRoot, serveMirror } from '../support/npm-mirror.t
 
 // The scaffold tests' setup (plan 12 §12.1, ADR 0010, 2): `pnpm test` runs before `pnpm build`, so it builds the
 // testkit's packages first; then it packs the scaffold's packages and serves them. The bin tests start no kvman.
-const built = ['@kvman/sdk', '@kvman/kernel', '@kvman/testkit'];
+const built = ['@kvman/sdk', '@kvman/kernel', '@kvman/testkit', '@kvman/kvai', '@kvman/kvwebui', '@kvman/kvcoder'];
 
 export async function setup(project: TestProject): Promise<() => Promise<void>> {
   execFileSync('pnpm', [...built.flatMap((name) => ['--filter', name]), 'build'], { cwd: repositoryRoot, stdio: 'pipe' });
