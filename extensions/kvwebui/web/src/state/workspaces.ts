@@ -33,6 +33,11 @@ export async function openFolder(state: Kvwebui, path: string): Promise<void> {
   await switchWorkspace(state, workspace.id);
 }
 
+/** The sub-folders of `path` on this machine, or of Home's folder when there is no path (ADR 0009, 219). */
+export function listFolder(state: Kvwebui, path: string | undefined, hidden: boolean) {
+  return kernelQuery(state.api, 'kernel.folder.list', { ...(path === undefined ? {} : { path }), hidden });
+}
+
 export async function closeWorkspace(state: Kvwebui, id: string): Promise<void> {
   await kernelCommand(state.api, 'kernel.workspace.close', { workspaceId: id });
   if (state.workspace.value === id) await switchWorkspace(state, homeWorkspaceId);

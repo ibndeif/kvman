@@ -28,6 +28,7 @@
   "kernel.workspace.close.description": "يغلق مساحة عمل؛ تبقى بياناتها لحين فتحها مجددًا.",
   "kernel.workspace.close.fields.workspaceId": "مساحة العمل",
   "kernel.workspace.list.description": "يعرض مساحات العمل المفتوحة.",
+  "kernel.folder.list.description": "يعرض المجلدات الفرعية لمجلد على هذا الجهاز.",
   "kernel.settings.set.description": "يضبط إعدادًا.",
   "kernel.settings.set.fields.key": "الإعداد",
   "kernel.settings.set.fields.value": "القيمة",

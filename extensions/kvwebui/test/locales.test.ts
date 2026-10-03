@@ -40,4 +40,11 @@ describe("kvwebui's catalogs (02 §2.11)", () => {
     const settingKeys = ['kvwebui.title', 'kvwebui.home', 'kvwebui.nav.order', 'kvwebui.nav.hidden', 'kvwebui.theme'];
     expect(settingKeys.flatMap((key) => [`${key}.title`, `${key}.description`]).filter((key) => en[key] === undefined)).toEqual([]);
   });
+
+  it('QA13-E9 en and ar have the folder browser texts', () => {
+    for (const language of ['en', 'ar']) {
+      const texts = catalog(language);
+      for (const key of ['kvwebui.workspace.openThis', 'kvwebui.workspace.up', 'kvwebui.workspace.showHidden', 'kvwebui.workspace.noFolders', 'kvwebui.workspace.truncated', 'kvwebui.workspace.folderHelp']) expect(texts[key], `${language} ${key}`).toBeTypeOf('string');
+    }
+  });
 });

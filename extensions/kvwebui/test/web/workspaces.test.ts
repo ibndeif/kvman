@@ -7,6 +7,10 @@ import { notesApi, notesUi } from './support/notes.ts';
 function withWorkspaces(): ReturnType<typeof notesApi> {
   const api = notesApi();
   api.workspaces.push({ id: 'w1', name: 'project', path: '/work/project' }, { id: 'w2', name: 'second', path: '/work/second' });
+  api.handlers.set('kernel.folder.list', (input: Json) => {
+    const path = (input as { path?: string }).path ?? '/home/me';
+    return { path, parent: '/', folders: [], truncated: false };
+  });
   api.handlers.set('kernel.workspace.open', (input: Json) => {
     const workspace = { id: 'w3', name: 'other', path: String((input as { path: string }).path) };
     api.workspaces.push(workspace);
@@ -38,6 +42,8 @@ describe('workspaces in the browser (06 §6.2, ADR 0009, 74)', () => {
     expect(app.find('[data-test="close-w2"]')).not.toBeNull();
     await click(app.find('[data-test="open-folder"]'));
     await type(document.querySelector<HTMLElement>('[data-test="folder-path"]'), '/work/other');
+    document.querySelector('[data-test="folder-path"]')?.closest('form')?.dispatchEvent(new Event('submit', { cancelable: true }));
+    await app.settle();
     await click(document.querySelector<HTMLElement>('[data-test="folder-open"]'));
     expect(api.callsTo('kernel.workspace.open').map((call) => call.input)).toEqual([{ path: '/work/other' }]);
     expect(app.state.workspace.value).toBe('w3');

@@ -28,6 +28,7 @@
   "kernel.workspace.close.description": "Closes a workspace; its data stays for when it's opened again.",
   "kernel.workspace.close.fields.workspaceId": "Workspace",
   "kernel.workspace.list.description": "Lists the open workspaces.",
+  "kernel.folder.list.description": "Lists the sub-folders of a folder on this machine.",
   "kernel.settings.set.description": "Sets a setting.",
   "kernel.settings.set.fields.key": "Setting",
   "kernel.settings.set.fields.value": "Value",

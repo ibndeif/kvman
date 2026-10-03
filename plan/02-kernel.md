@@ -198,6 +198,7 @@ All are public. Types are in `@kvman/sdk`.
 | `kernel.workspace.open` | command | `{ path }` → `Workspace`: the existing one if that path is open, the remembered one if it was open before (§2.6) |
 | `kernel.workspace.close` | command | `{ workspaceId }` → `{}`: pauses it (§2.6); Home can't be closed (`VALIDATION_FAILED`) |
 | `kernel.workspace.list` | query | `{}` → the open `Workspace[]`, Home first, then in the order they were first opened |
+| `kernel.folder.list` | query | `{ path?, hidden? }` → `{ path, parent, folders: [{ name, path }], truncated }`: the sub-folders of a folder on this machine, for choosing a workspace folder (ADR 0009, 219) |
 | `kernel.settings.set` | command | `{ key, value, scope: 'global' \| 'workspace' }` → `{}` |
 | `kernel.settings.reset` | command | `{ key, scope }` → `{}` |
 | `kernel.settings.list` | query | `{}` → `[{ key, description, schema, scopes, value, source }]`, where `schema` is JSON Schema and `source` is `workspace`, `global`, `preset`, or `default` |

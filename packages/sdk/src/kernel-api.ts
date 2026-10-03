@@ -51,6 +51,14 @@ export const processRowSchema = z.strictObject({
   startedAt: isoTimeSchema,
 });
 
+/** Accepts the sub-folders of a folder as `kernel.folder.list` answers (plan 02 §2.12). */
+export const folderListSchema = z.strictObject({
+  path: z.string(),
+  parent: z.string().nullable(),
+  folders: z.array(z.strictObject({ name: z.string(), path: z.string() })),
+  truncated: z.boolean(),
+});
+
 /** Accepts the answer of `kernel.health.get`. */
 export const healthSchema = z.strictObject({
   version: z.string(),
@@ -75,6 +83,7 @@ export const kernelCommandSchemas = {
 /** The input and output schemas of the kernel's own queries (plan 02 §2.12). */
 export const kernelQuerySchemas = {
   'kernel.workspace.list': { input: emptySchema, output: z.array(workspaceSchema) },
+  'kernel.folder.list': { input: z.strictObject({ path: z.string().min(1).exactOptional(), hidden: z.boolean().exactOptional() }), output: folderListSchema },
   'kernel.settings.list': { input: emptySchema, output: z.array(settingInfoSchema) },
   'kernel.secrets.list': { input: emptySchema, output: z.array(z.strictObject({ extension: z.string(), name: z.string() })) },
   'kernel.jobs.get': { input: z.strictObject({ id: z.string().min(1) }), output: jobSchema },

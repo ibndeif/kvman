@@ -39,6 +39,19 @@ const edgesExpression = `(() => {
   };
   return { title: edge('[data-test="call-title"]'), description: edge('[data-test="call-description"]'), command: edge('[data-test="call-command"] .kvc-mono') };
 })()`;
+// The popover re-fits on the frame after the conversation changes size, so a test waits for it to lie inside (ADR 0009, 221).
+const insideExpression = `(() => {
+  const popover = document.querySelector('[data-test="model-popover"]').getBoundingClientRect();
+  const box = document.querySelector('.kvc-conversation').getBoundingClientRect();
+  return popover.left >= box.left - 1 && popover.right <= box.right + 1;
+})()`;
+// Waits for the popover to lie inside the conversation; a failure says where everything was, and for which window.
+async function insideConversation(page: Page, context: string): Promise<void> {
+  await page.waitForFunction(insideExpression, undefined, { timeout: 10_000 }).catch(async (error: unknown) => {
+    throw new Error(`${context}: ${JSON.stringify(await page.evaluate(fitExpression))}`, { cause: error });
+  });
+}
+
 const fitExpression = `(() => {
   const popover = document.querySelector('[data-test="model-popover"]').getBoundingClientRect();
   const conversation = document.querySelector('.kvc-conversation');
@@ -217,6 +230,7 @@ describe('a long chat in Chromium (08 §8.7, ADR 0009, 195–199)', { timeout: 1
         const page = await openChat(kvman, sessionId, { width, height: 800 });
         await page.locator('.kvc-header [data-test="model-picker"]').click();
         await page.locator('[data-test="model-popover"]').waitFor();
+        await insideConversation(page, `${language} ${String(width)}`);
         const found = fitSchema.parse(await page.evaluate(fitExpression));
         expect(found.popoverLeft, `${language} ${String(width)} popover start`).toBeGreaterThanOrEqual(found.conversationLeft - 1);
         expect(found.popoverRight, `${language} ${String(width)} popover end`).toBeLessThanOrEqual(found.conversationRight + 1);
@@ -234,12 +248,27 @@ describe('a long chat in Chromium (08 §8.7, ADR 0009, 195–199)', { timeout: 1
         const page = await openChat(kvman, sessionId, { width, height: 800 });
         await page.locator('.kvc-header [data-test="model-picker"]').click();
         await page.locator('[data-test="model-popover"]').waitFor();
+        await insideConversation(page, `${language} ${String(width)}`);
         const found = fitSchema.parse(await page.evaluate(fitExpression));
         expect(found.popoverLeft, `${language} ${String(width)} button start`).toBeLessThanOrEqual(found.buttonLeft + 1);
         expect(found.popoverRight, `${language} ${String(width)} button end`).toBeGreaterThanOrEqual(found.buttonRight - 1);
         await page.close();
       }
     }
+  });
+
+  it('QA10-E11 an open model popover fits again when the window is resized', async () => {
+    const { kvman, sessionId } = await chatWith(says('Hi.'));
+    const page = await openChat(kvman, sessionId);
+    await page.locator('.kvc-header [data-test="model-picker"]').click();
+    await page.locator('[data-test="model-popover"]').waitFor();
+    for (const width of [700, 1280]) {
+      await page.setViewportSize({ width, height: 800 });
+      await insideConversation(page, `resized to ${String(width)}`);
+      const found = fitSchema.parse(await page.evaluate(fitExpression));
+      expect(found.sideways, `${String(width)} sideways scroll`).toEqual({ document: false, main: false, conversation: false });
+    }
+    await page.close();
   });
 
   it('QA10-E8 the recovery picker opens upward from its button and stays inside the column', async () => {

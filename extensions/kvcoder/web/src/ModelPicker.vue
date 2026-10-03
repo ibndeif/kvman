@@ -6,7 +6,9 @@ import { searchGroups, type ModelGroup } from './model-groups.ts';
 
 // The model picker (plan 08 §8.7, ADR 0009, 140): a button that opens a searchable list of the models, grouped by
 // provider. Every word typed must be in a model's name or id; arrows and Enter pick, Esc and a click outside close. The
-// list opens at its button and is moved only as far as it takes to stay inside the conversation (ADR 0009, 211).
+// list opens at its button and is moved only as far as it takes to stay inside the conversation, and is fitted again on
+// every frame while it is open, since the header can move the button without changing the conversation's size (ADR 0009,
+// 211 and 221).
 const props = defineProps<{ groups: ModelGroup[]; current: string | null; empty?: string | undefined }>();
 const emit = defineEmits<{ pick: [modelId: string] }>();
 const kvman = useKvman();
@@ -31,6 +33,7 @@ function close(): void {
 async function show(): Promise<void> {
   query.value = '';
   highlight.value = Math.max(indexOf(props.current ?? ''), 0);
+  shift = 0;
   open.value = true;
   await nextTick();
   keepInside();
@@ -38,14 +41,25 @@ async function show(): Promise<void> {
   scrollToHighlight();
 }
 
+let shift = 0;
+let frame = 0;
+
 function keepInside(): void {
   const list = panel.value;
   const bounds = trigger.value?.closest('.kvc-conversation')?.getBoundingClientRect();
   if (list === null || bounds === undefined) return;
   const box = list.getBoundingClientRect();
-  const start = bounds.left + gutterPx - box.left;
-  const end = bounds.right - gutterPx - box.right;
-  list.style.translate = `${start > 0 ? start : end < 0 ? end : 0}px 0`;
+  const start = bounds.left + gutterPx - (box.left - shift);
+  const end = bounds.right - gutterPx - (box.right - shift);
+  const next = start > 0 ? start : end < 0 ? end : 0;
+  if (next === shift) return;
+  shift = next;
+  list.style.translate = `${next}px 0`;
+}
+
+function follow(): void {
+  keepInside();
+  frame = requestAnimationFrame(follow);
 }
 
 function scrollToHighlight(): void {
@@ -70,8 +84,19 @@ function outside(event: Event): void {
 }
 
 watch(query, () => (highlight.value = 0));
-watch(open, (isOpen) => (isOpen ? document.addEventListener('pointerdown', outside) : document.removeEventListener('pointerdown', outside)));
-onBeforeUnmount(() => document.removeEventListener('pointerdown', outside));
+watch(open, (isOpen) => {
+  if (isOpen) {
+    document.addEventListener('pointerdown', outside);
+    frame = requestAnimationFrame(follow);
+  } else {
+    document.removeEventListener('pointerdown', outside);
+    cancelAnimationFrame(frame);
+  }
+});
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', outside);
+  cancelAnimationFrame(frame);
+});
 </script>
 
 <template>

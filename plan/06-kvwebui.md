@@ -28,7 +28,7 @@ kvwebui is the web app, and it is an extension like any other. The kernel serves
 
 **Top bar.**
 - The title is the `kvwebui.title` key.
-- **The workspace picker** lists `kernel.workspace.list`: each workspace's name and folder (Home is shown as "Home"), with a close button on each but Home (`kernel.workspace.close`). "Open a folder…" opens a dialog for a typed absolute path (`kernel.workspace.open`).
+- **The workspace picker** lists `kernel.workspace.list`: each workspace's name and folder (Home is shown as "Home"), with a close button on each but Home (`kernel.workspace.close`). "Open a folder…" opens a folder browser (ADR 0009, 220): the current folder's path, an Up button, its sub-folders from `kernel.folder.list` (a click enters one), a "Show hidden" switch, and a path field that goes to a typed path; "Open this folder" runs `kernel.workspace.open` for the folder shown. It starts at the open workspace's folder, or Home's folder from Home.
 - A language menu lists the languages in `kernel.health.get`, each named in itself, and sets `kernel.language`; kvwebui then reloads the catalog and sets the page direction (§2.11). A theme menu (System, Light, Dark) sets `kvwebui.theme`.
 
 **Nav.**
