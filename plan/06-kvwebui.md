@@ -167,3 +167,7 @@ There is no `tabs` component: an extension that wants tabs ships a custom compon
 | `kvwebui.nav.order` | `[]` |
 | `kvwebui.nav.hidden` | `[]` |
 | `kvwebui.theme` | `system` (`light`, `dark`); global only |
+
+## 6.9 Documentation
+
+kvwebui serves `kvwebui.docs.list` and `kvwebui.docs.get` (plan 09 §9.5): the pages `views` (the view tree, forms, effects) and `components` (custom Vue components, the import map, CSS variables, `@kvman/sdk/web`), as Markdown from its `docs/` folder (ADR 0010, 16).

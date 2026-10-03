@@ -16,6 +16,7 @@ Plain Markdown in the repository, English, written for people. It describes what
 | `components.md` | Custom Vue components: the `web` folder, the import map, CSS variables, `@kvman/sdk/web`, building with Vite | plan 06 §6.4, 09 §9.2 |
 | `localization.md` | Catalogs, `en` and `ar`, keys, error texts, right-to-left, "user-facing text is always a key" | plan 02 §2.11, 06 |
 | `connectors.md` | Extending kvcoder: connectors, sections, `ask`, subagents, how a registering extension offers fixed points to others | plan 08, 03 |
+| `documenting-your-extension.md` | Telling others and agents how to use your extension: the `<namespace>.docs.list` and `.docs.get` pair, topics, `extension-docs/`, `kvman-docs`, and how kvcustomizer shows it | plan 09 §9.5 |
 | `presets.md` | The preset format, bundled and personal presets, settings, `path:` and `npm:`, how an edit applies, `kvman-preset` | plan 02 §2.10, 11, 09 |
 | `testing.md` | `createTestKernel`, the fake clock, `restart`, the fake OpenAI server, `kvman-check`, deterministic tests | plan 10, 12 |
 | `preview-and-hot-reload.md` | `kvman-preview`, `path:` hot reload, `web:watch`, ports, what a failed reload does | plan 09 §9.3, 02 §2.9 |

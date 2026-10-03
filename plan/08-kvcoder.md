@@ -311,3 +311,7 @@ kvcoder owns its conversation UI. kvwebui only hosts it: kvcoder contributes pag
 | `kvcoder.connectors` | `[]` (binary connectors: `{ name, description, binary: { check, install? } }`) |
 | `kvcoder.sessions.keep` | 0 (keep all) |
 | `kvcoder.welcome` | `null`: no welcome; a translation key (such as `kvcoder.welcome.default`) makes the welcome session (ADR 0009, 193) |
+
+## 8.8 Documentation
+
+kvcoder serves `kvcoder.docs.list` and `kvcoder.docs.get` (plan 09 §9.5): the pages `connectors` (registering connectors, commands and binary connectors, examples, ownership and lifetime) and `sections` (global, workspace, and session sections, order, caps), as Markdown from its `docs/` folder (ADR 0010, 16).

@@ -20,7 +20,8 @@ kvcustomizer is the kvcoder extension for customizing kvman: developing extensio
 | `kvman settings list` / `set '{ "key", "value", "scope" }'` / `reset '{ "key", "scope" }'` | `kvcustomizer.app.settings.list` / `.set` / `.reset` | `kernel.settings.list`, `.set`, `.reset` |
 | `kvman extensions list` / `install '{ "name", "source" }'` / `uninstall '{ "name" }'` | `kvcustomizer.app.extensions.list` / `.install` / `.uninstall` | `kernel.extensions.list` / `kernel.extensions.install` / `.uninstall` (§2.12) |
 | `kvman preset get` | `kvcustomizer.app.preset.get` | `kernel.preset.get` (§2.12) |
-| `docs get '{ "topic": "sdk" \| "views" \| "components" \| "i18n" \| "connectors" \| "presets" }'` | `kvcustomizer.docs.get` | a guide as Markdown, read from the testkit's `docs/` (§9.2) |
+| `docs list` | `kvcustomizer.docs.list` | `[{ extension, topic, title }]`: the three built-in guides (`extension: "kvman"`), then the pages of every loaded extension that serves docs (§9.5), plus `[{ extension, problem }]` for each one whose docs failed (ADR 0010, 15) |
+| `docs get '{ "extension"?, "topic" }'` | `kvcustomizer.docs.get` | `{ extension, topic, title, markdown }`; with no `extension` the topic is a built-in guide (`sdk`, `i18n`, `presets`), read from the testkit's `docs/`; `NOT_FOUND` for an unknown extension or topic |
 
 - **The `kvman` connector** changes the app the agent runs in, and `ext` builds a project in the workspace (ADR 0010, 8). Its commands are public and each wraps the kernel command named in the table; none reads or writes a secret, and a change to the preset applies at the next start, which the answer says (`restartRequired`).
 - **Descriptions.** Each connector's `description` says what it is for and when to use it (ADR 0009, 170): `ext` for any work on an extension, running `check`, then `test`, after changing one; `preset` to create a preset file and check it before running it; `preview` to show the person a project working, stopping it when done; `docs` before writing an extension, preset, view, or component.
@@ -37,11 +38,11 @@ kvcustomizer is the kvcoder extension for customizing kvman: developing extensio
 
 ## 9.2 The scaffold and the guides
 
-The scaffold, the guides, `preset new` and `preset check`, and the preview are `@kvman/testkit` bins (§10): `kvman-new`, `kvman-preset`, and `kvman-preview`, next to `kvman-check`. Each takes the fields of its connector as flags, with the folder or file as an argument (`--name`, `--namespace`, `--web`), and with `--json` prints the connector's output, so a person, another harness, and kvcustomizer share one implementation (ADR 0010, 2). kvcustomizer declares `@kvman/testkit` in its own package.json, resolves the bins and the `docs/` folder from its own node_modules, and runs a bin as a child process with the running Node. It never imports the testkit (ADR 0010, 3).
+The scaffold, the kernel-level guides, `preset new` and `preset check`, and the preview are `@kvman/testkit` bins (§10): `kvman-new`, `kvman-preset`, and `kvman-preview`, next to `kvman-check`. Each takes the fields of its connector as flags, with the folder or file as an argument (`--name`, `--namespace`, `--web`), and with `--json` prints the connector's output, so a person, another harness, and kvcustomizer share one implementation (ADR 0010, 2). kvcustomizer declares `@kvman/testkit` in its own package.json, resolves the bins and the `docs/` folder from its own node_modules, and runs a bin as a child process with the running Node. It never imports the testkit (ADR 0010, 3).
 
-`kvman-new` also writes `AGENTS.md` and a one-line `CLAUDE.md` that points to it (ADR 0010, 9): `AGENTS.md` says the folder is a kvman extension, to read `docs/` first, to run `npm run check` and `npm test` after each change, and not to edit `dist/`; both are English. It copies the six guides (`sdk`, `views`, `components`, `i18n`, `connectors`, `presets`, as Markdown from the testkit's `docs/`) into the project's `docs/` folder, so any harness or person can read them there (ADR 0010, 2). `docs get` reads the testkit's copy, since it works before a project exists.
+`kvman-new` also writes `AGENTS.md` and a one-line `CLAUDE.md` that points to it (ADR 0010, 9): `AGENTS.md` says the folder is a kvman extension, to read `docs/` first, to run `kvman-docs list` and `kvman-docs get` for the docs of the extensions it builds on, to run `npm run check` and `npm test` after each change, and not to edit `dist/`; both are English. It copies the three kernel-level guides (`sdk`, `i18n`, `presets`, as Markdown from the testkit's `docs/`) into the project's `docs/` folder, so any harness or person can read them there (ADR 0010, 2, 17). The guides of the other concepts belong to the extensions that own them: kvwebui's `views` and `components`, kvcoder's `connectors` and `sections`, kvai's `models` and `providers`, and kvcustomizer's `customizing` (§9.5). `docs get` reads the testkit's copy of the built-in ones, since it works before a project exists.
 
-`kvman-new` writes:
+`kvman-new` writes the sample `<namespace>.docs.list` and `<namespace>.docs.get` (§9.5) over `extension-docs/usage.md`, and:
 - `package.json`: `main` (`dist/index.js`), a `kvman` field (namespace, `source: "src/index.ts"`, dependencies: `{}`, plain or web, ADR 0009, 128), `@kvman/sdk` as a peerDependency, and devDependencies `typescript`, `@types/node` (ADR 0009, 127), `@kvman/sdk`, and `@kvman/testkit`, pinned to the versions that the running kvman bundles, plus the scripts `build` (for publishing), `check`, and `test`;
 - `src/index.ts`, in erasable TypeScript, which a `path:` extension loads directly (§2.9), so edits need no build step. It registers a public query `<namespace>.greeting.get` (a sentence) and a `<namespace>.ui.get` with a page `hello` and a nav item that shows the greeting (ADR 0009, 118);
 - `locales/en.json` and `locales/ar.json`;
@@ -78,3 +79,19 @@ It returns `{ url }` once the preview answers `kernel.health.get`; after 30 s, o
 ## 9.4 Sections
 
 kvcustomizer adds one global section to kvcoder's prompt (§8.4), `guide` with order 20, set at each kvcustomizer start: a short guide to extensions, connectors, and presets, pointing to `docs get` for details and to `ext list` for the workspace's projects. It says to use the `ext`, `preset`, `preview`, and `docs` connectors for everything they cover and the shell for the rest, and to edit a project's files with `fs` (ADR 0009, 170). The guides and the section are English, as text for a model is (§2.11, ADR 0009, 126).
+
+## 9.5 Documenting an extension
+
+Any extension may tell others how to use it, so that an agent building a new extension can use what is installed (ADR 0010, 15–18). It registers two public queries, which kvcustomizer pulls (as kvwebui pulls `<namespace>.ui.get`); nothing is registered with kvcustomizer, and there is no load order:
+
+| Query | Input → output |
+|---|---|
+| `<namespace>.docs.list` | `{}` → `[{ topic, title }]` |
+| `<namespace>.docs.get` | `{ topic }` → `{ topic, title, markdown }` |
+
+- `topic` is a kebab-case segment (`^[a-z0-9]+(-[a-z0-9]+)*$`); `title` and the Markdown are English, as text for a model is (§2.11).
+- An extension is documented only when both are public queries. A private one is ignored; one of the two missing is ignored too.
+- kvcustomizer's `docs list` calls `<namespace>.docs.list` on each loaded extension that has the pair, and `docs get` calls `<namespace>.docs.get`. An answer that fails, or doesn't match, is shown for that extension as its Problem; it hides no other extension. `docs get` of an unknown topic is the extension's own `NOT_FOUND`.
+- The core extensions document themselves this way, and none is required: kvwebui `views` and `components`, kvcoder `connectors` and `sections`, kvai `models` and `providers`, kvcustomizer `customizing`. Each keeps its pages as Markdown in its own `docs/` folder. A person who removes them all, or all but one, loses only their pages.
+- `kvman-docs list|get` (testkit, §10) gives the same pages to any harness: it takes the port from `<home>/kvman.lock` (`--home`, `KVMAN_HOME`, or `~/.kvman`) or `--url`, reads `kernel.extensions.list`, calls each pair over HTTP (§4), and with `--json` prints the data. It also lists the built-in guides, read from the testkit with no kvman running. With no kvman running, `list` prints the built-in guides and says on stderr to start kvman; `get` of an extension's topic exits 1.
+- The scaffold's pair serves the Markdown pages of the project's `extension-docs/` folder (§9.2).

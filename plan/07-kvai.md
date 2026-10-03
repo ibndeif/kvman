@@ -103,3 +103,7 @@ All of these are public. Removing a built-in provider or model fails with `kvai/
 - Tests run a small scripted OpenAI-compatible streaming server on 127.0.0.1 (`@kvman/testkit/fake-openai`, ADR 0009, 62), and add it with `kvai.provider.add { api: 'openai-completions', baseUrl }`. They observe deltas with the testkit's `onProgress` (ADR 0009, 61).
 - The real code path runs, with no test-only branch.
 - Harness tests (kvcoder, kvcustomizer) reuse the same helper.
+
+## 7.5 Documentation
+
+kvai serves `kvai.docs.list` and `kvai.docs.get` (plan 09 §9.5): the pages `models` (calling a model with `kvai.complete`, choosing and listing models) and `providers` (connecting, adding a provider, how a plan sign-in works), as Markdown from its `docs/` folder (ADR 0010, 16).
