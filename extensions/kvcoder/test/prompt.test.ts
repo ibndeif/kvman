@@ -31,7 +31,7 @@ describe('the prompt (08 §8.2, §8.4)', { timeout: 30_000 }, () => {
     expect(prompt).toContain('## Connectors\nUse these before the shell, whenever one covers the task.\n');
   });
 
-  it("M2.4-E53, QA4-H15, QA4-H16, QA4-H17, QA5-H1, QA5-H3, QA5-H5, QA5-E3, QA6-H22, QA6-H23, and QA8-H5 the base prompt names the shell, the OS, the language, and the workspace folder; then sections by order; then the connector index", async () => {
+  it("QA12-E8, QA12-H8, and M2.4-E53, QA4-H15, QA4-H16, QA4-H17, QA5-H1, QA5-H3, QA5-H5, QA5-E3, QA6-H22, QA6-H23, and QA8-H5 the base prompt names the shell, the OS, the language, and the workspace folder; then sections by order; then the connector index", async () => {
     const { kernel, fake } = await kvcoder.start({ settings: { 'kernel.language': 'ar' } });
     const sessionId = await newSession(kernel);
     await kernel.exec('kvcoder.section.set', { id: 'later', title: 'Later', order: 30, content: 'L' }, { as: '@test/todo' });
@@ -54,7 +54,7 @@ describe('the prompt (08 §8.2, §8.4)', { timeout: 30_000 }, () => {
     expect(prompt).toContain('Connectors come first. A connector is a word kvcoder runs itself');
     expect(prompt).toContain('Write the plan as the artifact `plan`');
     expect(prompt).toContain('Write each file in its own call, with its content as the raw heredoc body of `fs write`.');
-    expect(prompt).toContain('- artifact: Show the person something to read or see: a plan, a report, a design, an HTML page, or the localhost address of an app you are running (format url). Use it for anything longer than a few lines instead of pasting it into a reply, and keep your plan in the artifact `plan`. Give the content as the raw heredoc body after the JSON (commands: write, edit, get). The panel runs a page in a sandbox where localStorage, sessionStorage, cookies, and indexedDB throw, so a page you show there must work without them, keeping its state in memory or wrapping each use in try/catch; the person can open a url artifact in a new tab, where they work. Help: `artifact -h`.');
+    expect(prompt).toContain('- artifact: Show the person something to read or see: a plan, a report, a design, an HTML page, or the localhost address of an app you are running (format url). Use it for anything longer than a few lines instead of pasting it into a reply, and keep your plan in the artifact `plan`. Give the content as the raw heredoc body after the JSON (commands: write, edit, get). The panel runs the page of an HTML artifact in a sandbox where localStorage, sessionStorage, cookies, and indexedDB throw, so a page you show that way must work without them, keeping its state in memory or wrapping each use in try/catch; a url artifact is a normal page on its own address and can use them. Help: `artifact -h`.');
     expect(prompt).toContain('## Connectors\nUse these before the shell, whenever one covers the task.\n- todo: Keep a todo list.');
     expect(prompt).toContain("- todo: Keep a todo list. Help: `todo -h` lists its commands; `todo <command> -h` shows a command's input, output, and examples.\n");
     const order = ['## Mine', '## Everywhere', '## Later', '## Connectors', '- todo: Keep a todo list.', '- ask: ', '- subagent: ', '- jobs: '].map((part) => prompt.indexOf(part));

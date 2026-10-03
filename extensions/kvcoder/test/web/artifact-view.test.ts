@@ -79,10 +79,12 @@ describe("the artifact panel's views and Copy (08 §8.7, ADR 0009, 214 and 216)"
     wrapper.unmount();
   });
 
-  it('QA12-H6 a url artifact previews in a scripts-only frame, Source shows the address, and a link opens it in a new tab', async () => {
+  it('QA12-H6 a url artifact previews in a frame that lets the page work as in a tab, without top navigation, Source shows the address, and a link opens it in a new tab', async () => {
     const wrapper = await panel({ id: 'app', title: 'App', format: 'url', content: 'http://localhost:8080/' });
     const frame = wrapper.find('[data-test="artifact-url-frame"]');
-    expect(frame.attributes('sandbox')).toBe('allow-scripts');
+    const rights = (frame.attributes('sandbox') ?? '').split(' ');
+    expect(rights).toEqual(['allow-scripts', 'allow-same-origin', 'allow-forms', 'allow-popups', 'allow-modals', 'allow-downloads']);
+    expect(rights).not.toContain('allow-top-navigation');
     expect(frame.attributes('referrerpolicy')).toBe('no-referrer');
     expect(frame.attributes('src')).toBe('http://localhost:8080/');
     const link = wrapper.find('[data-test="artifact-open-url"]');
