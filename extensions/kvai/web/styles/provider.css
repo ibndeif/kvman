@@ -1,0 +1,33 @@
+/* The Provider page (plan 07 §7.3, ADR 0009, 245-247): the header, the connection section, and the models. */
+.kvai-provider { display: flex; flex-direction: column; gap: 32px; box-sizing: border-box; inline-size: 100%; max-inline-size: 1100px; margin-inline: auto; }
+.kvai-provider .kvai-button { min-block-size: 44px; }
+.kvai-provider .kvai-input { min-block-size: 44px; }
+.kvai-provider .kvai-card { border-radius: 16px; padding-block: 20px; padding-inline: 22px; }
+.kvai-connection { gap: 20px; }
+.kvai-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: var(--kv-space-md); }
+.kvai-choice { display: flex; flex-direction: column; gap: 14px; border: 1px solid var(--kv-color-border); border-radius: 14px; padding-block: 20px; padding-inline: 20px; background: var(--kv-color-surface); }
+.kvai-choice-plan { border: 2px solid var(--kv-color-primary); background: color-mix(in srgb, var(--kv-color-primary) 8%, var(--kv-color-surface)); }
+.kvai-choice-title { margin-block: 0; font-size: 16px; font-weight: 600; }
+.kvai-connected { display: flex; flex-direction: column; gap: 14px; }
+.kvai-connected-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.kvai-other { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; border: 1px solid var(--kv-color-border); border-radius: 12px; background: var(--kv-color-background); padding-block: 14px; padding-inline: 16px; }
+.kvai-other > .kvai-choice { flex: 1 1 100%; }
+.kvai-other > .kvai-text { flex: 1 1 260px; }
+.kvai-progress-row { display: flex; align-items: flex-start; gap: 14px; }
+.kvai-remove { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.kvai-provider-head { display: flex; flex-direction: column; gap: 18px; }
+.kvai-provider-head .kvai-link { align-self: flex-start; }
+.kvai-provider-row { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.kvai-provider-titles { display: flex; flex-direction: column; gap: 4px; flex: 1 1 260px; min-inline-size: 0; }
+.kvai-provider-title { margin-block: 0; font-size: 28px; font-weight: 600; overflow-wrap: anywhere; }
+.kvai-provider section { display: flex; flex-direction: column; gap: 14px; }
+.kvai-model-list { overflow: hidden; }
+.kvai-model-row { display: flex; align-items: center; gap: 10px 16px; flex-wrap: wrap; padding-block: 16px; padding-inline: 22px; border-block-end: 1px solid var(--kv-color-border); }
+.kvai-model-row:last-child { border-block-end: 0; }
+.kvai-model-row[data-default='true'] { background: color-mix(in srgb, var(--kv-color-primary) 14%, var(--kv-color-surface)); }
+.kvai-model-text { display: flex; flex-direction: column; gap: 3px; flex: 1 1 200px; min-inline-size: 0; }
+.kvai-model-name { font-size: 15.5px; font-weight: 600; overflow-wrap: anywhere; }
+.kvai-model-flag { min-inline-size: 84px; }
+.kvai-model-context { min-inline-size: 84px; text-align: end; }
+.kvai-thinking { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; }
+.kvai-model-list .kvai-muted[data-test='model-context'] { font-size: 13px; }

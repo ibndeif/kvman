@@ -113,7 +113,8 @@ export const problem = (code: string, params: Record<string, Json> = {}, message
 });
 
 export async function mounted(component: Component, fake: FakeKvman, props: Record<string, unknown> = {}): Promise<VueWrapper> {
-  const wrapper = mount(component, { props, global: { provide: { kvman: fake.kvman } } });
+  // Attached to the document, so focus (the picker's search box) reaches `document.activeElement` as in kvwebui.
+  const wrapper = mount(component, { props, global: { provide: { kvman: fake.kvman } }, attachTo: document.body });
   await flushPromises();
   return wrapper;
 }

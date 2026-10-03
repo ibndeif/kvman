@@ -92,9 +92,9 @@ All of these are public. Removing a built-in provider or model fails with `kvai/
 
 ## 7.3 UI
 
-`kvai.ui.get` contributes (ADR 0009, 79):
-- a **Models** page (the nav item): the default model (a `detail` of `kvai.model.default.get`); the providers table, each row showing the provider's name with its id, its model count, and a status badge, and opening the provider's page; and a "Connect your own server" card linking to the add page.
-- a **Provider** page (`params: ['providerId']`): the provider and its status; the connection card, the custom component `kvai.connection` (ADR 0009, 237): how the provider is connected, an API key form (`kvai.provider.key.set`) when it takes one, "Sign in with your plan" when it offers one (the sign-in's link, device code, and prompts shown on the card, with Cancel), a Disconnect button while connected (`kvai.provider.disconnect`), and Remove provider for a custom provider (`kvai.provider.remove`); and its models, each with its name and id, thinking, context window, a "Default" badge, and a "Make default" row action that calls `kernel.settings.set` for `kvai.defaultModel` (global).
+`kvai.ui.get` contributes (ADR 0009, 79, 238–249):
+- a **Models** page (the nav item): a heading and intro, then the custom component `kvai.providers` (ADR 0009, 238–244): the default-model card with "Change model" (a searchable picker of the models of callable providers); "Connected" (a card for each connected or custom provider, with Manage); "Connect a provider" (tiles from a fixed list: Claude, ChatGPT, and GitHub Copilot to sign in with a plan; Anthropic, Google, xAI, and "Your own server" for a key or a local server); and "All providers" (the rest, A–Z, with search and "Show 25 more"). Each provider has a coloured letter avatar.
+- a **Provider** page (`params: ['providerId']`): the custom component `kvai.provider` (ADR 0009, 245–247): a header (avatar, title, `<id> · N models`, a chip, and a back link); the connection section (how the provider is connected; two choices, "Your plan" and "An API key", when it offers both; Disconnect while connected; the sign-in's link, device code, prompts, and Cancel while signing in; Remove provider for a custom provider); and the provider's models with a search, the Default chip, and "Make default".
 - an **Add a provider** page: the forms of `kvai.provider.add` and `kvai.model.add`.
 - a **status item** with the workspace's tokens and cost, from `kvai.usage.total.get` (ADR 0009, 60).
 

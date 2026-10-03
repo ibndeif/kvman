@@ -8,54 +8,6 @@ const text = (key: string) => ({ type: 'text', text: key });
 const providerParam = { $param: 'providerId' };
 const backToModels = { type: 'link', text: 'kvai.ui.back', to: { page: 'kvai.models' } };
 
-const providerStatus = {
-  ready: { text: 'kvai.ui.status.ready', tone: 'success' },
-  needsKey: { text: 'kvai.ui.status.needsKey', tone: 'warning' },
-  noKey: { text: 'kvai.ui.status.noKey', tone: 'neutral' },
-};
-
-const defaultCard = {
-  type: 'card',
-  title: 'kvai.ui.default.title',
-  children: [
-    {
-      type: 'detail',
-      query: 'kvai.model.default.get',
-      input: {},
-      fields: [
-        { field: 'name', title: 'kvai.ui.columns.model', secondary: 'id' },
-        { field: 'ready', title: 'kvai.ui.columns.status', badges: { true: { text: 'kvai.ui.status.ready', tone: 'success' }, false: { text: 'kvai.ui.status.notReady', tone: 'warning' } } },
-      ],
-    },
-    text('kvai.ui.default.help'),
-  ],
-};
-
-const providersCard = {
-  type: 'card',
-  title: 'kvai.ui.providers.title',
-  children: [
-    {
-      type: 'table',
-      query: 'kvai.provider.list',
-      input: {},
-      columns: [
-        { field: 'title', title: 'kvai.ui.columns.provider', secondary: 'id' },
-        { field: 'models', title: 'kvai.ui.columns.models', format: 'number' },
-        { field: 'status', title: 'kvai.ui.columns.status', badges: providerStatus },
-      ],
-      rowLink: { page: 'kvai.provider', params: { providerId: { $row: 'id' } } },
-      empty: 'kvai.ui.providers.empty',
-    },
-  ],
-};
-
-const connectCard = {
-  type: 'card',
-  title: 'kvai.ui.connect.title',
-  children: [text('kvai.ui.connect.help'), { type: 'link', text: 'kvai.ui.connect.add', to: { page: 'kvai.provider-add' } }],
-};
-
 const modelsPage = {
   id: 'models',
   title: 'kvai.ui.models.title',
@@ -63,68 +15,19 @@ const modelsPage = {
     type: 'stack',
     direction: 'vertical',
     gap: 'lg',
-    children: [{ type: 'heading', text: 'kvai.ui.models.title', level: 1 }, text('kvai.ui.models.intro'), defaultCard, providersCard, connectCard],
+    children: [
+      { type: 'heading', text: 'kvai.ui.models.title', level: 1 },
+      text('kvai.ui.models.intro'),
+      { type: 'custom', component: 'kvai.providers', props: {} },
+    ],
   },
-};
-
-const makeDefault = {
-  type: 'button',
-  text: 'kvai.ui.models.makeDefault',
-  command: 'kernel.settings.set',
-  input: { key: 'kvai.defaultModel', value: { $row: 'id' }, scope: 'global' },
-  style: 'secondary',
-  then: { toast: 'kvai.ui.models.defaultSet', level: 'success' },
-};
-
-const connectionCard = {
-  type: 'custom',
-  component: 'kvai.connection',
-  props: { providerId: providerParam },
-};
-
-const providerModelsCard = {
-  type: 'card',
-  title: 'kvai.ui.models.title',
-  children: [
-    {
-      type: 'table',
-      query: 'kvai.model.list',
-      input: { provider: providerParam },
-      columns: [
-        { field: 'name', title: 'kvai.ui.columns.model', secondary: 'id' },
-        { field: 'reasoning', title: 'kvai.ui.columns.reasoning', format: 'boolean' },
-        { field: 'contextWindow', title: 'kvai.ui.columns.contextWindow', format: 'number' },
-        { field: 'isDefault', title: 'kvai.ui.columns.default', badges: { true: { text: 'kvai.ui.models.default', tone: 'info' } } },
-      ],
-      rowActions: [makeDefault],
-      empty: 'kvai.ui.models.empty',
-    },
-  ],
 };
 
 const providerPage = {
   id: 'provider',
   title: 'kvai.ui.provider.title',
   params: ['providerId'],
-  view: {
-    type: 'stack',
-    direction: 'vertical',
-    gap: 'lg',
-    children: [
-      backToModels,
-      {
-        type: 'detail',
-        query: 'kvai.provider.get',
-        input: { id: providerParam },
-        fields: [
-          { field: 'title', title: 'kvai.ui.columns.provider', secondary: 'id' },
-          { field: 'status', title: 'kvai.ui.columns.status', badges: providerStatus },
-        ],
-      },
-      connectionCard,
-      providerModelsCard,
-    ],
-  },
+  view: { type: 'custom', component: 'kvai.provider', props: { providerId: providerParam } },
 };
 
 const addPage = {

@@ -1,4 +1,4 @@
-/* kvai's connection card (plan 06 §6.4): styled with kvwebui's theme variables and logical properties only. */
+/* kvai's shared component styles (plan 06 §6.4): kvwebui's theme variables and logical properties only. */
 .kvai-card { display: flex; flex-direction: column; gap: var(--kv-space-sm); border: 1px solid var(--kv-color-border); border-radius: var(--kv-radius); background: var(--kv-color-surface); color: var(--kv-color-text); padding-block: var(--kv-space-md); padding-inline: var(--kv-space-lg); }
 .kvai-title { margin-block: 0; font-size: 15px; font-weight: 600; }
 .kvai-line { display: flex; align-items: center; gap: var(--kv-space-sm); flex-wrap: wrap; }
@@ -22,3 +22,30 @@
 .kvai-signin { display: flex; flex-direction: column; gap: var(--kv-space-sm); }
 .kvai-error { margin-block: 0; font-size: 13px; color: var(--kv-color-danger); }
 .kvai-signin a { color: var(--kv-color-primary); text-decoration: underline; text-underline-offset: 2px; }
+.kvai-danger-outline { color: var(--kv-color-danger); border-color: var(--kv-color-danger); background: transparent; }
+.kvai-danger-quiet { color: var(--kv-color-danger); border-color: transparent; background: transparent; }
+.kvai-spinner { display: inline-block; inline-size: 18px; block-size: 18px; flex: none; border-radius: 50%; border: 3px solid var(--kv-color-border); border-block-start-color: var(--kv-color-primary); animation: kvai-spin 0.9s linear infinite; }
+@keyframes kvai-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .kvai-spinner { animation: none; } }
+/* The provider avatar (ADR 0009, 243): a round letter in white, bold, hidden from assistive technology. */
+.kvai-avatar { display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; color: #fff; font-weight: 600; flex: none; }
+.kvai-chip { display: inline-flex; align-items: center; border-radius: 999px; padding-block: 4px; padding-inline: 12px; font-size: 12.5px; font-weight: 500; white-space: nowrap; }
+.kvai-chip[data-tone='success'] { background: color-mix(in srgb, var(--kv-color-success) 14%, var(--kv-color-surface)); color: var(--kv-color-success); }
+.kvai-chip[data-tone='warning'] { background: color-mix(in srgb, var(--kv-color-warning) 14%, var(--kv-color-surface)); color: var(--kv-color-warning); }
+.kvai-chip[data-tone='info'] { background: color-mix(in srgb, var(--kv-color-primary) 14%, var(--kv-color-surface)); color: var(--kv-color-primary); }
+.kvai-eyebrow { font-size: 12px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; color: var(--kv-color-muted); }
+.kvai-section-title { margin-block: 0; font-size: 18px; font-weight: 600; }
+.kvai-card-title { font-size: 16px; font-weight: 600; }
+.kvai-stack { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-inline-size: 0; }
+.kvai-action { font-size: 14px; font-weight: 500; color: var(--kv-color-primary); }
+.kvai-check { color: var(--kv-color-success); flex: none; }
+.kvai-line-text { display: flex; align-items: center; gap: 8px; margin-block: 0; font-size: 13.5px; }
+.kvai-link { display: inline-flex; align-items: center; justify-content: center; min-block-size: 44px; padding-inline: 4px; border: 0; background: none; color: var(--kv-color-primary); font: inherit; font-size: 14px; font-weight: 500; cursor: pointer; }
+.kvai-dashed { border-style: dashed; }
+.kvai-hidden { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.kvai-sub { margin-block: 0; font-size: 14px; }
+.kvai-search { display: flex; align-items: center; gap: 8px; border: 1px solid var(--kv-color-border); border-radius: 999px; background: var(--kv-color-surface); padding-inline: 16px; min-block-size: 44px; min-inline-size: min(260px, 100%); color: var(--kv-color-muted); }
+.kvai-search-input { border: 0; outline: 0; background: transparent; font: inherit; font-size: 14px; color: var(--kv-color-text); inline-size: 100%; }
+.kvai-list { padding-block: 0; padding-inline: 0; overflow: hidden; }
+:dir(rtl) .kvai-flip { transform: scaleX(-1); }
+.kvai-default-meta { font-size: 12.5px; overflow-wrap: anywhere; }

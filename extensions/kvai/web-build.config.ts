@@ -3,11 +3,11 @@ import { fileURLToPath } from 'node:url';
 import vue from '@vitejs/plugin-vue';
 import { build } from 'vite';
 
-// kvai's custom components (plan 07 §7.3, ADR 0009, 237): each `web/components/<name>.vue` builds on its own into
+// kvai's custom components (plan 07 §7.3, ADR 0009, 238 and 245): each `web/components/<name>.vue` builds on its own into
 // `dist/web/components/<name>.js` and `<name>.css`, the two files kvwebui loads, with `vue` left to kvwebui's import
 // map. One build per component keeps each self-contained: no shared chunk holds another component's styles.
 const root = fileURLToPath(new URL('.', import.meta.url));
-const components = ['connection'];
+const components = ['providers', 'provider'];
 
 rmSync(`${root}/dist/web`, { recursive: true, force: true });
 for (const name of components) {
