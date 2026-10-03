@@ -18,7 +18,8 @@
   "bin": {
     "kvman-check": "./dist/check-bin.js",
     "kvman-docs": "./dist/docs/docs-bin.js",
-    "kvman-new": "./dist/new/new-bin.js"
+    "kvman-new": "./dist/new/new-bin.js",
+    "kvman-preset": "./dist/preset/preset-bin.js"
   },
   "files": [
     "dist",
