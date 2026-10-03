@@ -5,6 +5,7 @@ import { registerHealthApi } from './health-api.ts';
 import { registerJobsFilesApi } from './jobs-files-api.ts';
 import type { KernelApiServices } from './kernel-api-services.ts';
 import { kernelRegistrations } from './kernel-registrations.ts';
+import { registerPresetApi } from './preset-api.ts';
 import { registerSecretsApi } from './secrets-api.ts';
 import { registerSettingsApi } from './settings-api.ts';
 import { registerWorkspaceApi } from './workspace-api.ts';
@@ -18,5 +19,6 @@ export function registerKernelApi(registry: Registry, services: KernelApiService
   registerSecretsApi(api, services);
   registerJobsFilesApi(api, services);
   registerExtensionsApi(api, services);
+  registerPresetApi(api, services);
   registerHealthApi(api, services);
 }

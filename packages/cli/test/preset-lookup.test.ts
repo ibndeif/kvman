@@ -24,21 +24,26 @@ function write(file: string, content: unknown): void {
 
 const failed = expect.objectContaining({ problem: expect.objectContaining({ code: 'VALIDATION_FAILED' }) });
 
-describe('finding the preset (01 §1.2, ADR 0009, 45)', () => {
-  it('M1.8-H4 a name that is both bundled and in <home>/presets/ fails VALIDATION_FAILED', () => {
+describe('finding the preset (01 §1.2, ADR 0010, 4)', () => {
+  it("M1.8-H4 a person's preset replaces a bundled one of the same name", () => {
     const where = folders();
     write(path.join(where.bundled, 'same.json'), { name: 'same', extensions: {} });
-    write(path.join(where.home, 'presets', 'same.json'), { name: 'same', extensions: {} });
-    expect(() => findPreset('same', where)).toThrow(failed);
-    expect(() => findPreset('same', where)).toThrow('The preset name same is both bundled and in');
+    const own = path.join(where.home, 'presets', 'same.json');
+    write(own, { name: 'mine', extensions: {} });
+    expect(findPreset('same', where)).toEqual({ preset: { name: 'mine', extensions: {} }, presetFolder: path.dirname(own), source: { origin: 'home', file: own } });
   });
 
   it('M1.8-E11 a bundled name and a home name are each found, with their folder as the preset folder', () => {
     const where = folders();
     write(path.join(where.bundled, 'coder.json'), { name: 'coder', extensions: {} });
-    write(path.join(where.home, 'presets', 'mine.json'), { name: 'my own', extensions: {}, settings: { 'kernel.workers': 2 } });
-    expect(findPreset('coder', where)).toEqual({ preset: { name: 'coder', extensions: {} }, presetFolder: where.bundled });
-    expect(findPreset('mine', where)).toEqual({ preset: { name: 'my own', extensions: {}, settings: { 'kernel.workers': 2 } }, presetFolder: path.join(where.home, 'presets') });
+    const own = path.join(where.home, 'presets', 'mine.json');
+    write(own, { name: 'my own', extensions: {}, settings: { 'kernel.workers': 2 } });
+    expect(findPreset('coder', where)).toEqual({ preset: { name: 'coder', extensions: {} }, presetFolder: where.bundled, source: { origin: 'bundled' } });
+    expect(findPreset('mine', where)).toEqual({
+      preset: { name: 'my own', extensions: {}, settings: { 'kernel.workers': 2 } },
+      presetFolder: path.join(where.home, 'presets'),
+      source: { origin: 'home', file: own },
+    });
   });
 
   it('M1.8-E12 an unknown name, a missing file, a file that is not JSON, and an invalid preset fail VALIDATION_FAILED', () => {
@@ -52,6 +57,34 @@ describe('finding the preset (01 §1.2, ADR 0009, 45)', () => {
     expect(['./a/p.json', 'a\\p.json', 'p.json', '../p', 'p'].map(isPresetFile)).toEqual([true, true, true, true, false]);
     const where = folders();
     write(path.join(where.start, 'a', 'p.json'), { name: 'nested', extensions: {} });
-    expect(findPreset('./a/p.json', where)).toEqual({ preset: { name: 'nested', extensions: {} }, presetFolder: path.join(where.start, 'a') });
+    const file = path.join(where.start, 'a', 'p.json');
+    expect(findPreset('./a/p.json', where)).toEqual({ preset: { name: 'nested', extensions: {} }, presetFolder: path.join(where.start, 'a'), source: { origin: 'file', file } });
+  });
+
+  it("QA17-H7 a home file named like a bundled preset is the preset, and the bundled file is not read", () => {
+    const where = folders();
+    write(path.join(where.bundled, 'coder.json'), '{ broken');
+    const own = path.join(where.home, 'presets', 'coder.json');
+    write(own, { name: 'coder', extensions: {}, settings: { 'kernel.workers': 1 } });
+    expect(findPreset('coder', where)).toEqual({
+      preset: { name: 'coder', extensions: {}, settings: { 'kernel.workers': 1 } },
+      presetFolder: path.dirname(own),
+      source: { origin: 'home', file: own },
+    });
+  });
+
+  it("QA17-E10 an unknown name fails VALIDATION_FAILED, a file gives a file source, and a bundled name gives a bundled source", () => {
+    const where = folders();
+    expect(() => findPreset('nope', where)).toThrow(failed);
+    expect(() => findPreset('nope', where)).toThrow('neither a bundled one nor');
+    write(path.join(where.start, 'file.json'), { name: 'from file', extensions: {} });
+    const file = path.join(where.start, 'file.json');
+    expect(findPreset('./file.json', where)).toEqual({
+      preset: { name: 'from file', extensions: {} },
+      presetFolder: where.start,
+      source: { origin: 'file', file },
+    });
+    write(path.join(where.bundled, 'coder.json'), { name: 'coder', extensions: {} });
+    expect(findPreset('coder', where)).toEqual({ preset: { name: 'coder', extensions: {} }, presetFolder: where.bundled, source: { origin: 'bundled' } });
   });
 });

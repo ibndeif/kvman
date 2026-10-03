@@ -17,6 +17,8 @@ import { createFiles } from './files/files.ts';
 import { kernelCatalogOwner, readOwnerCatalogs, type Catalog } from './localization/catalogs.ts';
 import { openLogFile } from './logging/log-file.ts';
 import type { KernelLogger, LogLevel } from './logging/logger.ts';
+import { createPresetStore } from './preset-edit/preset-store.ts';
+import type { PresetSource } from './preset-edit/preset-source.ts';
 import { createProcessService } from './processes/process-service.ts';
 import { reloadExtensions } from './reload/reload-extensions.ts';
 import { watchExtensions, type ExtensionWatcher } from './reload/watcher.ts';
@@ -39,6 +41,8 @@ export type KernelOptions = {
   homeFolder: string;
   preset: Preset;
   presetFolder: string;
+  // Where the preset came from; absent means bundled (plan 01 §1.2).
+  presetSource?: PresetSource;
   bundled: ReadonlyMap<string, string>;
   mode: KernelMode;
   logLevel: LogLevel;
@@ -106,7 +110,15 @@ export async function startKernel(options: KernelOptions): Promise<Kernel> {
     processes.killLeftovers();
     const folders = { home: options.home, presetFolder: options.presetFolder, bundled: options.bundled };
     installMissing(options.preset, options.home, logger, process.platform);
-    await checkTrust(connection, clock, readExtensions(options.preset, folders), options.trust);
+    const loaded = readExtensions(options.preset, folders);
+    await checkTrust(connection, clock, loaded, options.trust);
+    const preset = createPresetStore({
+      home: options.home,
+      preset: options.preset,
+      source: options.presetSource ?? { origin: 'bundled' },
+      bundled: options.bundled,
+      dependencies: new Map(loaded.map((extension) => [extension.name, Object.keys(extension.manifest.kvman.dependencies ?? {})])),
+    });
     const presetSettings = options.preset.settings ?? {};
     const kernelCatalogs = readOwnerCatalogs(kernelCatalogOwner);
     const settings = kernelSettings(connection, presetSettings, [...kernelCatalogs.keys()], logger);
@@ -130,7 +142,7 @@ export async function startKernel(options: KernelOptions): Promise<Kernel> {
         setup: { home: options.home, homeFolder: options.homeFolder, database, presetSettings, logLevel: options.logLevel, terminalLog: options.terminalLog },
         logger,
         events: {
-          request: (request) => answerWorker({ dispatcher, schedules, secrets, clock, workspaces, processes, health }, request),
+          request: (request) => answerWorker({ dispatcher, schedules, secrets, clock, workspaces, processes, preset, health }, request),
           progress: (rootId, chunk) => hub.publish(rootId, chunk),
           syncEnded: (end) => dispatcher.deliverSyncEnd(end),
           slotFreed: () => dispatcher.slotFreed(),

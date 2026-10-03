@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { jsonSchema } from './json.ts';
-import { extensionSourceSchema } from './preset.ts';
+import { packageNameSchema } from './manifest.ts';
+import { extensionSourceSchema, presetStateSchema } from './preset.ts';
 import { fileSchema, isoTimeSchema, jobSchema, jobStatusSchema, workspaceSchema } from './rows.ts';
 
 const emptySchema = z.strictObject({});
@@ -79,6 +80,14 @@ export const kernelCommandSchemas = {
   'kernel.secrets.set': { input: z.strictObject({ extension: z.string().min(1), name: z.string().min(1), value: z.string() }), output: emptySchema },
   'kernel.secrets.delete': { input: z.strictObject({ extension: z.string().min(1), name: z.string().min(1) }), output: emptySchema },
   'kernel.files.unlink': { input: z.strictObject({ id: z.string().min(1) }), output: emptySchema },
+  'kernel.extensions.install': {
+    input: z.strictObject({ name: packageNameSchema, source: extensionSourceSchema }),
+    output: z.strictObject({ file: z.string(), restartRequired: z.literal(true) }),
+  },
+  'kernel.extensions.uninstall': {
+    input: z.strictObject({ name: packageNameSchema }),
+    output: z.strictObject({ file: z.string(), restartRequired: z.literal(true) }),
+  },
 } as const;
 
 /** The input and output schemas of the kernel's own queries (plan 02 §2.12). */
@@ -92,6 +101,7 @@ export const kernelQuerySchemas = {
   'kernel.files.get': { input: z.strictObject({ id: z.string().min(1) }), output: fileSchema },
   'kernel.files.list': { input: z.strictObject({ limit: listLimitSchema }), output: z.array(fileSchema) },
   'kernel.extensions.list': { input: emptySchema, output: z.array(extensionInfoSchema) },
+  'kernel.preset.get': { input: emptySchema, output: presetStateSchema },
   'kernel.processes.list': { input: emptySchema, output: z.array(processRowSchema) },
   'kernel.health.get': { input: emptySchema, output: healthSchema },
 } as const;

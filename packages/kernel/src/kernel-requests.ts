@@ -2,6 +2,7 @@ import type { Caller } from '@kvman/sdk';
 import type { Clock } from './clock.ts';
 import type { Dispatcher } from './jobs/dispatcher.ts';
 import { kernelProblem } from './problems.ts';
+import type { PresetStore } from './preset-edit/preset-store.ts';
 import type { ProcessService } from './processes/process-service.ts';
 import type { ScheduleRows } from './schedules/schedule-rows.ts';
 import type { SecretsFile } from './secrets/secrets-file.ts';
@@ -17,6 +18,7 @@ export type KernelRequestServices = {
   clock: Clock;
   workspaces: Workspaces;
   processes: ProcessService;
+  preset: PresetStore;
   health: () => unknown;
 };
 
@@ -48,6 +50,12 @@ export async function answerWorker(services: KernelRequestServices, request: Wor
     case 'close-workspace':
       services.workspaces.close(request.workspaceId);
       return null;
+    case 'preset-get':
+      return services.preset.get();
+    case 'preset-install':
+      return services.preset.install(request.name, request.source);
+    case 'preset-uninstall':
+      return services.preset.uninstall(request.name);
     case 'health':
       return services.health();
     case 'start-process':

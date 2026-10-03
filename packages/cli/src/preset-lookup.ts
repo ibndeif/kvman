@@ -1,14 +1,16 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import type { PresetSource } from '@kvman/kernel';
 import { presetSchema, ProblemError, type Preset } from '@kvman/sdk';
 
-// Finding the preset `--preset` names (plan 01 §1.2, ADR 0009, 45): a value with `/` or `\`, or ending in `.json`, is a
-// file relative to the start folder; any other value is a name, which must be exactly one of a bundled preset and
-// `<home>/presets/<name>.json`. Every miss fails VALIDATION_FAILED, like an invalid preset (plan 02 §2.10).
+// Finding the preset `--preset` names (plan 01 §1.2, ADR 0010, 4): a value with `/` or `\`, or ending in `.json`, is a
+// file relative to the start folder; any other value is a name, which is `<home>/presets/<name>.json` first (a
+// person's preset replaces a bundled one of the same name) and then a bundled preset. Every miss fails
+// VALIDATION_FAILED, like an invalid preset (plan 02 §2.10).
 
 export type PresetFolders = { bundled: string; home: string; start: string };
 
-export type FoundPreset = { preset: Preset; presetFolder: string };
+export type FoundPreset = { preset: Preset; presetFolder: string; source: PresetSource };
 
 export const defaultPreset = 'coder';
 
@@ -20,7 +22,7 @@ export function isPresetFile(value: string): boolean {
   return value.includes('/') || value.includes('\\') || value.endsWith('.json');
 }
 
-function readPreset(file: string): FoundPreset {
+function readPreset(file: string, source: PresetSource): FoundPreset {
   let parsed: unknown;
   try {
     parsed = JSON.parse(readFileSync(file, 'utf8'));
@@ -33,17 +35,21 @@ function readPreset(file: string): FoundPreset {
     const issues = result.error.issues.map((issue) => `${issue.path.join('.') || 'preset'}: ${issue.message}`).join('; ');
     throw invalid(`The preset ${file} is invalid (${issues}).`, { file });
   }
-  return { preset: result.data, presetFolder: path.dirname(file) };
+  return { preset: result.data, presetFolder: path.dirname(file), source };
 }
 
-function namedPresetFile(name: string, folders: PresetFolders): string {
-  const candidates = [path.join(folders.bundled, `${name}.json`), path.join(folders.home, 'presets', `${name}.json`)].filter((file) => existsSync(file));
-  const [only, other] = candidates;
-  if (only === undefined) throw invalid(`There is no preset named ${name}: neither a bundled one nor ${path.join(folders.home, 'presets', `${name}.json`)}.`, { preset: name });
-  if (other !== undefined) throw invalid(`The preset name ${name} is both bundled and in ${path.join(folders.home, 'presets')}; rename your own.`, { preset: name, files: candidates.join(', ') });
-  return only;
+function namedPreset(name: string, folders: PresetFolders): FoundPreset {
+  const own = path.join(folders.home, 'presets', `${name}.json`);
+  if (existsSync(own)) return readPreset(own, { origin: 'home', file: own });
+  const bundled = path.join(folders.bundled, `${name}.json`);
+  if (existsSync(bundled)) return readPreset(bundled, { origin: 'bundled' });
+  throw invalid(`There is no preset named ${name}: neither a bundled one nor ${own}.`, { preset: name });
 }
 
 export function findPreset(value: string, folders: PresetFolders): FoundPreset {
-  return readPreset(isPresetFile(value) ? path.resolve(folders.start, value) : namedPresetFile(value, folders));
+  if (isPresetFile(value)) {
+    const file = path.resolve(folders.start, value);
+    return readPreset(file, { origin: 'file', file });
+  }
+  return namedPreset(value, folders);
 }

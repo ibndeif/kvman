@@ -70,6 +70,7 @@ export async function runKvman(args: RunArguments, environment: CliEnvironment):
       homeFolder: environment.userFolder,
       preset: found.preset,
       presetFolder: found.presetFolder,
+      presetSource: found.source,
       bundled: bundledExtensions(),
       mode: args.mode ?? 'web',
       logLevel: args.logLevel,

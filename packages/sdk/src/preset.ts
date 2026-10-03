@@ -21,3 +21,12 @@ export const presetSchema = z.strictObject({
 
 /** A preset: the whole app for one run. */
 export type Preset = z.infer<typeof presetSchema>;
+
+/** Where the running preset came from: bundled with kvman, a person's `<home>/presets/` copy, or a file. */
+export const presetOriginSchema = z.enum(['bundled', 'home', 'file']);
+
+/** A preset as stored now, with where it came from and the file an edit writes. */
+export const presetStateSchema = presetSchema.extend({ origin: presetOriginSchema, file: z.string().exactOptional() });
+
+/** A preset as stored now. */
+export type PresetState = z.infer<typeof presetStateSchema>;
