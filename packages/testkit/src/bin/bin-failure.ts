@@ -3,7 +3,7 @@ import type { Json } from '@kvman/sdk';
 // The failure codes every bin of this package uses (ADR 0010, 20). kvcustomizer turns each into
 // `kvcustomizer/<CODE>`, except `VALIDATION_FAILED`, which stays as it is.
 
-export const binFailureCodes = ['VALIDATION_FAILED', 'FOLDER_NOT_EMPTY', 'FILE_EXISTS', 'NPM_FAILED', 'NO_FREE_PORT', 'PREVIEW_FAILED'] as const;
+export const binFailureCodes = ['VALIDATION_FAILED', 'NOT_FOUND', 'NOT_RUNNING', 'FOLDER_NOT_EMPTY', 'FILE_EXISTS', 'NPM_FAILED', 'NO_FREE_PORT', 'PREVIEW_FAILED'] as const;
 
 /** A code a bin fails with. */
 export type BinFailureCode = (typeof binFailureCodes)[number];
