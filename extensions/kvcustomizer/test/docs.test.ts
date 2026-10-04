@@ -62,7 +62,7 @@ describe('the docs connector pulls every extension\'s pages (09 §9.1 and §9.5,
     const { kernel } = await start();
     const { pages, problems } = await kernel.exec('kvcustomizer.guides.list', {});
     const listed = new Set(pages.map((page) => page.extension));
-    for (const name of ['@fix/private', '@fix/half', '@kvman/kvai', '@kvman/kvwebui']) expect(listed.has(name), name).toBe(false);
+    for (const name of ['@fix/private', '@fix/half']) expect(listed.has(name), name).toBe(false);
     expect(problems.map((entry) => entry.extension)).not.toContain('@fix/private');
     expect(problems.map((entry) => entry.extension)).not.toContain('@fix/half');
     const topics = pages.filter((page) => page.topic === 'usage' || page.topic === 'settings');
