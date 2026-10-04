@@ -3,17 +3,16 @@ import { ChevronDown } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { ExtensionInfo } from '../../api/kernel.ts';
+import { sourceKey } from '../../state/preset.ts';
+import RemoveExtension from './RemoveExtension.vue';
 
 // One extension (ADR 0009, 78): name, version, source, and counts; opened, its commands and queries (with translated
 // or English descriptions and a "Public" badge), settings, and handlers. A search opens the card on its matches.
-const props = defineProps<{ extension: ExtensionInfo; search: string }>();
+const props = defineProps<{ extension: ExtensionInfo; search: string; removed?: boolean }>();
 const { t, te } = useI18n();
 const opened = ref(false);
 const described = (name: string, english: string): string => (te(`${name}.description`) ? t(`${name}.description`) : english);
-const source = computed(() => {
-  if (props.extension.source === 'bundled') return 'kvwebui.extensions.bundled';
-  return props.extension.source.startsWith('npm:') ? 'kvwebui.extensions.npm' : 'kvwebui.extensions.path';
-});
+const source = computed(() => sourceKey(props.extension.source));
 const needle = computed(() => props.search.trim().toLowerCase());
 const calls = computed(() =>
   [...props.extension.commands, ...props.extension.queries].filter(
@@ -38,6 +37,7 @@ const counts = computed(() => [
           <span class="font-semibold">{{ props.extension.name }}</span>
           <span class="font-mono text-xs text-muted">{{ props.extension.version }}</span>
           <span class="rounded-full bg-neutral-soft px-2.5 py-0.5 text-xs font-medium text-neutral-ink" data-test="extension-source">{{ t(source) }}</span>
+          <span v-if="props.removed" class="rounded-full bg-warning-soft px-2.5 py-0.5 text-xs font-medium text-warning-ink" data-test="extension-mark">{{ t('kvwebui.extensions.mark.removed') }}</span>
         </span>
         <span class="flex flex-wrap gap-3 text-[13px] text-muted">
           <span v-for="entry in counts" :key="entry.label">{{ t(entry.label) }} {{ entry.count }}</span>
@@ -45,6 +45,9 @@ const counts = computed(() => [
       </span>
       <ChevronDown class="size-4.5 text-muted transition-transform" :class="open ? 'rotate-180' : ''" aria-hidden="true" />
     </button>
+    <div v-if="!props.removed" class="border-t border-line-soft px-4.5 py-3">
+      <RemoveExtension :name="props.extension.name" />
+    </div>
     <div v-if="open" class="flex flex-col border-t border-line-soft">
       <div v-for="call in calls" :key="call.name" class="flex flex-wrap items-baseline gap-3 border-b border-line-soft px-4.5 py-2.5" data-test="extension-call">
         <span class="w-64 font-mono text-[12.5px]">{{ call.name }}</span>

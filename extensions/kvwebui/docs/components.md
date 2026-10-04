@@ -1,6 +1,6 @@
 # Custom components (Vue)
 
-When the built-in views aren't enough, an extension ships Vue components. A project scaffolded with `ext new` and `"web": true` has this set up.
+When the built-in views aren't enough, an extension ships Vue components. A project scaffolded with `kvman-new --web` (or the `ext new` connector with `"web": true`) has this set up.
 
 - Each `web/components/<Name>.vue` builds on its own into `dist/web/components/<name>.js` and `<name>.css` (`npm run web:build`), with `vue` left external: kvwebui provides it through an import map.
 - `package.json` has `"kvman": { "web": "dist/web" }`, and the kernel serves that folder at `/web/<namespace>/`.

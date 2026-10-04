@@ -1,4 +1,4 @@
-import { kernelQuerySchemas, z, type Json, type Problem, type Workspace } from '@kvman/sdk';
+import { kernelQuerySchemas, z, type Json, type PresetState, type Problem, type Workspace } from '@kvman/sdk';
 import ar from '../../../locales/ar.json';
 import en from '../../../locales/en.json';
 import { createFakeJobs, type FakeJob, type FakeJobs } from './fake-jobs.ts';
@@ -49,6 +49,8 @@ export type FakeApi = {
   handlers: Map<string, Handler>;
   workspaces: Workspace[];
   extensions: ExtensionInfo[];
+  // The stored preset; while it is `undefined`, it is the loaded extensions' own bundled preset.
+  preset: PresetState | undefined;
   settings: SettingSpec[];
   global: Map<string, Json>;
   perWorkspace: Map<string, Map<string, Json>>;
@@ -86,6 +88,7 @@ export function createFakeApi(options: { home?: string; extensions?: ExtensionIn
     handlers: new Map(),
     workspaces: [{ id: 'home', name: 'ahmed', path: '/home/ahmed' }],
     extensions: options.extensions ?? [],
+    preset: undefined,
     settings: [...baseSettings(options.home ?? 'kvwebui.extensions'), ...(options.settings ?? [])],
     global: new Map(),
     perWorkspace: new Map(),
@@ -134,10 +137,31 @@ export function createFakeApi(options: { home?: string; extensions?: ExtensionIn
 
 const settingSetSchema = z.object({ key: z.string(), value: z.json(), scope: z.enum(['global', 'workspace']) });
 
+// The stored preset the handlers keep, checked against the SDK's own schema.
+function presetSchemaOf(preset: unknown): PresetState {
+  return kernelQuerySchemas['kernel.preset.get'].output.parse(preset);
+}
+
 function installKernelHandlers(api: FakeApi): void {
   const record = (input: Json) => z.record(z.string(), z.json()).parse(input);
   api.handlers.set('kernel.health.get', () => ({ version: '0.1.0', preset: 'test', mode: 'web', workers: 1, uptimeMs: 1, languages: api.languages }));
   api.handlers.set('kernel.extensions.list', () => api.extensions);
+  const storedPreset = (): PresetState => api.preset ?? { name: 'test', origin: 'bundled', extensions: Object.fromEntries(api.extensions.map((info) => [info.name, info.source])) };
+  api.handlers.set('kernel.preset.get', () => storedPreset());
+  api.handlers.set('kernel.extensions.install', (input) => {
+    const { name, source } = z.object({ name: z.string(), source: z.string() }).parse(input);
+    const stored = storedPreset();
+    const file = '/home/ahmed/.kvman/presets/test.json';
+    api.preset = presetSchemaOf({ ...stored, origin: 'home', file, extensions: { ...stored.extensions, [name]: source } });
+    return { file, restartRequired: true };
+  });
+  api.handlers.set('kernel.extensions.uninstall', (input) => {
+    const { name } = z.object({ name: z.string() }).parse(input);
+    const stored = storedPreset();
+    const file = '/home/ahmed/.kvman/presets/test.json';
+    api.preset = presetSchemaOf({ ...stored, origin: 'home', file, extensions: Object.fromEntries(Object.entries(stored.extensions).filter(([other]) => other !== name)) });
+    return { file, restartRequired: true };
+  });
   api.handlers.set('kernel.workspace.list', () => api.workspaces);
   api.handlers.set('kernel.settings.list', (_input, workspaceId) => api.settings.map((spec) => resolved(api, spec, workspaceId)));
   api.handlers.set('kernel.settings.set', (input, workspaceId) => {

@@ -1,4 +1,4 @@
-import type { Json, Problem, Workspace } from '@kvman/sdk';
+import type { Json, PresetState, Problem, Workspace } from '@kvman/sdk';
 import { inject, ref, shallowRef, type InjectionKey, type Ref, type ShallowRef } from 'vue';
 import type { Router } from 'vue-router';
 import { createApi, type Api } from '../api/client.ts';
@@ -27,6 +27,9 @@ export type Kvwebui = {
   online: Ref<boolean>;
   settings: ShallowRef<SettingInfo[]>;
   extensions: ShallowRef<ExtensionInfo[]>;
+  // The preset as stored now, or why it couldn't be read (ADR 0010, 5).
+  preset: ShallowRef<PresetState | undefined>;
+  presetProblem: ShallowRef<Problem | undefined>;
   registry: ShallowRef<Registry>;
   components: Components;
   jobs: JobStreams;
@@ -86,6 +89,8 @@ export function createState(router: Router, fetcher: typeof fetch, loader: Compo
     online: ref(true),
     settings: shallowRef([]),
     extensions,
+    preset: shallowRef(),
+    presetProblem: shallowRef(),
     registry: shallowRef(emptyRegistry()),
     components: createComponents(loader, (namespace) => extensions.value.find((extension) => extension.namespace === namespace)?.revision ?? 0),
     jobs: createJobStreams(api),

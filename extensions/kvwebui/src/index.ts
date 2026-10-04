@@ -1,4 +1,5 @@
 import { z, type Ctx } from '@kvman/sdk';
+import { registerDocs } from './docs.ts';
 import { registerEffects } from './effects/register-effects.ts';
 
 // kvwebui (plan 06): the web app, served from `dist/web`. The kernel side declares kvwebui's settings and keeps the
@@ -36,4 +37,5 @@ export default (ctx: Ctx): void => {
     scopes: ['global'],
   });
   registerEffects(ctx);
+  registerDocs(ctx);
 };

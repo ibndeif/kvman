@@ -1,5 +1,7 @@
 # Pages and views (kvwebui)
 
+This page is served by `kvwebui.docs.get`, so `kvman-docs get @kvman/kvwebui views` and kvcustomizer's `docs` connector read it.
+
 An extension adds UI by registering the public query `<namespace>.ui.get`, which takes `{}` and returns:
 
 ```ts
@@ -12,7 +14,7 @@ An extension adds UI by registering the public query `<namespace>.ui.get`, which
 ```
 
 - Ids are local; the full id is `<namespace>.<id>`. A page's URL is `/<namespace>/<page>`, followed by its params.
-- Every title and text is a translation key (see the i18n guide).
+- Every title and text is a translation key (read the `i18n` guide with `kvman-docs get kvman i18n`).
 - A nav item points at one of the extension's own pages with no params.
 - An invalid answer contributes nothing, and kvwebui shows an error card naming the problem.
 
@@ -31,7 +33,7 @@ An extension adds UI by registering the public query `<namespace>.ui.get`, which
 | `form` | `{ command, fixed?, submit, then? }` |
 | `link` | `{ text, params?, to: { page, params? } }` |
 | `button` | `{ text, command, input, confirm?, style?, then? }` |
-| `custom` | `{ component: '<namespace>.<name>', props }` (see the components guide) |
+| `custom` | `{ component: '<namespace>.<name>', props }` (see [Custom components](components.md)) |
 
 - A column or field is `{ field, title, format?: 'text' \| 'number' \| 'date' \| 'bytes' \| 'boolean', secondary?, badges? }`.
 - Values may be `{ "$param": name }` (a route param) or `{ "$row": field }` (the current row). There is no expression language.

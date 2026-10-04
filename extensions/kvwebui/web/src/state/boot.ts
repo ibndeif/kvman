@@ -5,6 +5,7 @@ import { loadRegistry } from '../contributions/registry.ts';
 import { applyLanguage, applyTheme } from './appearance.ts';
 import type { I18nState } from './i18n.ts';
 import { settingValue, workspaceMemory, type Kvwebui } from './kvwebui.ts';
+import { reloadPreset } from './preset.ts';
 import { reloadWorkspaces, startWorkspace } from './workspaces.ts';
 
 // What kvwebui loads when the browser opens it (plan 06 §6.2–§6.3): the tab's workspace (taking `?workspace=` once and
@@ -33,6 +34,7 @@ async function load(state: Kvwebui, i18n: I18nState): Promise<void> {
   state.health.value = health;
   state.settings.value = settings;
   state.extensions.value = extensions;
+  await reloadPreset(state);
   const language = settingValue(state, 'kernel.language');
   await applyLanguage(state, i18n, typeof language === 'string' ? language : 'en');
   applyTheme(state);

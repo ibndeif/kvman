@@ -1,0 +1,139 @@
+import { describe, expect, it } from 'vitest';
+import { kernelQuerySchemas } from '@kvman/sdk';
+import { fail } from './support/fake-api.ts';
+import { click, extension, mountApp, settle, type, type Mounted } from './support/mount-app.ts';
+import { notesApi } from './support/notes.ts';
+
+// The Extensions page manages the preset (06 §6.6, ADR 0010, 5): it adds and removes extensions, marks what a restart
+// changes, and leaves settings to the Settings page.
+
+const card = (app: Mounted, namespace: string) => app.find(`[data-test="extension-${namespace}"]`);
+const pending = (app: Mounted, name: string) => app.find(`[data-test="pending-${name}"]`);
+const presetOf = (extensions: Record<string, string>) =>
+  kernelQuerySchemas['kernel.preset.get'].output.parse({ name: 'test', origin: 'home', file: '/home/ahmed/.kvman/presets/test.json', extensions });
+
+async function install(app: Mounted, name: string, source: string): Promise<void> {
+  await type(app.find('[data-test="add-name"]'), name);
+  await type(app.find('[data-test="add-source"]'), source);
+  await click(app.find('[data-test="add-install"]'));
+}
+
+describe('the Extensions page manages extensions (06 §6.6, ADR 0010, 5)', () => {
+  it('QA17-H19 the page marks a pending extension, and Install saves exactly the typed name and source', async () => {
+    const api = notesApi();
+    api.preset = presetOf({ '@test/notes': 'bundled', '@acme/later': 'npm:2.0.0' });
+    const app = await mountApp(api, '/kvwebui/extensions');
+    expect(app.find('[data-test="restart-banner"]')?.textContent).toContain('Restart kvman to apply');
+    expect(app.find('[data-test="restart-banner"]')?.textContent).toContain('1 pending changes');
+    expect(card(app, 'notes')?.querySelector('[data-test="extension-source"]')?.textContent).toBe('Bundled');
+    expect(pending(app, '@acme/later')?.textContent).toContain('Starts after restart');
+    expect(pending(app, '@acme/later')?.textContent).toContain('npm');
+
+    await install(app, '  @acme/notes ', ' npm:1.2.3  ');
+    expect(api.callsTo('kernel.extensions.install').map((call) => call.input)).toEqual([{ name: '@acme/notes', source: 'npm:1.2.3' }]);
+    expect(app.find<HTMLInputElement>('[data-test="add-name"]')?.value).toBe('');
+    expect(app.find<HTMLInputElement>('[data-test="add-source"]')?.value).toBe('');
+    expect(pending(app, '@acme/notes')?.textContent).toContain('Starts after restart');
+    expect(app.find('[data-test="restart-banner"]')?.textContent).toContain('2 pending changes');
+    expect(app.root.textContent).toContain('Added. Restart kvman to apply.');
+  });
+
+  it('QA17-H20 Remove asks first, then saves, and the card shows Removed after restart', async () => {
+    const api = notesApi();
+    const app = await mountApp(api, '/kvwebui/extensions');
+    expect(app.find('[data-test="restart-banner"]')).toBeNull();
+    await click(card(app, 'notes')?.querySelector<HTMLElement>('[data-test="remove"]') ?? null);
+    expect(card(app, 'notes')?.textContent).toContain('Remove @test/notes?');
+    expect(api.callsTo('kernel.extensions.uninstall')).toEqual([]);
+
+    await click(card(app, 'notes')?.querySelector<HTMLElement>('[data-test="remove-cancel"]') ?? null);
+    expect(card(app, 'notes')?.querySelector('[data-test="remove"]')).not.toBeNull();
+    expect(api.callsTo('kernel.extensions.uninstall')).toEqual([]);
+
+    await click(card(app, 'notes')?.querySelector<HTMLElement>('[data-test="remove"]') ?? null);
+    await click(card(app, 'notes')?.querySelector<HTMLElement>('[data-test="remove-confirm"]') ?? null);
+    expect(api.callsTo('kernel.extensions.uninstall').map((call) => call.input)).toEqual([{ name: '@test/notes' }]);
+    expect(card(app, 'notes')?.querySelector('[data-test="extension-mark"]')?.textContent).toBe('Removed after restart');
+    expect(card(app, 'notes')?.querySelector('[data-test="remove"]')).toBeNull();
+    expect(app.find('[data-test="restart-banner"]')?.textContent).toContain('1 pending changes');
+    expect(app.root.textContent).toContain('Removed. Restart kvman to apply.');
+  });
+
+  it('QA17-H21 the page sets no setting and no secret, and links to the Settings page', async () => {
+    const api = notesApi();
+    const app = await mountApp(api, '/kvwebui/extensions');
+    await install(app, '@acme/notes', 'npm:1.2.3');
+    await click(card(app, 'notes')?.querySelector<HTMLElement>('[data-test="remove"]') ?? null);
+    await click(card(app, 'notes')?.querySelector<HTMLElement>('[data-test="remove-confirm"]') ?? null);
+    for (const call of api.calls) {
+      expect(call.name.startsWith('kernel.settings.set') || call.name.startsWith('kernel.settings.reset') || call.name.startsWith('kernel.secrets.set') || call.name.startsWith('kernel.secrets.delete'), call.name).toBe(false);
+    }
+    expect(app.find('[data-test="add-settings"]')?.getAttribute('href')).toBe('/kvwebui/settings');
+  });
+
+  it('QA17-E17 a failure shows its Problem and keeps the form, a blank field disables Install, and a pending note shows for a bundled preset', async () => {
+    const api = notesApi();
+    const app = await mountApp(api, '/kvwebui/extensions');
+    expect(app.find('[data-test="add-bundled-copy"]')?.textContent).toContain('saves your own copy of the bundled preset');
+    expect(app.find('[data-test="add-hint"]')?.textContent).toContain('npm:<exact version>');
+    expect(app.find<HTMLButtonElement>('[data-test="add-install"]')?.disabled).toBe(true);
+    await type(app.find('[data-test="add-name"]'), '   ');
+    await type(app.find('[data-test="add-source"]'), 'npm:1.2.3');
+    expect(app.find<HTMLButtonElement>('[data-test="add-install"]')?.disabled).toBe(true);
+
+    api.handlers.set('kernel.extensions.install', () => fail('VALIDATION_FAILED', { name: '@acme/notes' }));
+    await type(app.find('[data-test="add-name"]'), '@acme/notes');
+    await click(app.find('[data-test="add-install"]'));
+    expect(app.find('[data-test="add-error"]')?.textContent).toContain("Something isn't valid.");
+    expect(app.find<HTMLInputElement>('[data-test="add-name"]')?.value).toBe('@acme/notes');
+    expect(app.find<HTMLInputElement>('[data-test="add-source"]')?.value).toBe('npm:1.2.3');
+    expect(app.find('[data-test="restart-banner"]')).toBeNull();
+    expect(app.root.textContent).not.toContain('Added.');
+
+    api.handlers.set('kernel.extensions.uninstall', () => fail('NOT_FOUND'));
+    await click(card(app, 'notes')?.querySelector<HTMLElement>('[data-test="remove"]') ?? null);
+    await click(card(app, 'notes')?.querySelector<HTMLElement>('[data-test="remove-confirm"]') ?? null);
+    expect(card(app, 'notes')?.querySelector('[data-test="remove-error"]')?.textContent).toContain("It wasn't found.");
+    expect(app.find('[data-test="restart-banner"]')).toBeNull();
+    expect(app.root.textContent).not.toContain('Removed.');
+
+    const home = notesApi();
+    home.preset = presetOf({ '@test/notes': 'bundled' });
+    expect((await mountApp(home, '/kvwebui/extensions')).find('[data-test="add-bundled-copy"]')).toBeNull();
+  });
+
+  it('QA17-E17 a preset that cannot be read hides the marks and shows an error card while the list still renders', async () => {
+    const api = notesApi();
+    api.handlers.set('kernel.preset.get', () => fail('VALIDATION_FAILED', { file: '/home/ahmed/.kvman/presets/test.json' }));
+    const app = await mountApp(api, '/kvwebui/extensions');
+    expect(app.find('[data-test="preset-error"]')?.textContent).toContain("Something isn't valid.");
+    expect(app.find('[data-test="restart-banner"]')).toBeNull();
+    expect(card(app, 'notes')).not.toBeNull();
+  });
+
+  it('QA17-E18 a stored preset equal to what is loaded shows no banner and no marks', async () => {
+    const api = notesApi();
+    api.extensions.push(extension('remote', {}, 'npm:1.2.3'));
+    api.preset = presetOf({ '@test/notes': 'bundled', '@test/remote': 'npm:1.2.3' });
+    const app = await mountApp(api, '/kvwebui/extensions');
+    expect(app.find('[data-test="restart-banner"]')).toBeNull();
+    expect(app.findAll('[data-test="extension-mark"]')).toEqual([]);
+    expect(app.findAll('[data-test^="pending-"]')).toEqual([]);
+  });
+
+  it('QA17-E19 every state, in en and ar, shows no raw key', async () => {
+    for (const language of ['en', 'ar']) {
+      const api = notesApi();
+      api.global.set('kernel.language', language);
+      api.preset = presetOf({ '@test/notes': 'bundled', '@acme/later': 'npm:2.0.0' });
+      const app = await mountApp(api, '/kvwebui/extensions');
+      await click(card(app, 'notes')?.querySelector<HTMLElement>('[data-test="remove"]') ?? null);
+      api.handlers.set('kernel.extensions.install', () => fail('VALIDATION_FAILED'));
+      await install(app, '@acme/notes', 'npm:1.2.3');
+      await settle();
+      const text = app.find('main')?.textContent ?? app.text();
+      expect(text, language).not.toMatch(/kvwebui\.[a-zA-Z]/);
+      expect(document.documentElement.getAttribute('lang') ?? language).toBe(language);
+    }
+  });
+});
