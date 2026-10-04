@@ -35,6 +35,7 @@ Asked: "do we really need a kvdev to allow the user to develop extensions?", the
 
 ## Edge cases
 
+- **QA17-H29 kvman exports its home.** *Then* a kvman started with `--home <dir>` has `KVMAN_HOME=<dir>` in the environment its extensions and the programs they run see, so `kvman-docs` and `kvman-preset check` run by kvcustomizer find the kvman that runs them. (`packages/cli/test/start/kvman-home.test.ts`)
 - **QA17-E1 A bad source fails.** *Then* `install` with `npm:^1.2.3`, `npm:`, `path:`, `git:x`, an empty `source`, and `bundled` for a name that isn't a bundled extension each fail `VALIDATION_FAILED` saying why, and the file is unchanged. (`packages/kernel/test/preset-edit/install.test.ts`)
 - **QA17-E2 A name already present fails.** *Then* `install` of a name already in the preset fails `VALIDATION_FAILED` and writes nothing; an invalid npm package name fails the same way. (`packages/kernel/test/preset-edit/install.test.ts`)
 - **QA17-E3 Uninstalling what isn't there fails.** *Then* `uninstall` of a name not in the preset fails `NOT_FOUND`, and writes nothing, and doesn't copy the bundled preset. (`packages/kernel/test/preset-edit/uninstall.test.ts`)

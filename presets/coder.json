@@ -3,7 +3,8 @@
   "extensions": {
     "@kvman/kvai": "bundled",
     "@kvman/kvwebui": "bundled",
-    "@kvman/kvcoder": "bundled"
+    "@kvman/kvcoder": "bundled",
+    "@kvman/kvcustomizer": "bundled"
   },
   "settings": {
     "kvwebui.title": "kvcoder.app.title",

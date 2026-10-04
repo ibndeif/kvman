@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { presetSchema, z } from '@kvman/sdk';
@@ -18,7 +18,7 @@ function catalogText(key: string, language: string): string | undefined {
 }
 
 describe('the bundled presets (11)', () => {
-  it.each(['coder', 'dev'])('M2.5-E40 %s is a valid preset of bundled extensions only, with a translated title', (name) => {
+  it.each(['coder'])('M2.5-E40 %s is a valid preset of bundled extensions only, with a translated title', (name) => {
     const { preset } = findPreset(name, { bundled: bundledPresetsFolder, home: path.join(bundledPresetsFolder, 'no-home'), start: bundledPresetsFolder });
     expect(presetSchema.parse(preset).name).toBe(name);
     for (const [extension, source] of Object.entries(preset.extensions)) {
@@ -32,5 +32,11 @@ describe('the bundled presets (11)', () => {
 
   it('M2.5-E40 the default preset is coder', () => {
     expect(defaultPreset).toBe('coder');
+  });
+
+  it('QA17-H18 coder loads kvai, kvwebui, kvcoder, and kvcustomizer, and there is no dev preset', () => {
+    const { preset } = findPreset('coder', { bundled: bundledPresetsFolder, home: path.join(bundledPresetsFolder, 'no-home'), start: bundledPresetsFolder });
+    expect(Object.keys(preset.extensions)).toEqual(['@kvman/kvai', '@kvman/kvwebui', '@kvman/kvcoder', '@kvman/kvcustomizer']);
+    expect(existsSync(path.join(bundledPresetsFolder, 'dev.json'))).toBe(false);
   });
 });
