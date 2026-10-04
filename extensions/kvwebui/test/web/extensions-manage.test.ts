@@ -24,7 +24,7 @@ describe('the Extensions page manages extensions (06 §6.6, ADR 0010, 5)', () =>
     api.preset = presetOf({ '@test/notes': 'bundled', '@acme/later': 'npm:2.0.0' });
     const app = await mountApp(api, '/kvwebui/extensions');
     expect(app.find('[data-test="restart-banner"]')?.textContent).toContain('Restart kvman to apply');
-    expect(app.find('[data-test="restart-banner"]')?.textContent).toContain('1 pending changes');
+    expect(app.find('[data-test="restart-banner"]')?.textContent).toContain('Pending changes: 1');
     expect(card(app, 'notes')?.querySelector('[data-test="extension-source"]')?.textContent).toBe('Bundled');
     expect(pending(app, '@acme/later')?.textContent).toContain('Starts after restart');
     expect(pending(app, '@acme/later')?.textContent).toContain('npm');
@@ -34,7 +34,7 @@ describe('the Extensions page manages extensions (06 §6.6, ADR 0010, 5)', () =>
     expect(app.find<HTMLInputElement>('[data-test="add-name"]')?.value).toBe('');
     expect(app.find<HTMLInputElement>('[data-test="add-source"]')?.value).toBe('');
     expect(pending(app, '@acme/notes')?.textContent).toContain('Starts after restart');
-    expect(app.find('[data-test="restart-banner"]')?.textContent).toContain('2 pending changes');
+    expect(app.find('[data-test="restart-banner"]')?.textContent).toContain('Pending changes: 2');
     expect(app.root.textContent).toContain('Added. Restart kvman to apply.');
   });
 
@@ -55,7 +55,7 @@ describe('the Extensions page manages extensions (06 §6.6, ADR 0010, 5)', () =>
     expect(api.callsTo('kernel.extensions.uninstall').map((call) => call.input)).toEqual([{ name: '@test/notes' }]);
     expect(card(app, 'notes')?.querySelector('[data-test="extension-mark"]')?.textContent).toBe('Removed after restart');
     expect(card(app, 'notes')?.querySelector('[data-test="remove"]')).toBeNull();
-    expect(app.find('[data-test="restart-banner"]')?.textContent).toContain('1 pending changes');
+    expect(app.find('[data-test="restart-banner"]')?.textContent).toContain('Pending changes: 1');
     expect(app.root.textContent).toContain('Removed. Restart kvman to apply.');
   });
 
@@ -75,7 +75,7 @@ describe('the Extensions page manages extensions (06 §6.6, ADR 0010, 5)', () =>
     const api = notesApi();
     const app = await mountApp(api, '/kvwebui/extensions');
     expect(app.find('[data-test="add-bundled-copy"]')?.textContent).toContain('saves your own copy of the bundled preset');
-    expect(app.find('[data-test="add-hint"]')?.textContent).toContain('npm:<exact version>');
+    expect(app.find('[data-test="add-hint"]')?.textContent).toContain('an exact version (npm:1.2.3)');
     expect(app.find<HTMLButtonElement>('[data-test="add-install"]')?.disabled).toBe(true);
     await type(app.find('[data-test="add-name"]'), '   ');
     await type(app.find('[data-test="add-source"]'), 'npm:1.2.3');

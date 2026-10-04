@@ -111,7 +111,7 @@
   "kvwebui.extensions.add.namePlaceholder": "{'@'}acme/notes",
   "kvwebui.extensions.add.source": "المصدر",
   "kvwebui.extensions.add.sourcePlaceholder": "npm:1.2.3 أو path:/home/me/notes",
-  "kvwebui.extensions.add.hint": "المصدر هو npm:<الإصدار بالضبط> أو path:<مجلد بمساره الكامل> أو bundled. يُحفظ الامتداد في إعدادك المسبق ويبدأ في المرة القادمة التي يبدأ فيها kvman.",
+  "kvwebui.extensions.add.hint": "المصدر هو npm: مع الإصدار بالضبط (npm:1.2.3) أو path: مع مجلد بمساره الكامل (path:/home/me/notes) أو bundled. يُحفظ الامتداد في إعدادك المسبق ويبدأ في المرة القادمة التي يبدأ فيها kvman.",
   "kvwebui.extensions.add.install": "تثبيت",
   "kvwebui.extensions.add.bundledCopy": "أول تغيير يحفظ نسختك الخاصة من الإعداد المسبق المرفق في مجلدك الرئيسي.",
   "kvwebui.extensions.add.settingsLink": "غيّر إعدادات الامتداد في صفحة الإعدادات",
@@ -125,7 +125,7 @@
   "kvwebui.extensions.mark.starts": "يبدأ بعد إعادة التشغيل",
   "kvwebui.extensions.mark.removed": "يُزال بعد إعادة التشغيل",
   "kvwebui.extensions.banner": "أعد تشغيل kvman لتطبيق التغيير",
-  "kvwebui.extensions.banner.count": "{count} تغييرات معلّقة",
+  "kvwebui.extensions.banner.count": "تغييرات معلّقة: {count}",
   "kvwebui.extensions.presetFailed": "تعذّرت قراءة الإعداد المسبق، لذا لا تظهر التغييرات المعلّقة.",
   "kvwebui.docs.list.description": "يسرد صفحات توثيق kvwebui.",
   "kvwebui.docs.get.description": "يعطي صفحة توثيق واحدة لـ kvwebui."
