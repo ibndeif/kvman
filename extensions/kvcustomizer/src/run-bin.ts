@@ -19,9 +19,18 @@ export const binFailureSchema = z.object({ code: z.string(), message: z.string()
 /** A bin's structured failure: `{ code, message, params? }`. */
 export type BinFailure = z.output<typeof binFailureSchema>;
 
+function testkitPackageFile(): string {
+  return createRequire(import.meta.url).resolve('@kvman/testkit/package.json');
+}
+
+/** The testkit's `docs/` folder, which holds the built-in guides. */
+export function testkitDocsFolder(): string {
+  return path.join(path.dirname(testkitPackageFile()), 'docs');
+}
+
 /** The file of a `@kvman/testkit` bin; a missing entry or file is an installation problem, not a Problem. */
 export function binFile(name: string): string {
-  const packageFile = createRequire(import.meta.url).resolve('@kvman/testkit/package.json');
+  const packageFile = testkitPackageFile();
   let raw: unknown;
   try {
     raw = JSON.parse(readFileSync(packageFile, 'utf8'));

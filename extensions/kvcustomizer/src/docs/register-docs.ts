@@ -1,23 +1,26 @@
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { z, type Ctx } from '@kvman/sdk';
+import { getGuide, guideListSchema, guideSchema, listGuides } from './guides.ts';
+import { registerOwnDocs } from './own-docs.ts';
 
-// The `docs` connector (plan 09 §9.1, ADR 0009, 126): kvcustomizer's guides, English Markdown for the model, in `docs/`.
-
-export const docTopics = ['sdk', 'views', 'components', 'i18n', 'connectors', 'presets'] as const;
-
-const docsFolder = fileURLToPath(new URL('../../docs/', import.meta.url));
-
-export function readDoc(file: string): string {
-  return readFileSync(`${docsFolder}${file}.md`, 'utf8');
-}
+// What the `docs` connector calls (plan 09 §9.1), and kvcustomizer's own docs pair.
 
 export function registerDocs(ctx: Ctx): void {
-  ctx.registerQuery('kvcustomizer.docs.get', {
-    description: 'Gives one of the kvman development guides as Markdown.',
+  ctx.registerQuery('kvcustomizer.guides.list', {
+    description: 'Lists the guides of kvman and the documentation pages of every installed extension that serves docs.',
     public: true,
-    input: z.object({ topic: z.enum(docTopics).describe('The guide: sdk, views, components, i18n, connectors, or presets.') }),
-    output: z.string(),
-    handle: (input) => readDoc(input.topic),
+    input: z.object({}),
+    output: guideListSchema,
+    handle: () => listGuides(ctx),
   });
+  ctx.registerQuery('kvcustomizer.guides.get', {
+    description: "Gives one guide of kvman, or one page of an installed extension's docs, as Markdown.",
+    public: true,
+    input: z.object({
+      extension: z.string().min(1).optional().describe('The extension package name, such as @kvman/kvwebui; leave it out (or kvman) for a built-in guide.'),
+      topic: z.string().describe('The page topic, such as sdk or views.'),
+    }),
+    output: guideSchema,
+    handle: (input) => getGuide(ctx, input),
+  });
+  registerOwnDocs(ctx);
 }

@@ -1,6 +1,6 @@
 import type { Ctx } from '@kvman/sdk';
 import type {} from '@kvman/kvcoder';
-import { readDoc } from './docs/register-docs.ts';
+import { readSection } from './docs/own-docs.ts';
 
 // kvcustomizer extends kvcoder (plan 09, §9.1 and §9.4): at each start it registers its four connectors, which kvcoder clears
 // at its own start, and sets its one global section.
@@ -35,8 +35,18 @@ const connectors = [
   },
   {
     name: 'docs',
-    description: 'Read the kvman development guides. Use it before you write an extension, a preset, a view, or a component.',
-    commands: [{ name: 'get', command: 'kvcustomizer.docs.get', examples: [{ description: 'Read the SDK guide', input: { topic: 'sdk' } }] }],
+    description: 'Read the guides of kvman and of every installed extension. Use it before you write an extension, a preset, a view, or a component, and to learn how to use an extension that is installed.',
+    commands: [
+      { name: 'list', command: 'kvcustomizer.guides.list', examples: [{ description: 'List every guide and page', input: {} }] },
+      {
+        name: 'get',
+        command: 'kvcustomizer.guides.get',
+        examples: [
+          { description: 'Read the SDK guide', input: { topic: 'sdk' } },
+          { description: "Read an installed extension's page", input: { extension: '@kvman/kvwebui', topic: 'views' } },
+        ],
+      },
+    ],
   },
 ];
 
@@ -45,7 +55,7 @@ export function registerWithKvcoder(ctx: Ctx): void {
     description: "Registers kvcustomizer's connectors and its guide section with kvcoder.",
     handle: async () => {
       for (const connector of connectors) await ctx.exec('kvcoder.connector.register', connector);
-      await ctx.exec('kvcoder.section.set', { id: 'guide', title: 'kvman extensions', order: 20, global: true, content: readDoc('section') });
+      await ctx.exec('kvcoder.section.set', { id: 'guide', title: 'kvman extensions', order: 20, global: true, content: readSection() });
     },
   });
 }

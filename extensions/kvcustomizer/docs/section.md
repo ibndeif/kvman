@@ -5,4 +5,4 @@ This workspace may hold kvman extension projects. kvman is an app built from ext
 - Use the connectors `ext`, `preset`, `preview`, and `docs` for everything they cover, and the shell only for the rest. Edit a project's files with `fs`.
 - `preview start '{"extensions":["notes"]}'` runs a separate kvman with those projects and returns its URL; edits to `src/` reload live, and `preview stop` ends it.
 - `preset new` and `preset check` write and check presets.
-- Read `docs get '{"topic":"sdk"}'` before writing an extension; the other topics are `views`, `components`, `i18n`, `connectors`, and `presets`.
+- `docs list` shows every page: the built-in guides (`sdk`, `i18n`, `presets`) and the pages that installed extensions serve about themselves, such as the views and components of kvwebui. `docs get '{"topic":"sdk"}'` reads a built-in guide, and `docs get '{"extension":"@kvman/kvwebui","topic":"views"}'` reads an extension's page. Read the guides before writing an extension, and an extension's pages before building on it.

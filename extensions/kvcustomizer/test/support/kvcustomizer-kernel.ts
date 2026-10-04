@@ -28,14 +28,14 @@ export function manifest(name: string, namespace: string, extra: Record<string, 
   return { name, version: '0.1.0', type: 'module', main: 'dist/index.js', peerDependencies: { '@kvman/sdk': '^0.1.0' }, kvman: { namespace, source: 'src/index.ts', dependencies: {} }, ...extra };
 }
 
-export function useKvcustomizer(): { start(settings?: Record<string, Json>): Promise<KvcustomizerWorld> } {
+export function useKvcustomizer(): { start(settings?: Record<string, Json>, extra?: readonly string[]): Promise<KvcustomizerWorld> } {
   const kernels: TestKernel[] = [];
   afterEach(async () => {
     for (const kernel of kernels.splice(0)) await kernel.close();
   });
   return {
-    start: async (settings = {}) => {
-      const kernel = await createTestKernel({ extensions: bundledFolders, settings: { 'kvwebui.home': 'kvcoder.chat', ...settings } });
+    start: async (settings = {}, extra = []) => {
+      const kernel = await createTestKernel({ extensions: [...bundledFolders, ...extra], settings: { 'kvwebui.home': 'kvcoder.chat', ...settings } });
       kernels.push(kernel);
       return { kernel, workspace: kernel.homeFolder, write: (file, content) => writeIn(kernel.homeFolder, file, content) };
     },

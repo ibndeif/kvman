@@ -6,7 +6,7 @@ import { useKvcustomizer } from './support/kvcustomizer-kernel.ts';
 const kvcustomizer = useKvcustomizer();
 
 const expected = [
-  { name: 'docs', commands: ['get'] },
+  { name: 'docs', commands: ['list', 'get'] },
   { name: 'ext', commands: ['new', 'list', 'check', 'test'] },
   { name: 'preset', commands: ['new', 'check'] },
   { name: 'preview', commands: ['start', 'stop', 'status'] },
@@ -37,7 +37,7 @@ describe("kvcustomizer's connectors and section (09 §9.1, §9.4)", { timeout: 3
     expect(descriptions.get('ext')).toContain('run check, then test, after changing one');
     expect(descriptions.get('preset')).toContain('check it before running it');
     expect(descriptions.get('preview')).toContain('stop it when you are done');
-    expect(descriptions.get('docs')).toContain('Use it before you write an extension, a preset, a view, or a component.');
+    expect(descriptions.get('docs')).toContain('Use it before you write an extension, a preset, a view, or a component, and to learn how to use an extension that is installed.');
     const session = await kernel.exec('kvcoder.session.create', {});
     const { prompt } = await kernel.exec('kvcoder.prompt.get', { sessionId: session.id });
     expect(prompt).toContain('Use the connectors `ext`, `preset`, `preview`, and `docs` for everything they cover, and the shell only for the rest. Edit a project\'s files with `fs`.');
@@ -55,7 +55,7 @@ describe("kvcustomizer's connectors and section (09 §9.1, §9.4)", { timeout: 3
     expect(extension?.commands.map((command) => command.name).sort()).toEqual(
       ['kvcustomizer.ext.new', 'kvcustomizer.ext.check', 'kvcustomizer.ext.test', 'kvcustomizer.preset.new', 'kvcustomizer.preset.check', 'kvcustomizer.preview.start', 'kvcustomizer.preview.stop'].sort(),
     );
-    expect(extension?.queries.map((query) => query.name).sort()).toEqual(['kvcustomizer.docs.get', 'kvcustomizer.ext.list', 'kvcustomizer.preview.status'].sort());
+    expect(extension?.queries.map((query) => query.name).sort()).toEqual(['kvcustomizer.docs.get', 'kvcustomizer.docs.list', 'kvcustomizer.ext.list', 'kvcustomizer.guides.get', 'kvcustomizer.guides.list', 'kvcustomizer.preview.status'].sort());
     for (const command of extension?.commands ?? []) expect(command.public).toBe(true);
     for (const query of extension?.queries ?? []) expect(query.public).toBe(true);
   });
