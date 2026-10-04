@@ -9,6 +9,8 @@
   "kvai.usage.get.description": "Lists this workspace's tokens and cost per model.",
   "kvai.usage.total.get.description": "Gives this workspace's tokens and cost over every model.",
   "kvai.ui.get.description": "Gives kvai's UI: the Models, provider, and Add a provider pages, and the usage status item.",
+  "kvai.docs.list.description": "Lists the documentation pages of kvai.",
+  "kvai.docs.get.description": "Gives one documentation page of kvai.",
   "kvai.defaultModel.description": "The model kvai.complete uses when a call names none.",
   "kvai.errors.KEY_MISSING": "The provider {provider} has no API key yet. Add it on its page under Models.",
   "kvai.errors.NO_MODEL": "No model was given, and no default model is set.",

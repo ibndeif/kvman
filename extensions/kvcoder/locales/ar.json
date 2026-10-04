@@ -143,6 +143,8 @@
   "kvcoder.handler.run.description": "يشغّل أمر معالج المحادثة ويتذكر مهمته كي لا تبدأ رسائله دورًا.",
   "kvcoder.prompt.get.description": "يعطي موجّه النظام كما ترسله الخطوة التالية، وأقسامه.",
   "kvcoder.ui.get.description": "يعطي صفحات kvcoder وعنصر التنقل وعنصر الحالة.",
+  "kvcoder.docs.list.description": "يسرد صفحات توثيق kvcoder.",
+  "kvcoder.docs.get.description": "يعطي صفحة توثيق واحدة لـ kvcoder.",
   "kvcoder.model.title": "النموذج",
   "kvcoder.model.description": "النموذج الذي تبدأ به المحادثة الجديدة؛ القيمة الفارغة تستخدم kvai.defaultModel.",
   "kvcoder.thinking.title": "التفكير",

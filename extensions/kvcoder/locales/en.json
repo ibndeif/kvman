@@ -143,6 +143,8 @@
   "kvcoder.handler.run.description": "Runs a session handler's command, remembering its job so the handler's injections start no turn.",
   "kvcoder.prompt.get.description": "Gives the exact system prompt of a session's next step, and its sections.",
   "kvcoder.ui.get.description": "Gives kvcoder's pages, nav item, and status item.",
+  "kvcoder.docs.list.description": "Lists the documentation pages of kvcoder.",
+  "kvcoder.docs.get.description": "Gives one documentation page of kvcoder.",
   "kvcoder.model.title": "Model",
   "kvcoder.model.description": "The model a new session starts with; null uses kvai.defaultModel.",
   "kvcoder.thinking.title": "Thinking",
