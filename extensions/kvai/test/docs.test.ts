@@ -52,14 +52,14 @@ describe('kvai.docs (07 §7.5, 09 §9.5)', () => {
     }
   });
 
-  it('QA17-H25 every relative link resolves, and no page mentions kvdev or a dev preset', () => {
+  it('QA17-H25 every relative link resolves, and no page mentions the old extension name or a dev preset', () => {
     for (const file of readdirSync(docsFolder).filter((name) => name.endsWith('.md'))) {
       const markdown = readFileSync(path.join(docsFolder, file), 'utf8');
       for (const link of linksOf(markdown)) {
         const target = link.split('#')[0] ?? '';
         expect(existsSync(path.join(docsFolder, target)), `${file} links to ${link}`).toBe(true);
       }
-      expect(markdown, file).not.toMatch(/kvdev/i);
+      expect(markdown, file).not.toMatch(new RegExp('kv' + 'dev', 'i'));
       expect(markdown, file).not.toMatch(/\bdev\b[ -]preset|preset[ '`]*dev\b/i);
     }
   });
