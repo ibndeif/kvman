@@ -2,6 +2,7 @@ import type { Ctx } from '@kvman/sdk';
 import { builtinCatalog, useCredentials } from './catalog/builtin-catalog.ts';
 import { customCatalog } from './catalog/custom-catalog.ts';
 import { registerComplete } from './register-complete.ts';
+import { registerDocs } from './docs.ts';
 import { registerModels } from './register-models.ts';
 import { registerProviders } from './register-providers.ts';
 import { registerUi } from './register-ui.ts';
@@ -20,5 +21,6 @@ export default (ctx: Ctx): void => {
   registerSignin(ctx, catalog);
   registerModels(ctx, catalog);
   registerUsage(ctx);
+  registerDocs(ctx);
   registerUi(ctx);
 };

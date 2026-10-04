@@ -9,6 +9,8 @@
   "kvai.usage.get.description": "يسرد الرموز والتكلفة في مساحة العمل هذه لكل نموذج.",
   "kvai.usage.total.get.description": "يعطي مجموع الرموز والتكلفة في مساحة العمل هذه لكل النماذج.",
   "kvai.ui.get.description": "يعطي واجهة kvai: صفحات النماذج والمزوّد وإضافة مزوّد، وعنصر الاستهلاك في شريط الحالة.",
+  "kvai.docs.list.description": "يسرد صفحات توثيق kvai.",
+  "kvai.docs.get.description": "يعطي صفحة توثيق واحدة لـ kvai.",
   "kvai.defaultModel.description": "النموذج الذي يستخدمه kvai.complete حين لا يحدِّد الاستدعاء نموذجًا.",
   "kvai.errors.KEY_MISSING": "لا يوجد بعد مفتاح للمزوّد {provider}. أضفه من صفحته ضمن النماذج.",
   "kvai.errors.NO_MODEL": "لم يُحدَّد نموذج، ولا يوجد نموذج افتراضي.",
