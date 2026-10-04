@@ -1,9 +1,8 @@
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
-import { createServer } from 'node:net';
+import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { useKvcustomizer } from './support/kvcustomizer-kernel.ts';
+import { useKvcustomizer } from '../support/kvcustomizer-kernel.ts';
 
 const kvcustomizer = useKvcustomizer();
 const failed = (code: string) => expect.objectContaining({ problem: expect.objectContaining({ code }) });
@@ -11,18 +10,13 @@ const saved = { ...process.env };
 const roots: string[] = [];
 
 afterEach(() => {
-  process.env = { ...saved };
+  for (const key of Object.keys(process.env)) { if (!(key in saved)) delete (process.env as Record<string, string | undefined>)[key]; }
+  Object.assign(process.env, saved);
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
-// A port that refuses connections: one the OS gave a server that has closed again.
-async function closedPort(): Promise<number> {
-  const server = createServer();
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const address = server.address();
-  await new Promise<void>((resolve) => server.close(() => resolve()));
-  return typeof address === 'object' && address !== null ? address.port : 0;
-}
+// A registry that always refuses: port 1 never listens on 127.0.0.1.
+const refusedRegistry = 'http://127.0.0.1:1/';
 
 describe('ext new rules (09 §9.1, ADR 0009, 121, 126)', { timeout: 30_000 }, () => {
   it('M2.5-E3 a folder outside the workspace fails VALIDATION_FAILED, and one holding a file kvcustomizer/FOLDER_NOT_EMPTY, writing nothing', async () => {
@@ -48,11 +42,25 @@ describe('ext new rules (09 §9.1, ADR 0009, 121, 126)', { timeout: 30_000 }, ()
   it('M2.5-E5 a failing npm install fails kvcustomizer/NPM_FAILED with npm output, and the files stay', async () => {
     const cache = mkdtempSync(path.join(tmpdir(), 'kvcustomizer-npm-cache-'));
     roots.push(cache);
-    Object.assign(process.env, { npm_config_registry: `http://127.0.0.1:${String(await closedPort())}/`, npm_config_fetch_retries: '0', npm_config_cache: cache, npm_config_audit: 'false', npm_config_fund: 'false', npm_config_update_notifier: 'false' });
+    Object.assign(process.env, { npm_config_registry: refusedRegistry, npm_config_fetch_retries: '0', npm_config_cache: cache, npm_config_audit: 'false', npm_config_fund: 'false', npm_config_update_notifier: 'false' });
     const world = await kvcustomizer.start();
     const error: unknown = await world.kernel.exec('kvcustomizer.ext.new', { name: 'notes', namespace: 'notes', folder: 'notes' }).catch((thrown: unknown) => thrown);
     expect(error).toEqual(failed('kvcustomizer/NPM_FAILED'));
     expect(error).toEqual(expect.objectContaining({ problem: expect.objectContaining({ message: expect.stringMatching(/npm install failed in notes \(exit code \d+\):\n.*npm error/s) }) }));
     expect(existsSync(path.join(world.workspace, 'notes', 'src', 'index.ts'))).toBe(true);
+  });
+
+  it('QA17-E11 the bin reports FOLDER_NOT_EMPTY with the folder as given, and an empty folder runs up to the install', async () => {
+    const cache = mkdtempSync(path.join(tmpdir(), 'kvcustomizer-empty-cache-'));
+    roots.push(cache);
+    Object.assign(process.env, { npm_config_registry: refusedRegistry, npm_config_fetch_retries: '0', npm_config_cache: cache });
+    const world = await kvcustomizer.start();
+    world.write('taken/notes.txt', 'mine');
+    const taken: unknown = await world.kernel.exec('kvcustomizer.ext.new', { name: 'notes', namespace: 'notes', folder: 'taken' }).catch((thrown: unknown) => thrown);
+    expect(taken).toEqual(failed('kvcustomizer/FOLDER_NOT_EMPTY'));
+    expect(taken).toEqual(expect.objectContaining({ problem: expect.objectContaining({ params: expect.objectContaining({ folder: 'taken' }) }) }));
+    mkdirSync(path.join(world.workspace, 'empty'));
+    await expect(world.kernel.exec('kvcustomizer.ext.new', { name: 'notes', namespace: 'notes', folder: 'empty' })).rejects.toEqual(failed('kvcustomizer/NPM_FAILED'));
+    expect(existsSync(path.join(world.workspace, 'empty', 'src', 'index.ts'))).toBe(true);
   });
 });

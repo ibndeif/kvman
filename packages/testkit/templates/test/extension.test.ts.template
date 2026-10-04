@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { z } from '@kvman/sdk';
 import { createTestKernel } from '@kvman/testkit';
+
+const pageSchema = z.object({ topic: z.string(), title: z.string(), markdown: z.string() });
 
 test('__NAMESPACE__.greeting.get gives the greeting', async () => {
   const kernel = await createTestKernel({ extensions: ['./'] });
@@ -15,7 +18,7 @@ test('__NAMESPACE__.docs.list and __NAMESPACE__.docs.get serve the usage page', 
   const kernel = await createTestKernel({ extensions: ['./'] });
   try {
     assert.deepEqual(await kernel.exec('__NAMESPACE__.docs.list', {}), [{ topic: 'usage', title: 'Using __NAMESPACE__' }]);
-    const page = await kernel.exec('__NAMESPACE__.docs.get', { topic: 'usage' });
+    const page = pageSchema.parse(await kernel.exec('__NAMESPACE__.docs.get', { topic: 'usage' }));
     assert.equal(page.topic, 'usage');
     assert.equal(page.title, 'Using __NAMESPACE__');
     assert.ok(page.markdown.startsWith('# Using __NAMESPACE__'));

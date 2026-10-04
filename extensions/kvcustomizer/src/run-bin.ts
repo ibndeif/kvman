@@ -93,7 +93,7 @@ export function binFailureProblem(failure: BinFailure): ProblemError | undefined
  * `{ code, message, params? }` on stderr gives its Problem. Anything else fails `HANDLER_FAILED` in the kernel,
  * after logging the bin and the exit code, never the output or the arguments.
  */
-export function binResult<Output>(ctx: Ctx, bin: string, run: BinRun, outputSchema: z.ZodType<Output>): Output {
+export function binResult<Output>(log: Ctx['log'], bin: string, run: BinRun, outputSchema: z.ZodType<Output>): Output {
   if (run.exitCode === 0) {
     const line = lastOutputLine(run.stdout);
     if (line !== undefined) {
@@ -108,7 +108,7 @@ export function binResult<Output>(ctx: Ctx, bin: string, run: BinRun, outputSche
         if (checked.success) return checked.data;
       }
     }
-    ctx.log.error(`${bin} printed an unexpected output.`, { bin, exitCode: run.exitCode });
+    log.error(`${bin} printed an unexpected output.`, { bin, exitCode: run.exitCode });
     throw new Error(`${bin} failed.`);
   }
   if (run.exitCode === 1) {
@@ -129,6 +129,6 @@ export function binResult<Output>(ctx: Ctx, bin: string, run: BinRun, outputSche
       }
     }
   }
-  ctx.log.error(`${bin} failed.`, { bin, exitCode: run.exitCode });
+  log.error(`${bin} failed.`, { bin, exitCode: run.exitCode });
   throw new Error(`${bin} failed.`);
 }

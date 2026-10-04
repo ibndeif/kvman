@@ -16,7 +16,7 @@ const checkOutputSchema = z.array(z.object({ file: z.string(), message: z.string
 async function newPreset(ctx: Ctx, workspaceFolder: string, name: string, file: string): Promise<{ file: string }> {
   insideWorkspace(workspaceFolder, file, 'file');
   const run = await runBin('kvman-preset', ['new', file, '--name', name], workspaceFolder, ctx.job.signal);
-  const created = binResult(ctx, 'kvman-preset', run, newOutputSchema);
+  const created = binResult(ctx.log, 'kvman-preset', run, newOutputSchema);
   return { file: workspaceRelative(workspaceFolder, created.file) };
 }
 
@@ -36,7 +36,7 @@ async function checkPreset(ctx: Ctx, workspaceFolder: string, file: string): Pro
       if (findings.success) return findings.data;
     }
   }
-  return binResult(ctx, 'kvman-preset', run, checkOutputSchema);
+  return binResult(ctx.log, 'kvman-preset', run, checkOutputSchema);
 }
 
 export function registerPreset(ctx: Ctx): void {

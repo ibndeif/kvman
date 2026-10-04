@@ -2,19 +2,23 @@ import { createServer, type Server } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { z } from '@kvman/sdk';
-import { scaffoldFiles } from '../../src/ext/scaffold-files.ts';
 import { writeIn } from './kvcustomizer-kernel.ts';
 import type { Kvman } from './kvman-child.ts';
 
-// Preview helpers: a scaffold written without npm (a `path:` extension gets `@kvman/sdk` from the kernel), the
-// preview's processes and home, and listeners that hold ports.
+// Preview helpers: a minimal project written without npm (a `path:` extension gets `@kvman/sdk` from the kernel),
+// the preview's processes and home, and listeners that hold ports.
 
 export const statusSchema = z.union([z.object({ running: z.literal(false) }), z.object({ running: z.literal(true), url: z.string(), extensions: z.array(z.string()), startedAt: z.string() })]);
 
 const processesSchema = z.array(z.object({ extension: z.string(), workspaceId: z.string(), name: z.string(), pid: z.number() }));
 
 export function writeProject(folder: string, name: string, namespace: string): void {
-  for (const [file, content] of Object.entries(scaffoldFiles({ name, namespace, web: false }))) writeIn(folder, path.join(name, file), content);
+  writeIn(folder, path.join(name, 'package.json'), { name, version: '0.1.0', type: 'module', main: 'dist/index.js', peerDependencies: { '@kvman/sdk': '^0.1.0' }, kvman: { namespace, source: 'src/index.ts', dependencies: {} } });
+  writeIn(
+    folder,
+    path.join(name, 'src', 'index.ts'),
+    `import { z } from '@kvman/sdk';\nexport default (ctx) => {\n  ctx.registerQuery('${namespace}.greeting.get', {\n    description: 'Gives the greeting.',\n    public: true,\n    input: z.object({}),\n    output: z.object({ text: z.string() }),\n    handle: () => ({ text: 'Hello from ${namespace}!' }),\n  });\n};\n`,
+  );
 }
 
 export async function kvcustomizerProcesses(kvman: Kvman): Promise<{ name: string; pid: number }[]> {

@@ -3,14 +3,15 @@ import { BinFailure } from './bin-failure.ts';
 import { programCommand, type Program } from './program-command.ts';
 
 // One npm or npx run inside a testkit bin: stdin empty, its stdout kept apart and stdout and stderr together.
-// npm missing from the PATH fails `NPM_FAILED`.
+// npm missing from the PATH fails `NPM_FAILED`. It runs in the bin's own process group, not a group of its own, so a
+// kill of the bin's group (a cancelled kvcustomizer job) reaches it.
 
 export type ProgramRun = { exitCode: number; stdout: string; output: string };
 
 export function runProgram(program: Program, args: readonly string[], cwd: string): Promise<ProgramRun> {
   const start = programCommand(process.platform, program, args);
   return new Promise((resolve, reject) => {
-    const child = spawn(start.command, start.args, { cwd, stdio: ['ignore', 'pipe', 'pipe'], detached: start.detached, windowsHide: true });
+    const child = spawn(start.command, start.args, { cwd, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
     let stdout = '';
     let output = '';
     child.stdout?.setEncoding('utf8').on('data', (text: string) => {

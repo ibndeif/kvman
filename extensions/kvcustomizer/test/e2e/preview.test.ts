@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { z } from '@kvman/sdk';
-import { callKvman, kvmanWorld, until, type Kvman, type KvmanWorld } from '../support/kvman-child.ts';
+import { callKvman, customizerPreset, kvmanWorld, until, type Kvman, type KvmanWorld } from '../support/kvman-child.ts';
 import { writeIn } from '../support/kvcustomizer-kernel.ts';
 import { alive, holdPorts, kvcustomizerProcesses, previewHomeOf, statusSchema, writeProject } from '../support/preview-world.ts';
 
@@ -9,7 +9,7 @@ let world: KvmanWorld;
 let kvman: Kvman;
 beforeAll(async () => {
   world = kvmanWorld();
-  kvman = await world.start(['--preset', 'dev']);
+  kvman = await world.start(['--preset', customizerPreset(world)]);
   writeProject(world.project, 'notes', 'notes');
 });
 afterAll(() => world.close());
@@ -86,7 +86,7 @@ describe('the preview and the main kvman (09 §9.3)', () => {
   it('M2.5-E31 the preview stops with the main kvman', async () => {
     const own = kvmanWorld();
     try {
-      const main = await own.start(['--preset', 'dev']);
+      const main = await own.start(['--preset', customizerPreset(own)]);
       writeProject(own.project, 'notes', 'notes');
       await main.call('commands', 'kvcustomizer.preview.start', { extensions: ['notes'] });
       const preview = (await kvcustomizerProcesses(main)).find((process) => process.name === 'preview');

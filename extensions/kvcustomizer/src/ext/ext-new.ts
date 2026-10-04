@@ -14,6 +14,6 @@ const newOutputSchema = z.object({ folder: z.string(), name: z.string(), namespa
 export async function newProject(ctx: Ctx, workspaceFolder: string, input: NewProjectInput, signal: AbortSignal): Promise<NewProject> {
   insideWorkspace(workspaceFolder, input.folder, 'folder');
   const run = await runBin('kvman-new', [input.folder, '--name', input.name, '--namespace', input.namespace, ...(input.web ? ['--web'] : [])], workspaceFolder, signal);
-  const created = binResult(ctx, 'kvman-new', run, newOutputSchema);
+  const created = binResult(ctx.log, 'kvman-new', run, newOutputSchema);
   return { folder: workspaceRelative(workspaceFolder, created.folder), name: created.name, namespace: created.namespace, web: created.web };
 }

@@ -4,7 +4,6 @@ import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { envelopeSchema, healthSchema, presetSchema, z } from '@kvman/sdk';
 import { BinFailure } from '../bin/bin-failure.ts';
-import { programCommand } from '../bin/program-command.ts';
 import { lastLines, runProgram } from '../bin/run-program.ts';
 import { preparePreviewHome } from './preview-home.ts';
 import { readPreviewProject } from './preview-manifest.ts';
@@ -166,7 +165,7 @@ async function startWatchers(projects: readonly ResolvedProject[], state: Previe
     const build = await runProgram('npm', ['run', 'web:build'], project.absolute);
     if (build.exitCode !== 0) throw new BinFailure('PREVIEW_FAILED', `npm run web:build failed in ${project.given}:\n${lastLines(build.output)}`);
     if (signals.signalled()) return;
-    const watch = programCommand(process.platform, 'npm', ['run', 'web:watch']);
+    const watch = spawnCommand(process.platform, 'npm', ['run', 'web:watch']);
     const child = spawn(watch.command, watch.args, { cwd: project.absolute, stdio: 'ignore', detached: watch.detached, windowsHide: true });
     state.watchers.push(trackChild(child));
   }

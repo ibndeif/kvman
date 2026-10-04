@@ -13,7 +13,7 @@ describe("the conversation's actions (08 §8.7, ADR 0009, 104)", () => {
     serve(fake, world);
     for (const name of ['kvcoder.message.send', 'kvcoder.turn.cancel', 'kvcoder.session.configure', 'kvcoder.session.rename', 'kvcoder.session.compact', 'kvcoder.session.delete']) fake.handle(name, ok);
     fake.handle('kvcoder.session.fork', () => session({ id: 's2' }));
-    fake.handle('kvcoder.prompt.get', () => ({ prompt: 'You are kvman Coder', sections: [{ id: 'guide', title: 'Guide', owner: '@kvman/kvdev', reach: 'global', size: 120, included: true }] }));
+    fake.handle('kvcoder.prompt.get', () => ({ prompt: 'You are kvman Coder', sections: [{ id: 'guide', title: 'Guide', owner: '@kvman/kvcustomizer', reach: 'global', size: 120, included: true }] }));
     const fetch = vi.fn(async () => new Response(JSON.stringify({ ok: true, file: { id: 'f1' } })));
     vi.stubGlobal('fetch', fetch);
     const wrapper = await mounted(ConversationView, fake, { sessionId: 's1' });
@@ -41,7 +41,7 @@ describe("the conversation's actions (08 §8.7, ADR 0009, 104)", () => {
     await wrapper.find('[data-test="tab-prompt"]').trigger('click');
     await flushPromises();
     expect(wrapper.find('[data-test="prompt-text"]').text()).toBe('You are kvman Coder');
-    expect(wrapper.find('[data-test="prompt-section"]').text()).toContain('Guide · @kvman/kvdev · every workspace · 120 bytes');
+    expect(wrapper.find('[data-test="prompt-section"]').text()).toContain('Guide · @kvman/kvcustomizer · every workspace · 120 bytes');
     await wrapper.find('[data-test="tab-chat"]').trigger('click');
 
     await wrapper.find('[data-test="chat-menu"]').trigger('click');

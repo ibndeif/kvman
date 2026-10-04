@@ -3,9 +3,9 @@
 
 export type Program = 'npm' | 'npx';
 
-export type ProgramCommand = { command: string; args: string[]; detached: boolean };
+export type ProgramCommand = { command: string; args: string[] };
 
 export function programCommand(platform: NodeJS.Platform, program: Program, args: readonly string[]): ProgramCommand {
-  if (platform === 'win32') return { command: 'cmd.exe', args: ['/d', '/s', '/c', program, ...args], detached: false };
-  return { command: program, args: [...args], detached: true };
+  if (platform === 'win32') return { command: 'cmd.exe', args: ['/d', '/s', '/c', program, ...args] };
+  return { command: program, args: [...args] };
 }

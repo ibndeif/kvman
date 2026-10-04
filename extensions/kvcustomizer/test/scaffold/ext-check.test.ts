@@ -8,7 +8,8 @@ const kvcustomizer = useKvcustomizer();
 const saved = { ...process.env };
 beforeEach(() => Object.assign(process.env, npmEnvironment()));
 afterEach(() => {
-  process.env = { ...saved };
+  for (const key of Object.keys(process.env)) { if (!(key in saved)) delete (process.env as Record<string, string | undefined>)[key]; }
+  Object.assign(process.env, saved);
 });
 
 function edit(file: string, from: string, to: string): void {
@@ -35,7 +36,7 @@ describe('ext check and ext test of a scaffold (09 §9.1, ADR 0009, 116, 117, 12
   it('M2.5-E10 a fresh scaffold passes its test; a failing assertion fails it and names the test', async () => {
     const world = await kvcustomizer.start();
     await world.kernel.exec('kvcustomizer.ext.new', { name: 'notes', namespace: 'notes', folder: 'notes' });
-    expect(await world.kernel.exec('kvcustomizer.ext.test', { folder: 'notes' })).toEqual({ passed: true, exitCode: 0, output: expect.stringContaining('pass 1') });
+    expect(await world.kernel.exec('kvcustomizer.ext.test', { folder: 'notes' })).toEqual({ passed: true, exitCode: 0, output: expect.stringContaining('pass 2') });
     edit(path.join(world.workspace, 'notes', 'test', 'extension.test.ts'), "{ text: 'Hello from notes!' }", "{ text: 'Goodbye' }");
     const failed = await world.kernel.exec('kvcustomizer.ext.test', { folder: 'notes' });
     expect(failed).toMatchObject({ passed: false, exitCode: 1 });

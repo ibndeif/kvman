@@ -10,6 +10,7 @@ describe("kvcustomizer's job options (ADR 0009, 126)", () => {
       'kvcustomizer.preview.start': { retries: 0, timeoutMs: 300_000 },
       'kvcustomizer.preview.stop': { retries: 0 },
       'kvcustomizer.preset.new': { retries: 0 },
+      'kvcustomizer.preset.check': { retries: 0, timeoutMs: 300_000 },
     });
   });
 });

@@ -1,4 +1,6 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { z } from '@kvman/sdk';
 import { useKvcustomizer } from './support/kvcustomizer-kernel.ts';
 
 const kvcustomizer = useKvcustomizer();
@@ -40,5 +42,21 @@ describe("kvcustomizer's connectors and section (09 §9.1, §9.4)", { timeout: 3
     const { prompt } = await kernel.exec('kvcoder.prompt.get', { sessionId: session.id });
     expect(prompt).toContain('Use the connectors `ext`, `preset`, `preview`, and `docs` for everything they cover, and the shell only for the rest. Edit a project\'s files with `fs`.');
     expect(prompt).not.toContain('with the shell.');
+  });
+
+  it('QA17-H14 the extension is kvcustomizer with its commands, queries, and docs, all public', async () => {
+    const manifest = z.object({ name: z.string(), kvman: z.object({ namespace: z.string() }).loose() }).loose().parse(JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')));
+    expect(manifest.name).toBe('@kvman/kvcustomizer');
+    expect(manifest.kvman.namespace).toBe('kvcustomizer');
+    const { kernel } = await kvcustomizer.start();
+    const listed = await kernel.exec('kernel.extensions.list', {});
+    const extension = listed.find((entry) => entry.name === '@kvman/kvcustomizer');
+    expect(extension?.namespace).toBe('kvcustomizer');
+    expect(extension?.commands.map((command) => command.name).sort()).toEqual(
+      ['kvcustomizer.ext.new', 'kvcustomizer.ext.check', 'kvcustomizer.ext.test', 'kvcustomizer.preset.new', 'kvcustomizer.preset.check', 'kvcustomizer.preview.start', 'kvcustomizer.preview.stop'].sort(),
+    );
+    expect(extension?.queries.map((query) => query.name).sort()).toEqual(['kvcustomizer.docs.get', 'kvcustomizer.ext.list', 'kvcustomizer.preview.status'].sort());
+    for (const command of extension?.commands ?? []) expect(command.public).toBe(true);
+    for (const query of extension?.queries ?? []) expect(query.public).toBe(true);
   });
 });

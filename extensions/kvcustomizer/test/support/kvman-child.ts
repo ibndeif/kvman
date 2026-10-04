@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -81,6 +81,18 @@ export function kvmanWorld(): KvmanWorld {
     rmSync(root, { recursive: true, force: true });
   };
   return { root, project: project ?? '', start, close };
+}
+
+/** Writes the test preset that loads the four bundled extensions into the world's folder and returns its path. */
+export function customizerPreset(world: KvmanWorld): string {
+  const file = path.join(world.root, 'customizer-test.json');
+  const preset = {
+    name: 'customizer-test',
+    extensions: { '@kvman/kvai': 'bundled', '@kvman/kvwebui': 'bundled', '@kvman/kvcoder': 'bundled', '@kvman/kvcustomizer': 'bundled' },
+    settings: { 'kvwebui.home': 'kvcoder.chat' },
+  };
+  writeFileSync(file, `${JSON.stringify(preset, undefined, 2)}\n`);
+  return file;
 }
 
 /** Adds the fake OpenAI server as kvai's provider `fake` and makes `fake/m1` the default model for every workspace. */

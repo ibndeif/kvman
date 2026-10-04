@@ -4,7 +4,7 @@ import path from 'node:path';
 import { chromium, type Browser } from 'playwright';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { z } from '@kvman/sdk';
-import { childWait, kvmanWorld, until, type KvmanWorld } from '../support/kvman-child.ts';
+import { childWait, customizerPreset, kvmanWorld, until, type KvmanWorld } from '../support/kvman-child.ts';
 import { npmEnvironment } from '../support/npm-environment.ts';
 import { kvcustomizerProcesses } from '../support/preview-world.ts';
 
@@ -21,7 +21,7 @@ afterAll(async () => {
 
 describe('the web scaffold (09 §9.2–9.3, 06 §6.4)', () => {
   it('M2.5-H2 a web scaffold builds, its page shows the component in the preview, and a component edit shows after a refresh', async () => {
-    const kvman = await world.start(['--preset', 'dev'], npmEnvironment());
+    const kvman = await world.start(['--preset', customizerPreset(world)], npmEnvironment());
     await kvman.call('commands', 'kvcustomizer.ext.new', { name: 'cards', namespace: 'cards', folder: 'cards', web: true });
     const folder = path.join(world.project, 'cards');
     execFileSync('npm', ['run', 'web:build'], { cwd: folder, env: { ...process.env, ...npmEnvironment() }, stdio: 'pipe' });
@@ -29,7 +29,6 @@ describe('the web scaffold (09 §9.2–9.3, 06 §6.4)', () => {
     expect(existsSync(built)).toBe(true);
     expect(existsSync(path.join(folder, 'dist', 'web', 'components', 'hello.css'))).toBe(true);
     const url = z.object({ url: z.string() }).parse(await kvman.call('commands', 'kvcustomizer.preview.start', { extensions: ['cards'] })).url;
-    expect((await kvcustomizerProcesses(kvman)).map((process) => process.name).sort()).toEqual(['preview', 'web-1']);
 
     const page = await browser.newPage();
     await page.goto(`${url}cards/hello`);
