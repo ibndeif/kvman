@@ -8,6 +8,7 @@ const kvcustomizer = useKvcustomizer();
 const expected = [
   { name: 'docs', commands: ['list', 'get'] },
   { name: 'ext', commands: ['new', 'list', 'check', 'test'] },
+  { name: 'kvman', commands: ['model-list', 'model-set', 'settings-list', 'settings-set', 'settings-reset', 'extensions-list', 'extensions-install', 'extensions-uninstall', 'preset-get'] },
   { name: 'preset', commands: ['new', 'check'] },
   { name: 'preview', commands: ['start', 'stop', 'status'] },
 ];
@@ -34,13 +35,14 @@ describe("kvcustomizer's connectors and section (09 §9.1, §9.4)", { timeout: 3
   it('QA5-H7 and QA5-H8 each connector says when to use it, and the guide sends the connectors their work and file edits to fs', async () => {
     const { kernel } = await kvcustomizer.start();
     const descriptions = new Map((await kernel.exec('kvcoder.connector.list', {})).filter((connector) => connector.owner === '@kvman/kvcustomizer').map((connector) => [connector.name, connector.description]));
+    expect(descriptions.get('kvman')).toContain('Use it for any change to kvman itself.');
     expect(descriptions.get('ext')).toContain('run check, then test, after changing one');
     expect(descriptions.get('preset')).toContain('check it before running it');
     expect(descriptions.get('preview')).toContain('stop it when you are done');
     expect(descriptions.get('docs')).toContain('Use it before you write an extension, a preset, a view, or a component, and to learn how to use an extension that is installed.');
     const session = await kernel.exec('kvcoder.session.create', {});
     const { prompt } = await kernel.exec('kvcoder.prompt.get', { sessionId: session.id });
-    expect(prompt).toContain('Use the connectors `ext`, `preset`, `preview`, and `docs` for everything they cover, and the shell only for the rest. Edit a project\'s files with `fs`.');
+    expect(prompt).toContain('Use the connectors `kvman`, `ext`, `preset`, `preview`, and `docs` for everything they cover, and the shell only for the rest. Edit a project\'s files with `fs`.');
     expect(prompt).not.toContain('with the shell.');
   });
 
@@ -53,9 +55,9 @@ describe("kvcustomizer's connectors and section (09 §9.1, §9.4)", { timeout: 3
     const extension = listed.find((entry) => entry.name === '@kvman/kvcustomizer');
     expect(extension?.namespace).toBe('kvcustomizer');
     expect(extension?.commands.map((command) => command.name).sort()).toEqual(
-      ['kvcustomizer.ext.new', 'kvcustomizer.ext.check', 'kvcustomizer.ext.test', 'kvcustomizer.preset.new', 'kvcustomizer.preset.check', 'kvcustomizer.preview.start', 'kvcustomizer.preview.stop'].sort(),
+      ['kvcustomizer.ext.new', 'kvcustomizer.ext.check', 'kvcustomizer.ext.test', 'kvcustomizer.preset.new', 'kvcustomizer.preset.check', 'kvcustomizer.preview.start', 'kvcustomizer.preview.stop', 'kvcustomizer.app.model.set', 'kvcustomizer.app.settings.set', 'kvcustomizer.app.settings.reset', 'kvcustomizer.app.extensions.install', 'kvcustomizer.app.extensions.uninstall'].sort(),
     );
-    expect(extension?.queries.map((query) => query.name).sort()).toEqual(['kvcustomizer.docs.get', 'kvcustomizer.docs.list', 'kvcustomizer.ext.list', 'kvcustomizer.guides.get', 'kvcustomizer.guides.list', 'kvcustomizer.preview.status'].sort());
+    expect(extension?.queries.map((query) => query.name).sort()).toEqual(['kvcustomizer.app.extensions.list', 'kvcustomizer.app.model.list', 'kvcustomizer.app.preset.get', 'kvcustomizer.app.settings.list', 'kvcustomizer.docs.get', 'kvcustomizer.docs.list', 'kvcustomizer.ext.list', 'kvcustomizer.guides.get', 'kvcustomizer.guides.list', 'kvcustomizer.preview.status'].sort());
     for (const command of extension?.commands ?? []) expect(command.public).toBe(true);
     for (const query of extension?.queries ?? []) expect(query.public).toBe(true);
   });

@@ -16,10 +16,10 @@ kvcustomizer is the kvcoder extension for customizing kvman: developing extensio
 | `preset check '{ "file" }'` | `kvcustomizer.preset.check` | runs `kvman-preset check`, which validates the preset's schema and its references (extensions, settings, pages) → `[{ file, message, hint }]` |
 | `preview start '{ "extensions": [folders], "preset"?: file }'` | `kvcustomizer.preview.start` | starts `kvman-preview` (§9.3) through the process service → `{ url }` |
 | `preview stop` / `preview status` | `kvcustomizer.preview.stop` / `.status` | `{}` / `{ running: false }` or `{ running: true, url, extensions, startedAt }` |
-| `kvman model list` / `kvman model set '{ "model" }'` | `kvcustomizer.app.model.list` / `.set` | the models that can be called now (kvai's `kvai.model.list`, for each connected provider) / sets `kvai.defaultModel` (global) |
-| `kvman settings list` / `set '{ "key", "value", "scope" }'` / `reset '{ "key", "scope" }'` | `kvcustomizer.app.settings.list` / `.set` / `.reset` | `kernel.settings.list`, `.set`, `.reset` |
-| `kvman extensions list` / `install '{ "name", "source" }'` / `uninstall '{ "name" }'` | `kvcustomizer.app.extensions.list` / `.install` / `.uninstall` | `kernel.extensions.list` / `kernel.extensions.install` / `.uninstall` (§2.12) |
-| `kvman preset get` | `kvcustomizer.app.preset.get` | `kernel.preset.get` (§2.12) |
+| `kvman model-list` / `kvman model-set '{ "model" }'` | `kvcustomizer.app.model.list` / `.set` | the models that can be called now (kvai's `kvai.model.list`, for each connected provider) / sets `kvai.defaultModel` (global) |
+| `kvman settings-list` / `settings-set '{ "key", "value", "scope" }'` / `settings-reset '{ "key", "scope" }'` | `kvcustomizer.app.settings.list` / `.set` / `.reset` | `kernel.settings.list`, `.set`, `.reset` |
+| `kvman extensions-list` / `extensions-install '{ "name", "source" }'` / `extensions-uninstall '{ "name" }'` | `kvcustomizer.app.extensions.list` / `.install` / `.uninstall` | `kernel.extensions.list` / `kernel.extensions.install` / `.uninstall` (§2.12) |
+| `kvman preset-get` | `kvcustomizer.app.preset.get` | `kernel.preset.get` (§2.12) |
 | `docs list` | `kvcustomizer.guides.list` | `{ pages: [{ extension, topic, title }], problems: [{ extension, problem }] }`: the three built-in guides (`extension: "kvman"`), then the pages of every loaded extension that serves docs (§9.5); `problems` has one entry for each extension whose docs failed (ADR 0010, 15) |
 | `docs get '{ "extension"?, "topic" }'` | `kvcustomizer.guides.get` | `{ extension, topic, title, markdown }`; with no `extension` the topic is a built-in guide (`sdk`, `i18n`, `presets`), read from the testkit's `docs/`; `NOT_FOUND` for an unknown extension or topic |
 

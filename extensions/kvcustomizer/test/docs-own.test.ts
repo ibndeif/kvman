@@ -24,7 +24,7 @@ describe("kvcustomizer's own docs pair (09 §9.5, ADR 0010, 22)", { timeout: 30_
       expect(existsSync(path.join(docsFolder, link)), link).toBe(true);
     }
     const connectors = (await kernel.exec('kvcoder.connector.list', {})).filter((connector) => connector.owner === '@kvman/kvcustomizer').map((connector) => connector.name);
-    for (const word of ['ext', 'preset', 'preview', 'docs']) expect(connectors, word).toContain(word);
+    for (const word of ['kvman', 'ext', 'preset', 'preview', 'docs']) expect(connectors, word).toContain(word);
     const bins = Object.keys((JSON.parse(readFileSync(testkitPackage, 'utf8')) as { bin: Record<string, string> }).bin);
     for (const bin of markdown.match(/kvman-[a-z]+/g) ?? []) expect(bins, bin).toContain(bin);
   });

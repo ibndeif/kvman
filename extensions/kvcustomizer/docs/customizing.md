@@ -8,6 +8,7 @@ Each connector is a word the agent types in its shell tool, followed by a call a
 
 | Connector | Calls | Use it to |
 |---|---|---|
+| `kvman` | `model-list`, `model-set`, `settings-list`, `settings-set`, `settings-reset`, `extensions-list`, `extensions-install`, `extensions-uninstall`, `preset-get` | change the app you are running in: its default model, its settings, its extensions, and its preset |
 | `ext` | `new`, `list`, `check`, `test` | scaffold an extension project in the workspace, list the projects, type-check one and see what kvman would refuse, run its tests |
 | `preset` | `new`, `check` | write a preset file and check it before running it |
 | `preview` | `start`, `stop`, `status` | run projects in a separate kvman and get its URL |
@@ -16,6 +17,10 @@ Each connector is a word the agent types in its shell tool, followed by a call a
 Folders and files are always relative to the workspace folder, and must stay inside it.
 
 ```text
+kvman model-list
+kvman model-set '{"model":"anthropic/claude-sonnet-5-5"}'
+kvman extensions-install '{"name":"@acme/notes","source":"npm:1.2.3"}'
+kvman preset-get
 ext new '{"name":"notes","namespace":"notes","folder":"notes"}'
 ext check '{"folder":"notes"}'
 ext test '{"folder":"notes"}'
@@ -24,6 +29,15 @@ preview start '{"extensions":["notes"]}'
 docs list
 docs get '{"extension":"@kvman/kvwebui","topic":"views"}'
 ```
+
+## Changing the app you run in
+
+`kvman` is for the running app; `ext` is for a project in the workspace. A call to `kvman` does one of two things:
+
+- **Model and settings change at once.** `model-set` takes the full model id of a model `model-list` shows (a model of a connected provider or of a custom provider); `settings-set` and `settings-reset` take a setting key and a scope, `global` or `workspace`.
+- **Extensions and the preset change the preset file, and apply at the next start.** `extensions-install` takes a package name and a source (`npm:<exact version>`, `path:<folder>`, or `bundled` for a bundled extension), `extensions-uninstall` takes a name, and `preset-get` shows the preset as stored now. Nothing is installed, loaded, or trusted by the call: tell the person to restart kvman, and the terminal asks them to trust a new extension then. The first change to the bundled preset saves a copy of it as `<home>/presets/<name>.json`.
+
+None of these calls reads or changes a secret.
 
 ## The tools underneath
 
