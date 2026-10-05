@@ -11,7 +11,7 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `05-errors.md` | The Problem shape and the kernel's error codes |
 | `06-kvwebui.md` | The web app: frame, contributions, view trees, custom components, effects, built-in pages |
 | `07-kvai.md` | LLM calls, providers, models |
-| `08-kvcoder.md` | The coding harness: sessions, steps, the shell, connectors, sections, ask, subagents, its conversation UI |
+| `08-kvcoder.md` | The coding harness: sessions, steps, the `run` tool, connectors, sections, ask, subagents, its conversation UI |
 | `09-kvcustomizer.md` | The kvcoder extension that customizes kvman: connectors, scaffold, preview, guides |
 | `10-testkit.md` | `createTestKernel` |
 | `11-presets.md` | The bundled `coder` preset |
@@ -26,6 +26,7 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `adr/0007-milestones-and-testing.md` | Milestones, benchmarks, crash and UI testing, changesets |
 | `adr/0008-plan-review.md` | The full review before M1.1: running locally, platforms, and the fixes it made |
 | `adr/0009-implementation.md` | Questions answered while building, milestone by milestone |
+| `adr/0011-run-tool.md` | kvcoder's one `run` tool over connectors: the shell as a connector, help, background work, function tools |
 | `adr/0010-kvcustomizer.md` | kvdev becomes kvcustomizer: extension development for any harness, managing kvman, the `dev` preset removed |
 
 The plan is complete. Implementation starts with M1.1.

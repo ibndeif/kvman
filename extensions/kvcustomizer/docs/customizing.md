@@ -4,9 +4,9 @@ kvcustomizer is the extension that lets kvman's agent build and manage kvman its
 
 ## The connectors
 
-Each connector is a word the agent types in its shell tool, followed by a call and a JSON input.
+The agent calls each connector with kvcoder's `run` tool: `run { description, connector, command, payload }`. Every connector also has `help`, which describes its commands, and one command's payload with `{ "command": "<name>" }`.
 
-| Connector | Calls | Use it to |
+| Connector | Commands | Use it to |
 |---|---|---|
 | `kvman` | `model-list`, `model-set`, `settings-list`, `settings-set`, `settings-reset`, `extensions-list`, `extensions-install`, `extensions-uninstall`, `preset-get` | change the app you are running in: its default model, its settings, its extensions, and its preset |
 | `ext` | `new`, `list`, `check`, `test` | scaffold an extension project in the workspace, list the projects, type-check one and see what kvman would refuse, run its tests |
@@ -16,19 +16,18 @@ Each connector is a word the agent types in its shell tool, followed by a call a
 
 Folders and files are always relative to the workspace folder, and must stay inside it.
 
-```text
-kvman model-list
-kvman model-set '{"model":"anthropic/claude-sonnet-5-5"}'
-kvman extensions-install '{"name":"@acme/notes","source":"npm:1.2.3"}'
-kvman preset-get
-ext new '{"name":"notes","namespace":"notes","folder":"notes"}'
-ext check '{"folder":"notes"}'
-ext test '{"folder":"notes"}'
-preset new '{"name":"notes-app","file":"notes-app.json"}'
-preview start '{"extensions":["notes"]}'
-docs list
-docs get '{"extension":"@kvman/kvwebui","topic":"views"}'
+The payload is the command's input as JSON:
+
+```json
+{ "description": "Scaffolding the notes extension", "connector": "ext", "command": "new", "payload": { "name": "notes", "namespace": "notes", "folder": "notes" } }
+{ "description": "Checking the notes project", "connector": "ext", "command": "check", "payload": { "folder": "notes" } }
+{ "description": "Switching the default model", "connector": "kvman", "command": "model-set", "payload": { "model": "anthropic/claude-sonnet-5-5" } }
+{ "description": "Adding the notes extension to the app", "connector": "kvman", "command": "extensions-install", "payload": { "name": "@acme/notes", "source": "npm:1.2.3" } }
+{ "description": "Previewing the notes project", "connector": "preview", "command": "start", "payload": { "extensions": ["notes"] } }
+{ "description": "Reading the views guide", "connector": "docs", "command": "get", "payload": { "extension": "@kvman/kvwebui", "topic": "views" } }
 ```
+
+A command that takes nothing, such as `ext list`, `kvman preset-get`, or `docs list`, needs no payload.
 
 ## Changing the app you run in
 

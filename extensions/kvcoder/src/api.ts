@@ -8,14 +8,14 @@ type Thinking = 'off' | 'minimal' | 'low' | 'medium' | 'high';
 type Status = 'idle' | 'running' | 'waiting';
 type SessionId = { sessionId: string };
 type Example = { description: string; input: Json };
-type Binary = { check: string; install?: string };
+type Binary = { check: string; install?: string; help?: string };
 type Connector =
   | { name: string; description: string; commands: { name: string; command: string; examples?: Example[] }[] }
   | { name: string; description: string; binary: Binary };
 type ConnectorRow = { name: string; description: string; owner: string; kind: 'commands' | 'binary'; commands?: { name: string; command: string; examples: Example[] }[]; binary?: Binary };
 type Point = 'kvcoder.session.created' | 'kvcoder.session.deleted' | 'kvcoder.session.forked' | 'kvcoder.turn.started' | 'kvcoder.turn.ended' | 'kvcoder.session.waiting';
 type Place = { global?: boolean; sessionId?: string };
-type JobRow = { id: string; kind: 'process' | 'connector' | 'subagent'; title: string; call: string; status: string; startedAt: string; endedAt?: string; exitCode?: number; links: string[] };
+type JobRow = { id: string; kind: 'process' | 'subagent'; title: string; call: string; status: string; startedAt: string; endedAt?: string; exitCode?: number; links: string[] };
 type Send = { sessionId: string; text: string; fileIds?: string[] };
 
 declare module '@kvman/sdk' {

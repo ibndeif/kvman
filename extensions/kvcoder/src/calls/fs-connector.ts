@@ -1,24 +1,19 @@
 import type { Stats } from 'node:fs';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { ProblemError, z, type Ctx } from '@kvman/sdk';
-import { builtinHelp, callInput, errorOutput, jsonOutput, type CallResult } from '../connector-line.ts';
-import { invalidInput } from './invalid-input.ts';
+import { z, type Ctx } from '@kvman/sdk';
 import { applyEdits } from '../files/edit-text.ts';
-import { inOrder } from '../files/file-queue.ts';
-import { lexicalPath, resolveInWorkspace } from '../files/workspace-path.ts';
+import { listEntries } from '../files/list-entries.ts';
+import { readLines } from '../files/read-file.ts';
+import { searchText } from '../files/search-text.ts';
+import { resolveInWorkspace } from '../files/workspace-path.ts';
 import { invalid, notFound } from '../problems.ts';
-import { withBody } from './write-body.ts';
+import { callInput, payloads } from '../schemas/payloads.ts';
+import { builtinCommands } from './builtin-connectors.ts';
 
-// The `fs` connector (plan 08 §8.5, ADR 0009, 157 to 160): `write` creates or replaces a file, `edit` replaces text
-// in one, both inside the workspace folder. It runs in the step, after the approval the shell's calls get.
-
-const filePath = z.string().min(1);
-
-const inputSchemas = {
-  write: z.strictObject({ path: filePath, content: z.string() }),
-  edit: z.strictObject({ path: filePath, edits: z.array(z.strictObject({ oldText: z.string(), newText: z.string() })).min(1) }),
-};
+// The `fs` connector (plan 08 §8.5, ADR 0009, 157 to 160; ADR 0011, 8): `read`, `list`, and `search` look inside the
+// workspace folder; `write` creates or replaces a file and `edit` replaces text in one, after the approval the shell's
+// calls get. The step runs the changes to one file one after another.
 
 const strictText = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
 
@@ -26,6 +21,15 @@ const missing = (error: unknown): boolean => error instanceof Error && 'code' in
 
 // The file system's own refusals (a folder in the way, no permission) are the model's to read and fix.
 const refusedByFileSystem = (error: unknown): error is Error & { code: string } => error instanceof Error && 'code' in error && typeof error.code === 'string' && /^E[A-Z]+$/.test(error.code);
+
+async function asProblems<Result>(run: () => Promise<Result>): Promise<Result> {
+  try {
+    return await run();
+  } catch (error) {
+    if (refusedByFileSystem(error)) throw invalid(error.message);
+    throw error;
+  }
+}
 
 async function statOrUndefined(target: string): Promise<Stats | undefined> {
   try {
@@ -50,44 +54,59 @@ async function readText(target: string, requested: string): Promise<string> {
   }
 }
 
-async function writeTo(ctx: Ctx, input: z.output<typeof inputSchemas.write>): Promise<CallResult> {
+async function writeTo(ctx: Ctx, input: z.output<typeof payloads.fsWrite>) {
   const target = await resolveInWorkspace(ctx.job.workspace.path, input.path);
   const existing = await statOrUndefined(target);
   if (existing?.isDirectory() === true) throw invalid(`${input.path} is a folder.`, { path: input.path });
   await mkdir(path.dirname(target), { recursive: true });
   ctx.job.signal.throwIfAborted();
   await writeFile(target, input.content, 'utf8');
-  return jsonOutput({ path: input.path, created: existing === undefined, bytes: Buffer.byteLength(input.content) });
+  return { path: input.path, created: existing === undefined, bytes: Buffer.byteLength(input.content) };
 }
 
-async function editIn(ctx: Ctx, input: z.output<typeof inputSchemas.edit>): Promise<CallResult> {
+async function editIn(ctx: Ctx, input: z.output<typeof payloads.fsEdit>) {
   const target = await resolveInWorkspace(ctx.job.workspace.path, input.path);
   const edited = applyEdits(await readText(target, input.path), input.edits);
   ctx.job.signal.throwIfAborted();
   await writeFile(target, edited.text, 'utf8');
-  return jsonOutput({ path: input.path, replacements: edited.replacements, firstChangedLine: edited.firstChangedLine });
+  return { path: input.path, replacements: edited.replacements, firstChangedLine: edited.firstChangedLine };
 }
 
-async function run(ctx: Ctx, command: 'write' | 'edit', input: Record<string, unknown>): Promise<CallResult> {
-  try {
-    return command === 'write' ? await writeTo(ctx, inputSchemas.write.parse(input)) : await editIn(ctx, inputSchemas.edit.parse(input));
-  } catch (error) {
-    if (error instanceof ProblemError) return errorOutput(error.problem);
-    if (refusedByFileSystem(error)) return errorOutput({ code: 'VALIDATION_FAILED', message: error.message });
-    throw error;
-  }
-}
+const commands = builtinCommands.fs;
 
-/** An `fs` call: its result now, after the calls before it on the same file. */
-export function fsCall(ctx: Ctx, words: readonly string[], stdin: string | null): Promise<CallResult> {
-  if (words.length === 1 && words[0] === '-h') return Promise.resolve({ output: builtinHelp.fs, exitCode: 0 });
-  const body = withBody(words, stdin);
-  if ('output' in body) return Promise.resolve(body);
-  const call = callInput(body.words, body.stdin, 'fs');
-  if ('output' in call) return Promise.resolve(call);
-  const command = call.command;
-  if (command !== 'write' && command !== 'edit') return Promise.resolve(errorOutput({ code: 'NOT_FOUND', message: `fs has no command ${command}; run \`fs -h\`.` }));
-  const parsed = inputSchemas[command].safeParse(call.input);
-  if (!parsed.success) return Promise.resolve(invalidInput('fs', command, parsed.error.issues));
-  return inOrder(lexicalPath(ctx.job.workspace.path, parsed.data.path), () => run(ctx, command, parsed.data));
+export function registerFsConnector(ctx: Ctx): void {
+  ctx.registerQuery('kvcoder.fs.file.get', {
+    description: commands.read.description,
+    input: callInput(payloads.fsRead),
+    output: z.object({ path: z.string(), fromLine: z.number().int(), totalLines: z.number().int(), content: z.string() }),
+    handle: ({ payload }) => asProblems(() => readLines(ctx.job.workspace.path, payload)),
+  });
+  ctx.registerQuery('kvcoder.fs.entry.list', {
+    description: commands.list.description,
+    input: callInput(payloads.fsList),
+    output: z.object({ path: z.string(), entries: z.array(z.object({ name: z.string(), kind: z.enum(['file', 'folder']), bytes: z.number().int() })), truncated: z.boolean() }),
+    handle: ({ payload }) => asProblems(() => listEntries(ctx.job.workspace.path, payload)),
+  });
+  ctx.registerQuery('kvcoder.fs.text.search', {
+    description: commands.search.description,
+    input: callInput(payloads.fsSearch),
+    output: z.object({ matches: z.array(z.object({ path: z.string(), line: z.number().int(), text: z.string() })), truncated: z.boolean() }),
+    handle: ({ payload }) => asProblems(() => searchText(ctx.job.workspace.path, payload, ctx.job.signal)),
+  });
+  ctx.registerCommand('kvcoder.fs.write', {
+    description: commands.write.description,
+    input: callInput(payloads.fsWrite),
+    output: z.object({ path: z.string(), created: z.boolean(), bytes: z.number().int() }),
+    retries: 0,
+    maxInputBytes: 33_554_432,
+    handle: ({ payload }) => asProblems(() => writeTo(ctx, payload)),
+  });
+  ctx.registerCommand('kvcoder.fs.edit', {
+    description: commands.edit.description,
+    input: callInput(payloads.fsEdit),
+    output: z.object({ path: z.string(), replacements: z.number().int(), firstChangedLine: z.number().int() }),
+    retries: 0,
+    maxInputBytes: 33_554_432,
+    handle: ({ payload }) => asProblems(() => editIn(ctx, payload)),
+  });
 }

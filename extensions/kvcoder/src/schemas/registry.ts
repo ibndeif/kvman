@@ -7,13 +7,13 @@ export const kebab = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 /** A connector or connector command name: lowercase kebab case (ADR 0009, 100). */
 export const wordSchema = z.string().regex(kebab, 'Use lowercase kebab case, such as todo or open-items.');
 
-/** A binary connector: a program the agent runs in the real shell. */
-export const binarySchema = z.object({ check: z.string().min(1), install: z.string().min(1).exactOptional() });
+/** A binary connector: a program the agent runs in the real shell; `help` is the line that prints its help, when that isn't `--help`. */
+export const binarySchema = z.object({ check: z.string().min(1), install: z.string().min(1).exactOptional(), help: z.string().min(1).exactOptional() });
 
 export const exampleSchema = z.object({ description: z.string().min(1), input: z.json() });
 
-/** A commands connector's command: the word, the registering extension's public command, and examples. */
-export const connectorCommandSchema = z.object({ name: wordSchema, command: z.string().min(1), examples: z.array(exampleSchema).exactOptional() });
+/** A commands connector's command: its name, the registering extension's public command, and examples. `help` is every connector's own. */
+export const connectorCommandSchema = z.object({ name: wordSchema.refine((name) => name !== 'help', "help is every connector's own command; name this one differently."), command: z.string().min(1), examples: z.array(exampleSchema).exactOptional() });
 
 export const connectorRegisterSchema = z.union([
   z.strictObject({ name: wordSchema, description: z.string().min(1), commands: z.array(connectorCommandSchema).min(1) }),
@@ -29,7 +29,7 @@ export const connectorDocSchema = z.object({
   description: z.string(),
   kind: z.enum(['commands', 'binary']),
   commands: z.array(z.object({ name: z.string(), command: z.string(), examples: z.array(exampleSchema) })).nullable(),
-  binary: z.object({ check: z.string(), install: z.string().nullable() }).nullable(),
+  binary: z.object({ check: z.string(), install: z.string().nullable(), help: z.string().nullable().default(null) }).nullable(),
 });
 
 /** The session points (plan 08 §8.4). */

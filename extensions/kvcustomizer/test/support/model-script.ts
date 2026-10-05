@@ -5,10 +5,15 @@ import type { FakeOpenAI, FakeReply } from '@kvman/testkit/fake-openai';
 
 let counter = 0;
 
-/** A reply that calls the shell tool once with `command`. */
-export function calls(command: string): FakeReply {
+/** A reply that calls the `run` tool once: a connector's command with its payload. */
+export function runs(connector: string, command: string, payload: Record<string, unknown> = {}): FakeReply {
   counter += 1;
-  return { chunks: [{ toolCall: { id: `call-${String(counter)}`, name: 'bash', arguments: { title: 'A walkthrough step', description: 'A walkthrough step.', command, risky: false } } }] };
+  return { chunks: [{ toolCall: { id: `call-${String(counter)}`, name: 'run', arguments: { description: 'A walkthrough step.', connector, command, payload } } }] };
+}
+
+/** A reply that runs one line in the shell, not marked risky. */
+export function shell(line: string): FakeReply {
+  return runs('shell', 'exec', { line, risky: false });
 }
 
 /** A reply of plain text. */

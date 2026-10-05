@@ -50,6 +50,7 @@ ${gateCode}
           { name: 'add', command: 'todo.item.add', examples: [{ description: 'Add an item', input: { text: "it's done" } }] },
           { name: 'wait', command: 'todo.item.wait' },
           { name: 'fail', command: 'todo.item.fail' },
+          { name: 'list', command: 'todo.item.list' },
         ],
       });
     },

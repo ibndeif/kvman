@@ -2,7 +2,7 @@
   "name": "@kvman/kvcoder",
   "version": "0.1.0",
   "private": true,
-  "description": "kvcoder: the app-building harness, with one shell tool, connectors, sections, and its conversation UI.",
+  "description": "kvcoder: the app-building harness, with one run tool over connectors, sections, and its conversation UI.",
   "type": "module",
   "main": "dist/index.js",
   "exports": {
@@ -12,9 +12,9 @@
       "default": "./dist/index.js"
     },
     "./testing": {
-      "@kvman/source": "./src/connector-line.ts",
-      "types": "./dist/connector-line.d.ts",
-      "default": "./dist/connector-line.js"
+      "@kvman/source": "./src/connector-call.ts",
+      "types": "./dist/connector-call.d.ts",
+      "default": "./dist/connector-call.js"
     }
   },
   "files": [

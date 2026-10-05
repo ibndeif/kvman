@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { calls, says } from './support/model-script.ts';
+import { runs, says, shell } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
@@ -14,7 +14,7 @@ describe('turn limits and failures (08 §8.1)', { timeout: 30_000 }, () => {
   it("M2.4-E18 at kvcoder.maxSteps the step's results are appended, then the turn ends maxSteps with a notice", async () => {
     const { kernel, fake } = await kvcoder.start({ settings: { 'kvcoder.maxSteps': 2 } });
     const sessionId = await newSession(kernel);
-    fake.reply(calls('echo 1'), calls('echo 2'), says('never'));
+    fake.reply(runs(shell('echo 1')), runs(shell('echo 2')), says('never'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     expect(fake.requests()).toHaveLength(2);

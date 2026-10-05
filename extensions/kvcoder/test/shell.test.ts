@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { alive } from './support/alive.ts';
 import { wait } from './support/wait.ts';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { calls, says, toolResults } from './support/model-script.ts';
+import { runs, says, shell, toolResults } from './support/model-script.ts';
 import { fileExists, newSession, turnState } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
@@ -20,10 +20,10 @@ describe('the real shell (08 §8.3)', { timeout: 30_000 }, () => {
     posixShell();
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    fake.reply(calls('cd /', 'pwd'), says('ok'));
+    fake.reply(runs(shell('cd /'), shell('pwd')), says('ok'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
-    fake.reply(calls('read line; echo "read:$?"', 'echo out; echo err >&2; exit 3'), says('ok'));
+    fake.reply(runs(shell('read line; echo "read:$?"'), shell('echo out; echo err >&2; exit 3')), says('ok'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'again' });
     await kernel.clock.advance(0);
     const results = toolResults(fake);
@@ -31,14 +31,14 @@ describe('the real shell (08 §8.3)', { timeout: 30_000 }, () => {
     expect(results[2]).toBe('read:1\n[exit code 0]');
     expect(results[3]).toMatch(/^(out\nerr|err\nout)\n\[exit code 3\]$/);
     const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });
-    expect(messages.at(-2)?.content['details']).toMatchObject({ command: 'echo out; echo err >&2; exit 3', exitCode: 3, durationMs: expect.any(Number) as unknown });
+    expect(messages.at(-2)?.content['details']).toMatchObject({ description: 'A test call.', connector: 'shell', command: 'exec', output: expect.stringContaining('out') as unknown, exitCode: 3, durationMs: expect.any(Number) as unknown });
   });
 
   it('M2.4-E26 a call past its timeout is killed with its process group and reports the timeout', async () => {
     posixShell();
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    fake.reply(calls({ command: 'sleep 30 & echo $! > bg.pid; echo started; sleep 30', timeoutMs: 1_000 }), says('ok'));
+    fake.reply(runs(shell('sleep 30 & echo $! > bg.pid; echo started; sleep 30', { timeoutMs: 1_000 })), says('ok'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     expect(toolResults(fake)).toEqual(['started\n[timed out after 1 s; the process tree was killed]\n[exit code 124]']);
@@ -50,7 +50,7 @@ describe('the real shell (08 §8.3)', { timeout: 30_000 }, () => {
     posixShell();
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    fake.reply(calls('sleep 30 & echo $! > bg.pid; wait'));
+    fake.reply(runs(shell('sleep 30 & echo $! > bg.pid; wait')));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     const pidFile = path.join(kernel.homeFolder, 'bg.pid');
     await vi.waitFor(() => expect(fileExists(pidFile) && readFileSync(pidFile, 'utf8').trim() !== '').toBe(true), wait);
@@ -65,11 +65,11 @@ describe('the real shell (08 §8.3)', { timeout: 30_000 }, () => {
     posixShell();
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    fake.reply({ chunks: [{ toolCall: { id: 'a', name: 'bash', arguments: { title: 'No command', description: 'No command.' } } }, { toolCall: { id: 'b', name: 'python', arguments: { title: 'x', command: 'ls', description: 'x', risky: false } } }] }, says('ok'));
+    fake.reply({ chunks: [{ toolCall: { id: 'a', name: 'run', arguments: { description: 'No command.', connector: 'shell' } } }, { toolCall: { id: 'b', name: 'python', arguments: { command: 'ls' } } }] }, says('ok'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     const [missing, wrong] = toolResults(fake);
-    expect(missing).toMatch(/^error VALIDATION_FAILED: The call's arguments are invalid: command: .*\n\[exit code 1\]$/);
-    expect(wrong).toBe("error VALIDATION_FAILED: The call's arguments are invalid: the tool is bash, not python.\n[exit code 1]");
+    expect(missing).toMatch(/^error VALIDATION_FAILED: The call's arguments are invalid: command: .* \(it must be one of the connector's commands, or help\)\. Call run again with the arguments fixed\.$/);
+    expect(wrong).toBe("error VALIDATION_FAILED: The call's arguments are invalid: the tool is run, not python.");
   });
 });

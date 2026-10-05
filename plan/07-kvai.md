@@ -25,7 +25,7 @@ kvai.complete {
 - **Streaming.** While the call runs, kvai reports these through `ctx.job.progress`. They reach the root job's stream as `{ source: '@kvman/kvai', data }`, so the UI of the harness's turn sees them.
   - `{ type: 'text', delta }`
   - `{ type: 'thinking', delta }`
-  - `{ type: 'toolcall', name }`, when a tool call starts, then `{ type: 'toolcall', name, arguments }` each time one more argument is complete and once more with all of them when the call ends (`arguments` holds the completed values only, ADR 0009, 144, with a string value over 16 KiB sent as `null`, ADR 0009, 189)
+  - `{ type: 'toolcall', name }`, when a tool call starts, then `{ type: 'toolcall', name, arguments }` each time one more argument is complete and once more with all of them when the call ends (`arguments` holds the completed values only, ADR 0009, 144, with a value over 16 KiB, a string's bytes or any other value's JSON, sent as `null`, ADR 0009, 189, and ADR 0011, 22)
 - **Cancel.** The job's signal aborts the provider call.
 - **Failures.** The harness decides whether to call again. Each Problem's `params` name what failed (ADR 0009, 63).
 

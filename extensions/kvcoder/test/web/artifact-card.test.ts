@@ -11,7 +11,7 @@ describe('an artifact write or edit as a card (08 §8.7, ADR 0009, 177)', () => 
     expect(wrapper.find('[data-test="artifact-card-title"]').text()).toBe('The plan');
     expect(wrapper.find('[data-test="artifact-card-version"]').text()).toBe('Version 2');
     expect(wrapper.find('[data-test="artifact-open"]').exists()).toBe(true);
-    expect(wrapper.find('[data-test="shell-result"]').exists()).toBe(false);
+    expect(wrapper.find('[data-test="call-card"]').exists()).toBe(false);
     expect(wrapper.text()).not.toContain('# The plan');
     await wrapper.find('[data-test="artifact-open"]').trigger('click');
     expect(wrapper.emitted('openArtifact')).toEqual([['plan']]);

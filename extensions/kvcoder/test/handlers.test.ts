@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { calls, says } from './support/model-script.ts';
+import { command, runs, says } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
@@ -28,7 +28,7 @@ describe('session points (08 §8.4)', { timeout: 30_000 }, () => {
     const { kernel, fake } = await kvcoder.start();
     for (const point of points) await kernel.exec('kvcoder.handler.register', { point, command: 'todo.seen' }, todo);
     const sessionId = await newSession(kernel);
-    fake.reply({ ...calls(`ask confirm '{"prompt":"?"}'`), usage: { input: 7, output: 3 } }, says('ok'));
+    fake.reply({ ...runs(command('ask', 'confirm', {"prompt":"?"})), usage: { input: 7, output: 3 } }, says('ok'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     const { turn } = await turnState(kernel, sessionId);

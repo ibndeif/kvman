@@ -5,28 +5,38 @@ import type { FakeOpenAI, FakeReply } from '@kvman/testkit/fake-openai';
 
 let counter = 0;
 
-/** A shell call: its command, or the command with the tool's other fields. */
-export type ShellCallSpec = string | { command: string; risky?: boolean; mode?: 'sync' | 'async'; timeoutMs?: number };
+/** A call of the `run` tool: a connector's command with its payload, and what it tells the person. */
+export type RunCallSpec = { connector: string; command: string; payload?: Record<string, unknown>; description?: string };
 
-/** A reply that calls the shell tool once per command, in order. */
-export function calls(...commands: readonly ShellCallSpec[]): FakeReply {
+/** A reply that calls any tool with any arguments, as a model that gets a call wrong does. */
+export function rawCall(name: string, args: Record<string, unknown>): FakeReply {
+  counter += 1;
+  return { chunks: [{ toolCall: { id: `call-${counter}`, name, arguments: args } }] };
+}
+
+/** A reply that calls the `run` tool once per call, in order. */
+export function runs(...calls: readonly RunCallSpec[]): FakeReply {
   return {
-    chunks: commands.map((entry) => {
-      const call = typeof entry === 'string' ? { command: entry } : entry;
+    chunks: calls.map((call) => {
       counter += 1;
-      return { toolCall: { id: `call-${counter}`, name: 'bash', arguments: { title: 'A test step', description: 'A test call.', risky: false, ...call } } };
+      return { toolCall: { id: `call-${counter}`, name: 'run', arguments: { description: call.description ?? 'A test call.', connector: call.connector, command: call.command, ...(call.payload === undefined ? {} : { payload: call.payload }) } } };
     }),
   };
 }
 
-/** An `fs` call with its JSON on stdin, as the model types it. */
-export function fsCommand(command: 'write' | 'edit', input: unknown): string {
-  return `fs ${command} <<'EOF'\n${JSON.stringify(input)}\nEOF`;
+/** A call of one connector command. */
+export function command(connector: string, name: string, payload?: Record<string, unknown>): RunCallSpec {
+  return { connector, command: name, ...(payload === undefined ? {} : { payload }) };
 }
 
-/** An `artifact` call with its JSON on stdin, as the model types it. */
-export function artifactCommand(command: 'write' | 'edit' | 'get', input: unknown): string {
-  return `artifact ${command} <<'EOF'\n${JSON.stringify(input)}\nEOF`;
+/** An `fs` call; a write or an edit runs at once, not risky unless the payload says so. */
+export function fsCall(name: 'read' | 'list' | 'search' | 'write' | 'edit', payload: Record<string, unknown> = {}): RunCallSpec {
+  return command('fs', name, name === 'write' || name === 'edit' ? { risky: false, ...payload } : payload);
+}
+
+/** A `shell exec` call that runs at once: its line, not risky unless the payload says so. */
+export function shell(line: string, payload: Record<string, unknown> = {}): RunCallSpec {
+  return { connector: 'shell', command: 'exec', payload: { line, risky: false, ...payload } };
 }
 
 /** A reply of plain text. */
@@ -35,7 +45,7 @@ export function says(text: string): FakeReply {
 }
 
 const wireMessageSchema = z.object({ role: z.string(), content: z.unknown().optional(), tool_call_id: z.string().optional(), tool_calls: z.array(z.unknown()).optional() });
-const bodySchema = z.object({ messages: z.array(wireMessageSchema) });
+const bodySchema = z.object({ messages: z.array(wireMessageSchema), tools: z.array(z.unknown()).optional() });
 
 export type WireMessage = z.output<typeof wireMessageSchema>;
 
@@ -61,4 +71,10 @@ export function toolResults(fake: FakeOpenAI, index = -1): string[] {
 /** The system prompt of a request. */
 export function systemPrompt(fake: FakeOpenAI, index = -1): string {
   return textOf(requestMessages(fake, index).find((message) => message.role === 'system' || message.role === 'developer'));
+}
+
+/** The tools a request offered the model. */
+export function requestTools(fake: FakeOpenAI, index = -1): unknown[] {
+  const request = fake.requests().at(index);
+  return request === undefined ? [] : (bodySchema.parse(request.body).tools ?? []);
 }

@@ -1,5 +1,4 @@
-// What a call returns to the model, and how long output is cut (plan 08 §8.3, ADR 0009, 93): apart from the line parser,
-// which as an exported subpath may import only the SDK.
+// What a call returns to the model, and how long output is cut (plan 08 §8.3, ADR 0009, 93).
 
 /** Output over this many bytes is cut. */
 export const outputLimit = 30 * 1024;
@@ -18,12 +17,7 @@ export function truncate(text: string): string {
   return cutOutput(bytes.subarray(0, outputKept), bytes.length - 2 * outputKept, bytes.subarray(bytes.length - outputKept));
 }
 
-/** The text a call returns to the model: the output (already cut, trailing newlines dropped), then any notes, then its exit code (ADR 0009, 93). */
+/** The text a line in the shell returns to the model: the output (already cut, trailing newlines dropped), then any notes, then its exit code (ADR 0009, 93). */
 export function resultLines(output: string, exitCode: number, notes: readonly string[] = []): string {
   return [output.replace(/[\r\n]+$/, ''), ...notes, `[exit code ${exitCode}]`].filter((part) => part !== '').join('\n');
-}
-
-/** The same, cutting the output first. */
-export function resultText(output: string, exitCode: number, notes: readonly string[] = []): string {
-  return resultLines(truncate(output), exitCode, notes);
 }

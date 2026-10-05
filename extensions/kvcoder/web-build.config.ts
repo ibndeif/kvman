@@ -7,7 +7,7 @@ import { build } from 'vite';
 // `dist/web/components/<name>.js` and `<name>.css`, the two files kvwebui loads, with `vue` left to kvwebui's import
 // map. One build per component keeps each self-contained: no shared chunk holds another component's styles.
 const root = fileURLToPath(new URL('.', import.meta.url));
-const components = ['conversation', 'sessions', 'question', 'shell-result'];
+const components = ['conversation', 'sessions', 'question', 'call'];
 
 rmSync(`${root}/dist/web`, { recursive: true, force: true });
 for (const name of components) {

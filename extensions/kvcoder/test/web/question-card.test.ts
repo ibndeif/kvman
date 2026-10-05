@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import ApprovalsCard from '../../web/src/ApprovalsCard.vue';
 import PendingCards from '../../web/src/PendingCards.vue';
 import QuestionCard from '../../web/src/QuestionCard.vue';
-import ShellResult from '../../web/src/ShellResult.vue';
+import CallCard from '../../web/src/CallCard.vue';
 import { createFakeKvman } from './support/fake-kvman.ts';
 import { mounted } from './support/fixtures.ts';
 
@@ -30,9 +30,9 @@ describe('question cards (08 §8.5, ADR 0009, 104, 141, 143)', () => {
 
   it("M2.4-E60 one reply's approvals share a card with Allow, Deny, and Allow all, each saying what was decided", async () => {
     const approvals = [
-      { questionId: 'a1', title: '', command: 'npm ci', description: 'Reinstall.' },
-      { questionId: 'a2', title: '', command: 'npm run build', description: 'Build.' },
-      { questionId: 'a3', title: '', command: 'rm -rf dist', description: 'Clean.' },
+      { questionId: 'a1', subject: 'npm ci', description: 'Reinstall.' },
+      { questionId: 'a2', subject: 'npm run build', description: 'Build.' },
+      { questionId: 'a3', subject: 'rm -rf dist', description: 'Clean.' },
     ];
     const card = await mounted(ApprovalsCard, createFakeKvman(), { approvals });
     expect(card.findAll('[data-test^="approval-"]').map((row) => row.text())).toEqual(['Reinstall.npm ciDenyAllow', 'Build.npm run buildDenyAllow', 'Clean.rm -rf distDenyAllow']);
@@ -42,41 +42,37 @@ describe('question cards (08 §8.5, ADR 0009, 104, 141, 143)', () => {
     expect(card.emitted('decide')).toEqual([[{ approvals: [approvals[0]], confirmed: false }], [{ approvals: [approvals[1]], confirmed: true }], [{ approvals, confirmed: true }]]);
   });
 
-  it('QA3-H5 an approval shows the call\'s title, description, and command', async () => {
-    const approvals = [{ questionId: 'a1', title: 'Install the packages', command: 'npm ci', description: 'Installs what package.json lists.' }];
-    const card = await mounted(ApprovalsCard, createFakeKvman(), { approvals });
-    const row = card.find('[data-test="approval-a1"]');
-    expect(row.find('[data-test="call-title"]').text()).toBe('Install the packages');
-    expect(row.find('[data-test="call-description"]').text()).toBe('Installs what package.json lists.');
-    expect(row.find('[data-test="call-command"]').text()).toBe('npm ci');
+  it('QA18-H21 and QA3-H5 an approval shows the description, the connector command, and the line it would run or the file it would change', async () => {
+    const approval = (questionId: string, question: Record<string, unknown>) => ({ toolCallId: questionId, kind: 'approval' as const, questionId, question, childSessionId: null });
+    const pending = [
+      approval('a1', { description: 'Installing the packages.', connector: 'shell', command: 'exec', payload: { line: 'npm ci', risky: true } }),
+      approval('a2', { description: 'Writing the page.', connector: 'fs', command: 'write', payload: { path: 'index.html', content: '<p>hi</p>' } }),
+      approval('a3', { description: 'Checking what changed.', connector: 'git', command: 'exec', payload: { args: 'status --short' } }),
+    ];
+    const cards = await mounted(PendingCards, createFakeKvman(), { pending });
+    const row = (id: string, part: string): string => cards.find(`[data-test="approval-${id}"] [data-test="call-${part}"]`).text();
+    expect([row('a1', 'description'), row('a1', 'label'), row('a1', 'subject')]).toEqual(['Installing the packages.', 'shell · exec', 'npm ci']);
+    expect([row('a2', 'description'), row('a2', 'label'), row('a2', 'subject')]).toEqual(['Writing the page.', 'fs · write', 'index.html']);
+    expect([row('a3', 'label'), row('a3', 'subject')]).toEqual(['git · exec', 'git status --short']);
   });
 
-  it('QA11-H5 an approval with only a command shows the command, with no empty title or description line, and PendingCards builds it from the stored question', async () => {
-    const card = await mounted(ApprovalsCard, createFakeKvman(), { approvals: [{ questionId: 'a1', command: 'npm ci' }] });
-    const row = card.find('[data-test="approval-a1"]');
-    expect(row.find('[data-test="call-title"]').exists()).toBe(false);
-    expect(row.find('[data-test="call-description"]').exists()).toBe(false);
-    expect(row.find('[data-test="call-command"]').text()).toBe('npm ci');
-
+  it('QA11-H5 an approval stored before the run tool shows its command, with no empty description line', async () => {
     const pending = await mounted(PendingCards, createFakeKvman(), { pending: [{ toolCallId: 'c1', kind: 'approval', questionId: 'a2', question: { command: 'ls -la', mode: 'sync', timeoutMs: 120000 }, childSessionId: null }] });
-    expect(pending.find('[data-test="approval-a2"] [data-test="call-command"]').text()).toBe('ls -la');
-    expect(pending.find('[data-test="approval-a2"] [data-test="call-title"]').exists()).toBe(false);
-
-    const described = await mounted(PendingCards, createFakeKvman(), { pending: [{ toolCallId: 'c2', kind: 'approval', questionId: 'a3', question: { description: 'Lists the files.', command: 'ls', mode: 'sync', timeoutMs: 120000 }, childSessionId: null }] });
-    expect(described.find('[data-test="approval-a3"] [data-test="call-title"]').text()).toBe('Lists the files.');
-    expect(described.find('[data-test="approval-a3"] [data-test="call-description"]').exists()).toBe(false);
+    expect(pending.find('[data-test="approval-a2"] [data-test="call-subject"]').text()).toBe('ls -la');
+    expect(pending.find('[data-test="approval-a2"] [data-test="call-description"]').exists()).toBe(false);
+    expect(pending.find('[data-test="approval-a2"] [data-test="call-label"]').exists()).toBe(false);
   });
 
-  it('QA3-H19 an async approval says it runs in the background, and a sync one does not', async () => {
-    const pending = (mode: string) => [{ toolCallId: 'c1', kind: 'approval' as const, questionId: `a-${mode}`, question: { title: 'Start the server', command: 'python3 -m http.server 8000', description: 'Serves the app.', mode, timeoutMs: 120_000 }, childSessionId: null }];
-    const asyncCard = await mounted(PendingCards, createFakeKvman(), { pending: pending('async') });
-    expect(asyncCard.find('[data-test="call-background"]').text()).toBe('Runs in the background');
-    const syncCard = await mounted(PendingCards, createFakeKvman(), { pending: pending('sync') });
-    expect(syncCard.find('[data-test="call-background"]').exists()).toBe(false);
+  it('QA3-H19 a background approval says it runs in the background, and another does not', async () => {
+    const pending = (background: boolean) => [{ toolCallId: 'c1', kind: 'approval' as const, questionId: 'a1', question: { description: 'Serves the app.', connector: 'shell', command: 'exec', payload: { line: 'python3 -m http.server 8000', ...(background ? { background } : {}) } }, childSessionId: null }];
+    const inBackground = await mounted(PendingCards, createFakeKvman(), { pending: pending(true) });
+    expect(inBackground.find('[data-test="call-background"]').text()).toBe('Runs in the background');
+    const waited = await mounted(PendingCards, createFakeKvman(), { pending: pending(false) });
+    expect(waited.find('[data-test="call-background"]').exists()).toBe(false);
   });
 
-  it("QA3-H19 the result card of an async call is marked 'Background'", async () => {
-    const card = await mounted(ShellResult, createFakeKvman(), { command: 'npm run dev', output: 'started j1', exitCode: 0, background: true });
+  it("QA3-H19 the result card of a background call is marked 'Background'", async () => {
+    const card = await mounted(CallCard, createFakeKvman(), { description: 'Starting the dev server.', line: 'npm run dev', output: 'started j1', background: true });
     expect(card.find('[data-test="call-background"]').text()).toBe('Background');
   });
 });

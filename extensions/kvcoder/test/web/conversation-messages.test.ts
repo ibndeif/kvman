@@ -27,13 +27,13 @@ describe('the conversation shows its messages (08 §8.7)', () => {
     expect(wrapper.find('[data-test="session-totals"]').text()).toBe('Turns: 1 · 48 s · 1.5K tokens · $0.02');
     expect(wrapper.find('[data-test="thinking"]').text()).toContain('Plan it');
     expect(wrapper.findAll('[data-test="markdown"]').map((node) => node.text())).toContain('Running the tests.');
-    const shell = wrapper.find('[data-test="shell-result"]');
-    expect(shell.text()).toContain('npm test');
+    const shell = wrapper.find('[data-test="call-card"]');
+    expect(shell.text()).toContain('Test.');
     expect(shell.classes()).toContain('kvc-failed');
     expect(shell.find('[data-test="exit-code"]').exists()).toBe(false);
-    expect(shell.find('[data-test="shell-output"]').exists()).toBe(false);
+    expect(shell.find('[data-test="call-output"]').exists()).toBe(false);
     await shell.find('button').trigger('click');
-    expect(shell.find('[data-test="shell-output"]').text()).toBe('FAIL 1');
+    expect(shell.find('[data-test="call-output"]').text()).toBe('FAIL 1');
     expect(wrapper.findAll('[data-test="turn-totals"]').map((node) => node.text())).toEqual(['12 s · 1.5K tokens · $0.02']);
     expect(wrapper.find('[data-test="notice"]').text()).toBe('The turn stopped: kvai.errors.RATE_LIMITED');
     expect(wrapper.find('[data-test="note"]').text()).toContain('Welcome! This is a new workspace.');

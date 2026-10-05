@@ -3,22 +3,22 @@ import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { alive } from './support/alive.ts';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { calls, says, toolResults } from './support/model-script.ts';
+import { runs, says, shell, toolResults } from './support/model-script.ts';
 import { newSession } from './support/turns.ts';
 import { wait } from './support/wait.ts';
 
 const kvcoder = useKvcoder();
-const stopped = '[background processes were stopped when the command ended]';
+const stopped = '[background processes were stopped when the command ended; set background to true to keep one running]';
 
 // These calls are bash, the Linux and macOS branch: Windows can't kill what a finished shell left (ADR 0009, 148).
 function posixShell(): void {
   if (process.platform === 'win32') throw new Error('These calls are bash; Windows runs PowerShell.');
 }
 
-async function runCall(command: string): Promise<{ result: string; durationMs: number; folder: string }> {
+async function runCall(line: string): Promise<{ result: string; durationMs: number; folder: string }> {
   const { kernel, fake } = await kvcoder.start();
   const sessionId = await newSession(kernel);
-  fake.reply(calls(command), says('ok'));
+  fake.reply(runs(shell(line)), says('ok'));
   await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
   await kernel.clock.advance(0);
   const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });
@@ -42,7 +42,7 @@ describe('a shell call and the processes it leaves behind (08 §8.3, ADR 0009, 1
     expect((await runCall('echo hi')).result).toBe('hi\n[exit code 0]');
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    fake.reply(calls({ command: 'sleep 30', timeoutMs: 1_000 }), says('ok'));
+    fake.reply(runs(shell('sleep 30', { timeoutMs: 1_000 })), says('ok'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     expect(toolResults(fake)).toEqual(['[timed out after 1 s; the process tree was killed]\n[exit code 124]']);

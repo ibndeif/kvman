@@ -4,14 +4,14 @@ import type { Delta } from '../schemas/complete.ts';
 
 // What kvai reports of a stream (plan 07 §7.1): text and thinking as they come, and a tool call's name when it starts,
 // then its arguments as they complete (ADR 0009, 144): every key but the one being written, and all of them at the end.
-// A string value over 16 KiB is reported as `null`: the progress chunk has a 64 KiB limit, and the call itself keeps the
-// whole value (ADR 0009, 189).
+// A value over 16 KiB (a string's bytes, or any other value's JSON) is reported as `null`: the progress chunk has a
+// 64 KiB limit, and the call itself keeps the whole value (ADR 0009, 189; ADR 0011, 22).
 
 const argumentsSchema = z.record(z.string(), z.json());
 
 const valueLimitBytes = 16 * 1024;
 
-const reportedValue = (value: unknown): unknown => (typeof value === 'string' && Buffer.byteLength(value) > valueLimitBytes ? null : value);
+const reportedValue = (value: unknown): unknown => (Buffer.byteLength(typeof value === 'string' ? value : (JSON.stringify(value) ?? '')) > valueLimitBytes ? null : value);
 
 function toolCallAt(message: AssistantMessage, index: number) {
   const block = message.content[index];

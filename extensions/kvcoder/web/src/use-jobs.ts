@@ -5,7 +5,7 @@ import { toastProblem, type Translate } from './kvman.ts';
 // A chat's background jobs for the Running chip (plan 08 §8.7, ADR 0009, 153): read after every step, and every 5 s
 // while one runs or the list is open, with the output of each job whose Logs are open.
 
-export type Job = { id: string; kind: 'process' | 'connector' | 'subagent'; title: string; call: string; status: string; startedAt: string; endedAt?: string | undefined; exitCode?: number | undefined; links: string[] };
+export type Job = { id: string; kind: 'process' | 'subagent'; title: string; call: string; status: string; startedAt: string; endedAt?: string | undefined; exitCode?: number | undefined; links: string[] };
 
 const refreshEvery = 5;
 

@@ -1,9 +1,10 @@
 import { ProblemError, z, type Ctx, type Stored } from '@kvman/sdk';
 import type {} from '@kvman/kvai';
-import type { JsonValue } from '../connector-line.ts';
+import type { JsonValue } from '../connector-call.ts';
 import { runBinaryChecks } from '../calls/binary-checks.ts';
-import { shellTool } from '../calls/shell-tool.ts';
-import { sessionTools, shellFor, type SessionTools } from '../prompt/session-prompt.ts';
+import { runTool } from '../calls/run-tool.ts';
+import { shellFor } from '../calls/shell-program.ts';
+import { sessionTools, type SessionTools } from '../prompt/session-prompt.ts';
 import { ownerName } from '../jobs/process-records.ts';
 import { activeConnectors } from '../registry/register-connectors.ts';
 import { readSettings } from '../register-settings.ts';
@@ -29,7 +30,7 @@ async function beginStep(ctx: Ctx, sessionId: string, turnId: string, maxSteps: 
   const found = await currentTurn(ctx, sessionId, turnId);
   if (found === undefined || found.session.status !== 'running') return undefined;
   const { turn } = found;
-  const held = turn.calls.length === 0 ? [] : await Promise.all(turn.results.map(async (result) => runApproved(ctx, { shell: await shellFor(ctx) }, sessionId, result)));
+  const held = turn.calls.length === 0 ? [] : await Promise.all(turn.results.map((result) => runApproved(ctx, found.session, result)));
   const steps = await ctx.store.transaction((tx) => {
     const store = txRecords(tx);
     const live = liveTurn(store, sessionId, turnId);
@@ -73,7 +74,7 @@ async function callModel(ctx: Ctx, session: Stored<SessionDoc>, turnId: string, 
   const messages = await modelMessages(ctx, await sentHistory(ctx, session.id, session.nextSeq));
   const started = Date.now();
   try {
-    const answer = await completeWithRetries(ctx, { ...(session.model === null ? {} : { model: session.model }), systemPrompt: tools.built.prompt, messages, tools: [shellTool(tools.shell.toolName)], thinking: session.thinking });
+    const answer = await completeWithRetries(ctx, { ...(session.model === null ? {} : { model: session.model }), systemPrompt: tools.built.prompt, messages, tools: [runTool(tools.listed.map((listed) => listed.name))], thinking: session.thinking });
     const durationMs = Date.now() - started;
     const { blocks, broken } = repairedCalls(answer.message.content);
     const message = { ...answer.message, content: blocks };

@@ -42,7 +42,7 @@ describe("kvcustomizer's connectors and section (09 §9.1, §9.4)", { timeout: 3
     expect(descriptions.get('docs')).toContain('Use it before you write an extension, a preset, a view, or a component, and to learn how to use an extension that is installed.');
     const session = await kernel.exec('kvcoder.session.create', {});
     const { prompt } = await kernel.exec('kvcoder.prompt.get', { sessionId: session.id });
-    expect(prompt).toContain('Use the connectors `kvman`, `ext`, `preset`, `preview`, and `docs` for everything they cover, and the shell only for the rest. Edit a project\'s files with `fs`.');
+    expect(prompt).toContain('Use the connectors `kvman`, `ext`, `preset`, `preview`, and `docs` for everything they cover, and `shell` only for the rest. Read and edit a project\'s files with `fs`.');
     expect(prompt).not.toContain('with the shell.');
   });
 

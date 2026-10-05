@@ -18,7 +18,7 @@ describe('connector registration (08 §8.4, ADR 0009, 100 and 106)', { timeout: 
     ]) {
       await expect(register(input), JSON.stringify(input)).rejects.toMatchObject({ problem: { code: 'VALIDATION_FAILED' } });
     }
-    for (const name of ['todo', 'ask', 'subagent', 'jobs']) {
+    for (const name of ['todo', 'ask', 'subagent', 'shell', 'fs', 'artifact', 'background']) {
       await expect(register({ name, description: 'Mine.', binary: { check: 'true' } }, '@kvman/kvai'), name).rejects.toMatchObject({ problem: { code: 'kvcoder/NAME_TAKEN' } });
     }
     await register({ name: 'todo', description: 'A newer todo list.', commands: [{ name: 'add', command: 'todo.item.add' }] });

@@ -28,7 +28,6 @@ export async function newSession(ctx: Ctx, title: Title | undefined): Promise<St
     durationMs: 0,
     checks: null,
     connectors: null,
-    shell: true,
     createdAt: stamp,
     updatedAt: stamp,
   });

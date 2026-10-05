@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { z } from '@kvman/sdk';
 import { startFakeOpenAI, type FakeOpenAI } from '@kvman/testkit/fake-openai';
 import { callKvman, childWait, kvmanWorld, until, useFakeModel, type Kvman, type KvmanWorld } from '../support/kvman-child.ts';
-import { calls, says, toolResults } from '../support/model-script.ts';
+import { runs, says, shell, toolResults } from '../support/model-script.ts';
 import { npmEnvironment } from '../support/npm-environment.ts';
 
 let browser: Browser;
@@ -38,26 +38,26 @@ describe('the walkthrough (09, 13 M2.5)', () => {
     const kvman = await world.start(['--preset', 'coder'], npmEnvironment());
     await useFakeModel(kvman, fake);
     fake.reply(
-      calls(`ext new '{"name":"notes","namespace":"notes","folder":"notes"}'`),
-      calls(`ext test '{"folder":"notes"}'`),
-      calls('ext list'),
-      calls("cp notes/src/index.ts notes/index.backup && sed -i \"/description: 'Gives the greeting.',/d\" notes/src/index.ts"),
-      calls(`ext check '{"folder":"notes"}'`),
-      calls('mv notes/index.backup notes/src/index.ts'),
-      calls(`preview start '{"extensions":["notes"]}'`),
+      runs('ext', 'new', { name: 'notes', namespace: 'notes', folder: 'notes' }),
+      runs('ext', 'test', { folder: 'notes' }),
+      runs('ext', 'list'),
+      shell("cp notes/src/index.ts notes/index.backup && sed -i \"/description: 'Gives the greeting.',/d\" notes/src/index.ts"),
+      runs('ext', 'check', { folder: 'notes' }),
+      shell('mv notes/index.backup notes/src/index.ts'),
+      runs('preview', 'start', { extensions: ['notes'] }),
       says('The notes extension is ready.'),
     );
     const session = z.object({ id: z.string() }).parse(await kvman.call('commands', 'kvcoder.session.create', { title: 'Walkthrough' }));
     await kvman.call('commands', 'kvcoder.message.send', { sessionId: session.id, text: 'Build a notes extension' });
     await approveUntilDone(kvman, session.id);
     const [created, tested, listed, planted, checked, restored, previewed] = toolResults(fake);
-    expect(JSON.parse(created?.replace(/\n\[exit code 0\]$/, '') ?? '')).toEqual({ folder: 'notes', name: 'notes', namespace: 'notes', web: false });
+    expect(JSON.parse(created ?? '')).toEqual({ folder: 'notes', name: 'notes', namespace: 'notes', web: false });
     expect(tested).toMatch(/"passed": true/);
     expect(listed).toContain('"folder": "notes"');
     expect(planted).toMatch(/\[exit code 0\]$/);
     expect(checked).toMatch(/doesn't load: .*notes\.greeting\.get.*description/s);
     expect(restored).toMatch(/\[exit code 0\]$/);
-    const url = z.object({ url: z.string() }).parse(JSON.parse(previewed?.replace(/\n\[exit code 0\]$/, '') ?? '')).url;
+    const url = z.object({ url: z.string() }).parse(JSON.parse(previewed ?? '')).url;
     expect(Number(new URL(url).port)).toBeGreaterThanOrEqual(3738);
 
     const page = await browser.newPage();

@@ -4,7 +4,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import { chromium, type Browser, type Frame, type Page } from 'playwright';
 import { z } from '@kvman/sdk';
 import { kvmanWorld, until, type KvmanWorld, type Running } from '../support/kvman-child.ts';
-import { artifactCommand, calls, says } from '../support/model-script.ts';
+import { command, runs, says } from '../support/model-script.ts';
 
 let browser: Browser;
 let world: KvmanWorld | undefined;
@@ -82,7 +82,7 @@ const page = (kvman: string, foreign: string, extra = '', expected = 7): string 
 async function openProbe(kvman: Running, content: string): Promise<{ app: Page; outer: Frame; frame: Frame }> {
   const active = world;
   if (active === undefined) throw new Error('no world');
-  active.fake.reply(calls(artifactCommand('write', { id: 'probe', title: 'Probe', format: 'html', content })), says('Done.'));
+  active.fake.reply(runs(command('artifact', 'write', { id: 'probe', title: 'Probe', format: 'html', content })), says('Done.'));
   const sessionId = sessionSchema.parse(await kvman.call('commands', 'kvcoder.session.create', { title: 'Isolation' })).id;
   await kvman.call('commands', 'kvcoder.message.send', { sessionId, text: 'Show the probe' });
   await until(() => kvman.call('queries', 'kvcoder.session.get', { sessionId }), sessionSchema, (session) => session.status === 'idle');

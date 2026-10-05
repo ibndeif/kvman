@@ -8,7 +8,7 @@ import ChatStart from './ChatStart.vue';
 import ConversationHeader from './ConversationHeader.vue';
 import { toastProblem, totals, useKvman } from './kvman.ts';
 import ActivityLine from './ActivityLine.vue';
-import { callInfos } from './message-parts.ts';
+import { callViews } from './message-parts.ts';
 import MessageItem from './MessageItem.vue';
 import PendingCards from './PendingCards.vue';
 import RecoveryActions from './RecoveryActions.vue';
@@ -29,7 +29,7 @@ const conversation = useConversation(kvman, () => props.sessionId, (error) => to
 const { session, messages, omitted, turns, live, children } = conversation;
 const artifacts = useArtifacts(kvman, () => props.sessionId, () => session.value?.updatedAt, (error) => toastProblem(kvman, error));
 const panelShown = computed(() => artifacts.open.value && artifacts.shown.value !== undefined);
-const calls = computed(() => callInfos(messages.value));
+const calls = computed(() => callViews(messages.value));
 const recoverableNotices = new Set(['STEP_FAILED', 'REPLY_LOST', 'INTERRUPTED']);
 const running = computed(() => session.value?.status === 'running');
 const pending = computed(() => (session.value?.status === 'waiting' ? (turns.value[0]?.pending ?? []) : []));

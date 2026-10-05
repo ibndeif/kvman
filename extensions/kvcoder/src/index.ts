@@ -1,6 +1,12 @@
 import type { Ctx } from '@kvman/sdk';
 import { registerArtifacts } from './artifacts/register-artifacts.ts';
-import { registerConnectorRun } from './calls/connector-run.ts';
+import { registerArtifactConnector } from './calls/artifact-connector.ts';
+import { registerAskConnector } from './calls/ask.ts';
+import { registerBackgroundConnector } from './calls/background-connector.ts';
+import { registerConnectorHelp } from './calls/connector-help.ts';
+import { registerFsConnector } from './calls/fs-connector.ts';
+import { registerShellConnector } from './calls/shell-connector.ts';
+import { registerSubagentConnector } from './calls/subagent.ts';
 import { registerDocs } from './docs.ts';
 import { registerProcessHandlers, interruptLeftovers } from './jobs/process-handlers.ts';
 import { registerJobs } from './jobs/register-jobs.ts';
@@ -21,7 +27,7 @@ import { registerUi } from './ui/register-ui.ts';
 export type { Message, Session, Turn } from './sessions/session-view.ts';
 export type {} from './api.ts';
 
-// kvcoder (plan 08): the app-building harness, with one shell tool, connectors, sections, and its conversation UI.
+// kvcoder (plan 08): the app-building harness, with one `run` tool over connectors, sections, and its conversation UI.
 export default (ctx: Ctx): void => {
   registerSettings(ctx);
   registerSessions(ctx);
@@ -30,7 +36,13 @@ export default (ctx: Ctx): void => {
   registerMessages(ctx);
   registerTurns(ctx);
   registerStep(ctx);
-  registerConnectorRun(ctx);
+  registerShellConnector(ctx);
+  registerFsConnector(ctx);
+  registerArtifactConnector(ctx);
+  registerBackgroundConnector(ctx);
+  registerAskConnector(ctx);
+  registerSubagentConnector(ctx);
+  registerConnectorHelp(ctx);
   registerInterruptions(ctx);
   registerJobs(ctx);
   registerArtifacts(ctx);

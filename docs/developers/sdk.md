@@ -58,6 +58,8 @@ Give every input field a `.describe()`: it becomes the label of a form field and
 
 Calls to other extensions are typed when the other extension augments the SDK's `Commands` and `Queries` interfaces in its package: add `import type {} from '@kvman/kvai'` (the other extension must be a `kvman.dependencies` entry and a devDependency). A name that isn't declared takes and returns `unknown`.
 
+Not everything has to be a job. A function you call inside a handler runs on that handler's worker with no job at all, which is how an agent of your own runs its tools: see [agents-and-tools.md](agents-and-tools.md).
+
 ## The current job
 
 `ctx.job` exists only while a handler runs; outside one it fails `NO_JOB`.

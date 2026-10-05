@@ -1,5 +1,5 @@
 import type { Message } from '../../src/index.ts';
-import { callTitle } from './call-title.ts';
+import { callView, type CallView } from './call-view.ts';
 
 // Reading the parts of stored messages: an answer's text, thinking, and tool calls; a tool result's text and card.
 
@@ -26,46 +26,47 @@ export function thinkingOf(message: Message): string {
   return blocks(message.content['content']).flatMap((block) => (block['type'] === 'thinking' && typeof block['thinking'] === 'string' ? [block['thinking']] : [])).join('\n');
 }
 
-/** What an answer's tool call said, by tool call id: the command, and the title and description for the person (ADR 0009, 143). */
-export type CallInfo = { command: string; title?: string; description?: string };
-
-function labels(source: Record<string, unknown>): { title?: string; description?: string } {
-  const description = typeof source['description'] === 'string' && source['description'].trim() !== '' ? source['description'] : undefined;
-  const title = callTitle(typeof source['title'] === 'string' ? source['title'] : undefined, description);
-  return { ...(title === undefined ? {} : { title }), ...(description === undefined ? {} : { description }) };
-}
-
-export function callInfos(messages: readonly Message[]): Map<string, CallInfo> {
-  const infos = new Map<string, CallInfo>();
+/** What each tool call of the answers was, by tool call id (ADR 0011, 13). */
+export function callViews(messages: readonly Message[]): Map<string, CallView> {
+  const views = new Map<string, CallView>();
   for (const message of messages) {
     if (message.kind !== 'assistant') continue;
     for (const block of blocks(message.content['content'])) {
       const args = record(block['arguments']);
-      if (block['type'] === 'toolCall' && typeof block['id'] === 'string' && typeof args?.['command'] === 'string') infos.set(block['id'], { command: args['command'], ...labels(args) });
+      if (block['type'] === 'toolCall' && typeof block['id'] === 'string' && args !== undefined) views.set(block['id'], callView(args));
     }
   }
-  return infos;
+  return views;
 }
 
-export type ResultCard = { command: string; title?: string; description?: string; exitCode?: number; durationMs?: number; output: string; background?: boolean };
+export type ResultCard = CallView & { output: string; failed: boolean; durationMs?: number };
 
-/** A tool result as its card shows it: the shell's details, or the call's own words and the result text. */
-export function resultCard(message: Message, calls: ReadonlyMap<string, CallInfo>): ResultCard {
+// A result's own words: the `run` tool's details name the call, whose payload the call itself holds; an old shell
+// result's details hold its title and command.
+function detailsView(details: Record<string, unknown>, call: CallView | undefined): CallView {
+  const { description, connector, command } = details;
+  if (typeof connector !== 'string') return { ...call, ...callView(details) };
+  return {
+    ...call,
+    ...(typeof description === 'string' ? { description } : {}),
+    ...(typeof command === 'string' ? { label: `${connector} · ${command}` } : {}),
+    ...(details['background'] === true ? { background: true } : {}),
+  };
+}
+
+/** A tool result as its card shows it: the call it answers, its output, and whether it failed. */
+export function resultCard(message: Message, calls: ReadonlyMap<string, CallView>): ResultCard {
   const details = record(message.content['details']);
   const text = textOf(message.content['content']);
-  const exit = /\[exit code (\d+)\]$/.exec(text);
+  const exit = /\n?\[exit code (\d+)\]$/.exec(text);
   const call = calls.get(String(message.content['toolCallId']));
-  if (details !== undefined) {
-    return {
-      command: typeof details['command'] === 'string' ? details['command'] : (call?.command ?? ''),
-      output: typeof details['output'] === 'string' ? details['output'] : text,
-      ...labels(details),
-      ...(typeof details['exitCode'] === 'number' ? { exitCode: details['exitCode'] } : {}),
-      ...(typeof details['durationMs'] === 'number' ? { durationMs: details['durationMs'] } : {}),
-      ...(details['mode'] === 'async' ? { background: true } : {}),
-    };
-  }
-  return { command: call?.command ?? '', output: text.replace(/\n?\[exit code \d+\]$/, ''), ...(call === undefined ? {} : labels(call)), ...(exit === null ? {} : { exitCode: Number(exit[1]) }) };
+  const exitCode = typeof details?.['exitCode'] === 'number' ? details['exitCode'] : exit === null ? undefined : Number(exit[1]);
+  return {
+    ...(details === undefined ? call : detailsView(details, call)),
+    output: typeof details?.['output'] === 'string' ? details['output'] : text.replace(/\n?\[exit code \d+\]$/, ''),
+    failed: message.content['isError'] === true || (exitCode !== undefined && exitCode !== 0),
+    ...(typeof details?.['durationMs'] === 'number' ? { durationMs: details['durationMs'] } : {}),
+  };
 }
 
 /** Whether a user message is kvcoder's own word to the model, such as the hint after a lost reply (ADR 0009, 188). */

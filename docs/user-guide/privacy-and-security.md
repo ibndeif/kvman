@@ -41,7 +41,7 @@ API keys and sign-ins live only in `secrets.json` in your home folder, readable 
 
 ## The agent's reach
 
-The agent works through tools you can read in the chat. It runs shell commands inside the workspace you opened, asks before risky ones (see your shell approval setting), and edits files only inside that folder. It can change kvman's own model, settings, extensions, and preset through the `kvman` connector, but it can't read or change a secret.
+The agent works through connectors, and every call it makes is a card you can read in the chat. It runs shell lines inside the workspace you opened, asks before risky ones (see the `kvcoder.shell.approval` setting), and reads and edits files only inside that folder. It can change kvman's own model, settings, extensions, and preset through the `kvman` connector, but it can't read or change a secret.
 
 ## Next
 

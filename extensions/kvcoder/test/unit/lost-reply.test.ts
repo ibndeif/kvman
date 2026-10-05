@@ -36,7 +36,7 @@ describe('a lost reply (08 §8.2, ADR 0009, 188 and 191)', () => {
     expect(hint).toContain('the provider produced about 3400 tokens, but no tool call or text reached me');
     expect(hint).toContain('Send it again now, calling the tool directly.');
     expect(hint).toContain('one file per reply, under about 150 lines each');
-    expect(hint).toContain('raw heredoc body of `fs write`, not as JSON');
+    expect(hint).toContain('one file per reply, under about 150 lines each, with `fs write`.');
   });
 
   it('QA8-E16 a call with no id gets one, a call with no name is dropped and counted, and a sound call next to them is kept', () => {

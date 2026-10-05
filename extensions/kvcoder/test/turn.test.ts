@@ -5,7 +5,7 @@ import { z } from '@kvman/sdk';
 import { openGate } from './support/gates.ts';
 import { wait } from './support/wait.ts';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { calls, says, toolResults } from './support/model-script.ts';
+import { command, runs, says, shell, toolResults } from './support/model-script.ts';
 import { kvcoderChunks, newSession, sendStreamed, turnState } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
@@ -18,7 +18,7 @@ describe('a turn (08 §8.1–8.3)', { timeout: 30_000 }, () => {
     const sessionId = await newSession(kernel);
     const marker = path.join(kernel.homeFolder, 'shell-ran');
     const gate = openGate('h1');
-    fake.reply(calls(`todo wait '{"gate":"h1","text":"a"}'`, `touch shell-ran && echo hi`, `ask text '{"prompt":"Name?"}'`), says('done'));
+    fake.reply(runs(command('todo', 'wait', {"gate":"h1","text":"a"}), shell(`touch shell-ran && echo hi`), command('ask', 'text', {"prompt":"Name?"})), says('done'));
 
     const sent = sendStreamed(kernel, sessionId, 'go');
     await gate.waiting;
@@ -38,7 +38,7 @@ describe('a turn (08 §8.1–8.3)', { timeout: 30_000 }, () => {
     const { jobId } = await kernel.exec('kvcoder.question.answer', { questionId, answer: { text: 'Ada' } });
     expect(jobId).toEqual(expect.any(String));
     await kernel.clock.advance(0);
-    expect(toolResults(fake)).toEqual(['{\n  "text": "a"\n}\n[exit code 0]', 'hi\n[exit code 0]', '{\n  "text": "Ada"\n}\n[exit code 0]']);
+    expect(toolResults(fake)).toEqual(['{\n  "text": "a"\n}', 'hi\n[exit code 0]', '{\n  "text": "Ada"\n}']);
     const done = await turnState(kernel, sessionId);
     expect(done.session).toMatchObject({ status: 'idle' });
     expect(done.turn).toMatchObject({ outcome: 'done', steps: 2, pending: [] });

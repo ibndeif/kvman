@@ -41,4 +41,14 @@ describe('kvai.complete streams a tool call as its arguments complete (07 §7.1,
     expect(kvaiDeltas(chunks).at(-1)).toEqual({ type: 'toolcall', name: 'bash', arguments: { title: 'Write it', command: null, description: exact } });
     expect(JSON.stringify(answer)).toContain(big);
   });
+
+  it('QA18-E26 a value that is not a string is capped too: an object whose JSON is over 16 KiB is reported as null, and the answer keeps it', async () => {
+    const { kernel, fake } = await kvai.start();
+    const big = 'x'.repeat(70_000);
+    fake.reply({ chunks: [{ toolCall: { id: 'call_1', name: 'bash', argumentPieces: [`{"title":"Write it","payload":{"path":"a.txt","content":"${big}"},"small":{"path":"a.txt"}}`] } }] });
+    const chunks: ProgressChunk[] = [];
+    const answer = await kernel.exec('harness.turn', { model: 'fake/m1', messages: [userSays('go')], tools: [bash] }, { onProgress: (chunk) => chunks.push(chunk) });
+    expect(kvaiDeltas(chunks).at(-1)).toEqual({ type: 'toolcall', name: 'bash', arguments: { title: 'Write it', payload: null, small: { path: 'a.txt' } } });
+    expect(JSON.stringify(answer)).toContain(big);
+  });
 });

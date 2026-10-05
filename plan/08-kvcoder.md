@@ -1,6 +1,6 @@
 # 08 — kvcoder (namespace `kvcoder`)
 
-kvcoder is the app-building harness, built on kvai and kvwebui. Its agent has one tool, a shell: `bash` on Linux and macOS, `powershell` on Windows. It reaches everything through that tool. Other extensions extend kvcoder with **connectors** and **sections**. kvcoder owns its conversation UI (§8.7).
+kvcoder is the app-building harness, built on kvai and kvwebui. Its agent has one tool, `run`, which runs one command of a **connector** (ADR 0011). A connector is the only way the agent reaches anything outside the model: the shell, files, the person, other agents, and other extensions. Other extensions extend kvcoder with connectors and **sections**. kvcoder owns its conversation UI (§8.7).
 
 ## 8.1 Sessions and turns
 
@@ -18,7 +18,7 @@ kvcoder is the app-building harness, built on kvai and kvwebui. Its agent has on
     durationMs?,        // the model call (assistant) or the run time (toolResult)
     createdAt }
   ```
-- **A turn** records `{ id, startedAt, endedAt, durationMs, steps, usage, outcome: 'done' | 'cancelled' | 'failed' | 'interrupted' | 'maxSteps' }`. While suspended, it also holds its `pending` calls (`{ toolCallId, kind: 'question' | 'subagent' | 'approval', questionId?, question?, childSessionId? }`, where `question` is the `ask` input with its `kind`, or an approval's `{ title, command, description, mode, timeoutMs }`, ADR 0009, 102, 143, and 149) and the results already produced in that step. When the last pending call resolves, kvcoder appends all results in the model's call order and queues the next step.
+- **A turn** records `{ id, startedAt, endedAt, durationMs, steps, usage, outcome: 'done' | 'cancelled' | 'failed' | 'interrupted' | 'maxSteps' }`. While suspended, it also holds its `pending` calls (`{ toolCallId, kind: 'question' | 'subagent' | 'approval', questionId?, question?, childSessionId? }`, where `question` is the `ask` input with its `kind`, or an approval's `{ description, connector, command, payload }`, ADR 0009, 102, and ADR 0011) and the results already produced in that step. When the last pending call resolves, kvcoder appends all results in the model's call order and queues the next step.
 - **Totals.** The session keeps running totals of `usage` and `durationMs`, and a subagent's usage adds to its parent's. The conversation shows each turn's time, tokens, and cost under its last answer, and the session's totals in its header.
 - **Display-only messages.** A **notice** is kvcoder's own (a cancel, an interruption, a failed summary), shown as `kvcoder.notices.<code>` with its `params`; a `STEP_FAILED` notice's params are `{ code, details }`, the Problem's code and params, and the UI translates them, adding the provider's `reason` after the sentence when there is one, as its JSON `message` when the reason is a JSON error body, cut at 200 characters, with names and the reason kept in order in right-to-left text (ADR 0009, 133, 156, and 210). A **note** is added by any extension with `kvcoder.note.add` and shown as its translation key with `params`. Neither is sent to the model, and adding a note never starts a turn.
 - **Titles.** A title is a string, or `{ key }` for a translated title (the welcome session). Until the first turn ends, the title is the first 60 characters of the first user message. Then kvcoder asks `kvai.complete` (the session's model, no tools, `maxTokens` 30) for a 3–6 word title in the conversation's language. `kvcoder.session.rename` overrides it, and a renamed session is never retitled. A failed title call keeps the placeholder.
@@ -37,9 +37,9 @@ kvcoder is the app-building harness, built on kvai and kvwebui. Its agent has on
   - its subagents' turns;
   - its pending questions (a later answer fails `kvcoder/QUESTION_NOT_FOUND`).
 
-  It then adds a notice and sets the session idle. `--async` connector jobs keep running and still report back.
+  It then adds a notice and sets the session idle. Background processes keep running and still report back.
 - **Interrupted steps.** A step cut off by a stop or a crash fails with `INTERRUPTED` or `WORKER_CRASHED`, and since it has no retries, it ends `failed` (§2.3). kvcoder registers a `kernel.job.failed` handler: when the failed job is a step, it ends the turn (`interrupted` for `INTERRUPTED`, else `failed`), adds a notice, and sets the session idle; a subagent's interrupted step ends its parent's turn too. The handler queues nothing (ADR 0009, 95). The person sends a message to go on. Suspended turns survive restarts.
-- **Background results.** When an `--async` call or an async subagent ends, its result is appended as a `user` message with `source: { kind: 'job', jobId }` (or `{ kind: 'subagent', sessionId }`), read by the next step. It doesn't dismiss pending questions, and it starts a turn only when the session is idle; one that was interrupted or cancelled starts none (ADR 0009, 89 and 95).
+- **Background results.** When a background process or a background subagent ends, its result is appended as a `user` message with `source: { kind: 'job', jobId }` (or `{ kind: 'subagent', sessionId }`), read by the next step. It doesn't dismiss pending questions. A subagent's result starts a turn only when the session is idle, and one that was interrupted or cancelled starts none; a process's result never starts one (§8.3, ADR 0009, 89 and 95).
 - **Errors.** `kvcoder/SESSION_NOT_FOUND`, `kvcoder/SESSION_BUSY` (compacting while a step runs), `kvcoder/JOB_NOT_FOUND`, `kvcoder/NAME_TAKEN`, and `kvcoder/QUESTION_NOT_FOUND` (ADR 0009, 92). Subagent sessions are for reading: every command that names one fails `VALIDATION_FAILED`, except `kvcoder.question.answer` (ADR 0009, 102).
 - **Delete.** `kvcoder.session.delete` cancels the session's turn, stops its background processes (ADR 0009, 150), and deletes its subagent sessions and its artifacts too (ADR 0009, 175).
 - **Compaction.** Before each step, tokens are estimated (characters / 4) against the model's window.
@@ -51,57 +51,60 @@ kvcoder is the app-building harness, built on kvai and kvwebui. Its agent has on
 ## 8.2 A step
 
 1. **Build the prompt**, in this order:
-   - the base prompt: English, telling the model to reply in `kernel.language` unless the person writes in another language. It names the shell and the OS, says each shell call starts in the workspace folder, so `cd` doesn't carry over, and then three things (ADR 0009, 163 and 166 to 168):
-     - **connectors come first**: when a connector covers a task, the model uses it instead of doing the same through the shell, and uses the shell only for what no connector does;
-     - **how it works** (ADR 0009, 180): scale the process to the task, so a small, clear change needs no plan; understand from facts first (the request, then the files, config, tests, and guides), never assuming or inventing a name, path, API, or behavior; resolve gaps and conflicts by calling `ask` with all the questions in one reply and the recommended option first, never asking what looking would answer; plan as the artifact `plan` (§8.5), a checklist written in the same reply as the first call, and for a large, ambiguous, or risky task `ask confirm` on it before executing; execute step by step with the smallest change for each, checked with the project's own check or tests, ticking the step with `artifact edit`; delegate a separate, self-contained part to a subagent when a specialist view or parallel work is worth it, briefing it with its role, the goal, the facts it needs, its limits, and what to return, while a subagent that was given a task does it and returns the result without re-planning; the calls of one reply run at the same time, so calls that depend on each other go in separate replies; a reply with no tool call is the final answer and ends the turn, so when work remains the reply must hold the call that does the next piece, and a reply that only says what the model will do ends the turn with nothing done; what it is about to do is said in the same reply as that call, and it never makes a call that does nothing, such as `true`, to keep going (ADR 0009, 163, 200, and 202); show the person anything long to read or see in an artifact; keep replies short;
+   - the base prompt: English, telling the model to reply in `kernel.language` unless the person writes in another language. It names the OS and the workspace folder, describes the one tool `run` and its four arguments, says each `shell exec` starts in the workspace folder, so `cd` doesn't carry over, and then two things (ADR 0009, 163 and 166 to 168; ADR 0011):
+     - **connectors**: everything the model does goes through a connector's command; when a connector other than `shell` covers a task, the model uses it instead of a shell line, and uses `shell` only for what no other connector does; before the first use of a command whose payload it doesn't know, it calls the connector's `help`;
+     - **how it works** (ADR 0009, 180): scale the process to the task, so a small, clear change needs no plan; understand from facts first (the request, then the files, config, tests, and guides), never assuming or inventing a name, path, API, or behavior; resolve gaps and conflicts by calling `ask` with all the questions in one reply and the recommended option first, never asking what looking would answer; plan as the artifact `plan` (§8.5), a checklist written in the same reply as the first call, and for a large, ambiguous, or risky task `ask confirm` on it before executing; execute step by step with the smallest change for each, each file written in its own call, checked with the project's own check or tests, ticking the step with `artifact edit`; delegate a separate, self-contained part to a subagent when a specialist view or parallel work is worth it, briefing it with its role, the goal, the facts it needs, its limits, and what to return, while a subagent that was given a task does it and returns the result without re-planning; the calls of one reply run at the same time, so calls that depend on each other go in separate replies; a reply with no tool call is the final answer and ends the turn, so when work remains the reply must hold the call that does the next piece, and a reply that only says what the model will do ends the turn with nothing done; what it is about to do is said in the same reply as that call, and it never makes a call that does nothing, such as `true`, to keep going (ADR 0009, 163, 200, and 202); show the person anything long to read or see in an artifact; keep replies short;
    - the sections, by `order` (§8.4);
-   - the connector index, under a lead line that says to use the connectors before the shell: each registered connector's name and description (binary connectors only when their check passed), and after the description of a built-in connector, its commands; kvcoder ends every entry with how to get its help, `<name> -h` (and `<name> <command> -h` for a commands connector, ADR 0009, 163, 164, and 167).
-2. **Call the model.** `kvai.complete` with the session's model and thinking level, its messages (after the summary), and the one tool, `bash { command, title?, description?, risky?, mode?, timeoutMs? }` (or `powershell` with the same input on Windows): the tool's own description explains connectors with a one-line example and repeats that a connector is used instead of the shell whenever one covers the task (ADR 0009, 167 and 172); `title` (two to six words in the imperative) and `description` (one sentence) are optional, for the person, and shown in the UI, and a blank one is missing (ADR 0009, 143 and 212); a call that leaves out `title` gets the first 60 characters of its `description` (with `…` when cut), a call with neither shows its command, and any other invalid argument fails `VALIDATION_FAILED` with a message that says what the field must be (ADR 0009, 186); `risky` is `true` when the call could lose or damage something that isn't the model's own work, or reaches outside the workspace, and a call that leaves it out counts as `true` (ADR 0009, 161 and 212). Deltas stream to the UI. A call that fails `kvai/RATE_LIMITED`, or `kvai/PROVIDER_ERROR` with `transient: true`, is tried up to 4 times in all, after 1 s, 4 s, and then 15 s, with the chunk `{ type: 'retry', attempt, of }` before each retry; any other failure ends the turn at once (ADR 0009, 155 and 203).
+   - the connector index: each connector's name and description (binary connectors only when their check passed), then `Commands: <names>, help.`, which kvcoder adds from the registration, so the index always names every command (ADR 0011, 3).
+2. **Call the model.** `kvai.complete` with the session's model and thinking level, its messages (after the summary), and the one tool, `run { description, connector, command, payload? }` (ADR 0011, 1): `description` is one sentence for a person who knows nothing about the harness, saying what the call does, and is shown in the UI; `connector` is one of the session's connectors, an enum in the tool's schema; `command` is one of that connector's commands; `payload` is the command's input, `{}` when left out, and parsed when sent as a JSON string. The tool's own description explains the four arguments with one example and says to call `help` for a command's payload. A call to any other tool ("the tool is run, not bash"), a blank or missing `description`, an unknown connector, or a payload that isn't an object fails `VALIDATION_FAILED` with a message that says what is wrong and what the field must be. Deltas stream to the UI. A call that fails `kvai/RATE_LIMITED`, or `kvai/PROVIDER_ERROR` with `transient: true`, is tried up to 4 times in all, after 1 s, 4 s, and then 15 s, with the chunk `{ type: 'retry', attempt, of }` before each retry; any other failure ends the turn at once (ADR 0009, 155 and 203).
 3. **Handle the answer.**
-   - **Tool calls.** A call the provider sent without an id gets one, and a call without a name is dropped, so a stored reply never holds a broken call; a reply left with no call by such a drop is a lost reply (ADR 0009, 192). All calls of the reply start together (§8.3). Shell calls that need approval are asked together, and the turn suspends until every pending item is answered. Then kvcoder appends the results in the model's call order and queues the next step.
+   - **Tool calls.** A call the provider sent without an id gets one, and a call without a name is dropped, so a stored reply never holds a broken call; a reply left with no call by such a drop is a lost reply (ADR 0009, 192). All calls of the reply start together (§8.3). Calls that need approval are asked together, and the turn suspends until every pending item is answered. Then kvcoder appends the results in the model's call order and queues the next step.
    - **No calls.** The session goes idle, unless messages arrived while the step ran, in which case another step runs. A reply with no call that was lost on the way (under 400 characters of text, and more than 150 output tokens that its text and its reasoning don't explain, ADR 0009, 191) is not an ending: kvcoder adds a message telling the model so and to send the content in smaller pieces, and runs another step, at most twice in a turn; the next one ends the turn `failed` with the notice `REPLY_LOST` (ADR 0009, 188).
 
-## 8.3 How a shell call runs
+## 8.3 How a call runs
 
-| The command is | It runs as |
+| The call is | It runs as |
 |---|---|
-| `<connector> <command> '<json>'` for a commands connector (or the JSON on stdin: a bash heredoc, or a PowerShell here-string `@' … '@`), standing alone | the registered kernel command, through `ctx.exec`; the result is the output as JSON text, or `error <code>: <message>` with exit code 1 |
-| the same with `--async` | kvcoder's own job `kvcoder.connector.run` (which runs the command); prints `started <jobId>`. When it ends, the result is appended as a message, and starts a turn if the session is idle. |
-| `<connector> -h` / `<connector> <command> -h` (commands connectors) | the connector's commands with descriptions / that command's description, input and output JSON Schemas, and examples |
-| `ask …`, `subagent run …` | built-in connectors that suspend the turn (§8.5) |
-| `fs write '<json>'`, `fs edit '<json>'` | built-in connector commands that create, replace, or edit a file inside the workspace folder, run by kvcoder in the step after the same approval as a shell call (§8.5, ADR 0009, 157 and 161) |
-| `artifact write '<json>'`, `artifact edit '<json>'`, `artifact get '<json>'` | built-in connector commands that store, change, or read a document shown to the person, run by kvcoder in the step with no approval (§8.5, ADR 0009, 173 to 176) |
-| `jobs list`, `jobs get <id>`, `jobs cancel <id>` | built-in connector commands for the work this session started with `--async` (connector calls, and async subagents by their child session id) or with `mode: 'async'` (background processes by their id): the newest 50 as `[{ id, kind, call, status, startedAt, endedAt?, exitCode? }]`, one row plus its `output` (a process's last 100 lines) or `problem`, or a cancel (`{ "cancelled": true }`, `false` for a process that has already ended); another id fails `kvcoder/JOB_NOT_FOUND` (ADR 0009, 81, 88, and 151) |
-| a connector word inside a pipe, `&&`, `;`, or other shell syntax | not run: the result explains that connector calls stand alone, with exit code 1 |
-| anything else, including binary connectors (`gh …`) | the real shell (below) |
+| `help` of any connector | `help {}`: the connector's description and its commands with their descriptions; `help { command }`: that command's description, input and output JSON Schemas, and examples, each shown as `run` arguments. A binary connector's `help` also prints the program's own help (§8.4). The result is plain text. It never asks. |
+| a command of a commands connector | the registered kernel command or query, through `ctx.exec`, with the payload as its input |
+| `shell exec`, `<binary> exec` | the real shell (below) |
+| `ask …`, `subagent run` | checked, then the turn suspends (§8.5) |
+| `fs …`, `artifact …`, `background …` | kvcoder's own commands (§8.5) |
+| a command the connector doesn't have | `error NOT_FOUND: <connector> has no command <command>; call its help.` |
+| a connector this subagent wasn't given | `error VALIDATION_FAILED: <connector> isn't available in this subagent.` |
 
-kvcoder parses a line the same way in both shells; single quotes are literal in both. A connector call may leave the JSON out (`preview stop`); its input is then `{}`. Both stdin forms are accepted on every OS, `--async` may stand anywhere after the connector word, and a call stands alone when it's one simple command (no pipe but the here-string's, no `&&`, `||`, `;`, `&`, redirection, `$( )`, backticks, or second line). Errors print `error <code>: <message>` with exit 1 (ADR 0009, 100).
+**Every command is a kernel job.** A connector command, built-in or registered, is a kernel command or query that kvcoder runs with `ctx.exec`, on the step's worker (plan 02 §2.1). So validation, cancel, and timeouts are the kernel's, and there is no `--async`: a call runs to its end inside the step (ADR 0011, 6 and 10). kvcoder's built-in ones are its own private registrations, each taking `{ sessionId, payload }` (`kvcoder.connector.help.get` takes `{ connector, command? }`): `kvcoder.shell.run`, `kvcoder.binary.run` (with `connector`), `kvcoder.fs.write`, `kvcoder.fs.edit`, `kvcoder.fs.file.get`, `kvcoder.fs.entry.list`, `kvcoder.fs.text.search`, `kvcoder.artifact.write`, `kvcoder.artifact.edit`, `kvcoder.artifact.content.get`, `kvcoder.background.list`, `kvcoder.background.output.get`, `kvcoder.background.stop`, `kvcoder.ask.text.check`, `kvcoder.ask.choice.check`, `kvcoder.ask.confirm.check`, `kvcoder.subagent.check`, and `kvcoder.connector.help.get`. Their payload schemas are strict, with a description on every field.
 
-**What the model gets.** Every call returns plain text: the output (cut at 30 KB), then `[exit code N]`; a connector's output is its JSON indented by 2 spaces; a timeout adds `[timed out after N s; the process tree was killed]` and exits 124; a denied call returns `denied by the user`. The shell-result card's fields go in the toolResult's `details` (ADR 0009, 93).
+**Invalid payloads.** A payload that doesn't fit its command fails `VALIDATION_FAILED` with each problem and then the command's input JSON Schema, so one correction is enough (ADR 0009, 213; ADR 0011, 1).
 
-**The real shell.**
-- Linux and macOS: `bash -lc <command>`. Windows: `pwsh -NoProfile -Command <command>` when PowerShell 7 is on the PATH, otherwise `powershell.exe -NoProfile -Command <command>`. `kvcoder.shell.path` overrides the lookup on every OS. Calls run in the workspace folder, with an empty stdin and kvman's environment (ADR 0009, 101).
-- **Approval.** It covers real shell calls and `fs` calls (`fs -h` never asks), and `kvcoder.shell.approval` is `auto` (the default) or `ask` (ADR 0009, 161). With `auto`, a call whose `risky` is `true` (or left out) asks and any other runs at once; with `ask`, every call asks. A call that asks first becomes an `ask confirm` question, and the turn suspends. A denied call returns "denied by the user".
+**What the model gets** (ADR 0011, 11). A connector command returns its output as JSON indented by 2 spaces; a failure returns `error <code>: <message>`. `shell exec` and a binary's `exec` return the raw output (cut at 30 KB), then `[exit code N]`; a timeout adds `[timed out after N s; the process tree was killed]` and exits 124. A denied call returns `denied by the user`. The call card's fields go in the toolResult's `details`: `{ description, connector, command, output, durationMs, exitCode?, timedOut?, background?, jobId?, artifact? }`; the card reads the payload from the call itself (ADR 0009, 93).
+
+**The real shell** runs `shell exec`'s `line`, and for a binary connector the line `<name> <args>`.
+- Linux and macOS: `bash -lc <line>`. Windows: `pwsh -NoProfile -Command <line>` when PowerShell 7 is on the PATH, otherwise `powershell.exe -NoProfile -Command <line>`. `kvcoder.shell.path` overrides the lookup on every OS. Calls run in the workspace folder, with an empty stdin and kvman's environment (ADR 0009, 101).
+- **Payload.** `shell exec { line, background?, timeoutMs?, risky? }`; a binary's `exec { args, background?, timeoutMs?, risky? }`, where `args` may be left out.
+- **Approval.** It covers `shell exec`, a binary's `exec`, `fs write`, and `fs edit` (`help` never asks), and `kvcoder.shell.approval` is `auto` (the default) or `ask` (ADR 0009, 161). With `auto`, a call whose payload has `risky: true` (or leaves it out) asks and any other runs at once; with `ask`, every such call asks. `risky` is `true` when the call could lose or damage something that isn't the model's own work, or reaches outside the workspace (ADR 0009, 161 and 212; ADR 0011, 7). A call that asks becomes an approval question holding `{ description, connector, command, payload }`, and the turn suspends; the approved call runs at the start of the next step. A denied call returns "denied by the user".
 - **Timeout.** The default is 120 s; the model may ask for up to 600 s (a larger `timeoutMs` is cut to 600 s, ADR 0009, 101). On timeout or cancel, the process tree is killed: its group on Linux and macOS, `taskkill /PID <pid> /T /F` on Windows.
-- **Sync or async.** `mode` is `'sync'` (the default) or `'async'` (ADR 0009, 149). A sync call is as described here. An async call needs the same approval, then starts the command in the real shell through the kernel's process service (`ctx.processes.start`, in the workspace folder; plan 02 §2.16), waits 1 s for its first output, and returns `started <id>`, the output so far, and `[exit code 0]` (plus `[the process has already ended; jobs get <id> has its output]` when it has). It has no timeout, so `timeoutMs` is ignored.
-- **Background jobs.** An async process is a job of the chat (ADR 0009, 150). Its status is `running`, `succeeded`, `failed`, `cancelled`, or `interrupted`, and kvcoder records each way it ends: the `kernel.process.exited` handler for an exit by itself, its own stop for `jobs cancel` and the person's Stop, a `kernel.stopping` handler when kvman stops, and a `kernel.started` handler for a kvman that died. The records are in kvcoder's global store, since the last two handlers run in Home. An exit by itself and the person's stop add a background message with the outcome and the last 20 lines of output at once; an `interrupted` one is reported at the chat's next message. None starts a turn (a handler's jobs carry the `fromHandler` mark, plan 02 §2.15). It runs until it ends or is stopped; deleting the chat stops it, and a turn's Stop button doesn't.
-- **Background processes.** A call ends when its shell exits, not when every process that holds its output has closed it. On Linux and macOS, whatever is left in the shell's process group is then killed, and the result says `[background processes were stopped when the command ended; use mode "async" to keep one running]` before the exit code; nothing outlives a call. A process that left the group can't be stopped, so output gets at most 1 s to drain after the shell exits. Windows can't kill what a finished shell left, so there the call ends and the leftover keeps running (ADR 0009, 148).
-- **Output.** stdout and stderr are combined. Output over 30 KB keeps its first and last 15 KB around a `[… N bytes omitted …]` marker; connector results are cut the same way. The result includes the exit code.
+- **Background.** `background: true` (ADR 0009, 149; ADR 0011, 6) needs the same approval, then starts the line in the real shell through the kernel's process service (`ctx.processes.start`, in the workspace folder; plan 02 §2.16), waits 1 s for its first output, and returns `started <id>`, the output so far, and `[exit code 0]` (plus `[the process has already ended; background output has its output]` when it has). It has no timeout, so `timeoutMs` is ignored. The agent follows it up with the `background` connector (§8.5).
+- **Background runs.** A background process belongs to its chat (ADR 0009, 150). Its status is `running`, `succeeded`, `failed`, `cancelled`, or `interrupted`, and kvcoder records each way it ends: the `kernel.process.exited` handler for an exit by itself, its own stop for `background stop` and the person's Stop, a `kernel.stopping` handler when kvman stops, and a `kernel.started` handler for a kvman that died. The records are in kvcoder's global store, since the last two handlers run in Home. An exit by itself and the person's stop add a background message with the outcome and the last 20 lines of output at once; an `interrupted` one is reported at the chat's next message. None starts a turn (a handler's jobs carry the `fromHandler` mark, plan 02 §2.15). It runs until it ends or is stopped; deleting the chat stops it, and a turn's Stop button doesn't.
+- **Leftover processes.** A call ends when its shell exits, not when every process that holds its output has closed it. On Linux and macOS, whatever is left in the shell's process group is then killed, and the result says `[background processes were stopped when the command ended; set background to true to keep one running]` before the exit code; nothing outlives a call. A process that left the group can't be stopped, so output gets at most 1 s to drain after the shell exits. Windows can't kill what a finished shell left, so there the call ends and the leftover keeps running (ADR 0009, 148).
+- **Output.** stdout and stderr are combined. Output over 30 KB keeps its first and last 15 KB around a `[… N bytes omitted …]` marker; connector results are cut the same way, except those of `fs read`, `fs list`, and `fs search`, which limit themselves (ADR 0011, 23).
+
+**Old calls** (ADR 0011, 12). A chat stored before `run` keeps its `bash` and `powershell` calls, and its history is sent unchanged. A turn found waiting on an approval of such a call never runs it: whatever the answer, its result is `denied by the user`, then `Make this call again with the run tool.`
 
 ## 8.4 Extending kvcoder
 
 Other extensions extend kvcoder by calling its public commands. kvcoder keeps what they register in its own store, and reads only its own store while running a turn. It never calls other extensions to build a prompt.
 
-**A connector** is a word the agent can type in the shell. There are two kinds.
+**A connector** is a named set of commands the agent runs with `run`. There are two kinds.
 
 ```ts
-// A commands connector: `ext new '<json>'` runs kvcustomizer's own public command.
+// A commands connector: run { connector: 'ext', command: 'new', payload } runs kvcustomizer's own public command.
 await ctx.exec('kvcoder.connector.register', {
-  name: 'ext',                                   // the word the agent types
+  name: 'ext',                                   // the run tool's `connector`
   description: 'Create and test kvman extensions.',
   commands: [{
-    name: 'new',                                 // the second word: ext new '<json>'
-    command: 'kvcustomizer.ext.new',                    // your own public command
+    name: 'new',                                 // the run tool's `command`
+    command: 'kvcustomizer.ext.new',                    // your own public command; the payload is its input
     examples: [{ description: 'Scaffold a notes extension', input: { name: 'notes', namespace: 'notes', folder: './notes' } }],
   }],
 });
@@ -114,11 +117,11 @@ await ctx.exec('kvcoder.connector.register', {
 });
 ```
 
-- **Description.** The `description` is what the agent sees in the prompt's connector index (§8.2): write it to say what the connector is for and when to use it, in a sentence or two. kvcoder adds the help hint after it (ADR 0009, 164 and 165).
+- **Description.** The `description` is what the agent sees in the prompt's connector index (§8.2): write it to say what the connector is for and when to use it, in a sentence or two. kvcoder adds the command names after it (ADR 0009, 164 and 165; ADR 0011, 3).
 - **Two kinds.** A connector has exactly one of `commands` or `binary`.
-- **Invalid input to a built-in connector** (`ask`, `subagent`, `fs`, `artifact`) fails `VALIDATION_FAILED` with each problem and then the input the command takes, from its `-h` text, so one correction is enough (ADR 0009, 213).
-- **Commands connectors** run their commands through `ctx.exec`, with no shell. So validation, `--async`, cancel, retries, and timeouts are the kernel's. `-h` is built from each command's registered description and JSON Schema (through `kernel.extensions.list`) and its `examples`. A `command` must be a public command or query of the extension registering it, or the call fails with `VALIDATION_FAILED`; a query can't run with `--async` (ADR 0009, 129).
-- **Binary connectors** are run by the agent in the real shell, and `-h` is the program's own. One is listed in the prompt only when its `check` passes; checks run at a session's first step (5 s timeout each, no approval, passing on exit 0), and the results are stored in the session record. The setting `kvcoder.connectors` adds binary connectors from the preset or the person.
+- **Names.** `shell`, `fs`, `artifact`, `background`, `ask`, and `subagent` are kvcoder's own: registering one fails `kvcoder/NAME_TAKEN`. Every connector has `help` (§8.3), so a command named `help` fails `VALIDATION_FAILED` (ADR 0011, 4).
+- **Commands connectors** run their commands through `ctx.exec`, with the payload as the input. So validation, cancel, retries, and timeouts are the kernel's. `help` is built from each command's registered description and JSON Schema (through `kernel.extensions.list`) and its `examples`. A `command` must be a public command or query of the extension registering it, or the call fails with `VALIDATION_FAILED` (ADR 0009, 129).
+- **Binary connectors** have two commands (ADR 0011, 5): `exec { args?, background?, timeoutMs?, risky? }` runs the line `<name> <args>` in the real shell, with the approval, timeout, and background rules of `shell exec` (§8.3); `help {}` describes `exec` and `help` and then prints the output of `<name> --help`; `help { command: 'exec' }` gives `exec`'s payload; `help { command }` with any other command prints the output of `<name> <command> --help`. The program runs with a 5 s timeout and no approval. A registration may give `binary.help`, the line to run instead, in which `{command}` stands for the command, or for nothing when none is asked (`go help {command}`). One is listed in the prompt, and can be called, only when its `check` passes; checks run at a session's first step (5 s timeout each, no approval, passing on exit 0), and the results are stored in the session record. The setting `kvcoder.connectors` adds binary connectors from the preset or the person.
 
 **Sections** are text in the system prompt. The owner pushes them whenever its data changes:
 
@@ -170,63 +173,80 @@ ctx.registerHandler('kernel.started', {
 - **Loop safety.** kvcoder stores the ids of the handler jobs it queues. A message injected by one of them (a job whose `ctx.job.rootId` is such an id) is stored but doesn't start a turn; the next turn sees it. Work that a handler queues with `execAsync` isn't recognized, so a handler must not inject from there.
 - **Access.** Every extension can use kvcoder's public API: read sessions, messages, and turns; create, configure, rename, delete, fork, and export sessions; inject messages; add notes; cancel turns. Only `message.send` and `question.answer` are for the person; an extension calling them fails `NOT_PUBLIC` (ADR 0009, 105).
 
-**Testing.** `runConnector(kernel, 'ext new \'{…}\'')` from `@kvman/kvcoder/testing`, used with `createTestKernel`, parses a line exactly as kvcoder does and returns `{ output, exitCode }`, including for `-h`, stdin JSON in both shells, and non-standalone lines. It runs connector lines only: `ask`, `subagent`, `jobs`, `fs`, and `artifact` calls, and plain shell lines, return exit 1, and it never starts a shell (ADR 0009, 96).
+**Testing.** `runConnector(kernel, { connector: 'ext', command: 'new', payload: { … } })` from `@kvman/kvcoder/testing`, used with `createTestKernel`, runs a call exactly as kvcoder does and returns `{ output, exitCode }`, including for `help`. It runs commands connectors and the `help` of built-in ones: any other built-in call, and a binary connector's, returns exit 1, and it never starts a shell (ADR 0009, 96; ADR 0011, 18).
 
 ## 8.5 Built-in connectors
 
-**ask** suspends the turn until the person answers. The answer becomes the shell result, and a dismissal gives `{ "dismissed": true }`.
+`shell` is in §8.3. Unknown keys in a payload fail `VALIDATION_FAILED`.
+
+**ask** suspends the turn until the person answers. The answer becomes the call's result, and a dismissal gives `{ "dismissed": true }`.
 
 | Call | Result |
 |---|---|
-| `ask text '{ "prompt", "placeholder"? }'` | `{ "text" }` |
-| `ask choice '{ "prompt", "multiple", "options": [{ "id", "label", "description"? }] (2–10), "other"? }'` | `{ "selected": [ids], "other"? }` |
-| `ask confirm '{ "prompt", "danger"? }'` | `{ "confirmed" }` |
+| `ask text { prompt, placeholder? }` | `{ "text" }` |
+| `ask choice { prompt, multiple, options: [{ id, label, description? }] (2–10), other? }` | `{ "selected": [ids], "other"? }` |
+| `ask confirm { prompt, danger? }` | `{ "confirmed" }` |
 
-- The step sends a component chunk `{ type: 'component', component: 'kvcoder.question', props }`, so the conversation shows the question card inline. A pending question is also in the turn record, so the card shows again after a reload.
+- `kvcoder.ask.text.check`, `.choice.check`, or `.confirm.check` validates the payload (ADR 0011, 9). The step then sends a component chunk `{ type: 'component', component: 'kvcoder.question', props }`, so the conversation shows the question card inline. A pending question is also in the turn record, so the card shows again after a reload.
 - The person answers with `kvcoder.question.answer` (user only). `answer` has the shape of the result above, or `{ "dismissed": true }`. That appends the result and queues the next step, and the card follows that step.
 
 **subagent** runs a hidden child session:
 
 ```
-subagent run '{ "task", "mode": "fresh" | "fork", "connectors"?: [names], "shell"?: true }'
+subagent run { task, mode: "fresh" | "fork", connectors?: [names], background?: true }
 ```
 
 - **Modes.** `fresh` gives the child the base prompt, the sections, and the task. `fork` gives it a copy of the parent's messages so far (plus its summary), then the task.
 - **Model.** The child uses its parent's model and thinking level.
-- **Connectors.** `connectors` is a subset of the parent's (default: all). `subagent` is never included, so depth is 1, and `ask` always is. `shell: false` allows connector calls only.
-- **Waiting.** The parent's turn suspends until the child ends, and the child's final answer becomes the shell result.
+- **Connectors.** `connectors` is a subset of the parent's (default: all), and the one list: `shell` and the binary connectors are in it or not (ADR 0011, 9). `subagent` is never included, so depth is 1, and `ask` always is.
+- **Waiting.** The parent's turn suspends until the child ends, and the child's final answer becomes the call's result.
   - Several runs in one reply run in parallel.
-  - `--async` lets the parent continue; the answer arrives later as a message.
+  - `background: true` lets the parent continue; the answer arrives later as a message.
 - **Questions.** A child's approvals and questions show in the root session's conversation.
-- **Results.** A child that ends `done` returns its last answer's text; any other outcome returns `subagent ended <outcome>` and that text, with exit 1. An async run prints `started <childSessionId>`. Unknown `connectors`, or `subagent` among them, give an error result; with `shell: false`, real-shell calls and binary connectors are refused (ADR 0009, 102).
+- **Results.** A child that ends `done` returns its last answer's text; any other outcome returns `subagent ended <outcome>` and that text, as an error. A background run returns `started <childSessionId>`. Unknown `connectors`, or `subagent` among them, give an error result from `kvcoder.subagent.check` (ADR 0009, 102).
 
-**fs** writes and edits files inside the workspace folder (ADR 0009, 157 to 160):
+**fs** reads, lists, searches, writes, and edits files inside the workspace folder (ADR 0009, 157 to 160; ADR 0011, 8):
 
 | Call | Result |
 |---|---|
-| `fs write '{ "path", "content" }'`, or `fs write '{ "path" }'` with the content as the heredoc body | creates the file and its parent folders, or replaces it: `{ "path", "created", "bytes" }` |
-| `fs edit '{ "path", "edits": [{ "oldText", "newText" }] }'` | replaces text in an existing file: `{ "path", "replacements", "firstChangedLine" }` |
+| `fs read { path, fromLine?, lines? }` | `{ "path", "fromLine", "totalLines", "content" }`: `lines` lines from `fromLine` (1 by default) |
+| `fs list { path? }` | `{ "path", "entries": [{ "name", "kind": "file" \| "folder", "bytes" }], "truncated" }`: one folder (the workspace folder by default), not its sub-folders |
+| `fs search { pattern, path? }` | `{ "matches": [{ "path", "line", "text" }], "truncated" }`: the lines matching the regular expression `pattern`, in a file or under a folder (the workspace folder by default) |
+| `fs write { path, content, risky? }` | creates the file and its parent folders, or replaces it: `{ "path", "created", "bytes" }` |
+| `fs edit { path, edits: [{ oldText, newText }], risky? }` | replaces text in an existing file: `{ "path", "replacements", "firstChangedLine" }` |
 
-- **Content as the body.** A `write` may leave `content` out of its JSON and give it as the heredoc body, raw and unescaped, as `cat` would write it (every line ends with a line break; an empty body is empty); `content` in the JSON together with a body fails `VALIDATION_FAILED`. Use it for whole files: a model that must JSON-escape a large file inside a heredoc inside a call often loses the call (ADR 0009, 187, 188).
-- **Paths.** A relative `path` resolves against the workspace folder; an absolute one works when it is inside it. A path that leaves the folder, through `..` or a symlink, fails `VALIDATION_FAILED` and writes nothing.
-- **Matching.** Every `oldText` is matched exactly against the file as it was before the call, must be non-empty and occur once, and must not overlap another one; the edits apply together. If any check fails, or the result equals the file, nothing is written and the error names the edit and why. A missing file fails `NOT_FOUND`; a file that isn't valid UTF-8 text is refused. CRLF line endings and a leading BOM are kept.
-- **Order.** Calls on the same file run one after another, in the model's order when they start together. Unknown keys fail `VALIDATION_FAILED`, and `fs -h` lists the commands.
+- **Paths.** A relative `path` resolves against the workspace folder; an absolute one works when it is inside it. A path that leaves the folder, through `..` or a symlink, fails `VALIDATION_FAILED` and reads or writes nothing. A missing file or folder fails `NOT_FOUND`.
+- **Reading.** `lines` is 2000 by default and at most 2000 (`VALIDATION_FAILED` beyond); the content holds whole lines up to 30 KB, so it may hold fewer than asked, and `totalLines` lets the agent go on with `fromLine`. A `fromLine` past the end gives an empty `content`. A file that isn't valid UTF-8 text is refused (`VALIDATION_FAILED`), and so is a folder.
+- **Listing.** Entries are sorted by name, at most 1000, with `truncated: true` when there are more; `bytes` is 0 for a folder. A path that is a file fails `VALIDATION_FAILED`.
+- **Searching.** `pattern` is a JavaScript regular expression, matched line by line, case-sensitive (an invalid one fails `VALIDATION_FAILED`). Files are visited in path order; `node_modules`, `.git`, and every other folder whose name starts with a dot are skipped, and so are files that aren't valid UTF-8 text. At most 200 matches are returned, with `truncated: true` when there are more; `path` is relative to the workspace folder, `line` starts at 1, and `text` is the line cut at 500 characters.
+- **Approval.** `write` and `edit` ask as `shell exec` does (§8.3); `read`, `list`, `search`, and `help` never ask.
+- **Matching.** Every `oldText` is matched exactly against the file as it was before the call, must be non-empty and occur once, and must not overlap another one; the edits apply together. If any check fails, or the result equals the file, nothing is written and the error names the edit and why. A file that isn't valid UTF-8 text is refused. CRLF line endings and a leading BOM are kept.
+- **Order.** Calls on the same file run one after another, in the model's order when they start together.
 
 **artifact** shows the person a document beside the conversation: a plan, a report, a design, or a page (ADR 0009, 173 to 179):
 
 | Call | Result |
 |---|---|
-| `artifact write '{ "id", "title", "format"?, "content" }'`, or the same without `content` and with it as the heredoc body | creates the artifact, or replaces it (title, format, and content): `{ "id", "version", "created", "bytes" }` |
-| `artifact edit '{ "id", "edits": [{ "oldText", "newText" }] }'` | replaces text in an existing artifact: `{ "id", "version", "replacements", "firstChangedLine" }` |
-| `artifact get '{ "id" }'` | `{ "id", "title", "format", "version", "content" }` |
+| `artifact write { id, title, format?, content }` | creates the artifact, or replaces it (title, format, and content): `{ "id", "version", "created", "bytes" }` |
+| `artifact edit { id, edits: [{ oldText, newText }] }` | replaces text in an existing artifact: `{ "id", "version", "replacements", "firstChangedLine" }` |
+| `artifact get { id }` | `{ "id", "title", "format", "version", "content" }` |
 
 - **Shape.** `id` is lowercase kebab case, up to 50 characters, and names the artifact within its chat (`plan` is the plan, §8.2). `title` is 1 to 100 characters. `format` is `markdown`, `html`, or `url`; left out, it is `html` for content that starts with `<!doctype html` or `<html`, `url` for content that is one local address, and `markdown` for anything else (ADR 0009, 215 and 216). `content` is text up to 64 KB (`TOO_LARGE`, `params.limit`). A chat holds at most 20 artifacts: creating the 21st fails `TOO_LARGE`. `version` starts at 1 and rises with every write or edit; only the latest content is kept. An unknown `id` in `edit` or `get` fails `NOT_FOUND`; unknown keys, a bad `id`, or a bad `format` fail `VALIDATION_FAILED`.
-- **Content as the body.** `artifact write` takes its content as the heredoc body in the same way as `fs write`, the content left out of the JSON (ADR 0009, 187); a whole HTML page is best given this way.
 - **Edits** follow the matching rules of `fs edit`: every `oldText` is matched exactly once against the content as it was, edits don't overlap, and nothing is written when a check fails, the edits change nothing, or the result would pass 64 KB.
 - **Order and ownership.** Calls on the same artifact run one after another, in the model's order when they start together. An artifact belongs to its chat; a subagent's belongs to the chat at its root, so the person sees a helper's report. No approval is asked.
 - **Storage.** An HTML artifact's page, in the panel's scripts-only frame, has an opaque origin, so `localStorage`, `sessionStorage`, cookies, and `indexedDB` throw `SecurityError`; the `artifact` entry in the system prompt says so, and asks for pages that work without them. A `url` artifact's page has its own origin and can use them (ADR 0009, 217 and 218).
 - **URL.** A `url` artifact's `content` is one http or https address on `localhost` or `127.0.0.1`, with no credentials (anything else fails `VALIDATION_FAILED`), such as a dev server the agent started; it is shown in a frame that lets the page work as in a tab, and never when it is kvman's own address (ADR 0009, 216 and 218). `edit` re-checks the address.
 - **HTML.** An `html` artifact is shown in an isolated frame (§8.7): its scripts run, but it can't load from or reach the network, kvman's page, or the person's browser data.
+
+**background** follows up on what this chat started with `background: true` (ADR 0009, 81, 88, and 151; ADR 0011, 6): processes by their id, and background subagents by their child session id.
+
+| Call | Result |
+|---|---|
+| `background list {}` | the newest 50, newest first: `[{ "id", "kind": "process" \| "subagent", "call", "status", "startedAt", "endedAt"?, "exitCode"? }]` |
+| `background output { id }` | that row plus `output` (a process's last 100 lines, or a subagent's answer) or `problem` |
+| `background stop { id }` | stops a process, or cancels a subagent: `{ "stopped": true }`, `false` for one that has already ended |
+
+An id this chat didn't start fails `kvcoder/JOB_NOT_FOUND`. `call` is the line that runs, or the description of the call that started the subagent.
 
 ## 8.6 API
 
@@ -249,13 +269,13 @@ subagent run '{ "task", "mode": "fresh" | "fork", "connectors"?: [names], "shell
 | `kvcoder.session.fork` | command | `{ sessionId, throughSeq? }` → `Session`: a copy of the messages (and the current summary) through `throughSeq` (default: all); per-session sections and artifacts aren't copied |
 | `kvcoder.question.answer` | command, user only | `{ questionId, answer }` → `{ jobId }`: the next step's job, or `null` while other items of the step are pending (ADR 0009, 91) |
 | `kvcoder.session.count` | query | `{ status? }` → `{ count }` of top-level sessions, for the status item (ADR 0009, 97) |
-| `kvcoder.job.list` | query, user only | `{ sessionId }` → `[{ id, kind: 'process' \| 'connector' \| 'subagent', title, call, status, startedAt, endedAt?, exitCode?, links }]`: the chat's newest 50 background jobs, running first; `links` are the localhost URLs in a process's last 100 output lines (ADR 0009, 152) |
+| `kvcoder.job.list` | query, user only | `{ sessionId }` → `[{ id, kind: 'process' \| 'subagent', title, call, status, startedAt, endedAt?, exitCode?, links }]`: the chat's newest 50 background jobs, running first; `links` are the localhost URLs in a process's last 100 output lines (ADR 0009, 152) |
 | `kvcoder.job.get` | query, user only | `{ sessionId, id }` → the row plus `output` (`kvcoder/JOB_NOT_FOUND` for another chat's id) |
-| `kvcoder.job.cancel` | command, user only | `{ sessionId, id }` → `{}`: stops a running process, cancels a connector job or subagent |
+| `kvcoder.job.cancel` | command, user only | `{ sessionId, id }` → `{}`: stops a running process, or cancels a subagent |
 | `kvcoder.prompt.get` | query | `{ sessionId }` → the exact system prompt |
 | `kvcoder.artifact.list` | query | `{ sessionId }` → `[{ id, title, format, version, size, updatedAt }]` of the chat, newest change first; a subagent session answers with its chat's (ADR 0009, 176) |
 | `kvcoder.artifact.get` | query | `{ sessionId, id }` → `{ id, title, format, version, content, createdAt, updatedAt }` (`NOT_FOUND` for an unknown id) |
-| `kvcoder.connector.register` | command | `{ name, description, commands: [{ name, command, examples? }] }` or `{ name, description, binary: { check, install? } }` → `{}` |
+| `kvcoder.connector.register` | command | `{ name, description, commands: [{ name, command, examples? }] }` or `{ name, description, binary: { check, install?, help? } }` → `{}` |
 | `kvcoder.connector.unregister` | command | `{ name }` → `{}` (the owner only: another owner's fails `kvcoder/NAME_TAKEN`, a missing name does nothing, ADR 0009, 106) |
 | `kvcoder.connector.list` | query | `{}` → `[{ name, description, owner, kind: 'commands' \| 'binary', commands?, binary? }]` |
 | `kvcoder.section.set` | command | `{ id, title, order, content, global?, sessionId? }` → `{}` (`global` and `sessionId` exclude each other) |
@@ -265,7 +285,7 @@ subagent run '{ "task", "mode": "fresh" | "fork", "connectors"?: [names], "shell
 | `kvcoder.handler.unregister` | command | `{ point }` → `{}`: removes the caller's own handler, if any (ADR 0009, 106) |
 | `kvcoder.handler.list` | query | `{}` → `[{ point, command, owner }]` |
 
-All are public, except the private jobs `kvcoder.turn.step`, `kvcoder.connector.run`, `kvcoder.session.prune`, `kvcoder.session.title` (ADR 0009, 99), and `kvcoder.handler.run` (ADR 0009, 110). `Session`, `Message`, and `Turn` are as in §8.1.
+All are public, except the private jobs `kvcoder.turn.step`, `kvcoder.session.prune`, `kvcoder.session.title` (ADR 0009, 99), and `kvcoder.handler.run` (ADR 0009, 110), and the built-in connectors' commands and queries (§8.3). `Session`, `Message`, and `Turn` are as in §8.1.
 
 ## 8.7 UI and settings
 
@@ -277,7 +297,7 @@ kvcoder owns its conversation UI. kvwebui only hosts it: kvcoder contributes pag
 - **The session list** is kvcoder's custom component `kvcoder.sessions`: translated titles, each session's status (running, or "Needs you" while waiting), times grouped into Today and Earlier, the open chat highlighted, and a "New chat" button back to the Chat page (ADR 0009, 104).
 - **The conversation** is kvcoder's custom component `kvcoder.conversation { sessionId }`. It:
   - shows the messages from `kvcoder.message.list`, with notices and notes translated, and "N earlier messages" with the export;
-  - streams the running step (`kvman.stream`): text deltas into the pending answer, thinking deltas open while they stream, a tool call's title and description as its arguments complete, component chunks inline, and follow chunks continuing in the same bubble; an activity line tells what the step is doing, with seconds, and "Retrying… (2 of 4)" while a failed model call is tried again (ADR 0009, 142 and 155);
+  - streams the running step (`kvman.stream`): text deltas into the pending answer, thinking deltas open while they stream, a tool call's description as its arguments complete, component chunks inline, and follow chunks continuing in the same bubble; an activity line tells what the step is doing, with seconds, and "Retrying… (2 of 4)" while a failed model call is tried again (ADR 0009, 142 and 155);
   - makes an answered question or approval leave at once, and reads the session again without waiting for the next step (ADR 0009, 141);
   - reattaches to the running step after a reload, through the session's `stepJobId`;
   - shows pending questions from the turn record;
@@ -287,7 +307,7 @@ kvcoder owns its conversation UI. kvwebui only hosts it: kvcoder contributes pag
   - renders Markdown through `kvman.View`;
   - streams a subagent's steps in its card (the `subagent` chunk), shows "Summarizing earlier messages…" between `compaction` chunks (ADR 0009, 99), and shows background results as a small card;
   - has its own tabs, Chat and **Prompt**; Prompt shows `kvcoder.prompt.get` with each section's owner, reach, and size, and a Copy button (kvwebui has no `tabs`, ADR 0009, 68 and 104);
-  - shows an `artifact write` or `artifact edit` result as a compact card (title, version, Open) instead of a shell-result card, from the result's `details.artifact` (ADR 0009, 177);
+  - shows an `artifact write` or `artifact edit` result as a compact card (title, version, Open) instead of a call card, from the result's `details.artifact` (ADR 0009, 177);
   - has an **artifact panel** beside it (over it below 48 rem): it shows one artifact at a time, with a row of titles when the chat has several, the version, and a Close button. It opens when an artifact appears whose id wasn't there when the chat was opened (the `plan` included), when the person clicks a card, and when the person presses the header's `Artifacts (N)` button (shown while the chat has artifacts; it opens and closes the panel), and an update to one already shown doesn't reopen a panel the person closed; it reads `kvcoder.artifact.list` after every step and answer and every 5 s while nothing streams. A chat with no artifact has no panel (ADR 0009, 177);
   - gives the artifact panel a Preview and Source switch (Source is the text as stored, in a monospace block; Preview is the default and returns when another artifact is shown) and a Copy button that puts the stored text on the clipboard (ADR 0009, 214); a `url` artifact's Preview is its page in `<iframe sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads" referrerpolicy="no-referrer" src>` (its own origin, never kvman's, and no `allow-top-navigation`, ADR 0009, 218), with an "Open in a new tab" link, shown only for an http or https address on `localhost` or `127.0.0.1` other than kvman's own port, and a line saying so otherwise (ADR 0009, 216);
   - shows a Markdown artifact through the sanitized `markdown` view, and an HTML artifact in an isolated frame: `<iframe sandbox="allow-scripts" referrerpolicy="no-referrer" srcdoc>` (never with `allow-same-origin`, `allow-popups`, `allow-forms`, `allow-top-navigation`, or `allow-modals`) whose document is a wrapper holding the artifact in an inner frame with the same attributes (so the wrapper's policy also stops the artifact navigating its own frame, ADR 0009, 185); both documents start with the policy `default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; media-src data:; form-action 'none'; base-uri 'none'` as a `<meta http-equiv="Content-Security-Policy">`, so its scripts run but nothing loads from or reaches the network, the page, or the person's browser data (ADR 0009, 178, 179, and 185);
@@ -295,7 +315,7 @@ kvcoder owns its conversation UI. kvwebui only hosts it: kvcoder contributes pag
   - shows, under an idle chat's last message when it is a `STEP_FAILED`, `REPLY_LOST`, or `INTERRUPTED` notice, two actions: "Retry" and "Choose another model"; Retry sends the message "Continue", and a picked model is set on the chat, remembered as the default model, and followed by "Continue" (ADR 0009, 204);
   - makes every model the person picks (in a chat's header, a new chat's header, or those actions) the global `kvai.defaultModel`, so a new chat starts with it (ADR 0009, 205); the model popover opens at its button and is moved only as far as it takes to stay inside the conversation, and fitted again on every frame while it is open (ADR 0009, 208, 211, and 221);
   - scrolls its message list inside its own column, with the header above and the send box below always in view (ADR 0009, 130 and 198), and follows the newest message: opening a chat shows its last message; while the person is within 80 px of the end, every change keeps the view at the end; after the person scrolls up it stops, a "Jump to latest" button appears, and the button or sending a message returns to the end (ADR 0009, 199); a cost is a left-to-right run inside right-to-left text (ADR 0009, 197).
-- **Custom components:** the conversation, the session list (`kvcoder.sessions`), the question card (`kvcoder.question`; one reply's approvals share one card, with "Allow all"), and the shell-result card (the call's title, or the one derived from its description, then its description when that says more, the command cut to one line, all starting at the card's inline start, and the time; a failed call has a danger-colored border and there is no exit chip; opened, it shows the whole command and the output in dark blocks, with no block for an empty output; `http://127.0.0.1:<port>…` and `http://localhost:<port>…` URLs in any output are links that open in a new tab, ADR 0009, 120, 195, 196, 206, and 207).
+- **Custom components:** the conversation, the session list (`kvcoder.sessions`), the question card (`kvcoder.question`; one reply's approvals share one card, with "Allow all"), and the call card `kvcoder.call` (ADR 0011, 13): closed, it shows the call's description, then `connector · command` and the time, all starting at the card's inline start; a failed call has a danger-colored border and there is no exit chip; opened, it shows the payload (the line for `shell exec` and a binary's `exec`, its fields otherwise) and the output in dark blocks, with no block for an empty output; a call stored before `run` shows its command line as its one line; `http://127.0.0.1:<port>…` and `http://localhost:<port>…` URLs in any output are links that open in a new tab (ADR 0009, 120, 195, 196, 206, and 207).
 - **Status items:** the count of waiting sessions, from `kvcoder.session.count` (ADR 0009, 97), and on a chat page the chat's tokens and cost, from `kvcoder.session.get` (ADR 0009, 147); the conversation follows each step's job, so the count reruns when a step ends (ADR 0009, 131). The session list and the conversation sit side by side from 30 rem of conversation width, and stack below (ADR 0009, 130).
 
 **Settings.**
@@ -308,10 +328,10 @@ kvcoder owns its conversation UI. kvwebui only hosts it: kvcoder contributes pag
 | `kvcoder.shell.approval` | `auto`: ask only for a risky call (`ask`: ask for every call) |
 | `kvcoder.shell.path` | `null`: find bash, or `pwsh` then `powershell.exe` on Windows |
 | `kvcoder.compactAt` | 0.8 |
-| `kvcoder.connectors` | `[]` (binary connectors: `{ name, description, binary: { check, install? } }`) |
+| `kvcoder.connectors` | `[]` (binary connectors: `{ name, description, binary: { check, install?, help? } }`) |
 | `kvcoder.sessions.keep` | 0 (keep all) |
 | `kvcoder.welcome` | `null`: no welcome; a translation key (such as `kvcoder.welcome.default`) makes the welcome session (ADR 0009, 193) |
 
 ## 8.8 Documentation
 
-kvcoder serves `kvcoder.docs.list` and `kvcoder.docs.get` (plan 09 §9.5): the pages `connectors` (registering connectors, commands and binary connectors, examples, ownership and lifetime) and `sections` (global, workspace, and session sections, order, caps), as Markdown from its `docs/` folder (ADR 0010, 16).
+kvcoder serves `kvcoder.docs.list` and `kvcoder.docs.get` (plan 09 §9.5): the pages `connectors` (the `run` tool, registering connectors, commands and binary connectors, help, examples, ownership and lifetime) and `sections` (global, workspace, and session sections, order, caps), as Markdown from its `docs/` folder (ADR 0010, 16).

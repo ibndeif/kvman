@@ -1,6 +1,6 @@
 import { z } from '@kvman/sdk';
 import { artifactFormats } from '../artifacts/artifact-format.ts';
-import type { JsonValue } from '../connector-line.ts';
+import type { JsonValue } from '../connector-call.ts';
 
 export type { JsonValue };
 
@@ -52,7 +52,6 @@ export const sessionDocSchema = z.object({
   durationMs: z.number().nonnegative(),
   checks: z.array(checkSchema).nullable(),
   connectors: z.array(z.string()).nullable(),
-  shell: z.boolean(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -85,18 +84,21 @@ export const pendingSchema = z.object({
   childSessionId: z.string().nullable(),
 });
 
-// An approved shell call: its command and timeout, with the title and description the model wrote for the person (old
-// approvals have neither, ADR 0009, 143).
-export const shellRunSchema = z.object({ title: z.string().exactOptional(), description: z.string().exactOptional(), command: z.string(), mode: z.enum(['sync', 'async']).exactOptional(), timeoutMs: z.number().int().positive() });
+/** A call the person approves before it runs: what the model said it does, and the connector command with its payload. */
+export const runCallSchema = z.strictObject({ description: z.string(), connector: z.string(), command: z.string(), payload: z.record(z.string(), z.json()) });
 
-// A call's result kept in the turn until the step's calls all resolve; `run` is an approved shell call the next step
-// runs before it appends the results.
+// An approved call of the old shell tool. It is kept only so a turn stored before `run` still parses; it is never run
+// (ADR 0011, 12).
+const oldShellRunSchema = z.object({ command: z.string(), timeoutMs: z.number().int().positive() });
+
+// A call's result kept in the turn until the step's calls all resolve; `run` is an approved call the next step runs
+// before it appends the results.
 export const heldResultSchema = z.object({
   toolCallId: z.string(),
   text: z.string(),
   details: z.json().nullable(),
   isError: z.boolean(),
-  run: shellRunSchema.nullable(),
+  run: z.union([runCallSchema, oldShellRunSchema]).nullable(),
 });
 
 export const turnDocSchema = z.object({
@@ -122,10 +124,11 @@ export const questionDocSchema = z.object({
   question: z.record(z.string(), z.json()),
 });
 
-// Background work a session started with `--async` (ADR 0009, 88): a job id, or a child session id.
+// A subagent a session started with `background: true` (ADR 0009, 88), by its child session id. `connector` is the kind
+// of a job started with the old `--async`; such a stored row still parses and is never listed (ADR 0011, 6).
 export const backgroundDocSchema = z.object({ sessionId: z.string(), ref: z.string(), kind: z.enum(['connector', 'subagent']), call: z.string(), startedAt: z.string() });
 
-// A background process a session started with `mode: 'async'` (ADR 0009, 150). It lives in the global store, since the
+// A background process a session started with `background: true` (ADR 0009, 150). It lives in the global store, since the
 // handlers for kvman stopping and starting run in Home. It is running until `end` is set; `reported` says whether the
 // session has been told how it ended.
 export const processDocSchema = z.object({
@@ -160,6 +163,7 @@ export type QueuedDoc = z.output<typeof queuedDocSchema>;
 export type TurnDoc = z.output<typeof turnDocSchema>;
 export type Pending = z.output<typeof pendingSchema>;
 export type HeldResult = z.output<typeof heldResultSchema>;
+export type RunCallDoc = z.output<typeof runCallSchema>;
 export type QuestionDoc = z.output<typeof questionDocSchema>;
 export type BackgroundDoc = z.output<typeof backgroundDocSchema>;
 export type ArtifactDoc = z.output<typeof artifactDocSchema>;

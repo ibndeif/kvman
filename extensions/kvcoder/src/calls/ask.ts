@@ -1,43 +1,27 @@
-import { z } from '@kvman/sdk';
-import { builtinHelp, callInput, errorOutput, jsonOutput, type CallResult } from '../connector-line.ts';
-import { invalidInput } from './invalid-input.ts';
-import type { JsonValue } from '../connector-line.ts';
+import { z, type Ctx } from '@kvman/sdk';
+import { jsonOutput, type JsonValue } from '../connector-call.ts';
 import { invalid } from '../problems.ts';
-import { resultText } from '../result-text.ts';
+import { callInput, payloads } from '../schemas/payloads.ts';
 import type { QuestionDoc } from '../schemas/records.ts';
+import { builtinCommands } from './builtin-connectors.ts';
 
 // The `ask` connector (plan 08 §8.5): a question suspends the turn until the person answers; the answer becomes the
-// call's result, and a dismissal gives `{ "dismissed": true }`. Answers are checked (ADR 0009, 102).
-
-const prompt = z.string().min(1);
-
-export const askSchemas = {
-  text: z.strictObject({ prompt, placeholder: z.string().exactOptional() }),
-  choice: z.strictObject({
-    prompt,
-    multiple: z.boolean(),
-    options: z
-      .array(z.strictObject({ id: z.string().min(1), label: z.string().min(1), description: z.string().exactOptional() }))
-      .min(2)
-      .max(10)
-      .refine((options) => new Set(options.map((option) => option.id)).size === options.length, 'Option ids must differ.'),
-    other: z.boolean().exactOptional(),
-  }),
-  confirm: z.strictObject({ prompt, danger: z.boolean().exactOptional() }),
-};
+// call's result, and a dismissal gives `{ "dismissed": true }`. Each command's check validates its payload as a kernel
+// job, and the step then records the question (ADR 0011, 9). Answers are checked (ADR 0009, 102).
 
 export type QuestionKind = QuestionDoc['kind'];
 
-/** An `ask` call: the question to put to the person, or what the call printed instead. */
-export function askCall(words: readonly string[], stdin: string | null): { kind: QuestionKind; question: Record<string, JsonValue> } | CallResult {
-  if (words.length === 1 && words[0] === '-h') return { output: builtinHelp.ask, exitCode: 0 };
-  const call = callInput(words, stdin, 'ask');
-  if ('output' in call) return call;
-  const kind = call.command;
-  if (kind !== 'text' && kind !== 'choice' && kind !== 'confirm') return errorOutput({ code: 'NOT_FOUND', message: `ask has no command ${kind}; run \`ask -h\`.` });
-  const parsed = askSchemas[kind].safeParse(call.input);
-  if (!parsed.success) return invalidInput('ask', kind, parsed.error.issues);
-  return { kind, question: call.input };
+/** The kinds of question the agent asks: the `ask` connector's commands. */
+export const askKinds = ['text', 'choice', 'confirm'] as const;
+
+export const isAskKind = (command: string): command is (typeof askKinds)[number] => askKinds.some((kind) => kind === command);
+
+const noOutput = z.object({});
+
+export function registerAskConnector(ctx: Ctx): void {
+  ctx.registerCommand('kvcoder.ask.text.check', { description: builtinCommands.ask.text.description, input: callInput(payloads.askText), output: noOutput, retries: 0, handle: () => ({}) });
+  ctx.registerCommand('kvcoder.ask.choice.check', { description: builtinCommands.ask.choice.description, input: callInput(payloads.askChoice), output: noOutput, retries: 0, handle: () => ({}) });
+  ctx.registerCommand('kvcoder.ask.confirm.check', { description: builtinCommands.ask.confirm.description, input: callInput(payloads.askConfirm), output: noOutput, retries: 0, handle: () => ({}) });
 }
 
 const dismissedSchema = z.strictObject({ dismissed: z.literal(true) });
@@ -50,7 +34,7 @@ const answerSchemas = {
 };
 
 function checkChoice(question: Record<string, JsonValue>, answer: { selected: string[]; other?: string | undefined }): void {
-  const parsed = askSchemas.choice.parse(question);
+  const parsed = payloads.askChoice.parse(question);
   const ids = new Set(parsed.options.map((option) => option.id));
   const unknown = answer.selected.find((id) => !ids.has(id));
   if (unknown !== undefined) throw invalid(`${unknown} isn't one of the options.`, { selected: unknown });
@@ -68,11 +52,11 @@ export function checkedAnswer(question: QuestionDoc, answer: unknown): { kind: '
     if (!parsed.success) throw invalid('An approval is answered { confirmed } or { dismissed: true }.');
     return { kind: 'approval', approved: parsed.data.confirmed };
   }
-  if (dismissed.success) return { kind: 'result', text: resultText(jsonOutput({ dismissed: true }).output, 0) };
+  if (dismissed.success) return { kind: 'result', text: jsonOutput({ dismissed: true }).output };
   const parsed = answerSchemas[question.kind].safeParse(answer);
   if (!parsed.success) throw invalid(`The answer doesn't fit a ${question.kind} question.`);
   if ('selected' in parsed.data) checkChoice(question.question, parsed.data);
-  return { kind: 'result', text: resultText(jsonOutput(parsed.data).output, 0) };
+  return { kind: 'result', text: jsonOutput(parsed.data).output };
 }
 
 /** What a question, or an approval, dismissed by a message returns to the model (plan 08 §8.1). */

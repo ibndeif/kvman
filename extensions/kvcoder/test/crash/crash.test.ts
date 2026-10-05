@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from '@kvman/sdk';
-import { calls, says } from '../support/model-script.ts';
+import { command, runs, says, shell } from '../support/model-script.ts';
 import { childWait, kvmanWorld, until, type KvmanWorld } from '../support/kvman-child.ts';
 
 let world: KvmanWorld | undefined;
@@ -25,7 +25,7 @@ describe('crash invariants 3 and 5 (12 §12.2)', { timeout: 120_000 }, () => {
     const create = async (title: string) => sessionSchema.parse(await first.call('commands', 'kvcoder.session.create', { title })).id;
     const waiting = await create('Waiting');
     const held = await create('Held');
-    fake.reply(calls(`ask text '{"prompt":"Name?"}'`));
+    fake.reply(runs(command('ask', 'text', {"prompt":"Name?"})));
     await first.call('commands', 'kvcoder.message.send', { sessionId: waiting, text: 'go' });
     await until(() => first.call('queries', 'kvcoder.session.get', { sessionId: waiting }), sessionSchema, (session) => session.status === 'waiting');
     fake.reply({ chunks: [{ text: 'Thinking about it' }, { wait: new Promise<void>(() => undefined) }] });
@@ -56,7 +56,7 @@ describe('crash invariants 3 and 5 (12 §12.2)', { timeout: 120_000 }, () => {
     const { fake } = world;
     const first = await world.start();
     const sessionId = sessionSchema.parse(await first.call('commands', 'kvcoder.session.create', { title: 'Server' })).id;
-    fake.reply(calls({ command: 'echo serving; sleep 60', mode: 'async' }), says('Started.'));
+    fake.reply(runs(shell('echo serving; sleep 60', { background: true })), says('Started.'));
     await first.call('commands', 'kvcoder.message.send', { sessionId, text: 'serve' });
     await until(() => first.call('queries', 'kvcoder.session.get', { sessionId }), sessionSchema, (session) => session.status === 'idle');
     const [job] = jobsSchema.parse(await first.call('queries', 'kvcoder.job.list', { sessionId }));

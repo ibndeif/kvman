@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import { chromium, type Browser } from 'playwright';
 import { z } from '@kvman/sdk';
 import { childWait, kvmanWorld, until, type KvmanWorld } from '../support/kvman-child.ts';
-import { calls, says } from '../support/model-script.ts';
+import { command, runs, says } from '../support/model-script.ts';
 
 let browser: Browser;
 let world: KvmanWorld | undefined;
@@ -28,8 +28,8 @@ describe('what a person sees while a step runs, in Chromium (08 §8.7, ADR 0009,
     const kvman = await world.start();
     let release = (): void => undefined;
     const hold = new Promise<void>((resolve) => (release = resolve));
-    const pieces = ['{"title":"Create the todo file","description":"Writes todo.txt so you can see it.","risky":false,', '"command":"echo hi"}'];
-    world.fake.reply(calls(`ask confirm '{"prompt":"Go on?"}'`), { chunks: [{ toolCall: { id: 'c9', name: 'bash', argumentPieces: pieces } }, { wait: hold }] }, says('Done.'));
+    const pieces = ['{"description":"Creating the todo file","connector":"shell","command":"exec",', '"payload":{"line":"echo hi","risky":false}}'];
+    world.fake.reply(runs(command('ask', 'confirm', {"prompt":"Go on?"})), { chunks: [{ toolCall: { id: 'c9', name: 'run', argumentPieces: pieces } }, { wait: hold }] }, says('Done.'));
     const sessionId = sessionSchema.parse(await kvman.call('commands', 'kvcoder.session.create', { title: 'Live' })).id;
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
     await page.goto(`${kvman.origin}/kvcoder/session/${sessionId}`);
@@ -42,17 +42,18 @@ describe('what a person sees while a step runs, in Chromium (08 §8.7, ADR 0009,
       await page.locator('[data-test="answer-yes"]').click();
       await page.locator('[data-test="question-card"]').waitFor({ state: 'detached', timeout: 2000 });
       await activity.waitFor();
-      await activity.locator('[data-test="activity-title"]', { hasText: 'Create the todo file' }).waitFor();
-      expect(await activity.locator('[data-test="activity-description"]').textContent()).toBe('Writes todo.txt so you can see it.');
+      await activity.locator('[data-test="activity-title"]', { hasText: 'Creating the todo file' }).waitFor();
+      expect(await activity.locator('[data-test="activity-label"]').textContent()).toBe('shell · exec');
       expect(await activity.getAttribute('data-phase')).toBe('preparing');
     } finally {
       release();
     }
     await page.locator('[data-test="assistant-message"]', { hasText: 'Done.' }).waitFor();
     await activity.waitFor({ state: 'detached' });
-    const card = page.locator('[data-test="shell-result"]', { hasText: 'Create the todo file' });
-    expect(await card.locator('[data-test="call-description"]').textContent()).toBe('Writes todo.txt so you can see it.');
-    expect(await card.locator('[data-test="call-command"]').textContent()).toBe('echo hi');
+    const card = page.locator('[data-test="call-card"]', { hasText: 'Creating the todo file' });
+    expect(await card.locator('[data-test="call-label"]').textContent()).toBe('shell · exec');
+    await card.locator('button').click();
+    expect(await card.locator('[data-test="call-payload"]').textContent()).toBe('echo hi');
     await page.close();
   });
 

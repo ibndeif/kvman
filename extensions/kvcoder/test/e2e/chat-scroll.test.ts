@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { chromium, type Browser, type Page } from 'playwright';
 import { z } from '@kvman/sdk';
 import { kvmanWorld, until, type KvmanWorld, type Running } from '../support/kvman-child.ts';
-import { calls, says } from '../support/model-script.ts';
+import { runs, says, shell } from '../support/model-script.ts';
 import type { FakeReply } from '@kvman/testkit/fake-openai';
 
 let browser: Browser;
@@ -25,7 +25,7 @@ const sessionSchema = z.object({ id: z.string(), status: z.string() });
 const colorsSchema = z.object({ background: z.string(), text: z.string() });
 const listSchema = z.object({ scrollable: z.boolean(), overflow: z.string() });
 const edgeSchema = z.object({ left: z.number(), right: z.number() });
-const edgesSchema = z.object({ title: edgeSchema, description: edgeSchema, command: edgeSchema });
+const edgesSchema = z.object({ description: edgeSchema, label: edgeSchema });
 const fitSchema = z.object({ buttonLeft: z.number(), buttonRight: z.number(), popoverLeft: z.number(), popoverRight: z.number(), conversationLeft: z.number(), conversationRight: z.number(), sideways: z.object({ document: z.boolean(), main: z.boolean(), conversation: z.boolean() }) });
 const upwardSchema = z.object({ popoverBottom: z.number(), buttonTop: z.number(), sideways: z.boolean() });
 
@@ -37,7 +37,7 @@ const edgesExpression = `(() => {
     const { left, right } = range.getBoundingClientRect();
     return { left, right };
   };
-  return { title: edge('[data-test="call-title"]'), description: edge('[data-test="call-description"]'), command: edge('[data-test="call-command"] .kvc-mono') };
+  return { description: edge('[data-test="call-description"]'), label: edge('[data-test="call-label"]') };
 })()`;
 // The popover re-fits on the frame after the conversation changes size, so a test waits for it to lie inside (ADR 0009, 221).
 const insideExpression = `(() => {
@@ -149,12 +149,12 @@ describe('a long chat in Chromium (08 §8.7, ADR 0009, 195–199)', { timeout: 1
   });
 
   it('QA9-H12 a card opened in either theme shows its command and output on dark blocks', async () => {
-    const { kvman, sessionId } = await chatWith(calls('echo hello'), says('Done.'));
+    const { kvman, sessionId } = await chatWith(runs(shell('echo hello')), says('Done.'));
     const page = await openChat(kvman, sessionId);
-    await page.locator('[data-test="shell-result"] button').click();
+    await page.locator('[data-test="call-card"] button').click();
     for (const scheme of ['dark', 'light'] as const) {
       await page.emulateMedia({ colorScheme: scheme });
-      for (const block of ['shell-command', 'shell-output']) {
+      for (const block of ['call-payload', 'call-output']) {
         const colors = colorsSchema.parse(await page.evaluate(`(() => { const style = getComputedStyle(document.querySelector('[data-test="${block}"]')); return { background: style.backgroundColor, text: style.color }; })()`));
         expect(luminance(colors.background), `${scheme} ${block} background`).toBeLessThan(0.2);
         expect(luminance(colors.text), `${scheme} ${block} text`).toBeGreaterThan(0.6);
@@ -208,16 +208,15 @@ describe('a long chat in Chromium (08 §8.7, ADR 0009, 195–199)', { timeout: 1
     await page.close();
   });
 
-  it('QA10-H10 a card\'s title, description, and command share one edge: the right in Arabic, the left in English', async () => {
-    const { kvman, sessionId } = await chatWith(calls('echo hello'), says('Done.'));
+  it('QA10-H10 a card\'s description and its connector command share one edge: the right in Arabic, the left in English', async () => {
+    const { kvman, sessionId } = await chatWith(runs(shell('echo hello')), says('Done.'));
     for (const language of ['ar', 'en'] as const) {
       await kvman.call('commands', 'kernel.settings.set', { key: 'kernel.language', value: language, scope: 'global' });
       const page = await openChat(kvman, sessionId);
-      await page.locator('[data-test="shell-result"]').waitFor();
+      await page.locator('[data-test="call-card"]').waitFor();
       const edges = edgesSchema.parse(await page.evaluate(edgesExpression));
       const side = language === 'ar' ? 'right' : 'left';
-      expect(Math.abs(edges.title[side] - edges.command[side]), `${language} title and command`).toBeLessThan(1.5);
-      expect(Math.abs(edges.description[side] - edges.command[side]), `${language} description and command`).toBeLessThan(1.5);
+      expect(Math.abs(edges.description[side] - edges.label[side]), `${language} description and label`).toBeLessThan(1.5);
       await page.close();
     }
   });

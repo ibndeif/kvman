@@ -5,7 +5,7 @@ import { createFakeKvman, progress } from './support/fake-kvman.ts';
 import { mounted, serve, session, turn, user } from './support/fixtures.ts';
 
 const confirm = { toolCallId: 'c1', kind: 'question' as const, questionId: 'q1', question: { kind: 'confirm', prompt: 'Go on?' }, childSessionId: null };
-const approval = { toolCallId: 'c2', kind: 'approval' as const, questionId: 'a1', question: { title: 'Create the todo file', command: 'touch todo.txt', description: 'Makes todo.txt.', timeoutMs: 120_000 }, childSessionId: null };
+const approval = { toolCallId: 'c2', kind: 'approval' as const, questionId: 'a1', question: { description: 'Creating the todo file', connector: 'shell', command: 'exec', payload: { line: 'touch todo.txt' } }, childSessionId: null };
 
 const waiting = (pending: (typeof confirm | typeof approval)[]) => ({ found: session({ status: 'waiting' }), messages: [user('go')], omitted: 0, turns: [turn({ pending })] });
 const reads = (fake: ReturnType<typeof createFakeKvman>) => fake.calls.filter((call) => call.name === 'kvcoder.session.get').length;
@@ -49,8 +49,8 @@ describe('an answer is felt at once (08 §8.5, ADR 0009, 141)', () => {
     await flushPromises();
     expect(wrapper.find('[data-test="approvals-card"]').exists()).toBe(false);
     const line = wrapper.find('[data-test="activity"]');
-    expect(line.find('[data-test="activity-title"]').text()).toBe('Create the todo file');
-    expect(line.find('[data-test="activity-description"]').text()).toBe('Makes todo.txt.');
+    expect(line.find('[data-test="activity-title"]').text()).toBe('Creating the todo file');
+    expect(line.find('[data-test="activity-label"]').text()).toBe('shell · exec');
     expect(line.attributes('data-phase')).toBe('running');
     fake.emit('j2', progress('@kvman/kvai', { type: 'text', delta: 'Created.' }));
     await flushPromises();
@@ -94,7 +94,7 @@ describe('an answer is felt at once (08 §8.5, ADR 0009, 141)', () => {
 
   it('QA3-H2 Allow all answers each approval in order and the last one starts the next step', async () => {
     const fake = createFakeKvman();
-    const second = { ...approval, toolCallId: 'c3', questionId: 'a2', question: { ...approval.question, title: 'Build it', command: 'npm run build' } };
+    const second = { ...approval, toolCallId: 'c3', questionId: 'a2', question: { ...approval.question, description: 'Building it', payload: { line: 'npm run build' } } };
     const world = waiting([approval, second]);
     serve(fake, world);
     let taken = 0;
@@ -112,7 +112,7 @@ describe('an answer is felt at once (08 §8.5, ADR 0009, 141)', () => {
       { questionId: 'a1', answer: { confirmed: true } },
       { questionId: 'a2', answer: { confirmed: true } },
     ]);
-    expect(wrapper.findAll('[data-test="activity-title"]').map((title) => title.text())).toEqual(['Create the todo file', 'Build it']);
+    expect(wrapper.findAll('[data-test="activity-title"]').map((title) => title.text())).toEqual(['Creating the todo file', 'Building it']);
     wrapper.unmount();
   });
 });

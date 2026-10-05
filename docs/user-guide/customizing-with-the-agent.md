@@ -2,7 +2,7 @@
 
 This page is for anyone who wants kvman's agent to change kvman itself. When you finish, you can ask it to switch the model, change a setting, add or remove an extension, edit your preset, or build and preview a new extension, and you know which of those need a restart.
 
-The tools for this come from **kvcustomizer**, which the `coder` preset loads. The agent uses them instead of typing shell commands, so its work is predictable and checked. You never have to know their names; this page lists them so you can tell what the agent is doing when you read its steps.
+The tools for this come from **kvcustomizer**, which the `coder` preset loads. The agent uses them instead of shell lines, so its work is predictable and checked. You never have to know their names; this page lists them so you can tell what the agent is doing when you read its steps.
 
 ## What you can ask for
 
@@ -29,7 +29,7 @@ Changes to the **model** and to **settings** apply at once.
 
 ## Approvals
 
-Your **shell approval** setting, `kvcoder.shell.approval`, decides what the agent asks about: `auto` (the default) asks only for a call it marks risky, and `ask` asks for every call. Calls to `kvman` can change your app, so read them before you approve. Nothing the agent does here reads or changes a secret, and an API key is never sent to the model.
+Your approval setting, `kvcoder.shell.approval`, decides when the agent asks before a shell line or a file change: `auto` (the default) asks unless the agent marks the call as not risky, and `ask` asks every time. The connectors on this page run without asking; a change they make to your extensions or your preset applies only when you restart kvman, so you can read it on the call's card first. Nothing the agent does here reads or changes a secret, and an API key is never sent to the model.
 
 ## Looking things up
 

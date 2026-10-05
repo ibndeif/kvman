@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { calls } from './support/model-script.ts';
+import { command, runs } from './support/model-script.ts';
 import { newSession } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
@@ -12,7 +12,7 @@ describe('retention (08 §8.1, ADR 0009, 103)', { timeout: 30_000 }, () => {
     const { kernel, fake } = await kvcoder.start({ settings: { 'kvcoder.sessions.keep': 2 } });
     const oldest = await newSession(kernel);
     const waiting = await newSession(kernel);
-    fake.reply(calls(`ask text '{"prompt":"?"}'`));
+    fake.reply(runs(command('ask', 'text', {"prompt":"?"})));
     await kernel.exec('kvcoder.message.send', { sessionId: waiting, text: 'go' });
     await kernel.clock.advance(0);
     const newer = [await newSession(kernel), await newSession(kernel)];

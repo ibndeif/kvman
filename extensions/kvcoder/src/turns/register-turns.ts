@@ -1,6 +1,6 @@
 import { z, type Ctx } from '@kvman/sdk';
 import { checkedAnswer } from '../calls/ask.ts';
-import { shellRunSchema, type HeldResult } from '../schemas/records.ts';
+import { runCallSchema, type HeldResult } from '../schemas/records.ts';
 import { findSession, ownSession, userOnly } from '../sessions/session-lookup.ts';
 import { turnSchema, turnView } from '../sessions/session-view.ts';
 import { records, txRecords } from '../store/collections.ts';
@@ -53,7 +53,7 @@ export function registerTurns(ctx: Ctx): void {
         checked.kind === 'result'
           ? heldText(question.toolCallId, checked.text, false)
           : checked.approved
-            ? { toolCallId: question.toolCallId, text: '', details: null, isError: false, run: shellRunSchema.parse(question.question) }
+            ? { toolCallId: question.toolCallId, text: '', details: null, isError: false, run: runCallSchema.parse(question.question) }
             : heldText(question.toolCallId, 'denied by the user', true);
       return { jobId: await resolvePending(ctx, question.sessionId, question.toolCallId, held, false) };
     },

@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import { chromium, type Browser, type Page } from 'playwright';
 import { z } from '@kvman/sdk';
 import { childWait, kvmanWorld, until, type KvmanWorld, type Running } from '../support/kvman-child.ts';
-import { calls, says } from '../support/model-script.ts';
+import { command, runs, says } from '../support/model-script.ts';
 
 let browser: Browser;
 let world: KvmanWorld | undefined;
@@ -82,7 +82,7 @@ describe('the chat page in Chromium (08 §8.7, ADR 0009, 130–137)', { timeout:
   it('QA1-H2 and QA2-H1 the waiting count follows the steps with no reload, even when the step ends at once', async () => {
     world = await kvmanWorld();
     const kvman = await world.start();
-    world.fake.reply(calls(`ask confirm '{"prompt":"Go on?"}'`), says('Done.'));
+    world.fake.reply(runs(command('ask', 'confirm', {"prompt":"Go on?"})), says('Done.'));
     const sessionId = sessionSchema.parse(await kvman.call('commands', 'kvcoder.session.create', { title: 'Waiting' })).id;
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
     await page.goto(`${kvman.origin}/kvcoder/session/${sessionId}`);

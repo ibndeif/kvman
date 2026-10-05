@@ -1,13 +1,13 @@
 import { z, type Ctx } from '@kvman/sdk';
-import { builtinConnectors } from '../connector-line.ts';
+import { builtinConnectors } from '../connector-call.ts';
 import { invalid } from '../problems.ts';
 import { readSettings } from '../register-settings.ts';
 import { connectorRegisterSchema, exampleSchema, type ConnectorDoc } from '../schemas/registry.ts';
 import { records, txRecords } from '../store/collections.ts';
 import { callerExtension, loadedExtensions, ownsPublicCall } from './loaded.ts';
 
-// Connectors (plan 08 §8.4): words the agent types in its shell, registered by other extensions, kept in kvcoder's
-// global store for one run, and owned by their registering extension.
+// Connectors (plan 08 §8.4): named sets of commands the agent runs with `run`, registered by other extensions, kept in
+// kvcoder's global store for one run, and owned by their registering extension.
 
 const connectorRowSchema = z.object({
   name: z.string(),
@@ -15,7 +15,7 @@ const connectorRowSchema = z.object({
   owner: z.string(),
   kind: z.enum(['commands', 'binary']),
   commands: z.array(z.object({ name: z.string(), command: z.string(), examples: z.array(exampleSchema) })).exactOptional(),
-  binary: z.object({ check: z.string(), install: z.string().exactOptional() }).exactOptional(),
+  binary: z.object({ check: z.string(), install: z.string().exactOptional(), help: z.string().exactOptional() }).exactOptional(),
 });
 
 export type ConnectorRow = z.output<typeof connectorRowSchema>;
@@ -27,7 +27,7 @@ function rowOf(doc: ConnectorDoc): ConnectorRow {
     owner: doc.owner,
     kind: doc.kind,
     ...(doc.commands === null ? {} : { commands: doc.commands }),
-    ...(doc.binary === null ? {} : { binary: { check: doc.binary.check, ...(doc.binary.install === null ? {} : { install: doc.binary.install }) } }),
+    ...(doc.binary === null ? {} : { binary: { check: doc.binary.check, ...(doc.binary.install === null ? {} : { install: doc.binary.install }), ...(doc.binary.help === null ? {} : { help: doc.binary.help }) } }),
   };
 }
 
@@ -58,7 +58,7 @@ async function register(ctx: Ctx, input: z.output<typeof connectorRegisterSchema
   const doc: Omit<ConnectorDoc, 'owner'> =
     'commands' in input
       ? { name: input.name, description: input.description, kind: 'commands', commands: input.commands.map((command) => ({ name: command.name, command: command.command, examples: command.examples ?? [] })), binary: null }
-      : { name: input.name, description: input.description, kind: 'binary', commands: null, binary: { check: input.binary.check, install: input.binary.install ?? null } };
+      : { name: input.name, description: input.description, kind: 'binary', commands: null, binary: { check: input.binary.check, install: input.binary.install ?? null, help: input.binary.help ?? null } };
   const taken = await ctx.store.transaction((tx) => {
     const { connectors } = txRecords(tx);
     const [existing] = connectors.find({ name: input.name }, { limit: 1 });
@@ -72,7 +72,7 @@ async function register(ctx: Ctx, input: z.output<typeof connectorRegisterSchema
 
 export function registerConnectors(ctx: Ctx): void {
   ctx.registerCommand('kvcoder.connector.register', {
-    description: 'Registers a connector: a word the agent types to run the caller\'s public commands, or a program it runs in the shell.',
+    description: "Registers a connector the agent calls with its run tool: the caller's public commands, or a program run in the shell.",
     input: connectorRegisterSchema,
     output: z.object({}),
     public: true,

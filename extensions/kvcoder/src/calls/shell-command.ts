@@ -8,7 +8,7 @@ import path from 'node:path';
 export type Platform = NodeJS.Platform;
 
 /** How to start one shell call. */
-export type ShellCommand = { program: string; args: (command: string) => string[]; toolName: 'bash' | 'powershell' };
+export type ShellCommand = { program: string; args: (command: string) => string[]; kind: 'bash' | 'powershell' };
 
 const powershellArgs = (command: string): string[] => ['-NoProfile', '-Command', command];
 const bashArgs = (command: string): string[] => ['-lc', command];
@@ -25,10 +25,10 @@ export function onPath(name: string, environment: NodeJS.ProcessEnv, platform: P
 }
 
 export function shellCommand(platform: Platform, configured: string | null, hasPwsh: () => boolean): ShellCommand {
-  const toolName = platform === 'win32' ? 'powershell' : 'bash';
-  if (configured !== null) return { program: configured, args: isPowerShell(configured) ? powershellArgs : bashArgs, toolName };
-  if (platform !== 'win32') return { program: 'bash', args: bashArgs, toolName };
-  return { program: hasPwsh() ? 'pwsh' : 'powershell.exe', args: powershellArgs, toolName };
+  const kind = platform === 'win32' ? 'powershell' : 'bash';
+  if (configured !== null) return { program: configured, args: isPowerShell(configured) ? powershellArgs : bashArgs, kind };
+  if (platform !== 'win32') return { program: 'bash', args: bashArgs, kind };
+  return { program: hasPwsh() ? 'pwsh' : 'powershell.exe', args: powershellArgs, kind };
 }
 
 /** How to end a process tree: its group on Linux and macOS, `taskkill /T /F` on Windows. */

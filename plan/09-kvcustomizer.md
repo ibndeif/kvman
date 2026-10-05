@@ -6,22 +6,24 @@ kvcustomizer is the kvcoder extension for customizing kvman: developing extensio
 
 ## 9.1 Connectors
 
+The agent makes each call with kvcoder's `run` tool (plan 08 §8.2, ADR 0011); the table writes `run { connector: 'ext', command: 'new', payload: { … } }` as `ext new { … }`. Every connector also has kvcoder's `help`.
+
 | Call | Kernel command | Does |
 |---|---|---|
-| `ext new '{ "name", "namespace", "folder", "web"? }'` | `kvcustomizer.ext.new` | runs `kvman-new` (§9.2, §10) → `{ folder, name, namespace, web }` |
+| `ext new { "name", "namespace", "folder", "web"? }` | `kvcustomizer.ext.new` | runs `kvman-new` (§9.2, §10) → `{ folder, name, namespace, web }` |
 | `ext list` | `kvcustomizer.ext.list` | the projects in the workspace folder (folders whose package.json has a `kvman` field) → `[{ folder, name, namespace, version }]`, sorted by folder |
-| `ext check '{ "folder" }'` | `kvcustomizer.ext.check` | runs `npx tsc --noEmit --pretty false`, then `npm run check -- --json` → `[{ file?, message, hint }]`, TypeScript's findings first |
-| `ext test '{ "folder" }'` | `kvcustomizer.ext.test` | runs `npm test` → `{ passed, exitCode, output }` (the last 30 KB of the output) |
-| `preset new '{ "name", "file" }'` | `kvcustomizer.preset.new` | runs `kvman-preset new` → `{ file }` |
-| `preset check '{ "file" }'` | `kvcustomizer.preset.check` | runs `kvman-preset check`, which validates the preset's schema and its references (extensions, settings, pages) → `[{ file, message, hint }]` |
-| `preview start '{ "extensions": [folders], "preset"?: file }'` | `kvcustomizer.preview.start` | starts `kvman-preview` (§9.3) through the process service → `{ url }` |
+| `ext check { "folder" }` | `kvcustomizer.ext.check` | runs `npx tsc --noEmit --pretty false`, then `npm run check -- --json` → `[{ file?, message, hint }]`, TypeScript's findings first |
+| `ext test { "folder" }` | `kvcustomizer.ext.test` | runs `npm test` → `{ passed, exitCode, output }` (the last 30 KB of the output) |
+| `preset new { "name", "file" }` | `kvcustomizer.preset.new` | runs `kvman-preset new` → `{ file }` |
+| `preset check { "file" }` | `kvcustomizer.preset.check` | runs `kvman-preset check`, which validates the preset's schema and its references (extensions, settings, pages) → `[{ file, message, hint }]` |
+| `preview start { "extensions": [folders], "preset"?: file }` | `kvcustomizer.preview.start` | starts `kvman-preview` (§9.3) through the process service → `{ url }` |
 | `preview stop` / `preview status` | `kvcustomizer.preview.stop` / `.status` | `{}` / `{ running: false }` or `{ running: true, url, extensions, startedAt }` |
-| `kvman model-list` / `kvman model-set '{ "model" }'` | `kvcustomizer.app.model.list` / `.set` | the models that can be called now (kvai's `kvai.model.list`, for each connected provider) / sets `kvai.defaultModel` (global) |
-| `kvman settings-list` / `settings-set '{ "key", "value", "scope" }'` / `settings-reset '{ "key", "scope" }'` | `kvcustomizer.app.settings.list` / `.set` / `.reset` | `kernel.settings.list`, `.set`, `.reset` |
-| `kvman extensions-list` / `extensions-install '{ "name", "source" }'` / `extensions-uninstall '{ "name" }'` | `kvcustomizer.app.extensions.list` / `.install` / `.uninstall` | `kernel.extensions.list` / `kernel.extensions.install` / `.uninstall` (§2.12) |
+| `kvman model-list` / `kvman model-set { "model" }` | `kvcustomizer.app.model.list` / `.set` | the models that can be called now (kvai's `kvai.model.list`, for each connected provider) / sets `kvai.defaultModel` (global) |
+| `kvman settings-list` / `settings-set { "key", "value", "scope" }` / `settings-reset { "key", "scope" }` | `kvcustomizer.app.settings.list` / `.set` / `.reset` | `kernel.settings.list`, `.set`, `.reset` |
+| `kvman extensions-list` / `extensions-install { "name", "source" }` / `extensions-uninstall { "name" }` | `kvcustomizer.app.extensions.list` / `.install` / `.uninstall` | `kernel.extensions.list` / `kernel.extensions.install` / `.uninstall` (§2.12) |
 | `kvman preset-get` | `kvcustomizer.app.preset.get` | `kernel.preset.get` (§2.12) |
 | `docs list` | `kvcustomizer.guides.list` | `{ pages: [{ extension, topic, title }], problems: [{ extension, problem }] }`: the three built-in guides (`extension: "kvman"`), then the pages of every loaded extension that serves docs (§9.5); `problems` has one entry for each extension whose docs failed (ADR 0010, 15) |
-| `docs get '{ "extension"?, "topic" }'` | `kvcustomizer.guides.get` | `{ extension, topic, title, markdown }`; with no `extension` the topic is a built-in guide (`sdk`, `i18n`, `presets`), read from the testkit's `docs/`; `NOT_FOUND` for an unknown extension or topic |
+| `docs get { "extension"?, "topic" }` | `kvcustomizer.guides.get` | `{ extension, topic, title, markdown }`; with no `extension` the topic is a built-in guide (`sdk`, `i18n`, `presets`), read from the testkit's `docs/`; `NOT_FOUND` for an unknown extension or topic |
 
 - **The `kvman` connector** changes the app the agent runs in, and `ext` builds a project in the workspace (ADR 0010, 8). Its commands are public and each wraps the kernel command named in the table; none reads or writes a secret, and a change to the preset applies at the next start, which the answer says (`restartRequired`).
 - **Descriptions.** Each connector's `description` says what it is for and when to use it (ADR 0009, 170): `ext` for any work on an extension, running `check`, then `test`, after changing one; `preset` to create a preset file and check it before running it; `preview` to show the person a project working, stopping it when done; `docs` before writing an extension, preset, view, or component.

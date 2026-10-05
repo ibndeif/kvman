@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { heldReply } from './support/held-reply.ts';
 import { wait } from './support/wait.ts';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { calls, requestMessages, says, textOf } from './support/model-script.ts';
+import { command, requestMessages, runs, says, textOf } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
@@ -13,7 +13,7 @@ describe('steering (08 §8.1, ADR 0009, 90 and 102)', { timeout: 30_000 }, () =>
   it("M2.4-E15 a message sent while a step runs is queued, then appended after the step's results", async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    const held = heldReply({ toolCall: { id: 'c1', name: 'bash', arguments: { title: 'x', command: 'echo a', description: 'x', risky: false } } });
+    const held = heldReply({ toolCall: { id: 'c1', name: 'run', arguments: { description: 'A test call.', connector: 'shell', command: 'exec', payload: { line: 'echo a', risky: false } } } });
     fake.reply(held.reply, says('ok'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await vi.waitFor(() => expect(fake.requests()).toHaveLength(1), wait);
@@ -45,13 +45,13 @@ describe('steering (08 §8.1, ADR 0009, 90 and 102)', { timeout: 30_000 }, () =>
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
     const child = heldReply({ text: 'child answer' });
-    fake.reply(calls(`subagent run '{"task":"Help","mode":"fresh"}'`), child.reply, says('parent done'));
+    fake.reply(runs(command('subagent', 'run', {"task":"Help","mode":"fresh"})), child.reply, says('parent done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await vi.waitFor(() => expect(fake.requests()).toHaveLength(2), wait);
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'meanwhile' });
     expect((await turnState(kernel, sessionId)).session.status).toBe('waiting');
     child.release();
     await kernel.clock.advance(0);
-    expect(roles(requestMessages(fake)).slice(-2)).toEqual(['tool:child answer\n[exit code 0]', 'user:meanwhile']);
+    expect(roles(requestMessages(fake)).slice(-2)).toEqual(['tool:child answer', 'user:meanwhile']);
   });
 });

@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { chromium, type Browser, type Page } from 'playwright';
 import { z } from '@kvman/sdk';
 import { childWait, kvmanWorld, until, type KvmanWorld } from '../support/kvman-child.ts';
-import { artifactCommand, calls, says } from '../support/model-script.ts';
+import { command, runs, says } from '../support/model-script.ts';
 
 let browser: Browser;
 let world: KvmanWorld | undefined;
@@ -33,7 +33,7 @@ describe('the artifact panel in Chromium (08 §8.7, ADR 0009, 177 and 182)', { t
   it('QA6-H21 the panel sits beside the conversation on a wide window and over it on a narrow one', async () => {
     world = await kvmanWorld();
     const kvman = await world.start();
-    world.fake.reply(calls(artifactCommand('write', { id: 'plan', title: 'The plan', content: '# The plan' })), says('Done.'));
+    world.fake.reply(runs(command('artifact', 'write', { id: 'plan', title: 'The plan', content: '# The plan' })), says('Done.'));
     const sessionId = sessionSchema.parse(await kvman.call('commands', 'kvcoder.session.create', { title: 'Artifact' })).id;
     await kvman.call('commands', 'kvcoder.message.send', { sessionId, text: 'Write the plan' });
     await until(() => kvman.call('queries', 'kvcoder.session.get', { sessionId }), sessionSchema, (found) => found.status === 'idle');

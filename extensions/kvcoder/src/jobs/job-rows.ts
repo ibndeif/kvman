@@ -1,4 +1,4 @@
-import { z, type Ctx, type Json, type Stored } from '@kvman/sdk';
+import type { Ctx, Json, Stored } from '@kvman/sdk';
 import type { BackgroundDoc } from '../schemas/records.ts';
 import { records } from '../store/collections.ts';
 import { cancelTurn } from '../turns/cancel-turn.ts';
@@ -9,21 +9,13 @@ import { outputTail } from './process-report.ts';
 import { stopProcess } from './process-run.ts';
 import { localLinks } from './process-text.ts';
 
-// A session's background jobs (ADR 0009, 88, 150, and 152): connector calls and subagents it started with `--async`, and
-// processes it started with `mode: 'async'`, as the `jobs` connector and `kvcoder.job.*` show them.
+// A session's background runs (ADR 0009, 88, 150, and 152; ADR 0011, 6): the processes and subagents it started with
+// `background: true`, as the `background` connector and `kvcoder.job.*` show them.
 
-const jobSchema = z.object({ status: z.string(), createdAt: z.string(), startedAt: z.string().exactOptional(), endedAt: z.string().exactOptional(), output: z.json().exactOptional(), problem: z.json().exactOptional() });
-
-export type JobRow = { id: string; kind: 'process' | 'connector' | 'subagent'; title: string; call: string; status: string; startedAt: string; endedAt?: string; exitCode?: number };
+export type JobRow = { id: string; kind: 'process' | 'subagent'; title: string; call: string; status: string; startedAt: string; endedAt?: string; exitCode?: number };
 export type JobDetail = { row: JobRow; detail: Record<string, Json> };
 
 const outputLines = 100;
-
-async function connectorRow(ctx: Ctx, entry: Stored<BackgroundDoc>): Promise<JobDetail> {
-  const job = jobSchema.parse(await ctx.exec('kernel.jobs.get', { id: entry.ref }));
-  const row: JobRow = { id: entry.ref, kind: 'connector', title: entry.call, call: entry.call, status: job.status, startedAt: job.startedAt ?? entry.startedAt, ...(job.endedAt === undefined ? {} : { endedAt: job.endedAt }) };
-  return { row, detail: { ...(job.output === undefined ? {} : { output: job.output }), ...(job.problem === undefined ? {} : { problem: job.problem }) } };
-}
 
 async function subagentRow(ctx: Ctx, entry: Stored<BackgroundDoc>): Promise<JobDetail> {
   const store = records(ctx.store);
@@ -47,8 +39,7 @@ export async function jobDetail(ctx: Ctx, sessionId: string, id: string): Promis
   const process = await processRow(ctx, id, sessionId);
   if (process !== undefined) return process;
   const [entry] = await records(ctx.store).background.find({ sessionId, ref: id }, { limit: 1 });
-  if (entry === undefined) return undefined;
-  return entry.kind === 'connector' ? connectorRow(ctx, entry) : subagentRow(ctx, entry);
+  return entry === undefined || entry.kind !== 'subagent' ? undefined : subagentRow(ctx, entry);
 }
 
 /** The session's newest 50 jobs, newest first. */
@@ -67,15 +58,11 @@ export async function linksOf(ctx: Ctx, sessionId: string, row: JobRow): Promise
   return doc === undefined ? [] : localLinks(await outputTail(ctx, doc.id, outputLines));
 }
 
-/** Cancels a job: stops a process, cancels a connector job, or cancels a subagent and tells the session. */
+/** Stops a process, or cancels a subagent and tells the session; `false` for a process that had ended already. */
 export async function cancelJob(ctx: Ctx, sessionId: string, row: JobRow, by: 'agent' | 'person'): Promise<boolean> {
   if (row.kind === 'process') {
     const doc = await sessionProcess(ctx, sessionId, row.id);
     return doc !== undefined && stopProcess(ctx, doc, by);
-  }
-  if (row.kind === 'connector') {
-    await ctx.cancel(row.id);
-    return true;
   }
   if (await cancelTurn(ctx, row.id, false)) {
     const result = await childResult(ctx, row.id, 'cancelled');

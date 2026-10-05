@@ -3,9 +3,10 @@ import { ShieldAlert } from '@lucide/vue';
 import { useKvman } from './kvman.ts';
 import type { Decision } from './use-answers.ts';
 
-// One reply's approvals share a card (ADR 0009, 104): Allow or Deny each command, or Allow all. Each shows the call's
-// title and description, and the command under them (ADR 143); an async command says it runs in the background (ADR 149). The card only says what was decided (ADR 141).
-export type Approval = { questionId: string; title?: string; command: string; description?: string; mode?: 'sync' | 'async' };
+// One reply's approvals share a card (ADR 0009, 104): Allow or Deny each call, or Allow all. Each shows the call's
+// description, its connector command, and what it would run or change (ADR 0011, 13); a background call says so
+// (ADR 149). The card only says what was decided (ADR 141).
+export type Approval = { questionId: string; description?: string; label?: string; subject?: string; background?: boolean };
 const props = defineProps<{ approvals: Approval[] }>();
 const emit = defineEmits<{ decide: [decision: Decision] }>();
 const kvman = useKvman();
@@ -17,10 +18,10 @@ const decide = (approvals: readonly Approval[], confirmed: boolean): void => emi
     <div class="kvc-card-row" style="font-weight: 600"><ShieldAlert :size="18" aria-hidden="true" />{{ kvman.t('kvcoder.ui.allowCommands', { count: props.approvals.length }) }}</div>
     <div v-for="item in props.approvals" :key="item.questionId" class="kvc-card-row" style="border-block-start: 1px solid var(--kv-color-border)" :data-test="`approval-${item.questionId}`">
       <span style="display: flex; flex-direction: column; flex: 1 1 auto; gap: 2px; min-inline-size: 0">
-        <span v-if="item.title" style="font-weight: 600" data-test="call-title">{{ item.title }}</span>
-        <span v-if="item.description && item.description !== item.title" class="kvc-muted" data-test="call-description">{{ item.description }}</span>
-        <span data-test="call-command"><span class="kvc-mono" :class="{ 'kvc-muted': item.title }">{{ item.command }}</span></span>
-        <span v-if="item.mode === 'async'" class="kvc-chip" style="align-self: flex-start" data-test="call-background">{{ kvman.t('kvcoder.ui.jobs.inBackground') }}</span>
+        <span v-if="item.description" style="font-weight: 600" data-test="call-description">{{ item.description }}</span>
+        <span v-if="item.label" class="kvc-muted" dir="ltr" style="align-self: flex-start" data-test="call-label">{{ item.label }}</span>
+        <span v-if="item.subject" dir="ltr" style="align-self: flex-start" data-test="call-subject"><span class="kvc-mono" :class="{ 'kvc-muted': item.description }">{{ item.subject }}</span></span>
+        <span v-if="item.background" class="kvc-chip" style="align-self: flex-start" data-test="call-background">{{ kvman.t('kvcoder.ui.jobs.inBackground') }}</span>
       </span>
       <button type="button" class="kvc-button" data-test="deny" @click="decide([item], false)">{{ kvman.t('kvcoder.ui.deny') }}</button>
       <button type="button" class="kvc-button kvc-primary" data-test="allow" @click="decide([item], true)">{{ kvman.t('kvcoder.ui.allow') }}</button>

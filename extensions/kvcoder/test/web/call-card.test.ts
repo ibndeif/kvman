@@ -1,143 +1,122 @@
 import { describe, expect, it } from 'vitest';
 import MessageItem from '../../web/src/MessageItem.vue';
-import { callInfos } from '../../web/src/message-parts.ts';
+import { callViews } from '../../web/src/message-parts.ts';
 import { createFakeKvman } from './support/fake-kvman.ts';
 import { message, mounted } from './support/fixtures.ts';
 
-type Call = { description?: string; title?: string; command: string };
+type Wrapper = Awaited<ReturnType<typeof mounted>>;
+type Json = Parameters<typeof message>[1][string];
 
-function connector(call: Call, text: string): { assistant: ReturnType<typeof message>; result: ReturnType<typeof message> } {
-  const assistant = message('assistant', { role: 'assistant', content: [{ type: 'toolCall', id: 'c1', name: 'bash', arguments: { risky: false, ...call } }] });
-  const result = message('toolResult', { role: 'toolResult', toolCallId: 'c1', toolName: 'bash', content: [{ type: 'text', text }], isError: false });
-  return { assistant, result };
+const toolCall = (name: string, args: Record<string, Json>) => message('assistant', { role: 'assistant', content: [{ type: 'toolCall', id: 'c1', name, arguments: args }] });
+const toolResult = (name: string, text: string, extra: Record<string, Json> = {}) => message('toolResult', { role: 'toolResult', toolCallId: 'c1', toolName: name, content: [{ type: 'text', text }], isError: false, ...extra });
+
+// A `run` call and its result, as kvcoder stores them: the result's details name the call, and the call holds the payload.
+async function card(call: { description: string; connector: string; command: string; payload?: Record<string, Json> }, text: string, details: Record<string, Json> = {}, isError = false): Promise<Wrapper> {
+  const assistant = toolCall('run', call);
+  const result = toolResult('run', text, { isError, details: { description: call.description, connector: call.connector, command: call.command, output: text.replace(/\n?\[exit code \d+\]$/, ''), durationMs: 200, ...details } });
+  return mounted(MessageItem, createFakeKvman(), { message: result, calls: callViews([assistant, result]) });
 }
 
-async function card(call: Call, text: string): Promise<Awaited<ReturnType<typeof mounted>>> {
-  const { assistant, result } = connector(call, text);
-  return mounted(MessageItem, createFakeKvman(), { message: result, calls: callInfos([assistant, result]) });
+async function oldCard(args: Record<string, Json>, text: string): Promise<Wrapper> {
+  const assistant = toolCall('bash', args);
+  const result = toolResult('bash', text);
+  return mounted(MessageItem, createFakeKvman(), { message: result, calls: callViews([assistant, result]) });
 }
 
-async function opened(wrapper: Awaited<ReturnType<typeof mounted>>): Promise<void> {
-  await wrapper.find('[data-test="shell-result"] button').trigger('click');
-}
+const opened = (wrapper: Wrapper) => wrapper.find('[data-test="call-card"] button').trigger('click');
+const found = (wrapper: Wrapper, name: string) => wrapper.find(`[data-test="${name}"]`);
 
-describe("a call's card always says what the call is (ADR 0009, 186, 195)", () => {
-  it('QA9-H7 a call without a title shows its description as the title, once', async () => {
-    const wrapper = await card({ description: 'Create the todo app HTML file', command: 'cat > index.html' }, 'ok\n[exit code 0]');
-    expect(wrapper.find('[data-test="call-title"]').text()).toBe('Create the todo app HTML file');
-    expect(wrapper.find('[data-test="call-description"]').exists()).toBe(false);
-    expect(wrapper.find('[data-test="call-command"]').text()).toBe('cat > index.html');
-    wrapper.unmount();
+describe("a call's card says what the call does (08 §8.7, ADR 0011, 13)", () => {
+  it('QA18-H19 closed, the card shows the description, then the connector and command and the time; opened, the payload and the output', async () => {
+    const edit = await card({ description: 'Editing app.ts to add the save button', connector: 'fs', command: 'edit', payload: { path: 'src/app.ts', edits: [{ oldText: 'a', newText: 'b' }] } }, '{\n  "path": "src/app.ts",\n  "replacements": 1\n}');
+    expect(found(edit, 'call-description').text()).toBe('Editing app.ts to add the save button');
+    expect(found(edit, 'call-label').text()).toBe('fs · edit');
+    expect(found(edit, 'call-card').text()).toContain('0.2 s');
+    expect(found(edit, 'call-payload').exists()).toBe(false);
+    await opened(edit);
+    expect(JSON.parse(found(edit, 'call-payload').text())).toEqual({ path: 'src/app.ts', edits: [{ oldText: 'a', newText: 'b' }] });
+    expect(found(edit, 'call-output').text()).toContain('"replacements": 1');
+    const html = edit.html();
+    expect(html.indexOf('data-test="call-payload"')).toBeLessThan(html.indexOf('data-test="call-output"'));
+    edit.unmount();
+
+    const shell = await card({ description: "Listing the folder's files", connector: 'shell', command: 'exec', payload: { line: 'ls -a | wc -l', risky: false } }, '14\n[exit code 0]', { exitCode: 0 });
+    expect(found(shell, 'call-label').text()).toBe('shell · exec');
+    await opened(shell);
+    expect(found(shell, 'call-payload').text()).toBe('ls -a | wc -l');
+    expect(found(shell, 'call-output').text()).toBe('14');
+    shell.unmount();
   });
 
-  it('QA9-H8 a long description gives a cut title and is shown in full', async () => {
-    const description = 'D'.repeat(80);
-    const wrapper = await card({ description, command: 'cat > index.html' }, 'ok\n[exit code 0]');
-    expect(wrapper.find('[data-test="call-title"]').text()).toBe(`${'D'.repeat(60)}…`);
-    expect(wrapper.find('[data-test="call-description"]').text()).toBe(description);
-    wrapper.unmount();
-  });
+  it('QA18-E22 a call stored before the run tool shows its command line, and its output when opened', async () => {
+    const bare = await oldCard({ command: 'ls -a' }, 'a\nb\n[exit code 0]');
+    expect(found(bare, 'call-line').text()).toBe('ls -a');
+    expect(found(bare, 'call-description').exists()).toBe(false);
+    await opened(bare);
+    expect(found(bare, 'call-payload').text()).toBe('ls -a');
+    expect(found(bare, 'call-output').text()).toBe('a\nb');
+    bare.unmount();
 
-  it("QA9-H9 a card's command is one short line, and opening it shows everything", async () => {
-    const command = 'c'.repeat(19_000);
-    const wrapper = await card({ description: 'Writes the file.', command }, 'done output\n[exit code 0]');
-    const row = wrapper.find('[data-test="call-command"]').text();
-    expect(row).toBe(`${'c'.repeat(200)}…`);
-    await opened(wrapper);
-    expect(wrapper.find('[data-test="shell-command"]').text()).toBe(command);
-    expect(wrapper.find('[data-test="shell-output"]').text()).toBe('done output');
-    const html = wrapper.html();
-    expect(html.indexOf('data-test="shell-command"')).toBeLessThan(html.indexOf('data-test="shell-output"'));
-    wrapper.unmount();
+    const titled = await oldCard({ title: 'Run the tests', description: 'Checks the page.', command: 'npm test' }, 'ok\n[exit code 0]');
+    expect(found(titled, 'call-description').text()).toBe('Run the tests');
+    await opened(titled);
+    expect(found(titled, 'call-payload').text()).toBe('npm test');
+    titled.unmount();
   });
 
   it('QA9-H10 an empty output has no block', async () => {
-    const wrapper = await card({ description: 'Lists.', command: 'ls -la' }, '[exit code 0]');
+    const wrapper = await card({ description: 'Making the folder.', connector: 'shell', command: 'exec', payload: { line: 'mkdir out' } }, '[exit code 0]', { exitCode: 0 });
     await opened(wrapper);
-    expect(wrapper.find('[data-test="shell-command"]').text()).toBe('ls -la');
-    expect(wrapper.find('[data-test="shell-output"]').exists()).toBe(false);
+    expect(found(wrapper, 'call-payload').text()).toBe('mkdir out');
+    expect(found(wrapper, 'call-output').exists()).toBe(false);
     wrapper.unmount();
   });
 
-  it('QA9-E6 a blank title is missing, and a given title is kept with its description', async () => {
-    const blank = await card({ title: '   ', description: 'Create the todo file', command: 'touch todo.txt' }, 'ok\n[exit code 0]');
-    expect(blank.find('[data-test="call-title"]').text()).toBe('Create the todo file');
-    expect(blank.find('[data-test="call-description"]').exists()).toBe(false);
-    blank.unmount();
-
-    const given = await card({ title: 'Run the tests', description: 'Checks the page.', command: 'npm test' }, 'ok\n[exit code 0]');
-    expect(given.find('[data-test="call-title"]').text()).toBe('Run the tests');
-    expect(given.find('[data-test="call-description"]').text()).toBe('Checks the page.');
-    given.unmount();
-  });
-
-  it('QA9-E7 with neither title nor description the row shows the cut command alone', async () => {
-    const wrapper = await card({ command: 'c'.repeat(250) }, 'ok\n[exit code 0]');
-    expect(wrapper.find('[data-test="call-title"]').exists()).toBe(false);
-    expect(wrapper.find('[data-test="call-description"]').exists()).toBe(false);
-    expect(wrapper.find('[data-test="call-command"]').text()).toBe(`${'c'.repeat(200)}…`);
-    wrapper.unmount();
-  });
-
-  it("QA9-E8 and QA10-H8 a shell call's card shows its title, description, and command, with no exit chip", async () => {
-    const result = message('toolResult', { role: 'toolResult', toolCallId: 'c1', toolName: 'bash', content: [{ type: 'text', text: 'ok\n[exit code 0]' }], isError: false, details: { title: 'Run the tests', description: 'Checks the page.', command: 'npm test', exitCode: 0, output: 'ok', durationMs: 900 } });
-    const wrapper = await mounted(MessageItem, createFakeKvman(), { message: result, calls: new Map() });
-    expect(wrapper.find('[data-test="call-title"]').text()).toBe('Run the tests');
-    expect(wrapper.find('[data-test="call-description"]').text()).toBe('Checks the page.');
-    expect(wrapper.find('[data-test="call-command"]').text()).toBe('npm test');
-    expect(wrapper.find('[data-test="exit-code"]').exists()).toBe(false);
-    expect(wrapper.find('[data-test="shell-result"]').text()).not.toContain('exit');
-    expect(wrapper.find('[data-test="shell-result"]').text()).toContain('0.9 s');
+  it('QA10-H8 a card has no exit chip, whatever the exit code, and still shows the time', async () => {
+    const wrapper = await card({ description: 'Running the tests.', connector: 'shell', command: 'exec', payload: { line: 'npm test' } }, 'FAIL 1\n[exit code 1]', { exitCode: 1 }, true);
+    expect(found(wrapper, 'exit-code').exists()).toBe(false);
+    expect(found(wrapper, 'call-card').text()).not.toContain('exit');
+    expect(found(wrapper, 'call-card').text()).toContain('0.2 s');
     await opened(wrapper);
-    expect(wrapper.find('[data-test="shell-command"]').text()).toBe('npm test');
-    expect(wrapper.find('[data-test="shell-output"]').text()).toBe('ok');
+    expect(found(wrapper, 'call-output').text()).toBe('FAIL 1');
     wrapper.unmount();
   });
 
-  it('QA10-H8 a card with exit code 1 has no exit chip either, and still shows the time', async () => {
-    const wrapper = await card({ description: 'Run the tests.', command: 'npm test' }, 'FAIL 1\n[exit code 1]');
-    expect(wrapper.find('[data-test="exit-code"]').exists()).toBe(false);
-    expect(wrapper.find('[data-test="shell-result"]').text()).not.toContain('exit');
-    await opened(wrapper);
-    expect(wrapper.find('[data-test="shell-output"]').text()).toBe('FAIL 1');
-    wrapper.unmount();
-  });
-
-  it('QA10-H9 a failed call has a danger border: exit code 1, and an error text ending [exit code 1]; exit code 0 has none', async () => {
-    const failed = await card({ description: 'Run the tests.', command: 'npm test' }, 'FAIL 1\n[exit code 1]');
-    expect(failed.find('[data-test="shell-result"]').classes()).toContain('kvc-failed');
-    failed.unmount();
-
-    const errorText = message('toolResult', { role: 'toolResult', toolCallId: 'c1', toolName: 'bash', content: [{ type: 'text', text: 'denied\n[exit code 1]' }], isError: true });
-    const errored = await mounted(MessageItem, createFakeKvman(), { message: errorText, calls: new Map() });
-    expect(errored.find('[data-test="shell-result"]').classes()).toContain('kvc-failed');
+  it('QA10-H9 a failed call has a danger border: a shell line that exits 1, a connector command that returns an error, and an old result ending [exit code 1]', async () => {
+    const exited = await card({ description: 'Running the tests.', connector: 'shell', command: 'exec', payload: { line: 'npm test' } }, 'FAIL 1\n[exit code 1]', { exitCode: 1 }, true);
+    expect(found(exited, 'call-card').classes()).toContain('kvc-failed');
+    exited.unmount();
+    const errored = await card({ description: 'Editing a file.', connector: 'fs', command: 'edit', payload: { path: 'missing.txt' } }, "error NOT_FOUND: missing.txt doesn't exist.", {}, true);
+    expect(found(errored, 'call-card').classes()).toContain('kvc-failed');
     errored.unmount();
-
-    const ok = await card({ description: 'Run the tests.', command: 'npm test' }, 'ok\n[exit code 0]');
-    expect(ok.find('[data-test="shell-result"]').classes()).not.toContain('kvc-failed');
+    const old = await oldCard({ command: 'npm test' }, 'FAIL 1\n[exit code 1]');
+    expect(found(old, 'call-card').classes()).toContain('kvc-failed');
+    old.unmount();
+    const ok = await card({ description: 'Running the tests.', connector: 'shell', command: 'exec', payload: { line: 'npm test' } }, 'ok\n[exit code 0]', { exitCode: 0 });
+    expect(found(ok, 'call-card').classes()).not.toContain('kvc-failed');
     ok.unmount();
   });
 
-  it('QA10-E7 a card without an exit code has no failure border', async () => {
-    const wrapper = await card({ description: 'List the folder.', command: 'ls -la' }, 'total 0');
-    expect(wrapper.find('[data-test="shell-result"]').classes()).not.toContain('kvc-failed');
+  it('QA10-E7 a result with no exit code and no error has no failure border', async () => {
+    const wrapper = await oldCard({ description: 'List the folder.', command: 'ls -la' }, 'total 0');
+    expect(found(wrapper, 'call-card').classes()).not.toContain('kvc-failed');
     wrapper.unmount();
   });
 
   it('QA9-E15 an assistant message that only calls a tool renders nothing, and one with text or thinking renders as before', async () => {
-    const calling = message('assistant', { role: 'assistant', content: [{ type: 'toolCall', id: 'c1', name: 'bash', arguments: { command: 'ls', risky: false } }] });
+    const calling = toolCall('run', { description: 'Listing.', connector: 'fs', command: 'list' });
     const silent = await mounted(MessageItem, createFakeKvman(), { message: calling, calls: new Map() });
-    expect(silent.find('[data-test="assistant-message"]').exists()).toBe(false);
+    expect(found(silent, 'assistant-message').exists()).toBe(false);
     silent.unmount();
 
-    const thinking = message('assistant', { role: 'assistant', content: [{ type: 'thinking', thinking: 'Plan it.' }, { type: 'toolCall', id: 'c2', name: 'bash', arguments: { command: 'ls', risky: false } }] });
+    const thinking = message('assistant', { role: 'assistant', content: [{ type: 'thinking', thinking: 'Plan it.' }, { type: 'toolCall', id: 'c2', name: 'run', arguments: { description: 'Listing.', connector: 'fs', command: 'list' } }] });
     const thoughtful = await mounted(MessageItem, createFakeKvman(), { message: thinking, calls: new Map() });
-    expect(thoughtful.find('[data-test="thinking"]').text()).toContain('Plan it.');
+    expect(found(thoughtful, 'thinking').text()).toContain('Plan it.');
     thoughtful.unmount();
 
     const text = message('assistant', { role: 'assistant', content: [{ type: 'text', text: 'Done.' }] });
     const said = await mounted(MessageItem, createFakeKvman(), { message: text, calls: new Map() });
-    expect(said.find('[data-test="assistant-message"]').text()).toContain('Done.');
+    expect(found(said, 'assistant-message').text()).toContain('Done.');
     said.unmount();
   });
 });

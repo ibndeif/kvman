@@ -32,7 +32,7 @@ export function lostTokens(blocks: readonly ReplyBlock[], usage: { output: numbe
 /** What the model is told about its lost reply. */
 export function lostHint(tokens: number): string {
   const about = Math.round(tokens / 100) * 100;
-  return `Your last reply was lost on the way: the provider produced about ${String(about)} tokens, but no tool call or text reached me. Send it again now, calling the tool directly. If it was a large file, send the content in smaller pieces: one file per reply, under about 150 lines each, giving each file's content as the raw heredoc body of \`fs write\`, not as JSON.`;
+  return `Your last reply was lost on the way: the provider produced about ${String(about)} tokens, but no tool call or text reached me. Send it again now, calling the tool directly. If it was a large file, send the content in smaller pieces: one file per reply, under about 150 lines each, with \`fs write\`.`;
 }
 
 type CallBlock = { type: string; id?: string; name?: string };

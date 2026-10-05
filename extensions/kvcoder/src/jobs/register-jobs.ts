@@ -7,7 +7,7 @@ import { cancelJob, jobDetail, jobRows, linksOf, type JobRow } from './job-rows.
 const sessionJobSchema = z.object({ sessionId: z.string(), id: z.string() });
 const rowSchema = z.object({
   id: z.string(),
-  kind: z.enum(['process', 'connector', 'subagent']),
+  kind: z.enum(['process', 'subagent']),
   title: z.string(),
   call: z.string(),
   status: z.string(),
@@ -21,7 +21,7 @@ const withLinks = async (ctx: Ctx, sessionId: string, row: JobRow) => ({ ...row,
 
 export function registerJobs(ctx: Ctx): void {
   ctx.registerQuery('kvcoder.job.list', {
-    description: "A chat's newest 50 background jobs (processes, --async connector calls, and subagents), running ones first.",
+    description: "A chat's newest 50 background jobs (processes and subagents), running ones first.",
     input: z.object({ sessionId: z.string() }),
     output: z.array(rowSchema),
     public: true,
@@ -33,7 +33,7 @@ export function registerJobs(ctx: Ctx): void {
     },
   });
   ctx.registerQuery('kvcoder.job.get', {
-    description: "One background job of a chat with its output: a process's last 100 lines, a connector call's output, or a subagent's result.",
+    description: "One background job of a chat with its output: a process's last 100 lines, or a subagent's result.",
     input: sessionJobSchema,
     output: rowSchema.extend({ output: z.json().exactOptional(), problem: z.json().exactOptional() }),
     public: true,
@@ -46,7 +46,7 @@ export function registerJobs(ctx: Ctx): void {
     },
   });
   ctx.registerCommand('kvcoder.job.cancel', {
-    description: 'Stops a running background process, or cancels a connector call or subagent a chat started with --async.',
+    description: 'Stops a running background process of a chat, or cancels its background subagent.',
     input: sessionJobSchema,
     output: z.object({}),
     public: true,

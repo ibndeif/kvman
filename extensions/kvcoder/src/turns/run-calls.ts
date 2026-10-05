@@ -1,25 +1,21 @@
 import type { Ctx, Stored } from '@kvman/sdk';
-import { builtinConnectors, callInput, errorOutput, parseLine, refusedText, runCommandsCall, type CallResult } from '../connector-line.ts';
-import { askCall, type QuestionKind } from '../calls/ask.ts';
-import { resultText } from '../result-text.ts';
-import { artifactCall } from '../calls/artifact-connector.ts';
-import { chatIdOf } from '../artifacts/artifact-records.ts';
-import { fsCall } from '../calls/fs-connector.ts';
-import { jobsCall } from '../calls/jobs.ts';
-import { runShellCall } from '../calls/run-shell-call.ts';
-import { callTimeout } from '../calls/shell-command.ts';
-import { parseShellArgs, type ShellArgs } from '../calls/shell-tool.ts';
-import { createChild, startChild, subagentCall } from '../calls/subagent.ts';
+import { isAskKind, type QuestionKind } from '../calls/ask.ts';
+import { payloadJsonSchema } from '../calls/builtin-connectors.ts';
+import { parseRunArgs, type RunCall } from '../calls/run-tool.ts';
+import { createChild, refusedConnector, startChild } from '../calls/subagent.ts';
+import { builtinConnectors, errorOutput, invalidPayloadOutput, noCommandMessage, noConnectorMessage, type JsonValue } from '../connector-call.ts';
 import type { SessionTools } from '../prompt/session-prompt.ts';
-import { callInfos, isQuery, loadedExtensions } from '../registry/loaded.ts';
-import type { HeldResult, JsonValue, SessionDoc } from '../schemas/records.ts';
+import { activeConnectors } from '../registry/register-connectors.ts';
+import { payloads } from '../schemas/payloads.ts';
+import type { HeldResult, SessionDoc } from '../schemas/records.ts';
 import { now } from '../sessions/session-lookup.ts';
 import { records } from '../store/collections.ts';
+import { failedCall, runHelp, runTarget, targetOf, textResult, type CallDone, type CommandTarget } from './run-command.ts';
 
-// How one call of a reply runs (plan 08 §8.3): a connector call through kvcoder, a connector word in shell syntax
-// refused, and anything else in the real shell. A real shell call and an `fs` call ask the person first when
-// `kvcoder.shell.approval` is `ask`, or when the model marked the call risky (ADR 0009, 161). A call either returns
-// its result now, or waits on the person or on a subagent.
+// How one call of a reply runs (plan 08 §8.3): the `run` tool names a connector's command, which runs as a kernel job.
+// `shell exec`, a binary's `exec`, `fs write`, and `fs edit` ask the person first when `kvcoder.shell.approval` is
+// `ask`, or unless the payload says `risky: false` (ADR 0009, 161; ADR 0011, 7). A call either returns its result now,
+// or waits on the person or on a subagent.
 
 export type ToolCall = { id: string; name: string; arguments: Record<string, JsonValue> };
 
@@ -30,95 +26,68 @@ export type CallOutcome =
 
 export type CallEnv = { ctx: Ctx; session: Stored<SessionDoc>; tools: SessionTools; approval: 'ask' | 'auto'; answerSeq: number };
 
-const result = (toolCallId: string, call: CallResult, details: JsonValue = null): CallOutcome => ({
-  kind: 'result',
-  held: { toolCallId, text: resultText(call.output, call.exitCode), details, isError: call.exitCode !== 0, run: null },
-});
+const result = (toolCallId: string, done: CallDone): CallOutcome => ({ kind: 'result', held: { toolCallId, ...done, run: null } });
 
-const asks = (env: CallEnv, args: ShellArgs): boolean => env.approval === 'ask' || args.risky;
+// A call whose arguments never made a connector command: there is nothing for a card to show.
+const refused = (toolCallId: string, message: string): CallOutcome => result(toolCallId, { text: errorOutput({ code: 'VALIDATION_FAILED', message }).output, details: null, isError: true });
 
-const isHelp = (words: readonly string[]): boolean => words.length === 1 && words[0] === '-h';
-
-function approval(args: ShellArgs, line: string, mode: 'sync' | 'async', timeoutMs: number): CallOutcome {
-  const words = { ...(args.title === undefined ? {} : { title: args.title }), ...(args.description === undefined ? {} : { description: args.description }) };
-  return { kind: 'question', questionKind: 'approval', question: { ...words, command: line, mode, timeoutMs } };
+// Why a session can't call a connector: a subagent wasn't given it, or there is none by that name.
+function unavailable(env: CallEnv, connector: string): string {
+  const known = builtinConnectors.some((name) => name === connector) || env.tools.connectors.some((candidate) => candidate.name === connector);
+  if (known && env.session.parentId !== null) return `${connector} isn't available in this subagent.`;
+  return noConnectorMessage(connector, env.tools.listed.map((listed) => listed.name));
 }
 
-async function shellOutcome(env: CallEnv, call: ToolCall, shell: { title?: string | undefined; description?: string | undefined; command: string; mode?: 'sync' | 'async' | undefined }, timeoutMs: number): Promise<CallOutcome> {
-  const run = await runShellCall(env.ctx, env.session.id, env.tools.shell, { ...shell, timeoutMs });
-  return { kind: 'result', held: { toolCallId: call.id, ...run, run: null } };
+// The payload of a call that asks, checked before the person is asked about it.
+function invalidPayload(call: RunCall, target: CommandTarget): string | undefined {
+  if (target.builtin === undefined) return undefined;
+  const parsed = target.builtin.payload.safeParse(call.payload);
+  if (parsed.success) return undefined;
+  const issues = parsed.error.issues.map((issue) => ({ path: issue.path.map(String).join('.'), message: issue.message }));
+  return invalidPayloadOutput(call, issues, payloadJsonSchema(target.builtin.payload)).output;
 }
 
-async function connectorOutcome(env: CallEnv, call: ToolCall, line: string, parsed: { connector: string; words: string[]; stdin: string | null; async: boolean }): Promise<CallOutcome> {
+async function subagentOutcome(env: CallEnv, toolCallId: string, call: RunCall): Promise<CallOutcome> {
+  const { ctx, session } = env;
+  const run = payloads.subagentRun.parse(call.payload);
+  const denied = refusedConnector(run, new Set(env.tools.listed.map((listed) => listed.name)));
+  if (denied !== undefined) return result(toolCallId, failedCall(call, errorOutput({ code: 'VALIDATION_FAILED', message: `A subagent can't have the connector ${denied}.` }).output));
+  const childId = await createChild(ctx, session, run, env.answerSeq);
+  if (run.background !== true) return { kind: 'subagent', childSessionId: childId };
+  await records(ctx.store).background.insert({ sessionId: session.id, ref: childId, kind: 'subagent', call: call.description, startedAt: now() });
+  await startChild(ctx, childId);
+  return result(toolCallId, textResult(call, `started ${childId}`));
+}
+
+export async function evaluateCall(env: CallEnv, toolCall: ToolCall): Promise<CallOutcome> {
   const { ctx, session, tools } = env;
-  if (!tools.allowed.has(parsed.connector)) return result(call.id, errorOutput({ code: 'VALIDATION_FAILED', message: `${parsed.connector} isn't available in this subagent.` }));
-  if (parsed.connector === 'ask') {
-    const asked = askCall(parsed.words, parsed.stdin);
-    return 'output' in asked ? result(call.id, asked) : { kind: 'question', questionKind: asked.kind, question: asked.question };
+  if (toolCall.name !== 'run') return refused(toolCall.id, `The call's arguments are invalid: the tool is run, not ${toolCall.name}.`);
+  const args = parseRunArgs(toolCall.arguments);
+  if (!args.success) return refused(toolCall.id, `The call's arguments are invalid: ${args.problems}. Call run again with the arguments fixed.`);
+  const call = args.data;
+  if (!tools.listed.some((listed) => listed.name === call.connector)) return refused(toolCall.id, unavailable(env, call.connector));
+  if (call.command === 'help') return result(toolCall.id, await runHelp(ctx, call));
+  const target = targetOf(tools.connectors, call);
+  if (target === undefined) return result(toolCall.id, failedCall(call, errorOutput({ code: 'NOT_FOUND', message: noCommandMessage(call.connector, call.command) }).output));
+  if (target.builtin?.asks === true) {
+    const invalid = invalidPayload(call, target);
+    if (invalid !== undefined) return result(toolCall.id, failedCall(call, invalid));
+    if (env.approval === 'ask' || call.payload['risky'] !== false) return { kind: 'question', questionKind: 'approval', question: call };
   }
-  if (parsed.connector === 'jobs') return result(call.id, await jobsCall(ctx, session.id, parsed.words));
-  if (parsed.connector === 'fs') return result(call.id, await fsCall(ctx, parsed.words, parsed.stdin));
-  if (parsed.connector === 'artifact') {
-    const done = await artifactCall(ctx, chatIdOf(session), parsed.words, parsed.stdin);
-    return result(call.id, done, done.details);
-  }
-  if (parsed.connector === 'subagent') {
-    const run = subagentCall(parsed.words, parsed.stdin, tools.allowed);
-    if ('output' in run) return result(call.id, run);
-    const childId = await createChild(ctx, session, run, env.answerSeq);
-    if (!parsed.async) return { kind: 'subagent', childSessionId: childId };
-    await records(ctx.store).background.insert({ sessionId: session.id, ref: childId, kind: 'subagent', call: line, startedAt: now() });
-    await startChild(ctx, childId);
-    return result(call.id, { output: `started ${childId}`, exitCode: 0 });
-  }
-  const connector = tools.connectors.find((candidate) => candidate.name === parsed.connector);
-  const commands = connector?.commands ?? [];
-  const target = parsed.async ? commands.find((command) => command.name === parsed.words[0]) : undefined;
-  if (target !== undefined && parsed.words[1] !== '-h') {
-    if (isQuery(await loadedExtensions(ctx), target.command)) return result(call.id, errorOutput({ code: 'VALIDATION_FAILED', message: `${parsed.connector} ${target.name} reads only, so it can't run with --async.` }));
-    return asyncOutcome(env, call, line, target.command, parsed);
-  }
-  const deps = { exec: (name: string, input: Record<string, JsonValue>) => ctx.exec(name, input), commands: async () => callInfos(await loadedExtensions(ctx)) };
-  return result(call.id, await runCommandsCall(deps, { name: parsed.connector, description: connector?.description ?? '', commands }, parsed.words, parsed.stdin));
+  const done = await runTarget(ctx, session, call, target);
+  if (done.isError || (call.connector !== 'ask' && call.connector !== 'subagent')) return result(toolCall.id, done);
+  if (call.connector === 'subagent') return subagentOutcome(env, toolCall.id, call);
+  return isAskKind(call.command) ? { kind: 'question', questionKind: call.command, question: call.payload } : result(toolCall.id, done);
 }
 
-async function asyncOutcome(env: CallEnv, call: ToolCall, line: string, command: string, parsed: { connector: string; words: string[]; stdin: string | null }): Promise<CallOutcome> {
-  const input = callInput(parsed.words, parsed.stdin, parsed.connector);
-  if ('output' in input) return result(call.id, input);
-  const jobId = await env.ctx.execAsync('kvcoder.connector.run', { sessionId: env.session.id, call: line, command, input: input.input });
-  await records(env.ctx.store).background.insert({ sessionId: env.session.id, ref: jobId, kind: 'connector', call: line, startedAt: now() });
-  return result(call.id, { output: `started ${jobId}`, exitCode: 0 });
-}
+/** What an approved call of the old shell tool returns: it is never run (ADR 0011, 12). */
+const oldCallText = 'denied by the user\nMake this call again with the run tool.';
 
-export async function evaluateCall(env: CallEnv, call: ToolCall): Promise<CallOutcome> {
-  const args = parseShellArgs(call.arguments);
-  if (call.name !== env.tools.shell.toolName || !args.success) {
-    const tool = env.tools.shell.toolName;
-    const problems = args.success ? `the tool is ${tool}, not ${call.name}` : args.problems;
-    const again = args.success ? '' : ` Call ${tool} again with the arguments fixed.`;
-    return result(call.id, errorOutput({ code: 'VALIDATION_FAILED', message: `The call's arguments are invalid: ${problems}.${again}` }));
-  }
-  const line = args.data.command;
-  const words = new Set([...builtinConnectors, ...env.tools.connectors.filter((connector) => connector.kind === 'commands').map((connector) => connector.name)]);
-  const parsed = parseLine(line, words);
-  if (parsed.kind === 'refused') return result(call.id, { output: refusedText(parsed.connector), exitCode: 1 });
-  const timeoutMs = callTimeout(args.data.timeoutMs);
-  if (parsed.kind === 'call') {
-    const isFs = parsed.connector === 'fs' && env.tools.allowed.has('fs') && !isHelp(parsed.words);
-    return isFs && asks(env, args.data) ? approval(args.data, line, 'sync', timeoutMs) : connectorOutcome(env, call, line, parsed);
-  }
-  if (!env.session.shell) return result(call.id, errorOutput({ code: 'VALIDATION_FAILED', message: 'shell calls are off for this subagent' }));
-  if (asks(env, args.data)) return approval(args.data, line, args.data.mode ?? 'sync', timeoutMs);
-  return shellOutcome(env, call, args.data, timeoutMs);
-}
-
-/** Runs an approved shell or `fs` call held in the turn. */
-export async function runApproved(ctx: Ctx, tools: Pick<SessionTools, 'shell'>, sessionId: string, held: HeldResult): Promise<HeldResult> {
+/** Runs an approved call held in the turn. */
+export async function runApproved(ctx: Ctx, session: Stored<SessionDoc>, held: HeldResult): Promise<HeldResult> {
   if (held.run === null) return held;
-  const line = parseLine(held.run.command, new Set(['fs']));
-  if (line.kind === 'call') {
-    const done = await fsCall(ctx, line.words, line.stdin);
-    return { toolCallId: held.toolCallId, text: resultText(done.output, done.exitCode), details: null, isError: done.exitCode !== 0, run: null };
-  }
-  return { toolCallId: held.toolCallId, ...(await runShellCall(ctx, sessionId, tools.shell, held.run)), run: null };
+  if (!('connector' in held.run)) return { toolCallId: held.toolCallId, text: oldCallText, details: null, isError: true, run: null };
+  const target = targetOf(await activeConnectors(ctx), held.run);
+  const done = target === undefined ? failedCall(held.run, errorOutput({ code: 'NOT_FOUND', message: noCommandMessage(held.run.connector, held.run.command) }).output) : await runTarget(ctx, session, held.run, target);
+  return { toolCallId: held.toolCallId, ...done, run: null };
 }

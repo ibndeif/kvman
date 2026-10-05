@@ -11,7 +11,7 @@ const developers = path.join(root, 'docs', 'developers');
 const userGuide = path.join(root, 'docs', 'user-guide');
 
 const developerPages = [
-  'README', 'getting-started', 'anatomy', 'sdk', 'jobs', 'storage', 'views', 'components', 'localization', 'connectors', 'documenting-your-extension', 'presets',
+  'README', 'getting-started', 'anatomy', 'sdk', 'jobs', 'storage', 'views', 'components', 'localization', 'connectors', 'agents-and-tools', 'documenting-your-extension', 'presets',
   'testing', 'preview-and-hot-reload', 'kernel-api', 'http-api', 'errors', 'publishing', 'architecture', 'contributing',
 ];
 const userPages = [

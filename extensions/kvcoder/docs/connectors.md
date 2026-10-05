@@ -1,6 +1,16 @@
 # Connectors
 
-A **connector** is a word the agent can type in its shell. An extension registers its connectors with kvcoder, and the agent uses them instead of the shell whenever one covers the task. kvcoder keeps them in its own store, for one run: see **Ownership and lifetime** below.
+A **connector** is a named set of commands the agent runs with its one tool, `run`:
+
+```json
+{ "description": "Adding milk to the notes", "connector": "notes", "command": "add", "payload": { "text": "Buy milk" } }
+```
+
+- `description` is one sentence for the person, shown on the call's card.
+- `connector` and `command` name what runs; `payload` is the command's input, and may be left out when it takes none.
+- Every connector has the command `help`: with no payload it describes the connector and its commands, and with `{ "command": "add" }` it gives that command's payload and result as JSON Schema, with its examples.
+
+A connector is the only way the agent reaches anything outside the model. An extension registers its connectors with kvcoder, which keeps them in its own store for one run: see **Lifetime** below.
 
 Register from the registering extension's `kernel.started` handler, every start:
 
@@ -20,12 +30,12 @@ ctx.registerHandler('kernel.started', {
 
 - The registering extension declares `@kvman/kvcoder` in `kvman.dependencies`, so its `kernel.started` handler runs after kvcoder's clear.
 - `kvcoder.connector.register` takes exactly one of `commands` or `binary`, plus `name` and `description`.
-- `name`: the word the agent types. `notes add '{"text":"Buy milk"}'` runs `notes.note.add`. JSON may also come on stdin (a heredoc, or a PowerShell here-string); with no JSON the input is `{}`.
-- `description`: what the agent sees in the prompt's connector index. Say what the connector is for and when to use it.
-- `commands`: each command's `name`, the public `command` it runs, and optional `examples` (`{ description, input }`). `notes -h` and `notes add -h` print descriptions, JSON Schemas, and examples, so give every input field a `.describe()`.
-- Each `command` must be a public command or query of the registering extension, or registration fails `VALIDATION_FAILED`. A query can't run with `--async`. Connector calls stand alone: the command runs through `ctx.exec`, so validation, cancel, and timeouts are the kernel's. The result the agent reads is the output as JSON text, or `error <code>: <message>` with exit code 1.
-- `--async` queues the call as kvcoder's own job; its result arrives later as a message.
-- `binary`: a program on the system, run by the agent in the real shell, with `{ check, install? }`. `check` is a command whose exit code 0 means the program is usable; the connector is listed in the prompt only while its check passes.
+- `name`: the `connector` the agent names. Names, and each command's `name`, are lowercase kebab-case single words: `model-list`, not `model list`. A command can't be named `help`.
+- `description`: what the agent sees in the prompt's connector index. Say what the connector is for and when to use it. kvcoder adds the command names after it (`Commands: add, list, help.`), so the index is never out of date.
+- `commands`: each command's `name`, the public `command` it runs, and optional `examples` (`{ description, input }`). `help` shows the registered descriptions, JSON Schemas, and examples, so give every input field a `.describe()`.
+- Each `command` must be a public command or query of the registering extension, or registration fails `VALIDATION_FAILED`. The command runs through `ctx.exec` with the payload as its input, so validation, cancel, and timeouts are the kernel's, and it runs to its end inside the agent's step.
+- The result the agent reads is the output as indented JSON, or `error <code>: <message>`. A payload that doesn't fit returns each problem and then the payload's JSON Schema, so the agent can correct it in one try.
+- `binary`: a program on the system, with `{ check, install?, help? }`. `check` is a line whose exit code 0 means the program is usable; the connector is listed, and can be called, only while its check passes.
 
 A binary connector names a program instead of commands:
 
@@ -37,11 +47,15 @@ await ctx.exec('kvcoder.connector.register', {
 });
 ```
 
+The agent calls a binary connector with two commands. `exec { args?, background?, timeoutMs?, risky? }` runs the program with those arguments in the real shell, in the workspace folder. `help {}` describes `exec` and prints the program's own help (`gh --help`), and `help { "command": "pr" }` prints `gh pr --help`. For a program whose help is asked another way, register the line with `{command}` standing for the command: `help: 'go help {command}'`.
+
 `kvcoder.connector.unregister { name }` removes one of the caller's own connectors; a missing name does nothing. `kvcoder.connector.list` answers every connector the agent may use.
 
 ## Built-in connectors
 
-kvcoder ships two built-ins: `ask` (a question or approval that suspends the turn) and `subagent` (a background helper session). Their names are taken: registering a connector named `ask` or `subagent` fails like any other taken name.
+kvcoder's own connectors are `shell` (one line in the real shell), `fs` (read, list, search, write, and edit files in the workspace folder), `artifact` (a document shown beside the chat), `background` (follow up on what was started with `background: true`), `ask` (a question that suspends the turn), and `subagent` (a helper session). Their names are taken: registering one fails `kvcoder/NAME_TAKEN`.
+
+`shell exec`, a binary's `exec`, `fs write`, and `fs edit` ask the person first when the payload says `risky: true` or leaves `risky` out, or always when `kvcoder.shell.approval` is `ask`. Only `shell exec`, a binary's `exec`, and `subagent run` take `background: true`; every other command runs to its end.
 
 ## Ownership
 

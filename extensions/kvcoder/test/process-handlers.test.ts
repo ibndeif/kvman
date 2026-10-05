@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { z } from '@kvman/sdk';
 import type { TestKernel } from '@kvman/testkit';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { calls, says } from './support/model-script.ts';
+import { runs, says, shell } from './support/model-script.ts';
 import { newSession } from './support/turns.ts';
 import { wait } from './support/wait.ts';
 
@@ -24,7 +24,7 @@ async function jobMessages(kernel: TestKernel, sessionId: string): Promise<strin
 async function startJob(command: string) {
   const world = await kvcoder.start();
   const sessionId = await newSession(world.kernel);
-  world.fake.reply(calls({ command, mode: 'async' }), says('ok'));
+  world.fake.reply(runs(shell(command, { background: true })), says('ok'));
   await world.kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
   await world.kernel.clock.advance(0);
   const [turn] = await world.kernel.exec('kvcoder.turn.list', { sessionId, limit: 1 });

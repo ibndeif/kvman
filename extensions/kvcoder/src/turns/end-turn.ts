@@ -1,6 +1,6 @@
 import type { Ctx, Stored } from '@kvman/sdk';
-import { resultText } from '../result-text.ts';
-import type { JsonValue } from '../connector-line.ts';
+import { truncate } from '../result-text.ts';
+import type { JsonValue } from '../connector-call.ts';
 import { firePoint } from '../registry/session-points.ts';
 import type { Outcome, SessionDoc } from '../schemas/records.ts';
 import { now } from '../sessions/session-lookup.ts';
@@ -49,7 +49,7 @@ async function lastAnswer(ctx: Ctx, sessionId: string): Promise<string> {
 /** What a finished subagent returns (ADR 0009, 102). */
 export async function childResult(ctx: Ctx, childId: string, outcome: Outcome): Promise<{ text: string; isError: boolean }> {
   const answer = await lastAnswer(ctx, childId);
-  return outcome === 'done' ? { text: resultText(answer, 0), isError: false } : { text: resultText(`subagent ended ${outcome}\n${answer}`, 1), isError: true };
+  return outcome === 'done' ? { text: truncate(answer), isError: false } : { text: truncate(`subagent ended ${outcome}\n${answer}`), isError: true };
 }
 
 async function childEnded(ctx: Ctx, child: Stored<SessionDoc>, outcome: Outcome, by: EndedBy, notice: Notice | undefined): Promise<void> {

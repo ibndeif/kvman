@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { calls, says } from './support/model-script.ts';
+import { command, runs, says } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
@@ -36,7 +36,7 @@ describe('sessions (08 §8.6)', { timeout: 30_000 }, () => {
     const { kernel, fake } = await kvcoder.start();
     const first = await newSession(kernel);
     const second = await newSession(kernel);
-    fake.reply(calls(`ask text '{"prompt":"?"}'`), calls(`subagent run '{"task":"t","mode":"fresh"}'`), says('child'));
+    fake.reply(runs(command('ask', 'text', {"prompt":"?"})), runs(command('subagent', 'run', {"task":"t","mode":"fresh"})), says('child'));
     await kernel.exec('kvcoder.message.send', { sessionId: first, text: 'go' });
     await kernel.clock.advance(0);
     expect((await kernel.exec('kvcoder.session.list', { limit: 10 })).map((session) => session.id)).toEqual([second, first]);
@@ -67,7 +67,7 @@ describe('sessions (08 §8.6)', { timeout: 30_000 }, () => {
     await kernel.exec('kvcoder.handler.register', { point: 'kvcoder.session.deleted', command: 'todo.seen' }, { as: '@test/todo' });
     const sessionId = await newSession(kernel);
     await kernel.exec('kvcoder.section.set', { id: 'mine', title: 'Mine', order: 1, content: 'x', sessionId }, { as: '@test/todo' });
-    fake.reply(calls(`subagent run '{"task":"t","mode":"fresh"}'`), calls(`ask text '{"prompt":"?"}'`));
+    fake.reply(runs(command('subagent', 'run', {"task":"t","mode":"fresh"})), runs(command('ask', 'text', {"prompt":"?"})));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     const childId = String((await turnState(kernel, sessionId)).turn?.pending[0]?.childSessionId);

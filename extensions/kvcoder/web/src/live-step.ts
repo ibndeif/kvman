@@ -1,12 +1,13 @@
 import type { StreamEvent } from '@kvman/sdk/web';
+import { callView } from './call-view.ts';
 
 // What a running step streams (plan 08 §8.7, ADR 0009, 99, 142): kvai's text and thinking deltas build the pending
-// answer, and its tool-call chunks give each call's title and description as the model writes them (ADR 144); kvcoder's
+// answer, and its tool-call chunks give each call's description and connector command as the model writes them (ADR 144; ADR 0011, 13); kvcoder's
 // chunks tell the conversation to follow the next step, show a subagent, that a summary is being made (whose text
 // isn't the answer), or that a failed model call is being tried again (ADR 0009, 155).
 
 /** A tool call being written or run. `carried` marks a call the previous step approved and this one is running. */
-export type LiveCall = { name: string; title?: string; description?: string; complete: boolean; carried?: boolean };
+export type LiveCall = { name: string; description?: string; label?: string; complete: boolean; carried?: boolean };
 
 export type Live = { text: string; thinking: string; summarizing: boolean; calls: LiveCall[]; retry: { attempt: number; of: number } | null; startedAt: number };
 
@@ -30,15 +31,16 @@ export function phaseOf(live: Live): Phase {
 }
 
 // A `toolcall` chunk: without `arguments` a call starts; with them, the last call has those arguments complete, and the
-// call is whole once its command is in (the last of the tool's arguments, ADR 0009, 143).
+// call is whole once its payload is in (the last of the tool's arguments; `null` when it was too large to stream).
 function applyToolCall(live: Live, data: Record<string, unknown>, name: string): void {
   const given = record(data['arguments']);
   if (given === undefined || live.calls.length === 0) live.calls.push({ name, complete: false });
   const call = live.calls.at(-1);
   if (given === undefined || call === undefined) return;
-  if (typeof given['title'] === 'string') call.title = given['title'];
-  if (typeof given['description'] === 'string') call.description = given['description'];
-  call.complete = 'command' in given;
+  const view = callView(given);
+  if (view.description !== undefined) call.description = view.description;
+  if (view.label !== undefined) call.label = view.label;
+  call.complete = 'payload' in given;
 }
 
 /** Applies one stream event to the live answer and says what kvcoder asked for. */

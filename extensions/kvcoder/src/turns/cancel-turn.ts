@@ -3,7 +3,7 @@ import { txRecords } from '../store/collections.ts';
 import { endTurn } from './end-turn.ts';
 
 // Cancel (plan 08 §8.1): the running step, the subagents the turn waits on, and the pending questions; then the
-// session is idle. `--async` work goes on and still reports back. Resolves whether a turn was cancelled.
+// session is idle. Background work goes on and still reports back. Resolves whether a turn was cancelled.
 export async function cancelTurn(ctx: Ctx, sessionId: string, notice: boolean): Promise<boolean> {
   const found = await ctx.store.transaction((tx) => {
     const store = txRecords(tx);

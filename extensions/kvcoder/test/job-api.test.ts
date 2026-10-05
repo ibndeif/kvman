@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { z } from '@kvman/sdk';
 import type { TestKernel } from '@kvman/testkit';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { calls, says } from './support/model-script.ts';
+import { command, runs, says, shell } from './support/model-script.ts';
 import { newSession } from './support/turns.ts';
 import { wait } from './support/wait.ts';
 
@@ -18,7 +18,7 @@ const messagesSchema = z.object({ messages: z.array(z.object({ kind: z.string(),
 async function startJob(command: string) {
   const world = await kvcoder.start();
   const sessionId = await newSession(world.kernel);
-  world.fake.reply(calls({ command, mode: 'async' }), says('ok'));
+  world.fake.reply(runs(shell(command, { background: true })), says('ok'));
   await world.kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
   await world.kernel.clock.advance(0);
   const [job] = await world.kernel.exec('kvcoder.job.list', { sessionId });
@@ -35,7 +35,7 @@ describe("a chat's background jobs for the person (08 §8.6, ADR 0009, 152)", { 
     posixShell();
     const { kernel, sessionId, jobId } = await startJob('echo "Serving on http://localhost:8000."; sleep 30');
     const [row] = await kernel.exec('kvcoder.job.list', { sessionId });
-    expect(row).toEqual({ id: jobId, kind: 'process', title: 'A test step', call: 'echo "Serving on http://localhost:8000."; sleep 30', status: 'running', startedAt: expect.any(String) as unknown, links: ['http://localhost:8000'] });
+    expect(row).toEqual({ id: jobId, kind: 'process', title: 'A test call.', call: 'echo "Serving on http://localhost:8000."; sleep 30', status: 'running', startedAt: expect.any(String) as unknown, links: ['http://localhost:8000'] });
     expect(await kernel.exec('kvcoder.job.get', { sessionId, id: jobId })).toMatchObject({ id: jobId, status: 'running', output: 'Serving on http://localhost:8000.' });
     for (const call of [kernel.exec('kvcoder.job.list', { sessionId }, { as: '@test/todo' }), kernel.exec('kvcoder.job.get', { sessionId, id: jobId }, { as: '@test/todo' }), kernel.exec('kvcoder.job.cancel', { sessionId, id: jobId }, { as: '@test/todo' })]) {
       await expect(call).rejects.toMatchObject({ problem: { code: 'NOT_PUBLIC' } });
@@ -61,7 +61,7 @@ describe("a chat's background jobs for the person (08 §8.6, ADR 0009, 152)", { 
   it('QA3-E20 a process stopped by the agent or the person is reported once and reads cancelled', async () => {
     posixShell();
     const { kernel, fake, sessionId, jobId } = await startJob('sleep 30');
-    fake.reply(calls(`jobs cancel ${jobId}`), says('ok'));
+    fake.reply(runs(command('background', 'stop', { id: jobId })), says('ok'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'stop it' });
     await kernel.clock.advance(0);
     expect(await kernel.exec('kvcoder.job.get', { sessionId, id: jobId })).toMatchObject({ status: 'cancelled' });
@@ -74,7 +74,7 @@ describe("a chat's background jobs for the person (08 §8.6, ADR 0009, 152)", { 
     posixShell();
     const { kernel, fake, sessionId, jobId } = await startJob('echo quick');
     await vi.waitFor(async () => expect(await kernel.exec('kvcoder.job.get', { sessionId, id: jobId })).toMatchObject({ status: 'succeeded', output: 'quick' }), wait);
-    fake.reply(calls({ command: 'sleep 30', mode: 'async' }), says('ok'));
+    fake.reply(runs(shell('sleep 30', { background: true })), says('ok'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'one more' });
     await kernel.clock.advance(0);
     const rows = await kernel.exec('kvcoder.job.list', { sessionId });

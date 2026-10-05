@@ -45,6 +45,7 @@ The agent's connectors run the same tools underneath, so all three ways give the
 - [components.md](components.md): custom Vue components
 - [localization.md](localization.md): texts, languages, right to left
 - [connectors.md](connectors.md): extending kvcoder, and the pull convention
+- [agents-and-tools.md](agents-and-tools.md): an agent of your own, with tools that are plain functions
 - [documenting-your-extension.md](documenting-your-extension.md): telling others how to use yours
 - [presets.md](presets.md): which extensions run
 

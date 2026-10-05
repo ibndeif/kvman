@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { wait } from './support/wait.ts';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { calls, says, toolResults } from './support/model-script.ts';
+import { command, runs, says, toolResults } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
@@ -18,7 +18,7 @@ describe('restarts (08 §8.1, 12 §12.2)', { timeout: 30_000 }, () => {
   it('M2.4-H2 a suspended turn survives a restart, and answering it continues', async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    fake.reply(calls(`ask confirm '{"prompt":"Go?"}'`), says('done'));
+    fake.reply(runs(command('ask', 'confirm', {"prompt":"Go?"})), says('done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     const before = await turnState(kernel, sessionId);
@@ -29,7 +29,7 @@ describe('restarts (08 §8.1, 12 §12.2)', { timeout: 30_000 }, () => {
     const questionId = String(after.turn?.pending[0]?.questionId);
     await kernel.exec('kvcoder.question.answer', { questionId, answer: { confirmed: true } });
     await kernel.clock.advance(0);
-    expect(toolResults(fake)).toEqual(['{\n  "confirmed": true\n}\n[exit code 0]']);
+    expect(toolResults(fake)).toEqual(['{\n  "confirmed": true\n}']);
     expect((await turnState(kernel, sessionId)).turn).toMatchObject({ outcome: 'done' });
   });
 
@@ -53,7 +53,7 @@ describe('restarts (08 §8.1, 12 §12.2)', { timeout: 30_000 }, () => {
   it("M2.4-E47 a child's step interrupted by a restart ends the child's turn and the parent's", async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    fake.reply(calls(`subagent run '{"task":"Look around","mode":"fresh"}'`), held);
+    fake.reply(runs(command('subagent', 'run', {"task":"Look around","mode":"fresh"})), held);
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await vi.waitFor(() => expect(fake.requests()).toHaveLength(2), wait);
     const parent = await turnState(kernel, sessionId);

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import type { FakeReply } from '@kvman/testkit/fake-openai';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { calls, requestMessages, says, textOf, toolResults } from './support/model-script.ts';
+import { command, requestMessages, runs, says, shell, textOf, toolResults } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 import { wait } from './support/wait.ts';
 
@@ -26,7 +26,7 @@ async function started(settings?: Record<string, string | number>) {
 describe('a reply lost on the way is not the end of the turn (08 §8.2, ADR 0009, 188)', { timeout: 30_000 }, () => {
   it('QA8-H6 and QA8-H7 a lost reply gets a hint from kvcoder and another step, and the turn goes on to its end', async () => {
     const { kernel, fake, sessionId, send, hints } = await started();
-    fake.reply(lost(3400), calls('touch made.txt'), says('done'));
+    fake.reply(lost(3400), runs(shell('touch made.txt')), says('done'));
     await send('go');
     expect(existsSync(path.join(kernel.homeFolder, 'made.txt'))).toBe(true);
     expect((await turnState(kernel, sessionId)).turn).toMatchObject({ outcome: 'done', steps: 3 });
@@ -50,7 +50,7 @@ describe('a reply lost on the way is not the end of the turn (08 §8.2, ADR 0009
 
   it('QA8-E6 a reply with a call is never lost, however many tokens it took', async () => {
     const { fake, sessionId, kernel, send, hints } = await started();
-    fake.reply({ ...calls('echo hi'), usage: { input: 100, output: 5000 } }, says('done'));
+    fake.reply({ ...runs(shell('echo hi')), usage: { input: 100, output: 5000 } }, says('done'));
     await send('go');
     expect((await turnState(kernel, sessionId)).turn).toMatchObject({ outcome: 'done', steps: 2 });
     expect(await hints()).toEqual([]);
@@ -92,7 +92,7 @@ describe('a reply lost on the way is not the end of the turn (08 §8.2, ADR 0009
 
   it("QA8-E11 a subagent's lost reply is retried too, and its answer reaches the parent", async () => {
     const { fake, sessionId, kernel, send } = await started();
-    fake.reply(calls(`subagent run '{"task":"Do it","mode":"fresh"}'`), lost(3400), says('child done'), says('parent done'));
+    fake.reply(runs(command('subagent', 'run', {"task":"Do it","mode":"fresh"})), lost(3400), says('child done'), says('parent done'));
     await send('go');
     expect((await turnState(kernel, sessionId)).turn).toMatchObject({ outcome: 'done' });
     expect(textOf(requestMessages(fake, 2).at(-1))).toContain('Your last reply was lost on the way');

@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { chromium, type Browser, type Page } from 'playwright';
 import { z } from '@kvman/sdk';
 import { kvmanWorld, until, type KvmanWorld } from '../support/kvman-child.ts';
-import { calls, says } from '../support/model-script.ts';
+import { runs, says, shell } from '../support/model-script.ts';
 
 let browser: Browser;
 let world: KvmanWorld | undefined;
@@ -28,7 +28,7 @@ describe("a chat's background jobs in Chromium (08 §8.7, ADR 0009, 149 to 153)"
   it('QA3-H18 the Running chip lists a started server with its link and logs, and Stop ends it, on a narrow and a wide window', async () => {
     world = await kvmanWorld();
     const kvman = await world.start();
-    world.fake.reply(calls({ command: 'echo "Serving on http://localhost:8123"; sleep 120', mode: 'async' }), says('The server is running.'));
+    world.fake.reply(runs(shell('echo "Serving on http://localhost:8123"; sleep 120', { background: true })), says('The server is running.'));
     const sessionId = sessionSchema.parse(await kvman.call('commands', 'kvcoder.session.create', { title: 'Server' })).id;
     await kvman.call('commands', 'kvcoder.message.send', { sessionId, text: 'serve the app' });
     await until(() => kvman.call('queries', 'kvcoder.session.get', { sessionId }), sessionSchema, (session) => session.status === 'idle');

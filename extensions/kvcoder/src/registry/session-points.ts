@@ -1,5 +1,5 @@
 import { z, type Ctx } from '@kvman/sdk';
-import type { JsonValue } from '../connector-line.ts';
+import type { JsonValue } from '../connector-call.ts';
 import { sessionPointSchema, type SessionPoint } from '../schemas/registry.ts';
 import { invalid } from '../problems.ts';
 import { records, txRecords } from '../store/collections.ts';

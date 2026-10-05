@@ -23,36 +23,39 @@ Type in the box at the bottom and press Enter (Shift+Enter for a new line). Whil
 A turn is a chain of steps. Each step calls the model, which streams its answer. The agent:
 
 1. Reads your message and the workspace (files, config, tests) — it looks before it assumes.
-2. Explains what it is about to do, then makes a call (usually of the shell) — several calls in one reply run at the same time.
-3. Shows each call as a card: its title, a one-line description, the command, and the output when opened.
+2. Explains what it is about to do, then makes a call — several calls in one reply run at the same time.
+3. Shows each call as a card: a sentence saying what it does, then the connector and command it used (`fs · edit`) and how long it took. Open the card to see exactly what ran and what came back.
 4. Continues until it answers in text, which sends no more calls and ends the turn.
 
 Long answers and results are stored as **artifacts**, not dumped into the chat.
 
-## The shell and its approval
+## Connectors: how the agent acts
 
-The agent's one tool is a shell: `bash` on Linux and macOS, PowerShell on Windows. Calls run in the workspace folder, and each starts fresh (a `cd` doesn't carry over).
+Everything the agent does goes through a **connector**: a named set of commands. It has no other way to touch your files or your machine. Built in:
 
-The `kvcoder.shell.approval` setting controls when kvman asks first:
-
-- **auto** (the default) — kvman asks only for calls the model marks **risky** (could lose something or reach outside the workspace). Unmarked calls run at once.
-- **ask** — every call asks.
-
-When a call asks, you see a card with the command and its description, with **Allow**, **Deny**, **Allow all** / **Deny all** when several are pending. A denied call returns "denied by the user" to the agent.
-
-Calls time out after 120 s by default (the agent may ask for up to 600 s). When a call ends, any background processes it left are stopped.
-
-## Connectors
-
-Connectors are words the agent can type instead of using the shell. Built in:
-
+- `shell` — runs one line in a real shell, in the workspace folder: `bash` on Linux and macOS, PowerShell on Windows. Each line starts fresh (a `cd` doesn't carry over).
+- `fs` — reads, lists, and searches files, and writes and edits them, all inside the workspace folder.
+- `artifact` — stores a document you can read (below).
 - `ask` — asks you a question and waits for your answer (below).
 - `subagent` — runs a helper chat that does a self-contained part and reports back.
-- `fs` — writes and edits files inside the workspace folder (runs through the same approval as a shell call).
-- `artifact` — stores a document you can read (below).
-- `jobs` — lists, gets, or cancels background work the chat started.
+- `background` — checks on, or stops, something the agent left running (below).
 
-Other extensions add connectors (kvcustomizer adds `ext`, `preset`, `preview`, `kvman`, and `docs` — see [customizing-with-the-agent.md](customizing-with-the-agent.md)). The agent can also start background work with `--async`, which reports its result back into the chat when it ends.
+Other extensions add connectors (kvcustomizer adds `ext`, `preset`, `preview`, `kvman`, and `docs` — see [customizing-with-the-agent.md](customizing-with-the-agent.md)), and a preset or you can add a program on your machine, such as `git` or `gh`, as a connector with the `kvcoder.connectors` setting.
+
+## Approval
+
+Four kinds of call can change things outside the agent's own work: a shell line, a program such as `git`, writing a file, and editing a file. The `kvcoder.shell.approval` setting controls when kvman asks you first:
+
+- **auto** (the default) — kvman asks unless the agent marks the call as not risky. A call is risky when it could lose something that isn't the agent's own work, or reaches outside the workspace.
+- **ask** — every such call asks.
+
+When a call asks, you see a card with its description and the line it would run, or the file it would change, with **Allow**, **Deny**, and **Allow all** / **Deny all** when several are pending. A denied call returns "denied by the user" to the agent. Reading, listing, and searching files never ask.
+
+A shell line times out after 120 s by default (the agent may ask for up to 600 s). When a line ends, anything it left running is stopped.
+
+## Background work
+
+For a dev server or anything else that must keep running, the agent starts the line in the background. The chat's header then shows a **Running** chip: open it for each run's time, its local links, its logs, and a **Stop** button. The agent can read a run's output and stop it too. A background run keeps going when you stop a turn, and ends when it exits, when you or the agent stop it, when you delete the chat, or when kvman stops.
 
 ## Artifacts
 
@@ -62,11 +65,11 @@ HTML artifacts run in an isolated frame: their scripts work, but they can't reac
 
 ## `ask` questions
 
-When the agent needs a decision, it shows a question card: free text, a choice (pick several, or add your own), or a yes/no confirm. You answer in the card; a later answer fails `kvcoder/QUESTION_NOT_FOUND` if the turn was cancelled meanwhile. Your message in the box also dismisses pending questions and denies pending commands.
+When the agent needs a decision, it shows a question card: free text, a choice (pick several, or add your own), or a yes/no confirm. You answer in the card; a later answer fails `kvcoder/QUESTION_NOT_FOUND` if the turn was cancelled meanwhile. Your message in the box also dismisses pending questions and denies pending calls.
 
 ## Subagents
 
-The agent can delegate a separate, self-contained part to a hidden helper chat. You see its steps stream in its card, and its questions and approvals show up in your chat. Helpers use the same model and thinking level. A chat's header shows a **Running** chip while background work (helpers, async calls) is going on; open it for each job's time, links, logs, and stop button.
+The agent can delegate a separate, self-contained part to a hidden helper chat. You see its steps stream in its card, and its questions and approvals show up in your chat. Helpers use the same model and thinking level. A helper the agent left working in the background shows in the **Running** chip too.
 
 ## Attachments
 
@@ -81,7 +84,7 @@ The paperclip button attaches images (PNG, JPEG, GIF, or WebP) from your compute
 
 ## Useful settings
 
-On the Settings page, under the kvcoder group: the model a new chat starts with (`kvcoder.model`), its thinking level (`kvcoder.thinking`), shell approval, the shell program, step limits (`kvcoder.maxSteps`), when to summarize a long chat (`kvcoder.compactAt`), and how many chats to keep (`kvcoder.sessions.keep`). See [settings-and-secrets.md](settings-and-secrets.md).
+On the Settings page, under the kvcoder group: the model a new chat starts with (`kvcoder.model`), its thinking level (`kvcoder.thinking`), approval (`kvcoder.shell.approval`), the shell program, extra program connectors (`kvcoder.connectors`), step limits (`kvcoder.maxSteps`), when to summarize a long chat (`kvcoder.compactAt`), and how many chats to keep (`kvcoder.sessions.keep`). See [settings-and-secrets.md](settings-and-secrets.md).
 
 ## Next
 

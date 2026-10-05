@@ -1,16 +1,16 @@
 import type { Section } from '../registry/register-sections.ts';
 import { sectionsLimit } from '../registry/register-sections.ts';
 
-// The system prompt (plan 08 §8.2): the base prompt, the sections by `order`, then the connector index under its lead
-// line. Sections past 64 KB together are left out, last by `order` first (ADR 0009, 94).
+// The system prompt (plan 08 §8.2): the base prompt, the sections by `order`, then the connector index. Sections past
+// 64 KB together are left out, last by `order` first (ADR 0009, 94).
 
 export type PromptInput = {
   workspacePath: string;
   platform: NodeJS.Platform;
-  toolName: 'bash' | 'powershell';
+  shell: 'bash' | 'powershell';
   language: string;
   sections: readonly Section[];
-  connectors: readonly { name: string; description: string; kind: 'commands' | 'binary' | 'builtin' }[];
+  connectors: readonly { name: string; description: string; commands: readonly string[] }[];
 };
 
 export type BuiltPrompt = { prompt: string; included: ReadonlySet<Section>; left: readonly Section[] };
@@ -22,15 +22,12 @@ function languageName(code: string): string {
   return name === undefined || name === code ? code : `${name} (${code})`;
 }
 
-const connectorsFirst =
-  'Connectors come first. A connector is a word kvcoder runs itself: `<connector> <command> \'<json>\'`, or the JSON on stdin (a heredoc in bash, a here-string in PowerShell), alone on its line. When a connector covers a task, use it instead of doing the same through the shell: it checks its input, returns structured results, and is tracked for the person. Use the shell only for what no connector does. Run `<connector> -h` to see what one does. Add --async to run it in the background: it prints the job id at once, and the result arrives later as a message.';
-
 const howYouWork = [
   'How you work. Scale the process to the task: a small, clear change needs no plan, so just do it; a larger one follows these steps.',
   "1. Understand. Look for facts before you decide anything: read the request, then the files, config, and tests, and `docs get` where there is a guide. Never assume or invent names, paths, APIs, or behavior; when you can't find a fact, say so or ask.",
   "2. Resolve gaps and conflicts. If the request is unclear, contradicts itself or the code, or leaves out something that changes the result, call `ask` with all the questions in one reply, each with your recommended option first. Don't ask what looking would answer.",
-  '3. Plan. Write the plan as the artifact `plan`: the goal, the steps in order as a checklist (☐ to do, ☑ done), what each step uses (a connector, the shell, a subagent), and how you will check it. Write it in the same reply as your first call. For a large, ambiguous, or risky task, call `ask confirm` on the plan before you start.',
-  "4. Execute step by step. Make the smallest change for each step, check it with the project's own check or tests, fix a failure at its cause, and tick the step off with `artifact edit`. Write each file in its own call, with its content as the raw heredoc body of `fs write`. If the facts change, change the plan.",
+  '3. Plan. Write the plan as the artifact `plan`: the goal, the steps in order as a checklist (☐ to do, ☑ done), what each step uses (a connector, a subagent), and how you will check it. Write it in the same reply as your first call. For a large, ambiguous, or risky task, call `ask confirm` on the plan before you start.',
+  "4. Execute step by step. Make the smallest change for each step, check it with the project's own check or tests, fix a failure at its cause, and tick the step off with `artifact edit`. Write each file in its own call, with `fs write`. If the facts change, change the plan.",
   "5. Delegate when it helps. Hand a separate, self-contained part to a subagent when a specialist view or parallel work is worth it: a UI/UX designer for screens, a reviewer for a fresh look at your changes, a researcher for a question that takes a lot of reading. Brief it with its role, the goal, the facts it needs, its limits, and what to return. If another agent gave you your task, do that task and return the result; don't re-plan it, and ask the person only if you are blocked.",
   "Use the simplest practical way that follows the project's conventions and sound engineering practice, and don't add what wasn't asked.",
   'Show the person anything long to read or see (a plan, a report, a design, an HTML page) in an artifact, not in a reply.',
@@ -40,25 +37,22 @@ const howYouWork = [
   'Say what you are about to do in the same reply as the call that does it, and never make a call that does nothing, such as `true`, just to keep going. A reply with no tool call is your final answer and ends the turn: when work remains, your reply must contain the call that does the next piece. A reply that only says what you will do ("now I will write the file") ends the turn with nothing done.',
 ].join('\n');
 
-// The base prompt (ADR 0009, 163, 166, and 180): who the agent is, its one tool, connectors first, and how it works.
+// The base prompt (ADR 0009, 163, 166, and 180; ADR 0011, 1): who the agent is, its one tool, connectors, and how it works.
 function basePrompt(input: PromptInput): string {
-  const shell = input.toolName === 'bash' ? 'bash' : 'PowerShell';
+  const shell = input.shell === 'bash' ? 'bash' : 'PowerShell';
   const identity = [
     `You are kvman Coder, an agent that builds software with the person, in the folder ${input.workspacePath} on ${systems[input.platform] ?? input.platform}.`,
     `Reply in ${languageName(input.language)} unless the person writes in another language.`,
   ].join('\n');
-  const tool = `Your one tool is ${input.toolName}: it runs a ${shell} command. Each call starts in the workspace folder, so cd doesn't carry over to the next call.`;
-  return [identity, tool, connectorsFirst, howYouWork].join('\n\n');
+  const tool = 'Your one tool is run: it runs one command of a connector, as { description, connector, command, payload }. description is one sentence for the person, saying what the call does. Below, `fs write` means the connector fs and its command write.';
+  const connectors = `Connectors are the only way you act. When a connector other than shell covers a task, use it instead of a shell line: it checks its input, returns structured results, and is shown to the person. Use shell only for what no other connector does. Every connector has the command help: call it before the first time you use a command whose payload you don't know, with { "command": "<name>" } for one command's payload. Each \`shell exec\` starts in the workspace folder, so cd doesn't carry over to the next call; the shell is ${shell}.`;
+  return [identity, tool, connectors, howYouWork].join('\n\n');
 }
 
-const connectorsLead = 'Use these before the shell, whenever one covers the task.';
-
-// A connector's entry: its owner's description, then how to get its help (ADR 0009, 164).
+// A connector's entry: its owner's description, then its commands, which kvcoder adds (ADR 0009, 164; ADR 0011, 3).
 function connectorLine(connector: PromptInput['connectors'][number]): string {
   const description = /[.!?)]$/.test(connector.description.trimEnd()) ? connector.description.trimEnd() : `${connector.description.trimEnd()}.`;
-  const name = connector.name;
-  const help = connector.kind === 'commands' ? `Help: \`${name} -h\` lists its commands; \`${name} <command> -h\` shows a command's input, output, and examples.` : `Help: \`${name} -h\`.`;
-  return `- ${name}: ${description} ${help}`;
+  return `- ${connector.name}: ${description} Commands: ${[...connector.commands, 'help'].join(', ')}.`;
 }
 
 function keptSections(sections: readonly Section[]): { kept: Section[]; left: Section[] } {
@@ -79,6 +73,6 @@ function keptSections(sections: readonly Section[]): { kept: Section[]; left: Se
 export function buildPrompt(input: PromptInput): BuiltPrompt {
   const { kept, left } = keptSections(input.sections);
   const parts = [basePrompt(input), ...kept.map((section) => `## ${section.title}\n${section.content}`)];
-  if (input.connectors.length > 0) parts.push(['## Connectors', connectorsLead, ...input.connectors.map(connectorLine)].join('\n'));
+  if (input.connectors.length > 0) parts.push(['## Connectors', ...input.connectors.map(connectorLine)].join('\n'));
   return { prompt: parts.join('\n\n'), included: new Set(kept), left };
 }

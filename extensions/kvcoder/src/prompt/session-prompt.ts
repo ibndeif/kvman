@@ -1,28 +1,27 @@
 import { z, type Ctx, type Stored } from '@kvman/sdk';
-import { builtinConnectors } from '../connector-line.ts';
+import { commandsOf } from '../calls/builtin-connectors.ts';
+import type { ShellCommand } from '../calls/shell-command.ts';
+import { shellFor } from '../calls/shell-program.ts';
+import { builtinConnectors } from '../connector-call.ts';
 import { activeConnectors, type ConnectorRow } from '../registry/register-connectors.ts';
 import { sectionsFor } from '../registry/register-sections.ts';
-import { settingSchemas } from '../register-settings.ts';
 import type { SessionDoc } from '../schemas/records.ts';
-import { onPath, shellCommand, type ShellCommand } from '../calls/shell-command.ts';
+import { builtinDescriptions } from './builtin-descriptions.ts';
 import { buildPrompt, type BuiltPrompt } from './build-prompt.ts';
 
 // A session's prompt and the connectors its agent may use: a subagent gets its parent's subset, never `subagent`,
 // always `ask` (plan 08 §8.5); binary connectors count once their check passed (plan 08 §8.4).
 
-const builtinDescriptions: Record<(typeof builtinConnectors)[number], string> = {
-  ask: 'Put a question to the person and wait for the answer. Use it when you need a decision, a missing detail, or a go-ahead before a risky step, instead of guessing (commands: text, choice, confirm).',
-  subagent: 'Hand a self-contained task to a helper agent. Use it to research or build a separate part in parallel, or in the background while you go on (command: run).',
-  jobs: 'Check on background work you started, a server from mode "async" or a --async call. Use it to see its status or output, or to stop it (commands: list, get, cancel).',
-  fs: 'Create and change files in the workspace folder. Use it for every file you create or change: write for a new file or a full rewrite, giving the content as the raw heredoc body after `{"path"}`, one file per call, and edit for exact text replacements in an existing file (commands: write, edit).',
-  artifact: 'Show the person something to read or see: a plan, a report, a design, an HTML page, or the localhost address of an app you are running (format url). Use it for anything longer than a few lines instead of pasting it into a reply, and keep your plan in the artifact `plan`. Give the content as the raw heredoc body after the JSON (commands: write, edit, get). The panel runs the page of an HTML artifact in a sandbox where localStorage, sessionStorage, cookies, and indexedDB throw, so a page you show that way must work without them, keeping its state in memory or wrapping each use in try/catch; a url artifact is a normal page on its own address and can use them.',
-};
+/** A connector the session's agent can call: its entry in the prompt's index and in the `run` tool's enum. */
+export type ListedConnector = { name: string; description: string; commands: string[] };
 
 export type SessionTools = {
   built: BuiltPrompt;
   shell: ShellCommand;
+  /** Every registered connector of the run, callable or not. */
   connectors: ConnectorRow[];
-  allowed: ReadonlySet<string>;
+  /** The connectors the session may call, in the prompt's order. */
+  listed: ListedConnector[];
 };
 
 // The connector names a session may use.
@@ -32,28 +31,26 @@ function allowedNames(session: SessionDoc, connectors: readonly ConnectorRow[]):
   return new Set(names.filter((name) => name === 'ask' || (name !== 'subagent' && (session.connectors === null || session.connectors.includes(name)))));
 }
 
-export async function shellFor(ctx: Ctx): Promise<ShellCommand> {
-  const configured = settingSchemas.shellPath.parse(await ctx.settings.get('kvcoder.shell.path'));
-  return shellCommand(process.platform, configured, () => onPath('pwsh', process.env, process.platform));
-}
-
 export async function sessionTools(ctx: Ctx, session: Stored<SessionDoc>): Promise<SessionTools> {
   const shell = await shellFor(ctx);
   const connectors = await activeConnectors(ctx);
   const allowed = allowedNames(session, connectors);
   const passed = new Set((session.checks ?? []).filter((check) => check.passed).map((check) => check.name));
+  const descriptions = builtinDescriptions(shell.kind);
   const listed = [
-    ...connectors.filter((connector) => allowed.has(connector.name) && (connector.kind === 'commands' || passed.has(connector.name))).map((connector) => ({ name: connector.name, description: connector.description, kind: connector.kind })),
-    ...builtinConnectors.filter((name) => allowed.has(name)).map((name) => ({ name, description: builtinDescriptions[name], kind: 'builtin' as const })),
+    ...builtinConnectors.filter((name) => allowed.has(name)).map((name) => ({ name, description: descriptions[name], commands: Object.keys(commandsOf(name)) })),
+    ...connectors
+      .filter((connector) => allowed.has(connector.name) && (connector.kind === 'commands' || passed.has(connector.name)))
+      .map((connector) => ({ name: connector.name, description: connector.description, commands: connector.commands?.map((command) => command.name) ?? ['exec'] })),
   ];
   const built = buildPrompt({
     workspacePath: ctx.job.workspace.path,
     platform: process.platform,
-    toolName: shell.toolName,
+    shell: shell.kind,
     language: z.string().parse(await ctx.settings.get('kernel.language')),
     sections: await sectionsFor(ctx, session.id),
     connectors: listed,
   });
   for (const section of built.left) ctx.log.warn('A section was left out of a prompt past 64 KB of sections.', { owner: section.owner, id: section.id });
-  return { built, shell, connectors, allowed };
+  return { built, shell, connectors, listed };
 }

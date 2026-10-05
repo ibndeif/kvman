@@ -7,7 +7,7 @@ import { newSession, turnState } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
 
-const idless = { toolCall: { id: '', name: 'bash', arguments: { title: 'Make it', description: 'Makes idless.txt.', command: 'touch idless.txt', risky: false } } };
+const idless = { toolCall: { id: '', name: 'run', arguments: { description: 'Makes idless.txt.', connector: 'shell', command: 'exec', payload: { line: 'touch idless.txt', risky: false } } } };
 
 describe("a call the provider sent in pieces is repaired or dropped (08 §8.2, ADR 0009, 192)", { timeout: 30_000 }, () => {
   it('QA8-H11 a call without an id is given one that the call, its result, and the next request share', async () => {

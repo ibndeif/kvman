@@ -4,7 +4,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { chromium, type Browser, type Page } from 'playwright';
 import { z } from '@kvman/sdk';
 import { kvmanWorld, until, type KvmanWorld, type Running } from '../support/kvman-child.ts';
-import { artifactCommand, calls, says } from '../support/model-script.ts';
+import { command, runs, says } from '../support/model-script.ts';
 
 let browser: Browser;
 let world: KvmanWorld | undefined;
@@ -30,7 +30,7 @@ const sessionSchema = z.object({ id: z.string(), status: z.string() });
 async function chatWithArtifact(input: Record<string, string>): Promise<{ kvman: Running; sessionId: string }> {
   world = await kvmanWorld();
   const kvman = await world.start();
-  world.fake.reply(calls(artifactCommand('write', input)), says('Done.'));
+  world.fake.reply(runs(command('artifact', 'write', input)), says('Done.'));
   const sessionId = sessionSchema.parse(await kvman.call('commands', 'kvcoder.session.create', { title: 'Artifact' })).id;
   await kvman.call('commands', 'kvcoder.message.send', { sessionId, text: 'Show it' });
   await until(() => kvman.call('queries', 'kvcoder.session.get', { sessionId }), sessionSchema, (found) => found.status === 'idle');
