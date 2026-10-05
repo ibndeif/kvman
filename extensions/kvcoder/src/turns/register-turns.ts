@@ -1,5 +1,5 @@
 import { z, type Ctx } from '@kvman/sdk';
-import { checkedAnswer } from '../calls/ask.ts';
+import { checkedAnswer } from '../connectors/ask.ts';
 import { runCallSchema, type HeldResult } from '../schemas/records.ts';
 import { findSession, ownSession, userOnly } from '../sessions/session-lookup.ts';
 import { turnSchema, turnView } from '../sessions/session-view.ts';

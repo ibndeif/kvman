@@ -3,7 +3,7 @@ import { invalid, tooLarge } from '../problems.ts';
 import type { SectionDoc } from '../schemas/registry.ts';
 import { findSession } from '../sessions/session-lookup.ts';
 import { records, txRecords, type TxRecords } from '../store/collections.ts';
-import { callerExtension, loadedExtensions } from './loaded.ts';
+import { callerExtension, loadedOwners } from './loaded.ts';
 
 // Sections (plan 08 §8.4, ADR 0009, 94): text in the system prompt, pushed by their owner. A global section is in every
 // workspace's prompts, a session's only in that session's, and any other in its workspace's. Ids belong to their owner.
@@ -23,11 +23,12 @@ function sectionOf(doc: SectionDoc, global: boolean): Section {
 /** The sections a session's prompt reaches, by `order`, with entries of unloaded owners left out. */
 export async function sectionsFor(ctx: Ctx, sessionId: string | null): Promise<Section[]> {
   const store = records(ctx.store);
-  const loaded = new Set((await loadedExtensions(ctx)).map((extension) => extension.name));
   const global = (await store.globalSections.find({}, { limit: 1000 })).map((doc) => sectionOf(doc, true));
   const local = (await store.sections.find({ sessionId: null }, { limit: 1000 })).map((doc) => sectionOf(doc, false));
   const own = sessionId === null ? [] : (await store.sections.find({ sessionId }, { limit: 1000 })).map((doc) => sectionOf(doc, false));
-  return [...global, ...local, ...own]
+  const sections = [...global, ...local, ...own];
+  const loaded = await loadedOwners(ctx, sections.map((section) => section.owner));
+  return sections
     .filter((section) => loaded.has(section.owner))
     .sort((first, second) => first.order - second.order || first.owner.localeCompare(second.owner) || first.id.localeCompare(second.id));
 }

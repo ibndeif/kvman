@@ -20,6 +20,15 @@ export const registrationInfoSchema = z.strictObject({
   output: jsonSchemaDocumentSchema,
 });
 
+/** Accepts a command or query as `kernel.registrations.list` lists it: with its owner, and without its schemas. */
+export const registrationRowSchema = z.strictObject({
+  name: z.string(),
+  kind: z.enum(['command', 'query']),
+  extension: z.string(),
+  public: z.boolean(),
+  description: z.string(),
+});
+
 /** Accepts an extension as `kernel.extensions.list` describes it. */
 export const extensionInfoSchema = z.strictObject({
   name: z.string(),
@@ -101,6 +110,7 @@ export const kernelQuerySchemas = {
   'kernel.files.get': { input: z.strictObject({ id: z.string().min(1) }), output: fileSchema },
   'kernel.files.list': { input: z.strictObject({ limit: listLimitSchema }), output: z.array(fileSchema) },
   'kernel.extensions.list': { input: emptySchema, output: z.array(extensionInfoSchema) },
+  'kernel.registrations.list': { input: emptySchema, output: z.array(registrationRowSchema) },
   'kernel.preset.get': { input: emptySchema, output: presetStateSchema },
   'kernel.processes.list': { input: emptySchema, output: z.array(processRowSchema) },
   'kernel.health.get': { input: emptySchema, output: healthSchema },

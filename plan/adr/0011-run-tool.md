@@ -37,8 +37,17 @@ Asked: "We need to simplify and enhance the kvcoder for better accuracy and perf
 23. **`fs read`, `fs list`, and `fs search` are never cut.** They limit their own results (decision 8), and cutting their JSON at 30 KB would break it for a full read or a long listing.
 24. **The kernel keeps a registration's JSON Schema once converted.** `kernel.extensions.list` and `kernel.settings.list` converted every schema on each call, and kvcoder reads the extensions at every prompt build; with the built-in connectors' schemas that pushed the `kvcoder.prompt` benchmark past its limit (about 30 ms before, 35 to 43 ms after). Registrations are sealed at load, so the conversion is kept with its schema. Nothing an extension sees changes, and the benchmark is at about 15 ms. It also ends a regression from QA 17: since `coder` loaded kvcustomizer (06de9d9), whose start handler registers five connectors and so read `kernel.extensions.list` five times, `rss.idle` and `start.cold` had been more than 20% over their M2.5 baseline (about 279 MB and 1510 ms). They are now about 262 MB and 1390 ms, inside the limit, with the baseline unchanged.
 
+## After the benchmark investigation (2026-10-05)
+
+`start.cold` and `rss.idle` had been over their limit since `coder` began loading kvcustomizer (decision 24). The product owner then asked for the three changes below, and that every connector live in its own file.
+
+25. **`kernel.registrations.list`**, a public query: `{}` → `[{ name, kind: 'command' | 'query', extension, public, description }]`, one row per command and query of the run's extensions, private ones too, with no schema. kvcoder uses it to check who owns a name and which owners are loaded; `kernel.extensions.list` stays for help and forms. Chosen over a `schemas: false` option on `kernel.extensions.list`, and over rows without a description. An owner with no command or query isn't in it, so only for such an owner does kvcoder read the list of extensions.
+26. **`kvcoder.connector.register` also takes `{ connectors: [ … ] }`**, each entry shaped as one connector. Every entry is checked first and all are stored in one transaction, so a call registers all of its connectors or none; a name given twice fails `VALIDATION_FAILED`. The single form keeps working. Chosen over a second command and over the list form alone.
+27. **`start.cold` runs with `kernel.workers: 3`**, the reference machine's default, as `rss.idle` does, so it no longer depends on the cores of the machine that measures it. A new baseline is recorded for every benchmark on today's code.
+28. **Every connector lives in its own file**, with its description, its payloads, its commands, and the jobs behind them: kvcoder's `shell`, `fs`, `artifact`, `background`, `ask`, `subagent`, and the binary connector under `src/connectors/`, and kvcustomizer's `kvman`, `ext`, `preset`, `preview`, and `docs` under its own `src/connectors/`. kvcustomizer registers its five in one call.
+
 ## Consequences
 
 - Removed from kvcoder: the shell-line parser, the heredoc and here-string forms, the refusal of a connector word inside shell syntax, `--async`, the `jobs` connector, and `kvcoder.connector.run`.
 - kvcustomizer's connectors keep their names and commands; only how they are called changes.
-- Changesets: `@kvman/kvcoder`, `@kvman/kvcustomizer`, and `@kvman/kvai`.
+- Changesets: `@kvman/kvcoder`, `@kvman/kvcustomizer`, `@kvman/kvai`, and `@kvman/sdk`.

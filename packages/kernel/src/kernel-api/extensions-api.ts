@@ -6,7 +6,8 @@ import type { KernelApiServices } from './kernel-api-services.ts';
 import type { KernelRegistrations } from './kernel-registrations.ts';
 
 // `kernel.extensions.list` (plan 02 §2.12, ADR 0009, 28): the run's extensions, not the kernel, with everything they
-// register, private names too.
+// register, private names too. `kernel.registrations.list` (ADR 0011, 25) is the light form: one row per command and
+// query, with no schema, for a caller that only needs to know what exists and whose it is.
 
 function describe(registry: Registry, extension: WorkerExtension) {
   const jobs = [...registry.jobs.values()].filter((job) => job.owner === extension.name);
@@ -33,4 +34,8 @@ export function registerExtensionsApi(api: KernelRegistrations, { registry, exte
   api.query('kernel.extensions.list', kernelQuerySchemas['kernel.extensions.list'], 'Lists the extensions of this run and what they register.', () =>
     extensions.map((extension) => describe(registry, extension)),
   );
+  api.query('kernel.registrations.list', kernelQuerySchemas['kernel.registrations.list'], 'Lists every command and query of this run with its owner, without schemas.', () => {
+    const loaded = new Set(extensions.map((extension) => extension.name));
+    return [...registry.jobs.values()].filter((job) => loaded.has(job.owner)).map((job) => ({ name: job.name, kind: job.kind, extension: job.owner, public: job.public, description: job.description }));
+  });
 }

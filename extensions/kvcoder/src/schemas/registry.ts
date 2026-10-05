@@ -15,10 +15,14 @@ export const exampleSchema = z.object({ description: z.string().min(1), input: z
 /** A commands connector's command: its name, the registering extension's public command, and examples. `help` is every connector's own. */
 export const connectorCommandSchema = z.object({ name: wordSchema.refine((name) => name !== 'help', "help is every connector's own command; name this one differently."), command: z.string().min(1), examples: z.array(exampleSchema).exactOptional() });
 
-export const connectorRegisterSchema = z.union([
-  z.strictObject({ name: wordSchema, description: z.string().min(1), commands: z.array(connectorCommandSchema).min(1) }),
-  z.strictObject({ name: wordSchema, description: z.string().min(1), binary: binarySchema }),
-]);
+const commandsConnectorSchema = z.strictObject({ name: wordSchema, description: z.string().min(1), commands: z.array(connectorCommandSchema).min(1) });
+const programConnectorSchema = z.strictObject({ name: wordSchema, description: z.string().min(1), binary: binarySchema });
+
+/** One connector as an extension registers it: its own commands, or a program. */
+export const connectorSchema = z.union([commandsConnectorSchema, programConnectorSchema]);
+
+/** What `kvcoder.connector.register` takes: one connector, or several that are registered together or not at all (ADR 0011, 26). */
+export const connectorRegisterSchema = z.union([commandsConnectorSchema, programConnectorSchema, z.strictObject({ connectors: z.array(connectorSchema).min(1) })]);
 
 /** A binary connector from the `kvcoder.connectors` setting. */
 export const binaryConnectorSchema = z.object({ name: wordSchema, description: z.string().min(1), binary: binarySchema });

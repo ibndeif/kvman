@@ -3,7 +3,7 @@ import type { JsonValue } from '../connector-call.ts';
 import { sessionPointSchema, type SessionPoint } from '../schemas/registry.ts';
 import { invalid } from '../problems.ts';
 import { records, txRecords } from '../store/collections.ts';
-import { callerExtension, loadedExtensions, ownsPublicCommand } from './loaded.ts';
+import { callerExtension, loadedOwners, ownsPublicCommand, registrations } from './loaded.ts';
 
 // Session points (plan 08 §8.4): an extension has one of its public commands queued when something happens to a
 // session. Each runs inside kvcoder's own job, `kvcoder.handler.run`, which records its id before the command runs, so
@@ -16,7 +16,7 @@ export async function firePoint(ctx: Ctx, point: SessionPoint, input: Record<str
   const store = records(ctx.store);
   const handlers = await store.handlers.find({ point }, { limit: 1000 });
   if (handlers.length === 0) return;
-  const loaded = new Set((await loadedExtensions(ctx)).map((extension) => extension.name));
+  const loaded = await loadedOwners(ctx, handlers.map((entry) => entry.owner));
   for (const handler of handlers.filter((entry) => loaded.has(entry.owner))) await ctx.execAsync('kvcoder.handler.run', { command: handler.command, input });
 }
 
@@ -45,7 +45,7 @@ export function registerSessionPoints(ctx: Ctx): void {
       const owner = callerExtension(ctx, 'session handlers');
       const known = sessionPointSchema.safeParse(point);
       if (!known.success) throw invalid(`There is no session point ${point}.`, { point });
-      if (!ownsPublicCommand(await loadedExtensions(ctx), owner, command)) throw invalid(`${command} isn't a public command of ${owner}.`, { command });
+      if (!ownsPublicCommand(await registrations(ctx), owner, command)) throw invalid(`${command} isn't a public command of ${owner}.`, { command });
       await ctx.store.transaction((tx) => {
         const { handlers } = txRecords(tx);
         for (const old of handlers.find({ point: known.data, owner }, { limit: 1 })) handlers.delete(old.id);

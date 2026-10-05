@@ -36,6 +36,7 @@ ctx.registerHandler('kernel.started', {
 - Every connector has `help`, built from what you registered: `help` with no payload lists your commands with their descriptions, and `help { "command": "add" }` gives that command's payload and result as JSON Schema, with your examples. Give every input field a `.describe()`, since the agent learns the payload from it.
 - A connector with `binary: { check, install?, help? }` instead of `commands` names a program on the system (`gh`). It is listed only while its `check` line exits 0, and the agent calls it with `exec { args }` and `help`. `help` runs `<name> --help`, or the line you give with `{command}` in it (`go help {command}`).
 - `shell`, `fs`, `artifact`, `background`, `ask`, and `subagent` are built in; their names are taken.
+- To register several connectors, pass them together: `ctx.exec('kvcoder.connector.register', { connectors: [notesConnector, tagsConnector] })`. They are checked first and stored together, so either all are registered or none is, and it is faster at start than one call each. Keep each connector in its own file, exporting the object you register.
 
 ## What the agent can't do
 

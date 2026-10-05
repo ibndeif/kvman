@@ -46,6 +46,7 @@ A `Workspace` is `{ id, name, path }`.
 | Name | Kind | Input → output |
 |---|---|---|
 | `kernel.extensions.list` | query | `{}` → `[{ name, version, source, revision, namespace, commands, queries, settings, handlers }]`. `source` is `bundled`, `npm:…`, or `path:…`; `revision` starts at 0 and grows with each hot reload. Each command and query, private ones too, is `{ name, description, public, input, output }` (JSON Schema); each setting `{ key, description, scopes }`; each handler `{ point, description }`. The kernel itself isn't listed. |
+| `kernel.registrations.list` | query | `{}` → `[{ name, kind, extension, public, description }]`: every command and query of the run, private ones too, with its owner and no schema. Use it instead of `kernel.extensions.list` when you only need to know what exists and whose it is: it is much smaller and faster. |
 | `kernel.processes.list` | query | `{}` → `[{ extension, workspaceId, name, pid, startedAt }]`. |
 | `kernel.health.get` | query | `{}` → `{ version, preset, mode, workers, uptimeMs, languages }`: kvman's version, the preset's name, `web`, the pool size, the uptime, and the language codes the loaded catalogs have. |
 

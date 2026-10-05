@@ -1,12 +1,11 @@
 import { z, type Ctx, type Stored } from '@kvman/sdk';
-import { commandsOf } from '../calls/builtin-connectors.ts';
+import { builtinDescriptions, commandsOf } from '../connectors/builtin-connectors.ts';
 import type { ShellCommand } from '../calls/shell-command.ts';
 import { shellFor } from '../calls/shell-program.ts';
 import { builtinConnectors } from '../connector-call.ts';
 import { activeConnectors, type ConnectorRow } from '../registry/register-connectors.ts';
 import { sectionsFor } from '../registry/register-sections.ts';
 import type { SessionDoc } from '../schemas/records.ts';
-import { builtinDescriptions } from './builtin-descriptions.ts';
 import { buildPrompt, type BuiltPrompt } from './build-prompt.ts';
 
 // A session's prompt and the connectors its agent may use: a subagent gets its parent's subset, never `subagent`,

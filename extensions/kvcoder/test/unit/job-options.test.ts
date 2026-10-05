@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lineRunOptions } from '../../src/calls/shell-connector.ts';
+import { lineRunOptions } from '../../src/calls/line-run.ts';
 import { stepOptions } from '../../src/turns/step.ts';
 
 describe("kvcoder's jobs (08 §8.1 and §8.3, ADR 0009, 100)", () => {

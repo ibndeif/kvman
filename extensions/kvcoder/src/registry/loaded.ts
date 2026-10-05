@@ -1,42 +1,47 @@
 import { z, type Ctx } from '@kvman/sdk';
 import { invalid } from '../problems.ts';
 
-// The run's extensions, from `kernel.extensions.list`: entries whose owner isn't loaded are ignored (plan 08 §8.4).
+// What the run has loaded. Who owns a name comes from `kernel.registrations.list`, which carries no schema
+// (ADR 0011, 25); the schemas of `help` and of an invalid payload come from `kernel.extensions.list`. Entries whose
+// owner isn't loaded are ignored (plan 08 §8.4).
 
-const registrationSchema = z.object({ name: z.string(), description: z.string(), public: z.boolean(), input: z.json(), output: z.json() });
+const rowSchema = z.object({ name: z.string(), kind: z.enum(['command', 'query']), extension: z.string(), public: z.boolean() });
 
-const extensionsSchema = z.array(
-  z.object({
-    name: z.string(),
-    commands: z.array(registrationSchema),
-    queries: z.array(registrationSchema),
-  }),
-);
+export type Registrations = z.output<typeof rowSchema>[];
 
-export type LoadedExtensions = z.output<typeof extensionsSchema>;
-
-export async function loadedExtensions(ctx: Ctx): Promise<LoadedExtensions> {
-  return extensionsSchema.parse(await ctx.exec('kernel.extensions.list', {}));
+/** Every command and query of the run, with its owner. */
+export async function registrations(ctx: Ctx): Promise<Registrations> {
+  return z.array(rowSchema).parse(await ctx.exec('kernel.registrations.list', {}));
 }
 
 /** Whether `command` is a public command of the extension `owner`. */
-export function ownsPublicCommand(extensions: LoadedExtensions, owner: string, command: string): boolean {
-  return extensions.some((extension) => extension.name === owner && extension.commands.some((registered) => registered.name === command && registered.public));
+export function ownsPublicCommand(rows: Registrations, owner: string, command: string): boolean {
+  return rows.some((row) => row.name === command && row.extension === owner && row.kind === 'command' && row.public);
 }
 
 /** Whether `name` is a public command or query of the extension `owner`: what a connector command may run (ADR 0009, 129). */
-export function ownsPublicCall(extensions: LoadedExtensions, owner: string, name: string): boolean {
-  return extensions.some((extension) => extension.name === owner && [...extension.commands, ...extension.queries].some((registered) => registered.name === name && registered.public));
+export function ownsPublicCall(rows: Registrations, owner: string, name: string): boolean {
+  return rows.some((row) => row.name === name && row.extension === owner && row.public);
 }
 
-/** Whether `name` is a query of a loaded extension. */
-export function isQuery(extensions: LoadedExtensions, name: string): boolean {
-  return extensions.some((extension) => extension.queries.some((registered) => registered.name === name));
+const extensionNamesSchema = z.array(z.object({ name: z.string() }));
+
+/** Those of `owners` that are loaded. An owner with no command or query isn't in the registrations, so only then is the list of extensions read. */
+export async function loadedOwners(ctx: Ctx, owners: readonly string[]): Promise<Set<string>> {
+  const registered = new Set((await registrations(ctx)).map((row) => row.extension));
+  if (owners.every((owner) => registered.has(owner))) return new Set(owners);
+  const loaded = new Set(extensionNamesSchema.parse(await ctx.exec('kernel.extensions.list', {})).map((extension) => extension.name));
+  return new Set(owners.filter((owner) => loaded.has(owner)));
 }
 
-/** Every command and query of the run, as connector help reads them. */
-export function callInfos(extensions: LoadedExtensions): LoadedExtensions[number]['commands'] {
-  return extensions.flatMap((extension) => [...extension.commands, ...extension.queries]);
+const callInfoSchema = z.object({ name: z.string(), description: z.string(), input: z.json(), output: z.json() });
+const extensionCallsSchema = z.array(z.object({ commands: z.array(callInfoSchema), queries: z.array(callInfoSchema) }));
+
+export type CallInfo = z.output<typeof callInfoSchema>;
+
+/** Every command and query of the run with its schemas, as connector help reads them. */
+export async function callInfos(ctx: Ctx): Promise<CallInfo[]> {
+  return extensionCallsSchema.parse(await ctx.exec('kernel.extensions.list', {})).flatMap((extension) => [...extension.commands, ...extension.queries]);
 }
 
 /** The caller's package name; only an extension registers with kvcoder. */

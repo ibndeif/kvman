@@ -1,12 +1,13 @@
 import type { Ctx } from '@kvman/sdk';
 import { registerArtifacts } from './artifacts/register-artifacts.ts';
-import { registerArtifactConnector } from './calls/artifact-connector.ts';
-import { registerAskConnector } from './calls/ask.ts';
-import { registerBackgroundConnector } from './calls/background-connector.ts';
 import { registerConnectorHelp } from './calls/connector-help.ts';
-import { registerFsConnector } from './calls/fs-connector.ts';
-import { registerShellConnector } from './calls/shell-connector.ts';
-import { registerSubagentConnector } from './calls/subagent.ts';
+import { registerArtifactConnector } from './connectors/artifact.ts';
+import { registerAskConnector } from './connectors/ask.ts';
+import { registerBackgroundConnector } from './connectors/background.ts';
+import { registerBinaryConnector } from './connectors/binary.ts';
+import { registerFsConnector } from './connectors/fs.ts';
+import { registerShellConnector } from './connectors/shell.ts';
+import { registerSubagentConnector } from './connectors/subagent.ts';
 import { registerDocs } from './docs.ts';
 import { registerProcessHandlers, interruptLeftovers } from './jobs/process-handlers.ts';
 import { registerJobs } from './jobs/register-jobs.ts';
@@ -37,6 +38,7 @@ export default (ctx: Ctx): void => {
   registerTurns(ctx);
   registerStep(ctx);
   registerShellConnector(ctx);
+  registerBinaryConnector(ctx);
   registerFsConnector(ctx);
   registerArtifactConnector(ctx);
   registerBackgroundConnector(ctx);

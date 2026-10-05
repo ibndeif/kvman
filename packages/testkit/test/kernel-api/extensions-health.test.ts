@@ -58,4 +58,15 @@ describe('kernel.extensions.list and kernel.health.get (02 §2.12)', () => {
     const after = await kernel.exec('kernel.health.get', {});
     expect(after.uptimeMs - before.uptimeMs).toBe(5000);
   });
+
+  it('QA18-H25 kernel.registrations.list answers one row per command and query, private ones too, with its owner and no schema', async () => {
+    const kernel = await harness.start([described]);
+    expect(await kernel.exec('kernel.registrations.list', {})).toEqual([
+      { name: 'e.do', kind: 'command', extension: '@test/e', public: true, description: 'Does it.' },
+      { name: 'e.peek', kind: 'query', extension: '@test/e', public: false, description: 'Peeks.' },
+      { name: 'e.transformed', kind: 'command', extension: '@test/e', public: false, description: 'Counts letters.' },
+      { name: 'e.dated', kind: 'command', extension: '@test/e', public: false, description: 'Takes a date.' },
+    ]);
+    expect(await kernel.exec('kernel.registrations.list', {}, { as: '@test/e' })).toHaveLength(4);
+  });
 });

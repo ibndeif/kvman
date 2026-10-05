@@ -1,13 +1,41 @@
 import { z, type Ctx } from '@kvman/sdk';
 import { jsonOutput, type JsonValue } from '../connector-call.ts';
 import { invalid } from '../problems.ts';
-import { callInput, payloads } from '../schemas/payloads.ts';
 import type { QuestionDoc } from '../schemas/records.ts';
-import { builtinCommands } from './builtin-connectors.ts';
+import { callInput, type ConnectorCommand } from './connector-command.ts';
 
 // The `ask` connector (plan 08 §8.5): a question suspends the turn until the person answers; the answer becomes the
 // call's result, and a dismissal gives `{ "dismissed": true }`. Each command's check validates its payload as a kernel
 // job, and the step then records the question (ADR 0011, 9). Answers are checked (ADR 0009, 102).
+
+/** What the prompt's index says the connector is for. */
+export const askDescription = 'Put a question to the person and wait for the answer. Use it when you need a decision, a missing detail, or a go-ahead before a risky step, instead of guessing.';
+
+const prompt = z.string().min(1).describe('The question, as the person reads it.');
+
+const payloads = {
+  text: z.strictObject({ prompt, placeholder: z.string().describe('A hint shown in the empty answer box.').exactOptional() }),
+  choice: z.strictObject({
+    prompt,
+    multiple: z.boolean().describe('true when the person may choose several options.'),
+    options: z
+      .array(z.strictObject({ id: z.string().min(1).describe('What the answer names the option by.'), label: z.string().min(1).describe('The option, as the person reads it.'), description: z.string().describe('A line that explains the option.').exactOptional() }))
+      .min(2)
+      .max(10)
+      .refine((options) => new Set(options.map((option) => option.id)).size === options.length, 'Option ids must differ.')
+      .describe('Two to ten options, the recommended one first.'),
+    other: z.boolean().describe('true lets the person write an answer of their own.').exactOptional(),
+  }),
+  confirm: z.strictObject({ prompt, danger: z.boolean().describe('true marks the confirmation as destructive.').exactOptional() }),
+};
+
+const dismissed = ', or { "dismissed": true }.';
+
+export const askCommands = {
+  text: { registration: 'kvcoder.ask.text.check', description: 'Asks the person for a free answer and waits for it.', payload: payloads.text, asks: false, result: `the person's answer: { "text" }${dismissed}` },
+  choice: { registration: 'kvcoder.ask.choice.check', description: 'Asks the person to choose among options and waits for the answer.', payload: payloads.choice, asks: false, result: `the person's answer: { "selected": [ids], "other"? }${dismissed}` },
+  confirm: { registration: 'kvcoder.ask.confirm.check', description: 'Asks the person yes or no and waits for the answer.', payload: payloads.confirm, asks: false, result: `the person's answer: { "confirmed" }${dismissed}` },
+} satisfies Record<string, ConnectorCommand>;
 
 export type QuestionKind = QuestionDoc['kind'];
 
@@ -19,9 +47,10 @@ export const isAskKind = (command: string): command is (typeof askKinds)[number]
 const noOutput = z.object({});
 
 export function registerAskConnector(ctx: Ctx): void {
-  ctx.registerCommand('kvcoder.ask.text.check', { description: builtinCommands.ask.text.description, input: callInput(payloads.askText), output: noOutput, retries: 0, handle: () => ({}) });
-  ctx.registerCommand('kvcoder.ask.choice.check', { description: builtinCommands.ask.choice.description, input: callInput(payloads.askChoice), output: noOutput, retries: 0, handle: () => ({}) });
-  ctx.registerCommand('kvcoder.ask.confirm.check', { description: builtinCommands.ask.confirm.description, input: callInput(payloads.askConfirm), output: noOutput, retries: 0, handle: () => ({}) });
+  for (const kind of askKinds) {
+    const command = askCommands[kind];
+    ctx.registerCommand(command.registration, { description: command.description, input: callInput(command.payload), output: noOutput, retries: 0, handle: () => ({}) });
+  }
 }
 
 const dismissedSchema = z.strictObject({ dismissed: z.literal(true) });
@@ -34,7 +63,7 @@ const answerSchemas = {
 };
 
 function checkChoice(question: Record<string, JsonValue>, answer: { selected: string[]; other?: string | undefined }): void {
-  const parsed = payloads.askChoice.parse(question);
+  const parsed = payloads.choice.parse(question);
   const ids = new Set(parsed.options.map((option) => option.id));
   const unknown = answer.selected.find((id) => !ids.has(id));
   if (unknown !== undefined) throw invalid(`${unknown} isn't one of the options.`, { selected: unknown });

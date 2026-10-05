@@ -33,7 +33,7 @@ declare module '@kvman/sdk' {
     'kvcoder.turn.cancel': { input: SessionId; output: Empty };
     'kvcoder.job.cancel': { input: { sessionId: string; id: string }; output: Empty };
     'kvcoder.question.answer': { input: { questionId: string; answer: Json }; output: { jobId: string | null } };
-    'kvcoder.connector.register': { input: Connector; output: Empty };
+    'kvcoder.connector.register': { input: Connector | { connectors: Connector[] }; output: Empty };
     'kvcoder.connector.unregister': { input: { name: string }; output: Empty };
     'kvcoder.section.set': { input: { id: string; title: string; order: number; content: string } & Place; output: Empty };
     'kvcoder.section.remove': { input: { id: string } & Place; output: Empty };

@@ -2,9 +2,9 @@ import { z, type Ctx } from '@kvman/sdk';
 import { builtinConnectors } from '../connector-call.ts';
 import { invalid } from '../problems.ts';
 import { readSettings } from '../register-settings.ts';
-import { connectorRegisterSchema, exampleSchema, type ConnectorDoc } from '../schemas/registry.ts';
+import { connectorRegisterSchema, connectorSchema, exampleSchema, type ConnectorDoc } from '../schemas/registry.ts';
 import { records, txRecords } from '../store/collections.ts';
-import { callerExtension, loadedExtensions, ownsPublicCall } from './loaded.ts';
+import { callerExtension, loadedOwners, ownsPublicCall, registrations } from './loaded.ts';
 
 // Connectors (plan 08 §8.4): named sets of commands the agent runs with `run`, registered by other extensions, kept in
 // kvcoder's global store for one run, and owned by their registering extension.
@@ -33,8 +33,9 @@ function rowOf(doc: ConnectorDoc): ConnectorRow {
 
 /** Every connector the agent may use: registered ones whose owner is loaded, then the setting's binary connectors. */
 export async function activeConnectors(ctx: Ctx): Promise<ConnectorRow[]> {
-  const loaded = new Set((await loadedExtensions(ctx)).map((extension) => extension.name));
-  const registered = (await records(ctx.store).connectors.find({}, { limit: 1000 })).filter((doc) => loaded.has(doc.owner)).map(rowOf);
+  const stored = await records(ctx.store).connectors.find({}, { limit: 1000 });
+  const loaded = await loadedOwners(ctx, stored.map((doc) => doc.owner));
+  const registered = stored.filter((doc) => loaded.has(doc.owner)).map(rowOf);
   const names = new Set(registered.map((connector) => connector.name));
   const fromSetting: ConnectorRow[] = [];
   for (const entry of (await readSettings(ctx)).connectors) {
@@ -47,37 +48,47 @@ export async function activeConnectors(ctx: Ctx): Promise<ConnectorRow[]> {
   return [...registered, ...fromSetting];
 }
 
-async function register(ctx: Ctx, input: z.output<typeof connectorRegisterSchema>): Promise<void> {
+type Connector = z.output<typeof connectorSchema>;
+
+const docOf = (input: Connector): Omit<ConnectorDoc, 'owner'> =>
+  'commands' in input
+    ? { name: input.name, description: input.description, kind: 'commands', commands: input.commands.map((command) => ({ name: command.name, command: command.command, examples: command.examples ?? [] })), binary: null }
+    : { name: input.name, description: input.description, kind: 'binary', commands: null, binary: { check: input.binary.check, install: input.binary.install ?? null, help: input.binary.help ?? null } };
+
+// Every connector of a call is checked before any is stored, and they are stored in one transaction, so a call
+// registers all of its connectors or none (ADR 0011, 26).
+async function register(ctx: Ctx, connectors: readonly Connector[]): Promise<void> {
   const owner = callerExtension(ctx, 'connectors');
-  if (builtinConnectors.some((name) => name === input.name)) throw ctx.problem('kvcoder/NAME_TAKEN', { name: input.name, owner: '@kvman/kvcoder' });
-  if ('commands' in input) {
-    const extensions = await loadedExtensions(ctx);
-    const foreign = input.commands.find((command) => !ownsPublicCall(extensions, owner, command.command));
+  const builtin = connectors.find((connector) => builtinConnectors.some((name) => name === connector.name));
+  if (builtin !== undefined) throw ctx.problem('kvcoder/NAME_TAKEN', { name: builtin.name, owner: '@kvman/kvcoder' });
+  const repeated = connectors.find((connector, index) => connectors.findIndex((other) => other.name === connector.name) !== index);
+  if (repeated !== undefined) throw invalid(`The connector ${repeated.name} is given twice.`, { name: repeated.name });
+  const commands = connectors.flatMap((connector) => ('commands' in connector ? connector.commands : []));
+  if (commands.length > 0) {
+    const rows = await registrations(ctx);
+    const foreign = commands.find((command) => !ownsPublicCall(rows, owner, command.command));
     if (foreign !== undefined) throw invalid(`${foreign.command} isn't a public command or query of ${owner}.`, { command: foreign.command });
   }
-  const doc: Omit<ConnectorDoc, 'owner'> =
-    'commands' in input
-      ? { name: input.name, description: input.description, kind: 'commands', commands: input.commands.map((command) => ({ name: command.name, command: command.command, examples: command.examples ?? [] })), binary: null }
-      : { name: input.name, description: input.description, kind: 'binary', commands: null, binary: { check: input.binary.check, install: input.binary.install ?? null, help: input.binary.help ?? null } };
   const taken = await ctx.store.transaction((tx) => {
-    const { connectors } = txRecords(tx);
-    const [existing] = connectors.find({ name: input.name }, { limit: 1 });
-    if (existing !== undefined && existing.owner !== owner) return existing.owner;
-    if (existing !== undefined) connectors.delete(existing.id);
-    connectors.insert({ ...doc, owner });
+    const stored = txRecords(tx).connectors;
+    const existing = connectors.map((connector) => stored.find({ name: connector.name }, { limit: 1 })[0]);
+    const other = existing.find((doc) => doc !== undefined && doc.owner !== owner);
+    if (other !== undefined) return { name: other.name, owner: other.owner };
+    for (const doc of existing) if (doc !== undefined) stored.delete(doc.id);
+    for (const connector of connectors) stored.insert({ ...docOf(connector), owner });
     return undefined;
   });
-  if (taken !== undefined) throw ctx.problem('kvcoder/NAME_TAKEN', { name: input.name, owner: taken });
+  if (taken !== undefined) throw ctx.problem('kvcoder/NAME_TAKEN', taken);
 }
 
 export function registerConnectors(ctx: Ctx): void {
   ctx.registerCommand('kvcoder.connector.register', {
-    description: "Registers a connector the agent calls with its run tool: the caller's public commands, or a program run in the shell.",
+    description: "Registers a connector the agent calls with its run tool, or several at once: the caller's public commands, or a program run in the shell.",
     input: connectorRegisterSchema,
     output: z.object({}),
     public: true,
     handle: async (input) => {
-      await register(ctx, input);
+      await register(ctx, 'connectors' in input ? input.connectors : [input]);
       return {};
     },
   });

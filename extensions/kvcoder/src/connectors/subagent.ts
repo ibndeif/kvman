@@ -1,23 +1,36 @@
 import { z, type Ctx, type Stored } from '@kvman/sdk';
 import { firePoint } from '../registry/session-points.ts';
-import { callInput, payloads } from '../schemas/payloads.ts';
 import type { SessionDoc } from '../schemas/records.ts';
 import { now } from '../sessions/session-lookup.ts';
 import { txRecords } from '../store/collections.ts';
 import { appendMessage, noUsage, userContent } from '../turns/history.ts';
 import { sentHistory } from '../turns/model-context.ts';
 import { beginTurn, openTurn } from '../turns/start-turn.ts';
-import { builtinCommands } from './builtin-connectors.ts';
+import { callInput, type ConnectorCommand } from './connector-command.ts';
 
 // The `subagent` connector (plan 08 §8.5): a hidden child session with its parent's model and thinking. `fresh`
 // starts from the task; `fork` from a copy of the parent's messages so far (and its summary). Its connectors are a
 // subset of the parent's, never `subagent`, always `ask`. The check validates the payload as a kernel job, and the step
 // then starts the child (ADR 0011, 9).
 
-export type SubagentRun = z.output<typeof payloads.subagentRun>;
+/** What the prompt's index says the connector is for. */
+export const subagentDescription = 'Hand a self-contained task to a helper agent. Use it to research or build a separate part in parallel, or with background set to true while you go on.';
+
+export const subagentRunSchema = z.strictObject({
+  task: z.string().min(1).describe("The helper's whole brief: its role, the goal, the facts it needs, its limits, and what to return."),
+  mode: z.enum(['fresh', 'fork']).describe('fresh starts from the task alone; fork starts from a copy of this conversation.'),
+  connectors: z.array(z.string()).describe('The connectors the helper may use; all of yours when left out. It always has ask and never subagent.').exactOptional(),
+  background: z.boolean().describe('true lets you go on at once; the answer arrives later as a message.').exactOptional(),
+});
+
+export const subagentCommands = {
+  run: { registration: 'kvcoder.subagent.check', description: 'Runs a helper agent on a task; several runs in one reply run in parallel.', payload: subagentRunSchema, asks: false, result: "the helper's final answer, or started <id> with background." },
+} satisfies Record<string, ConnectorCommand>;
+
+export type SubagentRun = z.output<typeof subagentRunSchema>;
 
 export function registerSubagentConnector(ctx: Ctx): void {
-  ctx.registerCommand('kvcoder.subagent.check', { description: builtinCommands.subagent.run.description, input: callInput(payloads.subagentRun), output: z.object({}), retries: 0, handle: () => ({}) });
+  ctx.registerCommand('kvcoder.subagent.check', { description: subagentCommands.run.description, input: callInput(subagentRunSchema), output: z.object({}), retries: 0, handle: () => ({}) });
 }
 
 /** The first connector of a run that its child can't have, if any. */

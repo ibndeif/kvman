@@ -1,76 +1,20 @@
 import type { Ctx } from '@kvman/sdk';
 import type {} from '@kvman/kvcoder';
+import { docsConnector } from './connectors/docs.ts';
+import { extConnector } from './connectors/ext.ts';
+import { kvmanConnector } from './connectors/kvman.ts';
+import { presetConnector } from './connectors/preset.ts';
+import { previewConnector } from './connectors/preview.ts';
 import { readSection } from './docs/own-docs.ts';
 
-// kvcustomizer extends kvcoder (plan 09, §9.1 and §9.4): at each start it registers its four connectors, which kvcoder clears
-// at its own start, and sets its one global section.
-
-const connectors = [
-  {
-    name: 'kvman',
-    description:
-      'Change the app you are running in: its default model, its settings, its extensions, and its preset. Use it for any change to kvman itself. A change to the extensions or the preset is saved to the preset file and applies at the next start of kvman.',
-    commands: [
-      { name: 'model-list', command: 'kvcustomizer.app.model.list' },
-      { name: 'model-set', command: 'kvcustomizer.app.model.set', examples: [{ description: 'Use another model', input: { model: 'anthropic/claude-sonnet-5-5' } }] },
-      { name: 'settings-list', command: 'kvcustomizer.app.settings.list' },
-      { name: 'settings-set', command: 'kvcustomizer.app.settings.set', examples: [{ description: 'Set a setting for everyone', input: { key: 'kvwebui.theme', value: 'dark', scope: 'global' } }] },
-      { name: 'settings-reset', command: 'kvcustomizer.app.settings.reset', examples: [{ description: 'Go back to the default', input: { key: 'kvwebui.theme', scope: 'global' } }] },
-      { name: 'extensions-list', command: 'kvcustomizer.app.extensions.list' },
-      { name: 'extensions-install', command: 'kvcustomizer.app.extensions.install', examples: [{ description: 'Add an npm extension', input: { name: '@acme/notes', source: 'npm:1.2.3' } }] },
-      { name: 'extensions-uninstall', command: 'kvcustomizer.app.extensions.uninstall', examples: [{ description: 'Remove one', input: { name: '@acme/notes' } }] },
-      { name: 'preset-get', command: 'kvcustomizer.app.preset.get' },
-    ],
-  },
-  {
-    name: 'ext',
-    description: 'Create, list, check, and test kvman extension projects in the workspace. Use it for any work on an extension, and run check, then test, after changing one.',
-    commands: [
-      { name: 'new', command: 'kvcustomizer.ext.new', examples: [{ description: 'Scaffold a notes extension', input: { name: 'notes', namespace: 'notes', folder: 'notes' } }, { description: 'Scaffold one with a Vue component', input: { name: 'cards', namespace: 'cards', folder: 'cards', web: true } }] },
-      { name: 'list', command: 'kvcustomizer.ext.list' },
-      { name: 'check', command: 'kvcustomizer.ext.check', examples: [{ description: 'Check the notes project', input: { folder: 'notes' } }] },
-      { name: 'test', command: 'kvcustomizer.ext.test', examples: [{ description: 'Test the notes project', input: { folder: 'notes' } }] },
-    ],
-  },
-  {
-    name: 'preset',
-    description: 'Write and check kvman presets. Use it to create a preset file, and to check it before running it.',
-    commands: [
-      { name: 'new', command: 'kvcustomizer.preset.new', examples: [{ description: 'Write a preset for a notes app', input: { name: 'notes-app', file: 'notes-app.json' } }] },
-      { name: 'check', command: 'kvcustomizer.preset.check', examples: [{ description: 'Check that preset', input: { file: 'notes-app.json' } }] },
-    ],
-  },
-  {
-    name: 'preview',
-    description: 'Run extension projects in a separate kvman with a temporary home. Use it to show the person a project working, and stop it when you are done.',
-    commands: [
-      { name: 'start', command: 'kvcustomizer.preview.start', examples: [{ description: 'Preview the notes project', input: { extensions: ['notes'] } }] },
-      { name: 'stop', command: 'kvcustomizer.preview.stop' },
-      { name: 'status', command: 'kvcustomizer.preview.status' },
-    ],
-  },
-  {
-    name: 'docs',
-    description: 'Read the guides of kvman and of every installed extension. Use it before you write an extension, a preset, a view, or a component, and to learn how to use an extension that is installed.',
-    commands: [
-      { name: 'list', command: 'kvcustomizer.guides.list', examples: [{ description: 'List every guide and page', input: {} }] },
-      {
-        name: 'get',
-        command: 'kvcustomizer.guides.get',
-        examples: [
-          { description: 'Read the SDK guide', input: { topic: 'sdk' } },
-          { description: "Read an installed extension's page", input: { extension: '@kvman/kvwebui', topic: 'views' } },
-        ],
-      },
-    ],
-  },
-];
+// kvcustomizer extends kvcoder (plan 09, §9.1 and §9.4): at each start it registers its connectors in one call, since
+// kvcoder clears them at its own start, and sets its one global section. Each connector is in its own file.
 
 export function registerWithKvcoder(ctx: Ctx): void {
   ctx.registerHandler('kernel.started', {
     description: "Registers kvcustomizer's connectors and its guide section with kvcoder.",
     handle: async () => {
-      for (const connector of connectors) await ctx.exec('kvcoder.connector.register', connector);
+      await ctx.exec('kvcoder.connector.register', { connectors: [kvmanConnector, extConnector, presetConnector, previewConnector, docsConnector] });
       await ctx.exec('kvcoder.section.set', { id: 'guide', title: 'kvman extensions', order: 20, global: true, content: readSection() });
     },
   });

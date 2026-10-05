@@ -1,6 +1,6 @@
 # 09 — kvcustomizer (namespace `kvcustomizer`)
 
-kvcustomizer is the kvcoder extension for customizing kvman: developing extensions and presets (this file), and managing the running app (ADR 0010). It has no loop of its own: it extends kvcoder (§8.4), registering its connectors with `kvcoder.connector.register` and its global sections with `kvcoder.section.set` from its `kernel.started` handler. The `coder` preset runs it. Projects live in the workspace folder, and the agent edits their files with `fs`.
+kvcustomizer is the kvcoder extension for customizing kvman: developing extensions and presets (this file), and managing the running app (ADR 0010). It has no loop of its own: it extends kvcoder (§8.4), registering its connectors with one `kvcoder.connector.register` call (ADR 0011, 26) and its global sections with `kvcoder.section.set` from its `kernel.started` handler. The `coder` preset runs it. Projects live in the workspace folder, and the agent edits their files with `fs`.
 
 **Any harness, or none.** Developing an extension never needs kvcustomizer. The scaffold, the guides, the checks, and the preview are `@kvman/testkit` bins (§10), so Claude Code, pi, another harness, or a person typing by hand uses them directly. kvcustomizer's connectors run those bins, and add the prompt that steers the agent to them (ADR 0010, 1–3).
 

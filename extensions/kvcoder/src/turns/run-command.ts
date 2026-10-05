@@ -1,13 +1,15 @@
 import { z, type Ctx, type Stored } from '@kvman/sdk';
 import { chatIdOf } from '../artifacts/artifact-records.ts';
-import { artifactCard } from '../calls/artifact-connector.ts';
-import { binaryExec, builtinCommands, commandsOf, payloadJsonSchema, type BuiltinCommand } from '../calls/builtin-connectors.ts';
+import { lineRunSchema, lineRunText } from '../calls/line-run.ts';
+import { artifactCard } from '../connectors/artifact.ts';
+import { binaryExec } from '../connectors/binary.ts';
+import { builtinCommands, commandsOf } from '../connectors/builtin-connectors.ts';
+import { payloadJsonSchema, type ConnectorCommand } from '../connectors/connector-command.ts';
 import type { RunCall } from '../calls/run-tool.ts';
-import { lineRunText, parseLineRun } from '../calls/shell-connector.ts';
 import { inOrder } from '../files/file-queue.ts';
 import { lexicalPath } from '../files/workspace-path.ts';
 import { builtinConnectors, errorOutput, jsonOutput, runCommand, type JsonValue } from '../connector-call.ts';
-import { callInfos, loadedExtensions } from '../registry/loaded.ts';
+import { callInfos } from '../registry/loaded.ts';
 import type { ConnectorRow } from '../registry/register-connectors.ts';
 import { truncate } from '../result-text.ts';
 import type { HeldResult, SessionDoc } from '../schemas/records.ts';
@@ -20,7 +22,7 @@ import type { HeldResult, SessionDoc } from '../schemas/records.ts';
 export type CallDone = Pick<HeldResult, 'text' | 'details' | 'isError'>;
 
 /** The kernel job behind a connector command; `builtin` is set for kvcoder's own. */
-export type CommandTarget = { registration: string; builtin?: BuiltinCommand };
+export type CommandTarget = { registration: string; builtin?: ConnectorCommand };
 
 /** The job a call's connector command runs, or `undefined` when the connector has no such command. */
 export function targetOf(connectors: readonly ConnectorRow[], call: Pick<RunCall, 'connector' | 'command'>): CommandTarget | undefined {
@@ -83,12 +85,12 @@ async function runJob(ctx: Ctx, sessionId: string, call: RunCall, target: Comman
     command: call.command,
     payloadPath: builtin === undefined ? '' : 'payload',
     exec: () => ctx.exec(target.registration, jobInput(sessionId, call, target)),
-    payloadSchema: async () => (builtin === undefined ? callInfos(await loadedExtensions(ctx)).find((info) => info.name === target.registration)?.input : payloadJsonSchema(builtin.payload)),
+    payloadSchema: async () => (builtin === undefined ? (await callInfos(ctx)).find((info) => info.name === target.registration)?.input : payloadJsonSchema(builtin.payload)),
     cancelled: () => ctx.job.signal.aborted,
   });
   if (!done.ok) return failedCall(call, done.result.output, Date.now() - started);
   if (target.registration === shellRun || target.registration === binaryExec.registration) {
-    const run = parseLineRun(done.value);
+    const run = lineRunSchema.parse(done.value);
     const details = { ...words(call), output: run.output, durationMs: run.durationMs, exitCode: run.exitCode, ...(run.timedOut ? { timedOut: true } : {}), ...(run.jobId === null ? {} : { background: true, jobId: run.jobId }) };
     return { text: lineRunText(run), isError: run.exitCode !== 0, details };
   }

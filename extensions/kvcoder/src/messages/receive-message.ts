@@ -1,5 +1,5 @@
 import type { Ctx, Stored } from '@kvman/sdk';
-import { dismissedText } from '../calls/ask.ts';
+import { dismissedText } from '../connectors/ask.ts';
 import { reportInterrupted } from '../jobs/process-report.ts';
 import { invalid } from '../problems.ts';
 import type { SessionDoc, Source } from '../schemas/records.ts';

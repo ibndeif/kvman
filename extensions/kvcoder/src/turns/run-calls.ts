@@ -1,12 +1,11 @@
 import type { Ctx, Stored } from '@kvman/sdk';
-import { isAskKind, type QuestionKind } from '../calls/ask.ts';
-import { payloadJsonSchema } from '../calls/builtin-connectors.ts';
+import { isAskKind, type QuestionKind } from '../connectors/ask.ts';
+import { payloadJsonSchema } from '../connectors/connector-command.ts';
 import { parseRunArgs, type RunCall } from '../calls/run-tool.ts';
-import { createChild, refusedConnector, startChild } from '../calls/subagent.ts';
+import { createChild, refusedConnector, startChild, subagentRunSchema } from '../connectors/subagent.ts';
 import { builtinConnectors, errorOutput, invalidPayloadOutput, noCommandMessage, noConnectorMessage, type JsonValue } from '../connector-call.ts';
 import type { SessionTools } from '../prompt/session-prompt.ts';
 import { activeConnectors } from '../registry/register-connectors.ts';
-import { payloads } from '../schemas/payloads.ts';
 import type { HeldResult, SessionDoc } from '../schemas/records.ts';
 import { now } from '../sessions/session-lookup.ts';
 import { records } from '../store/collections.ts';
@@ -49,7 +48,7 @@ function invalidPayload(call: RunCall, target: CommandTarget): string | undefine
 
 async function subagentOutcome(env: CallEnv, toolCallId: string, call: RunCall): Promise<CallOutcome> {
   const { ctx, session } = env;
-  const run = payloads.subagentRun.parse(call.payload);
+  const run = subagentRunSchema.parse(call.payload);
   const denied = refusedConnector(run, new Set(env.tools.listed.map((listed) => listed.name)));
   if (denied !== undefined) return result(toolCallId, failedCall(call, errorOutput({ code: 'VALIDATION_FAILED', message: `A subagent can't have the connector ${denied}.` }).output));
   const childId = await createChild(ctx, session, run, env.answerSeq);

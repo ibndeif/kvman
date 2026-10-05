@@ -53,6 +53,7 @@
   "kernel.files.unlink.description": "يحذف ملفًا من مساحة العمل هذه.",
   "kernel.files.unlink.fields.id": "الملف",
   "kernel.extensions.list.description": "يعرض إضافات هذا التشغيل وما تسجّله.",
+  "kernel.registrations.list.description": "يعرض كل أمر واستعلام في هذا التشغيل مع مالكه، دون المخططات.",
   "kernel.preset.get.description": "يعرض الإعداد المسبق الجاري كما هو مخزّن الآن.",
   "kernel.extensions.install.description": "يضيف إضافة إلى ملف الإعداد المسبق؛ يُطبَّق عند التشغيل التالي.",
   "kernel.extensions.uninstall.description": "يزيل إضافة من ملف الإعداد المسبق؛ يُطبَّق عند التشغيل التالي.",
