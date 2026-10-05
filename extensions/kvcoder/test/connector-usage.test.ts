@@ -15,7 +15,7 @@ async function resultOf(call: RunCallSpec): Promise<string> {
 }
 
 describe("a built-in connector's invalid payload says what the command takes (08 §8.3, ADR 0012, 2)", { timeout: 30_000 }, () => {
-  it('QA11-H6 artifact, ask, fs, and subagent show the payload signature of the command that failed', async () => {
+  it('QA11-H6 artifact, ask, fs, and delegate show the payload signature of the command that failed', async () => {
     const artifact = await resultOf(command('artifact', 'write', { name: 'todo-app' }));
     expect(artifact).toContain('id: ');
     expect(artifact).toContain('title: ');
@@ -25,8 +25,8 @@ describe("a built-in connector's invalid payload says what the command takes (08
     expect(choice.endsWith('The payload of ask choice is\n{ prompt, multiple, options: [{ id, label, description? }], other? }')).toBe(true);
     const file = await resultOf(fsCall('write', { content: 'x' }));
     expect(file.endsWith('The payload of fs write is\n{ path, content, risky }')).toBe(true);
-    const helper = await resultOf(command('subagent', 'run', { prompt: 'x' }));
-    expect(helper.endsWith('The payload of subagent run is\n{ task, mode: "fresh" | "fork", connectors?, background? }')).toBe(true);
+    const helper = await resultOf(command('delegate', 'run', { worker: 'general',  prompt: 'x' }));
+    expect(helper.endsWith('The payload of delegate run is\n{ worker, task, background? }')).toBe(true);
   });
 
   it('QA11-E6 a valid call gets no signature', async () => {

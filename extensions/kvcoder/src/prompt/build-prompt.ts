@@ -1,8 +1,8 @@
 import type { Section } from '../registry/register-sections.ts';
 import { sectionsLimit } from '../registry/register-sections.ts';
 
-// The system prompt (plan 08 §8.2): the base prompt, the sections by `order`, then the connector index. Sections past
-// 64 KB together are left out, last by `order` first (ADR 0009, 94).
+// The system prompt (plan 08 §8.2): the base prompt, the sections by `order`, a worker's instructions, then the
+// connector index. Sections past 64 KB together are left out, last by `order` first (ADR 0009, 94).
 
 export type PromptInput = {
   workspacePath: string;
@@ -10,6 +10,8 @@ export type PromptInput = {
   shell: 'bash' | 'powershell';
   language: string;
   sections: readonly Section[];
+  /** The worker a subagent runs for: its instructions follow the sections (ADR 0021, 8). */
+  worker?: { name: string; instructions: string };
   connectors: readonly { name: string; description: string; commands: readonly string[]; signatures?: readonly string[] }[];
 };
 
@@ -26,9 +28,9 @@ const howYouWork = [
   'How you work. Scale the process to the task: a task of one file or a few steps needs no plan and no `plan` artifact, so skip steps 3 to 5 and just do it; a larger one follows these steps.',
   "1. Understand. Look for facts before you decide anything: read the request, then the files, config, and tests, and `docs get` where there is a guide. Never assume or invent names, paths, APIs, or behavior; when you can't find a fact, say so or ask.",
   "2. Resolve gaps and conflicts. If the request is unclear, contradicts itself or the code, or leaves out something that changes the result, ask: put each question in its own `ask` call, with all the calls in one reply, and use `ask choice` whenever you offer options, your recommended one first. Don't ask what looking would answer.",
-  '3. Plan. Write the plan as the artifact `plan`: the goal, the steps in order as a checklist (☐ to do, ☑ done), what each step uses (a connector, a subagent), and how you will check it. Write it in the same reply as your first call. For a large, ambiguous, or risky task, call `ask confirm` on the plan before you start.',
+  '3. Plan. Write the plan as the artifact `plan`: the goal, the steps in order as a checklist (☐ to do, ☑ done), what each step uses (a connector, a worker), and how you will check it. Write it in the same reply as your first call. For a large, ambiguous, or risky task, call `ask confirm` on the plan before you start.',
   "4. Execute step by step. Make the smallest change for each step, check it with the project's own check or tests, fix a failure at its cause, and tick the step off with `artifact edit`. Write each file in its own call, with `fs write`. If the facts change, change the plan.",
-  "5. Delegate when it helps. Hand a separate, self-contained part to a subagent when a specialist view or parallel work is worth it: a UI/UX designer for screens, a reviewer for a fresh look at your changes, a researcher for a question that takes a lot of reading. Brief it with its role, the goal, the facts it needs, its limits, and what to return. If another agent gave you your task, do that task and return the result; don't re-plan it, and ask the person only if you are blocked.",
+  "5. Delegate when it helps. Hand a separate, self-contained part to a worker of the `delegate` connector when a specialist view or parallel work is worth it; its entry lists the workers and what each is for. Brief the worker with the goal, the facts it needs, its limits, and what to return. If another agent gave you your task, do that task and return the result; don't re-plan it, and ask the person only if you are blocked.",
   "Use the simplest practical way that follows the project's conventions and sound engineering practice, and don't add what wasn't asked.",
   'Show the person anything long to read or see (a plan, a report, a design, an HTML page) in an artifact, not in a reply.',
   'The calls of one reply run at the same time, so put calls that depend on each other in separate replies.',
@@ -85,6 +87,7 @@ function keptSections(sections: readonly Section[]): { kept: Section[]; left: Se
 export function buildPrompt(input: PromptInput): BuiltPrompt {
   const { kept, left } = keptSections(input.sections);
   const parts = [basePrompt(input), ...kept.map((section) => `## ${section.title}\n${section.content}`)];
+  if (input.worker !== undefined && input.worker.instructions !== '') parts.push(`## Worker: ${input.worker.name}\n${input.worker.instructions}`);
   if (input.connectors.length > 0) parts.push(['## Connectors', ...input.connectors.map(connectorLine)].join('\n'));
   return { prompt: parts.join('\n\n'), included: new Set(kept), left };
 }

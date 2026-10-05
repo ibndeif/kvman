@@ -2,6 +2,7 @@
 import { Settings } from '@lucide/vue';
 import { nextTick, ref } from 'vue';
 import ConnectorDialog from './ConnectorDialog.vue';
+import DelegateWorkers from './DelegateWorkers.vue';
 import { useKvman } from './kvman.ts';
 import McpServers from './McpServers.vue';
 import ShellSettings from './ShellSettings.vue';
@@ -71,6 +72,7 @@ const scoped = (key: string): string => kvman.t(`${key}.${kvman.scope.value}`, {
     </div>
     <ConnectorDialog v-if="opened !== undefined" :name="opened" @close="close">
       <ShellSettings v-if="opened === 'shell'" />
+      <DelegateWorkers v-else-if="opened === 'delegate'" />
       <McpServers v-else-if="opened === 'mcp'" />
     </ConnectorDialog>
   </div>

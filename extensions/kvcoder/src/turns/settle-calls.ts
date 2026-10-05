@@ -1,5 +1,5 @@
 import type { Ctx, Stored } from '@kvman/sdk';
-import { startChild } from '../connectors/subagent.ts';
+import { startChild } from '../connectors/delegate.ts';
 import { firePoint } from '../registry/session-points.ts';
 import type { HeldResult, JsonValue, Pending, SessionDoc, TurnDoc } from '../schemas/records.ts';
 import { now } from '../sessions/session-lookup.ts';

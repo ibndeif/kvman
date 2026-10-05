@@ -11,7 +11,7 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `05-errors.md` | The Problem shape and the kernel's error codes |
 | `06-kvwebui.md` | The web app: frame, contributions, view trees, custom components, effects, built-in pages |
 | `07-kvai.md` | LLM calls, providers, models |
-| `08-kvcoder.md` | The coding harness: sessions, steps, the `run` tool, connectors, sections, ask, subagents, its conversation UI |
+| `08-kvcoder.md` | The coding harness: sessions, steps, the `run` tool, connectors, sections, ask, delegate and its workers, its conversation UI |
 | `09-kvcustomizer.md` | The kvcoder extension that customizes kvman: connectors, scaffold, preview, guides |
 | `10-testkit.md` | `createTestKernel` |
 | `11-presets.md` | The bundled `coder` preset |
@@ -32,6 +32,7 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `adr/0018-attachments-and-conversation-fixes.md` | Any file as an attachment (saved under `attachments/` in the workspace), the greyed slash list on the Chat page, the header above the artifact panel, and its running time |
 | `adr/0019-command-progress-and-summary-minimum.md` | A running chat action's line in the chat (slash command or menu), the blocked send box meanwhile, how a summary by hand ends, and a summary's minimum of 10% of the model's window |
 | `adr/0020-kept-messages-connector-configuration-and-mcp.md` | The kept messages as the setting `kvcoder.compactKeep`, a cog and a dialog for a connector's own configuration, and the `mcp` connector: servers over HTTP or a command, their secrets, approval, and OAuth sign-in |
+| `adr/0021-delegate.md` | The `delegate` connector in place of `subagent`: workers as the setting `kvcoder.delegate.workers`, the five shipped ones, each worker's own configuration and switch, and the `opencode`, `pi`, and `claude` kinds |
 | `adr/0017-conversation-review.md` | The conversation view after its first long chat: a call's whole wait, "Failed", menus that close outside, the model in the send box, the artifact header, slash commands, and pasted images |
 | `adr/0016-workspace-switch-in-a-chat.md` | A workspace switch while a chat is open: the session page opens the selected workspace's newest chat, or a new chat |
 | `adr/0015-configuration-review.md` | The configuration pages after their first use: a model is chosen from a searchable dropdown everywhere, the Interface page has one section, and programs are rows of the one connectors list |

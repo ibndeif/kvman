@@ -45,7 +45,7 @@ Everything the agent does goes through a **connector**: a named set of commands.
 - `fs` — reads, lists, and searches files, and writes and edits them, all inside the workspace folder.
 - `artifact` — stores a document you can read (below).
 - `ask` — asks you a question and waits for your answer (below).
-- `subagent` — runs a helper chat that does a self-contained part and reports back.
+- `delegate` — hands a self-contained part to a worker, which does it in a helper chat and reports back.
 - `background` — checks on, or stops, something the agent left running (below).
 - `mcp` — uses the tools of the MCP servers you add (below). It is there only while you have at least one server.
 
@@ -99,9 +99,11 @@ HTML artifacts run in an isolated frame: their scripts work, but they can't reac
 
 When the agent needs a decision, it shows a question card: free text, a choice (pick several, or add your own), or a yes/no confirm. You answer in the card; a later answer fails `kvcoder/QUESTION_NOT_FOUND` if the turn was cancelled meanwhile. Your message in the box also dismisses pending questions and denies pending calls.
 
-## Subagents
+## Workers
 
-The agent can delegate a separate, self-contained part to a hidden helper chat. You see its steps stream in its card, and its questions and approvals show up in your chat. Helpers use the same model and thinking level. A helper the agent left working in the background shows in the **Running** chip too.
+The agent can delegate a separate, self-contained part to a worker: another agent that does it in a hidden helper chat. You see its steps stream in its card, which names the worker, and its questions and approvals show up in your chat. A worker the agent left working in the background shows in the **Running** chip too.
+
+kvman comes with five workers: `general` for any separate task, and the specialists `ui-ux`, `architect`, `tester`, and `reviewer`, each with its own instructions. To manage them, open **Extensions → Coder**, and press the cog on the `delegate` row. There you turn a worker off (the agent then no longer sees it), edit its instructions, choose which connectors it may use, give it its own model or thinking level (or leave them the same as the chat), remove it, or add your own. Reset brings the five back.
 
 ## Attachments
 

@@ -9,7 +9,7 @@ describe('registering a connector for the run tool (08 §8.4, ADR 0011, 4 and 5)
     const { kernel } = await kvcoder.start();
     const register = (input: Json) => kernel.exec('kvcoder.connector.register', input as never, { as: '@test/todo' });
     await expect(register({ name: 'notes', description: 'Notes.', commands: [{ name: 'help', command: 'todo.item.list' }] })).rejects.toMatchObject({ problem: { code: 'VALIDATION_FAILED' } });
-    for (const name of ['shell', 'fs', 'artifact', 'background', 'ask', 'subagent']) {
+    for (const name of ['shell', 'fs', 'artifact', 'background', 'ask', 'delegate']) {
       await expect(register({ name, description: 'Mine.', binary: { check: 'true' } }), name).rejects.toMatchObject({ problem: { code: 'kvcoder/NAME_TAKEN' } });
     }
     await register({ name: 'jobs', description: 'A name that is free again.', binary: { check: 'true' } });
@@ -17,6 +17,14 @@ describe('registering a connector for the run tool (08 §8.4, ADR 0011, 4 and 5)
     const listed = await kernel.exec('kvcoder.connector.list', {});
     expect(listed.find((connector) => connector.name === 'go')).toMatchObject({ kind: 'binary', binary: { check: 'go version', help: 'go help {command}' } });
     expect(listed.find((connector) => connector.name === 'jobs')?.binary).toEqual({ check: 'true' });
+  });
+
+  it('QA31-E11 delegate is a name kvcoder owns, and subagent is free again', async () => {
+    const { kernel } = await kvcoder.start();
+    const register = (name: string) => kernel.exec('kvcoder.connector.register', { name, description: 'Mine.', binary: { check: 'true' } }, { as: '@test/todo' });
+    await expect(register('delegate')).rejects.toMatchObject({ problem: { code: 'kvcoder/NAME_TAKEN' } });
+    await register('subagent');
+    expect((await kernel.exec('kvcoder.connector.list', {})).map((connector) => connector.name)).toContain('subagent');
   });
 
   it('QA18-H26 several connectors are registered in one call, and the single form still works', async () => {

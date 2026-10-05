@@ -35,12 +35,12 @@ ctx.registerHandler('kernel.started', {
 - The result the agent reads is your output as indented JSON, or `error <code>: <message>`. A payload that doesn't fit your input schema returns the problems and the schema itself.
 - Every connector has `help`, built from what you registered: `help` with no payload lists your commands with their descriptions, and `help { "command": "add" }` gives that command's payload and result as JSON Schema, with your examples. Give every input field a `.describe()`, since the agent learns the payload from it.
 - A connector with `binary: { check, install?, help? }` instead of `commands` names a program on the system (`gh`). It is listed only while its `check` line exits 0, and the agent calls it with `exec { args }` and `help`. `help` runs `<name> --help`, or the line you give with `{command}` in it (`go help {command}`).
-- `shell`, `fs`, `artifact`, `background`, `ask`, and `subagent` are built in; their names are taken.
+- `shell`, `fs`, `artifact`, `background`, `ask`, `delegate`, and `mcp` are built in; their names are taken.
 - To register several connectors, pass them together: `ctx.exec('kvcoder.connector.register', { connectors: [notesConnector, tagsConnector] })`. They are checked first and stored together, so either all are registered or none is, and it is faster at start than one call each. Keep each connector in its own file, exporting the object you register.
 
 ## What the agent can't do
 
-The agent never sees a kernel job or the process service. A command of yours can't be queued by the agent: if it starts long work, return at once and do the work with `ctx.execAsync` or `ctx.processes` inside your own extension, and offer a second command that reports on it. Only the built-in `shell exec`, a binary's `exec`, and `subagent run` take `background: true`, and the agent follows those up with the `background` connector.
+The agent never sees a kernel job or the process service. A command of yours can't be queued by the agent: if it starts long work, return at once and do the work with `ctx.execAsync` or `ctx.processes` inside your own extension, and offer a second command that reports on it. Only the built-in `shell exec`, a binary's `exec`, and `delegate run` take `background: true`, and the agent follows those up with the `background` connector.
 
 A tool that is a plain function, for an agent that your own extension runs, needs no connector at all: see [agents-and-tools.md](agents-and-tools.md).
 

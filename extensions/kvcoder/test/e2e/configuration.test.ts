@@ -34,7 +34,7 @@ describe("kvcoder's configuration in Chromium (06 §6.6, 08 §8.7, ADR 0014)", {
 
     const names = page.locator('[data-test="connectors"] [data-test="connector-name"]');
     await names.first().waitFor();
-    expect(await names.allTextContents()).toEqual(['shell', 'fs', 'artifact', 'background', 'ask', 'subagent', 'mcp']);
+    expect(await names.allTextContents()).toEqual(['shell', 'fs', 'artifact', 'background', 'ask', 'delegate', 'mcp']);
     const fs = page.locator('[data-test="connector-fs"] [data-test="connector-switch"]');
     expect(await fs.getAttribute('aria-checked')).toBe('true');
     await fs.click();
@@ -79,6 +79,31 @@ describe("kvcoder's configuration in Chromium (06 §6.6, 08 §8.7, ADR 0014)", {
     await page.reload();
     await cog.click();
     await expect.poll(() => select.inputValue()).toBe('ask');
+    await page.close();
+  });
+
+  it("QA31-H18 the person turns the reviewer off from delegate's cog, and it stays off after a reload", async () => {
+    world = await kvmanWorld();
+    const kvman = await world.start();
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await page.goto(`${kvman.origin}/kvwebui/extension/kvcoder`);
+    const cog = page.locator('[data-test="connector-delegate"] [data-test="connector-configure"]');
+    await cog.click();
+    const names = page.locator('[data-test="workers"] [data-test="worker-name"]');
+    await names.first().waitFor();
+    expect(await names.allTextContents()).toEqual(['general', 'ui-ux', 'architect', 'tester', 'reviewer']);
+    const reviewer = page.locator('[data-test="worker-reviewer"] [data-test="worker-switch"]');
+    expect(await reviewer.getAttribute('aria-checked')).toBe('true');
+    await reviewer.click();
+    await page.locator('[data-test="worker-reviewer"] [data-test="worker-switch"][aria-checked="false"]').waitFor();
+    const stored = settingsSchema.parse(await kvman.call('queries', 'kernel.settings.list', {})).find((setting) => setting.key === 'kvcoder.delegate.workers');
+    expect(stored?.source).toBe('global');
+    expect(stored?.value).toMatchObject([{ name: 'general', enabled: true }, { name: 'ui-ux', enabled: true }, { name: 'architect', enabled: true }, { name: 'tester', enabled: true }, { name: 'reviewer', enabled: false }]);
+
+    await page.reload();
+    await cog.click();
+    await page.locator('[data-test="worker-reviewer"] [data-test="worker-switch"][aria-checked="false"]').waitFor();
+    expect(await page.locator('[data-test="worker-general"] [data-test="worker-switch"]').getAttribute('aria-checked')).toBe('true');
     await page.close();
   });
 

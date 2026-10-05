@@ -18,6 +18,7 @@ export async function newSession(ctx: Ctx, title: Title | undefined): Promise<St
     autoTitle: title === undefined,
     status: 'idle',
     parentId: null,
+    worker: null,
     model,
     thinking: settingSchemas.thinking.parse(await ctx.settings.get('kvcoder.thinking')),
     stepJobId: null,

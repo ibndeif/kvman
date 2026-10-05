@@ -2,7 +2,8 @@ import type { Ctx, Stored } from '@kvman/sdk';
 import { isAskKind, type QuestionKind } from '../connectors/ask.ts';
 import { payloadJsonSchema } from '../connectors/connector-command.ts';
 import { parseRunArgs, type RunCall } from '../calls/run-tool.ts';
-import { createChild, refusedConnector, startChild, subagentRunSchema } from '../connectors/subagent.ts';
+import { createChild, delegateRunSchema, startChild } from '../connectors/delegate.ts';
+import { availableWorker } from '../delegate/workers.ts';
 import { builtinConnectors, errorOutput, invalidPayloadOutput, noCommandMessage, noConnectorMessage, type JsonValue } from '../connector-call.ts';
 import type { SessionTools } from '../prompt/session-prompt.ts';
 import { activeConnectors } from '../registry/register-connectors.ts';
@@ -14,7 +15,7 @@ import { commandNamesOf, failedCall, runHelp, runTarget, targetOf, textResult, t
 // How one call of a reply runs (plan 08 §8.3): the `run` tool names a connector's command, which runs as a kernel job.
 // `shell exec`, a binary's `exec`, `fs write`, and `fs edit` ask the person first when `kvcoder.shell.approval` is
 // `ask`, or unless the payload says `risky: false` (ADR 0009, 161; ADR 0011, 7). A call either returns its result now,
-// or waits on the person or on a subagent.
+// or waits on the person or on a worker's subagent.
 
 export type ToolCall = { id: string; name: string; arguments: Record<string, JsonValue> };
 
@@ -23,7 +24,7 @@ export type CallOutcome =
   | { kind: 'question'; questionKind: QuestionKind; question: Record<string, JsonValue> }
   | { kind: 'subagent'; childSessionId: string };
 
-export type CallEnv = { ctx: Ctx; session: Stored<SessionDoc>; tools: SessionTools; approval: 'ask' | 'auto'; answerSeq: number };
+export type CallEnv = { ctx: Ctx; session: Stored<SessionDoc>; tools: SessionTools; approval: 'ask' | 'auto' };
 
 const result = (toolCallId: string, done: CallDone): CallOutcome => ({ kind: 'result', held: { toolCallId, ...done, run: null } });
 
@@ -47,12 +48,11 @@ function invalidPayload(call: RunCall, target: CommandTarget): string | undefine
   return invalidPayloadOutput(call, issues, payloadJsonSchema(target.builtin.payload)).output;
 }
 
-async function subagentOutcome(env: CallEnv, toolCallId: string, call: RunCall): Promise<CallOutcome> {
+// A checked `delegate run` (ADR 0021): the worker's child session, which the turn waits on, or which runs in the background.
+async function delegateOutcome(env: CallEnv, toolCallId: string, call: RunCall): Promise<CallOutcome> {
   const { ctx, session } = env;
-  const run = subagentRunSchema.parse(call.payload);
-  const denied = refusedConnector(run, new Set(env.tools.listed.map((listed) => listed.name)));
-  if (denied !== undefined) return result(toolCallId, failedCall(call, errorOutput({ code: 'VALIDATION_FAILED', message: `A subagent can't have the connector ${denied}.` }).output));
-  const childId = await createChild(ctx, session, run, env.answerSeq);
+  const run = delegateRunSchema.parse(call.payload);
+  const childId = await createChild(ctx, session, await availableWorker(ctx, run.worker), run.task);
   if (run.background !== true) return { kind: 'subagent', childSessionId: childId };
   await records(ctx.store).background.insert({ sessionId: session.id, ref: childId, kind: 'subagent', call: call.description, startedAt: now() });
   await startChild(ctx, childId);
@@ -75,8 +75,8 @@ export async function evaluateCall(env: CallEnv, toolCall: ToolCall): Promise<Ca
     if (env.approval === 'ask' || call.payload['risky'] !== false) return { kind: 'question', questionKind: 'approval', question: call };
   }
   const done = await runTarget(ctx, session, call, target);
-  if (done.isError || (call.connector !== 'ask' && call.connector !== 'subagent')) return result(toolCall.id, done);
-  if (call.connector === 'subagent') return subagentOutcome(env, toolCall.id, call);
+  if (done.isError || (call.connector !== 'ask' && call.connector !== 'delegate')) return result(toolCall.id, done);
+  if (call.connector === 'delegate') return delegateOutcome(env, toolCall.id, call);
   return isAskKind(call.command) ? { kind: 'question', questionKind: call.command, question: call.payload } : result(toolCall.id, done);
 }
 

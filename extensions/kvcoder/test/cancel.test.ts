@@ -10,7 +10,7 @@ describe('cancel (08 §8.1)', { timeout: 30_000 }, () => {
   it('M2.4-H10 cancel stops the children and the questions, and background work still reports back', async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    fake.reply(runs(shell('sleep 2; echo finished', { background: true }), command('subagent', 'run', {"task":"Ask them","mode":"fresh"})), runs(command('ask', 'text', {"prompt":"Name?"})), says('after'));
+    fake.reply(runs(shell('sleep 2; echo finished', { background: true }), command('delegate', 'run', { worker: 'general', task: 'Ask them' })), runs(command('ask', 'text', {"prompt":"Name?"})), says('after'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     const childId = await vi.waitFor(async () => {
       const id = String((await turnState(kernel, sessionId)).turn?.pending[0]?.childSessionId);

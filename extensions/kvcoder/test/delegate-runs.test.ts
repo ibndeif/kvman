@@ -8,14 +8,14 @@ const kvcoder = useKvcoder();
 
 const usage = { input: 10, output: 5 };
 
-describe('subagents (08 §8.5)', { timeout: 30_000 }, () => {
+describe('delegate runs (08 §8.5, ADR 0021)', { timeout: 30_000 }, () => {
   it('M2.4-H4 two subagents run in parallel and return their answers in call order', async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
     let release = (): void => undefined;
     const both = new Promise<void>((resolve) => (release = resolve));
     fake.reply(
-      { ...runs(command('subagent', 'run', {"task":"Task A","mode":"fresh"}), command('subagent', 'run', {"task":"Task B","mode":"fork"})), usage },
+      { ...runs(command('delegate', 'run', { worker: 'general', task: 'Task A' }), command('delegate', 'run', { worker: 'general', task: 'Task B' })), usage },
       { chunks: [{ wait: both }, { text: 'first answer' }], usage },
       { chunks: [{ wait: both }, { text: 'second answer' }], usage },
       says('done'),
@@ -33,7 +33,7 @@ describe('subagents (08 §8.5)', { timeout: 30_000 }, () => {
     const fresh = served.indexOf('Task A') + 1;
     expect(requestMessages(fake, fresh).filter((message) => message.role === 'user').map(textOf)).toEqual(['Task A']);
     expect(systemPrompt(fake, fresh)).toContain('You are kvman Coder');
-    expect(requestMessages(fake, 3 - fresh).filter((message) => message.role === 'user').map(textOf)).toEqual(['split it', 'Task B']);
+    expect(requestMessages(fake, 3 - fresh).filter((message) => message.role === 'user').map(textOf)).toEqual(['Task B']);
 
     const children = (waiting.turn?.pending ?? []).map((item) => String(item.childSessionId));
     expect((await kernel.exec('kvcoder.session.list', { limit: 100 })).map((session) => session.id)).not.toContain(children[0]);
@@ -45,7 +45,7 @@ describe('subagents (08 §8.5)', { timeout: 30_000 }, () => {
   it('M2.4-E44 a background subagent returns its id, and its answer arrives later as a message', async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    fake.reply(runs(command('subagent', 'run', { task: 'Background task', mode: 'fresh', background: true })), says('one'), says('two'), says('three'), says('four'));
+    fake.reply(runs(command('delegate', 'run', { worker: 'general', task: 'Background task', background: true })), says('one'), says('two'), says('three'), says('four'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     const [started] = toolResults(fake, 1).length > 0 ? toolResults(fake, 1) : toolResults(fake, 2);
@@ -60,7 +60,7 @@ describe('subagents (08 §8.5)', { timeout: 30_000 }, () => {
   it("M2.4-E46 a child's approval shows in the root: the parent waits on the child, and the answer continues the child", async () => {
     const { kernel, fake } = await kvcoder.start({ settings: { 'kvcoder.shell.approval': 'ask' } });
     const sessionId = await newSession(kernel);
-    fake.reply(runs(command('subagent', 'run', {"task":"Check","mode":"fresh"})), runs(shell('echo child')), says('child done'), says('parent done'));
+    fake.reply(runs(command('delegate', 'run', { worker: 'general', task: 'Check' })), runs(shell('echo child')), says('child done'), says('parent done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     const parent = await turnState(kernel, sessionId);

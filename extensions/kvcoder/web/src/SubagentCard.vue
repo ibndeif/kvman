@@ -6,7 +6,8 @@ import { titleText, useKvman } from './kvman.ts';
 import PendingCards from './PendingCards.vue';
 import type { Answer, Decision } from './use-answers.ts';
 
-// A subagent's card (ADR 0009, 104): its task, status, the text it is streaming, and its own questions and approvals.
+// A subagent's card (ADR 0009, 104; ADR 0021, 29): its worker, its task, status, the text it is streaming, and its own
+// questions and approvals.
 const props = defineProps<{ child: Child; hidden?: ReadonlySet<string> | undefined }>();
 const emit = defineEmits<{ answer: [answer: Answer]; decide: [decision: Decision] }>();
 const kvman = useKvman();
@@ -17,6 +18,7 @@ const status = computed(() => kvman.t(`kvcoder.ui.status.${props.child.session.s
   <section class="kvc-card" data-test="subagent-card" :aria-label="titleText(kvman.t, props.child.session.title)">
     <div class="kvc-card-row">
       <Bot :size="18" aria-hidden="true" />
+      <span v-if="props.child.session.worker !== undefined" class="kvc-chip kvc-mono" data-test="subagent-worker">{{ props.child.session.worker }}</span>
       <span style="flex: 1 1 auto; font-weight: 500">{{ titleText(kvman.t, props.child.session.title) }}</span>
       <span v-if="props.child.session.status === 'running'" class="kvc-spin" />
       <span class="kvc-chip" :class="{ 'kvc-warn': props.child.session.status === 'waiting' }">{{ status }}</span>

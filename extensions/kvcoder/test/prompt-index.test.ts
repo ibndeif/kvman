@@ -3,6 +3,7 @@ import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { useLooked } from './support/looked.ts';
 import { command, runs, says, systemPrompt } from './support/model-script.ts';
 import { newSession } from './support/turns.ts';
+import { worker, workers } from './support/workers.ts';
 
 const kvcoder = useKvcoder();
 const looked = useLooked();
@@ -15,7 +16,7 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
     const prompt = systemPrompt(fake);
     const index = (prompt.split('## Connectors\n')[1] ?? '').split('\n');
     const headers = index.filter((line) => line.startsWith('- '));
-    expect(headers.map((line) => /^- ([\w-]+): /.exec(line)?.[1])).toEqual(['shell', 'fs', 'artifact', 'background', 'ask', 'subagent', 'todo', 'node']);
+    expect(headers.map((line) => /^- ([\w-]+): /.exec(line)?.[1])).toEqual(['shell', 'fs', 'artifact', 'background', 'ask', 'delegate', 'todo', 'node']);
     expect(headers.at(-2)).toBe('- todo: Keep a todo list. Commands: add, wait, fail, list, help.');
     expect(headers.at(-1)).toBe('- node: Node.js. Commands: exec, help.');
     expect(prompt).toContain('Your one tool is run: it runs one command of a connector, as { description, connector, command, payload }.');
@@ -26,7 +27,7 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
     const prompt = systemPrompt(fake);
     const index = (prompt.split('## Connectors\n')[1] ?? '').split('\n');
     const headers = index.filter((line) => line.startsWith('- '));
-    expect(headers.map((line) => /^- ([\w-]+): /.exec(line)?.[1])).toEqual(['shell', 'fs', 'artifact', 'background', 'ask', 'subagent', 'todo', 'node']);
+    expect(headers.map((line) => /^- ([\w-]+): /.exec(line)?.[1])).toEqual(['shell', 'fs', 'artifact', 'background', 'ask', 'delegate', 'todo', 'node']);
     expect(headers.slice(0, 6).every((line) => /^- [\w-]+: \S.*[.!?]$/.test(line) && !line.includes('Commands:'))).toBe(true);
     expect(headers.at(-2)).toBe('- todo: Keep a todo list. Commands: add, wait, fail, list, help.');
     expect(headers.at(-1)).toBe('- node: Node.js. Commands: exec, help.');
@@ -52,7 +53,7 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
       '  choice  { prompt, multiple, options: [{ id, label, description? }], other? }',
       '  confirm { prompt, danger? }',
       '  help    { command? }',
-      '  run  { task, mode: "fresh" | "fork", connectors?, background? }',
+      '  run  { worker, task, background? }',
       '  help { command? }',
     ]);
   });
@@ -65,9 +66,9 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
   });
 
   it("QA19-E12 a subagent's index", async () => {
-    const { kernel, fake } = await kvcoder.start();
+    const { kernel, fake } = await kvcoder.start({ settings: workers(worker('files', { connectors: ['fs'] })) });
     const sessionId = await newSession(kernel);
-    fake.reply(runs(command('subagent', 'run', { task: 'List files.', mode: 'fresh', connectors: ['fs'] })), runs(command('fs', 'list')), says('child done'), says('parent done'));
+    fake.reply(runs(command('delegate', 'run', { worker: 'files', task: 'List files.' })), runs(command('fs', 'list')), says('child done'), says('parent done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     const prompt = systemPrompt(fake, 1);
@@ -85,6 +86,6 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
       '  confirm { prompt, danger? }',
       '  help    { command? }',
     ]);
-    for (const absent of ['- shell: ', '- artifact: ', '- background: ', '- subagent: ', '- todo: ', '- node: ']) expect(prompt).not.toContain(absent);
+    for (const absent of ['- shell: ', '- artifact: ', '- background: ', '- delegate: ', '- todo: ', '- node: ']) expect(prompt).not.toContain(absent);
   });
 });

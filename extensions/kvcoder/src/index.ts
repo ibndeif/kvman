@@ -8,7 +8,7 @@ import { registerBinaryConnector } from './connectors/binary.ts';
 import { registerFsConnector } from './connectors/fs.ts';
 import { registerMcpConnector } from './connectors/mcp.ts';
 import { registerShellConnector } from './connectors/shell.ts';
-import { registerSubagentConnector } from './connectors/subagent.ts';
+import { registerDelegateConnector } from './connectors/delegate.ts';
 import { registerDocs } from './docs.ts';
 import { registerProcessHandlers, interruptLeftovers } from './jobs/process-handlers.ts';
 import { registerJobs } from './jobs/register-jobs.ts';
@@ -45,7 +45,7 @@ export default (ctx: Ctx): void => {
   registerArtifactConnector(ctx);
   registerBackgroundConnector(ctx);
   registerAskConnector(ctx);
-  registerSubagentConnector(ctx);
+  registerDelegateConnector(ctx);
   registerMcpConnector(ctx);
   registerMcp(ctx);
   registerConnectorHelp(ctx);

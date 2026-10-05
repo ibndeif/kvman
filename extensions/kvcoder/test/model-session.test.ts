@@ -59,7 +59,7 @@ describe('model session id (ADR 0012, 6)', { timeout: 30_000 }, () => {
     const { kernel, fake } = await relaySession();
     const sessionId = await newSession(kernel);
     const child = heldReply({ text: 'child done' });
-    fake.reply(runs(command('subagent', 'run', { task: 'Check it', mode: 'fresh' })), child.reply, says('parent done'));
+    fake.reply(runs(command('delegate', 'run', { worker: 'general', task: 'Check it' })), child.reply, says('parent done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await vi.waitFor(() => expect(fake.requests()).toHaveLength(2), wait);
     const parent = await turnState(kernel, sessionId);

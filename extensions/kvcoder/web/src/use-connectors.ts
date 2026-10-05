@@ -7,10 +7,10 @@ import { useSetting } from './use-setting.ts';
 // that setting in the scope the extension's page is set to. A connector with a configuration of its own has a cog.
 
 /** kvcoder's own connectors, in the prompt's order (the server's `builtinConnectors`). */
-export const ownConnectors = ['shell', 'fs', 'artifact', 'background', 'ask', 'subagent', 'mcp'] as const;
+export const ownConnectors = ['shell', 'fs', 'artifact', 'background', 'ask', 'delegate', 'mcp'] as const;
 
 /** The connectors with a configuration of their own, which their cog opens (ADR 0020, 2). */
-export const configurableConnectors: readonly string[] = ['shell', 'mcp'];
+export const configurableConnectors: readonly string[] = ['shell', 'delegate', 'mcp'];
 
 export type ConnectorItem = { name: string; description: string; on: boolean; configurable: boolean };
 

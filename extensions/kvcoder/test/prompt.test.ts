@@ -31,6 +31,17 @@ describe('the prompt (08 §8.2, §8.4)', { timeout: 30_000 }, () => {
     expect(prompt).toContain('## Connectors\n- shell: ');
   });
 
+  it('QA31-H10 the base prompt speaks of workers, not of subagents', async () => {
+    const { kernel, fake } = await kvcoder.start();
+    fake.reply(says('hi'));
+    await kernel.exec('kvcoder.message.send', { sessionId: await newSession(kernel), text: 'go' });
+    await kernel.clock.advance(0);
+    const prompt = systemPrompt(fake, 0);
+    expect(prompt).toContain('5. Delegate when it helps. Hand a separate, self-contained part to a worker of the `delegate` connector when a specialist view or parallel work is worth it; its entry lists the workers and what each is for. Brief the worker with the goal, the facts it needs, its limits, and what to return.');
+    expect(prompt).toContain('what each step uses (a connector, a worker)');
+    expect(prompt).not.toContain('to a subagent');
+  });
+
   it("QA12-E8, QA12-H8, and M2.4-E53, QA4-H15, QA4-H16, QA4-H17, QA5-H1, QA5-H3, QA5-H5, QA5-E3, QA6-H22, QA6-H23, and QA8-H5 the base prompt names the shell, the OS, the language, and the workspace folder; then sections by order; then the connector index", async () => {
     const { kernel, fake } = await kvcoder.start({ settings: { 'kernel.language': 'ar' } });
     const sessionId = await newSession(kernel);
@@ -55,12 +66,12 @@ describe('the prompt (08 §8.2, §8.4)', { timeout: 30_000 }, () => {
     expect(prompt).toContain('a url artifact is a normal page on its own address and can use them.\n  write { id, title, format?: "markdown" | "html" | "url", content }\n  edit  { id, edits: [{ oldText, newText }] }\n  get   { id }\n  help  { command? }');
     expect(prompt).toContain('- background: Follow up on what you started with background set to true: a server or other long-running shell line, or a background subagent. Use it to see its status or output, or to stop it.\n  list   {}\n  output { id }\n  stop   { id }\n  help   { command? }');
     expect(prompt).toContain('- ask: Put a question to the person and wait for the answer. Use it when you need a decision, a missing detail, or a go-ahead before a risky step, instead of guessing.\n  text    { prompt, placeholder? }\n  choice  { prompt, multiple, options: [{ id, label, description? }], other? }\n  confirm { prompt, danger? }\n  help    { command? }');
-    expect(prompt).toContain('- subagent: Hand a self-contained task to a helper agent. Use it to research or build a separate part in parallel, or with background set to true while you go on.\n  run  { task, mode: "fresh" | "fork", connectors?, background? }\n  help { command? }');
+    expect(prompt).toContain('- delegate: Hand a self-contained task to a worker: a helper agent that works on it alone and returns its answer. Use it for a specialist view or to do a separate part in parallel, or with background set to true while you go on. Workers: general (Any separate, self-contained task), ui-ux (Designs screens and flows), architect (Studies the code and proposes a design), tester (Writes and runs tests), reviewer (Reviews changes with a fresh look).\n  run  { worker, task, background? }\n  help { command? }');
     expect(prompt).toContain('Connectors are the only way you act.');
     expect(prompt).toContain('Write the plan as the artifact `plan`');
     expect(prompt).toContain('Write each file in its own call, with `fs write`.');
     expect(prompt.endsWith('- todo: Keep a todo list. Commands: add, wait, fail, list, help.')).toBe(true);
-    const order = ['## Mine', '## Everywhere', '## Later', '## Connectors', '- shell: ', '- fs: ', '- artifact: ', '- background: ', '- ask: ', '- subagent: ', '- todo: Keep a todo list.'].map((part) => prompt.indexOf(part));
+    const order = ['## Mine', '## Everywhere', '## Later', '## Connectors', '- shell: ', '- fs: ', '- artifact: ', '- background: ', '- ask: ', '- delegate: ', '- todo: Keep a todo list.'].map((part) => prompt.indexOf(part));
     expect(order.every((index) => index > 0)).toBe(true);
     expect([...order].sort((first, second) => first - second)).toEqual(order);
   });

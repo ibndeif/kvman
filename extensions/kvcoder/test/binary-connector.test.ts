@@ -30,7 +30,7 @@ describe('a binary connector (08 §8.4, ADR 0011, 5)', { timeout: 30_000 }, () =
   it('QA18-E9 a binary whose check failed is not listed and cannot be called', async () => {
     const settings = { 'kvcoder.connectors': [{ name: 'absent', description: 'Not installed.', binary: { check: 'exit 3' } }] } as unknown as Record<string, string>;
     const { results, fake } = await looked(nothing, [command('absent', 'exec', { args: '--version', risky: false })], settings);
-    expect(results[0]).toBe('error VALIDATION_FAILED: There is no connector absent. The connectors are: shell, fs, artifact, background, ask, subagent, todo.');
+    expect(results[0]).toBe('error VALIDATION_FAILED: There is no connector absent. The connectors are: shell, fs, artifact, background, ask, delegate, todo.');
     expect(systemPrompt(fake)).not.toContain('- absent:');
     expect(JSON.stringify(requestTools(fake, 0))).not.toContain('absent');
   });

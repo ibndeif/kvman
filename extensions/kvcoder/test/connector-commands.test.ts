@@ -24,7 +24,7 @@ const connectorJobs = [
   'kvcoder.ask.text.check',
   'kvcoder.ask.choice.check',
   'kvcoder.ask.confirm.check',
-  'kvcoder.subagent.check',
+  'kvcoder.delegate.check',
   'kvcoder.connector.help.get',
 ];
 

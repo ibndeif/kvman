@@ -53,4 +53,16 @@ describe('the conversation streams a step (08 §8.7, ADR 0009, 99)', () => {
     expect(wrapper.find('[data-test="subagent-card"]').text()).toContain('Helper task');
     wrapper.unmount();
   });
+
+  it("QA31-H17 a subagent's card names its worker beside the task", async () => {
+    const fake = createFakeKvman();
+    const pending = [{ toolCallId: 'c2', kind: 'subagent' as const, questionId: null, question: null, childSessionId: 'child' }];
+    const world = { found: session({ status: 'waiting' }), messages: [user('go')], omitted: 0, turns: [turn({ pending })] };
+    serve(fake, world);
+    fake.handle('kvcoder.session.get', (input) => (input['sessionId'] === 'child' ? session({ id: 'child', title: 'Review the diff', parentId: 's1', worker: 'reviewer', status: 'running' }) : world.found));
+    const wrapper = await mounted(ConversationView, fake, { sessionId: 's1' });
+    await vi.waitFor(() => expect(wrapper.find('[data-test="subagent-worker"]').text()).toBe('reviewer'));
+    expect(wrapper.find('[data-test="subagent-card"]').text()).toContain('Review the diff');
+    wrapper.unmount();
+  });
 });

@@ -1,0 +1,61 @@
+# ADR 0021 — The `delegate` connector and its workers
+
+The product owner asked (2026-10-06) to "replace subagent connector by a brand new connector for delegate: it should give ability to agent to delegate work to subagent, opencode, pi, claude code", with "each of them must have their own configs", a "ui ux expert (which is a subagent with a predefined system prompt and connectors)", "architect or testers or reviewers", and "the user should be able to enable/disable workers". Decisions 1 to 19 were asked with alternatives, several with mockups. Decisions 20 to 30 are the smallest way to carry them out; the product owner may overrule any of them.
+
+It lands in two passes: QA 31 is the connector with subagent workers, and QA 32 adds the three program kinds (decisions 3, 10 to 17, and the `worker` kinds of 23).
+
+## Decisions
+
+1. **One connector, `delegate`** (asked; chosen over a connector per worker, and over a command per kind). It is kvcoder's own and replaces `subagent`. Its one command is `run`. Its entry in the prompt's connector index ends with `Workers: <name> (<description>), ….`, the available workers in the setting's order, as `mcp` names its servers.
+2. **The payload is `{ worker, task, background? }`** (asked; chosen over keeping `mode`, and over keeping `mode` and `connectors`). A run always starts from the task alone: `fork` is gone, and the worker's own configuration decides its connectors.
+3. **A kind per program** (asked; chosen over one generic command kind, and over both). A worker's `kind` is `subagent`, `opencode`, `pi`, or `claude`. kvcoder knows each program's command line and how to read its answer.
+4. **The workers are a setting** (asked; chosen over a `kvcoder.worker.register` for extensions). `kvcoder.delegate.workers` is the one source: the person edits it, and a preset can set it.
+5. **Five workers are shipped** (asked; chosen over `general` alone, and over adding the programs found on the PATH). The setting's default is `general`, `ui-ux`, `architect`, `tester`, and `reviewer`, all of kind `subagent`, all with every connector (asked; chosen over `architect` and `reviewer` without `shell`): they differ by their instructions only.
+6. **A worker is turned on and off in `delegate`'s dialog** (asked; chosen over a Workers card, and over rows of the connectors list). `delegate` has a cog, as `shell` and `mcp` do. Its dialog lists the workers, each with a switch, Edit, and Remove, and has "Add a worker". The switch writes the worker's `enabled`.
+7. **A subagent worker sets its instructions, connectors, model, and thinking** (asked; chosen over instructions and connectors only, and over adding a step limit). `connectors` is a list of names, or `null` for all; `model` and `thinking` are `null` for the chat's own. This changes ADR 0008, 61.
+8. **The instructions follow the base prompt and the sections** (asked; chosen over replacing the "How you work" block, and over putting them before the task). They are a block of the child's system prompt, titled with the worker's name, before the connector index.
+9. **`subagent` stays the word for a child session** (asked; chosen over renaming to `worker` everywhere, with or without a migration). A pending call's kind, a job row's kind, a message's `source.kind`, the `kvcoder.session.waiting` kind, the stream chunk, and the export's `subagents` are unchanged, and stored chats still read.
+10. **A program's run suspends the turn** (asked; chosen over a call capped at 600 s, and over always running in the background). The answer becomes the call's result when the program exits. Each such worker has `timeoutMs`, 1 800 000 by default and from 60 000 to 7 200 000, after which its process tree is killed. `background: true` lets the agent go on.
+11. **A program runs in its own async job** (asked, because the first answer conflicted with plan 02 §2.15: a `kernel.process.exited` handler's jobs carry `fromHandler`, so a process of the process service can't continue a turn; chosen over a kernel change, and over a run that never continues the turn). The step queues the private command `kvcoder.delegate.worker.run` with `ctx.execAsync`. It has `retries: 0`, starts the program with `cross-spawn`, waits, kills the tree on a timeout or a cancel, then resolves the pending call and queues the next step. A kvman that stops loses the run, and the turn ends `interrupted` with a notice.
+12. **Approval is the worker's own setting** (asked; chosen over following `kvcoder.shell.approval` with a `risky` flag, and over never asking). A program worker has `approval`: `ask` (the default) shows an approval card with the worker and the task before every run; `auto` starts at once. A subagent worker's run never asks: its own calls ask as usual.
+13. **Each program kind has the flags that matter** (asked; chosen over adding a free `args` list, and over `model` alone). `opencode`: `model`, `agent`, and `autoApprove` (`--auto`, `true` by default). `pi`: `model`, `thinking`, and `tools`. `claude`: `model`, `effort`, and `permissionMode` (`acceptEdits` by default). A `null` field leaves the flag out. `instructions` are sent with `--append-system-prompt` to `pi` and `claude`, and put before the task for `opencode`.
+14. **A program's run is one card** (asked; chosen over streaming its steps): the worker, the task, "running" with the time and Stop, then the answer.
+15. **A program's run is a row of the Running chip** (asked; chosen over a live tail, and over the card alone): kind `worker`, with its task, time, and Stop. Its output, cut like a shell call's, is kept with the run and shown once it ends, and `background output` returns it.
+16. **A program's run adds nothing to the chat's usage** (asked; chosen over reading what each program reports). Its card shows its time.
+17. **A worker whose program isn't installed is hidden from the agent** (asked; chosen over listing it and failing the call). It is checked at a chat's first step, as a binary connector is. Its row in the dialog says the program wasn't found, with "Check again".
+18. **With no available worker, `delegate` isn't a connector of the chat** (asked; chosen over listing it with no workers), as `mcp` with no server. Its row and cog stay.
+19. **Two passes** (asked; chosen over one, and over three).
+
+20. **A worker's entry** is strict. Every kind has `{ name, description, enabled, kind, instructions }`: `name` is lowercase kebab case and unique in the list, `description` is non-empty, and `instructions` is text up to 16 KB, empty for none. A `subagent` adds `{ connectors: string[] | null, model: string | null, thinking: 'off' | 'minimal' | 'low' | 'medium' | 'high' | null }`. A program kind adds `{ approval: 'ask' | 'auto', timeoutMs }` and its fields of decision 13. The setting has the global and workspace scopes, and a workspace's list replaces the global one.
+21. **Registrations.** `kvcoder.delegate.check` is the connector's private command: it validates the payload and the worker. `kvcoder.delegate.worker.run` is the private job of decision 11. `kvcoder.delegate.worker.check { name }` → `{ status: 'ready' | 'notFound' }` is public and gives the dialog a program worker's state.
+22. **Errors.** `kvcoder/WORKER_NOT_FOUND` (`{ worker }`): the call names a worker that isn't in the list, is turned off, or has no program; the message is `There is no worker <name>. The workers are: <names>.`, or `… No worker is available.`. A child that ends otherwise than `done` still returns `subagent ended <outcome>` and its text. A program that exits with another code than 0 returns `<worker> exited with code <N>`, and one that passes its timeout `<worker> timed out after <N> s`, each followed by its output, as an error.
+23. **New kinds.** A pending call may be `{ kind: 'worker', runId }`; `kvcoder.session.waiting` may give `kind: 'worker'`; a job row and a `background list` row may have `kind: 'worker'`. A background run's result is a message with `source: { kind: 'job', jobId }`, where `jobId` is the run's id, and it starts a turn when the chat is idle.
+24. **Depth stays 1.** A child session never has `delegate` and always has `ask`. A name in a worker's `connectors` that no connector of the chat has, or that is turned off, is ignored. Several runs in one reply run in parallel.
+25. **Names.** `delegate` is a name no extension can register (`kvcoder/NAME_TAKEN`); `subagent` no longer is. A `subagent` entry in `kvcoder.connectors.disabled` now names no connector and is ignored, so a person who had turned `subagent` off turns `delegate` off.
+26. **A program** runs in the workspace folder with kvman's environment and an empty standard input; the task is one argument. It signs in by its own means, and kvcoder keeps no secret for it.
+27. **Cancel and delete** stop a turn's program runs as they stop its subagents.
+28. **The base prompt** says "a worker" where it said "a subagent". Step 5 becomes: "Delegate when it helps. Hand a separate, self-contained part to a worker of the `delegate` connector when a specialist view or parallel work is worth it; its entry lists the workers and what each is for. Brief the worker with the goal, the facts it needs, its limits, and what to return." The rest of the step is unchanged.
+29. **A child session records its worker.** `Session` gains `worker?`, the worker's name, on a child session, and the child's card shows it. The child keeps the instructions it started with, so a later edit of the worker doesn't change a running child.
+30. **Every worker can be removed**, `general` too; the reset of the list brings the shipped five back.
+
+## Shapes
+
+- **The call:** `delegate run { worker, task, background? }`. `task` is the worker's whole brief.
+- **The shipped workers**, each `{ enabled: true, kind: 'subagent', connectors: null, model: null, thinking: null }`:
+
+  | Name | Description | Instructions |
+  |---|---|---|
+  | `general` | Any separate, self-contained task | (none) |
+  | `ui-ux` | Designs screens and flows | You are a UI/UX designer. Design the screens and flows the task asks for, from the person's experience: what they see, what they do next, and every empty, loading, and error state. Follow the project's existing components, styles, and wording. Show the design in an artifact, as a page when layout matters. Don't change the project's files unless the task asks you to build the design. |
+  | `architect` | Studies the code and proposes a design | You are a software architect. Read the code the task touches before you propose anything. Return a design: the parts, their responsibilities, the shapes that pass between them, the trade-offs you weighed, and the risks. Prefer the simplest design that fits the project's conventions. Don't edit the project's files. |
+  | `tester` | Writes and runs tests | You are a test engineer. Write the tests the task asks for in the project's own test setup, each checking one behavior with real values, and run them. Report each failure with its cause. Don't change production code to make a test pass; report the defect. |
+  | `reviewer` | Reviews changes with a fresh look | You are a code reviewer. Read the changes the task names, and the code around them. Report defects by severity, each with its file and line, what is wrong, and what you expect instead: correctness first, then security, then the project's conventions. Say so when you find nothing. Don't edit the project's files. |
+
+- **The worker block** of a child's prompt is `## Worker: <name>`, then the instructions; a worker without instructions has none.
+- **A program's command line** (QA 32) is fixed per kind from the worker's fields, and its answer is read from what the program prints. Each is confirmed against the real program before it is written into plan 08.
+
+## Consequences
+
+- Plan 01 §1.5 and plan 08 §8.1 to §8.7 are corrected. ADR 0008, 61 (a subagent uses its parent's model), ADR 0009 QA 6 (specialists taught in the prompt, with no role field), ADR 0011, 9 (`subagent run`), and ADR 0020, 2 (the connectors with a cog) are changed.
+- `kvcoder.subagent.check` is removed, and with it `mode` and the per-call `connectors`.
+- No new dependency: `cross-spawn` is already kvcoder's.

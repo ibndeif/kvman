@@ -1,4 +1,5 @@
 import { z, type Ctx } from '@kvman/sdk';
+import { shippedWorkers, workersSchema } from './delegate/workers.ts';
 import { mcpServersSchema } from './mcp/servers.ts';
 import { thinkingSchema } from './schemas/records.ts';
 import { binaryConnectorSchema, wordSchema } from './schemas/registry.ts';
@@ -15,6 +16,7 @@ export const settingSchemas = {
   connectors: z.array(binaryConnectorSchema),
   disabledConnectors: z.array(wordSchema),
   mcpServers: mcpServersSchema,
+  workers: workersSchema,
   keep: z.number().int().nonnegative(),
   welcome: z.string().min(1).nullable(),
 };
@@ -30,6 +32,7 @@ export function registerSettings(ctx: Ctx): void {
   ctx.registerSetting('kvcoder.connectors', { description: 'Binary connectors to add: programs the agent runs in the real shell.', schema: settingSchemas.connectors, default: [] });
   ctx.registerSetting('kvcoder.connectors.disabled', { description: 'The names of the connectors that are turned off: the agent neither sees nor calls them.', schema: settingSchemas.disabledConnectors, default: [] });
   ctx.registerSetting('kvcoder.mcp.servers', { description: "The MCP servers the mcp connector reaches: a command or an address each, with the names of its secret variables or headers.", schema: settingSchemas.mcpServers, default: [] });
+  ctx.registerSetting('kvcoder.delegate.workers', { description: 'The workers the delegate connector hands tasks to: each with its instructions, connectors, model, and whether it is turned on.', schema: settingSchemas.workers, default: shippedWorkers });
   ctx.registerSetting('kvcoder.sessions.keep', { description: 'How many top-level sessions to keep per workspace; 0 keeps every session.', schema: settingSchemas.keep, default: 0 });
   ctx.registerSetting('kvcoder.welcome', { description: "The translation key of a new workspace's welcome note; null (the default) for no welcome.", schema: settingSchemas.welcome, default: null });
 }

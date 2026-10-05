@@ -17,7 +17,7 @@ describe('runConnector (08 §8.4, ADR 0009, 96; ADR 0011, 18)', { timeout: 30_00
     expect(add.output).toContain('"text": {\n      "type": "string"');
     expect(add.output).toContain('Result (JSON Schema):\n{');
     expect(add.output).toContain('Examples:\n  # Add an item\n  { "connector": "todo", "command": "add", "payload": {"text":"it\'s done"} }');
-    for (const builtin of ['shell', 'fs', 'artifact', 'background', 'ask', 'subagent']) expect((await runConnector(kernel, { connector: builtin, command: 'help' })).output).toMatch(new RegExp(`^${builtin}: `));
+    for (const builtin of ['shell', 'fs', 'artifact', 'background', 'ask', 'delegate']) expect((await runConnector(kernel, { connector: builtin, command: 'help' })).output).toMatch(new RegExp(`^${builtin}: `));
   });
 
   it('M2.4-E33 a call returns its output as JSON, or an error line with exit 1', async () => {
@@ -46,6 +46,14 @@ describe('runConnector (08 §8.4, ADR 0009, 96; ADR 0011, 18)', { timeout: 30_00
     expect(await runConnector(kernel, { connector: 'fs', command: 'help' })).toMatchObject({ exitCode: 0, output: expect.stringMatching(/^fs: /) as unknown });
     expect(await runConnector(kernel, { connector: 'fs', command: 'write', payload: { path: 'a.txt', content: 'x' } })).toEqual({ exitCode: 1, output: 'fs runs only inside a turn' });
     expect(existsSync(path.join(kernel.homeFolder, 'a.txt'))).toBe(false);
+  });
+
+  it('QA31-E12 delegate help is answered, and a run runs only inside a turn', async () => {
+    const { kernel } = await kvcoder.start();
+    const help = await runConnector(kernel, { connector: 'delegate', command: 'help' });
+    expect(help).toMatchObject({ exitCode: 0, output: expect.stringMatching(/^delegate: Hand a self-contained task to a worker/) as unknown });
+    expect(await runConnector(kernel, { connector: 'delegate', command: 'run', payload: { worker: 'general', task: 'x' } })).toEqual({ exitCode: 1, output: 'delegate runs only inside a turn' });
+    expect(await kernel.exec('kvcoder.session.list', { limit: 10 })).toEqual([]);
   });
 
   it('QA6-H6 artifact help is answered, and a real call runs only inside a turn', async () => {

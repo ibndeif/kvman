@@ -10,7 +10,7 @@ export type JsonValue = z.output<ReturnType<typeof z.json>>;
 export type CallResult = { output: string; exitCode: number };
 
 /** The connectors kvcoder runs itself, in the order the prompt lists them. */
-export const builtinConnectors = ['shell', 'fs', 'artifact', 'background', 'ask', 'subagent', 'mcp'] as const;
+export const builtinConnectors = ['shell', 'fs', 'artifact', 'background', 'ask', 'delegate', 'mcp'] as const;
 
 export type BuiltinConnector = (typeof builtinConnectors)[number];
 

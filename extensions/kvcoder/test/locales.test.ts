@@ -22,7 +22,7 @@ function webKeys(): string[] {
   return readdirSync(folder).flatMap((file) => [...readFileSync(path.join(folder, file), 'utf8').matchAll(/t\('(kvcoder\.[\w.]+)'/g)].map((match) => match[1] ?? ''));
 }
 
-const codes = ['NAME_TAKEN', 'QUESTION_NOT_FOUND', 'SESSION_NOT_FOUND', 'SESSION_BUSY', 'JOB_NOT_FOUND', 'MCP_SERVER_NOT_FOUND', 'MCP_CONNECT_FAILED', 'MCP_SIGN_IN_NEEDED', 'MCP_SIGN_IN_FAILED'];
+const codes = ['NAME_TAKEN', 'QUESTION_NOT_FOUND', 'SESSION_NOT_FOUND', 'SESSION_BUSY', 'JOB_NOT_FOUND', 'MCP_SERVER_NOT_FOUND', 'MCP_CONNECT_FAILED', 'MCP_SIGN_IN_NEEDED', 'MCP_SIGN_IN_FAILED', 'WORKER_NOT_FOUND'];
 const notices = ['CANCELLED', 'INTERRUPTED', 'STEP_FAILED', 'MAX_STEPS', 'SUMMARY_FAILED', 'REPLY_LOST'];
 const dynamic = [
   ...['idle', 'running', 'waiting'].map((status) => `kvcoder.ui.status.${status}`),
@@ -86,5 +86,17 @@ describe("kvcoder's catalogs (02 §2.11)", { timeout: 30_000 }, () => {
   it("QA20-E9 every choice of kvcoder's settings has a name in both languages", () => {
     const keys = [...['off', 'minimal', 'low', 'medium', 'high'].map((level) => `kvcoder.thinking.options.${level}`), ...['auto', 'ask'].map((mode) => `kvcoder.shell.approval.options.${mode}`)];
     for (const language of ['en', 'ar'] as const) expect(keys.filter((key) => catalog(language)[key] === undefined), language).toEqual([]);
+  });
+
+  it('QA31-E18 the workers dialog, the delegate connector, and its error are in both languages', () => {
+    const en = catalog('en');
+    const ar = catalog('ar');
+    const added = Object.keys(en).filter((key) => key.startsWith('kvcoder.config.workers.') || key.startsWith('kvcoder.delegate.'));
+    expect(added).toHaveLength(38);
+    for (const key of [...added, 'kvcoder.config.connector.delegate', 'kvcoder.errors.WORKER_NOT_FOUND']) {
+      expect(ar[key], key).toBeTruthy();
+      expect(placeholders(ar[key] ?? ''), key).toEqual(placeholders(en[key] ?? ''));
+    }
+    expect(Object.keys(en).filter((key) => key.includes('subagent.check') || key === 'kvcoder.config.connector.subagent')).toEqual([]);
   });
 });

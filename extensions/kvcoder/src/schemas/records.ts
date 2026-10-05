@@ -42,6 +42,8 @@ export const sessionDocSchema = z.object({
   autoTitle: z.boolean(),
   status: statusSchema,
   parentId: z.string().nullable(),
+  // The worker a child session runs for, with the instructions it started with (ADR 0021, 29).
+  worker: z.object({ name: z.string(), instructions: z.string() }).nullable().default(null),
   model: z.string().nullable(),
   thinking: thinkingSchema,
   stepJobId: z.string().nullable(),

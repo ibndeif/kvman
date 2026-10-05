@@ -45,7 +45,7 @@ describe('steering (08 §8.1, ADR 0009, 90 and 102)', { timeout: 30_000 }, () =>
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
     const child = heldReply({ text: 'child answer' });
-    fake.reply(runs(command('subagent', 'run', {"task":"Help","mode":"fresh"})), child.reply, says('parent done'));
+    fake.reply(runs(command('delegate', 'run', { worker: 'general', task: 'Help' })), child.reply, says('parent done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await vi.waitFor(() => expect(fake.requests()).toHaveLength(2), wait);
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'meanwhile' });

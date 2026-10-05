@@ -15,7 +15,7 @@ describe("a connector's help (08 §8.3, ADR 0011, 4)", { timeout: 30_000 }, () =
   });
 
   it('QA18-H5 every built-in connector has help, and a command\'s help holds its payload with a description on every field', async () => {
-    const builtins = { shell: ['exec'], fs: ['read', 'list', 'search', 'write', 'edit'], artifact: ['write', 'edit', 'get'], background: ['list', 'output', 'stop'], ask: ['text', 'choice', 'confirm'], subagent: ['run'] };
+    const builtins = { shell: ['exec'], fs: ['read', 'list', 'search', 'write', 'edit'], artifact: ['write', 'edit', 'get'], background: ['list', 'output', 'stop'], ask: ['text', 'choice', 'confirm'], delegate: ['run'] };
     const { results } = await looked(nothing, [...Object.keys(builtins).map((name) => command(name, 'help')), command('fs', 'help', { command: 'edit' }), command('shell', 'help', { command: 'exec' }), command('ask', 'help', { command: 'confirm' })]);
     for (const [index, [name, commands]] of Object.entries(builtins).entries()) {
       expect(results[index], name).toMatch(new RegExp(`^${name}: `));

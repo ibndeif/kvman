@@ -3,7 +3,9 @@ import { builtinDescriptions, builtinSignatures, commandsOf } from '../connector
 import type { ShellCommand } from '../calls/shell-command.ts';
 import { shellFor } from '../calls/shell-program.ts';
 import { builtinConnectors } from '../connector-call.ts';
+import { delegateIndexDescription } from '../connectors/delegate.ts';
 import { mcpIndexDescription } from '../connectors/mcp.ts';
+import { availableWorkers } from '../delegate/workers.ts';
 import { mcpServers } from '../mcp/servers.ts';
 import { activeConnectors, type ConnectorRow } from '../registry/register-connectors.ts';
 import { disabledConnectors } from '../register-settings.ts';
@@ -11,9 +13,10 @@ import { sectionsFor } from '../registry/register-sections.ts';
 import type { SessionDoc } from '../schemas/records.ts';
 import { buildPrompt, type BuiltPrompt } from './build-prompt.ts';
 
-// A session's prompt and the connectors its agent may use: a subagent gets its parent's subset, never `subagent`,
-// always `ask` (plan 08 §8.5); binary connectors count once their check passed (plan 08 §8.4), and `mcp` while the
-// workspace has a server, which its entry then names (ADR 0020, 10 and 12).
+// A session's prompt and the connectors its agent may use: a subagent gets its worker's among its parent's, never
+// `delegate`, always `ask` (plan 08 §8.5); binary connectors count once their check passed (plan 08 §8.4), `mcp` while
+// the workspace has a server, and `delegate` while a worker is available, each entry naming them (ADR 0020, 10 and 12;
+// ADR 0021, 1 and 18).
 
 /** A connector the session's agent can call: its entry in the prompt's index and in the `run` tool's enum. */
 export type ListedConnector = { name: string; description: string; commands: string[]; signatures?: readonly string[] };
@@ -29,11 +32,11 @@ export type SessionTools = {
   disabled: ReadonlySet<string>;
 };
 
-// The connector names a session may use: none that is turned off (ADR 0014, 7), and for a subagent only those it was given.
+// The connector names a session may use: none that is turned off (ADR 0014, 7), and for a subagent only its worker's (ADR 0021, 24).
 function allowedNames(session: SessionDoc, connectors: readonly ConnectorRow[], disabled: ReadonlySet<string>): Set<string> {
   const names = [...builtinConnectors, ...connectors.map((connector) => connector.name)].filter((name) => !disabled.has(name));
   if (session.parentId === null) return new Set(names);
-  return new Set(names.filter((name) => name === 'ask' || (name !== 'subagent' && (session.connectors === null || session.connectors.includes(name)))));
+  return new Set(names.filter((name) => name === 'ask' || (name !== 'delegate' && (session.connectors === null || session.connectors.includes(name)))));
 }
 
 export async function sessionTools(ctx: Ctx, session: Stored<SessionDoc>): Promise<SessionTools> {
@@ -43,9 +46,11 @@ export async function sessionTools(ctx: Ctx, session: Stored<SessionDoc>): Promi
   const allowed = allowedNames(session, connectors, disabled);
   const passed = new Set((session.checks ?? []).filter((check) => check.passed).map((check) => check.name));
   const servers = await mcpServers(ctx);
-  const descriptions = { ...builtinDescriptions(shell.kind), mcp: mcpIndexDescription(servers) };
+  const workers = await availableWorkers(ctx);
+  const descriptions = { ...builtinDescriptions(shell.kind), delegate: delegateIndexDescription(workers), mcp: mcpIndexDescription(servers) };
+  const present: Partial<Record<string, boolean>> = { mcp: servers.length > 0, delegate: workers.length > 0 };
   const listed = [
-    ...builtinConnectors.filter((name) => allowed.has(name) && (name !== 'mcp' || servers.length > 0)).map((name) => ({ name, description: descriptions[name], commands: Object.keys(commandsOf(name)), signatures: builtinSignatures[name] })),
+    ...builtinConnectors.filter((name) => allowed.has(name) && present[name] !== false).map((name) => ({ name, description: descriptions[name], commands: Object.keys(commandsOf(name)), signatures: builtinSignatures[name] })),
     ...connectors
       .filter((connector) => allowed.has(connector.name) && (connector.kind === 'commands' || passed.has(connector.name)))
       .map((connector) => ({ name: connector.name, description: connector.description, commands: connector.commands?.map((command) => command.name) ?? ['exec'] })),
@@ -56,6 +61,7 @@ export async function sessionTools(ctx: Ctx, session: Stored<SessionDoc>): Promi
     shell: shell.kind,
     language: z.string().parse(await ctx.settings.get('kernel.language')),
     sections: await sectionsFor(ctx, session.id),
+    ...(session.worker === null ? {} : { worker: session.worker }),
     connectors: listed,
   });
   for (const section of built.left) ctx.log.warn('A section was left out of a prompt past 64 KB of sections.', { owner: section.owner, id: section.id });

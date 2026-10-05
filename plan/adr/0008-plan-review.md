@@ -83,7 +83,7 @@ Status: accepted, 2026-09-30. A full review of the plan before M1.1, decided wit
 58. `kernel.language` is `en` or `ar`. (Changed by 72: an open list.)
 59. Connector output gets the same 30 KB truncation as shell output.
 60. A connector word inside a pipe, `&&`, or other shell syntax returns an error explaining that connector calls stand alone; it isn't run in the shell.
-61. A subagent uses its parent's model and thinking level.
+61. A subagent uses its parent's model and thinking level. *Changed by ADR 0021, 7: its worker may set either.*
 62. Deleting a session cancels its turn and deletes its subagent sessions.
 63. `kvcoder.message.send` sends the chunk `{ type: 'follow', jobId }` for the step it starts, and a session records the job id of its running step.
 64. Connectors, session handlers, and global sections are in kvcoder's global store; sessions and other sections are in the workspace store.

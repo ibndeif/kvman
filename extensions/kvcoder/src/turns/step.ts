@@ -141,7 +141,7 @@ async function runStep(ctx: Ctx, sessionId: string, turnId: string): Promise<voi
     await finishWithoutCalls(ctx, sessionId, turnId, settings.maxSteps, answer.lost);
     return;
   }
-  const env = { ctx, session, tools, approval: settings.approval, answerSeq: answer.seq };
+  const env = { ctx, session, tools, approval: settings.approval };
   const outcomes = await Promise.all(answer.calls.map((call) => evaluateCall(env, call)));
   await settleCalls(ctx, sessionId, turnId, answer.calls, outcomes, settings.maxSteps);
 }
