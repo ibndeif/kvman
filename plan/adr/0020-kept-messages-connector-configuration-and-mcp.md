@@ -1,6 +1,6 @@
 # ADR 0020 — The kept messages as a setting, a connector's own configuration, and MCP servers
 
-After ADR 0019 the product owner asked (2026-10-05) for three changes to kvcoder: "refactor compact to leave last n messages, and add a config for it", "add an mcp connector, and it should add configs in the UI to let the user add their MCPs", and "add a cog icon next to each connector to open a modal for this specific connector's configs". Decisions 1 to 11 were asked with alternatives and mockups. Decisions 12 to 16 are the smallest way to carry them out; the product owner may overrule any of them.
+After ADR 0019 the product owner asked (2026-10-05) for three changes to kvcoder: "refactor compact to leave last n messages, and add a config for it", "add an mcp connector, and it should add configs in the UI to let the user add their MCPs", and "add a cog icon next to each connector to open a modal for this specific connector's configs". Decisions 1 to 11 and 17 were asked with alternatives, the first eleven with mockups. Decisions 12 to 16 are the smallest way to carry them out; the product owner may overrule any of them.
 
 ## Decisions
 
@@ -17,9 +17,11 @@ After ADR 0019 the product owner asked (2026-10-05) for three changes to kvcoder
 11. **The sign-in returns to a kvcoder page** (asked; chosen over a new kernel route). The redirect address is `http://127.0.0.1:<port>/kvcoder/mcp-sign-in`, the page `kvcoder.mcp-sign-in`, whose component reads `code` and `state` from the address and runs `kvcoder.mcp.sign-in.finish`. The kernel's routes and the listener's checks don't change.
 12. **With no server, `mcp` isn't a connector of the session**: it is left out of the prompt's connector index and of the `run` tool, like a program whose check failed, and a call to it gets the answer for a connector that doesn't exist. Its row and cog are always in the list.
 13. **The dialogs are kvcoder's own components.** A `setting` view is valid only in `configuration` (ADR 0014, 3), so the shell's two rows are built by kvcoder, like the model's row (ADR 0015, 7): each saves into `kvman.scope` as it changes, shows "Changed" with a reset, and is disabled on "All workspaces" while the workspace has its own value. kvwebui and `@kvman/sdk` don't change.
-14. **A server's state is checked, not stored.** `kvcoder.mcp.server.check { name }` connects, lists the tools, and answers `{ status: 'ready', tools }`, `{ status: 'signInNeeded' }`, or `{ status: 'failed', problem }`. The dialog checks each server when it opens, after a save, and after a sign-in.
+14. **A server's state is checked, not stored.** `kvcoder.mcp.server.check { name }` connects, lists the tools, and answers `{ status: 'ready', tools }`, `{ status: 'signInNeeded' }`, or `{ status: 'failed', problem }`. A check gives the server 30 s. The dialog checks each server when it opens, after a save, after a sign-in, and from a row's "Check again".
 15. **The UI writes the setting and the secrets itself**, with `kernel.settings.set`, `kernel.secrets.set`, and `kernel.secrets.delete`, as the extension's page already does. Removing a server deletes its secrets. The one kvcoder command that takes a secret is `kvcoder.mcp.sign-in.finish` (the authorization code), which is sync only.
 16. **Tools only, and registration by the server.** MCP's resources, prompts, and sampling aren't used. Sign-in registers kvman with the server (dynamic client registration); a server that doesn't offer it fails `kvcoder/MCP_SIGN_IN_FAILED`.
+
+17. **kvcoder starts a command itself, with `cross-spawn`** (asked, while building, 2026-10-05; chosen over the client's own stdio transport, which stops only the direct child on Linux and macOS, and over a start on Windows written by kvcoder). The client's stdio transport can't start a process in its own group, so kvcoder has its own: it starts the command with `cross-spawn` (pinned exactly, with its types as a dev dependency), in its own process group on Linux and macOS, and kills the tree as a shell call's is killed.
 
 ## Shapes
 
@@ -32,6 +34,6 @@ After ADR 0019 the product owner asked (2026-10-05) for three changes to kvcoder
 ## Consequences
 
 - Plan 08 §8.1 to §8.7 are corrected, and ADR 0014, 10 is changed: the configuration is three cards.
-- kvcoder gains the dependency `@modelcontextprotocol/sdk`.
+- kvcoder gains the dependencies `@modelcontextprotocol/sdk` and `cross-spawn`.
 - `mcp` becomes a name no extension can register (`kvcoder/NAME_TAKEN`).
 - The catalog key `kvcoder.config.shell` is removed.

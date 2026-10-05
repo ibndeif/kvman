@@ -44,7 +44,7 @@ Extensions have their own, such as `kvwebui.theme` (light, dark, or the same as 
 
 ## Secrets
 
-A secret is a value such as an API key, and it belongs to one extension. Providers you connect through the **Models** page keep their keys as secrets. Every extension's page (open it from **Extensions**) ends with a **Secrets** section:
+A secret is a value such as an API key, and it belongs to one extension. Providers you connect through the **Models** page keep their keys as secrets, and so do the MCP servers you add on Coder's page: the value of each environment variable or header is the secret `mcp.<server>.env.<NAME>` or `mcp.<server>.header.<NAME>`. Every extension's page (open it from **Extensions**) ends with a **Secrets** section:
 
 - It lists that extension's secrets by name. **Values are never shown.**
 - **Add a secret** takes a **Name** and a **Value** (a password field), then **Save**.

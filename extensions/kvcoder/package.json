@@ -31,6 +31,8 @@
   },
   "dependencies": {
     "@lucide/vue": "1.49.0",
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "cross-spawn": "7.0.6",
     "vue": "3.5.43"
   },
   "devDependencies": {
@@ -38,6 +40,7 @@
     "@kvman/kvwebui": "workspace:*",
     "@kvman/sdk": "workspace:*",
     "@kvman/testkit": "workspace:*",
+    "@types/cross-spawn": "6.0.6",
     "@vitejs/plugin-vue": "6.0.9",
     "@vue/test-utils": "2.5.1",
     "happy-dom": "20.14.5",

@@ -72,6 +72,7 @@ a.kvc-button { text-decoration: none; color: inherit; }
 .kvc-composer { padding-block: 12px 18px; padding-inline: var(--kv-space-lg); }
 .kvc-box { box-sizing: border-box; max-inline-size: 760px; margin-inline: auto; border: 1px solid var(--kv-color-border); border-radius: 16px; background: var(--kv-color-surface); padding: 10px 12px; display: flex; flex-direction: column; gap: var(--kv-space-sm); }
 .kvc-field { box-sizing: border-box; inline-size: 100%; border: 1px solid var(--kv-color-border); border-radius: 10px; background: var(--kv-color-surface); color: inherit; font: inherit; padding-block: 8px; padding-inline: 12px; }
+.kvc-field:disabled { opacity: 0.6; cursor: not-allowed; }
 .kvc-box textarea { border: 0; resize: none; background: transparent; color: inherit; font: inherit; min-block-size: 44px; outline: none; }
 .kvc-start { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; gap: var(--kv-space-lg); padding: var(--kv-space-lg); }
 .kvc-start-note { text-align: center; margin: 0; }
@@ -147,6 +148,25 @@ a.kvc-button { text-decoration: none; color: inherit; }
 .kvc-dialog-title { font-size: 16px; font-weight: 600; }
 .kvc-dialog-rows { display: flex; flex-direction: column; }
 .kvc-dialog-rows > .kvc-setting:last-child { border-block-end: 0; padding-block-end: 0; }
+/* The MCP servers and the form that adds one (ADR 0020, 9 and 15). */
+.kvc-server { align-items: flex-start; }
+.kvc-server-state { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 13px; font-weight: 500; }
+.kvc-server-state[data-status='ready'] { color: var(--kv-color-success); }
+.kvc-server-state[data-status='failed'], .kvc-server-state[data-status='signInNeeded'] { color: var(--kv-color-warning); }
+.kvc-server-state[data-status='checking'] { color: var(--kv-color-muted); }
+.kvc-server-reason { overflow-wrap: anywhere; white-space: pre-wrap; }
+.kvc-danger { background: var(--kv-color-danger); border-color: var(--kv-color-danger); color: var(--kv-color-on-primary); }
+.kvc-form { display: flex; flex-direction: column; gap: var(--kv-space-md); padding-block-start: var(--kv-space-sm); }
+.kvc-form-field { display: flex; flex-direction: column; gap: 6px; }
+.kvc-form-label { font-weight: 600; padding: 0; }
+.kvc-form-error { color: var(--kv-color-danger); font-size: 12.5px; }
+.kvc-form-choice { display: flex; flex-wrap: wrap; gap: var(--kv-space-md); margin: 0; padding: 0; border: 0; }
+.kvc-form-choice > legend { margin-block-end: 6px; }
+.kvc-form-radio { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.kvc-form-value { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) auto; align-items: center; gap: 8px; }
+.kvc-form-set { display: flex; align-items: center; gap: 10px; }
+.kvc-form-add { display: inline-flex; align-items: center; gap: 4px; align-self: flex-start; }
+.kvc-form textarea.kvc-field { resize: vertical; }
 /* The send box's row, its pickers, and its slash commands (ADR 0017, 3, 11, and 12). */
 .kvc-box { position: relative; }
 .kvc-composer-row { display: flex; align-items: center; gap: 8px; }

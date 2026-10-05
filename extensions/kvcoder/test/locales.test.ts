@@ -22,7 +22,7 @@ function webKeys(): string[] {
   return readdirSync(folder).flatMap((file) => [...readFileSync(path.join(folder, file), 'utf8').matchAll(/t\('(kvcoder\.[\w.]+)'/g)].map((match) => match[1] ?? ''));
 }
 
-const codes = ['NAME_TAKEN', 'QUESTION_NOT_FOUND', 'SESSION_NOT_FOUND', 'SESSION_BUSY', 'JOB_NOT_FOUND'];
+const codes = ['NAME_TAKEN', 'QUESTION_NOT_FOUND', 'SESSION_NOT_FOUND', 'SESSION_BUSY', 'JOB_NOT_FOUND', 'MCP_SERVER_NOT_FOUND', 'MCP_CONNECT_FAILED', 'MCP_SIGN_IN_NEEDED'];
 const notices = ['CANCELLED', 'INTERRUPTED', 'STEP_FAILED', 'MAX_STEPS', 'SUMMARY_FAILED', 'REPLY_LOST'];
 const dynamic = [
   ...['idle', 'running', 'waiting'].map((status) => `kvcoder.ui.status.${status}`),

@@ -17,6 +17,8 @@ type Point = 'kvcoder.session.created' | 'kvcoder.session.deleted' | 'kvcoder.se
 type Place = { global?: boolean; sessionId?: string };
 type JobRow = { id: string; kind: 'process' | 'subagent'; title: string; call: string; status: string; startedAt: string; endedAt?: string; exitCode?: number; links: string[] };
 type Send = { sessionId: string; text: string; fileIds?: string[] };
+type McpServer = { name: string; description: string; command: string; args: string[]; env: string[] } | { name: string; description: string; url: string; headers: string[] };
+type McpCheck = { status: 'ready'; tools: number } | { status: 'signInNeeded' } | { status: 'failed'; problem: { code: string; message: string; params?: Record<string, Json> } };
 
 declare module '@kvman/sdk' {
   interface Commands {
@@ -25,6 +27,7 @@ declare module '@kvman/sdk' {
     'kvcoder.session.configure': { input: { sessionId: string; model?: string; thinking?: Thinking }; output: Empty };
     'kvcoder.session.delete': { input: SessionId; output: Empty };
     'kvcoder.session.compact': { input: SessionId; output: { summarized: boolean } };
+    'kvcoder.mcp.server.check': { input: { name: string }; output: McpCheck };
     'kvcoder.session.export': { input: SessionId; output: { fileId: string } };
     'kvcoder.session.fork': { input: { sessionId: string; throughSeq?: number }; output: Session };
     'kvcoder.message.send': { input: Send; output: Empty };
@@ -65,6 +68,7 @@ declare module '@kvman/sdk' {
     'kvcoder.compactKeep': number;
     'kvcoder.connectors': { name: string; description: string; binary: Binary }[];
     'kvcoder.connectors.disabled': string[];
+    'kvcoder.mcp.servers': McpServer[];
     'kvcoder.sessions.keep': number;
     'kvcoder.welcome': string | null;
   }

@@ -21,7 +21,7 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
     expect(prompt).toContain('Your one tool is run: it runs one command of a connector, as { description, connector, command, payload }.');
   });
 
-  it("QA19-H1 the prompt gives the payloads of kvcoder's six connectors", async () => {
+  it("QA19-H1 the prompt gives the payloads of kvcoder's connectors", async () => {
     const { fake } = await looked(() => undefined, [command('todo', 'list')], settings);
     const prompt = systemPrompt(fake);
     const index = (prompt.split('## Connectors\n')[1] ?? '').split('\n');

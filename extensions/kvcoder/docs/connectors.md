@@ -50,13 +50,13 @@ await ctx.exec('kvcoder.connector.register', {
 
 The agent calls a binary connector with two commands. `exec { args?, background?, timeoutMs?, risky }` runs the program with those arguments in the real shell, in the workspace folder. `help {}` describes `exec` and prints the program's own help (`gh --help`), and `help { "command": "pr" }` prints `gh pr --help`. For a program whose help is asked another way, register the line with `{command}` standing for the command: `help: 'go help {command}'`.
 
-`kvcoder.connector.unregister { name }` removes one of the caller's own connectors; a missing name does nothing. `kvcoder.connector.list` answers every registered connector and program, each with `enabled`. The setting `kvcoder.connectors.disabled` lists the names that are turned off, kvcoder's own six included: such a connector is left out of the prompt and can't be called, from the next step.
+`kvcoder.connector.unregister { name }` removes one of the caller's own connectors; a missing name does nothing. `kvcoder.connector.list` answers every registered connector and program, each with `enabled`. The setting `kvcoder.connectors.disabled` lists the names that are turned off, kvcoder's own seven included: such a connector is left out of the prompt and can't be called, from the next step.
 
 ## Built-in connectors
 
-kvcoder's own connectors are `shell` (one line in the real shell), `fs` (read, list, search, write, and edit files in the workspace folder), `artifact` (a document shown beside the chat), `background` (follow up on what was started with `background: true`), `ask` (a question that suspends the turn), and `subagent` (a helper session). Their names are taken: registering one fails `kvcoder/NAME_TAKEN`.
+kvcoder's own connectors are `shell` (one line in the real shell), `fs` (read, list, search, write, and edit files in the workspace folder), `artifact` (a document shown beside the chat), `background` (follow up on what was started with `background: true`), `ask` (a question that suspends the turn), `subagent` (a helper session), and `mcp` (the tools of the MCP servers the person added; it is a connector of a session only while the workspace has a server). Their names are taken: registering one fails `kvcoder/NAME_TAKEN`.
 
-`shell exec`, a binary's `exec`, `fs write`, and `fs edit` ask the person first when the payload says `risky: true`, or always when `kvcoder.shell.approval` is `ask`. `risky` is required: a call that leaves it out fails `VALIDATION_FAILED` and asks nobody. Only `shell exec`, a binary's `exec`, and `subagent run` take `background: true`; every other command runs to its end.
+`shell exec`, a binary's `exec`, `fs write`, `fs edit`, and `mcp call` ask the person first when the payload says `risky: true`, or always when `kvcoder.shell.approval` is `ask`. `risky` is required: a call that leaves it out fails `VALIDATION_FAILED` and asks nobody. Only `shell exec`, a binary's `exec`, and `subagent run` take `background: true`; every other command runs to its end.
 
 ## Ownership
 

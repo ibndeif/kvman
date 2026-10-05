@@ -6,7 +6,7 @@ This page is for anyone whose extension should be usable by kvman's agent, or wh
 
 ## Connectors
 
-kvman's agent has one tool, `run`, and a **connector** is a named set of commands it runs with it. A connector is the only way the agent reaches anything outside the model: the shell and files are kvcoder's own connectors, and your extension adds its own.
+kvman's agent has one tool, `run`, and a **connector** is a named set of commands it runs with it. A connector is the only way the agent reaches anything outside the model: the shell and files are kvcoder's own connectors, and your extension adds its own. (The person can also add MCP servers, which the agent reaches through kvcoder's `mcp` connector; an extension that owns its commands registers a connector instead.)
 
 ```json
 { "description": "Adding milk to the notes", "connector": "notes", "command": "add", "payload": { "text": "Buy milk" } }

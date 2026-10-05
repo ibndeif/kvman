@@ -3,6 +3,7 @@ import { chatIdOf } from '../artifacts/artifact-records.ts';
 import { lineRunIsError, lineRunSchema, lineRunText } from '../calls/line-run.ts';
 import { artifactCard } from '../connectors/artifact.ts';
 import { binaryExec } from '../connectors/binary.ts';
+import { mcpCallSchema } from '../connectors/mcp.ts';
 import { builtinCommands, builtinSignatures, commandsOf } from '../connectors/builtin-connectors.ts';
 import { payloadJsonSchema, type ConnectorCommand } from '../connectors/connector-command.ts';
 import type { RunCall } from '../calls/run-tool.ts';
@@ -46,6 +47,7 @@ export function commandNamesOf(connectors: readonly ConnectorRow[], name: string
 }
 
 const shellRun = builtinCommands.shell.exec.registration;
+const mcpCall = builtinCommands.mcp.call.registration;
 const artifactChanges = new Set([builtinCommands.artifact.write.registration, builtinCommands.artifact.edit.registration]);
 const artifactCalls = new Set([...artifactChanges, builtinCommands.artifact.get.registration]);
 const fileChanges = new Set([builtinCommands.fs.write.registration, builtinCommands.fs.edit.registration]);
@@ -101,6 +103,11 @@ async function runJob(ctx: Ctx, sessionId: string, call: RunCall, target: Comman
     const run = lineRunSchema.parse(done.value);
     const details = { ...words(call), output: run.output, durationMs: run.durationMs, ...(run.exitCode === null ? {} : { exitCode: run.exitCode }), ...(run.timedOut ? { timedOut: true } : {}), ...(run.jobId === null ? {} : { background: true, jobId: run.jobId }) };
     return { text: lineRunText(run), isError: lineRunIsError(run), details };
+  }
+  if (target.registration === mcpCall) {
+    const called = mcpCallSchema.parse(done.value);
+    const output = truncate(called.text);
+    return { text: output, isError: called.isError, details: { ...words(call), output, durationMs: Date.now() - started } };
   }
   const output = jsonOutput(done.value).output;
   const text = builtin?.bounded === true ? output : truncate(output);

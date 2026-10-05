@@ -15,6 +15,7 @@ There is no password in this phase: any program running as you, on this computer
 
 ## What leaves your computer
 
+- **MCP servers.** A server you add over a URL receives what the agent sends its tools, and the headers you gave it; a command server is a program on your machine and can reach whatever that program reaches. What a tool returns goes into the conversation, and so to the model. kvman adds no server by itself.
 - **Model calls.** When the agent or an extension asks a model, kvman sends the conversation, the tool descriptions, and the files or text the conversation includes to the provider you connected (Anthropic, OpenAI, your own server, and so on), over your connection and under that provider's terms. Nothing is sent until you connect a provider and send a message.
 - **Installing extensions and updating kvman** use npm and your network.
 - **Signing in with a plan** opens the provider's own sign-in page in your browser, and keeps the result as a secret.
@@ -33,7 +34,7 @@ Only add extensions from authors you trust. Adding one on the **Extensions** pag
 
 ## Secrets
 
-API keys and sign-ins live only in `secrets.json` in your home folder, readable only by you. They are never written to the database, the settings, the logs, or any answer to the browser, so the app can't show them back, and they are not sent to a model. See [Settings and secrets](settings-and-secrets.md).
+API keys, the values you give an MCP server (its environment variables and headers), and sign-ins live only in `secrets.json` in your home folder, readable only by you. They are never written to the database, the settings, the logs, or any answer to the browser, so the app can't show them back, and they are not sent to a model. See [Settings and secrets](settings-and-secrets.md).
 
 ## Logs
 

@@ -23,7 +23,8 @@ function signalGroup(pid: number, signal: NodeJS.Signals): boolean {
   }
 }
 
-function killTree(pid: number | undefined): void {
+/** Kills a process and everything it started: its group on Linux and macOS, `taskkill /T /F` on Windows. */
+export function killTree(pid: number | undefined): void {
   if (pid === undefined) return;
   const kill = treeKill(process.platform, pid);
   if (kill.kind === 'taskkill') {

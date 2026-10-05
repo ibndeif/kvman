@@ -4,6 +4,7 @@ import { askCommands, askDescription } from './ask.ts';
 import { backgroundCommands, backgroundDescription } from './background.ts';
 import { payloadJsonSchema, type ConnectorCommand } from './connector-command.ts';
 import { fsCommands, fsDescription } from './fs.ts';
+import { mcpCommands, mcpDescription } from './mcp.ts';
 import { shellCommands, shellDescription } from './shell.ts';
 import { subagentCommands, subagentDescription } from './subagent.ts';
 
@@ -17,6 +18,7 @@ export const builtinCommands = {
   background: backgroundCommands,
   ask: askCommands,
   subagent: subagentCommands,
+  mcp: mcpCommands,
 } satisfies Record<BuiltinConnector, Record<string, ConnectorCommand>>;
 
 /** A built-in connector's commands by name, in the order `help` lists them. */
@@ -26,7 +28,7 @@ export function commandsOf(connector: BuiltinConnector): Readonly<Record<string,
 
 /** What the prompt's connector index and `help` say each built-in connector is for; `shell` names the shell this run uses. */
 export function builtinDescriptions(shell: 'bash' | 'powershell'): Record<BuiltinConnector, string> {
-  return { shell: shellDescription(shell), fs: fsDescription, artifact: artifactDescription, background: backgroundDescription, ask: askDescription, subagent: subagentDescription };
+  return { shell: shellDescription(shell), fs: fsDescription, artifact: artifactDescription, background: backgroundDescription, ask: askDescription, subagent: subagentDescription, mcp: mcpDescription };
 }
 
 // Each built-in payload is an object, so a missing signature is a programming error, not a case the prompt may fall
@@ -47,4 +49,5 @@ export const builtinSignatures: Record<BuiltinConnector, readonly string[]> = {
   background: signaturesOf('background'),
   ask: signaturesOf('ask'),
   subagent: signaturesOf('subagent'),
+  mcp: signaturesOf('mcp'),
 };

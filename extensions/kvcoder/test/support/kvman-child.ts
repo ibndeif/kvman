@@ -19,7 +19,7 @@ export const childWait = { timeout: 20_000, interval: 50 };
 
 export type Running = { origin: string; call(route: 'commands' | 'queries', name: string, input: unknown): Promise<unknown>; kill(): Promise<void> };
 
-export type KvmanWorld = { fake: FakeOpenAI; start(): Promise<Running>; close(): Promise<void> };
+export type KvmanWorld = { fake: FakeOpenAI; home: string; start(): Promise<Running>; close(): Promise<void> };
 
 function waitForUrl(child: ChildProcess, output: () => string): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -81,7 +81,7 @@ export async function kvmanWorld(): Promise<KvmanWorld> {
     await fake.close();
     rmSync(root, { recursive: true, force: true });
   };
-  return { fake, start, close };
+  return { fake, home: home ?? '', start, close };
 }
 
 /** Waits until a call's output passes `check`, and returns it. */

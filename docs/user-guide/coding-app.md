@@ -47,12 +47,33 @@ Everything the agent does goes through a **connector**: a named set of commands.
 - `ask` — asks you a question and waits for your answer (below).
 - `subagent` — runs a helper chat that does a self-contained part and reports back.
 - `background` — checks on, or stops, something the agent left running (below).
+- `mcp` — uses the tools of the MCP servers you add (below). It is there only while you have at least one server.
 
 Other extensions add connectors (kvcustomizer adds `ext`, `preset`, `preview`, `kvman`, and `docs` — see [customizing-with-the-agent.md](customizing-with-the-agent.md)), and a preset can add a program on your machine, such as `git` or `gh`, as a connector with the `kvcoder.connectors` setting. A program is a connector like any other: it is in the same list on Coder's page, with the same switch.
 
+## MCP servers
+
+An MCP server gives the agent more tools: your issue tracker, a database, a browser. You add servers yourself; kvman ships with none.
+
+Open **Extensions**, then **Coder**, and press the cog beside `mcp`. **Add a server** asks for:
+
+- **Name** — what the agent calls it, such as `github`. It can't be changed later.
+- **Description** — what the server is for. The agent reads it to decide when to use the server.
+- **Runs as** — **A command on this computer** (a **Command** such as `npx`, with its **Arguments**, one per line) or **A URL** (a server reached over HTTP).
+- **Environment variables** (for a command) or **Headers** (for a URL) — a name and a value each. The values are kept as secrets and are never shown again: a stored one shows **Set**, with **Replace**.
+
+Each server in the list says **Ready · N tools**, **Sign-in needed**, or **Could not connect** with the reason; it is checked when you open the list, after you save it, and with **Check again**. The list is saved for all workspaces or only this one, as the page's switch says; a workspace with its own list uses only that list.
+
+What to know:
+
+- The agent sees your servers' names and descriptions, and asks a server for its tools when it needs them.
+- A command server is started for each call and stopped when the call ends, in the workspace folder, so it keeps nothing between calls.
+- A tool call asks you first when the agent marks it risky, or always when approval is set to ask (below), exactly like a shell line.
+- Only run servers you trust: a command server is a program on your machine, and a tool's result goes into the conversation, so it is sent to the model.
+
 ## Approval
 
-Four kinds of call can change things outside the agent's own work: a shell line, a program such as `git`, writing a file, and editing a file. The `kvcoder.shell.approval` setting controls when kvman asks you first:
+Five kinds of call can change things outside the agent's own work: a shell line, a program such as `git`, writing a file, editing a file, and calling an MCP server's tool. The `kvcoder.shell.approval` setting controls when kvman asks you first:
 
 - **auto** (the default) — kvman asks unless the agent marks the call as not risky. A call is risky when it could lose something that isn't the agent's own work, or reaches outside the workspace.
 - **ask** — every such call asks.

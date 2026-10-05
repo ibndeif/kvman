@@ -3,6 +3,8 @@ import { builtinDescriptions, builtinSignatures, commandsOf } from '../connector
 import type { ShellCommand } from '../calls/shell-command.ts';
 import { shellFor } from '../calls/shell-program.ts';
 import { builtinConnectors } from '../connector-call.ts';
+import { mcpIndexDescription } from '../connectors/mcp.ts';
+import { mcpServers } from '../mcp/servers.ts';
 import { activeConnectors, type ConnectorRow } from '../registry/register-connectors.ts';
 import { disabledConnectors } from '../register-settings.ts';
 import { sectionsFor } from '../registry/register-sections.ts';
@@ -10,7 +12,8 @@ import type { SessionDoc } from '../schemas/records.ts';
 import { buildPrompt, type BuiltPrompt } from './build-prompt.ts';
 
 // A session's prompt and the connectors its agent may use: a subagent gets its parent's subset, never `subagent`,
-// always `ask` (plan 08 §8.5); binary connectors count once their check passed (plan 08 §8.4).
+// always `ask` (plan 08 §8.5); binary connectors count once their check passed (plan 08 §8.4), and `mcp` while the
+// workspace has a server, which its entry then names (ADR 0020, 10 and 12).
 
 /** A connector the session's agent can call: its entry in the prompt's index and in the `run` tool's enum. */
 export type ListedConnector = { name: string; description: string; commands: string[]; signatures?: readonly string[] };
@@ -39,9 +42,10 @@ export async function sessionTools(ctx: Ctx, session: Stored<SessionDoc>): Promi
   const disabled = await disabledConnectors(ctx);
   const allowed = allowedNames(session, connectors, disabled);
   const passed = new Set((session.checks ?? []).filter((check) => check.passed).map((check) => check.name));
-  const descriptions = builtinDescriptions(shell.kind);
+  const servers = await mcpServers(ctx);
+  const descriptions = { ...builtinDescriptions(shell.kind), mcp: mcpIndexDescription(servers) };
   const listed = [
-    ...builtinConnectors.filter((name) => allowed.has(name)).map((name) => ({ name, description: descriptions[name], commands: Object.keys(commandsOf(name)), signatures: builtinSignatures[name] })),
+    ...builtinConnectors.filter((name) => allowed.has(name) && (name !== 'mcp' || servers.length > 0)).map((name) => ({ name, description: descriptions[name], commands: Object.keys(commandsOf(name)), signatures: builtinSignatures[name] })),
     ...connectors
       .filter((connector) => allowed.has(connector.name) && (connector.kind === 'commands' || passed.has(connector.name)))
       .map((connector) => ({ name: connector.name, description: connector.description, commands: connector.commands?.map((command) => command.name) ?? ['exec'] })),

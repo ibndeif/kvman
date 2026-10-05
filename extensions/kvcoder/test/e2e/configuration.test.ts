@@ -34,7 +34,7 @@ describe("kvcoder's configuration in Chromium (06 §6.6, 08 §8.7, ADR 0014)", {
 
     const names = page.locator('[data-test="connectors"] [data-test="connector-name"]');
     await names.first().waitFor();
-    expect(await names.allTextContents()).toEqual(['shell', 'fs', 'artifact', 'background', 'ask', 'subagent']);
+    expect(await names.allTextContents()).toEqual(['shell', 'fs', 'artifact', 'background', 'ask', 'subagent', 'mcp']);
     const fs = page.locator('[data-test="connector-fs"] [data-test="connector-switch"]');
     expect(await fs.getAttribute('aria-checked')).toBe('true');
     await fs.click();
