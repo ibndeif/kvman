@@ -34,8 +34,8 @@ const counts = computed(() => [
       <span class="grid size-9 shrink-0 place-items-center rounded-xl bg-neutral-soft text-[13px] font-semibold text-neutral-ink" aria-hidden="true">{{ props.extension.namespace.slice(0, 2) }}</span>
       <span class="flex grow flex-col gap-0.5">
         <span class="flex flex-wrap items-center gap-2">
-          <span class="font-semibold">{{ props.extension.name }}</span>
-          <span class="font-mono text-xs text-muted">{{ props.extension.version }}</span>
+          <span dir="ltr" class="font-semibold" data-test="extension-name">{{ props.extension.name }}</span>
+          <span dir="ltr" class="font-mono text-xs text-muted" data-test="extension-version">{{ props.extension.version }}</span>
           <span class="rounded-full bg-neutral-soft px-2.5 py-0.5 text-xs font-medium text-neutral-ink" data-test="extension-source">{{ t(source) }}</span>
           <span v-if="props.removed" class="rounded-full bg-warning-soft px-2.5 py-0.5 text-xs font-medium text-warning-ink" data-test="extension-mark">{{ t('kvwebui.extensions.mark.removed') }}</span>
         </span>
@@ -50,16 +50,16 @@ const counts = computed(() => [
     </div>
     <div v-if="open" class="flex flex-col border-t border-line-soft">
       <div v-for="call in calls" :key="call.name" class="flex flex-wrap items-baseline gap-3 border-b border-line-soft px-4.5 py-2.5" data-test="extension-call">
-        <span class="w-64 font-mono text-[12.5px]">{{ call.name }}</span>
+        <span dir="ltr" class="w-64 font-mono text-[12.5px]" data-test="call-name">{{ call.name }}</span>
         <span v-if="call.public" class="rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent-ink">{{ t('kvwebui.extensions.public') }}</span>
         <span class="grow text-muted">{{ described(call.name, call.description) }}</span>
       </div>
       <div v-for="setting in props.extension.settings" :key="setting.key" class="flex flex-wrap items-baseline gap-3 border-b border-line-soft px-4.5 py-2.5">
-        <span class="w-64 font-mono text-[12.5px]">{{ setting.key }}</span>
+        <span dir="ltr" class="w-64 font-mono text-[12.5px]">{{ setting.key }}</span>
         <span class="grow text-muted">{{ described(setting.key, setting.description) }}</span>
       </div>
       <div v-for="handler in props.extension.handlers" :key="handler.point" class="flex flex-wrap items-baseline gap-3 px-4.5 py-2.5">
-        <span class="w-64 font-mono text-[12.5px]">{{ handler.point }}</span>
+        <span dir="ltr" class="w-64 font-mono text-[12.5px]">{{ handler.point }}</span>
         <span class="grow text-muted">{{ handler.description }}</span>
       </div>
     </div>

@@ -1,110 +1,68 @@
 <script setup lang="ts">
-import type { Problem } from '@kvman/sdk';
-import { Lock } from '@lucide/vue';
-import { computed, reactive, ref, watch } from 'vue';
+import { Check, Lock } from '@lucide/vue';
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { SettingInfo } from '../../api/kernel.ts';
-import { firstIssueMessage } from '../../api/problem-text.ts';
-import { valueField } from '../../forms/fields.ts';
-import { buildInput, valueText, type FormValues } from '../../forms/values.ts';
-import { applyLanguage, applyTheme } from '../../state/appearance.ts';
+import { valueText } from '../../forms/values.ts';
 import { useI18nState } from '../../state/i18n.ts';
-import { runCommand } from '../../state/commands.ts';
-import { settingValue, showProblem, useKvwebui } from '../../state/kvwebui.ts';
-import { reloadSettings } from '../../state/workspaces.ts';
-import FormField from '../views/FormField.vue';
+import { useKvwebui } from '../../state/kvwebui.ts';
+import { useSettingSave, type Scope } from '../../state/setting-save.ts';
+import { settingDescription, settingTitle } from '../../state/setting-text.ts';
+import SettingControl from './SettingControl.vue';
 
-// One setting (ADR 0009, 77): its title, description, and key; a control from its schema with the scope it applies
-// to; where its value comes from; and a reset. A preset-only key is shown locked.
-const props = defineProps<{ setting: SettingInfo }>();
+// One setting (ADR 0009, 77; ADR 0013, 2 to 5): its title and description, a control that saves as it changes into the
+// page's scope, whether the value was changed there, and a reset. Its key and where the value comes from are in its
+// details. A preset-only key is shown locked, and a key this workspace overrides can't be edited for all workspaces.
+const props = defineProps<{ setting: SettingInfo; scope: Scope; workspaceName: string }>();
 const state = useKvwebui();
-const i18n = useI18nState();
-const { t, te } = useI18n();
-const field = computed(() => valueField(props.setting.schema));
-const values = reactive<FormValues>({});
-const scope = ref<'global' | 'workspace'>('global');
-const invalid = ref<string[]>([]);
-const issue = ref<string | undefined>(undefined);
-const reset = (): void => {
-  values['value'] = valueText(field.value, props.setting.value);
-  scope.value = props.setting.source === 'workspace' ? 'workspace' : 'global';
-  invalid.value = [];
-  issue.value = undefined;
-};
-watch(() => props.setting, reset, { immediate: true });
+const translator = useI18n();
+const { t } = translator;
+const target = computed<Scope>(() => (props.setting.scopes.includes(props.scope) ? props.scope : 'global'));
+const save = useSettingSave(state, useI18nState(), () => props.setting, () => target.value);
+const { field, typed, invalid, issue, saved } = save;
 
-const title = computed(() => (te(`${props.setting.key}.title`) ? t(`${props.setting.key}.title`) : props.setting.key));
-const description = computed(() => (te(`${props.setting.key}.description`) ? t(`${props.setting.key}.description`) : props.setting.description));
+const title = computed(() => settingTitle(translator, props.setting));
+const description = computed(() => settingDescription(translator, props.setting));
 const locked = computed(() => props.setting.scopes.length === 0);
-const sourceText = computed(() => (props.setting.source === 'preset' ? t('kvwebui.settings.fromPreset', { preset: state.health.value?.preset ?? '' }) : t(`kvwebui.settings.source.${props.setting.source}`)));
-const changed = computed(() => values['value'] !== valueText(field.value, props.setting.value) || (props.setting.source !== scope.value && props.setting.source !== 'default' && props.setting.source !== 'preset'));
-const resettable = computed(() => props.setting.source === scope.value);
-
-const saved = async (): Promise<void> => {
-  await reloadSettings(state);
-  if (props.setting.key === 'kvwebui.theme') applyTheme(state);
-  const language = props.setting.key === 'kernel.language' ? settingValue(state, 'kernel.language') : undefined;
-  if (typeof language === 'string' && language !== state.language.value) await applyLanguage(state, i18n, language);
-};
-const fail = (problem: Problem): void => {
-  const rejected = problem.code === 'VALIDATION_FAILED';
-  invalid.value = rejected ? ['value'] : [];
-  issue.value = rejected ? firstIssueMessage(problem) : undefined;
-  showProblem(state, problem);
-};
-const save = async (): Promise<void> => {
-  const built = buildInput([field.value], values);
-  const value = built.input['value'];
-  if (built.invalid.length > 0 || value === undefined) {
-    invalid.value = ['value'];
-    return;
-  }
-  await runCommand(state, 'kernel.settings.set', { key: props.setting.key, value, scope: scope.value }, (outcome) => (outcome.ok ? saved() : fail(outcome.problem)));
-};
-const resetValue = async (): Promise<void> => {
-  await runCommand(state, 'kernel.settings.reset', { key: props.setting.key, scope: scope.value }, (outcome) => (outcome.ok ? saved() : fail(outcome.problem)));
-};
-const set = (path: string, value: string | boolean): void => {
-  values[path] = value;
-};
+const ownValue = computed(() => target.value === 'global' && props.setting.source === 'workspace');
+const globalOnly = computed(() => props.scope === 'workspace' && !props.setting.scopes.includes('workspace'));
+const presetText = computed(() => t('kvwebui.settings.fromPreset', { preset: state.health.value?.preset ?? '' }));
+const sourceText = computed(() => (props.setting.source === 'preset' ? presetText.value : t(`kvwebui.settings.source.${props.setting.source}`)));
 </script>
 
 <template>
   <div class="flex flex-wrap items-start gap-6 border-b border-line-soft px-5 py-4 last:border-b-0" :data-test="`setting-${props.setting.key}`">
-    <div class="flex min-w-60 grow basis-80 flex-col gap-0.5">
+    <div class="flex min-w-60 grow basis-80 flex-col gap-1">
       <span class="font-semibold" data-test="setting-title">{{ title }}</span>
       <span class="text-muted" data-test="setting-description">{{ description }}</span>
-      <span class="font-mono text-xs text-muted">{{ props.setting.key }}</span>
+      <details class="text-[12.5px] text-muted" data-test="setting-details">
+        <summary class="w-fit">{{ t('kvwebui.settings.details') }}</summary>
+        <span class="flex flex-wrap items-center gap-x-2 pt-1">
+          <span dir="ltr" class="font-mono text-xs" data-test="setting-key">{{ props.setting.key }}</span>
+          <span data-test="setting-source">{{ sourceText }}</span>
+        </span>
+      </details>
     </div>
     <div class="flex w-90 max-w-full flex-col gap-2">
       <template v-if="locked">
         <div class="flex h-9.5 items-center gap-2 rounded-xl bg-neutral-soft px-3 text-neutral-ink" data-test="setting-locked">
-          <Lock class="size-4 shrink-0" aria-hidden="true" /><span class="truncate font-mono text-[13px]">{{ valueText(field, props.setting.value) }}</span>
+          <Lock class="size-4 shrink-0" aria-hidden="true" /><span dir="ltr" class="truncate font-mono text-[13px]">{{ valueText(field, props.setting.value) }}</span>
         </div>
         <span class="text-[12.5px] text-muted">{{ sourceText }}</span>
       </template>
       <template v-else>
-        <FormField :field="field" command="kvwebui.settings" :values="values" :invalid="invalid" :set="set" bare />
+        <SettingControl :field="field" :setting-key="props.setting.key" :value="typed" :invalid="invalid" :disabled="ownValue" :label="title" @input="save.edit" @commit="save.commit" />
         <span v-if="issue" class="text-[12.5px] text-danger" data-test="setting-issue">{{ issue }}</span>
-        <div v-if="props.setting.scopes.length === 2" role="group" :aria-label="t('kvwebui.settings.appliesTo')" class="flex gap-0.5 rounded-xl bg-neutral-soft p-0.75">
-          <button
-            v-for="choice in (['global', 'workspace'] as const)"
-            :key="choice"
-            type="button"
-            class="h-7.5 grow rounded-lg text-[13px]"
-            :class="scope === choice ? 'bg-surface font-medium text-ink shadow-sm' : 'text-neutral-ink'"
-            :aria-pressed="scope === choice"
-            :data-test="`scope-${choice}`"
-            @click="scope = choice"
-          >
-            {{ t(`kvwebui.settings.scope.${choice}`) }}
-          </button>
-        </div>
-        <div class="flex flex-wrap items-center gap-2.5">
-          <span class="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-medium text-accent-ink" data-test="setting-source">{{ sourceText }}</span>
-          <button v-if="resettable" type="button" class="text-[13px] font-medium text-primary" data-test="setting-reset" @click="resetValue">{{ t(`kvwebui.settings.reset.${scope}`) }}</button>
-          <div class="grow" />
-          <button v-if="changed" type="button" class="h-8 rounded-lg bg-primary px-3 text-[13px] font-medium text-on-primary" data-test="setting-save" @click="save">{{ t('kvwebui.settings.save') }}</button>
+        <span v-if="ownValue" class="text-[12.5px] text-muted" data-test="setting-own-value">{{ t('kvwebui.settings.ownValue', { name: props.workspaceName }) }}</span>
+        <div v-else class="flex min-h-5 flex-wrap items-center gap-x-2.5 gap-y-1 text-[12.5px]">
+          <span v-if="globalOnly" class="text-muted" data-test="setting-global-only">{{ t('kvwebui.settings.globalOnly') }}</span>
+          <template v-if="props.setting.source === target">
+            <span class="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-medium text-accent-ink" data-test="setting-changed">{{ t(`kvwebui.settings.changed.${target}`, { name: props.workspaceName }) }}</span>
+            <button type="button" class="text-[13px] font-medium text-primary" data-test="setting-reset" @click="save.reset">{{ t(`kvwebui.settings.reset.${target}`) }}</button>
+          </template>
+          <span v-if="props.setting.source === 'preset'" class="text-muted" data-test="setting-preset">{{ presetText }}</span>
+          <span class="grow" />
+          <span v-if="saved" role="status" class="flex items-center gap-1 font-medium text-success-ink" data-test="setting-saved"><Check class="size-3.5" aria-hidden="true" />{{ t('kvwebui.settings.saved') }}</span>
         </div>
       </template>
     </div>

@@ -1,5 +1,5 @@
 import type { Message } from '../../src/index.ts';
-import { callView, type CallView } from './call-view.ts';
+import { callView, type AskKind, type CallView } from './call-view.ts';
 
 // Reading the parts of stored messages: an answer's text, thinking, and tool calls; a tool result's text and card.
 
@@ -67,6 +67,29 @@ export function resultCard(message: Message, calls: ReadonlyMap<string, CallView
     failed: message.content['isError'] === true || (exitCode !== undefined && exitCode !== 0),
     ...(typeof details?.['durationMs'] === 'number' ? { durationMs: details['durationMs'] } : {}),
   };
+}
+
+export type AnsweredQuestion = { kind: AskKind; question: Record<string, unknown>; answer: Record<string, unknown> };
+
+// What a question dismissed by a message returns (plan 08 §8.1); an answer and a Skip are JSON.
+const dismissedByMessage = 'dismissed by the user';
+
+function answerOf(text: string): Record<string, unknown> | undefined {
+  if (text === dismissedByMessage) return { dismissed: true };
+  try {
+    return record(JSON.parse(text));
+  } catch {
+    return undefined;
+  }
+}
+
+/** An `ask` call's result as the question and the person's answer (ADR 0013, 1), or nothing for any other result. */
+export function answeredQuestion(message: Message, calls: ReadonlyMap<string, CallView>): AnsweredQuestion | undefined {
+  if (message.kind !== 'toolResult' || message.content['isError'] === true) return undefined;
+  const ask = calls.get(String(message.content['toolCallId']))?.ask;
+  if (ask === undefined) return undefined;
+  const answer = answerOf(textOf(message.content['content']));
+  return answer === undefined ? undefined : { ...ask, answer };
 }
 
 /** Whether a user message is kvcoder's own word to the model, such as the hint after a lost reply (ADR 0009, 188). */

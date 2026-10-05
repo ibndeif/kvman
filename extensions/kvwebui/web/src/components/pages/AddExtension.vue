@@ -41,11 +41,11 @@ const install = async (): Promise<void> => {
     <div class="flex flex-wrap items-end gap-3">
       <label class="flex min-w-48 grow basis-60 flex-col gap-1.5">
         <span class="text-[13px] font-medium text-muted">{{ t('kvwebui.extensions.add.name') }}</span>
-        <input v-model="name" type="text" class="h-11 rounded-xl border border-line bg-surface px-3 font-mono text-ink outline-none" :placeholder="t('kvwebui.extensions.add.namePlaceholder')" data-test="add-name" />
+        <input v-model="name" type="text" dir="ltr" class="h-11 rounded-xl border border-line bg-surface px-3 font-mono text-ink outline-none" :placeholder="t('kvwebui.extensions.add.namePlaceholder')" data-test="add-name" />
       </label>
       <label class="flex min-w-48 grow basis-72 flex-col gap-1.5">
         <span class="text-[13px] font-medium text-muted">{{ t('kvwebui.extensions.add.source') }}</span>
-        <input v-model="source" type="text" class="h-11 rounded-xl border border-line bg-surface px-3 font-mono text-ink outline-none" :placeholder="t('kvwebui.extensions.add.sourcePlaceholder')" data-test="add-source" />
+        <input v-model="source" type="text" dir="ltr" class="h-11 rounded-xl border border-line bg-surface px-3 font-mono text-ink outline-none" :placeholder="t('kvwebui.extensions.add.sourcePlaceholder')" data-test="add-source" />
       </label>
       <button type="button" class="h-11 rounded-xl bg-primary px-5 font-medium text-on-primary disabled:opacity-50" :disabled="!ready" data-test="add-install" @click="install">{{ t('kvwebui.extensions.add.install') }}</button>
     </div>

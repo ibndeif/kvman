@@ -3,21 +3,16 @@ import { CircleHelp } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import type { Json } from '@kvman/sdk';
 import type { Answer } from './use-answers.ts';
-import { fields, useKvman } from './kvman.ts';
+import { useKvman } from './kvman.ts';
+import { optionsOf } from './question-options.ts';
 
 // The question card (plan 08 §8.5): an `ask` text, choice, or confirm question, answered or skipped by the person.
-type Option = { id: string; label: string; description?: string };
 const props = defineProps<{ questionId: string; question: Record<string, unknown> }>();
 const emit = defineEmits<{ answer: [answer: Answer] }>();
 const kvman = useKvman();
 const kind = computed(() => String(props.question['kind'] ?? 'text'));
 const prompt = computed(() => String(props.question['prompt'] ?? ''));
-const options = computed<Option[]>(() =>
-  (Array.isArray(props.question['options']) ? props.question['options'] : []).map((value: unknown) => {
-    const option = fields(value);
-    return { id: String(option['id']), label: String(option['label']), ...(typeof option['description'] === 'string' ? { description: option['description'] } : {}) };
-  }),
-);
+const options = computed(() => optionsOf(props.question));
 const multiple = computed(() => props.question['multiple'] === true);
 const offersOther = computed(() => props.question['other'] === true);
 const text = ref('');
@@ -42,10 +37,10 @@ function answerChoice(): void {
 
 <template>
   <section class="kvc-card kvc-ask" data-test="question-card" :aria-label="prompt">
-    <div class="kvc-card-row" style="font-weight: 600"><CircleHelp :size="18" aria-hidden="true" />{{ prompt }}</div>
+    <div class="kvc-card-row" style="font-weight: 600"><CircleHelp :size="18" aria-hidden="true" /><span dir="auto">{{ prompt }}</span></div>
     <div class="kvc-card-body">
       <template v-if="kind === 'text'">
-        <input v-model="text" class="kvc-field" :placeholder="String(props.question['placeholder'] ?? '')" :aria-label="prompt" data-test="answer-text" />
+        <input v-model="text" class="kvc-field" dir="auto" :placeholder="String(props.question['placeholder'] ?? '')" :aria-label="prompt" data-test="answer-text" @keydown.enter.prevent="send({ text })" />
         <div class="kvc-actions">
           <button type="button" class="kvc-button" data-test="skip" @click="send({ dismissed: true })">{{ kvman.t('kvcoder.ui.skip') }}</button>
           <button type="button" class="kvc-button kvc-primary" data-test="answer" @click="send({ text })">{{ kvman.t('kvcoder.ui.answer') }}</button>

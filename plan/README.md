@@ -29,5 +29,6 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `adr/0011-run-tool.md` | kvcoder's one `run` tool over connectors: the shell as a connector, help, background work, function tools |
 | `adr/0010-kvcustomizer.md` | kvdev becomes kvcustomizer: extension development for any harness, managing kvman, the `dev` preset removed |
 | `adr/0012-chat-review.md` | What a real chat showed: payload signatures in the prompt and in errors, one question per `ask` call, `sessionId` for the provider's cache, honest background starts |
+| `adr/0013-ui-review.md` | The UI review: an answered question's card, the Settings page (one scope switch, saving as you change, named choices, details), and the Arabic glossary |
 
 The plan is complete. Implementation starts with M1.1.

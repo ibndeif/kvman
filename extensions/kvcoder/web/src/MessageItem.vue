@@ -3,13 +3,14 @@ import { BellRing, Info, NotebookText, ScrollText } from '@lucide/vue';
 import { computed } from 'vue';
 import type { Message } from '../../src/index.ts';
 import { failureReason, fields, isolateValue, problemKey, stringValues, useKvman } from './kvman.ts';
-import { artifactOf, isBackground, isKvcoderHint, resultCard, textOf, thinkingOf, } from './message-parts.ts';
+import { answeredQuestion, artifactOf, isBackground, isKvcoderHint, resultCard, textOf, thinkingOf } from './message-parts.ts';
+import AnsweredCard from './AnsweredCard.vue';
 import ArtifactCard from './ArtifactCard.vue';
 import CallCard from './CallCard.vue';
 import type { CallView } from './call-view.ts';
 
 // One stored message (plan 08 §8.7): the person's text and images, an answer in Markdown with its thinking folded, a
-// tool result's card, kvcoder's notices and other extensions' notes translated, a summary, and background results.
+// tool result's card (an answered question shows its answer), kvcoder's notices and other extensions' notes translated, a summary, and background results.
 const props = defineProps<{ message: Message; calls: ReadonlyMap<string, CallView> }>();
 const emit = defineEmits<{ openArtifact: [id: string] }>();
 const kvman = useKvman();
@@ -17,6 +18,7 @@ const text = computed(() => textOf(props.message.content['content']));
 const thinking = computed(() => thinkingOf(props.message));
 const card = computed(() => resultCard(props.message, props.calls));
 const artifact = computed(() => artifactOf(props.message));
+const answered = computed(() => answeredQuestion(props.message, props.calls));
 const notice = computed(() => {
   const params = fields(props.message.content['params']);
   const code = typeof params['code'] === 'string' ? params['code'] : undefined;
@@ -47,7 +49,7 @@ const markdown = (body: string) => ({ type: 'markdown' as const, text: 'kvcoder.
       <div class="kvc-card-body kvc-muted">{{ text }}</div>
     </details>
   </div>
-  <div v-else-if="props.message.kind === 'user'" class="kvc-user" :class="{ 'kvc-queued': props.message.queued }" data-test="user-message">
+  <div v-else-if="props.message.kind === 'user'" dir="auto" class="kvc-user" :class="{ 'kvc-queued': props.message.queued }" data-test="user-message">
     <span>{{ text }}</span>
     <span v-if="props.message.fileIds" style="display: flex; gap: 6px; margin-block-start: 6px">
       <img v-for="fileId in props.message.fileIds" :key="fileId" :src="imageUrl(fileId)" :alt="kvman.t('kvcoder.ui.attachment')" style="block-size: 48px; border-radius: 6px" />
@@ -59,6 +61,7 @@ const markdown = (body: string) => ({ type: 'markdown' as const, text: 'kvcoder.
     <component :is="kvman.View" v-if="text !== ''" :view="markdown(text)" />
   </div>
   <ArtifactCard v-else-if="props.message.kind === 'toolResult' && artifact !== undefined" :id="artifact.id" :title="artifact.title" :format="artifact.format" :version="artifact.version" @open="emit('openArtifact', $event)" />
+  <AnsweredCard v-else-if="answered !== undefined" :answered="answered" />
   <CallCard v-else-if="props.message.kind === 'toolResult'" :description="card.description" :label="card.label" :line="card.line" :payload="card.payload" :failed="card.failed" :duration-ms="card.durationMs" :output="card.output" :background="card.background" />
   <div v-else-if="props.message.kind === 'notice'" class="kvc-notice" data-test="notice">{{ notice }}</div>
   <div v-else-if="props.message.kind === 'note'" class="kvc-card kvc-card-row" role="note" data-test="note"><NotebookText :size="18" aria-hidden="true" />{{ note }}</div>

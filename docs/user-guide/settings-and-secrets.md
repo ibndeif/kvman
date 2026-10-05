@@ -4,25 +4,25 @@ This page is for anyone who wants to change how kvman behaves, or to store an AP
 
 ## The Settings page
 
-Open **Settings** from the sidebar. Every setting kvman and its extensions offer is listed, grouped by extension (kvman's own first). Each one shows:
+Open **Settings** from the sidebar. Every setting kvman and its extensions offer is listed, grouped by extension (kvman's own first). At the top are a switch, **All workspaces** or **Only \<your workspace\>**, which says where your changes are stored, and a search box that filters the settings by title, description, or key. Each setting shows:
 
-- a title and a description, and its key in small print, such as `kvwebui.theme`;
-- a control that fits the setting: a switch, a choice, a number, or a text field;
-- **Applies to** with **All workspaces** or **This workspace**, when the setting allows both;
-- a badge saying where the value comes from: **Default**, **Set for all workspaces**, **Set for this workspace**, or **Set by the \<preset\> preset**;
-- **Save** when you have changed the value, and a reset.
+- a title and a description;
+- a control that fits the setting: a choice, a number, or a text field;
+- **Changed** and a reset, when its value was set in the place you are editing;
+- **Details**, which opens to show its key, such as `kvwebui.theme`, and where its value comes from: **Default**, **Set for all workspaces**, **Set for this workspace**, or **Set by the \<preset\> preset**.
 
 A setting applies to every workspace unless you set it for one. kvman uses the value for **this workspace** if there is one, otherwise the value for **all workspaces**, otherwise the preset's value, otherwise the default.
 
 ## Change and reset
 
-1. Change the control. **Save** appears.
-2. Pick **Applies to**: **All workspaces** or **This workspace**.
-3. Press **Save**. The change applies at once, with no restart, except for `kernel.port`, `kernel.workers`, and `kernel.workerConcurrency`, which apply at the next start.
+1. Pick where the change applies: **All workspaces** or **Only \<your workspace\>**.
+2. Change the control. A choice is saved when you pick it; a field is saved when you press Enter or leave it. **Saved** shows beside it.
 
-To undo a value you set, press **Reset** (for all workspaces) or **Use the value for all workspaces** (for this workspace). The setting falls back to the next source.
+The change applies at once, with no restart, except for `kernel.port`, `kernel.workers`, and `kernel.workerConcurrency`, which apply at the next start. A setting that is the same in every workspace says so, and is stored for all of them.
 
-If a value isn't valid, kvman keeps the old one and shows the reason under the control. A setting the preset locks is shown with a lock and can't be changed here; change it in the preset (see [Presets](presets.md)).
+To undo a value you set, press **Reset** (for all workspaces) or **Use the value for all workspaces** (for this workspace). The setting falls back to the next source. While you are on **All workspaces**, a setting your workspace has its own value for can't be edited: switch to the workspace to change or undo it.
+
+If a value isn't valid, kvman keeps the old one in effect, leaves what you typed in the field, and shows the reason under it. A setting the preset locks is shown with a lock and can't be changed here; change it in the preset (see [Presets](presets.md)).
 
 ## kvman's own settings
 

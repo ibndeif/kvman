@@ -15,7 +15,13 @@ export type CallView = {
   payload?: string;
   /** Whether the call asked to keep running in the background. */
   background?: boolean;
+  /** An `ask` call's question: its kind and its payload. */
+  ask?: { kind: AskKind; question: Record<string, unknown> };
 };
+
+const askKinds = ['text', 'choice', 'confirm'] as const;
+
+export type AskKind = (typeof askKinds)[number];
 
 function record(value: unknown): Record<string, unknown> | undefined {
   return typeof value === 'object' && value !== null && !Array.isArray(value) ? Object.fromEntries(Object.entries(value)) : undefined;
@@ -43,7 +49,8 @@ export function callView(given: Record<string, unknown>): CallView {
   const description = text(given['description']);
   const payload = record(typeof given['payload'] === 'string' ? undefined : given['payload']) ?? {};
   const shown = command === 'exec' ? { line: execLine(connector, payload) } : Object.keys(payload).length === 0 ? {} : { payload: JSON.stringify(payload, null, 2) };
-  return { ...(description === undefined ? {} : { description }), ...(command === undefined ? {} : { label: `${connector} · ${command}` }), ...shown, ...(payload['background'] === true ? { background: true } : {}) };
+  const kind = connector === 'ask' ? askKinds.find((candidate) => candidate === command) : undefined;
+  return { ...(description === undefined ? {} : { description }), ...(command === undefined ? {} : { label: `${connector} · ${command}` }), ...shown, ...(payload['background'] === true ? { background: true } : {}), ...(kind === undefined ? {} : { ask: { kind, question: payload } }) };
 }
 
 /** A line or a payload cut to what a card's row shows (ADR 0009, 195). */

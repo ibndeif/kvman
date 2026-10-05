@@ -22,4 +22,17 @@ describe('Markdown (06 §6.1, §6.4)', () => {
       expect(block.querySelector('strong')?.textContent).toBe('bold');
     }
   });
+
+  it('QA20-E12 each block takes its direction from its own text, and a code block has none to guess', async () => {
+    const source = 'فقرة عربية.\n\n# عنوان\n\n- one\n- two\n\n> quote\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n```\nnpm test\n```';
+    const api = notesApi({ ui: notesUi({ pages: [{ id: 'list', title: 'notes.pages.list', view: { type: 'markdown', query: 'notes.note.get', input: {}, field: 'body' } }] }) });
+    api.handlers.set('notes.note.get', () => ({ body: source }));
+    const app = await mountApp(api, '/notes/list');
+    const block = app.find('[data-test="markdown"]');
+    const directions = (selector: string) => [...(block?.querySelectorAll(selector) ?? [])].map((element) => element.getAttribute('dir'));
+    for (const tag of ['h1', 'p', 'ul', 'li', 'blockquote', 'table']) expect(directions(tag), tag).toContain('auto');
+    expect(directions('h1, p, ul, li, blockquote, table').filter((direction) => direction !== 'auto')).toEqual([]);
+    expect(directions('pre')).toEqual([null]);
+    expect(block?.querySelector('h1')?.textContent).toBe('عنوان');
+  });
 });

@@ -43,6 +43,12 @@
 .kvc-notice::before, .kvc-notice::after { content: ''; flex: 1 1 auto; block-size: 1px; background: var(--kv-color-border); }
 .kvc-ask { border-color: var(--kv-color-warning); }
 .kvc-option { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--kv-color-border); border-radius: 10px; cursor: pointer; }
+.kvc-option:has(input:checked) { border-color: var(--kv-color-primary); background: color-mix(in srgb, var(--kv-color-primary) 8%, var(--kv-color-surface)); }
+.kvc-answered-option { display: flex; align-items: flex-start; gap: 10px; color: var(--kv-color-muted); }
+.kvc-answered-option[data-chosen='true'] { color: var(--kv-color-text); font-weight: 500; }
+.kvc-answered-option > svg { flex: 0 0 auto; margin-block-start: 3px; }
+.kvc-answered-gap { flex: 0 0 16px; }
+.kvc-sr { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .kvc-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-block-size: 36px; padding-inline: 14px; border-radius: 10px; border: 1px solid var(--kv-color-border); background: var(--kv-color-surface); color: var(--kv-color-text); font: inherit; font-weight: 500; cursor: pointer; }
 a.kvc-button { text-decoration: none; color: inherit; }
 .kvc-button:disabled { opacity: 0.5; cursor: default; }

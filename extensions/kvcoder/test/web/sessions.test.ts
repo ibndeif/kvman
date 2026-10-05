@@ -10,7 +10,7 @@ describe('the session list (ADR 0009, 104)', () => {
     fake.handle('kvcoder.session.list', () => [
       session({ id: 'a', title: 'Running one', status: 'running', updatedAt: now }),
       session({ id: 'b', title: 'Waiting one', status: 'waiting', updatedAt: now }),
-      session({ id: 'w', title: { key: 'kvcoder.welcome.title' }, updatedAt: '2026-01-02T09:00:00.000Z' }),
+      session({ id: 'w', title: { key: 'kvcoder.ui.welcomeChat' }, updatedAt: '2026-01-02T09:00:00.000Z' }),
       session({ id: 'n', title: '', updatedAt: '2026-01-01T09:00:00.000Z' }),
     ]);
     const wrapper = await mounted(SessionList, fake, { sessionId: 'b' });

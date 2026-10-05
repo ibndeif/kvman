@@ -12,11 +12,11 @@ const { t } = useI18n();
   <section class="flex flex-wrap items-center gap-3.5 rounded-2xl border border-dashed border-line bg-surface px-4.5 py-3.5" :data-test="`pending-${props.name}`">
     <span class="flex grow flex-col gap-0.5">
       <span class="flex flex-wrap items-center gap-2">
-        <span class="font-semibold">{{ props.name }}</span>
+        <span dir="ltr" class="font-semibold">{{ props.name }}</span>
         <span class="rounded-full bg-neutral-soft px-2.5 py-0.5 text-xs font-medium text-neutral-ink" data-test="extension-source">{{ t(sourceKey(props.source)) }}</span>
         <span class="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-medium text-accent-ink" data-test="extension-mark">{{ t('kvwebui.extensions.mark.starts') }}</span>
       </span>
-      <span class="font-mono text-xs text-muted">{{ props.source }}</span>
+      <span dir="ltr" class="font-mono text-xs text-muted">{{ props.source }}</span>
     </span>
     <RemoveExtension :name="props.name" />
   </section>

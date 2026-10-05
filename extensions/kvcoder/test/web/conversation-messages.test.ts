@@ -49,10 +49,10 @@ describe('the conversation shows its messages (08 §8.7)', () => {
   it("M2.4-H8 a note and a welcome title show in the person's language", async () => {
     const fake = createFakeKvman();
     fake.language.value = 'ar';
-    serve(fake, { found: session({ title: { key: 'kvcoder.welcome.title' } }), messages: [message('note', { key: 'kvcoder.welcome.default' })], omitted: 0, turns: [] });
+    serve(fake, { found: session({ title: { key: 'kvcoder.ui.welcomeChat' } }), messages: [message('note', { key: 'kvcoder.welcome.default' })], omitted: 0, turns: [] });
     const wrapper = await mounted(ConversationView, fake, { sessionId: 's1' });
     expect(wrapper.find('[data-test="session-title"]').text()).toBe('مرحبًا بك في kvman للبرمجة');
-    expect(wrapper.find('[data-test="note"]').text()).toContain('أهلًا! هذه مساحة عمل جديدة.');
+    expect(wrapper.find('[data-test="note"]').text()).toContain('أهلًا بك! هذه مساحة عمل جديدة.');
     wrapper.unmount();
   });
 });

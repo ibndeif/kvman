@@ -25,6 +25,6 @@ describe("kvcoder's word to the model and its notice of a lost reply (08 §8.7, 
     expect(english.find('[data-test="notice"]').text()).toBe("The model's reply was lost on the way, again and again (about 3575 tokens never arrived). Say continue to try again, or choose another model.");
     fake.language.value = 'ar';
     const arabic = await mounted(MessageItem, fake, { message: notice, calls: new Map() });
-    expect(arabic.find('[data-test="notice"]').text()).toContain('حوالي 3575 رمز');
+    expect(arabic.find('[data-test="notice"]').text()).toContain('نحو 3575 توكن');
   });
 });

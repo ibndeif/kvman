@@ -23,7 +23,7 @@ const placeholders = (text: string): string[] => [...text.matchAll(/\{(\w+)\}/g)
 // Names under `kvwebui.` that aren't texts: setting keys, page ids, what a tab remembers, and the commands the app calls.
 const notTexts = new Set(['kvwebui.home', 'kvwebui.nav.order', 'kvwebui.nav.hidden', 'kvwebui.theme', 'kvwebui.settings', 'kvwebui.extensions', 'kvwebui.workspace', 'kvwebui.panel', 'kvwebui.nav.collapsed', 'kvwebui.effect.take']);
 // The keys the sources build from a template.
-const built = ['global', 'workspace'].flatMap((scope) => [`kvwebui.settings.reset.${scope}`, `kvwebui.settings.scope.${scope}`, `kvwebui.settings.source.${scope}`]);
+const built = ['global', 'workspace'].flatMap((scope) => [`kvwebui.settings.reset.${scope}`, `kvwebui.settings.scope.${scope}`, `kvwebui.settings.source.${scope}`, `kvwebui.settings.changed.${scope}`]);
 const themes = ['system', 'light', 'dark'].map((theme) => `kvwebui.theme.${theme}`);
 
 describe("kvwebui's catalogs (02 §2.11)", () => {
@@ -52,6 +52,13 @@ describe("kvwebui's catalogs (02 §2.11)", () => {
     for (const language of ['en', 'ar']) {
       const texts = catalog(language);
       for (const key of ['places', 'back', 'filter', 'noMatch', 'alreadyOpen', 'newFolder', 'newFolderName', 'create', 'pathLabel']) expect(texts[`kvwebui.workspace.${key}`], `${language} ${key}`).toBeTypeOf('string');
+    }
+  });
+
+  it("QA20-E9 every choice of kvwebui's theme has a name in both languages", () => {
+    for (const language of ['en', 'ar']) {
+      const texts = catalog(language);
+      for (const theme of ['system', 'light', 'dark']) expect(texts[`kvwebui.theme.options.${theme}`], `${language} ${theme}`).toBeTypeOf('string');
     }
   });
 });

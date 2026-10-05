@@ -30,4 +30,16 @@ describe('the Extensions page (06 §6.6, ADR 0009, 78)', () => {
     await type(app.find('[data-test="extensions-search"]'), 'add');
     expect(app.findAll('[data-test="extension-call"]').map((call) => call.querySelector('span')?.textContent)).toEqual(['notes.note.add']);
   });
+
+  it('QA20-E10 names keep their direction: an extension name, its version, and a call name are left to right', async () => {
+    const app = await mountApp(notesApi(), '/kvwebui/extensions');
+    const card = app.find('[data-test="extension-notes"]');
+    expect([card?.querySelector('[data-test="extension-name"]')?.textContent, card?.querySelector('[data-test="extension-name"]')?.getAttribute('dir')]).toEqual(['@test/notes', 'ltr']);
+    expect(card?.querySelector('[data-test="extension-version"]')?.getAttribute('dir')).toBe('ltr');
+    await click(card?.querySelector('button') ?? null);
+    const names = [...(card?.querySelectorAll<HTMLElement>('[data-test="call-name"]') ?? [])];
+    expect(names.length).toBeGreaterThan(0);
+    expect(names.filter((name) => name.getAttribute('dir') !== 'ltr')).toEqual([]);
+    expect(app.find<HTMLInputElement>('[data-test="add-name"]')?.dir).toBe('ltr');
+  });
 });

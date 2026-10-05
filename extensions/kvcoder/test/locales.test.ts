@@ -48,6 +48,7 @@ describe("kvcoder's catalogs (02 §2.11)", { timeout: 30_000 }, () => {
       ...codes.map((code) => `kvcoder.errors.${code}`),
       ...notices.map((code) => `kvcoder.notices.${code}`),
       'kvcoder.welcome.title',
+      'kvcoder.ui.welcomeChat',
       'kvcoder.welcome.default',
       'kvcoder.pages.chat',
       'kvcoder.pages.session',
@@ -73,5 +74,16 @@ describe("kvcoder's catalogs (02 §2.11)", { timeout: 30_000 }, () => {
       const texts = catalog(language);
       for (const key of ['kvcoder.ui.artifacts.view', 'kvcoder.ui.artifacts.preview', 'kvcoder.ui.artifacts.source', 'kvcoder.ui.artifacts.format.url', 'kvcoder.ui.artifacts.openUrl', 'kvcoder.ui.artifacts.urlRefused']) expect(texts[key], `${language} ${key}`).toBeTypeOf('string');
     }
+  });
+
+  it('QA20-E8 the welcome setting has its own title, apart from the welcome chat', () => {
+    expect(catalog('en')['kvcoder.welcome.title']).toBe('Welcome note');
+    for (const language of ['en', 'ar'] as const) expect(catalog(language)['kvcoder.ui.welcomeChat'], language).toBeTypeOf('string');
+    expect(catalog('en')['kvcoder.ui.welcomeChat']).toBe('Welcome to kvman Coder');
+  });
+
+  it("QA20-E9 every choice of kvcoder's settings has a name in both languages", () => {
+    const keys = [...['off', 'minimal', 'low', 'medium', 'high'].map((level) => `kvcoder.thinking.options.${level}`), ...['auto', 'ask'].map((mode) => `kvcoder.shell.approval.options.${mode}`)];
+    for (const language of ['en', 'ar'] as const) expect(keys.filter((key) => catalog(language)[key] === undefined), language).toEqual([]);
   });
 });

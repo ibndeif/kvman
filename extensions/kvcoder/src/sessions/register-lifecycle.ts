@@ -32,7 +32,7 @@ async function writeTitle(ctx: Ctx, sessionId: string): Promise<void> {
 async function welcome(ctx: Ctx): Promise<void> {
   const key = settingSchemas.welcome.parse(await ctx.settings.get('kvcoder.welcome'));
   if (key === null) return;
-  const session = await newSession(ctx, { key: 'kvcoder.welcome.title' });
+  const session = await newSession(ctx, { key: 'kvcoder.ui.welcomeChat' });
   await ctx.store.transaction((tx) => appendMessage(txRecords(tx), session, { kind: 'note', content: { key } }));
 }
 

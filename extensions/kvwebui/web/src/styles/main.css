@@ -170,6 +170,9 @@ body {
   padding: 0.75rem 1rem;
   overflow: auto;
 }
+.kvwebui-markdown :where(pre) {
+  direction: ltr;
+}
 .kvwebui-markdown :where(pre code) {
   background: none;
   padding: 0;

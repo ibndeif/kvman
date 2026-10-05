@@ -12,7 +12,7 @@ describe('the welcome session (08 §8.1, ADR 0008, 73–75)', { timeout: 30_000 
   it('M2.4-H8 and QA9-E1 with kvcoder.welcome set, a new workspace gets the welcome session and its note once, and notes and notices never reach the model', async () => {
     const { kernel, fake, root } = await kvcoder.start({ settings: { 'kvcoder.welcome': 'kvcoder.welcome.default' } });
     const home = await kernel.exec('kvcoder.session.list', { limit: 10 });
-    expect(home).toEqual([expect.objectContaining({ title: { key: 'kvcoder.welcome.title' }, status: 'idle' })]);
+    expect(home).toEqual([expect.objectContaining({ title: { key: 'kvcoder.ui.welcomeChat' }, status: 'idle' })]);
     const folder = mkdtempSync(path.join(root, 'project-'));
     const opened = await kernel.exec('kernel.workspace.open', { path: folder });
     await kernel.clock.advance(0);
