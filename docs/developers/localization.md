@@ -27,7 +27,7 @@ An extension ships `locales/<lang>.json` files: one flat JSON object of strings 
 | Key | Is |
 |---|---|
 | `<namespace>.title` | the extension's display name |
-| `<setting key>.title` | a setting's short title on the Settings page |
+| `<setting key>.title` | a setting's short title, where the setting is shown |
 | `<setting key>.options.<value>` | the name of one choice of a setting whose value is one of a list of strings (otherwise the value shows) |
 | `<name>.description` | a translated description of a setting, command, or query (otherwise the English `description` shows) |
 | `<command>.fields.<field>` | a form field's label (otherwise the field's `.describe()` text) |

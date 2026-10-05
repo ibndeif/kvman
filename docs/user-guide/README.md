@@ -50,7 +50,7 @@ More detail: [coding-app.md](coding-app.md).
 - [coding-app.md](coding-app.md) — chats, steps, the shell, approvals, connectors, artifacts, attachments
 - [extensions.md](extensions.md) — what runs, installing and removing extensions
 - [presets.md](presets.md) — what a preset is, making your own
-- [settings-and-secrets.md](settings-and-secrets.md) — the Settings page, where secrets live
+- [settings-and-secrets.md](settings-and-secrets.md) — kvman's own settings, each extension's settings, and where secrets live
 - [customizing-with-the-agent.md](customizing-with-the-agent.md) — asking the agent to customize kvman
 - [building-extensions.md](building-extensions.md) — building an extension with the agent's help
 - [troubleshooting.md](troubleshooting.md) — error codes in plain words, and the fix

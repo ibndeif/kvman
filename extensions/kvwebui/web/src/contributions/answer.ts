@@ -13,6 +13,7 @@ export const contributionsSchema = z.object({
   nav: z.array(z.object({ id: localIdSchema, page: localIdSchema, title: textKey, icon: z.string().min(1), order: z.number() })),
   panels: z.array(z.object({ id: localIdSchema, title: textKey, icon: z.string().min(1), view: viewSchema })),
   status: z.array(z.object({ id: localIdSchema, query: z.string().min(1), input: values, text: textKey, params: values.exactOptional(), order: z.number() })),
+  configuration: viewSchema.exactOptional(),
 });
 
 export type Contributions = z.output<typeof contributionsSchema>;
@@ -24,13 +25,16 @@ export type Known = { publicQueries: ReadonlySet<string>; publicCommands: Readon
 
 type Named = { path: string; name: string };
 
-// The queries, commands, and custom components a view names, with their paths.
-function namesOf(view: View, path: string): { queries: Named[]; commands: Named[]; components: Named[] } {
-  const found: { queries: Named[]; commands: Named[]; components: Named[] } = { queries: [], commands: [], components: [] };
+type Names = { queries: Named[]; commands: Named[]; components: Named[]; settings: Named[] };
+
+// The queries, commands, custom components, and settings a view names, with their paths.
+function namesOf(view: View, path: string): Names {
+  const found: Names = { queries: [], commands: [], components: [], settings: [] };
   const visit = (node: View, at: string): void => {
     if ('query' in node && node.query !== undefined) found.queries.push({ path: `${at}.query`, name: node.query });
     if (node.type === 'form') found.commands.push({ path: `${at}.command`, name: node.command });
     if (node.type === 'custom') found.components.push({ path: `${at}.component`, name: node.component });
+    if (node.type === 'setting') found.settings.push({ path: `${at}.key`, name: node.key });
     if (node.type === 'stack' || node.type === 'card') node.children.forEach((child, index) => visit(child, `${at}.children.${String(index)}`));
     if (node.type === 'list') visit(node.item, `${at}.item`);
   };
@@ -42,9 +46,17 @@ function duplicates(ids: readonly string[], part: string): Issue[] {
   return ids.flatMap((id, index) => (ids.indexOf(id) === index ? [] : [{ path: `${part}.${String(index)}.id`, message: `The id "${id}" repeats.` }]));
 }
 
-function viewIssues(view: View, path: string, params: readonly string[], known: Known): Issue[] {
-  const { queries, commands, components } = namesOf(view, path);
+// A `setting` view belongs in `configuration`, and names one of the extension's own keys (ADR 0014, 3).
+function settingIssue(setting: Named, ownSettings: ReadonlySet<string> | undefined): Issue[] {
+  if (ownSettings === undefined) return [{ path: setting.path, message: 'A setting view belongs in configuration.' }];
+  return ownSettings.has(setting.name) ? [] : [{ path: setting.path, message: `"${setting.name}" isn't one of the extension's settings.` }];
+}
+
+// `ownSettings` is the extension's keys when the view is its configuration, and `undefined` for any other view.
+function viewIssues(view: View, path: string, params: readonly string[], known: Known, ownSettings?: ReadonlySet<string>): Issue[] {
+  const { queries, commands, components, settings } = namesOf(view, path);
   return [
+    ...settings.flatMap((setting) => settingIssue(setting, ownSettings)),
     ...queries.filter((call) => !known.publicQueries.has(call.name)).map((call) => ({ path: call.path, message: `"${call.name}" isn't a public query.` })),
     ...commands.filter((call) => !known.publicCommands.has(call.name)).map((call) => ({ path: call.path, message: `"${call.name}" isn't a public command.` })),
     ...components.filter((custom) => !known.namespaces.has(custom.name.split('.')[0] ?? '')).map((custom) => ({ path: custom.path, message: `"${custom.name}" isn't a loaded extension's component.` })),
@@ -62,7 +74,7 @@ function formatIssues(params: Record<string, Json>, path: string): Issue[] {
   });
 }
 
-export function contributionIssues(answer: Contributions, known: Known): Issue[] {
+export function contributionIssues(answer: Contributions, known: Known, ownSettings: ReadonlySet<string>): Issue[] {
   const pageParams = new Map(answer.pages.map((page) => [page.id, page.params ?? []]));
   return [
     ...duplicates(answer.pages.map((page) => page.id), 'pages'),
@@ -71,6 +83,7 @@ export function contributionIssues(answer: Contributions, known: Known): Issue[]
     ...duplicates(answer.status.map((item) => item.id), 'status'),
     ...answer.pages.flatMap((page, index) => viewIssues(page.view, `pages.${String(index)}.view`, page.params ?? [], known)),
     ...answer.panels.flatMap((panel, index) => viewIssues(panel.view, `panels.${String(index)}.view`, [], known)),
+    ...(answer.configuration === undefined ? [] : viewIssues(answer.configuration, 'configuration', [], known, ownSettings)),
     ...answer.nav.flatMap((item, index) => {
       const params = pageParams.get(item.page);
       if (params === undefined) return [{ path: `nav.${String(index)}.page`, message: `There's no page "${item.page}".` }];

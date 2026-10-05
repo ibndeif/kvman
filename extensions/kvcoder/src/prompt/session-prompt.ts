@@ -4,6 +4,7 @@ import type { ShellCommand } from '../calls/shell-command.ts';
 import { shellFor } from '../calls/shell-program.ts';
 import { builtinConnectors } from '../connector-call.ts';
 import { activeConnectors, type ConnectorRow } from '../registry/register-connectors.ts';
+import { disabledConnectors } from '../register-settings.ts';
 import { sectionsFor } from '../registry/register-sections.ts';
 import type { SessionDoc } from '../schemas/records.ts';
 import { buildPrompt, type BuiltPrompt } from './build-prompt.ts';
@@ -21,11 +22,13 @@ export type SessionTools = {
   connectors: ConnectorRow[];
   /** The connectors the session may call, in the prompt's order. */
   listed: ListedConnector[];
+  /** The names that are turned off (ADR 0014, 7). */
+  disabled: ReadonlySet<string>;
 };
 
-// The connector names a session may use.
-function allowedNames(session: SessionDoc, connectors: readonly ConnectorRow[]): Set<string> {
-  const names = [...builtinConnectors, ...connectors.map((connector) => connector.name)];
+// The connector names a session may use: none that is turned off (ADR 0014, 7), and for a subagent only those it was given.
+function allowedNames(session: SessionDoc, connectors: readonly ConnectorRow[], disabled: ReadonlySet<string>): Set<string> {
+  const names = [...builtinConnectors, ...connectors.map((connector) => connector.name)].filter((name) => !disabled.has(name));
   if (session.parentId === null) return new Set(names);
   return new Set(names.filter((name) => name === 'ask' || (name !== 'subagent' && (session.connectors === null || session.connectors.includes(name)))));
 }
@@ -33,7 +36,8 @@ function allowedNames(session: SessionDoc, connectors: readonly ConnectorRow[]):
 export async function sessionTools(ctx: Ctx, session: Stored<SessionDoc>): Promise<SessionTools> {
   const shell = await shellFor(ctx);
   const connectors = await activeConnectors(ctx);
-  const allowed = allowedNames(session, connectors);
+  const disabled = await disabledConnectors(ctx);
+  const allowed = allowedNames(session, connectors, disabled);
   const passed = new Set((session.checks ?? []).filter((check) => check.passed).map((check) => check.name));
   const descriptions = builtinDescriptions(shell.kind);
   const listed = [
@@ -51,5 +55,5 @@ export async function sessionTools(ctx: Ctx, session: Stored<SessionDoc>): Promi
     connectors: listed,
   });
   for (const section of built.left) ctx.log.warn('A section was left out of a prompt past 64 KB of sections.', { owner: section.owner, id: section.id });
-  return { built, shell, connectors, listed };
+  return { built, shell, connectors, listed, disabled };
 }

@@ -2,6 +2,8 @@
 
 Asked: an answered `ask` question shows its JSON; review and fix every Arabic text; check the whole UI, and the Settings page most of all. Decided in ADR 0013; plan 02 §2.11, plan 06 §6.6 and §6.7, plan 08 §8.1 and §8.7. This file is the contract; every scenario's test name starts with its id.
 
+*Changed by QA 21 (ADR 0014): the Settings page now holds only kvman's own settings, so the scope switch (H4, H7, E3, E4), an extension's rows (H5, H6, H8, H11, E5, E6), and the secrets (E7) are on each extension's page, where their tests now run; the search (H10) filters kvman's own rows; and the Extensions page lists no command or query (E10).*
+
 ## Happy path
 
 - **QA20-H1 An answered choice shows its answer.** *Given* a stored `ask choice` call with three options and its result `{ "selected": ["drag", "core"], "other": "Dark mode too" }`, *then* the message shows an answered card and no call card: the prompt, the three options in the question's order with `core` and `drag` marked chosen, the other answer, and no JSON. `extensions/kvcoder/test/web/answered-card.test.ts`

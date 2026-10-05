@@ -14,6 +14,7 @@ Register a public query named `<namespace>.ui.get` that takes `{}` and returns:
   nav:    [{ id, page, title, icon, order }],     // icon: a lucide icon name, such as 'notebook'
   panels: [{ id, title, icon, view }],
   status: [{ id, query, input, text, params?, order }],
+  configuration?: view,                         // your extension's page under Extensions
 }
 ```
 
@@ -24,7 +25,7 @@ Register a public query named `<namespace>.ui.get` that takes `{}` and returns:
 - A **status** item is a line in the status bar fed by a query: `text` is a key whose `params` may use `{ "$output": field, "format"?: "compact" | "usd" }` read from the query's output (a dotted path is allowed). Its query reruns after every command the UI runs, when a job the UI started ends, and every 30 seconds.
 - The preset decides the home page: `kvwebui.home` is required, preset-only, and names a page with no params, such as `notes.list`.
 
-kvwebui validates every answer. An extension whose answer is invalid, or whose `ui.get` fails, contributes nothing, and a dismissible error card names it; others are unaffected. An answer is invalid when it names an unknown component or a query that isn't public, a nav item points at a page with params or at a page that isn't yours, an id repeats, an icon isn't a lucide name, a form's command isn't a known public command, or a `$param` names a param its page doesn't declare.
+kvwebui validates every answer. An extension whose answer is invalid, or whose `ui.get` fails, contributes nothing, and a dismissible error card names it; others are unaffected. An answer is invalid when it names an unknown component or a query that isn't public, a nav item points at a page with params or at a page that isn't yours, an id repeats, an icon isn't a lucide name, a form's command isn't a known public command, a `$param` names a param its page doesn't declare, or a `setting` view is outside `configuration` or names a key that isn't yours.
 
 ```ts
 ctx.registerQuery('notes.ui.get', {
@@ -61,6 +62,7 @@ A view is a JSON tree of built-in components. Every text is a translation key, w
 | `form` | `{ command, fixed?: { field: value }, submit, then? }` |
 | `link` | `{ text, params?, to: { page, params? } }` |
 | `button` | `{ text, command, input, confirm?, style?: 'primary' \| 'secondary' \| 'danger', then? }` |
+| `setting` | `{ key }`: one of your own settings as a row that saves as it changes; only in `configuration` (below) |
 | `custom` | `{ component: '<namespace>.<name>', props }` ([components.md](components.md)) |
 
 There is no `tabs` component: ship a custom component for that.
@@ -86,7 +88,27 @@ Effects older than one hour are cleaned up.
 
 ## Built-in pages
 
-Below a divider, kvwebui shows **Settings** (`kvwebui.settings`) and **Extensions** (`kvwebui.extensions`). They can be a preset's `kvwebui.home` and the target of a `navigate` or `link`. The Extensions page lists what runs, installs and removes extensions, and marks what a restart changes ([presets.md](presets.md)).
+Below a divider, kvwebui shows **Settings** (`kvwebui.settings`) and **Extensions** (`kvwebui.extensions`). They can be a preset's `kvwebui.home` and the target of a `navigate` or `link`. The Settings page holds kvman's own settings (`kernel.*`). The Extensions page lists what runs, installs extensions, and marks what a restart changes ([presets.md](presets.md)); each row opens that extension's own page.
+
+## Your extension's configuration
+
+Every loaded extension has a page at `/kvwebui/extension/<namespace>`: its title (`<namespace>.title`), package name, version, source, and **Remove**; then the `configuration` view your `ui.get` gives; then its secrets, which kvwebui lists and sets through `kernel.secrets.*`. You manage the configuration; kvwebui only shows it.
+
+```ts
+configuration: {
+  type: 'stack',
+  direction: 'vertical',
+  children: [
+    { type: 'card', title: 'notes.config.lists', children: [{ type: 'setting', key: 'notes.pageSize' }, { type: 'setting', key: 'notes.sort' }] },
+    { type: 'card', title: 'notes.config.folders', children: [{ type: 'custom', component: 'notes.folders', props: {} }] },
+  ],
+},
+```
+
+- `{ type: 'setting', key }` shows one of your own registered settings: its title (`<key>.title`), description (`<key>.description`), a control built from its schema (a select names its options `<key>.options.<value>`), **Saved**, **Changed** with a reset, and its details. It is valid only inside `configuration`.
+- The page has one switch, **All workspaces | Only \<workspace\>**. Setting rows save where it points, and a custom component reads it as `kvman.scope.value` (`'global'` or `'workspace'`) and passes it to `kernel.settings.set`.
+- An extension without `configuration` shows "This extension has nothing to configure."
+
 
 ## kvwebui's own settings
 

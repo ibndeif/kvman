@@ -29,19 +29,19 @@ describe('routes and the home page (06 §6.3)', () => {
     expect(api.calls.filter((call) => call.kind === 'commands')).toHaveLength(commands);
   });
 
-  it("M2.2-H6 / shows the preset's home page; a missing one shows Extensions with HOME_UNAVAILABLE; Settings shows kvwebui.home locked", async () => {
+  it("M2.2-H6 / shows the preset's home page; a missing one shows Extensions with HOME_UNAVAILABLE; kvwebui's page shows kvwebui.home locked", async () => {
     const home = await mountApp(notesApi(), '/');
     expect(home.find('h1')?.textContent).toBe('Notes');
     expect(home.find('[data-test="nav-notes.list"]')?.getAttribute('aria-current')).toBe('page');
     const api = notesApi({ home: 'ghost.start' });
-    api.extensions.push(extension('ghost'));
+    api.extensions.push(extension('ghost'), { ...extension('kvwebui'), name: '@kvman/kvwebui', queries: [] });
     api.handlers.set('ghost.ui.get', () => fail('ghost/DOWN'));
     const missing = await mountApp(api, '/');
     const card = missing.find('[data-test="home-unavailable"]');
     expect(card?.textContent).toContain("The home page, ghost.start, isn't available.");
     expect(card?.querySelector('[data-test="problem-code"]')?.textContent).toBe('ghost/DOWN');
     expect(missing.find('h1')?.textContent).toBe('Extensions');
-    await missing.router.push('/kvwebui/settings');
+    await missing.router.push('/kvwebui/extension/kvwebui');
     await missing.settle();
     const row = missing.find('[data-test="setting-kvwebui.home"]');
     expect(row?.querySelector('[data-test="setting-locked"]')?.textContent).toContain('ghost.start');

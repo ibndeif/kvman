@@ -44,7 +44,7 @@ The agent never sees a kernel job or the process service. A command of yours can
 
 A tool that is a plain function, for an agent that your own extension runs, needs no connector at all: see [agents-and-tools.md](agents-and-tools.md).
 
-`kvcoder.connector.unregister { name }` removes one of your own; `kvcoder.connector.list` answers every connector the agent may use. A name owned by another extension fails `kvcoder/NAME_TAKEN`. Connectors last one run: kvcoder clears them at its own start, and each owner registers again.
+`kvcoder.connector.unregister { name }` removes one of your own; `kvcoder.connector.list` answers every registered connector and program, each with `enabled`: the person turns a connector off on Coder's page under Extensions (the setting `kvcoder.connectors.disabled`, a list of names, which a preset may set too), and one that is off is left out of the prompt and can't be called. A name owned by another extension fails `kvcoder/NAME_TAKEN`. Connectors last one run: kvcoder clears them at its own start, and each owner registers again.
 
 ## Sections
 

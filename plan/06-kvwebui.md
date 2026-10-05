@@ -33,7 +33,7 @@ kvwebui is the web app, and it is an extension like any other. The kernel serves
 
 **Nav.**
 - One flat list, ordered by `kvwebui.nav.order`, then by each item's `order`, then by full nav id (`<namespace>.<id>`) alphabetically. Items in `kvwebui.nav.hidden` are left out.
-- Below a divider come the built-in pages: Settings (`kvwebui.settings`) and Extensions (`kvwebui.extensions`), at `/kvwebui/<page>`. They can be `kvwebui.home` and the target of a `navigate` or `link`, and they're outside `kvwebui.nav.order` and `kvwebui.nav.hidden`. There is no built-in Jobs page: an extension that wants one contributes it (ADR 0009, 69).
+- Below a divider come the built-in pages: Settings (`kvwebui.settings`) and Extensions (`kvwebui.extensions`), at `/kvwebui/<page>`. An extension's page, `/kvwebui/extension/<namespace>` (§6.6), belongs to Extensions, and is neither a home page nor a target. The two can be `kvwebui.home` and the target of a `navigate` or `link`, and they're outside `kvwebui.nav.order` and `kvwebui.nav.hidden`. There is no built-in Jobs page: an extension that wants one contributes it (ADR 0009, 69).
 - The nav can collapse to icons only, remembered in `localStorage`. Below 768 px it is always the icon rail (68 px, as when collapsed), and its toggle opens the full nav as an overlay that closes when a page is picked (ADR 0009, 134).
 
 **Panels.** One is open at a time, chosen from a strip of panel icons. The open panel is remembered per tab, like the workspace, and panels show on every page.
@@ -59,6 +59,7 @@ An extension contributes UI by registering the public query `<namespace>.ui.get`
   nav:    [{ id, page, title, icon, order }],     // icon: a lucide name
   panels: [{ id, title, icon, view }],
   status: [{ id, query, input, text, params?, order }],
+  configuration?: View,                         // shown on the extension's page (§6.6)
 }
 ```
 
@@ -70,7 +71,9 @@ An extension contributes UI by registering the public query `<namespace>.ui.get`
   - an id repeats within `pages`, `nav`, `panels`, or `status`;
   - an icon isn't a lucide name;
   - a form's command isn't a known public command;
-  - a `$param` names a param its page doesn't declare (ADR 0009, 72).
+  - a `$param` names a param its page doesn't declare (ADR 0009, 72);
+  - a `setting` view is anywhere but in `configuration`, or names a key that isn't one of the extension's own settings (ADR 0014, 3).
+- **Configuration.** `configuration` is a view tree like a page's, on a page without params. kvwebui shows it on the extension's page (§6.6), so each extension manages its own configuration UI (ADR 0014, 2).
 - A `link` or `navigate` to a page that doesn't exist shows a "page not found" card when it's followed.
 - **Routes.** A page's URL is `/<namespace>/<page>`, followed by its params in order: `params: ['sessionId']` gives `/kvcoder/session/:sessionId`. `kvwebui.home` names the page shown at `/`.
 - **The home page.** The preset decides it: `kvwebui.home` is required and preset-only (§2.8), so every preset that loads kvwebui names its home page, and the person can't change it in Settings.
@@ -97,6 +100,7 @@ An extension contributes UI by registering the public query `<namespace>.ui.get`
 | `form` | `{ command, fixed?: { field: value \| ref }, submit, then? }` |
 | `link` | `{ text, params?, to: { page: '<ns>.<page>', params? } }`: navigation with no command; `params` fill the text, `to.params` fill the route |
 | `button` | `{ text, command, input, confirm?, style?: 'primary' \| 'secondary' \| 'danger', then? }` |
+| `setting` | `{ key }`: one of the extension's own settings as a row (title, description, a control from its schema that saves as it changes, "Changed" with a reset, and its details, §6.6); only in `configuration` (ADR 0014, 3) |
 | `custom` | `{ component: '<namespace>.<name>', props }`: the namespace is a loaded extension's, and the name is lowercase kebab case (ADR 0009, 82) |
 
 There is no `tabs` component: an extension that wants tabs ships a custom component (ADR 0009, 68).
@@ -116,12 +120,13 @@ There is no `tabs` component: an extension that wants tabs ships a custom compon
   - kvwebui provides `vue` through an import map, so extensions build with `vue` as an external. The `kvman-new` scaffold sets this up (§9.2).
   - **Styling.** kvwebui defines CSS variables for light and dark: `--kv-color-*` (background, surface, text, muted, border, primary, on-primary, danger, warning, success), `--kv-space-*` (`sm`, `md`, `lg`: 8, 16, and 24 px), `--kv-radius` (12 px), and `--kv-font-mono` (ADR 0009, 85). Extensions style with these variables and logical properties; kvwebui's Tailwind classes aren't available to them.
   - **Types.** `@kvman/sdk/web` types the injected `kvman` object and view trees (§3.2).
-  - The component gets `props` and an injected `kvman` object (`inject('kvman')`): `exec`, `execAsync`, `stream(jobId)`, `follow(jobId)`, `navigate`, `toast`, `panel`, `refresh`, `t`, `workspace`, and `View` (ADR 0009, 83, 138).
+  - The component gets `props` and an injected `kvman` object (`inject('kvman')`): `exec`, `execAsync`, `stream(jobId)`, `follow(jobId)`, `navigate`, `toast`, `panel`, `refresh`, `t`, `workspace`, `scope`, and `View` (ADR 0009, 83, 138; ADR 0014, 8).
   - `exec(name, input)` and `execAsync(name, input)` return promises that reject with a `ProblemError`, without a toast. `exec` of a command counts as a command the UI ran: the page's queries rerun and its effects apply. A job started with `execAsync` is followed as by `follow`.
   - `stream(jobId)` is an async iterable of the job's stream events (§4.4): `{ type: 'progress', source, data }`, then one `{ type: 'result', output }` or `{ type: 'problem', problem }`, after which it ends. What the chunks mean is up to the extensions that send and read them. A stream closes when the component that opened it unmounts.
   - `refresh()` reruns the page's queries and the status items at once, as after a command the UI ran (ADR 0009, 138).
   - `follow(jobId)` reruns the page's queries and applies the job's effects (§6.5) when the job ends, and resolves then.
   - `workspace` is a live, read-only ref: `workspace.value` is the tab's `{ id, name, path }`. A workspace switch doesn't remount the page.
+  - `scope` is a live, read-only ref: `scope.value` is `'global'` or `'workspace'`, what the extension's page (§6.6) is set to save to; anywhere else it is `'global'` (ADR 0014, 8).
   - `navigate(page, params?)`, `toast(text, params?, level?)` (level `info` by default), and `panel(id, open)` act at once in the browser, like the effects of the same name. A `panel` with an unknown id does nothing; a `navigate` to an unknown page shows the "page not found" card.
   - `View` is a component that renders a view tree with kvwebui's built-in components: `<View :view="{ type: 'markdown', text }" />`. Custom components use it for Markdown, so the sanitized renderer stays the only `v-html`. `View` checks its tree like a `ui.get` view; an invalid tree shows an error card with `VALIDATION_FAILED` and its issues.
 
@@ -142,8 +147,11 @@ There is no `tabs` component: an extension that wants tabs ships a custom compon
 
 | Page | Shows |
 |---|---|
-| **Settings** (`kvwebui.settings`) | Every key from `kernel.settings.list`, grouped by namespace (kvman's own first; a group's heading is `<namespace>.title` with the namespace, or the namespace alone), with a search box that filters by title, description, or key. One switch for the page, "All workspaces \| Only <workspace>", says where a change is stored (globally for a key without the workspace scope). Each key shows its title (`<key>.title`, else the key), its description (`<key>.description`, else its English description), and a control built from its JSON Schema: a select names each string option `<key>.options.<value>` (else the value), and `kernel.language` is a select of the installed languages, each named in itself. A change is saved as it is made (a select or checkbox on change, a field on Enter or on leaving it), and the row says "Saved". A key set in the scope being edited shows "Changed" and a reset; one that this workspace overrides is disabled on "All workspaces"; preset-only keys are shown locked. A row's "Details" holds the key and where the value comes from. A Secrets section lists `kernel.secrets.list` masked, deletes a secret after a confirmation, and adds one (extension, name, and a password field), never showing a value (ADR 0009, 77; ADR 0013, 2 to 6). |
-| **Extensions** (`kvwebui.extensions`) | `kernel.extensions.list` and `kernel.preset.get`: a card per extension with its name, version, source, and counts, which opens to list its commands and queries (with `<name>.description`, or the English description, and a "Public" badge), settings, and handlers; a search box filters commands and queries (ADR 0009, 78). The page also manages the preset (ADR 0010, 5): an "Add an extension" form (a name and a source, `npm:<exact version>` or `path:<folder>`) calls `kernel.extensions.install`; a card's "Remove" (with an inline confirmation) calls `kernel.extensions.uninstall`; a failure shows its Problem; the page marks what the stored preset changes (a name in `kernel.preset.get` but not loaded: "Starts after restart"; a loaded name no longer in it: "Removed after restart") with a banner "Restart kvman to apply"; and each extension's settings are set on the Settings page. |
+| **Settings** (`kvwebui.settings`) | kvman's own settings only: the `kernel.*` keys of `kernel.settings.list`, with a search box that filters by title, description, or key (ADR 0014, 1). They are global only, so the page has no scope switch. Each key is a setting row (below). |
+| **Extensions** (`kvwebui.extensions`) | `kernel.extensions.list` and `kernel.preset.get`: a list with each extension's title (`<namespace>.title`, else the namespace), package name, version, and source, each a link to the extension's page; a search box filters by title or package name. It shows no commands, queries, or handlers (ADR 0014, 4 and 5). The page also manages the preset (ADR 0010, 5): an "Add an extension" form (a name and a source, `npm:<exact version>` or `path:<folder>`) calls `kernel.extensions.install`; a failure shows its Problem; the page marks what the stored preset changes (a name in `kernel.preset.get` but not loaded: "Starts after restart", with its "Remove"; a loaded name no longer in it: "Removed after restart") with a banner "Restart kvman to apply". |
+| **An extension** (`/kvwebui/extension/<namespace>`) | A link back to Extensions, the extension's title, package name, version, and source, and "Remove" (with an inline confirmation), which calls `kernel.extensions.uninstall`. Then the extension's `configuration` (§6.3) under one switch, "All workspaces \| Only <workspace>", which says where a change is stored (globally for a key without the workspace scope); kvwebui's own configuration is built in (its theme, nav order and hidden items, and its title and home page, locked). An extension without one shows "This extension has nothing to configure." and no switch. Last, a Secrets section: the extension's names from `kernel.secrets.list`, masked, a delete after a confirmation, and "Add a secret" (a name and a password field), never showing a value. A namespace that isn't loaded shows "page not found" (ADR 0014, 4, 6, 12, and 13). |
+
+**A setting row** (ADR 0009, 77; ADR 0013, 2 to 5) shows the key's title (`<key>.title`, else the key), its description (`<key>.description`, else its English description), and a control built from its JSON Schema: a select names each string option `<key>.options.<value>` (else the value), and `kernel.language` is a select of the installed languages, each named in itself. A change is saved as it is made (a select or checkbox on change, a field on Enter or on leaving it), and the row says "Saved". A key set in the scope being edited shows "Changed" and a reset; one that this workspace overrides is disabled on "All workspaces"; preset-only keys are shown locked. A row's "Details" holds the key and where the value comes from.
 
 ## 6.7 Problems
 

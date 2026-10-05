@@ -22,7 +22,7 @@ function typed<Output>(output: Json): Output {
   return output as Output;
 }
 
-export function createKvman(state: Kvwebui, t: Kvman['t'], View: Kvman['View']): KvmanHandle {
+export function createKvman(state: Kvwebui, t: Kvman['t'], View: Kvman['View'], scope: Kvman['scope']): KvmanHandle {
   const readers = new Set<() => void>();
   const workspace = computed(() => state.workspaces.value.find((candidate) => candidate.id === state.workspace.value) ?? { id: state.workspace.value, name: state.workspace.value, path: '' });
   const kvman: Kvman = {
@@ -55,6 +55,7 @@ export function createKvman(state: Kvwebui, t: Kvman['t'], View: Kvman['View']):
     panel: (id, open) => openPanel(state, id, open),
     t,
     workspace,
+    scope,
     View,
   };
   return {

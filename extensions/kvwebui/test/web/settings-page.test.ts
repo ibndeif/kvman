@@ -1,38 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { fail } from './support/fake-api.ts';
+import { fail, setting } from './support/fake-api.ts';
 import { click, type } from './support/mount-app.ts';
 import { leave, openSettings, pressEnter } from './support/settings-page.ts';
 
-describe('the Settings page (06 §6.6, ADR 0009, 77; ADR 0013, 2 to 5)', () => {
-  it('QA20-E7 and M2.2-E12 groups, titles, a locked key, and secrets that are never shown', async () => {
-    let secrets = [{ extension: '@test/notes', name: 'token' }];
-    const { api, app, part } = await openSettings((fake) => {
-      fake.handlers.set('kernel.secrets.list', () => secrets);
-      fake.handlers.set('kernel.secrets.set', () => ({}));
-      fake.handlers.set('kernel.secrets.delete', () => {
-        secrets = [];
-        return {};
-      });
-    });
-    expect(app.findAll('[data-test^="group-"]').map((group) => group.textContent)).toEqual(['kvman', 'Interface (kvwebui)', 'Notes (notes)']);
-    expect(part('notes.pageSize', 'setting-title')?.textContent).toBe('Page size');
+describe('setting rows (06 §6.6, ADR 0009, 77; ADR 0013, 2 to 5; ADR 0014, 1 and 3)', () => {
+  it("QA21-H1 the Settings page holds kvman's own settings only: no scope switch, no secrets, and a change is global", async () => {
+    const { app, part, control, sets } = await openSettings((api) => api.settings.push(setting('kernel.jobs.retentionDays', { type: 'integer', minimum: 0 }, ['global'], { default: 7 })), 'settings');
+    expect(app.findAll('[data-test^="setting-"][data-test*="."]').map((row) => row.dataset['test'])).toEqual(['setting-kernel.language', 'setting-kernel.jobs.retentionDays']);
+    expect(app.findAll('[data-test^="scope-"]')).toEqual([]);
+    expect(app.find('[data-test="secrets"]')).toBeNull();
+    expect(app.find('[data-test="settings-search"]')).not.toBeNull();
+    expect(app.find('[data-test="settings-extensions"]')?.getAttribute('href')).toBe('/kvwebui/extensions');
     expect(part('kernel.language', 'setting-title')?.textContent).toBe('kernel.language');
-    expect(part('kvwebui.title', 'setting-locked')).not.toBeNull();
-    expect(part('kvwebui.title', 'setting-control')).toBeNull();
-
-    expect(app.findAll('[data-test="secret"]').map((secret) => secret.textContent)).toEqual([expect.stringContaining('token')]);
-    await click(app.find('[data-test="secret-add"]'));
-    expect(app.find<HTMLInputElement>('[data-test="secret-value"]')?.type).toBe('password');
-    await type(app.find('[data-test="secret-extension"]'), '@test/notes');
-    await type(app.find('[data-test="secret-name"]'), 'api');
-    await type(app.find('[data-test="secret-value"]'), 's3cr3t-value');
-    await click(app.find('[data-test="secret-save"]'));
-    expect(api.callsTo('kernel.secrets.set').map((call) => call.input)).toEqual([{ extension: '@test/notes', name: 'api', value: 's3cr3t-value' }]);
-    expect(app.root.innerHTML).not.toContain('s3cr3t-value');
-    await click(app.find('[data-test="secret-delete-token"]'));
-    await click(document.querySelector<HTMLElement>('[data-test="confirm-ok"]'));
-    expect(api.callsTo('kernel.secrets.delete').map((call) => call.input)).toEqual([{ extension: '@test/notes', name: 'token' }]);
-    expect(app.findAll('[data-test="secret"]')).toEqual([]);
+    await type(control('kernel.jobs.retentionDays'), '3');
+    await pressEnter(control('kernel.jobs.retentionDays'));
+    expect(sets()).toEqual([{ key: 'kernel.jobs.retentionDays', value: 3, scope: 'global' }]);
   });
 
   it('QA20-H4 one switch for the page says where changes are stored, and no row has a scope or a Save button', async () => {
@@ -46,7 +28,7 @@ describe('the Settings page (06 §6.6, ADR 0009, 77; ADR 0013, 2 to 5)', () => {
   });
 
   it('QA20-H5 a select saves as it changes, says Saved, and then shows Changed with its reset', async () => {
-    const { part, control, sets, resets } = await openSettings();
+    const { part, control, sets, resets } = await openSettings(undefined, 'kvwebui');
     expect(part('kvwebui.theme', 'setting-changed')).toBeNull();
     await type(control('kvwebui.theme'), '"dark"');
     expect(sets()).toEqual([{ key: 'kvwebui.theme', value: 'dark', scope: 'global' }]);
@@ -110,13 +92,13 @@ describe('the Settings page (06 §6.6, ADR 0009, 77; ADR 0013, 2 to 5)', () => {
   });
 
   it('QA20-E4 on the workspace side a key with only the global scope says so and is stored globally', async () => {
-    const { app, part, control, sets } = await openSettings();
-    expect(part('kvwebui.theme', 'setting-global-only')).toBeNull();
+    const { app, part, control, sets } = await openSettings((api) => api.settings.push(setting('notes.mode', { type: 'string', enum: ['auto', 'ask'] }, ['global'], { default: 'ask' })));
+    expect(part('notes.mode', 'setting-global-only')).toBeNull();
     await click(app.find('[data-test="scope-workspace"]'));
-    expect(part('kvwebui.theme', 'setting-global-only')?.textContent).toBe('The same in every workspace.');
+    expect(part('notes.mode', 'setting-global-only')?.textContent).toBe('The same in every workspace.');
     expect(part('notes.pageSize', 'setting-global-only')).toBeNull();
-    await type(control('kvwebui.theme'), '"light"');
-    expect(sets()).toEqual([{ key: 'kvwebui.theme', value: 'light', scope: 'global' }]);
+    await type(control('notes.mode'), '"auto"');
+    expect(sets()).toEqual([{ key: 'notes.mode', value: 'auto', scope: 'global' }]);
   });
 
   it('QA20-E5, QA1-H6, and QA1-E5 a rejected value stays in its field with the first issue and no toast, until a valid one is saved', async () => {

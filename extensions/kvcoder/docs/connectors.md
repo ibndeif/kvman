@@ -50,7 +50,7 @@ await ctx.exec('kvcoder.connector.register', {
 
 The agent calls a binary connector with two commands. `exec { args?, background?, timeoutMs?, risky }` runs the program with those arguments in the real shell, in the workspace folder. `help {}` describes `exec` and prints the program's own help (`gh --help`), and `help { "command": "pr" }` prints `gh pr --help`. For a program whose help is asked another way, register the line with `{command}` standing for the command: `help: 'go help {command}'`.
 
-`kvcoder.connector.unregister { name }` removes one of the caller's own connectors; a missing name does nothing. `kvcoder.connector.list` answers every connector the agent may use.
+`kvcoder.connector.unregister { name }` removes one of the caller's own connectors; a missing name does nothing. `kvcoder.connector.list` answers every registered connector and program, each with `enabled`. The setting `kvcoder.connectors.disabled` lists the names that are turned off, kvcoder's own six included: such a connector is left out of the prompt and can't be called, from the next step.
 
 ## Built-in connectors
 

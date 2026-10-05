@@ -3,6 +3,7 @@ import type { Problem } from '@kvman/sdk';
 import { Search } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { extensionTitle } from '../../state/extension-text.ts';
 import { useKvwebui } from '../../state/kvwebui.ts';
 import { pendingChanges } from '../../state/preset.ts';
 import ErrorCard from '../shared/ErrorCard.vue';
@@ -10,13 +11,16 @@ import AddExtension from './AddExtension.vue';
 import ExtensionCard from './ExtensionCard.vue';
 import PendingExtensionCard from './PendingExtensionCard.vue';
 
-// The Extensions page (plan 06 §6.6, ADR 0009, 78, ADR 0010, 5): one card per extension, with what the stored preset
-// changes at the next restart, and the form that adds an extension. At `/` without a home page it carries the
-// HOME_UNAVAILABLE card (§6.3).
+// The Extensions page (plan 06 §6.6, ADR 0010, 5, ADR 0014, 4): each extension as a link to its own page, with what the
+// stored preset changes at the next restart, and the form that adds an extension. At `/` without a home page it
+// carries the HOME_UNAVAILABLE card (§6.3).
 const props = defineProps<{ homeUnavailable?: { page: string; problem: Problem | undefined } }>();
 const state = useKvwebui();
-const { t } = useI18n();
+const translator = useI18n();
+const { t } = translator;
 const search = ref('');
+const needle = computed(() => search.value.trim().toLowerCase());
+const shown = computed(() => state.extensions.value.filter((extension) => [extensionTitle(translator, extension), extension.name].some((text) => text.toLowerCase().includes(needle.value))));
 const pending = computed(() => pendingChanges(state));
 const changes = computed(() => pending.value.starting.length + pending.value.removed.size);
 </script>
@@ -45,8 +49,9 @@ const changes = computed(() => pending.value.starting.length + pending.value.rem
       <span>{{ t('kvwebui.extensions.banner.count', { count: String(changes) }) }}</span>
     </div>
     <ErrorCard v-if="state.presetProblem.value" :problem="state.presetProblem.value" title="kvwebui.extensions.presetFailed" data-test="preset-error" />
-    <AddExtension />
-    <ExtensionCard v-for="extension in state.extensions.value" :key="extension.name" :extension="extension" :search="search" :removed="pending.removed.has(extension.name)" />
+    <ExtensionCard v-for="extension in shown" :key="extension.name" :extension="extension" :removed="pending.removed.has(extension.name)" />
+    <p v-if="shown.length === 0" class="m-0 text-muted" data-test="extensions-none">{{ t('kvwebui.extensions.noMatch') }}</p>
     <PendingExtensionCard v-for="extension in pending.starting" :key="extension.name" :name="extension.name" :source="extension.source" />
+    <AddExtension />
   </div>
 </template>

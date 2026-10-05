@@ -88,6 +88,7 @@ export const viewSchema: z.ZodType<View> = z.lazy(() =>
     z.object({ type: z.literal('form'), command: callName, fixed: values.exactOptional(), submit: textKey, then: thenSchema.exactOptional() }),
     z.object({ type: z.literal('link'), text: textKey, params: values.exactOptional(), to: pageLinkSchema }),
     buttonSchema,
+    z.object({ type: z.literal('setting'), key: z.string().min(1) }),
     z.object({ type: z.literal('custom'), component: z.string().regex(new RegExp(`^${kebab}\\.${kebab}$`), 'A component is <namespace>.<name>.'), props: values }),
   ]),
 );

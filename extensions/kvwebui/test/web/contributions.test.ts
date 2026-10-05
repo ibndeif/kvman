@@ -70,6 +70,31 @@ describe('contributions (06 §6.2–§6.3)', () => {
     expect(contributed.filter((id) => !id.startsWith('notes.'))).toEqual([]);
   });
 
+  it('QA21-E1, QA21-E2, and QA21-E3 a setting view belongs in configuration and names an own key, and a configuration is checked like a view', async () => {
+    const own = { type: 'setting', key: 'own.size' };
+    const cases: Record<string, { ui: Json; says: string }> = {
+      inpage: { ui: answer({ pages: [page('p', own)] }), says: 'pages.0.view.key' },
+      inpanel: { ui: answer({ panels: [{ id: 'x', title: 'notes.panels.help', icon: 'notebook', view: { type: 'card', children: [own] } }] }), says: 'belongs in configuration' },
+      foreign: { ui: answer({ configuration: { type: 'stack', direction: 'vertical', children: [{ type: 'setting', key: 'kvwebui.theme' }] } }), says: "isn't one of the extension's settings" },
+      query: { ui: answer({ configuration: { type: 'table', query: 'query.secret.get', input: {}, columns: [{ field: 'id', title: 'notes.columns.title' }] } }), says: "isn't a public query" },
+      param: { ui: answer({ configuration: { type: 'text', text: 'notes.note.showing', params: { id: { $param: 'noteId' } } } }), says: "isn't declared" },
+    };
+    const api = notesApi();
+    for (const [namespace, { ui }] of Object.entries(cases)) {
+      api.extensions.push({ ...extension(namespace, { queries: [{ name: `${namespace}.secret.get`, public: false }] }), settings: [{ key: 'own.size', description: 'A size.', scopes: ['global'] }] });
+      api.handlers.set(`${namespace}.ui.get`, () => ui);
+    }
+    api.extensions.push({ ...extension('good'), settings: [{ key: 'own.size', description: 'A size.', scopes: ['global'] }] });
+    api.handlers.set('good.ui.get', () => answer({ configuration: { type: 'card', children: [own] } }));
+    const app = await mountApp(api, '/notes/list');
+    for (const [namespace, { says }] of Object.entries(cases)) {
+      const card = app.find(`[data-test="load-failure-${namespace}"]`);
+      expect(card?.querySelector('[data-test="problem-code"]')?.textContent, namespace).toBe('VALIDATION_FAILED');
+      expect(card?.textContent, namespace).toContain(says);
+    }
+    expect([...app.state.registry.value.configurations.keys()]).toEqual(['kvwebui', 'good']);
+  });
+
   it("M2.2-E2 the kernel's own queries and commands count as public", async () => {
     const api = notesApi();
     api.extensions.push(extension('files'));

@@ -30,10 +30,11 @@ const result = (toolCallId: string, done: CallDone): CallOutcome => ({ kind: 're
 // A call whose arguments never made a connector command: there is nothing for a card to show.
 const refused = (toolCallId: string, message: string): CallOutcome => result(toolCallId, { text: errorOutput({ code: 'VALIDATION_FAILED', message }).output, details: null, isError: true });
 
-// Why a session can't call a connector: a subagent wasn't given it, or there is none by that name.
+// Why a session can't call a connector: a subagent wasn't given it, or there is none by that name; one that is turned
+// off counts as none (ADR 0014, 7).
 function unavailable(env: CallEnv, connector: string): string {
   const known = builtinConnectors.some((name) => name === connector) || env.tools.connectors.some((candidate) => candidate.name === connector);
-  if (known && env.session.parentId !== null) return `${connector} isn't available in this subagent.`;
+  if (known && !env.tools.disabled.has(connector) && env.session.parentId !== null) return `${connector} isn't available in this subagent.`;
   return noConnectorMessage(connector, env.tools.listed.map((listed) => listed.name));
 }
 

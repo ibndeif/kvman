@@ -36,6 +36,7 @@ const kvman = inject<Kvman>('kvman');
 | `navigate(page, params?)`, `toast(text, params?, level?)`, `panel(id, open)` | Act at once in the browser. |
 | `t(key, params?)` | Translates a key. |
 | `workspace` | A live ref: `workspace.value` is the tab's `{ id, name, path }`. |
+| `scope` | A live ref: `scope.value` is `'global'` or `'workspace'`, what your extension's page under Extensions is set to save to; `'global'` anywhere else. |
 | `View` | A component that renders a view tree: `<component :is="kvman.View" :view="{ type: 'markdown', text }" />`. Use it for Markdown; never `v-html`. |
 
 ## Styling

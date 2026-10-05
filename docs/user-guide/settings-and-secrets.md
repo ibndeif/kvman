@@ -1,24 +1,29 @@
 # Settings and secrets
 
-This page is for anyone who wants to change how kvman behaves, or to store an API key safely. When you finish, you can change a setting for everyone or for one workspace, reset it, add and delete a secret, and know what kvman never shows or writes down.
+This page is for anyone who wants to change how kvman or one of its extensions behaves, or to store an API key safely. When you finish, you can change a setting for everyone or for one workspace, reset it, add and delete a secret, and know what kvman never shows or writes down.
 
-## The Settings page
+## Where settings are
 
-Open **Settings** from the sidebar. Every setting kvman and its extensions offer is listed, grouped by extension (kvman's own first). At the top are a switch, **All workspaces** or **Only \<your workspace\>**, which says where your changes are stored, and a search box that filters the settings by title, description, or key. Each setting shows:
+- **Settings**, in the sidebar, holds kvman's own settings: its language, its port, and how it runs jobs. They are the same in every workspace.
+- **Extensions**, in the sidebar, lists what kvman runs. Open an extension to configure it: each extension lays out its own configuration there. Coder, for example, has its model and thinking level, the shell approval, and the list of its connectors with a switch for each; see [Extensions](extensions.md).
+
+Both pages show a setting the same way:
 
 - a title and a description;
 - a control that fits the setting: a choice, a number, or a text field;
 - **Changed** and a reset, when its value was set in the place you are editing;
 - **Details**, which opens to show its key, such as `kvwebui.theme`, and where its value comes from: **Default**, **Set for all workspaces**, **Set for this workspace**, or **Set by the \<preset\> preset**.
 
-A setting applies to every workspace unless you set it for one. kvman uses the value for **this workspace** if there is one, otherwise the value for **all workspaces**, otherwise the preset's value, otherwise the default.
+The Settings page also has a search box that filters by title, description, or key.
 
 ## Change and reset
 
-1. Pick where the change applies: **All workspaces** or **Only \<your workspace\>**.
+1. On an extension's page, pick where the change applies with the switch at the top: **All workspaces** or **Only \<your workspace\>**. kvman's own settings always apply to all of them.
 2. Change the control. A choice is saved when you pick it; a field is saved when you press Enter or leave it. **Saved** shows beside it.
 
 The change applies at once, with no restart, except for `kernel.port`, `kernel.workers`, and `kernel.workerConcurrency`, which apply at the next start. A setting that is the same in every workspace says so, and is stored for all of them.
+
+A setting applies to every workspace unless you set it for one. kvman uses the value for **this workspace** if there is one, otherwise the value for **all workspaces**, otherwise the preset's value, otherwise the default.
 
 To undo a value you set, press **Reset** (for all workspaces) or **Use the value for all workspaces** (for this workspace). The setting falls back to the next source. While you are on **All workspaces**, a setting your workspace has its own value for can't be edited: switch to the workspace to change or undo it.
 
@@ -35,14 +40,14 @@ If a value isn't valid, kvman keeps the old one in effect, leaves what you typed
 | `kernel.jobs.retentionDays` | How many days finished jobs are kept. | 7 |
 | `kernel.web.home` | The extension whose web app is served at `/`. | `kvwebui` |
 
-Extensions add their own, such as `kvwebui.theme` (light, dark, or the same as the system) and `kvai.defaultModel`.
+Extensions have their own, such as `kvwebui.theme` (light, dark, or the same as the system) and `kvai.defaultModel`, each on its extension's page.
 
 ## Secrets
 
-A secret is a value such as an API key. Providers you connect through the **Models** page keep their keys as secrets. The Settings page has a **Secrets** section at the bottom:
+A secret is a value such as an API key, and it belongs to one extension. Providers you connect through the **Models** page keep their keys as secrets. Every extension's page (open it from **Extensions**) ends with a **Secrets** section:
 
-- It lists each secret by extension and name. **Values are never shown.**
-- **Add a secret** takes an **Extension**, a **Name**, and a **Value** (a password field), then **Save**.
+- It lists that extension's secrets by name. **Values are never shown.**
+- **Add a secret** takes a **Name** and a **Value** (a password field), then **Save**.
 - **Delete** asks **Delete the secret \<name\>?** and removes it after you confirm.
 
 Where secrets are kept and what never happens to them:

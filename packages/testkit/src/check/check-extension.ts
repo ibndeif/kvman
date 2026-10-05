@@ -40,8 +40,8 @@ async function loadedFindings(kernel: TestKernel, folder: string, name: string):
   const extension = (await kernel.exec('kernel.extensions.list', {})).find((candidate) => candidate.name === name);
   if (extension === undefined) return [];
   const { namespace } = extension;
-  const required: RequiredKey[] = [{ key: `${namespace}.title`, usedBy: 'the Settings and Extensions pages' }];
-  for (const setting of extension.settings) required.push({ key: `${setting.key}.title`, usedBy: 'the Settings page' });
+  const required: RequiredKey[] = [{ key: `${namespace}.title`, usedBy: 'the Extensions page' }];
+  for (const setting of extension.settings) required.push({ key: `${setting.key}.title`, usedBy: "the extension's page" });
   const findings: CheckedFinding[] = fieldFindings([...extension.commands, ...extension.queries]);
   findings.push(...(await docsFindings(kernel, namespace, extension.queries)));
   if (extension.queries.some((query) => query.name === `${namespace}.ui.get`)) {

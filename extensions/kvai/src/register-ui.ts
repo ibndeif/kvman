@@ -46,6 +46,9 @@ const addPage = {
   },
 };
 
+// kvai's configuration on its own page of the Extensions list (ADR 0014, 11).
+const configuration = { type: 'card', children: [{ type: 'setting', key: 'kvai.defaultModel' }, { type: 'link', text: 'kvai.config.models', to: { page: 'kvai.models' } }] };
+
 const contributions = {
   pages: [modelsPage, providerPage, addPage],
   nav: [{ id: 'models', page: 'models', title: 'kvai.ui.models.nav', icon: 'brain', order: 50 }],
@@ -53,6 +56,7 @@ const contributions = {
   status: [
     { id: 'usage', query: 'kvai.usage.total.get', input: {}, text: 'kvai.ui.status.usage', params: { tokens: { $output: 'tokens', format: 'compact' }, cost: { $output: 'cost', format: 'usd' } }, order: 50 },
   ],
+  configuration,
 };
 
 const contributionsSchema = z.object({
@@ -60,6 +64,7 @@ const contributionsSchema = z.object({
   nav: z.array(z.object({ id: z.string(), page: z.string(), title: z.string(), icon: z.string(), order: z.number() })),
   panels: z.array(z.object({ id: z.string(), title: z.string(), icon: z.string(), view: z.json() })),
   status: z.array(z.object({ id: z.string(), query: z.string(), input: z.json(), text: z.string(), params: z.record(z.string(), z.json()).exactOptional(), order: z.number() })),
+  configuration: z.json(),
 });
 
 export function registerUi(ctx: Ctx): void {

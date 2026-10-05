@@ -99,6 +99,7 @@ All of these are public. Removing a built-in provider or model fails with `kvai/
 - a **Provider** page (`params: ['providerId']`): the custom component `kvai.provider` (ADR 0009, 245–247): a header (avatar, title, `<id> · N models`, a chip, and a back link); the connection section (how the provider is connected; two choices, "Your plan" and "An API key", when it offers both; Disconnect while connected; the sign-in's link, device code, prompts, and Cancel while signing in; Remove provider for a custom provider); and the provider's models with a search, the Default chip, and "Make default".
 - an **Add a provider** page: the forms of `kvai.provider.add` and `kvai.model.add`.
 - a **status item** with the workspace's tokens and cost, from `kvai.usage.total.get` (ADR 0009, 60).
+- a **configuration** (plan 06 §6.3; ADR 0014, 11): one card with the setting `kvai.defaultModel` and a link to the Models page.
 
 ## 7.4 Testing
 

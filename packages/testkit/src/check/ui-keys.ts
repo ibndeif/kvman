@@ -60,5 +60,6 @@ export function uiKeys(answer: unknown): string[] {
     ...objects(answer['nav']).flatMap((item) => strings(item, ['title'])),
     ...objects(answer['panels']).flatMap((panel) => [...strings(panel, ['title']), ...viewKeys(panel['view'])]),
     ...objects(answer['status']).flatMap((item) => strings(item, ['text'])),
+    ...viewKeys(answer['configuration']),
   ];
 }

@@ -151,5 +151,6 @@
   "kvai.ui.provider.starting": "Preparing the sign-in…",
   "kvai.ui.provider.finishTitle": "Finish signing in in the new tab",
   "kvai.ui.provider.finishHelp": "This page updates by itself. If the tab can't reach this computer, paste the address it ends on.",
-  "kvai.ui.provider.openAgain": "Open the sign-in page again"
+  "kvai.ui.provider.openAgain": "Open the sign-in page again",
+  "kvai.config.models": "Connect and choose models"
 }

@@ -2,6 +2,7 @@ import { kernelCommandSchemas, kernelQuerySchemas, type Problem } from '@kvman/s
 import type { ExtensionInfo } from '../api/kernel.ts';
 import { problemOf, type Api } from '../api/client.ts';
 import { contributionIssues, contributionsSchema, type Contributions, type Known } from './answer.ts';
+import { ownConfiguration } from './own-configuration.ts';
 import type { Values, View } from './views.ts';
 
 // What the extensions contribute (plan 06 §6.3): kvwebui reads `kernel.extensions.list` when the browser loads and calls
@@ -13,10 +14,11 @@ export type PanelEntry = { id: string; namespace: string; title: string; icon: s
 export type StatusEntry = { id: string; namespace: string; query: string; input: Values; text: string; params: Values; order: number };
 export type LoadFailure = { extension: string; namespace: string; problem: Problem };
 
-export type Registry = { pages: Map<string, PageEntry>; nav: NavEntry[]; panels: PanelEntry[]; status: StatusEntry[]; failures: LoadFailure[]; known: Known };
+// `configurations` holds each namespace's configuration view (ADR 0014, 2), kvwebui's own included.
+export type Registry = { pages: Map<string, PageEntry>; nav: NavEntry[]; panels: PanelEntry[]; status: StatusEntry[]; configurations: Map<string, View>; failures: LoadFailure[]; known: Known };
 
 export function emptyRegistry(): Registry {
-  return { pages: new Map(), nav: [], panels: [], status: [], failures: [], known: knownCalls([], new Set()) };
+  return { pages: new Map(), nav: [], panels: [], status: [], configurations: new Map([['kvwebui', ownConfiguration]]), failures: [], known: knownCalls([], new Set()) };
 }
 
 export function knownCalls(extensions: readonly ExtensionInfo[], icons: ReadonlySet<string>): Known {
@@ -29,11 +31,11 @@ export function knownCalls(extensions: readonly ExtensionInfo[], icons: Readonly
   };
 }
 
-// An answer's contributions, or the Problem that keeps it out.
-export function checkAnswer(answer: unknown, known: Known): { contributions: Contributions } | { problem: Problem } {
+// An answer's contributions, or the Problem that keeps it out. `ownSettings` are the answering extension's keys.
+export function checkAnswer(answer: unknown, known: Known, ownSettings: ReadonlySet<string>): { contributions: Contributions } | { problem: Problem } {
   const parsed = contributionsSchema.safeParse(answer);
   const issues = parsed.success
-    ? contributionIssues(parsed.data, known)
+    ? contributionIssues(parsed.data, known, ownSettings)
     : parsed.error.issues.map((issue) => ({ path: issue.path.map(String).join('.'), message: issue.message }));
   if (issues.length > 0 || !parsed.success) return { problem: { code: 'VALIDATION_FAILED', message: 'The UI contributions are invalid.', params: { issues } } };
   return { contributions: parsed.data };
@@ -45,6 +47,7 @@ function add(registry: Registry, namespace: string, contributions: Contributions
   registry.nav.push(...contributions.nav.map((item) => ({ ...item, id: full(item.id), namespace, page: full(item.page) })));
   registry.panels.push(...contributions.panels.map((panel) => ({ ...panel, id: full(panel.id), namespace })));
   registry.status.push(...contributions.status.map((item) => ({ ...item, id: full(item.id), namespace, params: item.params ?? {} })));
+  if (contributions.configuration !== undefined) registry.configurations.set(namespace, contributions.configuration);
 }
 
 export async function loadRegistry(api: Api, extensions: readonly ExtensionInfo[], icons: ReadonlySet<string>): Promise<Registry> {
@@ -53,7 +56,7 @@ export async function loadRegistry(api: Api, extensions: readonly ExtensionInfo[
   const answers = await Promise.all(
     contributing.map(async (extension) => {
       const result = await api.query(`${extension.namespace}.ui.get`, {}).then(
-        (answer) => checkAnswer(answer, known),
+        (answer) => checkAnswer(answer, known, new Set(extension.settings.map((setting) => setting.key))),
         (error: unknown) => ({ problem: problemOf(error) }),
       );
       return { extension, result };

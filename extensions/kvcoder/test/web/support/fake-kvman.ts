@@ -1,4 +1,4 @@
-import { defineComponent, h, type PropType } from 'vue';
+import { defineComponent, h, ref, type PropType, type Ref } from 'vue';
 import { vi } from 'vitest';
 import type { Json } from '@kvman/sdk';
 import type { Kvman, StreamEvent, View } from '@kvman/sdk/web';
@@ -20,6 +20,7 @@ export type FakeKvman = {
   navigate: ReturnType<typeof vi.fn>;
   toast: ReturnType<typeof vi.fn>;
   language: { value: string };
+  scope: Ref<'global' | 'workspace'>;
 };
 
 const catalogs: Record<'en' | 'ar', Record<string, string>> = { en, ar };
@@ -41,6 +42,7 @@ export function createFakeKvman(): FakeKvman {
     channels.set(jobId, found);
     return found;
   };
+  const scope = ref<'global' | 'workspace'>('global');
   const refresh = vi.fn();
   const navigate = vi.fn();
   const toast = vi.fn();
@@ -75,6 +77,7 @@ export function createFakeKvman(): FakeKvman {
     panel: () => undefined,
     t: translate,
     workspace: { value: { id: 'home', name: 'notes-app', path: '/work/notes-app' } },
+    scope,
     View: MarkdownStub,
   } as unknown as Kvman;
   return {
@@ -95,6 +98,7 @@ export function createFakeKvman(): FakeKvman {
     navigate,
     toast,
     language,
+    scope,
   };
 }
 

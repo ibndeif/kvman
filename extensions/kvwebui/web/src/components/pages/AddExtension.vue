@@ -2,7 +2,6 @@
 import type { Problem } from '@kvman/sdk';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { RouterLink } from 'vue-router';
 import { runCommand } from '../../state/commands.ts';
 import { useKvwebui } from '../../state/kvwebui.ts';
 import { reloadPreset } from '../../state/preset.ts';
@@ -52,6 +51,5 @@ const install = async (): Promise<void> => {
     <p class="m-0 text-[13px] text-muted" data-test="add-hint">{{ t('kvwebui.extensions.add.hint') }}</p>
     <p v-if="state.preset.value?.origin === 'bundled'" class="m-0 text-[13px] text-muted" data-test="add-bundled-copy">{{ t('kvwebui.extensions.add.bundledCopy') }}</p>
     <ErrorCard v-if="problem" :problem="problem" title="kvwebui.extensions.addFailed" :dismiss="() => (problem = undefined)" data-test="add-error" />
-    <RouterLink to="/kvwebui/settings" class="text-[13px] font-medium text-primary" data-test="add-settings">{{ t('kvwebui.extensions.add.settingsLink') }}</RouterLink>
   </section>
 </template>

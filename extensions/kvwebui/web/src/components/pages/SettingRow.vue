@@ -31,7 +31,7 @@ const sourceText = computed(() => (props.setting.source === 'preset' ? presetTex
 </script>
 
 <template>
-  <div class="flex flex-wrap items-start gap-6 border-b border-line-soft px-5 py-4 last:border-b-0" :data-test="`setting-${props.setting.key}`">
+  <div class="flex flex-wrap items-start gap-6 border-b border-line-soft py-4 last:border-b-0" :data-test="`setting-${props.setting.key}`">
     <div class="flex min-w-60 grow basis-80 flex-col gap-1">
       <span class="font-semibold" data-test="setting-title">{{ title }}</span>
       <span class="text-muted" data-test="setting-description">{{ description }}</span>

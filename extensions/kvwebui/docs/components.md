@@ -23,7 +23,7 @@ The injected `kvman` object offers:
 - `exec(name, input)` and `execAsync(name, input)`: they reject with a `ProblemError` and show no toast. An `exec` of a command reruns the page's queries.
 - `stream(jobId)`: the job's events, `{ type: 'progress', source, data }`, then `{ type: 'result', output }` or `{ type: 'problem', problem }`.
 - `follow(jobId)`, `navigate(page, params?)`, `toast(text, params?, level?)`, `panel(id, open)`.
-- `t(key, params?)` translates; `workspace.value` is `{ id, name, path }`.
+- `t(key, params?)` translates; `workspace.value` is `{ id, name, path }`; `scope.value` is `'global'` or `'workspace'`, what your extension's page under Extensions is set to save to (`'global'` anywhere else).
 - `View`, a component that renders a view tree: use `<component :is="kvman.View" :view="{ type: 'markdown', text }" />` for Markdown; never `v-html`.
 
 ## Styling

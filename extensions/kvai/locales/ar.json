@@ -151,5 +151,6 @@
   "kvai.ui.provider.starting": "جارٍ تجهيز تسجيل الدخول…",
   "kvai.ui.provider.finishTitle": "أكمل تسجيل الدخول في التبويب الجديد",
   "kvai.ui.provider.finishHelp": "تتحدّث هذه الصفحة تلقائيًا. إذا لم يستطع التبويب الوصول إلى هذا الجهاز، فالصق العنوان الذي انتهى إليه.",
-  "kvai.ui.provider.openAgain": "فتح صفحة تسجيل الدخول مجددًا"
+  "kvai.ui.provider.openAgain": "فتح صفحة تسجيل الدخول مجددًا",
+  "kvai.config.models": "ربط النماذج واختيارها"
 }

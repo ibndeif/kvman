@@ -49,7 +49,7 @@ declare module '@kvman/sdk' {
     'kvcoder.job.get': { input: { sessionId: string; id: string }; output: JobRow & { output?: Json; problem?: Json } };
     'kvcoder.turn.list': { input: { sessionId: string; limit: number }; output: Turn[] };
     'kvcoder.prompt.get': { input: SessionId; output: { prompt: string; sections: { id: string; title: string; owner: string; reach: 'global' | 'workspace' | 'session'; size: number; included: boolean }[] } };
-    'kvcoder.connector.list': { input: Empty; output: ConnectorRow[] };
+    'kvcoder.connector.list': { input: Empty; output: (ConnectorRow & { enabled: boolean })[] };
     'kvcoder.section.list': { input: { sessionId?: string }; output: { id: string; title: string; order: number; owner: string; global: boolean; sessionId?: string; size: number }[] };
     'kvcoder.handler.list': { input: Empty; output: { point: Point; command: string; owner: string }[] };
     'kvcoder.artifact.list': { input: SessionId; output: { id: string; title: string; format: 'markdown' | 'html' | 'url'; version: number; size: number; updatedAt: string }[] };
@@ -63,6 +63,7 @@ declare module '@kvman/sdk' {
     'kvcoder.shell.path': string | null;
     'kvcoder.compactAt': number;
     'kvcoder.connectors': { name: string; description: string; binary: Binary }[];
+    'kvcoder.connectors.disabled': string[];
     'kvcoder.sessions.keep': number;
     'kvcoder.welcome': string | null;
   }

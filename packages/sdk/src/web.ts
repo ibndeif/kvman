@@ -45,6 +45,7 @@ export type View =
   | { type: 'form'; command: string; fixed?: ViewValues; submit: string; then?: ViewThen }
   | ({ type: 'link'; to: PageLink } & Text)
   | ButtonView
+  | { type: 'setting'; key: string }
   | { type: 'custom'; component: string; props: ViewValues };
 
 /** An event of a job's stream: progress chunks, then one result or Problem. */
@@ -72,6 +73,8 @@ export type Kvman = {
   t(key: string, params?: Record<string, unknown>): string;
   /** The tab's workspace, a live read-only ref. */
   workspace: { readonly value: Workspace };
+  /** What the extension's page is set to save to, a live read-only ref; `global` anywhere else. */
+  scope: { readonly value: 'global' | 'workspace' };
   /** A component that renders a view tree with kvwebui's built-in components. */
   View: new () => { $props: { view: View } };
 };

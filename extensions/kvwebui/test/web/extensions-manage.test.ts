@@ -4,10 +4,11 @@ import { fail } from './support/fake-api.ts';
 import { click, extension, mountApp, settle, type, type Mounted } from './support/mount-app.ts';
 import { notesApi } from './support/notes.ts';
 
-// The Extensions page manages the preset (06 §6.6, ADR 0010, 5): it adds and removes extensions, marks what a restart
-// changes, and leaves settings to the Settings page.
+// The Extensions page manages the preset (06 §6.6, ADR 0010, 5): it adds extensions and marks what a restart changes;
+// an extension is removed from its own page (ADR 0014, 4).
 
 const card = (app: Mounted, namespace: string) => app.find(`[data-test="extension-${namespace}"]`);
+const page = (app: Mounted, namespace = 'notes') => app.find(`[data-test="extension-page-${namespace}"]`);
 const pending = (app: Mounted, name: string) => app.find(`[data-test="pending-${name}"]`);
 const presetOf = (extensions: Record<string, string>) =>
   kernelQuerySchemas['kernel.preset.get'].output.parse({ name: 'test', origin: 'home', file: '/home/ahmed/.kvman/presets/test.json', extensions });
@@ -38,37 +39,38 @@ describe('the Extensions page manages extensions (06 §6.6, ADR 0010, 5)', () =>
     expect(app.root.textContent).toContain('Added. Restart kvman to apply.');
   });
 
-  it('QA17-H20 Remove asks first, then saves, and the card shows Removed after restart', async () => {
+  it("QA17-H20 Remove, on the extension's page, asks first, then saves, and the page and the list show Removed after restart", async () => {
     const api = notesApi();
-    const app = await mountApp(api, '/kvwebui/extensions');
-    expect(app.find('[data-test="restart-banner"]')).toBeNull();
-    await click(card(app, 'notes')?.querySelector<HTMLElement>('[data-test="remove"]') ?? null);
-    expect(card(app, 'notes')?.textContent).toContain('Remove @test/notes?');
+    const app = await mountApp(api, '/kvwebui/extension/notes');
+    await click(page(app)?.querySelector<HTMLElement>('[data-test="remove"]') ?? null);
+    expect(page(app)?.textContent).toContain('Remove @test/notes?');
     expect(api.callsTo('kernel.extensions.uninstall')).toEqual([]);
 
-    await click(card(app, 'notes')?.querySelector<HTMLElement>('[data-test="remove-cancel"]') ?? null);
-    expect(card(app, 'notes')?.querySelector('[data-test="remove"]')).not.toBeNull();
+    await click(page(app)?.querySelector<HTMLElement>('[data-test="remove-cancel"]') ?? null);
+    expect(page(app)?.querySelector('[data-test="remove"]')).not.toBeNull();
     expect(api.callsTo('kernel.extensions.uninstall')).toEqual([]);
 
-    await click(card(app, 'notes')?.querySelector<HTMLElement>('[data-test="remove"]') ?? null);
-    await click(card(app, 'notes')?.querySelector<HTMLElement>('[data-test="remove-confirm"]') ?? null);
+    await click(page(app)?.querySelector<HTMLElement>('[data-test="remove"]') ?? null);
+    await click(page(app)?.querySelector<HTMLElement>('[data-test="remove-confirm"]') ?? null);
     expect(api.callsTo('kernel.extensions.uninstall').map((call) => call.input)).toEqual([{ name: '@test/notes' }]);
-    expect(card(app, 'notes')?.querySelector('[data-test="extension-mark"]')?.textContent).toBe('Removed after restart');
-    expect(card(app, 'notes')?.querySelector('[data-test="remove"]')).toBeNull();
-    expect(app.find('[data-test="restart-banner"]')?.textContent).toContain('Pending changes: 1');
+    expect(page(app)?.querySelector('[data-test="extension-mark"]')?.textContent).toBe('Removed after restart');
+    expect(page(app)?.querySelector('[data-test="remove"]')).toBeNull();
     expect(app.root.textContent).toContain('Removed. Restart kvman to apply.');
+    await click(app.find('[data-test="extension-back"]'));
+    expect(card(app, 'notes')?.querySelector('[data-test="extension-mark"]')?.textContent).toBe('Removed after restart');
+    expect(app.find('[data-test="restart-banner"]')?.textContent).toContain('Pending changes: 1');
   });
 
-  it('QA17-H21 the page sets no setting and no secret, and links to the Settings page', async () => {
+  it('QA17-H21 adding and removing set no setting and no secret', async () => {
     const api = notesApi();
     const app = await mountApp(api, '/kvwebui/extensions');
     await install(app, '@acme/notes', 'npm:1.2.3');
-    await click(card(app, 'notes')?.querySelector<HTMLElement>('[data-test="remove"]') ?? null);
-    await click(card(app, 'notes')?.querySelector<HTMLElement>('[data-test="remove-confirm"]') ?? null);
+    await click(card(app, 'notes'));
+    await click(page(app)?.querySelector<HTMLElement>('[data-test="remove"]') ?? null);
+    await click(page(app)?.querySelector<HTMLElement>('[data-test="remove-confirm"]') ?? null);
     for (const call of api.calls) {
       expect(call.name.startsWith('kernel.settings.set') || call.name.startsWith('kernel.settings.reset') || call.name.startsWith('kernel.secrets.set') || call.name.startsWith('kernel.secrets.delete'), call.name).toBe(false);
     }
-    expect(app.find('[data-test="add-settings"]')?.getAttribute('href')).toBe('/kvwebui/settings');
   });
 
   it('QA17-E17 a failure shows its Problem and keeps the form, a blank field disables Install, and a pending note shows for a bundled preset', async () => {
@@ -91,10 +93,11 @@ describe('the Extensions page manages extensions (06 §6.6, ADR 0010, 5)', () =>
     expect(app.root.textContent).not.toContain('Added.');
 
     api.handlers.set('kernel.extensions.uninstall', () => fail('NOT_FOUND'));
-    await click(card(app, 'notes')?.querySelector<HTMLElement>('[data-test="remove"]') ?? null);
-    await click(card(app, 'notes')?.querySelector<HTMLElement>('[data-test="remove-confirm"]') ?? null);
-    expect(card(app, 'notes')?.querySelector('[data-test="remove-error"]')?.textContent).toContain("It wasn't found.");
-    expect(app.find('[data-test="restart-banner"]')).toBeNull();
+    await click(card(app, 'notes'));
+    await click(page(app)?.querySelector<HTMLElement>('[data-test="remove"]') ?? null);
+    await click(page(app)?.querySelector<HTMLElement>('[data-test="remove-confirm"]') ?? null);
+    expect(page(app)?.querySelector('[data-test="remove-error"]')?.textContent).toContain("It wasn't found.");
+    expect(page(app)?.querySelector('[data-test="extension-mark"]')).toBeNull();
     expect(app.root.textContent).not.toContain('Removed.');
 
     const home = notesApi();
@@ -127,11 +130,14 @@ describe('the Extensions page manages extensions (06 §6.6, ADR 0010, 5)', () =>
       api.global.set('kernel.language', language);
       api.preset = presetOf({ '@test/notes': 'bundled', '@acme/later': 'npm:2.0.0' });
       const app = await mountApp(api, '/kvwebui/extensions');
-      await click(card(app, 'notes')?.querySelector<HTMLElement>('[data-test="remove"]') ?? null);
       api.handlers.set('kernel.extensions.install', () => fail('VALIDATION_FAILED'));
       await install(app, '@acme/notes', 'npm:1.2.3');
       await settle();
-      const text = app.find('main')?.textContent ?? app.text();
+      const texts = [app.find('main')?.textContent ?? app.text()];
+      await click(card(app, 'notes'));
+      await click(page(app)?.querySelector<HTMLElement>('[data-test="remove"]') ?? null);
+      texts.push(app.find('main')?.textContent ?? app.text());
+      const text = texts.join(' ');
       expect(text, language).not.toMatch(/kvwebui\.[a-zA-Z]/);
       expect(document.documentElement.getAttribute('lang') ?? language).toBe(language);
     }

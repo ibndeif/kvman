@@ -5,6 +5,24 @@ import { z, type Ctx } from '@kvman/sdk';
 
 const sessionParam = { sessionId: { $param: 'sessionId' } };
 
+const settings = (keys: readonly string[]) => keys.map((key) => ({ type: 'setting', key }));
+
+// kvcoder's configuration on its own page of the Extensions list (ADR 0014, 10).
+const configuration = {
+  type: 'stack',
+  direction: 'vertical',
+  children: [
+    { type: 'card', title: 'kvcoder.config.agent', children: settings(['kvcoder.model', 'kvcoder.thinking', 'kvcoder.maxSteps', 'kvcoder.compactAt']) },
+    { type: 'card', title: 'kvcoder.config.shell', children: settings(['kvcoder.shell.approval', 'kvcoder.shell.path']) },
+    { type: 'card', title: 'kvcoder.config.chats', children: settings(['kvcoder.sessions.keep', 'kvcoder.welcome']) },
+    {
+      type: 'card',
+      title: 'kvcoder.config.connectors',
+      children: [{ type: 'text', text: 'kvcoder.config.connectors.intro' }, { type: 'custom', component: 'kvcoder.connectors', props: {} }, ...settings(['kvcoder.connectors'])],
+    },
+  ],
+};
+
 const contributions = {
   pages: [
     {
@@ -46,11 +64,12 @@ const contributions = {
       order: 20,
     },
   ],
+  configuration,
 };
 
 export function registerUi(ctx: Ctx): void {
   ctx.registerQuery('kvcoder.ui.get', {
-    description: "Gives kvcoder's pages, nav item, and status items.",
+    description: "Gives kvcoder's pages, nav item, status items, and configuration.",
     input: z.object({}),
     output: z.json(),
     public: true,

@@ -7,14 +7,14 @@ import { useQuery } from '../../composables/use-query.ts';
 import { runCommand } from '../../state/commands.ts';
 import { showProblem, useKvwebui } from '../../state/kvwebui.ts';
 
-// The Secrets section (plan 06 §6.6): the secrets by name, masked, with Delete after a confirmation, and "Add a secret"
-// with a password field. A secret's value is never shown or kept after it's sent.
+// An extension's secrets (plan 06 §6.6, ADR 0014, 6): their names, masked, with Delete after a confirmation, and
+// "Add a secret" with a password field. A secret's value is never shown or kept after it's sent.
+const props = defineProps<{ extension: string }>();
 const state = useKvwebui();
 const { t } = useI18n();
 const { data } = useQuery(() => 'kernel.secrets.list', () => ({}));
-const secrets = computed(() => z.array(z.object({ extension: z.string(), name: z.string() })).safeParse(data.value).data ?? []);
+const secrets = computed(() => (z.array(z.object({ extension: z.string(), name: z.string() })).safeParse(data.value).data ?? []).filter((secret) => secret.extension === props.extension));
 const adding = ref(false);
-const extension = ref('');
 const name = ref('');
 const value = ref('');
 
@@ -25,7 +25,7 @@ const remove = async (secret: { extension: string; name: string }): Promise<void
   });
 };
 const add = async (): Promise<void> => {
-  await runCommand(state, 'kernel.secrets.set', { extension: extension.value, name: name.value.trim(), value: value.value }, (outcome) => {
+  await runCommand(state, 'kernel.secrets.set', { extension: props.extension, name: name.value.trim(), value: value.value }, (outcome) => {
     if (!outcome.ok) return showProblem(state, outcome.problem);
     adding.value = false;
     name.value = '';
@@ -36,15 +36,12 @@ const add = async (): Promise<void> => {
 </script>
 
 <template>
-  <h2 id="settings-secrets" class="m-0 pt-2 text-[13px] font-semibold tracking-wide text-muted uppercase">{{ t('kvwebui.secrets.title') }}</h2>
   <section class="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5" data-test="secrets">
+    <h2 class="m-0 text-base font-semibold">{{ t('kvwebui.secrets.title') }}</h2>
     <p class="m-0 text-muted">{{ t('kvwebui.secrets.intro') }}</p>
     <div v-for="secret in secrets" :key="`${secret.extension}/${secret.name}`" class="flex items-center gap-3" data-test="secret">
       <KeyRound class="size-4.5 shrink-0 text-muted" aria-hidden="true" />
-      <span class="flex grow flex-col">
-        <span>{{ secret.name }}</span>
-        <span class="font-mono text-xs text-muted">{{ secret.extension }}</span>
-      </span>
+      <span dir="ltr" class="grow font-mono text-[13px]" data-test="secret-name-shown">{{ secret.name }}</span>
       <span class="font-mono tracking-widest text-muted" aria-hidden="true">••••••••</span>
       <button type="button" class="h-8 rounded-lg border border-line bg-surface px-3 text-[13px] font-medium text-danger" :data-test="`secret-delete-${secret.name}`" @click="remove(secret)">
         {{ t('kvwebui.secrets.delete') }}
@@ -53,14 +50,8 @@ const add = async (): Promise<void> => {
     <p v-if="secrets.length === 0" class="m-0 text-muted">{{ t('kvwebui.secrets.none') }}</p>
     <form v-if="adding" class="flex flex-col gap-3 rounded-xl border border-line p-4" data-test="secret-form" @submit.prevent="add">
       <label class="flex flex-col gap-1.5">
-        <span class="font-medium">{{ t('kvwebui.secrets.extension') }}</span>
-        <select v-model="extension" required class="h-10 rounded-xl border border-line bg-surface px-3" data-test="secret-extension">
-          <option v-for="entry in state.extensions.value" :key="entry.name" :value="entry.name">{{ entry.name }}</option>
-        </select>
-      </label>
-      <label class="flex flex-col gap-1.5">
         <span class="font-medium">{{ t('kvwebui.secrets.name') }}</span>
-        <input v-model="name" type="text" required class="h-10 rounded-xl border border-line bg-surface px-3 font-mono text-[13px]" data-test="secret-name" />
+        <input v-model="name" type="text" required dir="ltr" class="h-10 rounded-xl border border-line bg-surface px-3 font-mono text-[13px]" data-test="secret-name" />
       </label>
       <label class="flex flex-col gap-1.5">
         <span class="font-medium">{{ t('kvwebui.secrets.value') }}</span>

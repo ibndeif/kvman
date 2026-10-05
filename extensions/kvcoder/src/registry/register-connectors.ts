@@ -1,7 +1,7 @@
 import { z, type Ctx } from '@kvman/sdk';
 import { builtinConnectors } from '../connector-call.ts';
 import { invalid } from '../problems.ts';
-import { readSettings } from '../register-settings.ts';
+import { disabledConnectors, readSettings } from '../register-settings.ts';
 import { connectorRegisterSchema, connectorSchema, exampleSchema, type ConnectorDoc } from '../schemas/registry.ts';
 import { records, txRecords } from '../store/collections.ts';
 import { callerExtension, loadedOwners, ownsPublicCall, registrations } from './loaded.ts';
@@ -109,9 +109,12 @@ export function registerConnectors(ctx: Ctx): void {
   ctx.registerQuery('kvcoder.connector.list', {
     description: 'Lists the connectors the agent may use.',
     input: z.object({}),
-    output: z.array(connectorRowSchema),
+    output: z.array(connectorRowSchema.extend({ enabled: z.boolean() })),
     public: true,
-    handle: () => activeConnectors(ctx),
+    handle: async () => {
+      const disabled = await disabledConnectors(ctx);
+      return (await activeConnectors(ctx)).map((connector) => ({ ...connector, enabled: !disabled.has(connector.name) }));
+    },
   });
 }
 

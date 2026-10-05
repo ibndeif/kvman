@@ -61,7 +61,7 @@ describe('workspaces in the browser (06 §6.2, ADR 0009, 74)', () => {
     await click(app.find('[data-test="workspace-w2"]'));
     expect(app.state.workspace.value).toBe('w2');
     api.workspaces = api.workspaces.filter((workspace) => workspace.id !== 'w2');
-    await app.router.push('/kvwebui/settings');
+    await app.router.push('/kvwebui/extension/notes');
     await app.settle();
     expect(app.state.workspace.value).toBe('home');
     expect(app.find('[data-level="warning"]')?.textContent).toContain('The workspace second was closed, so this tab moved to Home.');

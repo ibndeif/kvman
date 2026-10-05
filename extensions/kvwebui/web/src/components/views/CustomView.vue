@@ -8,6 +8,7 @@ import { resolveValues, viewScopeKey, type Scope } from '../../contributions/ref
 import { componentThrew } from '../../state/components.ts';
 import { createKvman } from '../../state/kvman.ts';
 import { useKvwebui } from '../../state/kvwebui.ts';
+import { useSettingsScope } from '../../state/settings-scope.ts';
 import ErrorCard from '../shared/ErrorCard.vue';
 import LoadingRows from '../shared/LoadingRows.vue';
 import KvmanView from './KvmanView.vue';
@@ -17,7 +18,7 @@ import KvmanView from './KvmanView.vue';
 const props = defineProps<{ view: Extract<View, { type: 'custom' }>; scope: Scope }>();
 const state = useKvwebui();
 const { t } = useI18n();
-const handle = createKvman(state, (key, params) => t(key, params ?? {}), KvmanView);
+const handle = createKvman(state, (key, params) => t(key, params ?? {}), KvmanView, useSettingsScope());
 provide('kvman', handle.kvman);
 provide(
   viewScopeKey,

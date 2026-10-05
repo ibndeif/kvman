@@ -4,6 +4,7 @@ import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { iconComponent } from '../../contributions/icons.ts';
+import { pathExtension } from '../../state/extension-text.ts';
 import { builtinPages, orderedNav, pageLocation, routePage } from '../../state/navigation.ts';
 import { rememberNavCollapsed, settingValue, useKvwebui } from '../../state/kvwebui.ts';
 
@@ -35,6 +36,7 @@ watch(state.narrow, () => (overlayOpen.value = false));
 const currentPage = computed(() => {
   const home = settingValue(state, 'kvwebui.home');
   if (route.path === '/') return typeof home === 'string' ? home : undefined;
+  if (pathExtension(state, route.path) !== undefined) return 'kvwebui.extensions';
   return routePage(state.registry.value, route)?.id ?? Object.keys(builtinPages).find((id) => builtinPages[id]?.path === route.path);
 });
 const linkClass = (page: string): string[] => ['flex h-10 items-center gap-2.5 rounded-xl px-3', page === currentPage.value ? 'bg-accent-soft font-semibold text-accent-ink' : 'text-neutral-ink'];

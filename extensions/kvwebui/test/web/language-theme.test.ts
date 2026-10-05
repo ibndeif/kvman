@@ -12,7 +12,7 @@ const openLanguages = (app: Mounted) => click(app.find('button[aria-label="Langu
 describe('language and theme (06 §6.2, §2.11, ADR 0009, 75)', () => {
   it('M2.2-H7 switching the language re-renders the UI in it, and a setting without <key>.description shows its English one', async () => {
     const api = notesApi();
-    api.settings.push(setting('notes.pageSize', { type: 'integer' }, ['global', 'workspace'], { default: 20 }));
+    api.settings.push(setting('kernel.port', { type: 'integer' }, ['global'], { default: 3737 }));
     const app = await mountApp(api, '/notes/list');
     expect(app.find('[data-test="nav-kvwebui.settings"]')?.textContent).toBe('Settings');
     await openLanguages(app);
@@ -22,7 +22,7 @@ describe('language and theme (06 §6.2, §2.11, ADR 0009, 75)', () => {
     expect([document.documentElement.lang, document.documentElement.dir]).toEqual(['ar', 'rtl']);
     await app.router.push('/kvwebui/settings');
     await app.settle();
-    expect(app.find('[data-test="setting-notes.pageSize"] [data-test="setting-description"]')?.textContent).toBe('The English description of notes.pageSize.');
+    expect(app.find('[data-test="setting-kernel.port"] [data-test="setting-description"]')?.textContent).toBe('The English description of kernel.port.');
   });
 
   it('M2.2-E7 the theme follows kvwebui.theme and the system', async () => {
