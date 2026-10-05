@@ -11,7 +11,8 @@ describe("the conversation's actions (08 §8.7, ADR 0009, 104)", () => {
     const fake = createFakeKvman();
     const world = { found: session({ status: 'running' }), messages: [user('go')], omitted: 0, turns: [] };
     serve(fake, world);
-    for (const name of ['kvcoder.message.send', 'kvcoder.turn.cancel', 'kvcoder.session.configure', 'kvcoder.session.rename', 'kvcoder.session.compact', 'kvcoder.session.delete']) fake.handle(name, ok);
+    for (const name of ['kvcoder.message.send', 'kvcoder.turn.cancel', 'kvcoder.session.configure', 'kvcoder.session.rename', 'kvcoder.session.delete']) fake.handle(name, ok);
+    fake.handle('kvcoder.session.compact', () => ({ summarized: true }));
     fake.handle('kvcoder.session.fork', () => session({ id: 's2' }));
     fake.handle('kvcoder.prompt.get', () => ({ prompt: 'You are kvman Coder', sections: [{ id: 'guide', title: 'Guide', owner: '@kvman/kvcustomizer', reach: 'global', size: 120, included: true }] }));
     const fetch = vi.fn(async () => new Response(JSON.stringify({ ok: true, file: { id: 'f1' } })));

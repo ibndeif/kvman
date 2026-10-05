@@ -9,7 +9,7 @@ import { matchingCommands, typedCommand, type SlashName } from './slash-commands
 // `fileIds`; while a step runs, Stop cancels the turn. The `controls` slot holds the chat's model and thinking level.
 // A one-line text that starts with `/` is a slash command, never a message: a list above the box names the matching
 // ones, and with `commands` `run`, Enter runs the highlighted one; with `wait` (no chat yet) the list is greyed and
-// nothing runs.
+// nothing runs. While `blocked`, the box takes text and neither sends nor runs a command (ADR 0019, 3).
 const props = defineProps<{ running: boolean; placeholder: string; blocked?: boolean | undefined; commands?: 'run' | 'wait' | undefined }>();
 const emit = defineEmits<{ send: [message: { text: string; fileIds: string[] }]; stop: []; command: [name: SlashName, argument: string] }>();
 const kvman = useKvman();
@@ -62,7 +62,7 @@ function pasted(event: ClipboardEvent): void {
 function runCommand(): void {
   const command = found.value[highlight.value];
   const argument = typed.value?.argument ?? '';
-  if (waiting.value || command === undefined || ('argument' in command && argument === '')) return;
+  if (waiting.value || props.blocked === true || command === undefined || ('argument' in command && argument === '')) return;
   emit('command', command.name, argument);
   text.value = '';
 }

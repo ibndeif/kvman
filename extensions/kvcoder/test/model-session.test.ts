@@ -3,6 +3,7 @@ import type { FixtureExtension } from './support/kvcoder-kernel.ts';
 import { heldReply } from './support/held-reply.ts';
 import { wait } from './support/wait.ts';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
+import { longAlone, padded } from './support/long-messages.ts';
 import { command, runs, says } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 
@@ -38,9 +39,9 @@ describe('model session id (ADR 0012, 6)', { timeout: 30_000 }, () => {
     const { kernel, fake } = await relaySession();
     const sessionId = (await kernel.exec('kvcoder.session.create', {})).id;
     fake.reply(says('Sure.'), says('"Date Chat"'));
-    await kernel.exec('kvcoder.message.send', { sessionId, text: 'hello' });
+    await kernel.exec('kvcoder.message.send', { sessionId, text: padded('hello', longAlone) });
     await kernel.clock.advance(0);
-    // A compaction summarizes what is older than the last 10 messages, so the chat needs more than 10.
+    // A compaction summarizes what is older than the last 10 messages, so the chat needs more than 10, and the older ones long enough (ADR 0019, 7).
     for (const index of [2, 3, 4, 5, 6]) {
       fake.reply(says(`answer ${index}`));
       await kernel.exec('kvcoder.message.send', { sessionId, text: `message ${index}` });

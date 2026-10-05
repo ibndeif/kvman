@@ -15,7 +15,8 @@ afterEach(() => {
 function world(): FakeKvman {
   const fake = createFakeKvman();
   serve(fake, { found: session(), messages: [user('go')], omitted: 0, turns: [turn()] });
-  for (const name of ['kvcoder.message.send', 'kvcoder.session.compact', 'kvcoder.session.rename']) fake.handle(name, () => ({}));
+  for (const name of ['kvcoder.message.send', 'kvcoder.session.rename']) fake.handle(name, () => ({}));
+  fake.handle('kvcoder.session.compact', () => ({ summarized: true }));
   fake.handle('kvcoder.session.export', () => ({ fileId: 'f9' }));
   fake.handle('kvcoder.session.fork', () => session({ id: 's2' }));
   fake.handle('kvcoder.prompt.get', () => ({ prompt: 'You are kvman Coder', sections: [] }));

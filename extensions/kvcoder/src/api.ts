@@ -24,7 +24,7 @@ declare module '@kvman/sdk' {
     'kvcoder.session.rename': { input: { sessionId: string; title: string }; output: Empty };
     'kvcoder.session.configure': { input: { sessionId: string; model?: string; thinking?: Thinking }; output: Empty };
     'kvcoder.session.delete': { input: SessionId; output: Empty };
-    'kvcoder.session.compact': { input: SessionId; output: Empty };
+    'kvcoder.session.compact': { input: SessionId; output: { summarized: boolean } };
     'kvcoder.session.export': { input: SessionId; output: { fileId: string } };
     'kvcoder.session.fork': { input: { sessionId: string; throughSeq?: number }; output: Session };
     'kvcoder.message.send': { input: Send; output: Empty };

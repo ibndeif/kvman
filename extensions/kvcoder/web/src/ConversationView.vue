@@ -5,6 +5,7 @@ import type { Message } from '../../src/index.ts';
 import ArtifactPanel from './ArtifactPanel.vue';
 import MessageComposer from './MessageComposer.vue';
 import ChatStart from './ChatStart.vue';
+import CommandProgress from './CommandProgress.vue';
 import ConversationHeader from './ConversationHeader.vue';
 import { toastProblem, totals, useKvman } from './kvman.ts';
 import ActivityLine from './ActivityLine.vue';
@@ -82,8 +83,11 @@ const recoverable = computed(() => {
   const last = messages.value.at(-1);
   return session.value?.status === 'idle' && last?.kind === 'notice' && recoverableNotices.has(String(last.content['code']));
 });
+// A slash command of the send box runs what the chat's menu runs (ADR 0017, 6). One that waits shows its line in the
+// chat, so it leaves the prompt, and a summary says how it ended (ADR 0019, 1, 4, and 5).
+const actions = useSessionActions(kvman, () => sessionId.value ?? '', () => conversation.refresh());
 const list = useTemplateRef<HTMLElement>('list');
-const follow = useFollowLatest(list, () => [messages.value, live.text, live.thinking, live.calls.length, live.summarizing, running.value, pending.value, children.size, answers.hidden.value], () => sessionId.value);
+const follow = useFollowLatest(list, () => [messages.value, live.text, live.thinking, live.calls.length, live.summarizing, running.value, pending.value, children.size, answers.hidden.value, actions.working.value], () => sessionId.value);
 
 async function exportEarlier(): Promise<void> {
   if (sessionId.value === undefined) return;
@@ -95,13 +99,22 @@ async function exportEarlier(): Promise<void> {
   }
 }
 
-// A slash command of the send box runs what the chat's menu runs (ADR 0017, 6).
-const actions = useSessionActions(kvman, () => sessionId.value ?? '', () => void conversation.refresh());
-function command(name: SlashName, argument: string): void {
-  if (name === 'new') kvman.navigate('kvcoder.chat');
-  else if (name === 'prompt') tab.value = tab.value === 'prompt' ? 'chat' : 'prompt';
-  else if (name === 'rename') void actions.rename(argument);
-  else if (name === 'compact') void actions.compact();
+const summaryFailed = (): boolean => messages.value.at(-1)?.kind === 'notice' && messages.value.at(-1)?.content['code'] === 'SUMMARY_FAILED';
+
+async function summarize(): Promise<void> {
+  const summarized = await actions.compact();
+  if (summarized === true) kvman.toast('kvcoder.ui.summarized', {}, 'success');
+  else if (summarized === false && !summaryFailed()) kvman.toast('kvcoder.ui.nothingToSummarize');
+}
+
+function command(name: SlashName | 'delete', argument: string): void {
+  if (name === 'new') return kvman.navigate('kvcoder.chat');
+  if (name === 'prompt') return void (tab.value = tab.value === 'prompt' ? 'chat' : 'prompt');
+  if (name === 'delete') return void actions.remove();
+  if (actions.working.value !== undefined) return;
+  tab.value = 'chat';
+  if (name === 'rename') void actions.rename(argument);
+  else if (name === 'compact') void summarize();
   else if (name === 'export') void actions.exportFile();
   else void actions.fork();
 }
@@ -111,7 +124,7 @@ const key = (message: Message): string => message.id;
 
 <template>
   <div class="kvc-workspace">
-    <ConversationHeader v-if="session && sessionId !== undefined" :session="session" :tab="tab" :turns="turns.length" :running-since="runningSince" :artifacts="artifacts.list.value.length" :artifacts-open="artifacts.open.value" @tab="tab = $event" @changed="conversation.refresh()" @toggle-artifacts="artifacts.toggle()" />
+    <ConversationHeader v-if="session && sessionId !== undefined" :session="session" :tab="tab" :turns="turns.length" :running-since="runningSince" :artifacts="artifacts.list.value.length" :artifacts-open="artifacts.open.value" :working="actions.working.value !== undefined" @tab="tab = $event" @action="command" @toggle-artifacts="artifacts.toggle()" />
     <div class="kvc-stage">
     <section class="kvc-conversation" data-test="conversation">
       <ChatStart v-if="props.sessionId === undefined" />
@@ -132,6 +145,7 @@ const key = (message: Message): string => message.id;
                 <component :is="kvman.View" v-if="live.text !== ''" :view="{ type: 'markdown', text: 'kvcoder.markdown', params: { text: live.text } }" />
               </div>
               <ActivityLine v-if="running" :live="live" />
+              <CommandProgress v-if="actions.working.value" :working="actions.working.value" />
               <SubagentCard v-for="[id, child] in children" :key="id" :child="child" :hidden="answers.hidden.value" @answer="answers.answer" @decide="answers.decide" />
               <PendingCards :pending="pending" :hidden="answers.hidden.value" @answer="answers.answer" @decide="answers.decide" />
               <p v-if="waitingOnYou.some((item) => item.kind !== 'subagent')" class="kvc-muted" style="text-align: center; margin: 0">{{ kvman.t('kvcoder.ui.messageDismisses') }}</p>
@@ -139,7 +153,7 @@ const key = (message: Message): string => message.id;
           </div>
           <button v-if="follow.away.value" type="button" class="kvc-button kvc-jump" data-test="jump-to-latest" @click="follow.resume"><ArrowDown :size="16" aria-hidden="true" />{{ kvman.t('kvcoder.ui.jumpToLatest') }}</button>
         </div>
-        <MessageComposer :running="running" :placeholder="kvman.t('kvcoder.ui.placeholder')" commands="run" @send="send" @stop="stop" @command="command">
+        <MessageComposer :running="running" :placeholder="kvman.t('kvcoder.ui.placeholder')" :blocked="actions.working.value !== undefined" commands="run" @send="send" @stop="stop" @command="command">
           <template #controls><SessionModel :session="session" @changed="conversation.refresh()" /></template>
         </MessageComposer>
       </template>

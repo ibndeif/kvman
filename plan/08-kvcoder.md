@@ -44,7 +44,8 @@ kvcoder is the app-building harness, built on kvai and kvwebui. Its agent has on
 - **Delete.** `kvcoder.session.delete` cancels the session's turn, stops its background processes (ADR 0009, 150), and deletes its subagent sessions and its artifacts too (ADR 0009, 175).
 - **Compaction.** Before each step, tokens are estimated (characters / 4) against the model's window.
   - Above `kvcoder.compactAt`, kvai summarizes the older messages, the last 10 are kept whole, and a summary message is stored. Older messages stay visible but aren't sent.
-  - `kvcoder.session.compact` compacts by hand.
+  - The older messages are summarized only when they are at least 10% of the model's context window (their stored content's characters / 4); smaller, they stay whole and are sent as they are, so a full chat isn't summarized again on every step (ADR 0019, 7).
+  - `kvcoder.session.compact` compacts by hand, with the same minimum, and answers whether a summary was stored: `false` when nothing was summarized or the summary failed (ADR 0019, 5 and 8).
   - A failed summary adds a notice and the step goes on; `kvai/CONTEXT_TOO_LONG` then ends the turn.
 - **Limits.** A turn ends with a notice after `kvcoder.maxSteps` steps. When `kvcoder.sessions.keep` is above 0, the oldest idle top-level sessions beyond it are deleted daily: creating a session schedules `kvcoder.session.prune` in its workspace with the key `session-prune` (§2.4), daily at 03:00 (ADR 0009, 103). The default, 0, keeps every session.
 
@@ -263,7 +264,7 @@ An id this chat didn't start fails `kvcoder/JOB_NOT_FOUND`. `call` is the line t
 | `kvcoder.session.rename` | command | `{ sessionId, title }` → `{}` |
 | `kvcoder.session.configure` | command | `{ sessionId, model?, thinking? }` → `{}`: applies from the next step |
 | `kvcoder.session.delete` | command | `{ sessionId }` → `{}`: cancels its turn, stops its background processes, deletes its subagent sessions and its artifacts |
-| `kvcoder.session.compact` | command | `{ sessionId }` → `{}` |
+| `kvcoder.session.compact` | command | `{ sessionId }` → `{ summarized: boolean }` (ADR 0019, 5) |
 | `kvcoder.message.send` | command, user only | `{ sessionId, text, fileIds? }` → `{}` |
 | `kvcoder.message.inject` | command | `{ sessionId, text, fileIds? }` → `{}`: starts a turn when the session is idle, unless it comes from a handler job (§8.4) |
 | `kvcoder.note.add` | command | `{ sessionId, key, params? }` → `{}`: a display-only note (§8.1); never starts a turn |
@@ -311,6 +312,7 @@ kvcoder owns its conversation UI. kvwebui only hosts it: kvcoder contributes pag
   - has a send box with image attachments (`POST /api/files`, then `fileIds`), of any kind from the attach button ("Attach files") or from a paste that holds files (ADR 0017, 13; ADR 0018, 6), and a Stop button that runs `kvcoder.turn.cancel`;
   - takes slash commands in the send box (ADR 0017, 6 and 11): a one-line text that starts with `/` is a command, never a message. `/compact`, `/export`, `/fork`, `/new`, `/prompt`, and `/rename <title>` run what the menu runs. A list above the box shows the commands whose name starts with what is typed; Up and Down move, Tab completes, Enter runs the highlighted one, Escape hides the list until the text changes; an unknown name shows "No such command" and runs nothing. On the Chat page, with no chat yet, the list is greyed under "Send a first message to use commands" and nothing runs or is sent (ADR 0018, 5);
   - shows a finished call's card with the whole wait as its time: the model time of the answer that made the call plus the call's own run, in the unit that fits ("2 ms", "1.2 s", "36 s", "1 min 9 s"); opened, the card says both parts; a failed call has a danger border and the chip "Failed" (ADR 0017, 1, 2, and 7);
+  - shows a running chat action as a line at the end of the messages, like the running step's: a spinner, what is running, and the seconds (ADR 0019, 1 to 4 and 6). `/compact`, `/export`, `/fork`, and `/rename`, and the same four menu items, show it ("Summarizing earlier messages…", "Exporting the chat…", "Copying the chat into a new one…", "Renaming the chat…"); one started while the prompt is shown returns to the chat. While one runs, the send box takes text but neither sends nor runs a command, and the menu's four items are disabled. A summary by hand ends with the success toast "Earlier messages were summarized" or the toast "Nothing to summarize yet: the messages before the last 10 are still short"; one that failed has its notice and no toast;
   - has a menu in its header (Rename, Fork, Export, Compact, the prompt, Delete) that closes, like its delete confirmation, on a press outside it and on Escape (ADR 0017, 8);
   - renders Markdown through `kvman.View`;
   - streams a subagent's steps in its card (the `subagent` chunk), shows "Summarizing earlier messages…" between `compaction` chunks (ADR 0009, 99), and shows background results as a small card;

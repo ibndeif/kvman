@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { TestKernel } from '@kvman/testkit';
 import type { FakeOpenAI } from '@kvman/testkit/fake-openai';
 import { heldReply } from './support/held-reply.ts';
+import { padded, unpadded } from './support/long-messages.ts';
 import { wait } from './support/wait.ts';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { requestMessages, says, textOf } from './support/model-script.ts';
@@ -9,17 +10,17 @@ import { kvcoderChunks, newSession, sendStreamed } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
 
-// Seven turns of a message and an answer: 14 messages.
+// Seven turns of a message and an answer: 14 messages, whose first four pass a summary's minimum.
 async function history(kernel: TestKernel, fake: FakeOpenAI, sessionId: string): Promise<void> {
   for (const index of [1, 2, 3, 4, 5, 6, 7]) {
     fake.reply(says(`answer ${index}`));
-    await kernel.exec('kvcoder.message.send', { sessionId, text: `message ${index}` });
+    await kernel.exec('kvcoder.message.send', { sessionId, text: padded(`message ${index}`) });
     await kernel.clock.advance(0);
   }
   await kernel.exec('kernel.settings.set', { key: 'kvcoder.compactAt', value: 0.0001, scope: 'global' });
 }
 
-const sent = (fake: FakeOpenAI) => requestMessages(fake).filter((message) => message.role !== 'system' && message.role !== 'developer').map(textOf);
+const sent = (fake: FakeOpenAI) => requestMessages(fake).filter((message) => message.role !== 'system' && message.role !== 'developer').map((message) => unpadded(textOf(message)));
 
 describe('compaction (08 §8.1)', { timeout: 30_000 }, () => {
   it('M2.4-H9 above compactAt the older messages are summarized and the last 10 kept whole', async () => {

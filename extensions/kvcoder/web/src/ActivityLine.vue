@@ -1,16 +1,14 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed } from 'vue';
 import { useKvman } from './kvman.ts';
 import { phaseOf, type Live } from './live-step.ts';
+import { useNow } from './use-now.ts';
 
 // What the running step is doing (plan 08 §8.7, ADR 0009, 142): waiting for the model, thinking, writing, or the tool
 // calls with the description and the connector command the model gave each, preparing or running. The seconds come from the page's clock.
 const props = defineProps<{ live: Live }>();
 const kvman = useKvman();
-const now = ref(Date.now());
-let ticker: ReturnType<typeof setInterval> | undefined;
-onMounted(() => (ticker = setInterval(() => (now.value = Date.now()), 1000)));
-onBeforeUnmount(() => clearInterval(ticker));
+const now = useNow();
 
 const phase = computed(() => phaseOf(props.live));
 const seconds = computed(() => Math.max(0, Math.floor((now.value - props.live.startedAt) / 1000)));

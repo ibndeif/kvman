@@ -3,15 +3,17 @@ import { z } from '@kvman/sdk';
 import type { TestKernel } from '@kvman/testkit';
 import type { FakeOpenAI } from '@kvman/testkit/fake-openai';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
+import { longAlone, padded } from './support/long-messages.ts';
 import { says } from './support/model-script.ts';
 import { newSession } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
 
+// Each message alone passes a summary's minimum (ADR 0019, 7).
 async function turns(kernel: TestKernel, fake: FakeOpenAI, sessionId: string, count: number): Promise<void> {
   for (let index = 1; index <= count; index += 1) {
     fake.reply(says(`answer ${index}`));
-    await kernel.exec('kvcoder.message.send', { sessionId, text: `message ${index}` });
+    await kernel.exec('kvcoder.message.send', { sessionId, text: padded(`message ${index}`, longAlone) });
     await kernel.clock.advance(0);
   }
 }
