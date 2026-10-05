@@ -7,18 +7,18 @@ const sessionParam = { sessionId: { $param: 'sessionId' } };
 
 const settings = (keys: readonly string[]) => keys.map((key) => ({ type: 'setting', key }));
 
-// kvcoder's configuration on its own page of the Extensions list (ADR 0014, 10).
+// kvcoder's configuration on its own page of the Extensions list (ADR 0014, 10; ADR 0015, 4 and 7).
 const configuration = {
   type: 'stack',
   direction: 'vertical',
   children: [
-    { type: 'card', title: 'kvcoder.config.agent', children: settings(['kvcoder.model', 'kvcoder.thinking', 'kvcoder.maxSteps', 'kvcoder.compactAt']) },
+    { type: 'card', title: 'kvcoder.config.agent', children: [{ type: 'custom', component: 'kvcoder.model', props: {} }, ...settings(['kvcoder.thinking', 'kvcoder.maxSteps', 'kvcoder.compactAt'])] },
     { type: 'card', title: 'kvcoder.config.shell', children: settings(['kvcoder.shell.approval', 'kvcoder.shell.path']) },
     { type: 'card', title: 'kvcoder.config.chats', children: settings(['kvcoder.sessions.keep', 'kvcoder.welcome']) },
     {
       type: 'card',
       title: 'kvcoder.config.connectors',
-      children: [{ type: 'text', text: 'kvcoder.config.connectors.intro' }, { type: 'custom', component: 'kvcoder.connectors', props: {} }, ...settings(['kvcoder.connectors'])],
+      children: [{ type: 'text', text: 'kvcoder.config.connectors.intro' }, { type: 'custom', component: 'kvcoder.connectors', props: {} }],
     },
   ],
 };

@@ -11,7 +11,7 @@
   "kvai.ui.get.description": "يعيد واجهة kvai: صفحات النماذج والمزوّد وإضافة مزوّد، وعنصر الاستهلاك في شريط الحالة.",
   "kvai.docs.list.description": "يسرد صفحات توثيق kvai.",
   "kvai.docs.get.description": "يعيد صفحة توثيق واحدة من kvai.",
-  "kvai.defaultModel.description": "النموذج المستخدم حين لا تحدّد المحادثة أو الإضافة نموذجًا. اختره من صفحة «النماذج».",
+  "kvai.defaultModel.description": "النموذج المستخدم حين لا تحدّد المحادثة أو الإضافة نموذجًا.",
   "kvai.errors.KEY_MISSING": "لم يُضَف مفتاح API للمزوّد {provider} بعد. أضفه من صفحته في «النماذج».",
   "kvai.errors.NO_MODEL": "لم يُحدَّد نموذج، ولم يُعيَّن نموذج افتراضي.",
   "kvai.errors.MODEL_UNKNOWN": "لا يوجد نموذج باسم {model}.",
@@ -132,10 +132,8 @@
   "kvai.ui.picker.choose": "اختيار نموذج",
   "kvai.ui.picker.title": "اختر نموذجًا",
   "kvai.ui.picker.search": "ابحث في النماذج",
-  "kvai.ui.picker.searchLabel": "ابحث في النماذج",
-  "kvai.ui.picker.narrow": "واصل الكتابة لتضييق القائمة.",
   "kvai.ui.picker.connectFirst": "اربط مزوّدًا أولًا.",
-  "kvai.ui.picker.noMatch": "لا يوجد نموذج مطابق.",
+  "kvai.ui.picker.noMatch": "لا توجد نماذج مطابقة",
   "kvai.ui.providers.added": "تمت إضافة المزوّد.",
   "kvai.ui.models.added": "تمت إضافة النموذج.",
   "kvai.ui.provider.connectTitle": "ربط {title}",
@@ -152,5 +150,11 @@
   "kvai.ui.provider.finishTitle": "أكمل تسجيل الدخول في التبويب الجديد",
   "kvai.ui.provider.finishHelp": "تتحدّث هذه الصفحة تلقائيًا. إذا لم يستطع التبويب الوصول إلى هذا الجهاز، فالصق العنوان الذي انتهى إليه.",
   "kvai.ui.provider.openAgain": "فتح صفحة تسجيل الدخول مجددًا",
-  "kvai.config.models": "ربط النماذج واختيارها"
+  "kvai.config.models": "ربط النماذج واختيارها",
+  "kvai.config.changed.global": "تم تغييره",
+  "kvai.config.changed.workspace": "تم تغييره في {name}",
+  "kvai.config.reset.global": "استعادة الافتراضي",
+  "kvai.config.reset.workspace": "استخدام قيمة كل مساحات العمل",
+  "kvai.config.ownValue": "لمساحة العمل {name} قيمة خاصة بها. انتقل إلى {name} لتغييرها.",
+  "kvai.ui.picker.count": "{shown} من أصل {total}"
 }

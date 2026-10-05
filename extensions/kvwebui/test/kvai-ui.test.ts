@@ -27,15 +27,14 @@ describe("kvai's pages in kvwebui (07 §7.3, ADR 0009, 79)", () => {
     expect(JSON.stringify(answer)).not.toContain('"tabs"');
   });
 
-  it("QA21-H10 kvai.ui.get gives a configuration with its default model, which kvwebui's check accepts", async () => {
+  it("QA21-H10 and QA22-H3 kvai.ui.get gives a configuration with its default-model component, which kvwebui's check accepts", async () => {
     const kernel = await createTestKernel({ extensions: [kvaiFolder] });
     kernels.push(kernel);
     const extensions = await kernel.exec('kernel.extensions.list', {});
     const result = checkAnswer(await kernel.exec('kvai.ui.get', {}), knownCalls(extensions, icons), new Set(['kvai.defaultModel']));
     expect('contributions' in result ? result.contributions.configuration : undefined).toEqual({
       type: 'card',
-      children: [{ type: 'setting', key: 'kvai.defaultModel' }, { type: 'link', text: 'kvai.config.models', to: { page: 'kvai.models' } }],
+      children: [{ type: 'custom', component: 'kvai.default-model', props: {} }, { type: 'link', text: 'kvai.config.models', to: { page: 'kvai.models' } }],
     });
-    expect(checkAnswer(await kernel.exec('kvai.ui.get', {}), knownCalls(extensions, icons), new Set())).toHaveProperty('problem');
   });
 });

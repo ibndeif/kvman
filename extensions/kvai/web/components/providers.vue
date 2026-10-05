@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import '../styles/kvai.css';
+import '../styles/picker.css';
 import '../styles/providers.css';
 import ProvidersPage from '../src/ProvidersPage.vue';
 

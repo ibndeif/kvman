@@ -32,18 +32,26 @@ function world(values: { global?: string[]; workspace?: string[] } = {}, fail = 
 const writes = (fake: FakeKvman) => fake.calls.filter((call) => call.name.startsWith('kernel.settings.') && call.name !== 'kernel.settings.list');
 
 describe("the connectors list of kvcoder's configuration (08 §8.7, ADR 0014, 10)", () => {
+  it('QA22-H2 the connectors are one list: a name, a description, and a switch each, and nothing about where one comes from', async () => {
+    const list = await mounted(ConnectorsList, world());
+    expect(list.findAll('.kvc-connector').map((row) => row.find('[data-test="connector-name"]').text())).toEqual(['shell', 'fs', 'artifact', 'background', 'ask', 'subagent', 'todo', 'gh']);
+    expect(list.findAll('.kvc-connector').map((row) => row.findAll('[data-test]').map((part) => part.attributes('data-test')))).toEqual(Array.from({ length: 8 }, () => ['connector-name', 'connector-description', 'connector-switch']));
+    expect(list.find('[data-test="connector-gh"] [data-test="connector-description"]').text()).toBe('GitHub CLI.');
+    expect(list.text()).not.toContain('@test/todo');
+  });
+
   it('QA21-H11 the list shows the six own connectors and the added ones, each on, and turning one off writes the setting', async () => {
     const fake = world();
     const list = await mounted(ConnectorsList, fake);
-    expect(list.findAll('.kvc-connector').map((row) => [row.find('[data-test="connector-name"]').text(), row.find('[data-test="connector-origin"]').text(), row.find('[data-test="connector-switch"]').attributes('aria-checked')])).toEqual([
-      ['shell', 'Built in', 'true'],
-      ['fs', 'Built in', 'true'],
-      ['artifact', 'Built in', 'true'],
-      ['background', 'Built in', 'true'],
-      ['ask', 'Built in', 'true'],
-      ['subagent', 'Built in', 'true'],
-      ['todo', 'From @test/todo', 'true'],
-      ['gh', 'Program', 'true'],
+    expect(list.findAll('.kvc-connector').map((row) => [row.find('[data-test="connector-name"]').text(), row.find('[data-test="connector-switch"]').attributes('aria-checked')])).toEqual([
+      ['shell', 'true'],
+      ['fs', 'true'],
+      ['artifact', 'true'],
+      ['background', 'true'],
+      ['ask', 'true'],
+      ['subagent', 'true'],
+      ['todo', 'true'],
+      ['gh', 'true'],
     ]);
     expect(list.find('[data-test="connector-ask"] [data-test="connector-description"]').text()).toBe('Asks you a question and waits for your answer.');
     expect(list.find('[data-test="connector-todo"] [data-test="connector-description"]').text()).toBe('Keep a todo list.');

@@ -46,8 +46,8 @@ const addPage = {
   },
 };
 
-// kvai's configuration on its own page of the Extensions list (ADR 0014, 11).
-const configuration = { type: 'card', children: [{ type: 'setting', key: 'kvai.defaultModel' }, { type: 'link', text: 'kvai.config.models', to: { page: 'kvai.models' } }] };
+// kvai's configuration on its own page of the Extensions list (ADR 0014, 11; ADR 0015, 7).
+const configuration = { type: 'card', children: [{ type: 'custom', component: 'kvai.default-model', props: {} }, { type: 'link', text: 'kvai.config.models', to: { page: 'kvai.models' } }] };
 
 const contributions = {
   pages: [modelsPage, providerPage, addPage],

@@ -17,10 +17,7 @@ const scoped = (key: string): string => kvman.t(`${key}.${kvman.scope.value}`, {
     </div>
     <div v-for="item in items" :key="item.name" class="kvc-connector" :data-test="`connector-${item.name}`">
       <span class="kvc-connector-text">
-        <span class="kvc-connector-name">
-          <span class="kvc-mono" data-test="connector-name">{{ item.name }}</span>
-          <span class="kvc-chip" data-test="connector-origin">{{ item.origin }}</span>
-        </span>
+        <span class="kvc-mono kvc-connector-name" data-test="connector-name">{{ item.name }}</span>
         <span class="kvc-muted" dir="auto" data-test="connector-description">{{ item.description }}</span>
       </span>
       <button

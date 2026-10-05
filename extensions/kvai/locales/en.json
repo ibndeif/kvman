@@ -11,7 +11,7 @@
   "kvai.ui.get.description": "Gives kvai's UI: the Models, provider, and Add a provider pages, and the usage status item.",
   "kvai.docs.list.description": "Lists the documentation pages of kvai.",
   "kvai.docs.get.description": "Gives one documentation page of kvai.",
-  "kvai.defaultModel.description": "The model used when a chat or an extension names none. Choose it on the Models page.",
+  "kvai.defaultModel.description": "The model used when a chat or an extension names none.",
   "kvai.errors.KEY_MISSING": "The provider {provider} has no API key yet. Add it on its page under Models.",
   "kvai.errors.NO_MODEL": "No model was given, and no default model is set.",
   "kvai.errors.MODEL_UNKNOWN": "There's no model {model}.",
@@ -132,10 +132,8 @@
   "kvai.ui.picker.choose": "Choose a model",
   "kvai.ui.picker.title": "Choose a model",
   "kvai.ui.picker.search": "Search models",
-  "kvai.ui.picker.searchLabel": "Search models",
-  "kvai.ui.picker.narrow": "Keep typing to narrow the list.",
   "kvai.ui.picker.connectFirst": "Connect a provider first.",
-  "kvai.ui.picker.noMatch": "No model matches.",
+  "kvai.ui.picker.noMatch": "No models match",
   "kvai.ui.providers.added": "The provider is added.",
   "kvai.ui.models.added": "The model is added.",
   "kvai.ui.provider.connectTitle": "Connect {title}",
@@ -152,5 +150,11 @@
   "kvai.ui.provider.finishTitle": "Finish signing in in the new tab",
   "kvai.ui.provider.finishHelp": "This page updates by itself. If the tab can't reach this computer, paste the address it ends on.",
   "kvai.ui.provider.openAgain": "Open the sign-in page again",
-  "kvai.config.models": "Connect and choose models"
+  "kvai.config.models": "Connect and choose models",
+  "kvai.ui.picker.count": "{shown} of {total} models",
+  "kvai.config.changed.global": "Changed",
+  "kvai.config.changed.workspace": "Changed for {name}",
+  "kvai.config.reset.global": "Reset",
+  "kvai.config.reset.workspace": "Use the value for all workspaces",
+  "kvai.config.ownValue": "{name} has its own value. Switch to {name} to change it."
 }

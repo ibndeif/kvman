@@ -38,7 +38,8 @@ On the provider's page, click **Disconnect**. kvman deletes the key and the sign
 
 ## Choosing the default model
 
-- On **Models**, click **Change model** and pick any model of a connected provider.
+- On **Models**, click **Change model** and pick any model of a connected provider. The list is searchable: type any words of a model's name.
+- Or open **Extensions**, then **Models**, and pick it from the same list. There the switch at the top of the page says whether you set it for all workspaces or only for this one.
 - Or, on a provider's page, click **Make default** next to a model.
 - In a chat, picking a model in the header sets it as the default for new chats too.
 

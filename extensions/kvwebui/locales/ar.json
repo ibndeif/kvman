@@ -135,7 +135,5 @@
   "kvwebui.settings.extensionsLink": "إعدادات كل إضافة في صفحتها، ضمن «الإضافات».",
   "kvwebui.extensions.noMatch": "لا توجد إضافة مطابقة.",
   "kvwebui.extension.nothing": "لا يوجد في هذه الإضافة ما يُضبط.",
-  "kvwebui.config.appearance": "المظهر",
-  "kvwebui.config.navigation": "التنقل",
-  "kvwebui.config.app": "التطبيق"
+  "kvwebui.config.appearance": "المظهر"
 }

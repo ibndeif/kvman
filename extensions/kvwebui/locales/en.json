@@ -135,7 +135,5 @@
   "kvwebui.settings.extensionsLink": "Each extension's settings are on its page, under Extensions.",
   "kvwebui.extensions.noMatch": "No extension matches.",
   "kvwebui.extension.nothing": "This extension has nothing to configure.",
-  "kvwebui.config.appearance": "Appearance",
-  "kvwebui.config.navigation": "Navigation",
-  "kvwebui.config.app": "App"
+  "kvwebui.config.appearance": "Appearance"
 }

@@ -1,0 +1,21 @@
+/* The model popover (ADR 0009, 244; ADR 0015, 2): under its button, made like the chat's; the list scrolls. */
+.kvai-picker-anchor { position: relative; display: flex; }
+.kvai-picker { position: absolute; inset-block-start: calc(100% + 6px); inset-inline-end: 0; z-index: 20; box-sizing: border-box; inline-size: min(26rem, calc(100vw - 32px)); display: flex; flex-direction: column; gap: 6px; padding: 8px; border: 1px solid var(--kv-color-border); border-radius: 12px; background: var(--kv-color-surface); color: var(--kv-color-text); box-shadow: 0 12px 32px rgb(0 0 0 / 0.14); }
+.kvai-picker-search { display: flex; align-items: center; gap: 8px; padding-inline: 10px; border: 1px solid var(--kv-color-border); border-radius: 10px; }
+.kvai-picker-search input { flex: 1 1 auto; min-inline-size: 0; border: 0; outline: none; background: transparent; color: inherit; font: inherit; padding-block: 8px; }
+.kvai-picker-list { max-block-size: 18rem; overflow-y: auto; display: flex; flex-direction: column; }
+.kvai-picker-group { font-size: 12px; font-weight: 600; color: var(--kv-color-muted); padding-block: 12px 4px; padding-inline: 10px; }
+.kvai-picker-option { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-block: 7px; padding-inline: 10px; border-radius: 8px; cursor: pointer; }
+.kvai-picker-option[data-active='true'] { background: var(--kv-color-background); }
+.kvai-picker-option[aria-selected='true'] { font-weight: 600; }
+.kvai-picker-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kvai-picker-note { margin: 0; padding-inline: 10px; }
+/* The default model's row in kvai's configuration (ADR 0015, 7), laid out like kvwebui's own rows. */
+.kvai-setting { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 24px; padding-block: 16px; border-block-end: 1px solid var(--kv-color-border); }
+.kvai-setting-text { display: flex; flex-direction: column; gap: 4px; flex: 1 1 20rem; min-inline-size: 15rem; }
+.kvai-setting-title { font-weight: 600; }
+.kvai-setting-control { display: flex; flex-direction: column; gap: 8px; inline-size: 22.5rem; max-inline-size: 100%; }
+.kvai-setting-button { flex: 1 1 auto; min-inline-size: 0; justify-content: space-between; }
+.kvai-setting .kvai-picker { inline-size: 100%; }
+.kvai-setting-state { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.kvai-text-button { border: 0; background: none; padding: 0; color: var(--kv-color-primary); font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }

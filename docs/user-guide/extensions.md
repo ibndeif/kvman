@@ -18,9 +18,9 @@ Open **Extensions** from the sidebar, below the divider. It shows:
 
 Click an extension to open its own page. Each extension decides what its page holds, so they differ:
 
-- **Coder** has its settings in groups (the model and thinking level of a new chat, the shell approval, how many chats to keep) and its **Connectors**: everything the agent can use, each with a switch. Turn a connector off and the agent no longer sees it, from its next step. Turn `shell` off, for example, and the agent can't run command lines.
-- **Models** has the default model, and a link to the Models page.
-- **Interface** has the theme and the order of the sidebar.
+- **Coder** has its settings in groups (the model and thinking level of a new chat, the shell approval, how many chats to keep) and its **Connectors**: everything the agent can use, programs on your machine included, each with a switch. The model is picked from a searchable list; **Use the default model**, its first entry, follows whatever the default model is. Turn a connector off and the agent no longer sees it, from its next step. Turn `shell` off, for example, and the agent can't run command lines.
+- **Models** has the default model, picked from a searchable list of the models you can call, and a link to the Models page.
+- **Interface** has the theme.
 - An extension with nothing to set says **This extension has nothing to configure.**
 
 At the top of the page a switch, **All workspaces** or **Only \<your workspace\>**, says where your changes are stored; it covers everything on the page, the connector switches included. A change is saved as you make it, with no restart; see [Settings and secrets](settings-and-secrets.md). The page ends with the extension's **Secrets**.

@@ -89,7 +89,7 @@ export function useProviderModels(providerId: () => string): {
     making.value = true;
     failure.value = null;
     try {
-      await setDefaultModel(kvman, modelId);
+      await setDefaultModel(kvman, modelId, 'global');
       await reload();
       kvman.refresh();
     } catch (error) {

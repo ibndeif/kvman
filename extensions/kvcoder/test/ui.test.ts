@@ -25,7 +25,7 @@ describe("kvcoder's UI contributions (08 §8.7, ADR 0009, 104)", { timeout: 30_0
     expect(info?.queries.find((query) => query.name === 'kvcoder.ui.get')?.public).toBe(true);
   });
 
-  it("QA21-H10 the configuration names kvcoder's own settings in four cards, with the connectors list", async () => {
+  it("QA21-H10 and QA22-H3 the configuration names kvcoder's own settings in four cards, with the model row and the connectors list", async () => {
     const { kernel } = await kvcoder.start();
     const answer = z.object({ configuration: z.object({ children: z.array(z.object({ title: z.string(), children: z.array(z.record(z.string(), z.json())) })) }) }).parse(await kernel.exec('kvcoder.ui.get', {}));
     const cards = answer.configuration.children.map((card) => [card.title, card.children.map((child) => child['key'] ?? child['component'] ?? child['text'])]);
@@ -33,11 +33,13 @@ describe("kvcoder's UI contributions (08 §8.7, ADR 0009, 104)", { timeout: 30_0
       ['kvcoder.config.agent', ['kvcoder.model', 'kvcoder.thinking', 'kvcoder.maxSteps', 'kvcoder.compactAt']],
       ['kvcoder.config.shell', ['kvcoder.shell.approval', 'kvcoder.shell.path']],
       ['kvcoder.config.chats', ['kvcoder.sessions.keep', 'kvcoder.welcome']],
-      ['kvcoder.config.connectors', ['kvcoder.config.connectors.intro', 'kvcoder.connectors', 'kvcoder.connectors']],
+      ['kvcoder.config.connectors', ['kvcoder.config.connectors.intro', 'kvcoder.connectors']],
     ]);
+    expect(answer.configuration.children[0]?.children[0]).toEqual({ type: 'custom', component: 'kvcoder.model', props: {} });
     const own = new Set((await kernel.exec('kernel.extensions.list', {})).find((extension) => extension.name === '@kvman/kvcoder')?.settings.map((setting) => setting.key));
     expect(own.has('kvcoder.connectors.disabled')).toBe(true);
     const keys = answer.configuration.children.flatMap((card) => card.children.flatMap((child) => (child['type'] === 'setting' ? [String(child['key'])] : [])));
     expect(keys.filter((key) => !own.has(key))).toEqual([]);
+    expect(keys.filter((key) => key === 'kvcoder.model' || key === 'kvcoder.connectors')).toEqual([]);
   });
 });

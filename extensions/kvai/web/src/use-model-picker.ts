@@ -1,11 +1,7 @@
-import { computed, ref, type ComputedRef, type Ref } from 'vue';
-import { setDefaultModel } from './default-model.ts';
+import { computed, ref } from 'vue';
 import { failureOf, fields, useKvman } from './kvman.ts';
-import { callableRows, groupByProvider, limitModels, matchModels, type PickerGroup, type PickerModel } from './picker-models.ts';
+import { callableRows, groupByProvider, matchModels, type PickerModel } from './picker-models.ts';
 import type { ProviderRow } from './provider-groups.ts';
-
-// At most this many models show in the picker (ADR 0009, 244).
-const pickerLimit = 100;
 
 export type PickerFailure = {
   provider: string;
@@ -14,10 +10,9 @@ export type PickerFailure = {
 };
 
 function asModel(value: unknown, provider: string): PickerModel | undefined {
-  const row = fields(value);
-  const { id, name } = row;
+  const { id, name } = fields(value);
   if (typeof id !== 'string' || typeof name !== 'string') return undefined;
-  return { id, name, provider, isDefault: row['isDefault'] === true };
+  return { id, name, provider };
 }
 
 function asModels(value: unknown, provider: string): PickerModel[] | undefined {
@@ -31,37 +26,15 @@ function asModels(value: unknown, provider: string): PickerModel[] | undefined {
   return models;
 }
 
-// The "Change model" picker (plan 07 §7.3, ADR 0009, 244): opens under the default card's button and lists every
-// model of the callable providers. Each provider is read on its own, so one failing provider doesn't hide the
-// others. Picking writes the global setting; a failed pick stays open with its reason.
-export function useModelPicker(options: {
-  providers: () => readonly ProviderRow[];
-  defaultId: () => string | null;
-  onPicked: () => Promise<void>;
-}): {
-  open: Ref<boolean>;
-  query: Ref<string>;
-  highlighted: Ref<number>;
-  loading: Ref<boolean>;
-  picking: Ref<boolean>;
-  pickError: Ref<{ key: string; params: Record<string, string> } | null>;
-  failures: Ref<PickerFailure[]>;
-  groups: ComputedRef<PickerGroup[]>;
-  shown: ComputedRef<PickerModel[]>;
-  hidden: ComputedRef<number>;
-  callableCount: ComputedRef<number>;
-  defaultId: ComputedRef<string | null>;
-  openPicker: () => Promise<void>;
-  closePicker: () => void;
-  togglePicker: () => void;
-  setQuery: (value: string) => void;
-  moveHighlight: (delta: number) => void;
-  pickModel: (modelId: string) => Promise<void>;
-} {
+// The model picker (plan 07 §7.3, ADR 0009, 244; ADR 0015, 2): opens under its button and lists every model of the
+// callable providers, as the chat's picker does: every word typed must be in a model's name or id, the highlight starts
+// on the current model, and the arrows wrap. Each provider is read on its own, so one failing provider doesn't hide the
+// others. `pick` stores the choice; a failed pick stays open with its reason.
+export function useModelPicker(options: { providers: () => readonly ProviderRow[]; current: () => string | null; pick: (modelId: string) => Promise<void> }) {
   const kvman = useKvman();
   const open = ref(false);
   const query = ref('');
-  const highlighted = ref(-1);
+  const highlighted = ref(0);
   const loading = ref(false);
   const picking = ref(false);
   const pickError = ref<{ key: string; params: Record<string, string> } | null>(null);
@@ -69,18 +42,26 @@ export function useModelPicker(options: {
   const loaded = ref<PickerModel[]>([]);
   const titles = ref(new Map<string, string>());
 
-  const defaultId = computed(() => options.defaultId());
+  const current = computed(() => options.current());
   const callableCount = computed(() => callableRows(options.providers()).length);
-  const matched = computed(() => matchModels(loaded.value, query.value));
-  const limited = computed(() => limitModels(matched.value, pickerLimit));
-  const groups = computed(() => groupByProvider(limited.value.shown, titles.value));
+  const groups = computed(() => groupByProvider(matchModels(loaded.value, query.value), titles.value));
   const shown = computed(() => groups.value.flatMap((group) => group.models));
-  const hidden = computed(() => limited.value.hidden);
+  const total = computed(() => loaded.value.length);
+
+  async function readModels(row: ProviderRow): Promise<{ row: ProviderRow; models: PickerModel[]; failure: PickerFailure['failure'] | null }> {
+    try {
+      const models = asModels(await kvman.exec('kvai.model.list', { provider: row.id }), row.id);
+      if (models === undefined) throw new Error('Unexpected model list answer.');
+      return { row, models, failure: null };
+    } catch (error) {
+      return { row, models: [], failure: failureOf(error) };
+    }
+  }
 
   async function openPicker(): Promise<void> {
     open.value = true;
     query.value = '';
-    highlighted.value = -1;
+    highlighted.value = 0;
     pickError.value = null;
     failures.value = [];
     loaded.value = [];
@@ -88,26 +69,10 @@ export function useModelPicker(options: {
     try {
       const callable = callableRows(options.providers());
       titles.value = new Map(callable.map((row) => [row.id, row.title]));
-      const settled = await Promise.all(
-        callable.map(async (row) => {
-          try {
-            const answer = await kvman.exec('kvai.model.list', { provider: row.id });
-            const models = asModels(answer, row.id);
-            if (models === undefined) throw new Error('Unexpected model list answer.');
-            return { row, models, failure: null as PickerFailure['failure'] | null };
-          } catch (error) {
-            return { row, models: [] as PickerModel[], failure: failureOf(error) };
-          }
-        }),
-      );
-      const models: PickerModel[] = [];
-      const seen: PickerFailure[] = [];
-      for (const entry of settled) {
-        models.push(...entry.models);
-        if (entry.failure !== null) seen.push({ provider: entry.row.id, title: entry.row.title, failure: entry.failure });
-      }
-      loaded.value = models;
-      failures.value = seen;
+      const settled = await Promise.all(callable.map(readModels));
+      loaded.value = settled.flatMap((entry) => entry.models);
+      failures.value = settled.flatMap((entry) => (entry.failure === null ? [] : [{ provider: entry.row.id, title: entry.row.title, failure: entry.failure }]));
+      highlighted.value = Math.max(shown.value.findIndex((model) => model.id === current.value), 0);
     } finally {
       loading.value = false;
     }
@@ -124,20 +89,16 @@ export function useModelPicker(options: {
 
   function setQuery(value: string): void {
     query.value = value;
-    highlighted.value = shown.value.length > 0 ? 0 : -1;
+    highlighted.value = 0;
   }
 
-  function moveHighlight(delta: number): void {
+  function setHighlight(index: number): void {
+    highlighted.value = index;
+  }
+
+  function moveHighlight(step: number): void {
     const count = shown.value.length;
-    if (count === 0) {
-      highlighted.value = -1;
-      return;
-    }
-    if (highlighted.value < 0) {
-      highlighted.value = delta > 0 ? 0 : count - 1;
-      return;
-    }
-    highlighted.value = Math.min(Math.max(highlighted.value + delta, 0), count - 1);
+    if (count > 0) highlighted.value = (highlighted.value + step + count) % count;
   }
 
   async function pickModel(modelId: string): Promise<void> {
@@ -145,11 +106,8 @@ export function useModelPicker(options: {
     picking.value = true;
     pickError.value = null;
     try {
-      await setDefaultModel(kvman, modelId);
+      await options.pick(modelId);
       open.value = false;
-      query.value = '';
-      highlighted.value = -1;
-      await options.onPicked();
     } catch (error) {
       pickError.value = failureOf(error);
     } finally {
@@ -157,27 +115,8 @@ export function useModelPicker(options: {
     }
   }
 
-  return {
-    open,
-    query,
-    highlighted,
-    loading,
-    picking,
-    pickError,
-    failures,
-    groups,
-    shown,
-    hidden,
-    callableCount,
-    defaultId,
-    openPicker,
-    closePicker,
-    togglePicker,
-    setQuery,
-    moveHighlight,
-    pickModel,
-  };
+  return { open, query, highlighted, loading, picking, pickError, failures, groups, shown, total, callableCount, current, openPicker, closePicker, togglePicker, setQuery, setHighlight, moveHighlight, pickModel };
 }
 
-/** The picker's state, passed from the default card to the popover. */
+/** The picker's state, passed from its button's component to the popover. */
 export type ModelPickerState = ReturnType<typeof useModelPicker>;

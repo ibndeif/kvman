@@ -40,7 +40,7 @@ Everything the agent does goes through a **connector**: a named set of commands.
 - `subagent` — runs a helper chat that does a self-contained part and reports back.
 - `background` — checks on, or stops, something the agent left running (below).
 
-Other extensions add connectors (kvcustomizer adds `ext`, `preset`, `preview`, `kvman`, and `docs` — see [customizing-with-the-agent.md](customizing-with-the-agent.md)), and a preset or you can add a program on your machine, such as `git` or `gh`, as a connector with the `kvcoder.connectors` setting.
+Other extensions add connectors (kvcustomizer adds `ext`, `preset`, `preview`, `kvman`, and `docs` — see [customizing-with-the-agent.md](customizing-with-the-agent.md)), and a preset can add a program on your machine, such as `git` or `gh`, as a connector with the `kvcoder.connectors` setting. A program is a connector like any other: it is in the same list on Coder's page, with the same switch.
 
 ## Approval
 
@@ -84,7 +84,7 @@ The paperclip button attaches images (PNG, JPEG, GIF, or WebP) from your compute
 
 ## Useful settings
 
-On Coder's page (open **Extensions**, then **Coder**): the model a new chat starts with (`kvcoder.model`), its thinking level (`kvcoder.thinking`), approval (`kvcoder.shell.approval`), the shell program, extra program connectors (`kvcoder.connectors`), step limits (`kvcoder.maxSteps`), when to summarize a long chat (`kvcoder.compactAt`), and how many chats to keep (`kvcoder.sessions.keep`). The same page lists the agent's **Connectors**, each with a switch that turns it on or off (`kvcoder.connectors.disabled`). See [extensions.md](extensions.md) and [settings-and-secrets.md](settings-and-secrets.md).
+On Coder's page (open **Extensions**, then **Coder**): the model a new chat starts with (`kvcoder.model`), its thinking level (`kvcoder.thinking`), approval (`kvcoder.shell.approval`), the shell program, step limits (`kvcoder.maxSteps`), when to summarize a long chat (`kvcoder.compactAt`), and how many chats to keep (`kvcoder.sessions.keep`). The same page lists the agent's **Connectors**, each with a switch that turns it on or off (`kvcoder.connectors.disabled`). See [extensions.md](extensions.md) and [settings-and-secrets.md](settings-and-secrets.md).
 
 ## Next
 

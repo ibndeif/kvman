@@ -55,4 +55,34 @@ describe("kvcoder's configuration in Chromium (06 §6.6, 08 §8.7, ADR 0014)", {
     expect(await page.locator('[data-test^="scope-"]').count()).toBe(0);
     await page.close();
   });
+
+  it('QA22-H8 Coder and AI pick their model from a dropdown, Coder lists no programs field, and Interface has only its theme', async () => {
+    world = await kvmanWorld();
+    const kvman = await world.start();
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await page.goto(`${kvman.origin}/kvwebui/extension/kvcoder`);
+    const coder = page.locator('[data-test="model-setting"] [data-test="model-picker"]');
+    await coder.waitFor();
+    await page.locator('[data-test="connectors"] [data-test="connector-name"]').first().waitFor();
+    expect(await page.locator('[data-test="setting-kvcoder.model"], [data-test="setting-kvcoder.connectors"], [data-test="connector-origin"]').count()).toBe(0);
+    await coder.click();
+    await page.locator('[data-test="model-setting"] [data-test="model-search"]').waitFor();
+    expect(await page.locator('[data-test="model-none-entry"]').getAttribute('aria-selected')).toBe('true');
+    const box = await page.locator('[data-test="model-popover"]').boundingBox();
+    expect(box !== null && box.x >= 0 && box.x + box.width <= 1280).toBe(true);
+
+    await page.goto(`${kvman.origin}/kvwebui/extension/kvai`);
+    const ai = page.locator('[data-test="default-model-setting"] [data-test="default-model-button"]');
+    await ai.waitFor();
+    expect(await page.locator('[data-test="setting-kvai.defaultModel"]').count()).toBe(0);
+    await ai.click();
+    await page.locator('[data-test="default-model-setting"] [data-test="picker-search"]').waitFor();
+    const popover = await page.locator('[data-test="default-model-setting"] [data-test="model-picker"]').boundingBox();
+    expect(popover !== null && popover.x >= 0 && popover.x + popover.width <= 1280).toBe(true);
+
+    await page.goto(`${kvman.origin}/kvwebui/extension/kvwebui`);
+    await page.locator('[data-test="setting-kvwebui.theme"]').waitFor();
+    expect(await page.locator('[data-test^="setting-kvwebui."]').evaluateAll((rows) => rows.map((row) => row.getAttribute('data-test')))).toEqual(['setting-kvwebui.theme']);
+    await page.close();
+  });
 });

@@ -110,10 +110,18 @@ a.kvc-button { text-decoration: none; color: inherit; }
 .kvc-connector { display: flex; align-items: center; gap: 16px; padding-block: 12px; border-block-end: 1px solid var(--kv-color-border); }
 .kvc-connector:last-child { border-block-end: 0; }
 .kvc-connector-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-inline-size: 0; }
-.kvc-connector-name { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.kvc-connector-name .kvc-mono { font-size: 13.5px; font-weight: 600; }
+.kvc-connector-name { font-size: 13.5px; font-weight: 600; }
 .kvc-switch { flex: none; display: flex; align-items: center; inline-size: 40px; block-size: 24px; padding: 2px; border: 0; border-radius: 999px; background: var(--kv-color-border); cursor: pointer; transition: background-color 120ms; }
 .kvc-switch[aria-checked='true'] { background: var(--kv-color-primary); }
 .kvc-switch:disabled { opacity: 0.5; cursor: default; }
 .kvc-switch-knob { inline-size: 20px; block-size: 20px; border-radius: 999px; background: var(--kv-color-surface); transition: margin-inline-start 120ms; }
 .kvc-switch[aria-checked='true'] .kvc-switch-knob { margin-inline-start: 16px; }
+/* A setting's row in kvcoder's configuration (ADR 0015, 7), laid out like kvwebui's own rows. */
+.kvc-setting { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 24px; padding-block: 16px; border-block-end: 1px solid var(--kv-color-border); }
+.kvc-setting-text { display: flex; flex-direction: column; gap: 4px; flex: 1 1 20rem; min-inline-size: 15rem; }
+.kvc-setting-title { font-weight: 600; }
+.kvc-setting-control { display: flex; flex-direction: column; gap: 8px; inline-size: 22.5rem; max-inline-size: 100%; }
+.kvc-setting .kvc-picker > .kvc-button { inline-size: 100%; justify-content: space-between; }
+.kvc-setting .kvc-picker-label { max-inline-size: none; }
+.kvc-setting .kvc-popover { inline-size: 100%; }
+.kvc-setting .kvc-connectors-state { padding-block-end: 0; }

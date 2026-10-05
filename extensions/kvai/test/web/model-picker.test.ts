@@ -1,7 +1,7 @@
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import ProvidersPage from '../../web/src/ProvidersPage.vue';
-import { callableRows, groupByProvider, limitModels, matchModels, type PickerModel } from '../../web/src/picker-models.ts';
+import { callableRows, groupByProvider, matchModels, type PickerModel } from '../../web/src/picker-models.ts';
 import type { ProviderRow } from '../../web/src/provider-groups.ts';
 import { createFakeKvman, mounted, problemError, type FakeKvman } from './support/fake-kvman.ts';
 
@@ -9,13 +9,11 @@ const openai: ProviderRow = { id: 'openai', title: 'OpenAI', builtIn: true, stat
 const relay: ProviderRow = { id: 'relay', title: 'Relay', builtIn: false, status: 'noKey', models: 1, connection: null, signIn: false, apiKey: false };
 const anthropic: ProviderRow = { id: 'anthropic', title: 'Anthropic', builtIn: true, status: 'needsKey', models: 3, connection: null, signIn: true, apiKey: true };
 
-function model(id: string, name: string, provider: string, isDefault: boolean): PickerModel {
-  return { id, name, provider, isDefault };
-}
+const model = (id: string, name: string, provider: string): PickerModel => ({ id, name, provider });
 
-const luna = model('openai/gpt-6-luna', 'GPT-6 Luna', 'openai', true);
-const nova = model('openai/gpt-6-nova', 'GPT-6 Nova', 'openai', false);
-const one = model('relay/r1', 'Relay One', 'relay', false);
+const luna = model('openai/gpt-6-luna', 'GPT-6 Luna', 'openai');
+const nova = model('openai/gpt-6-nova', 'GPT-6 Nova', 'openai');
+const one = model('relay/r1', 'Relay One', 'relay');
 const current = { id: 'openai/gpt-6-luna', name: 'GPT-6 Luna', ready: true };
 
 function serve(fake: FakeKvman, rows: ProviderRow[], models: Record<string, PickerModel[]>): void {
@@ -34,7 +32,7 @@ async function pressChange(wrapper: Awaited<ReturnType<typeof mounted>>): Promis
   await flushPromises();
 }
 
-describe('the Change model picker (07 §7.3, ADR 0009, 244)', () => {
+describe('the Change model picker (07 §7.3, ADR 0009, 244; ADR 0015, 2)', () => {
   it('QA16-H7 the picker lists callable providers and picking sets the default', async () => {
     const fake = createFakeKvman();
     serve(fake, [openai, relay, anthropic], { openai: [luna, nova], relay: [one] });
@@ -48,7 +46,6 @@ describe('the Change model picker (07 §7.3, ADR 0009, 244)', () => {
     expect(picker.findAll('[data-test="picker-group"]').map((group) => group.text())).toEqual(['OpenAI', 'Relay']);
     expect(picker.findAll('[data-test="picker-option"]')).toHaveLength(3);
     expect(picker.text()).not.toContain('Anthropic');
-    expect(picker.text()).toContain('Default');
     await picker.find('[data-test="picker-search"]').setValue('nova');
     const options = picker.findAll('[data-test="picker-option"]');
     expect(options).toHaveLength(1);
@@ -80,25 +77,23 @@ describe('the Change model picker (07 §7.3, ADR 0009, 244)', () => {
     const search = wrapper.find('[data-test="picker-search"]');
     expect(document.activeElement).toBe(search.element);
     const options = (): ReturnType<typeof wrapper.findAll> => wrapper.findAll('[data-test="picker-option"]');
-    await search.trigger('keydown', { key: 'Enter' });
-    await flushPromises();
-    expect(fake.calls.some((call) => call.name === 'kernel.settings.set')).toBe(false);
-    await search.trigger('keydown', { key: 'ArrowDown' });
-    expect(options()[0]?.attributes('aria-selected')).toBe('true');
-    await search.trigger('keydown', { key: 'ArrowDown' });
-    expect(options()[1]?.attributes('aria-selected')).toBe('true');
-    await search.trigger('keydown', { key: 'ArrowUp' });
-    expect(options()[0]?.attributes('aria-selected')).toBe('true');
+    expect(options()[0]?.attributes('data-active')).toBe('true');
+    await search.trigger('keydown', { key: 'Down' });
+    expect(options()[1]?.attributes('data-active')).toBe('true');
+    await search.trigger('keydown', { key: 'Down' });
+    expect(options()[2]?.attributes('data-active')).toBe('true');
+    await search.trigger('keydown', { key: 'Up' });
+    expect(options()[1]?.attributes('data-active')).toBe('true');
     await search.trigger('keydown', { key: 'Enter' });
     await flushPromises();
     expect(fake.calls).toContainEqual({
       name: 'kernel.settings.set',
-      input: { key: 'kvai.defaultModel', value: 'openai/gpt-6-luna', scope: 'global' },
+      input: { key: 'kvai.defaultModel', value: 'openai/gpt-6-nova', scope: 'global' },
     });
     expect(wrapper.find('[data-test="model-picker"]').exists()).toBe(false);
     await pressChange(wrapper);
     const callsBefore = fake.calls.length;
-    await wrapper.find('[data-test="picker-search"]').trigger('keydown', { key: 'Escape' });
+    await wrapper.find('[data-test="picker-search"]').trigger('keydown', { key: 'Esc' });
     expect(wrapper.find('[data-test="model-picker"]').exists()).toBe(false);
     expect(fake.calls.length).toBe(callsBefore);
     expect(document.activeElement).toBe(wrapper.find('[data-test="change-model"]').element);
@@ -127,7 +122,8 @@ describe('the Change model picker (07 §7.3, ADR 0009, 244)', () => {
     await pressChange(wrapper);
     await wrapper.find('[data-test="picker-search"]').setValue('zzz');
     expect(wrapper.findAll('[data-test="picker-option"]')).toHaveLength(0);
-    expect(wrapper.find('[data-test="model-picker"]').text()).toContain('No model matches.');
+    expect(wrapper.find('[data-test="picker-none"]').text()).toBe('No models match');
+    expect(wrapper.find('[data-test="picker-count"]').text()).toBe('0 of 3 models');
     wrapper.unmount();
   });
 
@@ -161,25 +157,50 @@ describe('the Change model picker (07 §7.3, ADR 0009, 244)', () => {
     other.unmount();
   });
 
-  it('QA16-E4 the picker caps at 100 models with a hint to narrow', async () => {
-    const many = Array.from({ length: 147 }, (_, index) => model(`openai/m${index}`, `Model ${index}`, 'openai', false));
-    const zeta = [1, 2, 3].map((number) => model(`openai/z${number}`, `Zeta ${number}`, 'openai', false));
+  it('QA22-H7 the picker behaves like the chat\'s: the current model checked and highlighted, every word searched, a count, and arrows that wrap', async () => {
     const fake = createFakeKvman();
-    serve(fake, [openai], { openai: [...many, ...zeta] });
+    serve(fake, [openai, relay, anthropic], { openai: [luna, nova], relay: [one] });
+    fake.handle('kvai.model.default.get', () => ({ id: 'openai/gpt-6-nova', name: 'GPT-6 Nova', ready: true }));
+    const wrapper = await mounted(ProvidersPage, fake);
+    await pressChange(wrapper);
+    const search = wrapper.find('[data-test="picker-search"]');
+    const options = (): ReturnType<typeof wrapper.findAll> => wrapper.findAll('[data-test="picker-option"]');
+    const marks = (name: string): (string | undefined)[] => options().map((option) => option.attributes(name));
+    expect(search.attributes('role')).toBe('combobox');
+    expect(options().map((option) => option.text())).toEqual(['GPT-6 Luna', 'GPT-6 Nova', 'Relay One']);
+    expect(marks('aria-selected')).toEqual(['false', 'true', 'false']);
+    expect(marks('data-active')).toEqual(['false', 'true', 'false']);
+    expect(options().map((option) => option.find('svg').exists())).toEqual([false, true, false]);
+    expect(wrapper.find('[data-test="picker-count"]').text()).toBe('3 of 3 models');
+    await search.trigger('keydown', { key: 'Down' });
+    await search.trigger('keydown', { key: 'Down' });
+    expect(marks('data-active')).toEqual(['true', 'false', 'false']);
+    await search.trigger('keydown', { key: 'Up' });
+    expect(marks('data-active')).toEqual(['false', 'false', 'true']);
+    await search.setValue('6 nova');
+    expect(options().map((option) => option.text())).toEqual(['GPT-6 Nova']);
+    expect(marks('data-active')).toEqual(['true']);
+    expect(wrapper.find('[data-test="picker-count"]').text()).toBe('1 of 3 models');
+    await search.setValue('nova 7');
+    expect(options()).toHaveLength(0);
+    await search.setValue('RELAY r1');
+    await search.trigger('keydown', { key: 'Enter' });
+    await flushPromises();
+    expect(fake.calls).toContainEqual({ name: 'kernel.settings.set', input: { key: 'kvai.defaultModel', value: 'relay/r1', scope: 'global' } });
+    wrapper.unmount();
+  });
+
+  it('QA22-E6 the picker has no cap: every model shows, with the count and no hint to narrow', async () => {
+    const many = Array.from({ length: 150 }, (_, index) => model(`openai/m${index}`, `Model ${index}`, 'openai'));
+    const fake = createFakeKvman();
+    serve(fake, [openai], { openai: many });
     const wrapper = await mounted(ProvidersPage, fake);
     await pressChange(wrapper);
     const picker = wrapper.find('[data-test="model-picker"]');
-    expect(picker.findAll('[data-test="picker-option"]')).toHaveLength(100);
-    expect(picker.find('[data-test="picker-narrow"]').text()).toBe('Keep typing to narrow the list.');
-    await picker.find('[data-test="picker-search"]').setValue('zeta');
-    expect(picker.findAll('[data-test="picker-option"]')).toHaveLength(3);
+    expect(picker.findAll('[data-test="picker-option"]')).toHaveLength(150);
+    expect(picker.find('[data-test="picker-count"]').text()).toBe('150 of 150 models');
     expect(picker.find('[data-test="picker-narrow"]').exists()).toBe(false);
     wrapper.unmount();
-
-    const capped = limitModels([...many, ...zeta], 100);
-    expect(capped.shown).toHaveLength(100);
-    expect(capped.hidden).toBe(50);
-    expect(limitModels(zeta, 100)).toEqual({ shown: zeta, hidden: 0 });
   });
 
   it('QA16-E5 the picker search ignores case and surrounding spaces', async () => {
@@ -191,7 +212,7 @@ describe('the Change model picker (07 §7.3, ADR 0009, 244)', () => {
     const options = wrapper.findAll('[data-test="picker-option"]');
     expect(options).toHaveLength(1);
     expect(options[0]?.text()).toContain('GPT-6 Luna');
-    expect(options[0]?.attributes('aria-selected')).toBe('true');
+    expect(options[0]?.attributes('data-active')).toBe('true');
     wrapper.unmount();
 
     expect(matchModels([luna, nova], '  NOVA ').map((found) => found.id)).toEqual(['openai/gpt-6-nova']);

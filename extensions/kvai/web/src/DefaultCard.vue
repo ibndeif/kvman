@@ -4,6 +4,7 @@ import ModelPicker from './ModelPicker.vue';
 import ProviderAvatar from './ProviderAvatar.vue';
 import { useKvman } from './kvman.ts';
 import { providerOf, type DefaultModel, type ProviderRow } from './provider-groups.ts';
+import { setDefaultModel } from './default-model.ts';
 import { useModelPicker } from './use-model-picker.ts';
 
 // The default-model card (plan 07 §7.3, ADR 0009, 239): what kvman uses, with its "Change model" picker (244).
@@ -13,8 +14,11 @@ const changeButton = ref<HTMLButtonElement | null>(null);
 
 const picker = useModelPicker({
   providers: () => props.rows,
-  defaultId: () => props.defaultModel?.id ?? null,
-  onPicked: () => props.onPicked(),
+  current: () => props.defaultModel?.id ?? null,
+  pick: async (modelId) => {
+    await setDefaultModel(kvman, modelId, 'global');
+    await props.onPicked();
+  },
 });
 
 const hasDefault = computed(() => props.defaultModel !== null && props.defaultModel.id !== null);

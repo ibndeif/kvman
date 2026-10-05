@@ -1,7 +1,7 @@
 import type { ProviderRow } from './provider-groups.ts';
 
 // A model row of `kvai.model.list` as the picker needs it (plan 07 §7.2).
-export type PickerModel = { id: string; name: string; provider: string; isDefault: boolean };
+export type PickerModel = { id: string; name: string; provider: string };
 
 // One provider's models in the picker, in the order of the providers' titles.
 export type PickerGroup = { provider: string; title: string; models: PickerModel[] };
@@ -13,13 +13,10 @@ export function callableRows(rows: readonly ProviderRow[]): ProviderRow[] {
     .sort((left, right) => left.title.localeCompare(right.title));
 }
 
-/** Models whose name or id holds the query, ignoring case and surrounding spaces; all of them when it is empty. */
+/** Models whose name or id holds every word of the query, ignoring case; all of them when it is empty (ADR 0015, 2). */
 export function matchModels(models: readonly PickerModel[], query: string): PickerModel[] {
-  const needle = query.trim().toLocaleLowerCase();
-  if (needle === '') return [...models];
-  return models.filter(
-    (model) => model.name.toLocaleLowerCase().includes(needle) || model.id.toLocaleLowerCase().includes(needle),
-  );
+  const words = query.toLocaleLowerCase().split(/\s+/).filter((word) => word !== '');
+  return models.filter((model) => words.every((word) => `${model.name} ${model.id}`.toLocaleLowerCase().includes(word)));
 }
 
 /** Models grouped under their provider's title, in the titles' order; a title with no model is left out. */
@@ -36,10 +33,4 @@ export function groupByProvider(models: readonly PickerModel[], titles: Readonly
     if (group !== undefined && group.length > 0) groups.push({ provider, title, models: group });
   }
   return groups;
-}
-
-/** At most `limit` models, with how many were cut. */
-export function limitModels<Item>(models: readonly Item[], limit: number): { shown: Item[]; hidden: number } {
-  const shown = models.slice(0, limit);
-  return { shown, hidden: models.length - shown.length };
 }

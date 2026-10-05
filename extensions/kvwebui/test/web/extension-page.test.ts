@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { defineComponent, h, inject } from 'vue';
 import type { Kvman } from '@kvman/sdk/web';
 import { kernelQuerySchemas } from '@kvman/sdk';
+import { setting } from './support/fake-api.ts';
 import { createFakeComponents } from './support/fake-components.ts';
 import { click, extension, mountApp, type } from './support/mount-app.ts';
 import { notesUi } from './support/notes.ts';
@@ -79,16 +80,18 @@ describe("an extension's page (06 §6.6, ADR 0014)", () => {
     expect(app.find('[data-test="probe"]')?.textContent).toBe('global');
   });
 
-  it("QA21-H7 and M2.2-E12 kvwebui's own page shows its theme and nav settings, and its title and home page locked", async () => {
+  it("QA22-H1 kvwebui's own page has one section, Appearance, with its theme", async () => {
     const { app, part } = await openSettings(undefined, 'kvwebui');
     expect(app.find('[data-test="extension-title"]')?.textContent).toBe('Interface');
-    expect(app.findAll('h2').map((heading) => heading.textContent).slice(0, 3)).toEqual(['Appearance', 'Navigation', 'App']);
-    expect(app.findAll('[data-test^="setting-kvwebui."]').map((row) => row.dataset['test'])).toEqual(['setting-kvwebui.theme', 'setting-kvwebui.nav.order', 'setting-kvwebui.nav.hidden', 'setting-kvwebui.title', 'setting-kvwebui.home']);
-    for (const key of ['kvwebui.title', 'kvwebui.home']) {
-      expect(part(key, 'setting-locked'), key).not.toBeNull();
-      expect(part(key, 'setting-control'), key).toBeNull();
-    }
+    expect(app.findAll('[data-test="extension-page-kvwebui"] h2').map((heading) => heading.textContent)).toEqual(['Appearance', 'Secrets']);
+    expect(app.findAll('[data-test^="setting-kvwebui."]').map((row) => row.dataset['test'])).toEqual(['setting-kvwebui.theme']);
     expect(part('kvwebui.theme', 'setting-control')).not.toBeNull();
+  });
+
+  it('M2.2-E12 a preset-only key of a configuration is shown locked, with no control', async () => {
+    const { part } = await openSettings((api) => api.settings.push(setting('notes.start', { type: 'string' }, [], { preset: 'inbox' })));
+    expect(part('notes.start', 'setting-locked')?.textContent).toContain('inbox');
+    expect(part('notes.start', 'setting-control')).toBeNull();
   });
 
   it('QA21-E4 an extension with nothing to configure says so, with no scope switch, and still has its secrets', async () => {

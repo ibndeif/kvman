@@ -2,6 +2,8 @@
 
 Asked: the Settings page shows only the general settings; each extension is configured from the Extensions page, by a configuration UI the extension manages (kvcoder: the connectors, with on and off), not by a list of its API. Decided in ADR 0014; plan 06 §6.3, §6.4, and §6.6, plan 08 §8.2 to §8.7. This file is the contract; every scenario's test name starts with its id.
 
+*Changed by QA 22 (ADR 0015): kvwebui's page shows only its theme (H7 is now QA22-H1), the connectors list no longer says where a connector comes from (H11), and the model settings are rows the extensions draw (H10).*
+
 ## Happy path
 
 - **QA21-H1 The Settings page holds kvman's own settings.** *Given* settings of `kernel`, `kvwebui`, and `notes`, *then* the page shows the `kernel.*` rows only, with no scope switch, no Secrets section, and its search box; changing one sends `scope: 'global'`. `extensions/kvwebui/test/web/settings-page.test.ts`

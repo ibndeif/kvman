@@ -29,7 +29,7 @@ describe('routes and the home page (06 §6.3)', () => {
     expect(api.calls.filter((call) => call.kind === 'commands')).toHaveLength(commands);
   });
 
-  it("M2.2-H6 / shows the preset's home page; a missing one shows Extensions with HOME_UNAVAILABLE; kvwebui's page shows kvwebui.home locked", async () => {
+  it("M2.2-H6 / shows the preset's home page; a missing one shows Extensions with HOME_UNAVAILABLE", async () => {
     const home = await mountApp(notesApi(), '/');
     expect(home.find('h1')?.textContent).toBe('Notes');
     expect(home.find('[data-test="nav-notes.list"]')?.getAttribute('aria-current')).toBe('page');
@@ -41,12 +41,6 @@ describe('routes and the home page (06 §6.3)', () => {
     expect(card?.textContent).toContain("The home page, ghost.start, isn't available.");
     expect(card?.querySelector('[data-test="problem-code"]')?.textContent).toBe('ghost/DOWN');
     expect(missing.find('h1')?.textContent).toBe('Extensions');
-    await missing.router.push('/kvwebui/extension/kvwebui');
-    await missing.settle();
-    const row = missing.find('[data-test="setting-kvwebui.home"]');
-    expect(row?.querySelector('[data-test="setting-locked"]')?.textContent).toContain('ghost.start');
-    expect(row?.textContent).toContain('Set by the test preset');
-    expect(row?.querySelectorAll('input, select, textarea')).toHaveLength(0);
   });
 
   it('M2.2-E3 a page with params renders, and unknown pages and links to missing pages show "page not found"', async () => {

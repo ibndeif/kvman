@@ -1,5 +1,7 @@
 # QA 16 — the providers UI, made usable and prettier (ADR 0009, 238–249)
 
+*Changed by QA 22 (ADR 0015): the "Change model" picker now behaves like the chat's. Its highlight starts on the current model and Enter picks it (H8), every word typed is searched (H7, E5), and the cap of 100 (E4) is gone; see QA22-H7 and QA22-E6.*
+
 Asked to "optimize and enhance the providers UI user experience and make it usable and prettier". The product owner chose, from mockups: connected first, then connect, then all providers; a short fixed list of quick-connect tiles; coloured letter avatars; and a searchable model picker. Tests mount the components in happy-dom with a fake injected `kvman` (`extensions/kvai/test/web/support/fake-kvman.ts`) and kvai's real catalogs. Behaviours of the connection section that QA 15 already covers (sign-in chunks, Disconnect, Remove, failures) keep their QA15 ids and move to the new component's tests.
 
 ## Happy path
