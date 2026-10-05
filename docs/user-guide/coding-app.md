@@ -64,10 +64,13 @@ Open **Extensions**, then **Coder**, and press the cog beside `mcp`. **Add a ser
 
 Each server in the list says **Ready · N tools**, **Sign-in needed**, or **Could not connect** with the reason; it is checked when you open the list, after you save it, and with **Check again**. The list is saved for all workspaces or only this one, as the page's switch says; a workspace with its own list uses only that list.
 
+**Signing in.** A server at a URL that needs your account says **Sign-in needed** and has a **Sign in** button. It opens the server's own sign-in in a new tab; when you finish there, the tab comes back to kvman and says **Signed in to \<name\>. You can close this tab.** Back on Coder's page the server turns **Ready**, and **Sign out** forgets the sign-in. If no tab opens, allow pop-ups for kvman and press **Sign in** again. A server that only takes a key needs no sign-in: give the key as a header.
+
 What to know:
 
 - The agent sees your servers' names and descriptions, and asks a server for its tools when it needs them.
 - A command server is started for each call and stopped when the call ends, in the workspace folder, so it keeps nothing between calls.
+- The agent never signs in for you: when a sign-in has run out and can't be renewed, the call fails and tells the agent you must sign in again.
 - A tool call asks you first when the agent marks it risky, or always when approval is set to ask (below), exactly like a shell line.
 - Only run servers you trust: a command server is a program on your machine, and a tool's result goes into the conversation, so it is sent to the model.
 

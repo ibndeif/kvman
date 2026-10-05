@@ -1,5 +1,5 @@
 import type { Kvman } from '@kvman/sdk/web';
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { problemOf, stringValues, toastProblem, type ShownProblem } from './kvman.ts';
 import { kvcoderPackage, secretPrefix, serverEntries, type McpServerEntry } from './mcp-server-entry.ts';
 import { useSetting } from './use-setting.ts';
@@ -75,6 +75,39 @@ export function useMcpServers(kvman: Kvman) {
       return true;
     });
 
+  /** Starts a sign-in and opens the server's address in a new tab; the server sends that tab back to kvcoder's sign-in page. */
+  async function signIn(name: string): Promise<'opened' | 'blocked' | 'failed'> {
+    let address: string | undefined;
+    await attempt(async () => {
+      address = (await kvman.exec('kvcoder.mcp.sign-in.start', { name, redirectUrl: `${window.location.origin}/kvcoder/mcp-sign-in` })).url;
+      return true;
+    });
+    if (address === undefined) return 'failed';
+    const tab = window.open(address, '_blank');
+    if (tab === null) return 'blocked';
+    tab.opener = null;
+    return 'opened';
+  }
+
+  /** Forgets a server's sign-in: its tokens and its registration. */
+  const signOut = (name: string): Promise<boolean> =>
+    attempt(async () => {
+      await deleteSecrets(secrets.value.filter((secret) => secret.startsWith(`${secretPrefix(name)}oauth.`)));
+      await loadSecrets();
+      void check(name);
+      return true;
+    });
+
+  const signedIn = (name: string): boolean => secrets.value.includes(`${secretPrefix(name)}oauth.tokens`);
+
+  // The sign-in happens in another tab: when this one has the focus again, a server that was waiting for it is checked.
+  async function onFocus(): Promise<void> {
+    const waiting = servers.value.filter((server) => states.value[server.name]?.status === 'signInNeeded');
+    if (waiting.length === 0) return;
+    await loadSecrets();
+    for (const server of waiting) void check(server.name);
+  }
+
   /** Removes a server and every secret of its. */
   const remove = (name: string): Promise<boolean> =>
     attempt(async () => {
@@ -85,6 +118,7 @@ export function useMcpServers(kvman: Kvman) {
     });
 
   onMounted(async () => {
+    window.addEventListener('focus', onFocus);
     try {
       await loadSecrets();
     } catch (error) {
@@ -96,7 +130,8 @@ export function useMcpServers(kvman: Kvman) {
     const known = new Set((before ?? []).map((server) => server.name));
     for (const server of now) if (!beingSaved.has(server.name) && (!known.has(server.name) || !(server.name in states.value))) void check(server.name);
   });
+  onUnmounted(() => window.removeEventListener('focus', onFocus));
   watch(() => kvman.workspace.value.id, checkAll);
 
-  return { servers, states, secrets, locked: setting.locked, changed: setting.changed, working: computed(() => working.value || setting.saving.value), save, remove, reset: setting.reset, check };
+  return { servers, states, secrets, locked: setting.locked, changed: setting.changed, working: computed(() => working.value || setting.saving.value), save, remove, reset: setting.reset, check, signIn, signOut, signedIn };
 }

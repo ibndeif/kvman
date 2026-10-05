@@ -50,6 +50,8 @@ const contributions = {
         ],
       },
     },
+    // Where an MCP server sends the browser back after a sign-in (ADR 0020, 11); it has no nav item.
+    { id: 'mcp-sign-in', title: 'kvcoder.pages.mcpSignIn', view: { type: 'custom', component: 'kvcoder.mcp-sign-in', props: {} } },
   ],
   nav: [{ id: 'chat', page: 'chat', title: 'kvcoder.pages.chat', icon: 'message-square', order: 10 }],
   panels: [],

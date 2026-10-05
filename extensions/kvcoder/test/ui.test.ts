@@ -5,13 +5,14 @@ import { useKvcoder } from './support/kvcoder-kernel.ts';
 const kvcoder = useKvcoder();
 
 describe("kvcoder's UI contributions (08 §8.7, ADR 0009, 104)", { timeout: 30_000 }, () => {
-  it('M2.4-E54 and QA3-H10 the Chat and session pages, the nav item, and the waiting and open-chat status items', async () => {
+  it('M2.4-E54, QA3-H10, and QA30-H6 the Chat, session, and sign-in pages, the nav item, and the waiting and open-chat status items', async () => {
     const { kernel } = await kvcoder.start();
     const answer = await kernel.exec('kvcoder.ui.get', {});
     expect(answer).toMatchObject({
       pages: [
         { id: 'chat', title: 'kvcoder.pages.chat', view: { type: 'stack', children: [{ type: 'custom', component: 'kvcoder.sessions' }, { type: 'custom', component: 'kvcoder.conversation', props: {} }] } },
         { id: 'session', params: ['sessionId'], view: { children: [{ component: 'kvcoder.sessions', props: { sessionId: { $param: 'sessionId' } } }, { component: 'kvcoder.conversation', props: { sessionId: { $param: 'sessionId' } } }] } },
+        { id: 'mcp-sign-in', title: 'kvcoder.pages.mcpSignIn', view: { type: 'custom', component: 'kvcoder.mcp-sign-in', props: {} } },
       ],
       nav: [{ id: 'chat', page: 'chat', icon: 'message-square' }],
       status: [

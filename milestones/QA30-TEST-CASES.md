@@ -1,0 +1,31 @@
+# QA 30 — signing in to an MCP server (ADR 0020, 8, 11, and 16)
+
+Asked: a server over HTTP authenticates with headers "and OAuth sign-in", returning to "a kvcoder page". Decided in ADR 0020, 8, 11, and 16; plan 08 §8.5 to §8.7. This file is the contract; every scenario's test name starts with its id. The tests use a fixture authorization server and protected MCP server on `127.0.0.1` (`test/support/mcp-oauth-fixture.ts`).
+
+## Happy path
+
+- **QA30-H1 A sign-in starts.** *Given* a URL server that answers 401, *when* `kvcoder.mcp.sign-in.start { name, redirectUrl }` runs, *then* kvman is registered with the server, the answer's `url` is the server's authorization address with `client_id`, `redirect_uri`, `state`, and an S256 `code_challenge`, and the client registration and the code verifier are secrets `mcp.<name>.oauth.client` and `.verifier`. `extensions/kvcoder/test/mcp-sign-in.test.ts`
+- **QA30-H2 A sign-in finishes.** *When* `kvcoder.mcp.sign-in.finish { state, code }` runs with the code the server gave, *then* it answers `{ name }`, the tokens are the secret `mcp.<name>.oauth.tokens`, the verifier is gone, and `kvcoder.mcp.server.check` answers `{ status: 'ready', tools: 8 }`. `extensions/kvcoder/test/mcp-sign-in.test.ts`
+- **QA30-H3 A call uses the tokens.** *Given* a signed-in server, *then* `mcp call` returns the tool's text and the server received `Authorization: Bearer <access token>`. `extensions/kvcoder/test/mcp-sign-in.test.ts`
+- **QA30-H4 Expired tokens are refreshed during a call.** *Given* the server no longer takes the access token, *then* the call still returns the tool's text, the server saw a refresh, and the stored tokens are the new ones. `extensions/kvcoder/test/mcp-sign-in.test.ts`
+- **QA30-H5 Tokens are in no setting, job row, or log.** *Then* after a sign-in and a call, the access and refresh tokens and the code are only in `secrets.json`. `extensions/kvcoder/test/mcp-sign-in.test.ts`
+- **QA30-H6 The page and its component.** *Then* `kvcoder.ui.get` has the page `mcp-sign-in` with the custom component `kvcoder.mcp-sign-in`, and no nav item for it. `extensions/kvcoder/test/ui.test.ts`
+- **QA30-H7 The sign-in page finishes the sign-in.** *Given* the address `?code=c&state=s`, *then* the component runs `kvcoder.mcp.sign-in.finish { state: 's', code: 'c' }` once and shows "Signed in to linear. You can close this tab." `extensions/kvcoder/test/web/mcp-sign-in.test.ts`
+- **QA30-H8 Sign in from the row.** *Given* a URL server whose check says a sign-in is needed, *then* its row has "Sign in"; pressing it runs `kvcoder.mcp.sign-in.start` with this page's origin and `/kvcoder/mcp-sign-in`, and opens the answer's address in a new tab; when the window gets the focus back the server is checked again. `extensions/kvcoder/test/web/mcp-sign-in.test.ts`
+- **QA30-H9 Sign out.** *Given* a server with the secret `mcp.<name>.oauth.tokens`, *then* its row has "Sign out", which deletes that server's `oauth` secrets and checks it again. `extensions/kvcoder/test/web/mcp-sign-in.test.ts`
+- **QA30-H10 In the real app.** *Given* kvman in Chromium and the fixture as a URL server, *when* the person presses "Sign in", *then* a new tab goes through the server and lands on `/kvcoder/mcp-sign-in`, which says "Signed in to remote. You can close this tab."; back in the first tab the row says "Ready · 8 tools" and has "Sign out". `extensions/kvcoder/test/e2e/mcp-sign-in.test.ts`
+
+## Edge cases
+
+- **QA30-E1 A redirect address that isn't kvman's page.** *Then* `start` fails `VALIDATION_FAILED` for `https://evil.example/kvcoder/mcp-sign-in`, `http://127.0.0.1:3737/other`, `http://127.0.0.1.evil.example/kvcoder/mcp-sign-in`, and `http://127.0.0.1:3737/kvcoder/mcp-sign-in?x=1`, and takes the `127.0.0.1` and `localhost` forms. `extensions/kvcoder/test/mcp-sign-in.test.ts`
+- **QA30-E2 Not a URL server, or no such server.** *Then* `start` fails `VALIDATION_FAILED` for a command server and `kvcoder/MCP_SERVER_NOT_FOUND` for an unknown name. `extensions/kvcoder/test/mcp-sign-in.test.ts`
+- **QA30-E3 A server without registration.** *Given* an authorization server with no registration endpoint, *then* `start` fails `kvcoder/MCP_SIGN_IN_FAILED` with the reason. `extensions/kvcoder/test/mcp-sign-in.test.ts`
+- **QA30-E4 An unknown, used, or expired state.** *Then* `finish` fails `kvcoder/MCP_SIGN_IN_FAILED` for a state that was never started, for one already finished, and for one started more than 10 minutes ago, and stores no tokens. `extensions/kvcoder/test/mcp-sign-in.test.ts`
+- **QA30-E5 A code the server refuses.** *Then* `finish` fails `kvcoder/MCP_SIGN_IN_FAILED`, and the server still needs a sign-in. `extensions/kvcoder/test/mcp-sign-in.test.ts`
+- **QA30-E6 `finish` is sync only and for the person.** *Then* queuing it fails `VALIDATION_FAILED`, and `start` and `finish` called by an extension fail `NOT_PUBLIC`. `extensions/kvcoder/test/mcp-sign-in.test.ts`
+- **QA30-E7 Tokens that can't be refreshed.** *Given* the server refuses the refresh token, *then* `mcp call` fails `kvcoder/MCP_SIGN_IN_NEEDED`, the check answers `{ status: 'signInNeeded' }`, and no browser address is opened or stored. `extensions/kvcoder/test/mcp-sign-in.test.ts`
+- **QA30-E8 A call never registers or starts a sign-in.** *Given* a server that was never signed in to, *then* a call fails `kvcoder/MCP_SIGN_IN_NEEDED` and the authorization server was asked nothing. `extensions/kvcoder/test/mcp-sign-in.test.ts`
+- **QA30-E9 The page without a code.** *Given* the address `?error=access_denied&state=s`, or no `code`, or no `state`, *then* the component runs nothing and says the sign-in didn't finish. `extensions/kvcoder/test/web/mcp-sign-in.test.ts`
+- **QA30-E10 The page when finishing fails.** *Given* `finish` fails `kvcoder/MCP_SIGN_IN_FAILED`, *then* the page shows the Problem's sentence. `extensions/kvcoder/test/web/mcp-sign-in.test.ts`
+- **QA30-E11 A start that fails.** *Given* `start` fails, *then* the Problem is toasted and no tab opens. `extensions/kvcoder/test/web/mcp-sign-in.test.ts`
+- **QA30-E12 A command server has no sign-in.** *Then* a command server's row never shows "Sign in" or "Sign out". `extensions/kvcoder/test/web/mcp-sign-in.test.ts`

@@ -9,7 +9,7 @@ import { useMcpServers, type SecretChanges, type ServerState } from './use-mcp-s
 // The `mcp` connector's configuration (plan 08 §8.7, ADR 0020, 9, 14, and 15): the servers, each with its state, and
 // the form that adds or edits one. The list is saved into the scope the extension's page is set to.
 const kvman = useKvman();
-const { servers, states, secrets, locked, changed, working, save, remove, reset, check } = useMcpServers(kvman);
+const { servers, states, secrets, locked, changed, working, save, remove, reset, check, signIn, signOut, signedIn } = useMcpServers(kvman);
 const form = ref<{ entry?: McpServerEntry }>();
 const removing = ref<string>();
 const scoped = (key: string): string => kvman.t(`${key}.${kvman.scope.value}`, { name: kvman.workspace.value.name });
@@ -27,6 +27,11 @@ async function saved(entry: McpServerEntry, changes: SecretChanges): Promise<voi
   if (!(await save(entry, changes))) return;
   form.value = undefined;
   kvman.toast('kvcoder.config.mcp.saved', { name: entry.name }, 'success');
+}
+
+// A browser that blocks the new tab leaves the person where they were, so it says why.
+async function startSignIn(name: string): Promise<void> {
+  if ((await signIn(name)) === 'blocked') kvman.toast('kvcoder.config.mcp.signIn.blocked', {}, 'warning');
 }
 
 async function removed(name: string): Promise<void> {
@@ -52,7 +57,9 @@ async function removed(name: string): Promise<void> {
         <span class="kvc-server-state" :data-status="stateOf(server.name).status" role="status" data-test="mcp-server-state">
           {{ stateText(stateOf(server.name)) }}
           <button v-if="stateOf(server.name).status !== 'checking'" type="button" class="kvc-text-button" data-test="mcp-server-check" @click="check(server.name)">{{ kvman.t('kvcoder.config.mcp.recheck') }}</button>
+          <button v-if="'url' in server && signedIn(server.name)" type="button" class="kvc-text-button" :disabled="working" data-test="mcp-server-sign-out" @click="signOut(server.name)">{{ kvman.t('kvcoder.config.mcp.signOut') }}</button>
         </span>
+        <button v-if="'url' in server && stateOf(server.name).status === 'signInNeeded'" type="button" class="kvc-button kvc-primary kvc-server-sign-in" :disabled="working" data-test="mcp-server-sign-in" @click="startSignIn(server.name)">{{ kvman.t('kvcoder.config.mcp.signIn') }}</button>
         <span v-if="reason(stateOf(server.name)) !== undefined" class="kvc-muted kvc-server-reason" dir="auto" data-test="mcp-server-reason">{{ reason(stateOf(server.name)) }}</span>
       </span>
       <span v-if="removing === server.name" class="kvc-connector-actions" role="alertdialog" :aria-label="kvman.t('kvcoder.config.mcp.removeConfirm', { name: server.name })" data-test="mcp-remove-confirm">

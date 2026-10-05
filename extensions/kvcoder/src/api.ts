@@ -28,6 +28,8 @@ declare module '@kvman/sdk' {
     'kvcoder.session.delete': { input: SessionId; output: Empty };
     'kvcoder.session.compact': { input: SessionId; output: { summarized: boolean } };
     'kvcoder.mcp.server.check': { input: { name: string }; output: McpCheck };
+    'kvcoder.mcp.sign-in.start': { input: { name: string; redirectUrl: string }; output: { url: string } };
+    'kvcoder.mcp.sign-in.finish': { input: { state: string; code: string }; output: { name: string } };
     'kvcoder.session.export': { input: SessionId; output: { fileId: string } };
     'kvcoder.session.fork': { input: { sessionId: string; throughSeq?: number }; output: Session };
     'kvcoder.message.send': { input: Send; output: Empty };

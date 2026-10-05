@@ -1,9 +1,10 @@
 import type { Store, Transaction } from '@kvman/sdk';
 import { artifactDocSchema, backgroundDocSchema, messageDocSchema, processDocSchema, questionDocSchema, queuedDocSchema, sessionDocSchema, turnDocSchema } from '../schemas/records.ts';
+import { signInDocSchema } from '../mcp/sign-in-record.ts';
 import { connectorDocSchema, handlerDocSchema, handlerJobDocSchema, sectionDocSchema } from '../schemas/registry.ts';
 
 // kvcoder's collections (plan 08 §8.4 "Where entries live"): sessions and their records, and workspace sections, in
-// the workspace store; connectors, session handlers, handler-job ids, global sections, and background processes in the global store.
+// the workspace store; connectors, session handlers, handler-job ids, global sections, background processes, and started MCP sign-ins in the global store.
 
 /** The collections through the store's Promise calls. */
 export function records(store: Store) {
@@ -21,6 +22,7 @@ export function records(store: Store) {
     connectors: store.global.collection('connectors', connectorDocSchema),
     handlers: store.global.collection('handlers', handlerDocSchema),
     handlerJobs: store.global.collection('handler-jobs', handlerJobDocSchema),
+    signIns: store.global.collection('mcp-sign-ins', signInDocSchema),
   };
 }
 
@@ -40,6 +42,7 @@ export function txRecords(tx: Transaction) {
     connectors: tx.global.collection('connectors', connectorDocSchema),
     handlers: tx.global.collection('handlers', handlerDocSchema),
     handlerJobs: tx.global.collection('handler-jobs', handlerJobDocSchema),
+    signIns: tx.global.collection('mcp-sign-ins', signInDocSchema),
   };
 }
 
