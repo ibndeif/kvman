@@ -29,12 +29,12 @@ async function answerAll(kernel: TestKernel, sessionId: string, confirmed: boole
 }
 
 describe('approval of the calls that can ask (08 §8.3, ADR 0011, 7)', { timeout: 30_000 }, () => {
-  it('QA18-H11 risky false runs at once; risky true or left out asks, holds the call, and runs it once allowed', async () => {
+  it('QA18-H11 risky false runs at once; risky true asks, holds the call, and runs it once allowed', async () => {
     const seed = (folder: string): void => looked.write(folder, 'seed.txt', 'old');
     const safe = await looked(seed, asking({ risky: false }), settings('auto'));
     expect((await turnState(safe.kernel, safe.sessionId)).turn).toMatchObject({ outcome: 'done' });
     expect(made.map((file) => exists(safe.kernel, file))).toEqual([true, true, true]);
-    for (const risky of [{ risky: true }, {}]) {
+    for (const risky of [{ risky: true }]) {
       const waiting = await looked(seed, asking(risky), settings('auto'));
       const { turn } = await turnState(waiting.kernel, waiting.sessionId);
       expect(turn?.pending.map((item) => item.kind)).toEqual(['approval', 'approval', 'approval', 'approval']);
@@ -47,6 +47,14 @@ describe('approval of the calls that can ask (08 §8.3, ADR 0011, 7)', { timeout
       expect(results[2]).toContain('"created": true');
       expect(results[3]).toContain('"replacements": 1');
     }
+  });
+
+  it('QA19-E16 a call that leaves risky out is refused before anyone is asked', async () => {
+    const { kernel, sessionId, results } = await looked((folder) => looked.write(folder, 'seed.txt', 'old'), asking({}), settings('auto'));
+    expect((await turnState(kernel, sessionId)).turn).toMatchObject({ outcome: 'done', pending: [] });
+    expect(results).toHaveLength(4);
+    for (const result of results) expect(result).toMatch(/^error VALIDATION_FAILED: risky: Invalid input: expected boolean, received undefined\. The payload of \S+ \S+ is\n\{ .*risky \}$/);
+    expect(made.map((file) => exists(kernel, file))).toEqual([false, false, false]);
   });
 
   it('QA18-E13 a denied call returns denied by the user and runs nothing', async () => {

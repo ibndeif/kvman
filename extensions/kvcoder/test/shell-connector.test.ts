@@ -26,6 +26,6 @@ describe('the shell connector (08 §8.3, ADR 0011, 2)', { timeout: 30_000 }, () 
 
   it('QA18-E12 an unknown key in the payload fails and shows the payload signature, which names line', async () => {
     const { results } = await looked(nothing, [command('shell', 'exec', { command: 'ls', risky: false })]);
-    expect(results[0]).toMatch(/^error VALIDATION_FAILED: line: .*payload: Unrecognized key: "command"\. The payload of shell exec is\n\{ line, background\?, timeoutMs\?, risky\? \}$/s);
+    expect(results[0]).toMatch(/^error VALIDATION_FAILED: line: .*payload: Unrecognized key: "command"\. The payload of shell exec is\n\{ line, background\?, timeoutMs\?, risky \}$/s);
   });
 });

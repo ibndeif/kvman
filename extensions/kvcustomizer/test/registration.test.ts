@@ -32,6 +32,12 @@ describe("kvcustomizer's connectors and section (09 §9.1, §9.4)", { timeout: 3
     }
   });
 
+  it('QA19-H16 the preview connector says it runs kvman extension projects only', async () => {
+    const { kernel } = await kvcustomizer.start();
+    const preview = (await kernel.exec('kvcoder.connector.list', {})).find((connector) => connector.name === 'preview');
+    expect(preview?.description).toBe('Run kvman extension projects in a separate kvman with a temporary home. Use it to show the person an extension project working, and stop it when you are done. It runs nothing else: start any other app or page with shell.');
+  });
+
   it('QA5-H7 and QA5-H8 each connector says when to use it, and the guide sends the connectors their work and file edits to fs', async () => {
     const { kernel } = await kvcustomizer.start();
     const descriptions = new Map((await kernel.exec('kvcoder.connector.list', {})).filter((connector) => connector.owner === '@kvman/kvcustomizer').map((connector) => [connector.name, connector.description]));

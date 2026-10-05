@@ -66,7 +66,7 @@ describe('the prompt builder (08 §8.2)', () => {
       const { prompt } = buildPrompt({ workspacePath: '/w', language: 'en', platform, shell, sections: [], connectors: [] });
       for (const sentence of [
         'Every connector has the command help. A command listed below with its payload needs no help call; for any other command, or for what a field means, call the connector\'s help with { "command": "<name>" } before the first use.',
-        'Scale the process to the task: a task of one file or a few steps needs no plan, so just do it; a larger one follows these steps.',
+        'Scale the process to the task: a task of one file or a few steps needs no plan and no `plan` artifact, so skip steps 3 to 5 and just do it; a larger one follows these steps.',
         'ask: put each question in its own `ask` call, with all the calls in one reply, and use `ask choice` whenever you offer options, your recommended one first.',
         'Before you say that something runs or works, check it the way the person would: run it, request its address, or run its test; if you couldn\'t, say what is unchecked.',
       ])
@@ -78,6 +78,15 @@ describe('the prompt builder (08 §8.2)', () => {
       ])
         expect(prompt, gone).not.toContain(gone);
     }
+  });
+
+  it('QA19-H15 the prompt says when to set risky, to request a started server, and what a small task skips', () => {
+    const { prompt } = buildPrompt({ workspacePath: '/w', language: 'en', platform: 'linux', shell: 'bash', sections: [], connectors: [] });
+    expect(prompt).toContain("`shell exec`, `fs write`, and `fs edit` take risky, which you always send: true when the call could lose or damage something that isn't your own work or reaches outside the workspace folder, and the person is then asked first; false otherwise.");
+    const check = "\nBefore you say that something runs or works, check it the way the person would: run it, request its address, or run its test; if you couldn't, say what is unchecked. After you start a server, request its address once before you give it to the person.\n";
+    expect(prompt).toContain(check);
+    expect(prompt.split('\n').find((line) => line.startsWith('4. '))).not.toContain('Before you say');
+    expect(prompt).toContain('needs no plan and no `plan` artifact, so skip steps 3 to 5 and just do it');
   });
 
   it('QA9-H18 and QA10-H1 the base prompt ends its working method with the call-or-final-answer rule, and never makes a call that does nothing', () => {

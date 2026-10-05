@@ -24,7 +24,7 @@ describe("a built-in connector's invalid payload says what the command takes (08
     const choice = await resultOf(command('ask', 'choice', { question: 'Which?', choices: ['a', 'b'] }));
     expect(choice.endsWith('The payload of ask choice is\n{ prompt, multiple, options: [{ id, label, description? }], other? }')).toBe(true);
     const file = await resultOf(fsCall('write', { content: 'x' }));
-    expect(file.endsWith('The payload of fs write is\n{ path, content, risky? }')).toBe(true);
+    expect(file.endsWith('The payload of fs write is\n{ path, content, risky }')).toBe(true);
     const helper = await resultOf(command('subagent', 'run', { prompt: 'x' }));
     expect(helper.endsWith('The payload of subagent run is\n{ task, mode: "fresh" | "fork", connectors?, background? }')).toBe(true);
   });

@@ -26,7 +26,13 @@ export function jsonOutput(value: unknown): CallResult {
 
 export const noConnectorMessage = (connector: string, names: readonly string[]): string => `There is no connector ${connector}. The connectors are: ${names.join(', ')}.`;
 
-export const noCommandMessage = (connector: string, command: string): string => `${connector} has no command ${command}; call its help.`;
+const shownCommandLength = 40;
+
+/** A connector has no such command: the message names the ones it has, and cuts a long wrong name, which is usually a shell line (ADR 0012, 19). */
+export function noCommandMessage(connector: string, command: string, commands: readonly string[]): string {
+  const shown = command.length > shownCommandLength ? `${command.slice(0, shownCommandLength)}…` : command;
+  return `${connector} has no command ${shown}. Its commands are: ${[...commands, 'help'].join(', ')}.`;
+}
 
 export type PayloadIssue = { path: string; message: string };
 
@@ -159,7 +165,7 @@ export async function runConnector(kernel: ConnectorKernel, call: ConnectorCall,
   if (connector === undefined) return errorOutput({ code: 'VALIDATION_FAILED', message: noConnectorMessage(call.connector, [...builtinConnectors, ...connectors.map((candidate) => candidate.name)]) });
   if (connector.kind === 'binary') return insideTurn(call.connector);
   const target = connector.commands?.find((candidate) => candidate.name === call.command);
-  if (target === undefined) return errorOutput({ code: 'NOT_FOUND', message: noCommandMessage(call.connector, call.command) });
+  if (target === undefined) return errorOutput({ code: 'NOT_FOUND', message: noCommandMessage(call.connector, call.command, (connector.commands ?? []).map((candidate) => candidate.name)) });
   const done = await runCommand({
     connector: call.connector,
     command: call.command,

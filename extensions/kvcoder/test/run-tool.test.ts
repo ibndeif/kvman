@@ -73,16 +73,22 @@ describe('the run tool (08 §8.2 and §8.3, ADR 0011)', { timeout: 30_000 }, () 
     }
   });
 
-  it('QA18-E4 an unknown connector names the connectors, and an unknown command points to help', async () => {
+  it("QA18-E4 an unknown connector names the connectors, and an unknown command names the connector's commands", async () => {
     const connector = await call({ connector: 'nope', command: 'add' });
     expect(connector.results[0]).toBe('error VALIDATION_FAILED: There is no connector nope. The connectors are: shell, fs, artifact, background, ask, subagent, todo.');
     const command = await call({ connector: 'todo', command: 'remove' });
-    expect(command.results[0]).toBe('error NOT_FOUND: todo has no command remove; call its help.');
+    expect(command.results[0]).toBe('error NOT_FOUND: todo has no command remove. Its commands are: add, wait, fail, list, help.');
+  });
+
+  it('QA19-E15 a shell line sent as the command is cut, and the error names the commands', async () => {
+    const line = 'node -e "console.log(1)" && echo a long line that is not a command name';
+    const { results } = await call({ connector: 'shell', command: line });
+    expect(results[0]).toBe(`error NOT_FOUND: shell has no command ${line.slice(0, 40)}…. Its commands are: exec { line, background?, timeoutMs?, risky }, help.`);
   });
 
   it('QA18-E5 an invalid payload returns each problem and the payload signature', async () => {
     const builtin = await call({ connector: 'fs', command: 'edit', payload: { file: 'a' } });
-    expect(builtin.results[0]).toMatch(/^error VALIDATION_FAILED: .*path: .*The payload of fs edit is\n\{ path, edits: \[\{ oldText, newText \}\], risky\? \}$/s);
+    expect(builtin.results[0]).toMatch(/^error VALIDATION_FAILED: .*path: .*The payload of fs edit is\n\{ path, edits: \[\{ oldText, newText \}\], risky \}$/s);
     const registered = await call({ connector: 'todo', command: 'add', payload: { text: 7 } });
     expect(registered.results[0]).toMatch(/^error VALIDATION_FAILED: text: .*The payload of todo add is\n\{ text \}$/s);
   });

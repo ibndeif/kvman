@@ -2,7 +2,7 @@ import { z } from '@kvman/sdk';
 import type { JsonValue } from '../connector-call.ts';
 
 // The agent's one tool (plan 08 §8.2, ADR 0011, 1): `run { description, connector, command, payload }` runs one command
-// of a connector. The payload has no schema here: the model learns it from the connector's `help`.
+// of a connector. The payload has no schema here: the model learns it from the prompt's connector index or the connector's `help`.
 
 const exampleCall = '{ "description": "Listing the project\'s source files", "connector": "fs", "command": "list", "payload": { "path": "src" } }';
 
@@ -12,7 +12,7 @@ export function runTool(connectors: readonly string[]) {
     description: [
       'Runs one command of a connector and returns its result. Connectors are the only way you act: the system prompt lists each one with its commands.',
       '',
-      `For example, ${exampleCall}. Every connector has the command help: call it with an empty payload to see the connector's commands, or with { "command": "<name>" } to see one command's payload, before the first time you use a command whose payload you don't know.`,
+      `For example, ${exampleCall}. Every connector has the command help: call it with an empty payload to see the connector's commands, or with { "command": "<name>" } to see one command's payload, before the first time you use a command whose payload the system prompt doesn't list.`,
     ].join('\n'),
     parameters: {
       type: 'object',
@@ -20,7 +20,7 @@ export function runTool(connectors: readonly string[]) {
         description: { type: 'string', description: 'One sentence saying what this call does, for a person who knows nothing about how you work ("Editing app.ts to add the save button"). Write it first.' },
         connector: { type: 'string', enum: [...connectors], description: 'The connector to use.' },
         command: { type: 'string', description: "One of the connector's commands, or help." },
-        payload: { type: 'object', description: "The command's input, as its help describes it. Leave it out for a command that takes none." },
+        payload: { type: 'object', description: "The command's input, as the system prompt or the connector's help gives it. Leave it out for a command that takes none." },
       },
       required: ['description', 'connector', 'command'],
       additionalProperties: false,

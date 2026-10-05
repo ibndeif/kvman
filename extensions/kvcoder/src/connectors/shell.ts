@@ -8,7 +8,7 @@ import { background, risky, timeoutMs } from './payload-fields.ts';
 
 /** What the prompt's index says the connector is for; it names the shell this run uses. */
 export const shellDescription = (shell: 'bash' | 'powershell'): string =>
-  `Run a line in the real shell (${shell === 'bash' ? 'bash' : 'PowerShell'}) in the workspace folder: build, test, install, or anything no other connector covers. Set background to true for a server or any command that keeps running.`;
+  `Run a line in the real shell (${shell === 'bash' ? 'bash' : 'PowerShell'}) in the workspace folder: build, test, install, or anything no other connector covers. Set background to true for a server or any command that keeps running; to show the person an app you started, give its address to artifact write with the format url.`;
 
 const execPayload = z.strictObject({ line: z.string().min(1).describe('The whole shell line to run, with any pipes, &&, or redirection.'), background, timeoutMs, risky });
 

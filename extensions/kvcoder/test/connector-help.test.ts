@@ -25,7 +25,7 @@ describe("a connector's help (08 §8.3, ADR 0011, 4)", { timeout: 30_000 }, () =
     const schema = JSON.parse(edit.slice(edit.indexOf('{'), edit.indexOf('\n\nResult'))) as { properties: Record<string, { description?: string }>; required: string[] };
     expect(Object.keys(schema.properties)).toEqual(['path', 'edits', 'risky']);
     for (const field of Object.values(schema.properties)) expect(field.description).toEqual(expect.any(String));
-    expect(schema.required).toEqual(['path', 'edits']);
+    expect(schema.required).toEqual(['path', 'edits', 'risky']);
     expect(edit).toContain('Result (JSON Schema):\n{');
     expect(results[7]).toContain('Result: the combined output, then [exit code N].');
     expect(results[8]).toContain('Result: the person\'s answer: { "confirmed" }, or { "dismissed": true }.');
@@ -38,14 +38,14 @@ describe("a connector's help (08 §8.3, ADR 0011, 4)", { timeout: 30_000 }, () =
     const schema = JSON.parse(help.slice(help.indexOf('{'), help.indexOf('\n\nResult'))) as { properties: Record<string, { description?: string }>; required: string[] };
     expect(Object.keys(schema.properties)).toEqual(['path', 'content', 'risky']);
     for (const field of Object.values(schema.properties)) expect(field.description).toEqual(expect.any(String));
-    expect(schema.required).toEqual(['path', 'content']);
+    expect(schema.required).toEqual(['path', 'content', 'risky']);
     expect(help).toContain('Result (JSON Schema):\n{');
   });
 
   it('QA18-E8 help of a command the connector does not have fails NOT_FOUND, and help takes nothing else', async () => {
     const { results } = await looked(nothing, [command('todo', 'help', { command: 'nope' }), command('fs', 'help', { command: 'nope' }), command('todo', 'help', { topic: 'add' })]);
-    expect(results[0]).toBe('error NOT_FOUND: todo has no command nope; call its help.');
-    expect(results[1]).toBe('error NOT_FOUND: fs has no command nope; call its help.');
+    expect(results[0]).toBe('error NOT_FOUND: todo has no command nope. Its commands are: add, wait, fail, list, help.');
+    expect(results[1]).toBe('error NOT_FOUND: fs has no command nope. Its commands are: read, list, search, write, edit, help.');
     expect(results[2]).toBe('error VALIDATION_FAILED: help takes { "command"? }.');
   });
 });

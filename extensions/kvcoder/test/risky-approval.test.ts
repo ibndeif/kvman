@@ -95,18 +95,18 @@ describe('risky calls ask, the others run (08 §8.3, ADR 0009, 161)', { timeout:
     expect((await turnState(kernel, sessionId)).turn).toMatchObject({ outcome: 'cancelled' });
   });
 
-  it('QA11-H4 and QA11-E4 under auto a call without risky waits for the person; risky false runs at once; under ask both wait', async () => {
+  it('QA11-H4 and QA11-E4 under auto a call without risky is refused and asks nobody; risky false runs at once; under ask a marked call waits', async () => {
     const unmarked = command('shell', 'exec', { line: 'touch unmarked.txt' });
-    const { kernel, sessionId } = await started({ 'kvcoder.shell.approval': 'auto' }, unmarked, shell('touch marked.txt'));
+    const { kernel, fake, sessionId } = await started({ 'kvcoder.shell.approval': 'auto' }, unmarked, shell('touch marked.txt'));
     const { session, turn } = await turnState(kernel, sessionId);
-    expect(session.status).toBe('waiting');
-    expect(turn?.pending[0]?.question).toMatchObject({ payload: { line: 'touch unmarked.txt' } });
+    expect(session.status).toBe('idle');
+    expect(turn?.pending).toEqual([]);
+    expect(toolResults(fake)).toEqual(['error VALIDATION_FAILED: risky: Invalid input: expected boolean, received undefined. The payload of shell exec is\n{ line, background?, timeoutMs?, risky }', '[exit code 0]']);
     expect(existsSync(home(kernel, 'marked.txt'))).toBe(true);
     expect(existsSync(home(kernel, 'unmarked.txt'))).toBe(false);
-    await answer(kernel, sessionId, 0, true);
-    expect(existsSync(home(kernel, 'unmarked.txt'))).toBe(true);
 
     const asking = await started({ 'kvcoder.shell.approval': 'ask' }, shell('touch one.txt'), unmarked);
-    expect((await turnState(asking.kernel, asking.sessionId)).turn?.pending.map((item) => item.kind)).toEqual(['approval', 'approval']);
+    expect((await turnState(asking.kernel, asking.sessionId)).turn?.pending.map((item) => item.kind)).toEqual(['approval']);
+    expect(existsSync(home(asking.kernel, 'unmarked.txt'))).toBe(false);
   });
 });

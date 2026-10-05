@@ -9,7 +9,7 @@ import { activeConnectors } from '../registry/register-connectors.ts';
 import type { HeldResult, SessionDoc } from '../schemas/records.ts';
 import { now } from '../sessions/session-lookup.ts';
 import { records } from '../store/collections.ts';
-import { failedCall, runHelp, runTarget, targetOf, textResult, type CallDone, type CommandTarget } from './run-command.ts';
+import { commandNamesOf, failedCall, runHelp, runTarget, targetOf, textResult, type CallDone, type CommandTarget } from './run-command.ts';
 
 // How one call of a reply runs (plan 08 §8.3): the `run` tool names a connector's command, which runs as a kernel job.
 // `shell exec`, a binary's `exec`, `fs write`, and `fs edit` ask the person first when `kvcoder.shell.approval` is
@@ -67,7 +67,7 @@ export async function evaluateCall(env: CallEnv, toolCall: ToolCall): Promise<Ca
   if (!tools.listed.some((listed) => listed.name === call.connector)) return refused(toolCall.id, unavailable(env, call.connector));
   if (call.command === 'help') return result(toolCall.id, await runHelp(ctx, call));
   const target = targetOf(tools.connectors, call);
-  if (target === undefined) return result(toolCall.id, failedCall(call, errorOutput({ code: 'NOT_FOUND', message: noCommandMessage(call.connector, call.command) }).output));
+  if (target === undefined) return result(toolCall.id, failedCall(call, errorOutput({ code: 'NOT_FOUND', message: noCommandMessage(call.connector, call.command, commandNamesOf(tools.connectors, call.connector)) }).output));
   if (target.builtin?.asks === true) {
     const invalid = invalidPayload(call, target);
     if (invalid !== undefined) return result(toolCall.id, failedCall(call, invalid));
@@ -86,7 +86,8 @@ const oldCallText = 'denied by the user\nMake this call again with the run tool.
 export async function runApproved(ctx: Ctx, session: Stored<SessionDoc>, held: HeldResult): Promise<HeldResult> {
   if (held.run === null) return held;
   if (!('connector' in held.run)) return { toolCallId: held.toolCallId, text: oldCallText, details: null, isError: true, run: null };
-  const target = targetOf(await activeConnectors(ctx), held.run);
-  const done = target === undefined ? failedCall(held.run, errorOutput({ code: 'NOT_FOUND', message: noCommandMessage(held.run.connector, held.run.command) }).output) : await runTarget(ctx, session, held.run, target);
+  const connectors = await activeConnectors(ctx);
+  const target = targetOf(connectors, held.run);
+  const done = target === undefined ? failedCall(held.run, errorOutput({ code: 'NOT_FOUND', message: noCommandMessage(held.run.connector, held.run.command, commandNamesOf(connectors, held.run.connector)) }).output) : await runTarget(ctx, session, held.run, target);
   return { toolCallId: held.toolCallId, ...done, run: null };
 }

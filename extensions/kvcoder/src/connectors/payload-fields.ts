@@ -5,8 +5,7 @@ import { z } from '@kvman/sdk';
 
 export const risky = z
   .boolean()
-  .describe("true when this could lose or damage something that isn't your own work, or reaches outside the workspace folder: deleting or overwriting files you didn't create, sudo, a global install, git push --force or reset --hard. The person is asked first. Otherwise false. Left out, it counts as true.")
-  .exactOptional();
+  .describe("true when this could lose or damage something that isn't your own work, or reaches outside the workspace folder: deleting or overwriting files you didn't create, sudo, a global install, git push --force or reset --hard. The person is asked first. Otherwise false.");
 
 export const background = z.boolean().describe('true keeps a server or any long-running command running after the call returns; follow it up with the background connector.').exactOptional();
 

@@ -6,14 +6,14 @@ The signatures of kvcoder's six connectors, as the prompt lists them (H1) and as
 
 ```
 - shell: …
-  exec { line, background?, timeoutMs?, risky? }
+  exec { line, background?, timeoutMs?, risky }
   help { command? }
 - fs: …
   read   { path, fromLine?, lines? }
   list   { path? }
   search { pattern, path? }
-  write  { path, content, risky? }
-  edit   { path, edits: [{ oldText, newText }], risky? }
+  write  { path, content, risky }
+  edit   { path, edits: [{ oldText, newText }], risky }
   help   { command? }
 - artifact: …
   write { id, title, format?: "markdown" | "html" | "url", content }
@@ -43,7 +43,7 @@ The signatures of kvcoder's six connectors, as the prompt lists them (H1) and as
 - **QA19-H4 A registered connector's invalid payload returns its signature too.** *When* the model calls `todo add {}`, *then* the error ends `The payload of todo add is\n` and the signature of the fixture's `todo.add` input, with no `"properties"`; `runConnector(kernel, { connector: 'todo', command: 'add', payload: {} })` returns the same text with exit code 1. (`extensions/kvcoder/test/invalid-payload.test.ts`)
 - **QA19-H5 The prompt's new sentences.** *Then* the base prompt, in both shells, holds each of these and none of the sentences they replace (`call it before the first time you use a command whose payload you don't know`, `a small, clear change needs no plan`, `call \`ask\` with all the questions in one reply`): (`extensions/kvcoder/test/unit/prompt-build.test.ts`)
   - `Every connector has the command help. A command listed below with its payload needs no help call; for any other command, or for what a field means, call the connector's help with { "command": "<name>" } before the first use.`
-  - `Scale the process to the task: a task of one file or a few steps needs no plan, so just do it; a larger one follows these steps.`
+  - ``Scale the process to the task: a task of one file or a few steps needs no plan and no `plan` artifact, so skip steps 3 to 5 and just do it; a larger one follows these steps.``
   - ``ask: put each question in its own `ask` call, with all the calls in one reply, and use `ask choice` whenever you offer options, your recommended one first.``
   - `Before you say that something runs or works, check it the way the person would: run it, request its address, or run its test; if you couldn't, say what is unchecked.`
 - **QA19-H6 The artifact connector's description.** *Then* the index's `artifact` line holds ``when you write a plan, keep it in the artifact `plan` `` and not ``keep your plan in the artifact `plan` ``. (`extensions/kvcoder/test/prompt-index.test.ts`)
@@ -55,6 +55,8 @@ The signatures of kvcoder's six connectors, as the prompt lists them (H1) and as
 - **QA19-H12 A background start that ended well.** *When* the line is `echo done`, *then* the result is `started <id>\ndone\n[the process has already ended]\n[exit code 0]`, it is not an error, and no background message is added. (`extensions/kvcoder/test/background-start.test.ts`)
 - **QA19-H13 An empty path is the workspace folder.** *Given* files in the workspace folder, *then* `fs list { path: '' }` returns the same entries as `fs list {}`, and `fs search { pattern, path: '' }` the same matches as `fs search { pattern }`. (`extensions/kvcoder/test/fs-empty-path.test.ts`)
 - **QA19-H14 The docs follow.** *Then* `extensions/kvcoder/docs/connectors.md` says that an invalid payload returns each problem and then the payload's signature, and that the prompt lists the payloads of kvcoder's own connectors while a registered connector's are learned from `help`; `extensions/kvai/docs/models.md` lists `sessionId?` among `kvai.complete`'s fields; and neither says that an invalid payload returns the JSON Schema. (`packages/cli/test/docs-chat-review.test.ts`)
+- **QA19-H15 The prompt after the first test chat.** *Then* the base prompt holds `` `shell exec`, `fs write`, and `fs edit` take risky, which you always send: true when the call could lose or damage something that isn't your own work or reaches outside the workspace folder, and the person is then asked first; false otherwise.``; the check sentence of H5 is a line of its own, followed by `After you start a server, request its address once before you give it to the person.`, and step 4 no longer holds it; and the threshold sentence says ``needs no plan and no `plan` artifact, so skip steps 3 to 5 and just do it``. (`extensions/kvcoder/test/unit/prompt-build.test.ts`)
+- **QA19-H16 The preview connector says what it runs.** *Then* kvcustomizer's `preview` connector is described as `Run kvman extension projects in a separate kvman with a temporary home. Use it to show the person an extension project working, and stop it when you are done. It runs nothing else: start any other app or page with shell.` (`extensions/kvcustomizer/test/registration.test.ts`)
 
 ## Edge cases
 
@@ -63,7 +65,7 @@ The signatures of kvcoder's six connectors, as the prompt lists them (H1) and as
 - **QA19-E3 A subagent's calls carry the child's id.** *When* the model calls `subagent run { task, mode: 'fresh' }`, *then* the child's `kvai.complete` input holds the child session's id, which differs from the parent's. (`extensions/kvcoder/test/model-session.test.ts`)
 - **QA19-E4 A schema with no signature.** *Then* a schema that is a union (`anyOf`), one with `type: "string"`, and an object without `properties` each have no signature; and the invalid-payload text for such a schema ends `The payload of notes add is (JSON Schema):\n` and the schema on one line, without `$schema`. (`extensions/kvcoder/test/unit/payload-signature.test.ts`)
 - **QA19-E5 A problem at the payload's root.** *Then* the invalid-payload text for an issue with an empty path reads `payload: <message>`, and several issues are joined by `; ` before the full stop. (`extensions/kvcoder/test/unit/payload-signature.test.ts`)
-- **QA19-E6 A call that asks is checked the same way.** *When* the model calls `fs write { file: 'a.txt', content: 'x' }`, *then* no approval is asked, nothing is written, and the error ends `The payload of fs write is\n{ path, content, risky? }`. (`extensions/kvcoder/test/invalid-payload.test.ts`)
+- **QA19-E6 A call that asks is checked the same way.** *When* the model calls `fs write { file: 'a.txt', content: 'x' }`, *then* no approval is asked, nothing is written, and the error ends `The payload of fs write is\n{ path, content, risky }`. (`extensions/kvcoder/test/invalid-payload.test.ts`)
 - **QA19-E7 A background process killed at once.** *When* the line is `kill -9 $$` (bash; the test is the Linux and macOS branch, since Windows reports no signal), *then* the result is `started <id>\n[the process has already ended]\n[killed by SIGKILL]`, with no `[exit code` line, it is an error, `details` hold no `exitCode`, and no background message is added. (`extensions/kvcoder/test/background-start.test.ts`)
 - **QA19-E8 An exit after the startup second is still a message.** *Given* a background line that stays alive past its start and then exits with code 2, *then* its start result ends `[running]`, and the chat gets the background message `The process exited with code 2.` with its last output, as before. (`extensions/kvcoder/test/background-start.test.ts`)
 - **QA19-E9 The record decides.** *Then* the start result built from a record with no end is `[running]`; from a record ended `exited` with code 1, `[the process has already ended]` and `[exit code 1]`; from one ended `exited` with no code and signal `SIGTERM`, `[killed by SIGTERM]`; and from one ended `person`, `[the process has already ended]` with no code line and no error. (`extensions/kvcoder/test/unit/line-run-text.test.ts`)
@@ -72,3 +74,5 @@ The signatures of kvcoder's six connectors, as the prompt lists them (H1) and as
 - **QA19-E12 A subagent's index.** *When* a child is given `connectors: ['fs']`, *then* its prompt lists `fs` and `ask` with their command lines and holds no line for `shell`, `artifact`, `background`, or `subagent`. (`extensions/kvcoder/test/prompt-index.test.ts`)
 - **QA19-E13 A binary connector's `exec` in the background.** *Given* a binary connector `node`, *when* the model calls `node exec { args: '-e "process.exit(4)"', background: true, risky: false }`, *then* the result ends `[the process has already ended]\n[exit code 4]` and is an error. (`extensions/kvcoder/test/background-start.test.ts`)
 - **QA19-E14 Help is unchanged.** *Then* `fs help { command: 'write' }` still holds the payload's indented JSON Schema with a description on every field. (`extensions/kvcoder/test/connector-help.test.ts`)
+- **QA19-E15 A shell line sent as the command.** *When* the model calls `run { connector: 'shell', command: <a line of more than 40 characters> }`, *then* the result is `error NOT_FOUND: shell has no command <its first 40 characters>…. Its commands are: exec { line, background?, timeoutMs?, risky }, help.`, each command of one of kvcoder's six connectors with its signature; a short wrong name is shown whole, as in `todo has no command remove. Its commands are: add, wait, fail, list, help.` (`extensions/kvcoder/test/run-tool.test.ts`)
+- **QA19-E16 `risky` left out.** *Given* `kvcoder.shell.approval: auto`, *when* a reply holds `shell exec`, a binary's `exec`, `fs write`, and `fs edit` without `risky`, *then* each fails `VALIDATION_FAILED` naming `risky`, ending with the command's signature, which shows `risky` with no `?`; nobody is asked, and nothing runs or is written. (`extensions/kvcoder/test/run-approval.test.ts`)

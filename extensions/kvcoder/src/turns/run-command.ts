@@ -3,7 +3,7 @@ import { chatIdOf } from '../artifacts/artifact-records.ts';
 import { lineRunIsError, lineRunSchema, lineRunText } from '../calls/line-run.ts';
 import { artifactCard } from '../connectors/artifact.ts';
 import { binaryExec } from '../connectors/binary.ts';
-import { builtinCommands, commandsOf } from '../connectors/builtin-connectors.ts';
+import { builtinCommands, builtinSignatures, commandsOf } from '../connectors/builtin-connectors.ts';
 import { payloadJsonSchema, type ConnectorCommand } from '../connectors/connector-command.ts';
 import type { RunCall } from '../calls/run-tool.ts';
 import { inOrder } from '../files/file-queue.ts';
@@ -35,6 +35,14 @@ export function targetOf(connectors: readonly ConnectorRow[], call: Pick<RunCall
   if (connector?.kind === 'binary') return call.command === 'exec' ? { registration: binaryExec.registration, builtin: binaryExec } : undefined;
   const command = connector?.commands?.find((candidate) => candidate.name === call.command);
   return command === undefined ? undefined : { registration: command.command };
+}
+
+/** The commands a connector has, besides `help`, as a failed call lists them: one of kvcoder's own with its payload's signature (ADR 0012, 19). */
+export function commandNamesOf(connectors: readonly ConnectorRow[], name: string): string[] {
+  const builtin = builtinConnectors.find((candidate) => candidate === name);
+  if (builtin !== undefined) return Object.keys(commandsOf(builtin)).map((command, index) => `${command} ${builtinSignatures[builtin][index] ?? ''}`.trimEnd());
+  const connector = connectors.find((candidate) => candidate.name === name);
+  return connector?.kind === 'binary' ? ['exec'] : (connector?.commands ?? []).map((command) => command.name);
 }
 
 const shellRun = builtinCommands.shell.exec.registration;

@@ -30,7 +30,7 @@ describe("an invalid payload returns its problems and the command's payload (08 
 
   it('QA19-E6 a call that asks is checked the same way', async () => {
     const { kernel, sessionId, results } = await looked(nothing, [fsCall('write', { file: 'a.txt', content: 'x' })]);
-    expect(results[0]?.endsWith('The payload of fs write is\n{ path, content, risky? }')).toBe(true);
+    expect(results[0]?.endsWith('The payload of fs write is\n{ path, content, risky }')).toBe(true);
     expect((await turnState(kernel, sessionId)).session.status).toBe('idle');
     expect(existsSync(path.join(kernel.homeFolder, 'a.txt'))).toBe(false);
   });

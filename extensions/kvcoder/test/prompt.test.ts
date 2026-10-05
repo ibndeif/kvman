@@ -48,9 +48,9 @@ describe('the prompt (08 §8.2, §8.4)', { timeout: 30_000 }, () => {
     expect(prompt).toContain('Your one tool is run: it runs one command of a connector, as { description, connector, command, payload }.');
     expect(prompt).toContain(`Each \`shell exec\` starts in the workspace folder, so cd doesn't carry over to the next call; the shell is ${process.platform === 'win32' ? 'PowerShell' : 'bash'}.`);
     expect(prompt).toContain('- shell: Run a line in the real shell');
-    expect(prompt).toContain('Set background to true for a server or any command that keeps running.\n  exec { line, background?, timeoutMs?, risky? }\n  help { command? }');
+    expect(prompt).toContain('Set background to true for a server or any command that keeps running; to show the person an app you started, give its address to artifact write with the format url.\n  exec { line, background?, timeoutMs?, risky }\n  help { command? }');
     expect(prompt).toContain('- fs: Read, list, search, create, and change files in the workspace folder.');
-    expect(prompt).toContain('and edit for exact text replacements in an existing file.\n  read   { path, fromLine?, lines? }\n  list   { path? }\n  search { pattern, path? }\n  write  { path, content, risky? }\n  edit   { path, edits: [{ oldText, newText }], risky? }\n  help   { command? }');
+    expect(prompt).toContain('and edit for exact text replacements in an existing file.\n  read   { path, fromLine?, lines? }\n  list   { path? }\n  search { pattern, path? }\n  write  { path, content, risky }\n  edit   { path, edits: [{ oldText, newText }], risky }\n  help   { command? }');
     expect(prompt).toContain('- artifact: Show the person something to read or see: a plan, a report, a design, an HTML page, or the localhost address of an app you are running (format url).');
     expect(prompt).toContain('a url artifact is a normal page on its own address and can use them.\n  write { id, title, format?: "markdown" | "html" | "url", content }\n  edit  { id, edits: [{ oldText, newText }] }\n  get   { id }\n  help  { command? }');
     expect(prompt).toContain('- background: Follow up on what you started with background set to true: a server or other long-running shell line, or a background subagent. Use it to see its status or output, or to stop it.\n  list   {}\n  output { id }\n  stop   { id }\n  help   { command? }');

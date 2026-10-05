@@ -32,13 +32,13 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
     expect(headers.at(-1)).toBe('- node: Node.js. Commands: exec, help.');
     const lines = index.filter((line) => line.startsWith('  '));
     expect(lines).toEqual([
-      '  exec { line, background?, timeoutMs?, risky? }',
+      '  exec { line, background?, timeoutMs?, risky }',
       '  help { command? }',
       '  read   { path, fromLine?, lines? }',
       '  list   { path? }',
       '  search { pattern, path? }',
-      '  write  { path, content, risky? }',
-      '  edit   { path, edits: [{ oldText, newText }], risky? }',
+      '  write  { path, content, risky }',
+      '  edit   { path, edits: [{ oldText, newText }], risky }',
       '  help   { command? }',
       '  write { id, title, format?: "markdown" | "html" | "url", content }',
       '  edit  { id, edits: [{ oldText, newText }] }',
@@ -77,8 +77,8 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
       '  read   { path, fromLine?, lines? }',
       '  list   { path? }',
       '  search { pattern, path? }',
-      '  write  { path, content, risky? }',
-      '  edit   { path, edits: [{ oldText, newText }], risky? }',
+      '  write  { path, content, risky }',
+      '  edit   { path, edits: [{ oldText, newText }], risky }',
       '  help   { command? }',
       '  text    { prompt, placeholder? }',
       '  choice  { prompt, multiple, options: [{ id, label, description? }], other? }',

@@ -23,7 +23,7 @@ async function builtinHelp(ctx: Ctx, connector: BuiltinConnector, command: strin
   const commands = commandsOf(connector);
   if (command === undefined) return connectorHelp(connector, builtinDescriptions((await shellFor(ctx)).kind)[connector], Object.entries(commands).map(([name, entry]) => ({ name, description: entry.description })));
   const found = commands[command];
-  if (found === undefined) throw notFound(noCommandMessage(connector, command), { connector, command });
+  if (found === undefined) throw notFound(noCommandMessage(connector, command, Object.keys(commands)), { connector, command });
   const result = found.result ?? (await callInfos(ctx)).find((info) => info.name === found.registration)?.output ?? {};
   return commandHelp(connector, { ...builtinDetail(command, found), result });
 }
@@ -34,7 +34,7 @@ async function commandsHelp(ctx: Ctx, connector: ConnectorRow, command: string |
   const info = (name: string) => infos.find((candidate) => candidate.name === name);
   if (command === undefined) return connectorHelp(connector.name, connector.description, commands.map((entry) => ({ name: entry.name, description: info(entry.command)?.description ?? '' })));
   const found = commands.find((entry) => entry.name === command);
-  if (found === undefined) throw notFound(noCommandMessage(connector.name, command), { connector: connector.name, command });
+  if (found === undefined) throw notFound(noCommandMessage(connector.name, command, commands.map((entry) => entry.name)), { connector: connector.name, command });
   const registered = info(found.command);
   return commandHelp(connector.name, { name: found.name, description: registered?.description ?? '', payload: registered?.input ?? {}, result: registered?.output ?? {}, examples: found.examples });
 }
