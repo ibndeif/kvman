@@ -18,6 +18,7 @@ import PromptTab from './PromptTab.vue';
 import SessionModel from './SessionModel.vue';
 import type { SlashName } from './slash-commands.ts';
 import SubagentCard from './SubagentCard.vue';
+import WorkerCard from './WorkerCard.vue';
 import { useAnswers } from './use-answers.ts';
 import { useArtifacts } from './use-artifacts.ts';
 import { useConversation } from './use-conversation.ts';
@@ -79,6 +80,7 @@ async function stop(): Promise<void> {
 
 // An answered question or approval leaves the conversation at once (ADR 0009, 141, 142).
 const answers = useAnswers(kvman, (ran) => conversation.refresh(ran));
+const runs = computed(() => pending.value.flatMap((item) => (item.kind === 'worker' && item.runId !== undefined ? [item.runId] : [])));
 const waitingOnYou = computed(() => pending.value.filter((item) => item.questionId === null || !answers.hidden.value.has(String(item.questionId))));
 const recoverable = computed(() => {
   const last = messages.value.at(-1);
@@ -153,8 +155,9 @@ const key = (message: Message): string => message.id;
               <ActivityLine v-if="running" :live="live" />
               <CommandProgress v-if="actions.working.value" :working="actions.working.value" />
               <SubagentCard v-for="[id, child] in children" :key="id" :child="child" :hidden="answers.hidden.value" @answer="answers.answer" @decide="answers.decide" />
+              <WorkerCard v-for="run in runs" :key="run" :session-id="session.id" :run-id="run" />
               <PendingCards :pending="pending" :hidden="answers.hidden.value" @answer="answers.answer" @decide="answers.decide" />
-              <p v-if="waitingOnYou.some((item) => item.kind !== 'subagent')" class="kvc-muted" style="text-align: center; margin: 0">{{ kvman.t('kvcoder.ui.messageDismisses') }}</p>
+              <p v-if="waitingOnYou.some((item) => item.kind !== 'subagent' && item.kind !== 'worker')" class="kvc-muted" style="text-align: center; margin: 0">{{ kvman.t('kvcoder.ui.messageDismisses') }}</p>
             </div>
           </div>
           <button v-if="follow.away.value" type="button" class="kvc-button kvc-jump" data-test="jump-to-latest" @click="follow.resume"><ArrowDown :size="16" aria-hidden="true" />{{ kvman.t('kvcoder.ui.jumpToLatest') }}</button>

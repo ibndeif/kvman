@@ -15,7 +15,7 @@ type Connector =
 type ConnectorRow = { name: string; description: string; owner: string; kind: 'commands' | 'binary'; commands?: { name: string; command: string; examples: Example[] }[]; binary?: Binary };
 type Point = 'kvcoder.session.created' | 'kvcoder.session.deleted' | 'kvcoder.session.forked' | 'kvcoder.turn.started' | 'kvcoder.turn.ended' | 'kvcoder.session.waiting';
 type Place = { global?: boolean; sessionId?: string };
-type JobRow = { id: string; kind: 'process' | 'subagent'; title: string; call: string; status: string; startedAt: string; endedAt?: string; exitCode?: number; links: string[] };
+type JobRow = { id: string; kind: 'process' | 'subagent' | 'worker'; title: string; call: string; status: string; startedAt: string; endedAt?: string; exitCode?: number; links: string[] };
 type Send = { sessionId: string; text: string; fileIds?: string[] };
 type McpServer = { name: string; description: string; command: string; args: string[]; env: string[] } | { name: string; description: string; url: string; headers: string[] };
 type McpCheck = { status: 'ready'; tools: number } | { status: 'signInNeeded' } | { status: 'failed'; problem: { code: string; message: string; params?: Record<string, Json> } };
@@ -28,6 +28,7 @@ declare module '@kvman/sdk' {
     'kvcoder.session.delete': { input: SessionId; output: Empty };
     'kvcoder.session.compact': { input: SessionId; output: { summarized: boolean } };
     'kvcoder.mcp.server.check': { input: { name: string }; output: McpCheck };
+    'kvcoder.delegate.worker.check': { input: { name: string }; output: { status: 'ready' | 'notFound' } };
     'kvcoder.mcp.sign-in.start': { input: { name: string; redirectUrl: string }; output: { url: string } };
     'kvcoder.mcp.sign-in.finish': { input: { state: string; code: string }; output: { name: string } };
     'kvcoder.session.export': { input: SessionId; output: { fileId: string } };

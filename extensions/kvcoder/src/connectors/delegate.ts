@@ -1,16 +1,16 @@
 import { z, type Ctx, type Stored } from '@kvman/sdk';
-import { availableWorker, type Worker } from '../delegate/workers.ts';
+import { availableWorker, type SubagentWorker, type Worker } from '../delegate/workers.ts';
 import { firePoint } from '../registry/session-points.ts';
 import type { SessionDoc } from '../schemas/records.ts';
 import { now } from '../sessions/session-lookup.ts';
-import { txRecords } from '../store/collections.ts';
+import { records, txRecords } from '../store/collections.ts';
 import { appendMessage, noUsage, userContent } from '../turns/history.ts';
 import { beginTurn, openTurn } from '../turns/start-turn.ts';
 import { callInput, type ConnectorCommand } from './connector-command.ts';
 
-// The `delegate` connector (plan 08 §8.5, ADR 0021): a task handed to a worker, which runs it in a hidden child
-// session that starts from the task alone, with the worker's instructions, connectors, model, and thinking. A child
-// never has `delegate` and always has `ask`. The check validates the payload and the worker as a kernel job, and the
+// The `delegate` connector (plan 08 §8.5, ADR 0021): a task handed to a worker. A subagent worker runs it in a hidden
+// child session that starts from the task alone, with the worker's instructions, connectors, model, and thinking; a
+// child never has `delegate` and always has `ask`. A program worker's run is in `src/delegate/`. The check validates the payload and the worker as a kernel job, and the
 // step then starts the child (ADR 0011, 9).
 
 /** What the prompt's index says the connector is for; the session's entry adds its workers. */
@@ -40,15 +40,16 @@ export function registerDelegateConnector(ctx: Ctx): void {
     input: callInput(delegateRunSchema),
     output: z.object({}),
     retries: 0,
-    handle: async ({ payload }) => {
-      await availableWorker(ctx, payload.worker);
+    handle: async ({ sessionId, payload }) => {
+      const session = await records(ctx.store).sessions.get(sessionId);
+      await availableWorker(ctx, session?.checks ?? null, payload.worker);
       return {};
     },
   });
 }
 
 /** Creates the worker's child session, with the task as its first message. */
-export async function createChild(ctx: Ctx, parent: Stored<SessionDoc>, worker: Worker, task: string): Promise<string> {
+export async function createChild(ctx: Ctx, parent: Stored<SessionDoc>, worker: SubagentWorker, task: string): Promise<string> {
   const childId = await ctx.store.transaction((tx) => {
     const store = txRecords(tx);
     const stamp = now();

@@ -1,6 +1,6 @@
 # ADR 0021 — The `delegate` connector and its workers
 
-The product owner asked (2026-10-06) to "replace subagent connector by a brand new connector for delegate: it should give ability to agent to delegate work to subagent, opencode, pi, claude code", with "each of them must have their own configs", a "ui ux expert (which is a subagent with a predefined system prompt and connectors)", "architect or testers or reviewers", and "the user should be able to enable/disable workers". Decisions 1 to 19 were asked with alternatives, several with mockups. Decisions 20 to 30 are the smallest way to carry them out; the product owner may overrule any of them.
+The product owner asked (2026-10-06) to "replace subagent connector by a brand new connector for delegate: it should give ability to agent to delegate work to subagent, opencode, pi, claude code", with "each of them must have their own configs", a "ui ux expert (which is a subagent with a predefined system prompt and connectors)", "architect or testers or reviewers", and "the user should be able to enable/disable workers". Decisions 1 to 19 were asked with alternatives, several with mockups. Decisions 20 to 38 are the smallest way to carry them out; the product owner may overrule any of them.
 
 It lands in two passes: QA 31 is the connector with subagent workers, and QA 32 adds the three program kinds (decisions 3, 10 to 17, and the `worker` kinds of 23).
 
@@ -38,6 +38,19 @@ It lands in two passes: QA 31 is the connector with subagent workers, and QA 32 
 29. **A child session records its worker.** `Session` gains `worker?`, the worker's name, on a child session, and the child's card shows it. The child keeps the instructions it started with, so a later edit of the worker doesn't change a running child.
 30. **Every worker can be removed**, `general` too; the reset of the list brings the shipped five back.
 
+31. **Each program's command line**, read from the real programs (opencode 2.0.22, pi 1.0.1, Claude Code 2.1.289) on 2026-10-06. The task follows `--`, so one that starts with a dash is still the task.
+    - `opencode run --format json [--model <model>] [--agent <agent>] [--auto] -- <text>`, where `<text>` is the instructions, a blank line, and the task, or the task alone.
+    - `pi -p [--model <model>] [--thinking <thinking>] [--tools <a,b>] [--append-system-prompt <instructions>] -- <task>`.
+    - `claude -p --permission-mode <permissionMode> [--model <model>] [--effort <effort>] [--append-system-prompt <instructions>] -- <task>`.
+    - `thinking` is `off`, `minimal`, `low`, `medium`, `high`, `xhigh`, or `max`; `effort` is `low`, `medium`, `high`, `xhigh`, or `max`; `permissionMode` is `acceptEdits`, `auto`, `bypassPermissions`, `dontAsk`, or `plan`; `tools` is a list of non-empty names. Each but `permissionMode` and `autoApprove` may be `null`.
+32. **The answer.** `pi` and `claude` print it on their standard output. `opencode` prints one JSON event per line: its answer is the text of the `text` events after the last `tool_use` event, joined by a blank line, and an `error` event's `error.message` is a failure's reason. An exit with code 0 returns the answer; with no answer it is the error `<worker> returned no answer`. Any other exit is the error `<worker> exited with code <N>`, then the reasons, the standard error, and the answer so far; a timeout is `<worker> timed out after <N> s` and then the same; a program that can't be started is `<worker> could not start: <reason>`. Text is cut as a shell call's is.
+33. **A run** is a record of its chat: `{ id, worker, task, call, status: 'running' | 'succeeded' | 'failed' | 'cancelled' | 'interrupted', startedAt, endedAt?, exitCode?, output? }`, where `call` is the call's description and `output` what the call returned. As a row of `kvcoder.job.list` and `background list` its `kind` is `worker`, its `title` the worker's name, and its `call` the description; `kvcoder.job.get` and `background output` add `output`. A run keeps the command line it started with, so a later change of the worker doesn't touch it.
+34. **Stop.** `kvcoder.job.cancel` and `background stop` of a run kill its process tree. A run the turn waits on then returns the error `<worker> was stopped`, and the turn goes on; a background one adds that as a background message and starts no turn. `kvcoder.turn.cancel` and `kvcoder.session.delete` stop a turn's runs and say nothing more.
+35. **A run that is lost.** When the job of a run fails (kvman stopped or died, or the worker thread crashed), the run is `interrupted`, or `failed` for any other problem; a turn that waits on it ends the same way with the notice a step's failure gives, and a background run adds a background message and starts no turn.
+36. **An approval that is allowed** turns its pending call into `{ kind: 'worker', runId }` at once, in `kvcoder.question.answer`, and the run starts; the turn stays `waiting`. With `background: true` the call returns `started <runId>` instead. A message sent while the turn waits only on runs and subagents is queued, as for subagents (ADR 0009, 90).
+37. **The program check** starts `<program> --version` as a run starts the program (not through the shell, so it finds what a run would find) at a chat's first step, for 5 s at most; it passes on exit 0. Its result is kept in the session's `checks` as `worker:<name>`. `kvcoder.delegate.worker.check { name }` runs the same check now, for any worker of the list, turned on or not (`ready` for a `subagent`; `kvcoder/WORKER_NOT_FOUND` for a name that isn't in the list).
+38. **The dialog's form** gains "Kind" (Subagent, opencode, pi, Claude Code), fixed when editing. A program kind shows, in place of Connectors, Model, and Thinking: "Before a run" (Ask me | Start at once), "Time limit" in minutes (1 to 120), and its own fields as text fields (empty stores `null`), with `autoApprove` as a checkbox, `permissionMode` as a select, and `tools` as one name per line. A program worker's row shows "Checking…", then nothing when the program is found, or "<program> not found" with "Check again".
+
 ## Shapes
 
 - **The call:** `delegate run { worker, task, background? }`. `task` is the worker's whole brief.
@@ -52,7 +65,6 @@ It lands in two passes: QA 31 is the connector with subagent workers, and QA 32 
   | `reviewer` | Reviews changes with a fresh look | You are a code reviewer. Read the changes the task names, and the code around them. Report defects by severity, each with its file and line, what is wrong, and what you expect instead: correctness first, then security, then the project's conventions. Say so when you find nothing. Don't edit the project's files. |
 
 - **The worker block** of a child's prompt is `## Worker: <name>`, then the instructions; a worker without instructions has none.
-- **A program's command line** (QA 32) is fixed per kind from the worker's fields, and its answer is read from what the program prints. Each is confirmed against the real program before it is written into plan 08.
 
 ## Consequences
 

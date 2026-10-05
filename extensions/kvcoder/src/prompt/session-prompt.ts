@@ -46,7 +46,7 @@ export async function sessionTools(ctx: Ctx, session: Stored<SessionDoc>): Promi
   const allowed = allowedNames(session, connectors, disabled);
   const passed = new Set((session.checks ?? []).filter((check) => check.passed).map((check) => check.name));
   const servers = await mcpServers(ctx);
-  const workers = await availableWorkers(ctx);
+  const workers = await availableWorkers(ctx, session.checks);
   const descriptions = { ...builtinDescriptions(shell.kind), delegate: delegateIndexDescription(workers), mcp: mcpIndexDescription(servers) };
   const present: Partial<Record<string, boolean>> = { mcp: servers.length > 0, delegate: workers.length > 0 };
   const listed = [

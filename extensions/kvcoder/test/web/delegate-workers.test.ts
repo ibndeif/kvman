@@ -1,13 +1,13 @@
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import DelegateWorkers from '../../web/src/DelegateWorkers.vue';
-import type { WorkerEntry } from '../../web/src/worker-entry.ts';
+import type { SubagentEntry } from '../../web/src/worker-entry.ts';
 import { createFakeKvman, type FakeKvman } from './support/fake-kvman.ts';
 import { mounted } from './support/fixtures.ts';
 import { serveSettings, settingWrites, type ScopedValues } from './support/settings-world.ts';
 
 const key = 'kvcoder.delegate.workers';
-const entry = (name: string, fields: Partial<WorkerEntry> = {}): WorkerEntry => ({ name, description: `The ${name} worker`, enabled: true, kind: 'subagent', instructions: '', connectors: null, model: null, thinking: null, ...fields });
+const entry = (name: string, fields: Partial<SubagentEntry> = {}): SubagentEntry => ({ name, description: `The ${name} worker`, enabled: true, kind: 'subagent', instructions: '', connectors: null, model: null, thinking: null, ...fields });
 const general = entry('general', { description: 'Any separate, self-contained task' });
 const reviewer = entry('reviewer', { description: 'Reviews changes with a fresh look', instructions: 'You are a code reviewer.', connectors: ['fs', 'todo'], model: 'zed/z1', thinking: 'high' });
 

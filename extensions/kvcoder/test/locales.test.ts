@@ -88,11 +88,11 @@ describe("kvcoder's catalogs (02 §2.11)", { timeout: 30_000 }, () => {
     for (const language of ['en', 'ar'] as const) expect(keys.filter((key) => catalog(language)[key] === undefined), language).toEqual([]);
   });
 
-  it('QA31-E18 the workers dialog, the delegate connector, and its error are in both languages', () => {
+  it('QA31-E18 and QA32-E19 the workers dialog, the delegate connector, its jobs, and its error are in both languages', () => {
     const en = catalog('en');
     const ar = catalog('ar');
     const added = Object.keys(en).filter((key) => key.startsWith('kvcoder.config.workers.') || key.startsWith('kvcoder.delegate.'));
-    expect(added).toHaveLength(38);
+    expect(added).toHaveLength(63);
     for (const key of [...added, 'kvcoder.config.connector.delegate', 'kvcoder.errors.WORKER_NOT_FOUND']) {
       expect(ar[key], key).toBeTruthy();
       expect(placeholders(ar[key] ?? ''), key).toEqual(placeholders(en[key] ?? ''));

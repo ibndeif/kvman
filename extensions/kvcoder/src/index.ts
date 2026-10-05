@@ -9,6 +9,7 @@ import { registerFsConnector } from './connectors/fs.ts';
 import { registerMcpConnector } from './connectors/mcp.ts';
 import { registerShellConnector } from './connectors/shell.ts';
 import { registerDelegateConnector } from './connectors/delegate.ts';
+import { registerWorkerRun } from './delegate/register-worker-run.ts';
 import { registerDocs } from './docs.ts';
 import { registerProcessHandlers, interruptLeftovers } from './jobs/process-handlers.ts';
 import { registerJobs } from './jobs/register-jobs.ts';
@@ -46,6 +47,7 @@ export default (ctx: Ctx): void => {
   registerBackgroundConnector(ctx);
   registerAskConnector(ctx);
   registerDelegateConnector(ctx);
+  registerWorkerRun(ctx);
   registerMcpConnector(ctx);
   registerMcp(ctx);
   registerConnectorHelp(ctx);

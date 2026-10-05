@@ -80,10 +80,12 @@ export const queuedDocSchema = z.object({ sessionId: z.string(), source: sourceS
 /** What a pending call waits on. */
 export const pendingSchema = z.object({
   toolCallId: z.string(),
-  kind: z.enum(['question', 'subagent', 'approval']),
+  kind: z.enum(['question', 'subagent', 'approval', 'worker']),
   questionId: z.string().nullable(),
   question: z.json().nullable(),
   childSessionId: z.string().nullable(),
+  // The run of a program worker the call waits on (ADR 0021, 23).
+  runId: z.string().nullable().default(null),
 });
 
 /** A call the person approves before it runs: what the model said it does, and the connector command with its payload. */
@@ -130,6 +132,28 @@ export const questionDocSchema = z.object({
 // of a job started with the old `--async`; such a stored row still parses and is never listed (ADR 0011, 6).
 export const backgroundDocSchema = z.object({ sessionId: z.string(), ref: z.string(), kind: z.enum(['connector', 'subagent']), call: z.string(), startedAt: z.string() });
 
+/** How a program worker's run stands. */
+export const runStatusSchema = z.enum(['running', 'succeeded', 'failed', 'cancelled', 'interrupted']);
+
+// A run of a program worker (ADR 0021, 33): the command line it started with, the job that runs it, and what it
+// returned. `toolCallId` is the call a turn waits on, and `null` for a background run.
+export const runDocSchema = z.object({
+  sessionId: z.string(),
+  toolCallId: z.string().nullable(),
+  worker: z.string(),
+  kind: z.enum(['opencode', 'pi', 'claude']),
+  call: z.string(),
+  command: z.string(),
+  args: z.array(z.string()),
+  timeoutMs: z.number().int().positive(),
+  jobId: z.string().nullable(),
+  status: runStatusSchema,
+  startedAt: z.string(),
+  endedAt: z.string().nullable(),
+  exitCode: z.number().int().nullable(),
+  output: z.string().nullable(),
+});
+
 // A background process a session started with `background: true` (ADR 0009, 150). It lives in the global store, since the
 // handlers for kvman stopping and starting run in Home. It is running until `end` is set; `reported` says whether the
 // session has been told how it ended.
@@ -171,6 +195,7 @@ export type QuestionDoc = z.output<typeof questionDocSchema>;
 export type BackgroundDoc = z.output<typeof backgroundDocSchema>;
 export type ArtifactDoc = z.output<typeof artifactDocSchema>;
 export type ProcessDoc = z.output<typeof processDocSchema>;
+export type RunDoc = z.output<typeof runDocSchema>;
 export type Usage = z.output<typeof usageSchema>;
 export type Outcome = z.output<typeof outcomeSchema>;
 export type Source = z.output<typeof sourceSchema>;

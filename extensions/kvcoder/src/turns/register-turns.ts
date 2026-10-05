@@ -1,4 +1,5 @@
 import { z, type Ctx } from '@kvman/sdk';
+import { isDelegateRun, startApprovedRun } from '../delegate/approved-run.ts';
 import { checkedAnswer } from '../connectors/ask.ts';
 import { runCallSchema, type HeldResult } from '../schemas/records.ts';
 import { findSession, ownSession, userOnly } from '../sessions/session-lookup.ts';
@@ -49,6 +50,8 @@ export function registerTurns(ctx: Ctx): void {
         return true;
       });
       if (!taken) throw ctx.problem('kvcoder/QUESTION_NOT_FOUND', { questionId });
+      const approvedCall = checked.kind !== 'result' && checked.approved ? runCallSchema.parse(question.question) : undefined;
+      if (approvedCall !== undefined && isDelegateRun(approvedCall)) return { jobId: await startApprovedRun(ctx, { sessionId: question.sessionId, toolCallId: question.toolCallId, call: approvedCall }) };
       const held: HeldResult =
         checked.kind === 'result'
           ? heldText(question.toolCallId, checked.text, false)

@@ -14,13 +14,13 @@ const payloads = { list: z.strictObject({}), output: started, stop: started };
 
 export const backgroundCommands = {
   list: { registration: 'kvcoder.background.list', description: "Lists this chat's newest 50 background runs, newest first.", payload: payloads.list, asks: false },
-  output: { registration: 'kvcoder.background.output.get', description: "Gives one background run's status, and its output (a process's last 100 lines, or a subagent's answer).", payload: payloads.output, asks: false },
-  stop: { registration: 'kvcoder.background.stop', description: 'Stops a background process, or cancels a background subagent.', payload: payloads.stop, asks: false },
+  output: { registration: 'kvcoder.background.output.get', description: "Gives one background run's status, and its output (a process's last 100 lines, a subagent's answer, or what a program worker's run returned).", payload: payloads.output, asks: false },
+  stop: { registration: 'kvcoder.background.stop', description: "Stops a background process or a program worker's run, or cancels a background subagent.", payload: payloads.stop, asks: false },
 } satisfies Record<string, ConnectorCommand>;
 
 const rowSchema = z.object({
   id: z.string(),
-  kind: z.enum(['process', 'subagent']),
+  kind: z.enum(['process', 'subagent', 'worker']),
   call: z.string(),
   status: z.string(),
   startedAt: z.string(),

@@ -2,6 +2,7 @@ import { ProblemError, z, type Ctx, type Stored } from '@kvman/sdk';
 import type {} from '@kvman/kvai';
 import type { JsonValue } from '../connector-call.ts';
 import { runBinaryChecks } from '../calls/binary-checks.ts';
+import { workerChecks } from '../delegate/register-worker-run.ts';
 import { runTool } from '../calls/run-tool.ts';
 import { shellFor } from '../calls/shell-program.ts';
 import { sessionTools, type SessionTools } from '../prompt/session-prompt.ts';
@@ -52,7 +53,7 @@ async function beginStep(ctx: Ctx, sessionId: string, turnId: string, maxSteps: 
 
 async function withChecks(ctx: Ctx, session: Stored<SessionDoc>): Promise<Stored<SessionDoc>> {
   if (session.checks !== null) return session;
-  const checks = await runBinaryChecks(ctx, await shellFor(ctx), await activeConnectors(ctx));
+  const checks = [...(await runBinaryChecks(ctx, await shellFor(ctx), await activeConnectors(ctx))), ...(await workerChecks(ctx))];
   return records(ctx.store).sessions.update(session.id, { checks });
 }
 

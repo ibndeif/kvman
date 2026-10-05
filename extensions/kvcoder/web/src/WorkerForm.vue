@@ -4,10 +4,11 @@ import { toastProblem, useKvman } from './kvman.ts';
 import { modelGroups, thinkingLevels, type ModelRow, type ProviderRow } from './model-groups.ts';
 import ModelPicker from './ModelPicker.vue';
 import { ownConnectors } from './use-connectors.ts';
-import { draftOf, draftProblems, entryOf, type DraftField, type WorkerEntry } from './worker-entry.ts';
+import { draftOf, draftProblems, entryOf, workerKinds, type DraftField, type WorkerEntry } from './worker-entry.ts';
+import WorkerProgramFields from './WorkerProgramFields.vue';
 
-// The form that adds or edits one worker (plan 08 §8.7, ADR 0021, 7 and 20): its instructions, the connectors its
-// subagent may use, and its model and thinking, each of which may be left as the chat's own.
+// The form that adds or edits one worker (plan 08 §8.7, ADR 0021, 7, 20, and 38): its kind and instructions, then a
+// subagent's connectors, model, and thinking, each of which may be left as the chat's own, or a program's own fields.
 const props = defineProps<{ entry?: WorkerEntry; taken: readonly string[]; working: boolean }>();
 const emit = defineEmits<{ save: [entry: WorkerEntry]; cancel: [] }>();
 const kvman = useKvman();
@@ -18,7 +19,7 @@ const models = ref<ModelRow[]>([]);
 const added = ref<string[]>([]);
 const text = (key: string): string => kvman.t(`kvcoder.config.workers.form.${key}`);
 
-// A worker's name is fixed once it is saved: the agent calls it by that name.
+// A worker's name and kind are fixed once it is saved: the agent calls it by that name.
 const editing = props.entry !== undefined;
 
 // A subagent never has `delegate` (ADR 0021, 24), so it isn't offered.
@@ -64,11 +65,20 @@ function submit(): void {
       <span v-else class="kvc-muted">{{ text('descriptionHint') }}</span>
     </label>
     <label class="kvc-form-field">
+      <span class="kvc-form-label">{{ text('kind') }}</span>
+      <select v-model="draft.kind" class="kvc-button" :disabled="editing" data-test="worker-kind-select">
+        <option v-for="kind in workerKinds" :key="kind" :value="kind">{{ kvman.t(`kvcoder.config.workers.kind.${kind}`) }}</option>
+      </select>
+      <span class="kvc-muted">{{ text('kindHint') }}</span>
+    </label>
+    <label class="kvc-form-field">
       <span class="kvc-form-label">{{ text('instructions') }}</span>
       <textarea v-model="draft.instructions" dir="auto" rows="8" class="kvc-field" :aria-invalid="problems.instructions !== undefined" data-test="worker-instructions" />
       <span v-if="problems.instructions !== undefined" class="kvc-form-error" role="alert" data-test="worker-instructions-error">{{ kvman.t(problems.instructions) }}</span>
       <span v-else class="kvc-muted">{{ text('instructionsHint') }}</span>
     </label>
+    <WorkerProgramFields v-if="draft.kind !== 'subagent'" v-model:draft="draft" :minutes-problem="problems.minutes" />
+    <template v-else>
     <fieldset class="kvc-form-choice">
       <legend class="kvc-form-label">{{ text('connectors') }}</legend>
       <label class="kvc-form-radio">
@@ -99,6 +109,7 @@ function submit(): void {
         <option v-for="level in thinkingLevels" :key="level" :value="level">{{ kvman.t(`kvcoder.ui.thinkingLevels.${level}`) }}</option>
       </select>
     </label>
+    </template>
     <div class="kvc-actions">
       <button type="button" class="kvc-button" :disabled="props.working" data-test="worker-cancel" @click="emit('cancel')">{{ kvman.t('kvcoder.config.workers.cancel') }}</button>
       <button type="submit" class="kvc-button kvc-primary" :disabled="props.working" data-test="worker-save">{{ text('save') }}</button>

@@ -105,6 +105,8 @@ The agent can delegate a separate, self-contained part to a worker: another agen
 
 kvman comes with five workers: `general` for any separate task, and the specialists `ui-ux`, `architect`, `tester`, and `reviewer`, each with its own instructions. To manage them, open **Extensions → Coder**, and press the cog on the `delegate` row. There you turn a worker off (the agent then no longer sees it), edit its instructions, choose which connectors it may use, give it its own model or thinking level (or leave them the same as the chat), remove it, or add your own. Reset brings the five back.
 
+A worker can also be a coding program installed on this computer: **opencode**, **pi**, or **Claude Code**. Pick its kind when you add it. Such a worker runs the program in your workspace folder with the task, signs in the way the program itself does, and spends on that program's account, not on the chat's. You choose whether kvman asks you before each run or starts at once, how many minutes a run may take (1 to 120), and the program's own options, such as its model. While it runs, the chat shows a card with the worker, the time, and **Stop**; it is also in the **Running** chip, with its output once it ends. The program edits files and runs commands on its own: kvman's approval cards don't cover what it does inside a run. If the program isn't installed, the worker's row says so and the agent isn't offered it.
+
 ## Attachments
 
 The paperclip button attaches images (PNG, JPEG, GIF, or WebP) from your computer. They are sent with your message to a model that accepts image input; a text-only model refuses them.

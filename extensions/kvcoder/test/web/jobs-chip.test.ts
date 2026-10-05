@@ -64,6 +64,23 @@ describe("the Running chip in the conversation's header (08 §8.7, ADR 0009, 153
     expect(reads()).toBe(3);
   });
 
+  it("QA32-H16 a program worker's run is a row: its worker and time, Stop while it runs, and its output under Logs", async () => {
+    const { world, fake, mount } = setup([job({ id: 'r1', kind: 'worker', title: 'opencode', call: 'Writing the retry test.' })]);
+    const wrapper = await mount();
+    expect(wrapper.find('[data-test="jobs-chip"]').text()).toBe('1 running');
+    await wrapper.find('[data-test="jobs-chip"]').trigger('click');
+    expect(wrapper.find('[data-test="job-title"]').text()).toBe('opencode');
+    expect(wrapper.find('[data-test="job-time"]').text()).toBe('1 min 12 s');
+    await wrapper.find('[data-test="job-stop-r1"]').trigger('click');
+    await flushPromises();
+    expect(fake.calls.filter((call) => call.name === 'kvcoder.job.cancel').map((call) => call.input)).toEqual([{ sessionId: 's1', id: 'r1' }]);
+    expect(world.jobs[0]?.status).toBe('cancelled');
+    await wrapper.find('[data-test="job-logs-r1"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[data-test="job-output"]').text()).toBe('Serving HTTP on 0.0.0.0 port 8000');
+    expect(wrapper.find('[data-test="job-status"]').text()).toBe('Stopped');
+  });
+
   it('QA3-H18 with nothing running, there is no chip', async () => {
     const { mount } = setup([job({ status: 'succeeded', exitCode: 0 })]);
     const wrapper = await mount();

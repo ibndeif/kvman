@@ -1,5 +1,5 @@
 import type { Store, Transaction } from '@kvman/sdk';
-import { artifactDocSchema, backgroundDocSchema, messageDocSchema, processDocSchema, questionDocSchema, queuedDocSchema, sessionDocSchema, turnDocSchema } from '../schemas/records.ts';
+import { artifactDocSchema, backgroundDocSchema, messageDocSchema, processDocSchema, questionDocSchema, queuedDocSchema, runDocSchema, sessionDocSchema, turnDocSchema } from '../schemas/records.ts';
 import { signInDocSchema } from '../mcp/sign-in-record.ts';
 import { connectorDocSchema, handlerDocSchema, handlerJobDocSchema, sectionDocSchema } from '../schemas/registry.ts';
 
@@ -16,6 +16,7 @@ export function records(store: Store) {
     questions: store.collection('questions', questionDocSchema),
     artifacts: store.collection('artifacts', artifactDocSchema),
     background: store.collection('background', backgroundDocSchema),
+    runs: store.collection('runs', runDocSchema),
     sections: store.collection('sections', sectionDocSchema),
     globalSections: store.global.collection('sections', sectionDocSchema),
     processes: store.global.collection('processes', processDocSchema),
@@ -36,6 +37,7 @@ export function txRecords(tx: Transaction) {
     questions: tx.collection('questions', questionDocSchema),
     artifacts: tx.collection('artifacts', artifactDocSchema),
     background: tx.collection('background', backgroundDocSchema),
+    runs: tx.collection('runs', runDocSchema),
     sections: tx.collection('sections', sectionDocSchema),
     globalSections: tx.global.collection('sections', sectionDocSchema),
     processes: tx.global.collection('processes', processDocSchema),

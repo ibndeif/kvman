@@ -3,7 +3,8 @@ import { isAskKind, type QuestionKind } from '../connectors/ask.ts';
 import { payloadJsonSchema } from '../connectors/connector-command.ts';
 import { parseRunArgs, type RunCall } from '../calls/run-tool.ts';
 import { createChild, delegateRunSchema, startChild } from '../connectors/delegate.ts';
-import { availableWorker } from '../delegate/workers.ts';
+import { createRun, launchRun } from '../delegate/runs.ts';
+import { availableWorker, isProgram } from '../delegate/workers.ts';
 import { builtinConnectors, errorOutput, invalidPayloadOutput, noCommandMessage, noConnectorMessage, type JsonValue } from '../connector-call.ts';
 import type { SessionTools } from '../prompt/session-prompt.ts';
 import { activeConnectors } from '../registry/register-connectors.ts';
@@ -22,7 +23,8 @@ export type ToolCall = { id: string; name: string; arguments: Record<string, Jso
 export type CallOutcome =
   | { kind: 'result'; held: HeldResult }
   | { kind: 'question'; questionKind: QuestionKind; question: Record<string, JsonValue> }
-  | { kind: 'subagent'; childSessionId: string };
+  | { kind: 'subagent'; childSessionId: string }
+  | { kind: 'worker'; runId: string };
 
 export type CallEnv = { ctx: Ctx; session: Stored<SessionDoc>; tools: SessionTools; approval: 'ask' | 'auto' };
 
@@ -48,11 +50,20 @@ function invalidPayload(call: RunCall, target: CommandTarget): string | undefine
   return invalidPayloadOutput(call, issues, payloadJsonSchema(target.builtin.payload)).output;
 }
 
-// A checked `delegate run` (ADR 0021): the worker's child session, which the turn waits on, or which runs in the background.
+// A checked `delegate run` (ADR 0021): a subagent worker's child session, or a program worker's run, either of which
+// the turn waits on or which runs in the background. A program worker may ask the person first (ADR 0021, 12).
 async function delegateOutcome(env: CallEnv, toolCallId: string, call: RunCall): Promise<CallOutcome> {
   const { ctx, session } = env;
   const run = delegateRunSchema.parse(call.payload);
-  const childId = await createChild(ctx, session, await availableWorker(ctx, run.worker), run.task);
+  const worker = await availableWorker(ctx, session.checks, run.worker);
+  if (isProgram(worker)) {
+    if (worker.approval === 'ask') return { kind: 'question', questionKind: 'approval', question: call };
+    const started = await createRun(ctx, session.id, worker, { description: call.description, task: run.task }, run.background === true ? null : toolCallId);
+    if (run.background !== true) return { kind: 'worker', runId: started.id };
+    await launchRun(ctx, started.id);
+    return result(toolCallId, textResult(call, `started ${started.id}`));
+  }
+  const childId = await createChild(ctx, session, worker, run.task);
   if (run.background !== true) return { kind: 'subagent', childSessionId: childId };
   await records(ctx.store).background.insert({ sessionId: session.id, ref: childId, kind: 'subagent', call: call.description, startedAt: now() });
   await startChild(ctx, childId);

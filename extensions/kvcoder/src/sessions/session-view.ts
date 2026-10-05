@@ -35,6 +35,9 @@ export const messageSchema = z.object({
   createdAt: z.string(),
 });
 
+// A pending call as it is shown: `runId` only on a call that waits on a program worker's run (plan 08 §8.1).
+const shownPendingSchema = pendingSchema.omit({ runId: true }).extend({ runId: z.string().exactOptional() });
+
 export const turnSchema = z.object({
   id: z.string(),
   sessionId: z.string(),
@@ -44,7 +47,7 @@ export const turnSchema = z.object({
   steps: z.number().int(),
   usage: usageSchema,
   outcome: outcomeSchema.exactOptional(),
-  pending: z.array(pendingSchema),
+  pending: z.array(shownPendingSchema),
 });
 
 export type Session = z.output<typeof sessionSchema>;
@@ -109,6 +112,6 @@ export function turnView(doc: Stored<TurnDoc>): Turn {
     steps: doc.steps,
     usage: doc.usage,
     ...(doc.outcome === null ? {} : { outcome: doc.outcome }),
-    pending: doc.pending,
+    pending: doc.pending.map(({ runId, ...item }) => (runId === null ? item : { ...item, runId })),
   };
 }

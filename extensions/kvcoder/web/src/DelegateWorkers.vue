@@ -6,10 +6,10 @@ import { useWorkers } from './use-workers.ts';
 import type { WorkerEntry } from './worker-entry.ts';
 import WorkerForm from './WorkerForm.vue';
 
-// The `delegate` connector's configuration (plan 08 §8.7, ADR 0021, 6 and 30): the workers, each with a switch, and
-// the form that adds or edits one. The list is saved into the scope the extension's page is set to.
+// The `delegate` connector's configuration (plan 08 §8.7, ADR 0021, 6, 30, and 38): the workers, each with a switch
+// and, for a program, whether it was found, and the form that adds or edits one. The list is saved into the scope the extension's page is set to.
 const kvman = useKvman();
-const { workers, locked, changed, working, save, remove, toggle, reset } = useWorkers(kvman);
+const { workers, states, locked, changed, working, save, remove, toggle, reset, check } = useWorkers(kvman);
 const form = ref<{ entry?: WorkerEntry }>();
 const removing = ref<string>();
 const scoped = (key: string): string => kvman.t(`${key}.${kvman.scope.value}`, { name: kvman.workspace.value.name });
@@ -42,6 +42,11 @@ async function removed(name: string): Promise<void> {
         <span class="kvc-mono kvc-connector-name" data-test="worker-name">{{ worker.name }}</span>
         <span class="kvc-muted" dir="auto" data-test="worker-description">{{ worker.description }}</span>
         <span><span class="kvc-chip" data-test="worker-kind">{{ kvman.t(`kvcoder.config.workers.kind.${worker.kind}`) }}</span></span>
+        <span v-if="states[worker.name] === 'checking'" class="kvc-server-state" data-status="checking" role="status" data-test="worker-state">{{ kvman.t('kvcoder.config.workers.checking') }}</span>
+        <span v-else-if="states[worker.name] === 'notFound'" class="kvc-server-state" data-status="failed" role="status" data-test="worker-state">
+          {{ kvman.t('kvcoder.config.workers.notFound', { program: worker.kind }) }}
+          <button type="button" class="kvc-text-button" data-test="worker-check" @click="check(worker.name)">{{ kvman.t('kvcoder.config.workers.recheck') }}</button>
+        </span>
       </span>
       <span v-if="removing === worker.name" class="kvc-connector-actions" role="alertdialog" :aria-label="named('removeConfirm', worker.name)" data-test="worker-remove-confirm">
         <span class="kvc-muted">{{ named('removeConfirm', worker.name) }}</span>

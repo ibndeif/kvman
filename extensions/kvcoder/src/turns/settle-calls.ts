@@ -1,5 +1,6 @@
 import type { Ctx, Stored } from '@kvman/sdk';
 import { startChild } from '../connectors/delegate.ts';
+import { dropRun, launchRun } from '../delegate/runs.ts';
 import { firePoint } from '../registry/session-points.ts';
 import type { HeldResult, JsonValue, Pending, SessionDoc, TurnDoc } from '../schemas/records.ts';
 import { now } from '../sessions/session-lookup.ts';
@@ -41,10 +42,11 @@ export async function continueTurn(ctx: Ctx, sessionId: string, turnId: string, 
 }
 
 function pendingOf(store: TxRecords, sessionId: string, rootSessionId: string, turnId: string, toolCallId: string, outcome: Exclude<CallOutcome, { kind: 'result' }>): Pending {
-  if (outcome.kind === 'subagent') return { toolCallId, kind: 'subagent', questionId: null, question: null, childSessionId: outcome.childSessionId };
+  if (outcome.kind === 'subagent') return { toolCallId, kind: 'subagent', questionId: null, question: null, childSessionId: outcome.childSessionId, runId: null };
+  if (outcome.kind === 'worker') return { toolCallId, kind: 'worker', questionId: null, question: null, childSessionId: null, runId: outcome.runId };
   const question = store.questions.insert({ sessionId, rootSessionId, turnId, toolCallId, kind: outcome.questionKind, question: outcome.question });
   const shown = outcome.questionKind === 'approval' ? outcome.question : { kind: outcome.questionKind, ...outcome.question };
-  return { toolCallId, kind: outcome.questionKind === 'approval' ? 'approval' : 'question', questionId: question.id, question: shown, childSessionId: null };
+  return { toolCallId, kind: outcome.questionKind === 'approval' ? 'approval' : 'question', questionId: question.id, question: shown, childSessionId: null, runId: null };
 }
 
 export async function settleCalls(ctx: Ctx, sessionId: string, turnId: string, calls: readonly ToolCall[], outcomes: readonly CallOutcome[], maxSteps: number): Promise<void> {
@@ -71,12 +73,24 @@ export async function settleCalls(ctx: Ctx, sessionId: string, turnId: string, c
     store.sessions.update(sessionId, { status: 'waiting', stepJobId: null, updatedAt: now() });
     return items;
   });
-  if (pending === undefined) return;
+  if (pending === undefined) {
+    await dropNewRuns(ctx, outcomes);
+    return;
+  }
   for (const item of pending) {
     if (item.questionId !== null) ctx.job.progress({ type: 'component', component: 'kvcoder.question', props: { questionId: item.questionId, sessionId, pending: item } });
     if (item.childSessionId !== null) await startChild(ctx, item.childSessionId);
+    if (item.runId !== null) await launchRun(ctx, item.runId);
   }
   for (const kind of new Set(pending.map((item) => item.kind))) await firePoint(ctx, 'kvcoder.session.waiting', { sessionId, kind });
+}
+
+// The runs recorded for a turn that ended meanwhile never start.
+async function dropNewRuns(ctx: Ctx, outcomes: readonly CallOutcome[]): Promise<void> {
+  for (const outcome of outcomes) {
+    const run = outcome.kind === 'worker' ? await records(ctx.store).runs.get(outcome.runId) : undefined;
+    if (run !== undefined) await dropRun(ctx, run);
+  }
 }
 
 async function rootOf(ctx: Ctx, sessionId: string): Promise<string | null> {

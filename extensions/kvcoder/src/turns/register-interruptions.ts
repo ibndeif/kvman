@@ -1,4 +1,5 @@
 import type { Ctx } from '@kvman/sdk';
+import { runLost } from '../delegate/register-worker-run.ts';
 import { records } from '../store/collections.ts';
 import { endTurn } from './end-turn.ts';
 
@@ -14,8 +15,9 @@ async function stepEnded(ctx: Ctx, jobId: string, outcome: 'interrupted' | 'fail
 
 export function registerInterruptions(ctx: Ctx): void {
   ctx.registerHandler('kernel.job.failed', {
-    description: 'Ends the turn of a step that failed.',
+    description: "Ends the turn of a step that failed, or of a program worker's run that was lost.",
     handle: async ({ jobId, name, problem }) => {
+      if (name === 'kvcoder.delegate.worker.run') await runLost(ctx, jobId, problem.code);
       if (name === 'kvcoder.turn.step') await stepEnded(ctx, jobId, problem.code === 'INTERRUPTED' ? 'interrupted' : 'failed', problem.code);
     },
   });

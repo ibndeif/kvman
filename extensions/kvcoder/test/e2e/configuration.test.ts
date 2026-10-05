@@ -107,6 +107,32 @@ describe("kvcoder's configuration in Chromium (06 §6.6, 08 §8.7, ADR 0014)", {
     await page.close();
   });
 
+  it('QA32-H17 the person adds a Claude Code worker, and its row and its entry hold after a reload', async () => {
+    world = await kvmanWorld();
+    const kvman = await world.start();
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await page.goto(`${kvman.origin}/kvwebui/extension/kvcoder`);
+    const cog = page.locator('[data-test="connector-delegate"] [data-test="connector-configure"]');
+    await cog.click();
+    await page.locator('[data-test="worker-add"]').click();
+    await page.locator('[data-test="worker-kind-select"]').selectOption('claude');
+    await page.locator('[data-test="worker-name"]').fill('second-opinion');
+    await page.locator('[data-test="worker-description"]').fill('A second opinion on a design');
+    expect(await page.locator('[data-test="worker-permission-mode"]').inputValue()).toBe('acceptEdits');
+    await page.locator('[data-test="worker-save"]').click();
+    const row = page.locator('[data-test="worker-second-opinion"]');
+    await row.waitFor();
+    expect(await row.locator('[data-test="worker-kind"]').textContent()).toBe('Claude Code');
+    const stored = settingsSchema.parse(await kvman.call('queries', 'kernel.settings.list', {})).find((setting) => setting.key === 'kvcoder.delegate.workers');
+    expect((stored?.value as unknown[]).at(-1)).toEqual({ name: 'second-opinion', description: 'A second opinion on a design', enabled: true, kind: 'claude', instructions: '', approval: 'ask', timeoutMs: 1_800_000, model: null, effort: null, permissionMode: 'acceptEdits' });
+
+    await page.reload();
+    await cog.click();
+    await row.waitFor();
+    expect(await row.locator('[data-test="worker-kind"]').textContent()).toBe('Claude Code');
+    await page.close();
+  });
+
   it('QA22-H8 Coder and AI pick their model from a dropdown, Coder lists no programs field, and Interface has only its theme', async () => {
     world = await kvmanWorld();
     const kvman = await world.start();

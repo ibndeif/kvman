@@ -16,6 +16,7 @@ There is no password in this phase: any program running as you, on this computer
 ## What leaves your computer
 
 - **MCP servers.** A server you add over a URL receives what the agent sends its tools, and the headers you gave it; a command server is a program on your machine and can reach whatever that program reaches. What a tool returns goes into the conversation, and so to the model. kvman adds no server by itself. Signing in to a server happens on that server's own page, in your browser; it sends the browser back only to kvman's sign-in page on `127.0.0.1`, and kvman accepts no other return address.
+- **Program workers.** A worker that runs opencode, pi, or Claude Code hands the task to that program, which works in your workspace folder with its own tools and sends what it reads to its own provider, under that program's sign-in and settings. kvman's approval cards cover starting the run (when the worker is set to ask), not what the program does during it.
 - **Model calls.** When the agent or an extension asks a model, kvman sends the conversation, the tool descriptions, and the files or text the conversation includes to the provider you connected (Anthropic, OpenAI, your own server, and so on), over your connection and under that provider's terms. Nothing is sent until you connect a provider and send a message.
 - **Installing extensions and updating kvman** use npm and your network.
 - **Signing in with a plan** opens the provider's own sign-in page in your browser, and keeps the result as a secret.
