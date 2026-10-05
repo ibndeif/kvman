@@ -18,7 +18,7 @@ Open **Extensions** from the sidebar, below the divider. It shows:
 
 Click an extension to open its own page. Each extension decides what its page holds, so they differ:
 
-- **Coder** has its settings in groups (the model and thinking level of a new chat, the shell approval, how many chats to keep) and its **Connectors**: everything the agent can use, programs on your machine included, each with a switch. The model is picked from a searchable list; **Use the default model**, its first entry, follows whatever the default model is. Turn a connector off and the agent no longer sees it, from its next step. Turn `shell` off, for example, and the agent can't run command lines.
+- **Coder** has its settings in groups (the model and thinking level of a new chat, how many chats to keep) and its **Connectors**: everything the agent can use, programs on your machine included, each with a switch. A connector with settings of its own has a cog beside its switch: `shell`'s opens when the agent asks before a call and which shell program runs. The model is picked from a searchable list; **Use the default model**, its first entry, follows whatever the default model is. Turn a connector off and the agent no longer sees it, from its next step. Turn `shell` off, for example, and the agent can't run command lines.
 - **Models** has the default model, picked from a searchable list of the models you can call, and a link to the Models page.
 - **Interface** has the theme.
 - An extension with nothing to set says **This extension has nothing to configure.**

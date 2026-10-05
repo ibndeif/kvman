@@ -5,7 +5,7 @@ This page is for anyone who wants to change how kvman or one of its extensions b
 ## Where settings are
 
 - **Settings**, in the sidebar, holds kvman's own settings: its language, its port, and how it runs jobs. They are the same in every workspace.
-- **Extensions**, in the sidebar, lists what kvman runs. Open an extension to configure it: each extension lays out its own configuration there. Coder, for example, has its model and thinking level, the shell approval, and the list of its connectors with a switch for each; see [Extensions](extensions.md).
+- **Extensions**, in the sidebar, lists what kvman runs. Open an extension to configure it: each extension lays out its own configuration there. Coder, for example, has its model and thinking level, and the list of its connectors with a switch for each and, where a connector has settings of its own, a cog that opens them; see [Extensions](extensions.md).
 
 Both pages show a setting the same way:
 

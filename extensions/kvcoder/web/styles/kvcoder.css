@@ -139,6 +139,14 @@ a.kvc-button { text-decoration: none; color: inherit; }
 .kvc-setting .kvc-picker-label { max-inline-size: none; }
 .kvc-setting .kvc-popover { inline-size: 100%; }
 .kvc-setting .kvc-connectors-state { padding-block-end: 0; }
+/* A connector's own configuration, over the page (ADR 0020, 2). */
+.kvc-connector-actions { flex: none; display: flex; align-items: center; gap: 8px; }
+.kvc-dialog-backdrop { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: var(--kv-space-md); background: rgb(0 0 0 / 0.35); }
+.kvc-dialog { box-sizing: border-box; display: flex; flex-direction: column; gap: var(--kv-space-sm); inline-size: 100%; max-inline-size: 44rem; max-block-size: calc(100dvh - 2 * var(--kv-space-md)); overflow-y: auto; border-radius: 16px; background: var(--kv-color-surface); color: var(--kv-color-text); padding: var(--kv-space-lg); box-shadow: 0 20px 50px rgb(0 0 0 / 0.25); outline: none; }
+.kvc-dialog-head { display: flex; align-items: flex-start; gap: 12px; }
+.kvc-dialog-title { font-size: 16px; font-weight: 600; }
+.kvc-dialog-rows { display: flex; flex-direction: column; }
+.kvc-dialog-rows > .kvc-setting:last-child { border-block-end: 0; padding-block-end: 0; }
 /* The send box's row, its pickers, and its slash commands (ADR 0017, 3, 11, and 12). */
 .kvc-box { position: relative; }
 .kvc-composer-row { display: flex; align-items: center; gap: 8px; }

@@ -7,13 +7,13 @@ const sessionParam = { sessionId: { $param: 'sessionId' } };
 
 const settings = (keys: readonly string[]) => keys.map((key) => ({ type: 'setting', key }));
 
-// kvcoder's configuration on its own page of the Extensions list (ADR 0014, 10; ADR 0015, 4 and 7).
+// kvcoder's configuration on its own page of the Extensions list (ADR 0014, 10; ADR 0015, 4 and 7). The shell's two
+// settings are in its connector's dialog (ADR 0020, 2).
 const configuration = {
   type: 'stack',
   direction: 'vertical',
   children: [
     { type: 'card', title: 'kvcoder.config.agent', children: [{ type: 'custom', component: 'kvcoder.model', props: {} }, ...settings(['kvcoder.thinking', 'kvcoder.maxSteps', 'kvcoder.compactAt', 'kvcoder.compactKeep'])] },
-    { type: 'card', title: 'kvcoder.config.shell', children: settings(['kvcoder.shell.approval', 'kvcoder.shell.path']) },
     { type: 'card', title: 'kvcoder.config.chats', children: settings(['kvcoder.sessions.keep', 'kvcoder.welcome']) },
     {
       type: 'card',

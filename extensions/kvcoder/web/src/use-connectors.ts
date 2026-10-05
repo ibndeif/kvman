@@ -4,12 +4,15 @@ import { useSetting } from './use-setting.ts';
 
 // The connectors list of kvcoder's configuration (plan 08 §8.7, ADR 0014, 10; ADR 0015, 4 and 5): kvcoder's own six,
 // then the registered ones and the programs, each on unless `kvcoder.connectors.disabled` names it. A switch writes
-// that setting in the scope the extension's page is set to.
+// that setting in the scope the extension's page is set to. A connector with a configuration of its own has a cog.
 
 /** kvcoder's own connectors, in the prompt's order (the server's `builtinConnectors`). */
 export const ownConnectors = ['shell', 'fs', 'artifact', 'background', 'ask', 'subagent'] as const;
 
-export type ConnectorItem = { name: string; description: string; on: boolean };
+/** The connectors with a configuration of their own, which their cog opens (ADR 0020, 2). */
+export const configurableConnectors: readonly string[] = ['shell'];
+
+export type ConnectorItem = { name: string; description: string; on: boolean; configurable: boolean };
 
 const names = (value: unknown): string[] => (Array.isArray(value) ? value.filter((name): name is string => typeof name === 'string') : []);
 
@@ -23,7 +26,7 @@ export function useConnectors(kvman: Kvman) {
   };
 
   const items = computed<ConnectorItem[]>(() =>
-    [...ownConnectors.map((name) => ({ name, description: kvman.t(`kvcoder.config.connector.${name}`) })), ...added.value.map((connector) => ({ name: connector.name, description: connector.description }))].map((item) => ({ ...item, on: !disabled.value.includes(item.name) })),
+    [...ownConnectors.map((name) => ({ name, description: kvman.t(`kvcoder.config.connector.${name}`) })), ...added.value.map((connector) => ({ name: connector.name, description: connector.description }))].map((item) => ({ ...item, on: !disabled.value.includes(item.name), configurable: configurableConnectors.includes(item.name) })),
   );
 
   onMounted(load);

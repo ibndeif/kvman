@@ -32,12 +32,14 @@ function world(values: { global?: string[]; workspace?: string[] } = {}, fail = 
 const writes = (fake: FakeKvman) => fake.calls.filter((call) => call.name.startsWith('kernel.settings.') && call.name !== 'kernel.settings.list');
 
 describe("the connectors list of kvcoder's configuration (08 §8.7, ADR 0014, 10)", () => {
-  it('QA22-H2 the connectors are one list: a name, a description, and a switch each, and nothing about where one comes from', async () => {
+  it('QA22-H2 and QA28-H1 the connectors are one list: a name, a description, and a switch each, a cog only on shell, and nothing about where one comes from', async () => {
     const list = await mounted(ConnectorsList, world());
     expect(list.findAll('.kvc-connector').map((row) => row.find('[data-test="connector-name"]').text())).toEqual(['shell', 'fs', 'artifact', 'background', 'ask', 'subagent', 'todo', 'gh']);
-    expect(list.findAll('.kvc-connector').map((row) => row.findAll('[data-test]').map((part) => part.attributes('data-test')))).toEqual(Array.from({ length: 8 }, () => ['connector-name', 'connector-description', 'connector-switch']));
+    expect(list.findAll('.kvc-connector').map((row) => row.findAll('[data-test]').map((part) => part.attributes('data-test')))).toEqual([['connector-name', 'connector-description', 'connector-configure', 'connector-switch'], ...Array.from({ length: 7 }, () => ['connector-name', 'connector-description', 'connector-switch'])]);
     expect(list.find('[data-test="connector-gh"] [data-test="connector-description"]').text()).toBe('GitHub CLI.');
     expect(list.text()).not.toContain('@test/todo');
+    const cog = list.find('[data-test="connector-shell"] [data-test="connector-configure"]');
+    expect([cog.attributes('aria-label'), cog.attributes('aria-haspopup')]).toEqual(['Configure shell', 'dialog']);
   });
 
   it('QA21-H11 the list shows the six own connectors and the added ones, each on, and turning one off writes the setting', async () => {
@@ -88,6 +90,14 @@ describe("the connectors list of kvcoder's configuration (08 §8.7, ADR 0014, 10
     await expect.poll(() => list.find('[data-test="connectors-own-value"]').exists()).toBe(false);
     expect(list.find('[data-test="connector-fs"] [data-test="connector-switch"]').attributes('disabled')).toBeUndefined();
     expect(list.find('[data-test="connectors-changed"]').text()).toBe('Changed for notes-app');
+  });
+
+  it("QA28-E3 the cog opens the dialog while a workspace's own list locks the switches", async () => {
+    const list = await mounted(ConnectorsList, world({ workspace: ['fs'] }));
+    expect(list.find('[data-test="connector-shell"] [data-test="connector-switch"]').attributes('disabled')).toBe('');
+    expect(list.find('[data-test="connector-shell"] [data-test="connector-configure"]').attributes('disabled')).toBeUndefined();
+    await list.find('[data-test="connector-shell"] [data-test="connector-configure"]').trigger('click');
+    expect(list.find('[data-test="connector-dialog"]').exists()).toBe(true);
   });
 
   it("QA21-E11 turning one on keeps the names the list doesn't show", async () => {

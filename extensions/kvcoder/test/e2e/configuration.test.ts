@@ -56,6 +56,32 @@ describe("kvcoder's configuration in Chromium (06 §6.6, 08 §8.7, ADR 0014)", {
     await page.close();
   });
 
+  it("QA28-H8 the person sets when the shell asks from its cog: the dialog covers the page, saves, closes on Escape, and holds after a reload", async () => {
+    world = await kvmanWorld();
+    const kvman = await world.start();
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await page.goto(`${kvman.origin}/kvwebui/extension/kvcoder`);
+    const cog = page.locator('[data-test="connector-shell"] [data-test="connector-configure"]');
+    await cog.click();
+    const select = page.locator('[data-test="shell-approval-control"]');
+    await select.waitFor();
+    expect(await page.locator('[data-test="connector-dialog-backdrop"]').boundingBox()).toEqual({ x: 0, y: 0, width: 1280, height: 900 });
+    expect(await page.locator('[data-test^="setting-kvcoder.shell"], [data-test="connector-fs"] [data-test="connector-configure"]').count()).toBe(0);
+    await select.selectOption('ask');
+    await page.locator('[data-test="shell-approval-saved"]').waitFor();
+    const stored = settingsSchema.parse(await kvman.call('queries', 'kernel.settings.list', {})).find((setting) => setting.key === 'kvcoder.shell.approval');
+    expect(stored).toMatchObject({ value: 'ask', source: 'global' });
+
+    await page.keyboard.press('Escape');
+    await page.locator('[data-test="connector-dialog"]').waitFor({ state: 'detached' });
+    expect(await page.locator('[data-test="connector-shell"] [data-test="connector-configure"]:focus').count()).toBe(1);
+
+    await page.reload();
+    await cog.click();
+    await expect.poll(() => select.inputValue()).toBe('ask');
+    await page.close();
+  });
+
   it('QA22-H8 Coder and AI pick their model from a dropdown, Coder lists no programs field, and Interface has only its theme', async () => {
     world = await kvmanWorld();
     const kvman = await world.start();

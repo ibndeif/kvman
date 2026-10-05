@@ -16,13 +16,16 @@ export function useSetting(kvman: Kvman, key: string) {
     source.value = setting?.source ?? 'default';
   };
 
-  const write = async (change: () => Promise<unknown>): Promise<void> => {
+  // Says whether the change was made; a failed one is toasted.
+  const write = async (change: () => Promise<unknown>): Promise<boolean> => {
     saving.value = true;
     try {
       await change();
       await load();
+      return true;
     } catch (error) {
       toastProblem(kvman, error);
+      return false;
     } finally {
       saving.value = false;
     }
