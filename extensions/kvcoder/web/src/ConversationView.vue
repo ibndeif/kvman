@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ArrowDown } from '@lucide/vue';
 import { computed, ref, useTemplateRef } from 'vue';
+import type { Json } from '@kvman/sdk';
 import type { Message } from '../../src/index.ts';
 import ArtifactPanel from './ArtifactPanel.vue';
 import MessageComposer from './MessageComposer.vue';
@@ -101,10 +102,15 @@ async function exportEarlier(): Promise<void> {
 
 const summaryFailed = (): boolean => messages.value.at(-1)?.kind === 'notice' && messages.value.at(-1)?.content['code'] === 'SUMMARY_FAILED';
 
+// The number the toast names: `kvcoder.compactKeep` as it is in effect here (ADR 0020, 1).
+async function keptMessages(): Promise<Json> {
+  return (await kvman.exec('kernel.settings.list', {})).find((setting) => setting.key === 'kvcoder.compactKeep')?.value ?? null;
+}
+
 async function summarize(): Promise<void> {
   const summarized = await actions.compact();
   if (summarized === true) kvman.toast('kvcoder.ui.summarized', {}, 'success');
-  else if (summarized === false && !summaryFailed()) kvman.toast('kvcoder.ui.nothingToSummarize');
+  else if (summarized === false && !summaryFailed()) kvman.toast('kvcoder.ui.nothingToSummarize', { count: await keptMessages() });
 }
 
 function command(name: SlashName | 'delete', argument: string): void {

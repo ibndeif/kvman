@@ -7,11 +7,10 @@ import { modelInfo } from './model-info.ts';
 import { sentHistory, textOf, type History } from './model-context.ts';
 
 // Compaction (plan 08 §8.1): above `kvcoder.compactAt` of the model's window (characters / 4), kvai summarizes the
-// older messages, the last 10 stay whole, and a summary message is stored. A step marks it in its stream with
+// older messages, the last `kvcoder.compactKeep` stay whole (ADR 0020, 1), and a summary message is stored. A step marks it in its stream with
 // `compaction` chunks (ADR 0009, 99); a failed summary adds a notice and the step goes on. Older messages smaller
 // than a tenth of the model's window aren't summarized, so a full chat isn't summarized again on every step (ADR 0019, 7).
 
-const kept = 10;
 const minimumShare = 0.1;
 
 const summarizer =
@@ -34,14 +33,14 @@ const sizeOf = (messages: readonly Stored<MessageDoc>[]): number => messages.red
 
 const estimate = (prompt: string, history: History): number => (prompt.length + JSON.stringify(history.summary?.content ?? '').length) / 4 + sizeOf(history.messages);
 
-export type CompactOptions = { force: boolean; compactAt: number; prompt: string; turnId: string | null };
+export type CompactOptions = { force: boolean; compactAt: number; keep: number; prompt: string; turnId: string | null };
 
 /** Summarizes the session's older messages when they pass the threshold, or with `force` whatever the threshold; says whether a summary was stored. */
 export async function compact(ctx: Ctx, session: Stored<SessionDoc>, options: CompactOptions): Promise<boolean> {
   const history = await sentHistory(ctx, session.id, session.nextSeq);
   const info = await modelInfo(ctx, session.model);
   if (!options.force && (info === undefined || estimate(options.prompt, history) <= info.contextWindow * options.compactAt)) return false;
-  const older = history.messages.slice(0, Math.max(history.messages.length - kept, 0));
+  const older = history.messages.slice(0, Math.max(history.messages.length - options.keep, 0));
   const last = older.at(-1);
   if (last === undefined || (info !== undefined && sizeOf(older) < info.contextWindow * minimumShare)) return false;
   ctx.job.progress({ type: 'compaction', state: 'started' });

@@ -133,7 +133,7 @@ async function runStep(ctx: Ctx, sessionId: string, turnId: string): Promise<voi
   if (begun === undefined) return;
   const checked = await withChecks(ctx, begun);
   const tools = await sessionTools(ctx, checked);
-  await compact(ctx, checked, { force: false, compactAt: settings.compactAt, prompt: tools.built.prompt, turnId });
+  await compact(ctx, checked, { force: false, compactAt: settings.compactAt, keep: settings.compactKeep, prompt: tools.built.prompt, turnId });
   const session = (await records(ctx.store).sessions.get(sessionId)) ?? checked;
   const answer = await callModel(ctx, session, turnId, tools);
   if (answer === undefined) return;

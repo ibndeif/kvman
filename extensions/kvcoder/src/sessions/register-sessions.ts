@@ -79,7 +79,7 @@ export function registerSessions(ctx: Ctx): void {
     },
   });
   ctx.registerCommand('kvcoder.session.compact', {
-    description: "Summarizes a session's older messages now; the last 10 stay whole. Says whether a summary was made.",
+    description: "Summarizes a session's older messages now; the newest kvcoder.compactKeep stay whole. Says whether a summary was made.",
     input: sessionIdSchema,
     output: z.object({ summarized: z.boolean() }),
     public: true,
@@ -87,7 +87,8 @@ export function registerSessions(ctx: Ctx): void {
       const session = await ownSession(ctx, sessionId);
       if (session.status === 'running') throw ctx.problem('kvcoder/SESSION_BUSY', { sessionId });
       const tools = await sessionTools(ctx, session);
-      return { summarized: await compact(ctx, session, { force: true, compactAt: (await readSettings(ctx)).compactAt, prompt: tools.built.prompt, turnId: null }) };
+      const settings = await readSettings(ctx);
+      return { summarized: await compact(ctx, session, { force: true, compactAt: settings.compactAt, keep: settings.compactKeep, prompt: tools.built.prompt, turnId: null }) };
     },
   });
 }

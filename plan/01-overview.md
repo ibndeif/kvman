@@ -62,7 +62,7 @@ Each is designed in its own round, after the kernel.
 
 - **kvai**: LLM calls, providers, and models. The pi-ai package's providers and models come by default, and other extensions can add theirs. Agents, tools, and loops are built by the extensions that need them (§7).
 - **kvwebui**: the Vue web app, plus a `kvwebui.*` API other extensions use to shape the UI.
-- **kvcoder**: the app-building harness on kvai and kvwebui. Its agent has one tool, `run`, which runs a command of a connector (the built-in `shell`, `fs`, `artifact`, `background`, `ask`, and `subagent`, and those other extensions register); connectors and sections extend it (ADR 0011). Its conversation UI is its own (§8).
+- **kvcoder**: the app-building harness on kvai and kvwebui. Its agent has one tool, `run`, which runs a command of a connector (the built-in `shell`, `fs`, `artifact`, `background`, `ask`, `subagent`, and `mcp`, and those other extensions register); connectors and sections extend it (ADR 0011). Its conversation UI is its own (§8).
 - **kvcustomizer**: the kvcoder extension for customizing kvman: it adds connectors and a prompt for developing extensions and presets, and for managing the running app (§9, ADR 0010).
 
 ## 1.6 Principles for this phase

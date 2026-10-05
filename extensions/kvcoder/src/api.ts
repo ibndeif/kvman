@@ -62,6 +62,7 @@ declare module '@kvman/sdk' {
     'kvcoder.shell.approval': 'ask' | 'auto';
     'kvcoder.shell.path': string | null;
     'kvcoder.compactAt': number;
+    'kvcoder.compactKeep': number;
     'kvcoder.connectors': { name: string; description: string; binary: Binary }[];
     'kvcoder.connectors.disabled': string[];
     'kvcoder.sessions.keep': number;

@@ -15,6 +15,8 @@ The product owner asked (2026-10-05) that the Settings page show only the genera
 9. **`kvcoder.connector.list` says whether each connector is on.** Each row gains `enabled`. The list is still the registered connectors and the `kvcoder.connectors` programs; kvcoder's own six aren't rows of it.
 10. **kvcoder's configuration** is four cards: Agent (`kvcoder.model`, `kvcoder.thinking`, `kvcoder.maxSteps`, `kvcoder.compactAt`), Shell (`kvcoder.shell.approval`, `kvcoder.shell.path`), Chats (`kvcoder.sessions.keep`, `kvcoder.welcome`), and Connectors (the custom component `kvcoder.connectors`, then `kvcoder.connectors`, the programs to add). The connectors list shows kvcoder's six, each with a catalog description, then the others with the description the agent reads and their owner, each with a switch. On "All workspaces" while the workspace has its own list, the switches are disabled and a line says so; a list set in the scope being edited shows "Changed" and a reset.
 11. **kvai's configuration** is one card with `kvai.defaultModel` and a link to its Models page. kvcustomizer has no settings and gives no configuration.
+*Decision 10 was changed again by ADR 0020: the Shell card is gone, and `shell` and `mcp` have a cog that opens their own dialog.*
+
 *Decisions 10 to 12 were changed by ADR 0015: a model's row is a custom component with a dropdown, the `kvcoder.connectors` setting and the owner of a connector aren't shown, and kvwebui's configuration is its Appearance card only.*
 
 12. **kvwebui's own configuration is built in**, since kvwebui is the host and has no `ui.get`: Appearance (`kvwebui.theme`), Navigation (`kvwebui.nav.order`, `kvwebui.nav.hidden`), and App (`kvwebui.title`, `kvwebui.home`, shown locked).

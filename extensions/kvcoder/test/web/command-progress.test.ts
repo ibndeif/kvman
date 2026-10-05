@@ -123,8 +123,9 @@ describe('a running chat action shows its progress (08 §8.7, ADR 0019)', () => 
     view.unmount();
   });
 
-  it('QA26-H4 a summary by hand says how it ended', async () => {
+  it('QA26-H4 and QA27-H6 a summary by hand says how it ended, naming the kept messages in effect', async () => {
     const { fake, hold } = world();
+    fake.handle('kernel.settings.list', () => [{ key: 'kvcoder.compactKeep', value: 6, source: 'global' }]);
     const view = await mounted(ConversationView, fake, { sessionId: 's1' });
     for (const summarized of [true, false]) {
       const compact = hold('compact');
@@ -132,7 +133,8 @@ describe('a running chat action shows its progress (08 §8.7, ADR 0019)', () => 
       compact.give({ summarized });
       await flushPromises();
     }
-    expect(fake.toast.mock.calls).toEqual([['kvcoder.ui.summarized', {}, 'success'], ['kvcoder.ui.nothingToSummarize']]);
+    expect(fake.toast.mock.calls).toEqual([['kvcoder.ui.summarized', {}, 'success'], ['kvcoder.ui.nothingToSummarize', { count: 6 }]]);
+    expect(fake.kvman.t('kvcoder.ui.nothingToSummarize', { count: 6 })).toBe('Nothing to summarize yet: the messages before the last 6 are still short');
     view.unmount();
   });
 

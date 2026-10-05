@@ -1,0 +1,37 @@
+# ADR 0020 — The kept messages as a setting, a connector's own configuration, and MCP servers
+
+After ADR 0019 the product owner asked (2026-10-05) for three changes to kvcoder: "refactor compact to leave last n messages, and add a config for it", "add an mcp connector, and it should add configs in the UI to let the user add their MCPs", and "add a cog icon next to each connector to open a modal for this specific connector's configs". Decisions 1 to 11 were asked with alternatives and mockups. Decisions 12 to 16 are the smallest way to carry them out; the product owner may overrule any of them.
+
+## Decisions
+
+1. **The kept messages are a setting** (asked; chosen over allowing 0, and over also making the 10% minimum a setting). `kvcoder.compactKeep` is a whole number from 1 to 100, 10 by default, with the global and workspace scopes. A summary, by a step or by hand, keeps that many of the newest messages whole. The minimum of ADR 0019, 7 stays 10% and isn't a setting. The Agent card shows the setting after `kvcoder.compactAt`.
+2. **A connector with something to set has a cog** (asked; chosen over a cog on every row, and over a cog on the Extensions list). In kvcoder's connectors list, `shell` and `mcp` have a cog button, "Configure <name>", before the switch; it opens a dialog for that connector. A row with nothing to set has none. `shell`'s dialog holds `kvcoder.shell.approval` and `kvcoder.shell.path`, and the Shell card leaves the configuration.
+3. **One connector, `mcp`** (asked; chosen over a connector per server). It is kvcoder's seventh own connector. Its commands are `tools { server, tool? }` and `call { server, tool, arguments?, timeoutMs?, risky }`.
+4. **Two transports, and nothing outlives a call** (asked; chosen over HTTP only, and over servers that stay running, which need a kernel process an extension can talk to). A server is reached over Streamable HTTP, or started as a command that speaks MCP on its standard input and output. A command is started inside the call's own job and its process tree is killed when the call ends, so a server keeps no state between calls.
+5. **The official client** (asked; chosen over a client of kvcoder's own). kvcoder depends on `@modelcontextprotocol/sdk`, pinned exactly.
+6. **Every environment variable's and header's value is a secret** (asked; chosen over a choice per value). A server's entry holds only their names. A value is one of kvcoder's secrets and is never shown again: the person replaces it to change it. The command, its arguments, and the URL are plain.
+7. **A tool call asks as a shell call does** (asked; chosen over a rule per server, and over never asking). `mcp call` takes the required `risky` and follows `kvcoder.shell.approval`. `mcp tools` and `help` never ask.
+8. **Headers and OAuth sign-in** (asked; chosen over headers only). A server over HTTP that answers that authorization is needed is signed in to from its row, in the browser.
+9. **The servers are a setting with both scopes** (asked; chosen over one list for every workspace). `kvcoder.mcp.servers` is `[]` by default, and the dialog saves into `kvman.scope`; as with every setting, a workspace's own list replaces the global one. A server's secrets are kept by its name, for the whole home, so one name means one set of credentials.
+10. **The prompt names the servers, not their tools** (asked; chosen over listing every tool name). The `mcp` entry of the connector index ends with `Servers: <name> (<description>), ….`; the model calls `mcp tools { server }` for a server's tools, and with `tool` for one tool's input schema.
+11. **The sign-in returns to a kvcoder page** (asked; chosen over a new kernel route). The redirect address is `http://127.0.0.1:<port>/kvcoder/mcp-sign-in`, the page `kvcoder.mcp-sign-in`, whose component reads `code` and `state` from the address and runs `kvcoder.mcp.sign-in.finish`. The kernel's routes and the listener's checks don't change.
+12. **With no server, `mcp` isn't a connector of the session**: it is left out of the prompt's connector index and of the `run` tool, like a program whose check failed, and a call to it gets the answer for a connector that doesn't exist. Its row and cog are always in the list.
+13. **The dialogs are kvcoder's own components.** A `setting` view is valid only in `configuration` (ADR 0014, 3), so the shell's two rows are built by kvcoder, like the model's row (ADR 0015, 7): each saves into `kvman.scope` as it changes, shows "Changed" with a reset, and is disabled on "All workspaces" while the workspace has its own value. kvwebui and `@kvman/sdk` don't change.
+14. **A server's state is checked, not stored.** `kvcoder.mcp.server.check { name }` connects, lists the tools, and answers `{ status: 'ready', tools }`, `{ status: 'signInNeeded' }`, or `{ status: 'failed', problem }`. The dialog checks each server when it opens, after a save, and after a sign-in.
+15. **The UI writes the setting and the secrets itself**, with `kernel.settings.set`, `kernel.secrets.set`, and `kernel.secrets.delete`, as the extension's page already does. Removing a server deletes its secrets. The one kvcoder command that takes a secret is `kvcoder.mcp.sign-in.finish` (the authorization code), which is sync only.
+16. **Tools only, and registration by the server.** MCP's resources, prompts, and sampling aren't used. Sign-in registers kvman with the server (dynamic client registration); a server that doesn't offer it fails `kvcoder/MCP_SIGN_IN_FAILED`.
+
+## Shapes
+
+- **A server**, an entry of `kvcoder.mcp.servers`: `{ name, description, command, args: string[], env: string[] }` or `{ name, description, url, headers: string[] }`, strict; `name` is lowercase kebab case and unique in the list; `env` and `headers` hold names.
+- **Secrets** (kvcoder's): `mcp.<name>.env.<VARIABLE>`, `mcp.<name>.header.<Header>`, and, for a sign-in, `mcp.<name>.oauth.tokens`, `mcp.<name>.oauth.client`, and `mcp.<name>.oauth.verifier`.
+- **A call's result** is the tool's text blocks, joined by a blank line; a block of another kind is `[<kind> omitted]`; it is cut like any connector result. A result the tool marks as an error is an error result. The timeout is 120 s by default and at most 600 s.
+- **API.** `kvcoder.mcp.server.check` (decision 14); `kvcoder.mcp.sign-in.start { name, redirectUrl }` → `{ url }`, where `redirectUrl` is `http://127.0.0.1:<port>/kvcoder/mcp-sign-in` or the same on `localhost` (`VALIDATION_FAILED` otherwise); `kvcoder.mcp.sign-in.finish { state, code }` → `{ name }`. A started sign-in is kept in kvcoder's global store for 10 minutes.
+- **Errors.** `kvcoder/MCP_SERVER_NOT_FOUND` (`{ server }`), `kvcoder/MCP_CONNECT_FAILED` (`{ server, reason }`), `kvcoder/MCP_SIGN_IN_NEEDED` (`{ server }`), and `kvcoder/MCP_SIGN_IN_FAILED` (`{ reason }`).
+
+## Consequences
+
+- Plan 08 §8.1 to §8.7 are corrected, and ADR 0014, 10 is changed: the configuration is three cards.
+- kvcoder gains the dependency `@modelcontextprotocol/sdk`.
+- `mcp` becomes a name no extension can register (`kvcoder/NAME_TAKEN`).
+- The catalog key `kvcoder.config.shell` is removed.
