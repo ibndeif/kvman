@@ -47,8 +47,7 @@ function probeScript(kvman: string, foreign: string, expected: number): string {
 const kvman = ${JSON.stringify(kvman)};
 const foreign = ${JSON.stringify(foreign)};
 const results = {};
-const violations = [];
-addEventListener('securitypolicyviolation', (event) => violations.push(event.effectiveDirective));
+const violations = window.probeViolations;
 const attempt = async (name, run) => {
   try { results[name] = await run(); } catch (error) { results[name] = 'blocked: ' + error.name; }
 };
@@ -76,7 +75,11 @@ const load = (element, url) => new Promise((resolve) => { element.onload = () =>
 </script>`;
 }
 
-const page = (kvman: string, foreign: string, extra = '', expected = 7): string => `<!doctype html><html><head>${extra}</head><body><pre id="out">running</pre>${probeScript(kvman, foreign, expected)}</body></html>`;
+// The listener is the first thing in the head: a violation of what follows it there (a base, an external script) is
+// reported while the head is parsed, before any script of the body has run.
+const violationListener = `<script>window.probeViolations = []; addEventListener('securitypolicyviolation', (event) => window.probeViolations.push(event.effectiveDirective));</script>`;
+
+const page = (kvman: string, foreign: string, extra = '', expected = 7): string => `<!doctype html><html><head>${violationListener}${extra}</head><body><pre id="out">running</pre>${probeScript(kvman, foreign, expected)}</body></html>`;
 
 // Opens the artifact in the app, as the person does from its card, and returns the page and the artifact's frame.
 async function openProbe(kvman: Running, content: string): Promise<{ app: Page; outer: Frame; frame: Frame }> {
