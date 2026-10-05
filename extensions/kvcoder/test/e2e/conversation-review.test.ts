@@ -80,4 +80,49 @@ describe('the conversation view in Chromium (08 §8.7, ADR 0017)', { timeout: 12
     await page.locator('[data-test="user-message"]').first().waitFor();
     await page.close();
   });
+
+  it("QA25-H5 the panel never covers the header's menu, its header is one row at any width, a slash text on the Chat page creates no chat, and a sent upload leaves the kernel's files", async () => {
+    world = await kvmanWorld();
+    const kvman = await world.start();
+    world.fake.reply(runs(command('artifact', 'write', { id: 'plan', title: 'The plan for the whole new website', content: '# The plan' })), says('Done.'), says('Read.'));
+    const sessionId = sessionSchema.parse(await kvman.call('commands', 'kvcoder.session.create', { title: 'Review' })).id;
+    await kvman.call('commands', 'kvcoder.message.send', { sessionId, text: 'Write the plan' });
+    await until(() => kvman.call('queries', 'kvcoder.session.get', { sessionId }), sessionSchema, (found) => found.status === 'idle');
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    await page.goto(`${kvman.origin}/kvcoder/session/${sessionId}`);
+    await page.locator('[data-test="artifacts-toggle"]').click();
+    await page.locator('[data-test="artifact-panel"]').waitFor();
+    for (const width of [1280, 800]) {
+      await page.setViewportSize({ width, height: 800 });
+      await page.locator('[data-test="chat-menu"]').click();
+      await page.locator('[data-test="chat-menu-items"]').waitFor();
+      await page.keyboard.press('Escape');
+      const header = await rectOf(page, '.kvc-header');
+      const panel = await rectOf(page, '[data-test="artifact-panel"]');
+      expect(panel.y, String(width)).toBeGreaterThanOrEqual(header.bottom - 1);
+      const name = await rectOf(page, '.kvc-artifact-name');
+      const actions = await rectOf(page, '.kvc-artifact-actions');
+      expect(actions.y, String(width)).toBeLessThan(name.bottom);
+      expect(name.y, String(width)).toBeLessThan(actions.bottom);
+      expect(name.width, String(width)).toBeGreaterThan(60);
+      expect(actions.right, String(width)).toBeLessThanOrEqual(panel.right);
+      expect(actions.x, String(width)).toBeGreaterThanOrEqual(panel.x);
+    }
+
+    const upload = await fetch(`${kvman.origin}/api/files?name=notes.md&workspaceId=home`, { method: 'POST', headers: { 'content-type': 'text/markdown' }, body: '# Notes' });
+    const fileId = z.object({ file: z.object({ id: z.string() }) }).parse(await upload.json()).file.id;
+    await kvman.call('commands', 'kvcoder.message.send', { sessionId, text: 'Read it', fileIds: [fileId] });
+    await page.locator('[data-test="user-message"]', { hasText: '- attachments/notes.md' }).waitFor();
+    await expect(kvman.call('queries', 'kernel.files.get', { id: fileId })).rejects.toThrow('NOT_FOUND');
+
+    const before = z.array(z.unknown()).parse(await kvman.call('queries', 'kvcoder.session.list', { limit: 10 })).length;
+    await page.goto(`${kvman.origin}/kvcoder/chat`);
+    await page.locator('[data-test="composer-text"]').fill('/co');
+    await page.locator('[data-test="slash-wait"]').waitFor();
+    expect(await page.locator('.kvc-slash-row').getAttribute('aria-disabled')).toBe('true');
+    await page.keyboard.press('Enter');
+    expect(await page.locator('[data-test="composer-text"]').inputValue()).toBe('/co');
+    expect(z.array(z.unknown()).parse(await kvman.call('queries', 'kvcoder.session.list', { limit: 10 })).length).toBe(before);
+    await page.close();
+  });
 });

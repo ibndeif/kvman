@@ -74,7 +74,7 @@
   "kvcoder.ui.activity.running": "جارٍ التنفيذ…",
   "kvcoder.ui.uploadFailed": "تعذّر رفع {name}.",
   "kvcoder.ui.removeAttachment": "إزالة المرفق",
-  "kvcoder.ui.attach": "إرفاق صورة",
+  "kvcoder.ui.attach": "إرفاق ملفات",
   "kvcoder.ui.enterSends": "Enter للإرسال · Shift+Enter لسطر جديد",
   "kvcoder.ui.stop": "إيقاف",
   "kvcoder.ui.send": "إرسال",
@@ -254,7 +254,6 @@
   "kvcoder.ui.callRan": "نُفّذ في {ran}",
   "kvcoder.ui.showPrompt": "عرض التعليمات",
   "kvcoder.ui.showChat": "العودة إلى المحادثة",
-  "kvcoder.ui.imagesOnly": "يمكن إرفاق الصور فقط: {name}",
   "kvcoder.ui.slash.title": "الأوامر",
   "kvcoder.ui.slash.none": "لا يوجد أمر بهذا الاسم",
   "kvcoder.ui.slash.compact": "تلخيص الرسائل السابقة الآن",
@@ -263,5 +262,6 @@
   "kvcoder.ui.slash.new": "بدء محادثة جديدة",
   "kvcoder.ui.slash.prompt": "عرض التعليمات، أو العودة إلى المحادثة",
   "kvcoder.ui.slash.rename": "إعادة تسمية هذه المحادثة",
-  "kvcoder.ui.slash.rename.argument": "العنوان"
+  "kvcoder.ui.slash.rename.argument": "العنوان",
+  "kvcoder.ui.slash.wait": "أرسل رسالة أولى لاستخدام الأوامر"
 }

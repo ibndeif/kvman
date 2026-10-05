@@ -74,7 +74,7 @@
   "kvcoder.ui.activity.running": "Running…",
   "kvcoder.ui.uploadFailed": "{name} couldn't be uploaded.",
   "kvcoder.ui.removeAttachment": "Remove the attachment",
-  "kvcoder.ui.attach": "Attach an image",
+  "kvcoder.ui.attach": "Attach files",
   "kvcoder.ui.enterSends": "Enter sends · Shift+Enter for a new line",
   "kvcoder.ui.stop": "Stop",
   "kvcoder.ui.send": "Send",
@@ -254,7 +254,6 @@
   "kvcoder.ui.callRan": "Ran in {ran}",
   "kvcoder.ui.showPrompt": "Show the prompt",
   "kvcoder.ui.showChat": "Back to the chat",
-  "kvcoder.ui.imagesOnly": "Only images can be attached: {name}",
   "kvcoder.ui.slash.title": "Commands",
   "kvcoder.ui.slash.none": "No such command",
   "kvcoder.ui.slash.compact": "Summarize the earlier messages now",
@@ -263,5 +262,6 @@
   "kvcoder.ui.slash.new": "Start a new chat",
   "kvcoder.ui.slash.prompt": "Show the prompt, or go back to the chat",
   "kvcoder.ui.slash.rename": "Rename this chat",
-  "kvcoder.ui.slash.rename.argument": "title"
+  "kvcoder.ui.slash.rename.argument": "title",
+  "kvcoder.ui.slash.wait": "Send a first message to use commands"
 }

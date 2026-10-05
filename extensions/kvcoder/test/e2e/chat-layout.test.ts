@@ -51,7 +51,8 @@ describe('the chat page in Chromium (08 §8.7, ADR 0009, 130–137)', { timeout:
     const composer = await rectOf(page, '[data-test="composer-text"]');
     const statusBar = await rectOf(page, '[data-test="status-bar"]');
     expect(sessions.right).toBeLessThanOrEqual(conversation.x + 1);
-    expect(Math.abs(sessions.y - conversation.y)).toBeLessThan(2);
+    // The chat's header is above the conversation (ADR 0018, 8): the two start level with the session list together.
+    expect(Math.abs(sessions.y - (await rectOf(page, '.kvc-header')).y)).toBeLessThan(2);
     expect(composer.bottom).toBeLessThanOrEqual(statusBar.y);
     expect(conversation.bottom).toBeLessThanOrEqual(statusBar.y);
     expect(await page.evaluate('document.querySelector("main").scrollHeight <= document.querySelector("main").clientHeight')).toBe(true);

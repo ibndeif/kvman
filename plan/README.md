@@ -29,6 +29,7 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `adr/0011-run-tool.md` | kvcoder's one `run` tool over connectors: the shell as a connector, help, background work, function tools |
 | `adr/0010-kvcustomizer.md` | kvdev becomes kvcustomizer: extension development for any harness, managing kvman, the `dev` preset removed |
 | `adr/0012-chat-review.md` | What a real chat showed: payload signatures in the prompt and in errors, one question per `ask` call, `sessionId` for the provider's cache, honest background starts |
+| `adr/0018-attachments-and-conversation-fixes.md` | Any file as an attachment (saved under `attachments/` in the workspace), the greyed slash list on the Chat page, the header above the artifact panel, and its running time |
 | `adr/0017-conversation-review.md` | The conversation view after its first long chat: a call's whole wait, "Failed", menus that close outside, the model in the send box, the artifact header, slash commands, and pasted images |
 | `adr/0016-workspace-switch-in-a-chat.md` | A workspace switch while a chat is open: the session page opens the selected workspace's newest chat, or a new chat |
 | `adr/0015-configuration-review.md` | The configuration pages after their first use: a model is chosen from a searchable dropdown everywhere, the Interface page has one section, and programs are rows of the one connectors list |

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Ellipsis, PanelRight } from '@lucide/vue';
-import { computed, ref, useTemplateRef } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue';
 import type { Session } from '../../src/index.ts';
 import { titleText, totals, useKvman } from './kvman.ts';
 import JobsChip from './JobsChip.vue';
@@ -9,15 +9,22 @@ import { useSessionActions } from './use-session-actions.ts';
 
 // The conversation's header (plan 08 §8.7, ADR 0009, 104; ADR 0017, 3, 8 to 10): the title, the session's totals, the
 // Running chip (ADR 0009, 153), the artifacts button (ADR 0009, 182), and the chat's menu, which also shows the prompt.
+// It spans the conversation and the artifact panel (ADR 0018, 8).
 // The menu and its delete confirmation close on a press outside them and on Escape.
-const props = withDefaults(defineProps<{ session: Session; tab: 'chat' | 'prompt'; turns: number; artifacts?: number; artifactsOpen?: boolean }>(), { artifacts: 0, artifactsOpen: false });
+const props = withDefaults(defineProps<{ session: Session; tab: 'chat' | 'prompt'; turns: number; runningSince?: string | undefined; artifacts?: number; artifactsOpen?: boolean }>(), { runningSince: undefined, artifacts: 0, artifactsOpen: false });
 const emit = defineEmits<{ tab: [tab: 'chat' | 'prompt']; changed: []; toggleArtifacts: [] }>();
 const kvman = useKvman();
 const menu = ref(false);
 const renaming = ref<string | null>(null);
 const confirming = ref(false);
 const more = useTemplateRef<HTMLElement>('more');
-const summary = computed(() => `${kvman.t('kvcoder.ui.turns', { count: props.turns })} · ${totals(kvman.t, props.session.usage, props.session.durationMs)}`);
+// The session's time counts its ended turns; the running one is added from the page's clock (ADR 0018, 9).
+const now = ref(Date.now());
+let ticker: ReturnType<typeof setInterval> | undefined;
+onMounted(() => (ticker = setInterval(() => (now.value = Date.now()), 1000)));
+onBeforeUnmount(() => clearInterval(ticker));
+const runningMs = computed(() => (props.runningSince === undefined ? 0 : Math.max(0, now.value - Date.parse(props.runningSince))));
+const summary = computed(() => `${kvman.t('kvcoder.ui.turns', { count: props.turns })} · ${totals(kvman.t, props.session.usage, props.session.durationMs + runningMs.value)}`);
 const artifactsLabel = computed(() => kvman.t('kvcoder.ui.artifacts.toggle', { count: props.artifacts }));
 const actions = useSessionActions(kvman, () => props.session.id, () => emit('changed'));
 

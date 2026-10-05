@@ -38,6 +38,8 @@ const panelShown = computed(() => artifacts.open.value && artifacts.shown.value 
 const calls = computed(() => callViews(messages.value));
 const recoverableNotices = new Set(['STEP_FAILED', 'REPLY_LOST', 'INTERRUPTED']);
 const running = computed(() => session.value?.status === 'running');
+// When the running turn started, for the header's time (ADR 0018, 9).
+const runningSince = computed(() => (running.value && turns.value[0]?.outcome === undefined ? turns.value[0]?.startedAt : undefined));
 const pending = computed(() => (session.value?.status === 'waiting' ? (turns.value[0]?.pending ?? []) : []));
 
 // Each ended turn's totals go under its last answer (plan 08 §8.1).
@@ -109,10 +111,11 @@ const key = (message: Message): string => message.id;
 
 <template>
   <div class="kvc-workspace">
+    <ConversationHeader v-if="session && sessionId !== undefined" :session="session" :tab="tab" :turns="turns.length" :running-since="runningSince" :artifacts="artifacts.list.value.length" :artifacts-open="artifacts.open.value" @tab="tab = $event" @changed="conversation.refresh()" @toggle-artifacts="artifacts.toggle()" />
+    <div class="kvc-stage">
     <section class="kvc-conversation" data-test="conversation">
       <ChatStart v-if="props.sessionId === undefined" />
       <template v-else-if="session && sessionId !== undefined">
-        <ConversationHeader :session="session" :tab="tab" :turns="turns.length" :artifacts="artifacts.list.value.length" :artifacts-open="artifacts.open.value" @tab="tab = $event" @changed="conversation.refresh()" @toggle-artifacts="artifacts.toggle()" />
         <div class="kvc-scrollport">
           <div ref="list" class="kvc-scroll" @scroll="follow.onScroll">
             <PromptTab v-if="tab === 'prompt'" :session-id="session.id" @back="tab = 'chat'" />
@@ -136,11 +139,12 @@ const key = (message: Message): string => message.id;
           </div>
           <button v-if="follow.away.value" type="button" class="kvc-button kvc-jump" data-test="jump-to-latest" @click="follow.resume"><ArrowDown :size="16" aria-hidden="true" />{{ kvman.t('kvcoder.ui.jumpToLatest') }}</button>
         </div>
-        <MessageComposer :running="running" :placeholder="kvman.t('kvcoder.ui.placeholder')" commands @send="send" @stop="stop" @command="command">
+        <MessageComposer :running="running" :placeholder="kvman.t('kvcoder.ui.placeholder')" commands="run" @send="send" @stop="stop" @command="command">
           <template #controls><SessionModel :session="session" @changed="conversation.refresh()" /></template>
         </MessageComposer>
       </template>
     </section>
     <ArtifactPanel v-if="panelShown" :list="artifacts.list.value" :shown="artifacts.shown.value" :content="artifacts.content.value" @select="artifacts.select($event)" @close="artifacts.close()" />
+    </div>
   </div>
 </template>

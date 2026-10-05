@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Copy, ExternalLink, X } from '@lucide/vue';
+import { Code, Copy, ExternalLink, Eye, X } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import ArtifactFrame from './ArtifactFrame.vue';
 import ArtifactUrlFrame from './ArtifactUrlFrame.vue';
@@ -48,8 +48,8 @@ const markdownView = computed(() => ({ type: 'markdown' as const, text: 'kvcoder
       </div>
       <div class="kvc-artifact-actions">
         <div class="kvc-tabs" role="group" :aria-label="kvman.t('kvcoder.ui.artifacts.view')">
-          <button type="button" class="kvc-tab" :aria-pressed="mode === 'preview'" data-test="artifact-view-preview" @click="mode = 'preview'">{{ kvman.t('kvcoder.ui.artifacts.preview') }}</button>
-          <button type="button" class="kvc-tab" :aria-pressed="mode === 'source'" data-test="artifact-view-source" @click="mode = 'source'">{{ kvman.t('kvcoder.ui.artifacts.source') }}</button>
+          <button type="button" class="kvc-tab" :aria-pressed="mode === 'preview'" :aria-label="kvman.t('kvcoder.ui.artifacts.preview')" :title="kvman.t('kvcoder.ui.artifacts.preview')" data-test="artifact-view-preview" @click="mode = 'preview'"><Eye :size="16" class="kvc-tab-icon" aria-hidden="true" /><span class="kvc-tab-text">{{ kvman.t('kvcoder.ui.artifacts.preview') }}</span></button>
+          <button type="button" class="kvc-tab" :aria-pressed="mode === 'source'" :aria-label="kvman.t('kvcoder.ui.artifacts.source')" :title="kvman.t('kvcoder.ui.artifacts.source')" data-test="artifact-view-source" @click="mode = 'source'"><Code :size="16" class="kvc-tab-icon" aria-hidden="true" /><span class="kvc-tab-text">{{ kvman.t('kvcoder.ui.artifacts.source') }}</span></button>
         </div>
         <a v-if="openable !== undefined" :href="openable" target="_blank" rel="noopener noreferrer" class="kvc-button kvc-icon-button" :aria-label="kvman.t('kvcoder.ui.artifacts.openUrl')" :title="kvman.t('kvcoder.ui.artifacts.openUrl')" data-test="artifact-open-url"><ExternalLink :size="16" aria-hidden="true" /></a>
         <button type="button" class="kvc-button kvc-icon-button" :disabled="current === undefined" :aria-label="kvman.t('kvcoder.ui.copy')" :title="kvman.t('kvcoder.ui.copy')" data-test="artifact-copy" @click="copy"><Copy :size="16" aria-hidden="true" /></button>

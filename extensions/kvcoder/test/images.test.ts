@@ -30,11 +30,9 @@ describe('image attachments (08 §8.1, ADR 0009, 103)', { timeout: 30_000 }, () 
     expect(await kernel.exec('kvcoder.message.list', { sessionId: textOnly, limit: 10 })).toEqual({ messages: [], omitted: 0 });
   });
 
-  it('M2.4-E14 a non-image or unknown file fails, and an image deleted after sending reaches the model as a note', async () => {
+  it('M2.4-E14 and QA25-E5 an unknown file fails, and an image deleted after sending reaches the model as a note', async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    const text = await upload(kernel, 'notes.txt', 'text/plain');
-    await expect(kernel.exec('kvcoder.message.send', { sessionId, text: 'x', fileIds: [text] })).rejects.toMatchObject({ problem: { code: 'VALIDATION_FAILED' } });
     await expect(kernel.exec('kvcoder.message.send', { sessionId, text: 'x', fileIds: ['nope'] })).rejects.toMatchObject({ problem: { code: 'NOT_FOUND' } });
     const image = await upload(kernel, 'gone.png', 'image/png');
     fake.reply(says('first'), says('second'));

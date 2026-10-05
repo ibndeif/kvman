@@ -1,10 +1,14 @@
 import { flushPromises } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import ConversationView from '../../web/src/ConversationView.vue';
 import { createFakeKvman, type FakeKvman } from './support/fake-kvman.ts';
 import { mounted, serve, session, turn, user } from './support/fixtures.ts';
 
 type Wrapper = Awaited<ReturnType<typeof mounted>>;
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 function world(): FakeKvman {
   const fake = createFakeKvman();
@@ -56,7 +60,7 @@ describe("the chat's header, its menu, and the send box's pickers (08 §8.7, ADR
     const header = view.find('header');
     expect(header.findAll('[data-test]').map((part) => part.attributes('data-test'))).toEqual(['session-title', 'session-totals', 'chat-menu']);
     const row = view.find('.kvc-composer-row');
-    expect(row.findAll('button, select').map((control) => control.attributes('data-test') ?? control.attributes('aria-label'))).toEqual(['Attach an image', 'model-picker', 'thinking-picker', 'send']);
+    expect(row.findAll('button, select').map((control) => control.attributes('data-test') ?? control.attributes('aria-label'))).toEqual(['Attach files', 'model-picker', 'thinking-picker', 'send']);
     await row.find('[data-test="model-picker"]').trigger('click');
     await row.find('[data-test="model-fake/m2"]').trigger('click');
     await flushPromises();
@@ -83,6 +87,23 @@ describe("the chat's header, its menu, and the send box's pickers (08 §8.7, ADR
     expect(view.find('[data-test="menu-prompt"]').text()).toBe('Back to the chat');
     await press(view, 'menu-prompt');
     expect(has(view, 'prompt-text')).toBe(false);
+    view.unmount();
+  });
+
+  it("QA25-H4 the header's time counts the running turn, and an idle session shows its own", async () => {
+    vi.useFakeTimers({ now: Date.parse('2026-10-01T09:00:30.000Z') });
+    const fake = world();
+    const running = { found: session({ status: 'running', durationMs: 60_000 }), messages: [user('go')], omitted: 0, turns: [turn({ startedAt: '2026-10-01T09:00:00.000Z' })] };
+    serve(fake, running);
+    const view = await mounted(ConversationView, fake, { sessionId: 's1' });
+    const totals = (): string => view.find('[data-test="session-totals"]').text();
+    expect(totals()).toContain('· 2 min ·');
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(totals()).toContain('· 3 min ·');
+    running.found = session({ status: 'idle', durationMs: 60_000 });
+    running.turns = [turn({ startedAt: '2026-10-01T09:00:00.000Z', outcome: 'done' })];
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(totals()).toContain('· 1 min ·');
     view.unmount();
   });
 });

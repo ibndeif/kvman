@@ -111,16 +111,25 @@ describe("the send box's slash commands (08 §8.7, ADR 0017, 6 and 11)", () => {
     view.unmount();
   });
 
-  it('QA24-E7 the Chat page shows no list and sends a slash text as the first message', async () => {
+  it('QA25-E6 a slash text on the Chat page shows the list greyed, with why, and sends nothing', async () => {
     const fake = world();
     fake.handle('kernel.settings.list', () => [{ key: 'kvai.defaultModel', value: 'fake/m1' }]);
     fake.handle('kvcoder.session.create', () => session({ id: 's5' }));
     const start = await mounted(ChatStart, fake);
-    await box(start).setValue('/compact');
-    expect(start.find('[data-test="slash-list"]').exists()).toBe(false);
+    await box(start).setValue('/co');
+    expect(start.find('[data-test="slash-wait"]').text()).toBe('Send a first message to use commands');
+    expect(start.findAll('.kvc-slash-row').map((row) => [row.find('.kvc-mono').text(), row.attributes('aria-disabled'), row.attributes('data-active')])).toEqual([['/compact', 'true', 'false']]);
+    await key(start, 'Enter');
+    await start.find('[data-test="slash-compact"]').trigger('click');
+    await start.find('[data-test="send"]').trigger('click');
+    await key(start, 'Tab');
+    await flushPromises();
+    expect(fake.calls.filter((call) => call.name.startsWith('kvcoder.session.') || call.name.startsWith('kvcoder.message.'))).toEqual([]);
+    expect((box(start).element as HTMLTextAreaElement).value).toBe('/co');
+    await box(start).setValue('Build it');
     await key(start, 'Enter');
     await flushPromises();
-    expect(ran(fake)).toEqual([{ name: 'kvcoder.message.send', input: { sessionId: 's5', text: '/compact' } }]);
+    expect(ran(fake)).toEqual([{ name: 'kvcoder.message.send', input: { sessionId: 's5', text: 'Build it' } }]);
     start.unmount();
   });
 

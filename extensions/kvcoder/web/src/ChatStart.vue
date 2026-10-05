@@ -39,7 +39,7 @@ async function send(message: { text: string; fileIds: string[] }): Promise<void>
     <p v-else-if="chat.state.value === 'noModel'" class="kvc-muted kvc-start-note" role="status" data-test="choose-model">{{ kvman.t('kvcoder.ui.chooseModelHint') }}</p>
     <p v-else class="kvc-muted kvc-start-note">{{ kvman.t('kvcoder.ui.startHint') }}</p>
   </div>
-  <MessageComposer :running="false" :placeholder="kvman.t('kvcoder.ui.startPlaceholder')" :blocked="chat.state.value !== 'ready'" @send="send">
+  <MessageComposer :running="false" :placeholder="kvman.t('kvcoder.ui.startPlaceholder')" :blocked="chat.state.value !== 'ready'" commands="wait" @send="send">
     <template #controls>
       <ModelControls :groups="chat.groups.value" :model="chat.current.value" :thinking="chat.thinking.value" :empty="chat.state.value === 'loading' ? '' : kvman.t('kvcoder.ui.chooseModel')" @model="pickModel" @thinking="chat.pickThinking" />
     </template>
