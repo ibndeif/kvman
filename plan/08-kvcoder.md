@@ -298,7 +298,7 @@ kvcoder owns its conversation UI. kvwebui only hosts it: kvcoder contributes pag
 
 **UI.**
 - The **Chat** page `kvcoder.chat`: the session list and the conversation with no session, the header of a chat with the model picker and the thinking select at the top (showing what the chat would use), the question, and a large input at the bottom that asks what to build; sending creates the chat (`kvcoder.session.create`, then `kvcoder.session.configure` with what the person changed, then `kvcoder.message.send`) and opens its page. When the model's provider needs a key, or there is no model, a line under the question says so (with an "Add a key" link to the provider's page) and sending is off (ADR 0009, 104 and 194).
-- The `kvcoder.session` page, with a `sessionId` param: the session list and the conversation.
+- The `kvcoder.session` page, with a `sessionId` param: the session list and the conversation. A session exists only in its workspace, so when the tab's workspace changes while this page is open, the conversation reads nothing more for the old session and opens the selected workspace's newest chat (`kvcoder.session.list { limit: 1 }`), or the Chat page when it has none; until then it is empty (ADR 0016).
 - **The session list** is kvcoder's custom component `kvcoder.sessions`: translated titles, each session's status (running, or "Needs you" while waiting), times grouped into Today and Earlier, the open chat highlighted, and a "New chat" button back to the Chat page (ADR 0009, 104).
 - **The conversation** is kvcoder's custom component `kvcoder.conversation { sessionId }`. It:
   - shows the messages from `kvcoder.message.list`, with notices and notes translated, and "N earlier messages" with the export;

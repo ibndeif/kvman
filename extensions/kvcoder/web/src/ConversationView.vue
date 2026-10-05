@@ -18,16 +18,19 @@ import { useAnswers } from './use-answers.ts';
 import { useArtifacts } from './use-artifacts.ts';
 import { useConversation } from './use-conversation.ts';
 import { useFollowLatest } from './use-follow-latest.ts';
+import { useWorkspaceSession } from './use-workspace-session.ts';
 
 // kvcoder's conversation (plan 08 §8.7): without a session it is the Chat page's start, whose first message creates
 // the chat; with one, the messages, the running step, the pending questions and subagents, the artifact panel, and
 // the send box.
 const props = defineProps<{ sessionId?: string | undefined }>();
 const kvman = useKvman();
+// After a workspace switch the page's chat isn't this workspace's: nothing is read for it until the page has moved.
+const sessionId = useWorkspaceSession(kvman, () => props.sessionId, (error) => toastProblem(kvman, error));
 const tab = ref<'chat' | 'prompt'>('chat');
-const conversation = useConversation(kvman, () => props.sessionId, (error) => toastProblem(kvman, error));
+const conversation = useConversation(kvman, () => sessionId.value, (error) => toastProblem(kvman, error));
 const { session, messages, omitted, turns, live, children } = conversation;
-const artifacts = useArtifacts(kvman, () => props.sessionId, () => session.value?.updatedAt, (error) => toastProblem(kvman, error));
+const artifacts = useArtifacts(kvman, () => sessionId.value, () => session.value?.updatedAt, (error) => toastProblem(kvman, error));
 const panelShown = computed(() => artifacts.open.value && artifacts.shown.value !== undefined);
 const calls = computed(() => callViews(messages.value));
 const recoverableNotices = new Set(['STEP_FAILED', 'REPLY_LOST', 'INTERRUPTED']);
@@ -47,9 +50,9 @@ const turnTotals = computed(() => {
 });
 
 async function send(message: { text: string; fileIds: string[] }): Promise<void> {
-  if (props.sessionId === undefined) return;
+  if (sessionId.value === undefined) return;
   try {
-    await kvman.exec('kvcoder.message.send', { sessionId: props.sessionId, text: message.text, ...(message.fileIds.length > 0 ? { fileIds: message.fileIds } : {}) });
+    await kvman.exec('kvcoder.message.send', { sessionId: sessionId.value, text: message.text, ...(message.fileIds.length > 0 ? { fileIds: message.fileIds } : {}) });
     follow.resume();
     await conversation.refresh();
   } catch (error) {
@@ -58,9 +61,9 @@ async function send(message: { text: string; fileIds: string[] }): Promise<void>
 }
 
 async function stop(): Promise<void> {
-  if (props.sessionId === undefined) return;
+  if (sessionId.value === undefined) return;
   try {
-    await kvman.exec('kvcoder.turn.cancel', { sessionId: props.sessionId });
+    await kvman.exec('kvcoder.turn.cancel', { sessionId: sessionId.value });
     await conversation.refresh();
   } catch (error) {
     toastProblem(kvman, error);
@@ -75,12 +78,12 @@ const recoverable = computed(() => {
   return session.value?.status === 'idle' && last?.kind === 'notice' && recoverableNotices.has(String(last.content['code']));
 });
 const list = useTemplateRef<HTMLElement>('list');
-const follow = useFollowLatest(list, () => [messages.value, live.text, live.thinking, live.calls.length, live.summarizing, running.value, pending.value, children.size, answers.hidden.value], () => props.sessionId);
+const follow = useFollowLatest(list, () => [messages.value, live.text, live.thinking, live.calls.length, live.summarizing, running.value, pending.value, children.size, answers.hidden.value], () => sessionId.value);
 
 async function exportEarlier(): Promise<void> {
-  if (props.sessionId === undefined) return;
+  if (sessionId.value === undefined) return;
   try {
-    const { fileId } = await kvman.exec('kvcoder.session.export', { sessionId: props.sessionId });
+    const { fileId } = await kvman.exec('kvcoder.session.export', { sessionId: sessionId.value });
     window.location.assign(`/api/files/${encodeURIComponent(fileId)}?workspaceId=${encodeURIComponent(kvman.workspace.value.id)}`);
   } catch (error) {
     toastProblem(kvman, error);
@@ -94,7 +97,7 @@ const key = (message: Message): string => message.id;
   <div class="kvc-workspace">
     <section class="kvc-conversation" data-test="conversation">
       <ChatStart v-if="props.sessionId === undefined" />
-      <template v-else-if="session">
+      <template v-else-if="session && sessionId !== undefined">
         <ConversationHeader :session="session" :tab="tab" :turns="turns.length" :artifacts="artifacts.list.value.length" :artifacts-open="artifacts.open.value" @tab="tab = $event" @changed="conversation.refresh()" @toggle-artifacts="artifacts.toggle()" />
         <div class="kvc-scrollport">
           <div ref="list" class="kvc-scroll" @scroll="follow.onScroll">

@@ -21,6 +21,7 @@ export type FakeKvman = {
   toast: ReturnType<typeof vi.fn>;
   language: { value: string };
   scope: Ref<'global' | 'workspace'>;
+  workspace: Ref<{ id: string; name: string; path: string }>;
 };
 
 const catalogs: Record<'en' | 'ar', Record<string, string>> = { en, ar };
@@ -43,6 +44,7 @@ export function createFakeKvman(): FakeKvman {
     return found;
   };
   const scope = ref<'global' | 'workspace'>('global');
+  const workspace = ref({ id: 'home', name: 'notes-app', path: '/work/notes-app' });
   const refresh = vi.fn();
   const navigate = vi.fn();
   const toast = vi.fn();
@@ -76,7 +78,7 @@ export function createFakeKvman(): FakeKvman {
     toast,
     panel: () => undefined,
     t: translate,
-    workspace: { value: { id: 'home', name: 'notes-app', path: '/work/notes-app' } },
+    workspace,
     scope,
     View: MarkdownStub,
   } as unknown as Kvman;
@@ -99,6 +101,7 @@ export function createFakeKvman(): FakeKvman {
     toast,
     language,
     scope,
+    workspace,
   };
 }
 
