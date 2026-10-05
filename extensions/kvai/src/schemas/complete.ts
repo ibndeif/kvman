@@ -14,6 +14,7 @@ export const completeInputSchema = z.object({
   tools: z.array(toolSchema).exactOptional(),
   thinking: thinkingSchema.exactOptional(),
   maxTokens: z.number().int().positive().exactOptional(),
+  sessionId: z.string().min(1).exactOptional(),
 });
 
 /** One call's usage: tokens by kind, and the cost in US dollars. */

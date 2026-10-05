@@ -19,7 +19,7 @@ async function writeTitle(ctx: Ctx, sessionId: string): Promise<void> {
   const opening = (await messagesFrom(ctx, sessionId, 0, Math.min(session.nextSeq, 20))).filter((message) => message.kind === 'user' || message.kind === 'assistant');
   const transcript = opening.map((message) => `${message.kind === 'user' ? 'User' : 'Assistant'}: ${textOf(message.content['content'])}`).join('\n\n');
   try {
-    const answer = await ctx.exec('kvai.complete', { ...(session.model === null ? {} : { model: session.model }), systemPrompt: titler, messages: [{ role: 'user', content: transcript, timestamp: Date.now() }], maxTokens: 30 });
+    const answer = await ctx.exec('kvai.complete', { ...(session.model === null ? {} : { model: session.model }), sessionId, systemPrompt: titler, messages: [{ role: 'user', content: transcript, timestamp: Date.now() }], maxTokens: 30 });
     const title = textOf(answer.message.content).trim().replace(/^["'“”]+|["'“”.]+$/g, '').slice(0, 100);
     const fresh = await store.sessions.get(sessionId);
     if (title !== '' && fresh?.autoTitle === true) await store.sessions.update(sessionId, { title, autoTitle: false });

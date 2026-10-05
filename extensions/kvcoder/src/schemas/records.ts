@@ -142,6 +142,7 @@ export const processDocSchema = z.object({
   exitCode: z.number().int().nullable().exactOptional(),
   signal: z.string().nullable().exactOptional(),
   reported: z.boolean(),
+  starting: z.boolean().exactOptional(),
 });
 
 // A document shown beside the chat (plan 08 §8.5, ADR 0009, 175): `sessionId` is the chat's own id, `artifactId`

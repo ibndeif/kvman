@@ -47,7 +47,7 @@ export async function compact(ctx: Ctx, session: Stored<SessionDoc>, options: Co
   if (last === undefined) return;
   ctx.job.progress({ type: 'compaction', state: 'started' });
   try {
-    const answer = await ctx.exec('kvai.complete', { ...(session.model === null ? {} : { model: session.model }), systemPrompt: summarizer, messages: [{ role: 'user', content: transcript(history, older), timestamp: Date.now() }] });
+    const answer = await ctx.exec('kvai.complete', { ...(session.model === null ? {} : { model: session.model }), sessionId: session.id, systemPrompt: summarizer, messages: [{ role: 'user', content: transcript(history, older), timestamp: Date.now() }] });
     const text = textOf(answer.message.content);
     await ctx.store.transaction((tx) => appendMessage(txRecords(tx), session, { kind: 'summary', content: { text, coversThroughSeq: last.seq }, turnId: options.turnId }));
   } catch (error) {

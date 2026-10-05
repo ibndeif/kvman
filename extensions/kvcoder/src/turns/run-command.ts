@@ -1,6 +1,6 @@
 import { z, type Ctx, type Stored } from '@kvman/sdk';
 import { chatIdOf } from '../artifacts/artifact-records.ts';
-import { lineRunSchema, lineRunText } from '../calls/line-run.ts';
+import { lineRunIsError, lineRunSchema, lineRunText } from '../calls/line-run.ts';
 import { artifactCard } from '../connectors/artifact.ts';
 import { binaryExec } from '../connectors/binary.ts';
 import { builtinCommands, commandsOf } from '../connectors/builtin-connectors.ts';
@@ -91,8 +91,8 @@ async function runJob(ctx: Ctx, sessionId: string, call: RunCall, target: Comman
   if (!done.ok) return failedCall(call, done.result.output, Date.now() - started);
   if (target.registration === shellRun || target.registration === binaryExec.registration) {
     const run = lineRunSchema.parse(done.value);
-    const details = { ...words(call), output: run.output, durationMs: run.durationMs, exitCode: run.exitCode, ...(run.timedOut ? { timedOut: true } : {}), ...(run.jobId === null ? {} : { background: true, jobId: run.jobId }) };
-    return { text: lineRunText(run), isError: run.exitCode !== 0, details };
+    const details = { ...words(call), output: run.output, durationMs: run.durationMs, ...(run.exitCode === null ? {} : { exitCode: run.exitCode }), ...(run.timedOut ? { timedOut: true } : {}), ...(run.jobId === null ? {} : { background: true, jobId: run.jobId }) };
+    return { text: lineRunText(run), isError: lineRunIsError(run), details };
   }
   const output = jsonOutput(done.value).output;
   const text = builtin?.bounded === true ? output : truncate(output);

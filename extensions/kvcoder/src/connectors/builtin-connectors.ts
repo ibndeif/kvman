@@ -1,8 +1,8 @@
-import type { BuiltinConnector } from '../connector-call.ts';
+import { payloadSignature, type BuiltinConnector } from '../connector-call.ts';
 import { artifactCommands, artifactDescription } from './artifact.ts';
 import { askCommands, askDescription } from './ask.ts';
 import { backgroundCommands, backgroundDescription } from './background.ts';
-import type { ConnectorCommand } from './connector-command.ts';
+import { payloadJsonSchema, type ConnectorCommand } from './connector-command.ts';
 import { fsCommands, fsDescription } from './fs.ts';
 import { shellCommands, shellDescription } from './shell.ts';
 import { subagentCommands, subagentDescription } from './subagent.ts';
@@ -28,3 +28,23 @@ export function commandsOf(connector: BuiltinConnector): Readonly<Record<string,
 export function builtinDescriptions(shell: 'bash' | 'powershell'): Record<BuiltinConnector, string> {
   return { shell: shellDescription(shell), fs: fsDescription, artifact: artifactDescription, background: backgroundDescription, ask: askDescription, subagent: subagentDescription };
 }
+
+// Each built-in payload is an object, so a missing signature is a programming error, not a case the prompt may fall
+// back from; computed once per worker, not at every prompt build. In the order of `commandsOf`, like the prompt's lines.
+function signaturesOf(connector: BuiltinConnector): readonly string[] {
+  return Object.values(commandsOf(connector)).map((command) => {
+    const signature = payloadSignature(payloadJsonSchema(command.payload));
+    if (signature === undefined) throw new Error(`The payload of a ${connector} command has no signature.`);
+    return signature;
+  });
+}
+
+/** Each built-in connector's command payloads' signatures, one per command, in `commandsOf`'s order. */
+export const builtinSignatures: Record<BuiltinConnector, readonly string[]> = {
+  shell: signaturesOf('shell'),
+  fs: signaturesOf('fs'),
+  artifact: signaturesOf('artifact'),
+  background: signaturesOf('background'),
+  ask: signaturesOf('ask'),
+  subagent: signaturesOf('subagent'),
+};

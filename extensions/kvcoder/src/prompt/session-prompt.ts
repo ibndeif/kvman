@@ -1,5 +1,5 @@
 import { z, type Ctx, type Stored } from '@kvman/sdk';
-import { builtinDescriptions, commandsOf } from '../connectors/builtin-connectors.ts';
+import { builtinDescriptions, builtinSignatures, commandsOf } from '../connectors/builtin-connectors.ts';
 import type { ShellCommand } from '../calls/shell-command.ts';
 import { shellFor } from '../calls/shell-program.ts';
 import { builtinConnectors } from '../connector-call.ts';
@@ -12,7 +12,7 @@ import { buildPrompt, type BuiltPrompt } from './build-prompt.ts';
 // always `ask` (plan 08 §8.5); binary connectors count once their check passed (plan 08 §8.4).
 
 /** A connector the session's agent can call: its entry in the prompt's index and in the `run` tool's enum. */
-export type ListedConnector = { name: string; description: string; commands: string[] };
+export type ListedConnector = { name: string; description: string; commands: string[]; signatures?: readonly string[] };
 
 export type SessionTools = {
   built: BuiltPrompt;
@@ -37,7 +37,7 @@ export async function sessionTools(ctx: Ctx, session: Stored<SessionDoc>): Promi
   const passed = new Set((session.checks ?? []).filter((check) => check.passed).map((check) => check.name));
   const descriptions = builtinDescriptions(shell.kind);
   const listed = [
-    ...builtinConnectors.filter((name) => allowed.has(name)).map((name) => ({ name, description: descriptions[name], commands: Object.keys(commandsOf(name)) })),
+    ...builtinConnectors.filter((name) => allowed.has(name)).map((name) => ({ name, description: descriptions[name], commands: Object.keys(commandsOf(name)), signatures: builtinSignatures[name] })),
     ...connectors
       .filter((connector) => allowed.has(connector.name) && (connector.kind === 'commands' || passed.has(connector.name)))
       .map((connector) => ({ name: connector.name, description: connector.description, commands: connector.commands?.map((command) => command.name) ?? ['exec'] })),

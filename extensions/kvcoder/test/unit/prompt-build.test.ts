@@ -37,14 +37,14 @@ describe('the prompt builder (08 §8.2)', () => {
       expect(prompt).toContain('Connectors are the only way you act.');
       expect(prompt).toContain('When a connector other than shell covers a task, use it instead of a shell line');
       expect(prompt).toContain('Use shell only for what no other connector does.');
-      expect(prompt).toContain('Every connector has the command help: call it before the first time you use a command whose payload you don\'t know');
+      expect(prompt).toContain('Every connector has the command help. A command listed below with its payload needs no help call');
       expect(prompt).toContain(`the shell is ${shell === 'bash' ? 'bash' : 'PowerShell'}.`);
       for (const gone of ['heredoc', '--async', ' -h']) expect(prompt, gone).not.toContain(gone);
       expect(prompt).not.toContain('20 years');
       for (const phrase of [
         'Scale the process to the task',
         'Never assume or invent names, paths, APIs, or behavior',
-        'all the questions in one reply, each with your recommended option first',
+        'ask: put each question in its own `ask` call, with all the calls in one reply, and use `ask choice` whenever you offer options, your recommended one first.',
         'Write the plan as the artifact `plan`',
         '(☐ to do, ☑ done)',
         'call `ask confirm` on the plan before you start',
@@ -58,6 +58,25 @@ describe('the prompt builder (08 §8.2)', () => {
         'To put a question to the person (a choice, a yes or no, a free answer), call `ask`.',
         'Keep replies short: say what you did and what is left.',
       ]) expect(prompt, phrase).toContain(phrase);
+    }
+  });
+
+  it('QA19-H5 the prompt\'s new sentences', () => {
+    for (const [platform, shell] of [['linux', 'bash'], ['win32', 'powershell']] as const) {
+      const { prompt } = buildPrompt({ workspacePath: '/w', language: 'en', platform, shell, sections: [], connectors: [] });
+      for (const sentence of [
+        'Every connector has the command help. A command listed below with its payload needs no help call; for any other command, or for what a field means, call the connector\'s help with { "command": "<name>" } before the first use.',
+        'Scale the process to the task: a task of one file or a few steps needs no plan, so just do it; a larger one follows these steps.',
+        'ask: put each question in its own `ask` call, with all the calls in one reply, and use `ask choice` whenever you offer options, your recommended one first.',
+        'Before you say that something runs or works, check it the way the person would: run it, request its address, or run its test; if you couldn\'t, say what is unchecked.',
+      ])
+        expect(prompt, sentence).toContain(sentence);
+      for (const gone of [
+        'call it before the first time you use a command whose payload you don\'t know',
+        'a small, clear change needs no plan',
+        'call `ask` with all the questions in one reply',
+      ])
+        expect(prompt, gone).not.toContain(gone);
     }
   });
 

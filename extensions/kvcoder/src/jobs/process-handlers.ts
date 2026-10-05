@@ -1,4 +1,5 @@
 import { z, type Ctx } from '@kvman/sdk';
+import type { ProcessDoc } from '../schemas/records.ts';
 import { records } from '../store/collections.ts';
 import { markEnd, ownerName, processId, processName } from './process-records.ts';
 import { reportEnd } from './process-report.ts';
@@ -8,6 +9,11 @@ import { reportEnd } from './process-report.ts';
 // Home, so they only record the end; the chat is told at its next message (`reportInterrupted`).
 
 const runningProcessesSchema = z.array(z.object({ extension: z.string(), name: z.string() }));
+
+/** An exit gets a background message only past the startup second; an earlier one reaches the model in the start result (ADR 0012, 8). */
+export function exitIsReported(doc: Pick<ProcessDoc, 'starting'>): boolean {
+  return doc.starting !== true;
+}
 
 async function interrupt(ctx: Ctx, ids: readonly string[]): Promise<void> {
   for (const id of ids) await markEnd(ctx, id, { end: 'interrupted', reported: false });
@@ -31,7 +37,7 @@ export function registerProcessHandlers(ctx: Ctx): void {
       const id = processId(name);
       if (extension !== ownerName || id === undefined) return;
       const ended = await markEnd(ctx, id, { end: 'exited', exitCode, signal, reported: true });
-      if (ended !== undefined) await reportEnd(ctx, ended);
+      if (ended !== undefined && exitIsReported(ended)) await reportEnd(ctx, ended);
     },
   });
   ctx.registerHandler('kernel.stopping', {

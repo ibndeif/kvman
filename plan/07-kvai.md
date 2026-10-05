@@ -16,12 +16,14 @@ kvai.complete {
   tools?: [{ name, description, parameters }],   // parameters: JSON Schema
   thinking?: 'off' | 'minimal' | 'low' | 'medium' | 'high',   // default 'off'
   maxTokens?: number,               // default: pi-ai's default for the model
+  sessionId?: string,               // the conversation the call belongs to
 } → { message: AssistantMessage, stopReason: 'stop' | 'length' | 'toolUse', usage: { input, output, cacheRead, cacheWrite, cost } }
 ```
 
 - `Message` and `AssistantMessage` are pi-ai's JSON types (text, image, thinking, and toolCall blocks), validated with zod in kvai. So a harness can store its context as JSON. The returned message keeps pi-ai's core fields: `role`, `content` (with the blocks' signatures), `api`, `provider`, `model`, `responseId?`, `usage`, `stopReason`, and `timestamp`; `diagnostics` and the rest are dropped (ADR 0009, 58).
 - `usage.cost` is pi-ai's total cost in US dollars. kvai turns pi-ai's own request retries off (ADR 0009, 59).
 - Tool calls in the answer are returned, never run.
+- `sessionId` is a non-empty string that names the conversation a call belongs to, such as a harness's chat id. kvai passes it to pi-ai as `sessionId`, which sends it as the provider's prompt cache key and session affinity, so the calls of one conversation read the provider's cache; a delegate command receives it with the rest of the input. Left out, nothing is sent (ADR 0012, 6).
 - **Streaming.** While the call runs, kvai reports these through `ctx.job.progress`. They reach the root job's stream as `{ source: '@kvman/kvai', data }`, so the UI of the harness's turn sees them.
   - `{ type: 'text', delta }`
   - `{ type: 'thinking', delta }`

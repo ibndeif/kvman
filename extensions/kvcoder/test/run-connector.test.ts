@@ -26,7 +26,7 @@ describe('runConnector (08 §8.4, ADR 0009, 96; ADR 0011, 18)', { timeout: 30_00
     expect(await kernel.exec('todo.item.list', {})).toEqual([{ text: 'a' }]);
     expect(await runConnector(kernel, { connector: 'todo', command: 'nope' })).toEqual({ exitCode: 1, output: 'error NOT_FOUND: todo has no command nope; call its help.' });
     expect(await runConnector(kernel, { connector: 'nope', command: 'add' })).toEqual({ exitCode: 1, output: expect.stringMatching(/^error VALIDATION_FAILED: There is no connector nope\. The connectors are: shell, .*todo\.$/) as unknown });
-    expect(await runConnector(kernel, { connector: 'todo', command: 'add', payload: { text: 1 } })).toMatchObject({ exitCode: 1, output: expect.stringMatching(/^error VALIDATION_FAILED: text: .*The payload of todo add is \(JSON Schema\):/s) as unknown });
+    expect(await runConnector(kernel, { connector: 'todo', command: 'add', payload: { text: 1 } })).toMatchObject({ exitCode: 1, output: expect.stringMatching(/^error VALIDATION_FAILED: text: .*The payload of todo add is\n\{ text \}$/s) as unknown });
     expect(await runConnector(kernel, { connector: 'todo', command: 'fail' })).toEqual({ exitCode: 1, output: expect.stringMatching(/^error todo\/BROKEN: /) as unknown });
   });
 

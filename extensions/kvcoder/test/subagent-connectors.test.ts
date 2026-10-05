@@ -32,7 +32,7 @@ describe("a subagent's connectors (08 §8.5, ADR 0011, 9)", { timeout: 30_000 },
     const results = toolResults(fake);
     expect(results[0]).toBe("error VALIDATION_FAILED: A subagent can't have the connector subagent.");
     expect(results[1]).toBe("error VALIDATION_FAILED: A subagent can't have the connector nope.");
-    expect(results[2]).toMatch(/^error VALIDATION_FAILED: payload: Unrecognized key: "shell"\. The payload of subagent run is \(JSON Schema\):/);
+    expect(results[2]).toMatch(/^error VALIDATION_FAILED: payload: Unrecognized key: "shell"\. The payload of subagent run is\n\{ task, mode: "fresh" \| "fork", connectors\?, background\? \}$/);
     expect(await kernel.exec('kvcoder.session.list', { limit: 10 })).toHaveLength(1);
   });
 });

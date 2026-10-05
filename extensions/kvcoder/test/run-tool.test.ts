@@ -80,12 +80,11 @@ describe('the run tool (08 §8.2 and §8.3, ADR 0011)', { timeout: 30_000 }, () 
     expect(command.results[0]).toBe('error NOT_FOUND: todo has no command remove; call its help.');
   });
 
-  it('QA18-E5 an invalid payload returns each problem and the payload schema', async () => {
+  it('QA18-E5 an invalid payload returns each problem and the payload signature', async () => {
     const builtin = await call({ connector: 'fs', command: 'edit', payload: { file: 'a' } });
-    expect(builtin.results[0]).toMatch(/^error VALIDATION_FAILED: .*path: .*The payload of fs edit is \(JSON Schema\):\n\{/s);
-    expect(builtin.results[0]).toContain('"edits"');
+    expect(builtin.results[0]).toMatch(/^error VALIDATION_FAILED: .*path: .*The payload of fs edit is\n\{ path, edits: \[\{ oldText, newText \}\], risky\? \}$/s);
     const registered = await call({ connector: 'todo', command: 'add', payload: { text: 7 } });
-    expect(registered.results[0]).toMatch(/^error VALIDATION_FAILED: text: .*The payload of todo add is \(JSON Schema\):\n\{/s);
+    expect(registered.results[0]).toMatch(/^error VALIDATION_FAILED: text: .*The payload of todo add is\n\{ text \}$/s);
   });
 
   it('QA18-E6 a call with no payload runs with an empty one', async () => {

@@ -37,7 +37,7 @@ describe('background shell calls (08 §8.3, ADR 0009, 149 to 151)', { timeout: 6
   it('QA3-H12 a background call starts a background process and returns its id and first output', async () => {
     posixShell();
     const { kernel, fake, sessionId, result, jobId } = await started('echo up; sleep 30');
-    expect(result).toBe(`started ${jobId}\nup\n[exit code 0]`);
+    expect(result).toBe(`started ${jobId}\nup\n[running]`);
     expect(await running(kernel, jobId)).toBe(true);
     const [list = ''] = await say(kernel, fake, sessionId, command('background', 'list'));
     expect(z.array(jobSchema).parse(JSON.parse(list))).toEqual([expect.objectContaining({ id: jobId, kind: 'process', call: 'echo up; sleep 30', status: 'running' })]);
@@ -86,14 +86,14 @@ describe('background shell calls (08 §8.3, ADR 0009, 149 to 151)', { timeout: 6
     const sessionId = await newSession(world.kernel);
     const [result = ''] = await say(world.kernel, world.fake, sessionId, shell('sleep 30', { background: true, timeoutMs: 100 }));
     const jobId = /^started (\S+)/.exec(result)?.[1] ?? '';
-    expect(result).toBe(`started ${jobId}\n[exit code 0]`);
+    expect(result).toBe(`started ${jobId}\n[running]`);
     expect(await running(world.kernel, jobId)).toBe(true);
   });
 
   it('QA3-E16 a command that ends at once says so, and a shell that cannot start gives an error and no job', async () => {
     posixShell();
     const { result, jobId } = await started('echo hi');
-    expect(result).toBe(`started ${jobId}\nhi\n[the process has already ended; background output has its output]\n[exit code 0]`);
+    expect(result).toBe(`started ${jobId}\nhi\n[the process has already ended]\n[exit code 0]`);
     const broken = await started('echo hi', { settings: { 'kvcoder.shell.path': '/definitely/not/bash' } });
     expect(broken.result).toMatch(/^error VALIDATION_FAILED: /);
     expect(await broken.kernel.exec('kvcoder.job.list', { sessionId: broken.sessionId })).toEqual([]);

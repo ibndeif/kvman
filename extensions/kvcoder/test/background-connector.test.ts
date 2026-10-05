@@ -29,7 +29,7 @@ describe('the background connector (08 §8.5, ADR 0011, 6)', { timeout: 60_000 }
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
     const [started = ''] = await say(kernel, fake, sessionId, shell('echo up; sleep 30', { background: true }));
-    const id = /^started (\S+)\nup\n\[exit code 0\]$/.exec(started)?.[1] ?? '';
+    const id = /^started (\S+)\nup\n\[running\]$/.exec(started)?.[1] ?? '';
     expect(id).not.toBe('');
     const [list = ''] = await say(kernel, fake, sessionId, command('background', 'list'));
     expect(z.array(rowSchema).parse(JSON.parse(list))).toEqual([expect.objectContaining({ id, kind: 'process', call: 'echo up; sleep 30', status: 'running' })]);

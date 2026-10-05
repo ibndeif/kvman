@@ -74,7 +74,7 @@ async function callModel(ctx: Ctx, session: Stored<SessionDoc>, turnId: string, 
   const messages = await modelMessages(ctx, await sentHistory(ctx, session.id, session.nextSeq));
   const started = Date.now();
   try {
-    const answer = await completeWithRetries(ctx, { ...(session.model === null ? {} : { model: session.model }), systemPrompt: tools.built.prompt, messages, tools: [runTool(tools.listed.map((listed) => listed.name))], thinking: session.thinking });
+    const answer = await completeWithRetries(ctx, { ...(session.model === null ? {} : { model: session.model }), sessionId: session.id, systemPrompt: tools.built.prompt, messages, tools: [runTool(tools.listed.map((listed) => listed.name))], thinking: session.thinking });
     const durationMs = Date.now() - started;
     const { blocks, broken } = repairedCalls(answer.message.content);
     const message = { ...answer.message, content: blocks };

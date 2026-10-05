@@ -40,6 +40,23 @@ describe('questions and approvals (08 §8.1, §8.5)', { timeout: 30_000 }, () =>
     expect(existsSync(path.join(kernel.homeFolder, 'made.txt'))).toBe(false);
   });
 
+  it('QA19-H7 several questions in one reply', async () => {
+    const { kernel, fake } = await kvcoder.start();
+    const sessionId = await newSession(kernel);
+    fake.reply(runs(command('ask', 'choice', { prompt: 'Which?', multiple: false, options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }] }), command('ask', 'text', { prompt: 'Name?' })), says('ok'));
+    await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
+    await kernel.clock.advance(0);
+    const pending = (await turnState(kernel, sessionId)).turn?.pending ?? [];
+    expect(pending.map((item) => item.kind)).toEqual(['question', 'question']);
+    const [choice, text] = pending;
+    expect(await kernel.exec('kvcoder.question.answer', { questionId: String(choice?.questionId), answer: { selected: ['a'] } })).toEqual({ jobId: null });
+    expect((await turnState(kernel, sessionId)).session.status).toBe('waiting');
+    const { jobId } = await kernel.exec('kvcoder.question.answer', { questionId: String(text?.questionId), answer: { text: 'Ada' } });
+    expect(await kernel.waitForJob(String(jobId))).toMatchObject({ name: 'kvcoder.turn.step', status: 'succeeded' });
+    await kernel.clock.advance(0);
+    expect(toolResults(fake)).toEqual(['{\n  "selected": [\n    "a"\n  ]\n}', '{\n  "text": "Ada"\n}']);
+  });
+
   it('M2.4-E22 answering one of several returns null, and the last answer returns the next step', async () => {
     const { kernel, fake } = await kvcoder.start(approvals);
     const sessionId = await newSession(kernel);

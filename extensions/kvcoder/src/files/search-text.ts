@@ -39,7 +39,7 @@ async function* filesUnder(folder: string, signal: AbortSignal): AsyncGenerator<
 
 export async function searchText(workspace: string, input: { pattern: string; path?: string | undefined }, signal: AbortSignal): Promise<SearchResult> {
   const pattern = expression(input.pattern);
-  const requested = input.path ?? '.';
+  const requested = input.path === undefined || input.path === '' ? '.' : input.path;
   const target = await resolveInWorkspace(workspace, requested);
   const found = await stat(target).catch((error: unknown) => {
     if (isMissing(error)) throw notFound(`${requested} doesn't exist.`, { path: requested });

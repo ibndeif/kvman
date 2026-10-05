@@ -112,7 +112,7 @@ describe('the fs connector (08 §8.5, ADR 0009, 157 to 160)', { timeout: 30_000 
       fsCall('write', { path: 'a.txt', content: 'x', mode: 'append' }),
     ]);
     expect(results[0]).toBe('error NOT_FOUND: fs has no command nope; call its help.');
-    expect(results[1]).toMatch(/^error VALIDATION_FAILED: path: .*The payload of fs write is \(JSON Schema\):/s);
+    expect(results[1]).toMatch(/^error VALIDATION_FAILED: path: .*The payload of fs write is\n\{ path, content, risky\? \}$/s);
     expect(results[2]).toMatch(/^error VALIDATION_FAILED: edits: /);
     expect(results[3]).toMatch(/^error VALIDATION_FAILED: payload: .*mode/);
   });

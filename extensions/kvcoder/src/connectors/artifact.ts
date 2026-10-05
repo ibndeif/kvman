@@ -15,7 +15,7 @@ import { edits } from './payload-fields.ts';
 
 /** What the prompt's index says the connector is for. */
 export const artifactDescription =
-  'Show the person something to read or see: a plan, a report, a design, an HTML page, or the localhost address of an app you are running (format url). Use it for anything longer than a few lines instead of pasting it into a reply, and keep your plan in the artifact `plan`. The panel runs the page of an HTML artifact in a sandbox where localStorage, sessionStorage, cookies, and indexedDB throw, so a page you show that way must work without them, keeping its state in memory or wrapping each use in try/catch; a url artifact is a normal page on its own address and can use them.';
+  'Show the person something to read or see: a plan, a report, a design, an HTML page, or the localhost address of an app you are running (format url). Use it for anything longer than a few lines instead of pasting it into a reply, and when you write a plan, keep it in the artifact `plan`. The panel runs the page of an HTML artifact in a sandbox where localStorage, sessionStorage, cookies, and indexedDB throw, so a page you show that way must work without them, keeping its state in memory or wrapping each use in try/catch; a url artifact is a normal page on its own address and can use them.';
 
 const idMessage = 'An artifact id is lowercase kebab case, such as plan or login-design, up to 50 characters.';
 

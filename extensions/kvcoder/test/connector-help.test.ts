@@ -31,6 +31,17 @@ describe("a connector's help (08 §8.3, ADR 0011, 4)", { timeout: 30_000 }, () =
     expect(results[8]).toContain('Result: the person\'s answer: { "confirmed" }, or { "dismissed": true }.');
   });
 
+  it('QA19-E14 help is unchanged', async () => {
+    const { results } = await looked(nothing, [command('fs', 'help', { command: 'write' })]);
+    const help = results[0] ?? '';
+    expect(help).toMatch(/^fs write: Creates a file and its parent folders, or replaces the file\./);
+    const schema = JSON.parse(help.slice(help.indexOf('{'), help.indexOf('\n\nResult'))) as { properties: Record<string, { description?: string }>; required: string[] };
+    expect(Object.keys(schema.properties)).toEqual(['path', 'content', 'risky']);
+    for (const field of Object.values(schema.properties)) expect(field.description).toEqual(expect.any(String));
+    expect(schema.required).toEqual(['path', 'content']);
+    expect(help).toContain('Result (JSON Schema):\n{');
+  });
+
   it('QA18-E8 help of a command the connector does not have fails NOT_FOUND, and help takes nothing else', async () => {
     const { results } = await looked(nothing, [command('todo', 'help', { command: 'nope' }), command('fs', 'help', { command: 'nope' }), command('todo', 'help', { topic: 'add' })]);
     expect(results[0]).toBe('error NOT_FOUND: todo has no command nope; call its help.');

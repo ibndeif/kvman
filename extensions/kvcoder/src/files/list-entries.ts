@@ -23,7 +23,7 @@ async function entryOf(folder: string, name: string): Promise<Entry | undefined>
 }
 
 export async function listEntries(workspace: string, input: { path?: string | undefined }): Promise<Listing> {
-  const requested = input.path ?? '.';
+  const requested = input.path === undefined || input.path === '' ? '.' : input.path;
   const folder = await resolveInWorkspace(workspace, requested);
   const names = await readdir(folder).catch((error: unknown) => {
     if (error instanceof Error && 'code' in error && error.code === 'ENOTDIR') throw invalid(`${requested} is a file; read it with fs read.`, { path: requested });

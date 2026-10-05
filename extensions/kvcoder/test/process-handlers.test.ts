@@ -1,3 +1,5 @@
+import { writeFileSync } from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { z } from '@kvman/sdk';
 import type { TestKernel } from '@kvman/testkit';
@@ -37,7 +39,8 @@ const statusOf = async (kernel: TestKernel, sessionId: string, id: string) => jo
 describe('background processes end without kvcoder doing it (08 §8.3, ADR 0009, 150)', { timeout: 60_000 }, () => {
   it('QA3-H15 an exit by itself adds a background message with the code and last lines, and starts no turn', async () => {
     posixShell();
-    const { kernel, sessionId, jobId } = await startJob('echo one; echo two; exit 1');
+    const { kernel, sessionId, jobId } = await startJob('echo one; echo two; until [ -f go ]; do sleep 0.1; done; exit 1');
+    writeFileSync(path.join(kernel.homeFolder, 'go'), 'go\n');
     await vi.waitFor(async () => expect(await jobMessages(kernel, sessionId)).toHaveLength(1), wait);
     const [text = ''] = await jobMessages(kernel, sessionId);
     expect(text).toContain(`(job ${jobId}) finished:\nThe process exited with code 1.\nIts last output:\none\ntwo`);
@@ -77,8 +80,10 @@ describe('background processes end without kvcoder doing it (08 §8.3, ADR 0009,
 
   it("QA3-E19 an exit already recorded isn't overwritten when kvman restarts", async () => {
     posixShell();
-    const { kernel, sessionId, jobId } = await startJob('echo done; exit 2');
+    const { kernel, sessionId, jobId } = await startJob('echo done; until [ -f go ]; do sleep 0.1; done; exit 2');
+    writeFileSync(path.join(kernel.homeFolder, 'go'), 'go\n');
     await vi.waitFor(async () => expect(await statusOf(kernel, sessionId, jobId)).toEqual({ status: 'failed', exitCode: 2 }), wait);
+    await vi.waitFor(async () => expect(await jobMessages(kernel, sessionId)).toHaveLength(1), wait);
     await kernel.restart();
     expect(await statusOf(kernel, sessionId, jobId)).toEqual({ status: 'failed', exitCode: 2 });
     expect(await jobMessages(kernel, sessionId)).toHaveLength(1);

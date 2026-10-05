@@ -30,10 +30,66 @@ export const noCommandMessage = (connector: string, command: string): string => 
 
 export type PayloadIssue = { path: string; message: string };
 
-/** An invalid payload as the model reads it: each problem, then the command's payload schema, so one correction is enough (ADR 0009, 213). */
+// A payload's schema as a signature can be written from it: enough of the JSON Schema's shape for the walk, with
+// everything else kept. Recursive, since an object's fields have schemas too.
+type Field = {
+  type?: string | undefined;
+  enum?: Json[] | undefined;
+  properties?: Record<string, Field> | undefined;
+  required?: string[] | undefined;
+  items?: Field | undefined;
+};
+
+const field: z.ZodType<Field> = z.lazy(() =>
+  z.looseObject({
+    type: z.string().optional(),
+    enum: z.array(z.json()).optional(),
+    properties: z.record(z.string(), field).optional(),
+    required: z.array(z.string()).optional(),
+    items: field.optional(),
+  }),
+);
+
+// The top of a payload's schema: an object with properties, as the kernel's `z.toJSONSchema` writes it.
+const payloadObject = z.looseObject({ type: z.literal('object'), properties: z.record(z.string(), field), required: z.array(z.string()).optional() });
+
+function objectSignature(schema: Field): string {
+  const entries = Object.entries(schema.properties ?? {});
+  if (entries.length === 0) return '{}';
+  const required = new Set(schema.required ?? []);
+  return `{ ${entries.map(([name, child]) => fieldSignature(name, child, required.has(name))).join(', ')} }`;
+}
+
+function fieldSignature(name: string, schema: Field, required: boolean): string {
+  const mark = required ? '' : '?';
+  if (schema.properties !== undefined) return `${name}${mark}: ${objectSignature(schema)}`;
+  if (schema.type === 'array' && schema.items?.properties !== undefined) return `${name}${mark}: [${objectSignature(schema.items)}]`;
+  if (schema.enum !== undefined && schema.enum.length > 0 && schema.enum.every((value) => typeof value === 'string')) {
+    return `${name}${mark}: ${schema.enum.map((value) => JSON.stringify(value)).join(' | ')}`;
+  }
+  return `${name}${mark}`;
+}
+
+/** A payload's signature written from its JSON Schema, such as `{ a, b?, c: [{ x }] }`; `undefined` when the schema isn't an object with properties. */
+export function payloadSignature(schema: Json | undefined): string | undefined {
+  if (schema === undefined) return undefined;
+  const parsed = payloadObject.safeParse(schema);
+  return parsed.success ? objectSignature(parsed.data) : undefined;
+}
+
+function withoutSchemaKey(schema: Json): Json {
+  if (typeof schema !== 'object' || schema === null || Array.isArray(schema)) return schema;
+  return Object.fromEntries(Object.entries(schema).filter(([key]) => key !== '$schema'));
+}
+
+/** An invalid payload as the model reads it: each problem, then the command's signature so one correction is enough (ADR 0012, 2 to 4). */
 export function invalidPayloadOutput(call: { connector: string; command: string }, issues: readonly PayloadIssue[], schema: Json | undefined): CallResult {
   const problems = issues.map((issue) => `${issue.path === '' ? 'payload' : issue.path}: ${issue.message}`).join('; ');
-  const shape = schema === undefined ? '' : ` The payload of ${call.connector} ${call.command} is (JSON Schema):\n${JSON.stringify(schema, null, 2)}`;
+  let shape = '';
+  if (schema !== undefined) {
+    const signature = payloadSignature(schema);
+    shape = signature === undefined ? ` The payload of ${call.connector} ${call.command} is (JSON Schema):\n${JSON.stringify(withoutSchemaKey(schema))}` : ` The payload of ${call.connector} ${call.command} is\n${signature}`;
+  }
   return errorOutput({ code: 'VALIDATION_FAILED', message: `${problems}.${shape}` });
 }
 

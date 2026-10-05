@@ -27,10 +27,10 @@ const payloads = {
     fromLine: z.number().int().min(1).describe('The first line to return, counting from 1. The default is 1.').exactOptional(),
     lines: z.number().int().min(1).max(2000).describe('How many lines to return: 2000 by default, which is also the most.').exactOptional(),
   }),
-  list: z.strictObject({ path: filePath('The folder to list').exactOptional() }),
+  list: z.strictObject({ path: z.string().describe('The folder to list, relative to the workspace folder, or absolute inside it; the workspace folder when left out or empty.').exactOptional() }),
   search: z.strictObject({
     pattern: z.string().min(1).describe('A JavaScript regular expression, matched against each line, case-sensitive.'),
-    path: filePath('The file or folder to search; the workspace folder when left out').exactOptional(),
+    path: z.string().describe('The file or folder to search, relative to the workspace folder, or absolute inside it; the workspace folder when left out or empty.').exactOptional(),
   }),
   write: z.strictObject({ path: filePath('The file to create or replace'), content: z.string().describe('The whole content of the file.'), risky }),
   edit: z.strictObject({ path: filePath('The existing text file to change'), edits, risky }),
