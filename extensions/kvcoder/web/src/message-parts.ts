@@ -26,14 +26,15 @@ export function thinkingOf(message: Message): string {
   return blocks(message.content['content']).flatMap((block) => (block['type'] === 'thinking' && typeof block['thinking'] === 'string' ? [block['thinking']] : [])).join('\n');
 }
 
-/** What each tool call of the answers was, by tool call id (ADR 0011, 13). */
+/** What each tool call of the answers was, and how long its answer took, by tool call id (ADR 0011, 13; ADR 0017, 1). */
 export function callViews(messages: readonly Message[]): Map<string, CallView> {
   const views = new Map<string, CallView>();
   for (const message of messages) {
     if (message.kind !== 'assistant') continue;
+    const written = typeof message.durationMs === 'number' ? { writtenMs: message.durationMs } : {};
     for (const block of blocks(message.content['content'])) {
       const args = record(block['arguments']);
-      if (block['type'] === 'toolCall' && typeof block['id'] === 'string' && args !== undefined) views.set(block['id'], callView(args));
+      if (block['type'] === 'toolCall' && typeof block['id'] === 'string' && args !== undefined) views.set(block['id'], { ...callView(args), ...written });
     }
   }
   return views;

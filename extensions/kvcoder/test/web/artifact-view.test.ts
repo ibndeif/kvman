@@ -21,6 +21,23 @@ async function panel(fields: Parameters<typeof artifactContent>[0], fake: FakeKv
   return mounted(ArtifactPanel, fake, { list: [artifactSummary({ id: content.id, title: content.title, format: content.format })], shown: content.id, content });
 }
 
+describe("the artifact panel's header (08 §8.7, ADR 0017, 4)", () => {
+  it('QA24-H7 the header shows the title over its kind and version, the view switch, and labelled icon buttons', async () => {
+    const content = artifactContent({ id: 'site', title: 'The running app', format: 'url', version: 2, content: 'http://localhost:8080/' });
+    const wrapper = await mounted(ArtifactPanel, createFakeKvman(), { list: [artifactSummary({ id: 'site', title: 'The running app', format: 'url', version: 2 })], shown: 'site', content });
+    const head = wrapper.find('.kvc-artifact-head');
+    expect(head.find('[data-test="artifact-title"]').text()).toBe('The running app');
+    expect(head.find('[data-test="artifact-meta"]').text()).toBe('URL · Version 2');
+    expect(head.findAll('.kvc-tab').map((tab) => tab.text())).toEqual(['Preview', 'Source']);
+    expect(head.findAll('.kvc-icon-button').map((button) => [button.attributes('data-test'), button.attributes('aria-label'), button.attributes('title'), button.text()])).toEqual([
+      ['artifact-open-url', 'Open in a new tab', 'Open in a new tab', ''],
+      ['artifact-copy', 'Copy', 'Copy', ''],
+      ['artifact-close', 'Close', 'Close', ''],
+    ]);
+    wrapper.unmount();
+  });
+});
+
 describe("the artifact panel's views and Copy (08 §8.7, ADR 0009, 214 and 216)", () => {
   it('QA12-H4 Preview comes first, Source shows the text as stored, and showing another artifact returns to Preview', async () => {
     const fake = createFakeKvman();

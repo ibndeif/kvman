@@ -148,18 +148,19 @@ describe("the Chat page's new chat (08 §8.7, ADR 0009, 194)", () => {
     wrapper.unmount();
   });
 
-  it('QA9-H19 a new chat looks like a chat: its header, the question, and the send box', async () => {
+  it('QA9-H19 and QA24-E10 a new chat is the question and the send box, which holds the model and thinking pickers, with no header', async () => {
     const wrapper = await mounted(ChatStart, startFake({ model: null, defaultModel: 'fake/m1' }));
-    const header = wrapper.find('[data-test="start-header"]');
-    expect(header.find('strong').text()).toBe('New chat');
-    expect(header.find('[data-test="model-picker"]').exists()).toBe(true);
-    expect(header.find('[data-test="thinking-picker"]').exists()).toBe(true);
-    for (const missing of ['tab-chat', 'chat-menu', 'running', 'session-totals']) expect(wrapper.find(`[data-test="${missing}"]`).exists()).toBe(false);
+    const box = wrapper.find('.kvc-composer');
+    expect(box.find('[data-test="model-picker"]').exists()).toBe(true);
+    expect(box.find('[data-test="thinking-picker"]').exists()).toBe(true);
+    for (const missing of ['start-header', 'chat-menu', 'running', 'session-totals']) expect(wrapper.find(`[data-test="${missing}"]`).exists()).toBe(false);
+    expect(wrapper.find('header').exists()).toBe(false);
     expect(wrapper.find('h1').text()).toBe('What should we build in notes-app?');
     expect(wrapper.find('[data-test="composer-text"]').exists()).toBe(true);
     expect(wrapper.find('[data-test="send"]').exists()).toBe(true);
     const html = wrapper.html();
-    expect(html.indexOf('data-test="start-header"')).toBeLessThan(html.indexOf('data-test="composer-text"'));
+    expect(html.indexOf('data-test="chat-start"')).toBeLessThan(html.indexOf('data-test="composer-text"'));
+    expect(html.indexOf('data-test="composer-text"')).toBeLessThan(html.indexOf('data-test="model-picker"'));
     wrapper.unmount();
   });
 

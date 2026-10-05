@@ -57,7 +57,7 @@ const fitExpression = `(() => {
   const conversation = document.querySelector('.kvc-conversation');
   const box = conversation.getBoundingClientRect();
   const main = document.querySelector('main');
-  const button = document.querySelector('.kvc-header [data-test="model-picker"]').getBoundingClientRect();
+  const button = document.querySelector('.kvc-composer [data-test="model-picker"]').getBoundingClientRect();
   return {
     buttonLeft: button.left,
     buttonRight: button.right,
@@ -174,32 +174,30 @@ describe('a long chat in Chromium (08 §8.7, ADR 0009, 195–199)', { timeout: 1
     await page.close();
   });
 
-  it('QA9-H19 a new chat has the header of a chat on top, the question in the middle, and the send box at the bottom', async () => {
+  it('QA9-H19 and QA24-E10 a new chat has the question in the middle and the send box, with its pickers, at the bottom', async () => {
     world = await kvmanWorld();
     const kvman = await world.start();
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
     await page.goto(kvman.origin);
-    await page.locator('[data-test="start-header"] [data-test="model-picker"]').waitFor();
-    const header = await rectOf(page, '[data-test="start-header"]');
+    await page.locator('.kvc-composer [data-test="model-picker"]').waitFor();
     const question = await rectOf(page, '.kvc-start h1');
     const composer = await rectOf(page, '[data-test="composer-text"]');
     const statusBar = await rectOf(page, '[data-test="status-bar"]');
-    expect(header.bottom).toBeLessThanOrEqual(question.y);
     expect(question.bottom).toBeLessThanOrEqual(composer.y);
     expect(composer.bottom).toBeLessThanOrEqual(statusBar.y);
-    expect(await page.locator('[data-test="start-header"] [data-test="thinking-picker"]').count()).toBe(1);
-    expect(await page.locator('[data-test="tab-chat"]').count()).toBe(0);
+    expect(await page.locator('.kvc-composer [data-test="thinking-picker"]').count()).toBe(1);
+    expect(await page.locator('header.kvc-header').count()).toBe(0);
     await page.close();
   });
 
-  it('QA9-E14 the Chat page in Arabic fits a narrow window, with the header, its picker, and the send button in view', async () => {
+  it('QA9-E14 the Chat page in Arabic fits a narrow window, with the send box, its picker, and the send button in view', async () => {
     world = await kvmanWorld();
     const kvman = await world.start();
     await kvman.call('commands', 'kernel.settings.set', { key: 'kernel.language', value: 'ar', scope: 'global' });
     const page = await browser.newPage({ viewport: { width: 600, height: 800 } });
     await page.goto(kvman.origin);
-    await page.locator('[data-test="start-header"] [data-test="model-picker"]').waitFor();
-    for (const selector of ['[data-test="start-header"]', '[data-test="model-picker"]', '[data-test="send"]']) {
+    await page.locator('.kvc-composer [data-test="model-picker"]').waitFor();
+    for (const selector of ['.kvc-box', '[data-test="model-picker"]', '[data-test="thinking-picker"]', '[data-test="send"]']) {
       const box = await rectOf(page, selector);
       expect(box.x, selector).toBeGreaterThanOrEqual(0);
       expect(box.right, selector).toBeLessThanOrEqual(600);
@@ -227,7 +225,7 @@ describe('a long chat in Chromium (08 §8.7, ADR 0009, 195–199)', { timeout: 1
       await kvman.call('commands', 'kernel.settings.set', { key: 'kernel.language', value: language, scope: 'global' });
       for (const width of [1280, 800, 600, 400]) {
         const page = await openChat(kvman, sessionId, { width, height: 800 });
-        await page.locator('.kvc-header [data-test="model-picker"]').click();
+        await page.locator('.kvc-composer [data-test="model-picker"]').click();
         await page.locator('[data-test="model-popover"]').waitFor();
         await insideConversation(page, `${language} ${String(width)}`);
         const found = fitSchema.parse(await page.evaluate(fitExpression));
@@ -245,7 +243,7 @@ describe('a long chat in Chromium (08 §8.7, ADR 0009, 195–199)', { timeout: 1
       await kvman.call('commands', 'kernel.settings.set', { key: 'kernel.language', value: language, scope: 'global' });
       for (const width of [1280, 800, 600, 400]) {
         const page = await openChat(kvman, sessionId, { width, height: 800 });
-        await page.locator('.kvc-header [data-test="model-picker"]').click();
+        await page.locator('.kvc-composer [data-test="model-picker"]').click();
         await page.locator('[data-test="model-popover"]').waitFor();
         await insideConversation(page, `${language} ${String(width)}`);
         const found = fitSchema.parse(await page.evaluate(fitExpression));
@@ -259,7 +257,7 @@ describe('a long chat in Chromium (08 §8.7, ADR 0009, 195–199)', { timeout: 1
   it('QA10-E11 an open model popover fits again when the window is resized', async () => {
     const { kvman, sessionId } = await chatWith(says('Hi.'));
     const page = await openChat(kvman, sessionId);
-    await page.locator('.kvc-header [data-test="model-picker"]').click();
+    await page.locator('.kvc-composer [data-test="model-picker"]').click();
     await page.locator('[data-test="model-popover"]').waitFor();
     for (const width of [700, 1280]) {
       await page.setViewportSize({ width, height: 800 });

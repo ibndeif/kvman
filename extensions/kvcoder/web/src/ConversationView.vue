@@ -13,11 +13,14 @@ import MessageItem from './MessageItem.vue';
 import PendingCards from './PendingCards.vue';
 import RecoveryActions from './RecoveryActions.vue';
 import PromptTab from './PromptTab.vue';
+import SessionModel from './SessionModel.vue';
+import type { SlashName } from './slash-commands.ts';
 import SubagentCard from './SubagentCard.vue';
 import { useAnswers } from './use-answers.ts';
 import { useArtifacts } from './use-artifacts.ts';
 import { useConversation } from './use-conversation.ts';
 import { useFollowLatest } from './use-follow-latest.ts';
+import { useSessionActions } from './use-session-actions.ts';
 import { useWorkspaceSession } from './use-workspace-session.ts';
 
 // kvcoder's conversation (plan 08 §8.7): without a session it is the Chat page's start, whose first message creates
@@ -90,6 +93,17 @@ async function exportEarlier(): Promise<void> {
   }
 }
 
+// A slash command of the send box runs what the chat's menu runs (ADR 0017, 6).
+const actions = useSessionActions(kvman, () => sessionId.value ?? '', () => void conversation.refresh());
+function command(name: SlashName, argument: string): void {
+  if (name === 'new') kvman.navigate('kvcoder.chat');
+  else if (name === 'prompt') tab.value = tab.value === 'prompt' ? 'chat' : 'prompt';
+  else if (name === 'rename') void actions.rename(argument);
+  else if (name === 'compact') void actions.compact();
+  else if (name === 'export') void actions.exportFile();
+  else void actions.fork();
+}
+
 const key = (message: Message): string => message.id;
 </script>
 
@@ -101,7 +115,7 @@ const key = (message: Message): string => message.id;
         <ConversationHeader :session="session" :tab="tab" :turns="turns.length" :artifacts="artifacts.list.value.length" :artifacts-open="artifacts.open.value" @tab="tab = $event" @changed="conversation.refresh()" @toggle-artifacts="artifacts.toggle()" />
         <div class="kvc-scrollport">
           <div ref="list" class="kvc-scroll" @scroll="follow.onScroll">
-            <PromptTab v-if="tab === 'prompt'" :session-id="session.id" />
+            <PromptTab v-if="tab === 'prompt'" :session-id="session.id" @back="tab = 'chat'" />
             <div v-else class="kvc-column">
               <button v-if="omitted > 0" type="button" class="kvc-button" style="align-self: center" data-test="earlier" @click="exportEarlier">{{ kvman.t('kvcoder.ui.earlierMessages', { count: omitted }) }}</button>
               <template v-for="message in messages" :key="key(message)">
@@ -122,7 +136,9 @@ const key = (message: Message): string => message.id;
           </div>
           <button v-if="follow.away.value" type="button" class="kvc-button kvc-jump" data-test="jump-to-latest" @click="follow.resume"><ArrowDown :size="16" aria-hidden="true" />{{ kvman.t('kvcoder.ui.jumpToLatest') }}</button>
         </div>
-        <MessageComposer :running="running" :placeholder="kvman.t('kvcoder.ui.placeholder')" @send="send" @stop="stop" />
+        <MessageComposer :running="running" :placeholder="kvman.t('kvcoder.ui.placeholder')" commands @send="send" @stop="stop" @command="command">
+          <template #controls><SessionModel :session="session" @changed="conversation.refresh()" /></template>
+        </MessageComposer>
       </template>
     </section>
     <ArtifactPanel v-if="panelShown" :list="artifacts.list.value" :shown="artifacts.shown.value" :content="artifacts.content.value" @select="artifacts.select($event)" @close="artifacts.close()" />

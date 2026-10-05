@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ProblemError, type Json } from '@kvman/sdk';
-import ConversationHeader from '../../web/src/ConversationHeader.vue';
+import SessionModel from '../../web/src/SessionModel.vue';
 import ModelSetting from '../../web/src/ModelSetting.vue';
 import { createFakeKvman, type FakeKvman } from './support/fake-kvman.ts';
 import { mounted, session } from './support/fixtures.ts';
@@ -93,7 +93,7 @@ describe("the model row of kvcoder's configuration (08 §8.7, ADR 0015)", () => 
     await row.find('[data-test="model-search"]').setValue('');
     expect(options(row)).toEqual(['Use the default model', 'M1', 'Z1']);
 
-    const header = await mounted(ConversationHeader, world(), { session: session({ model: 'fake/m1' }), tab: 'chat', turns: 1 });
+    const header = await mounted(SessionModel, world(), { session: session({ model: 'fake/m1' }) });
     await header.find('[data-test="model-picker"]').trigger('click');
     expect(options(header)).toEqual(['M1', 'Z1']);
     expect(header.find('[data-test="model-none-entry"]').exists()).toBe(false);

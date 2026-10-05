@@ -76,7 +76,7 @@ describe('a workspace switch while a chat is open, in Chromium (08 §8.7, ADR 00
 
     await page.locator('button:has([data-test="workspace-current"])').click();
     await page.locator(`[data-test="workspace-${emptyId}"]`).click();
-    await page.locator('[data-test="start-header"]').waitFor();
+    await page.locator('[data-test="chat-start"]').waitFor();
     expect(new URL(page.url()).pathname).toBe('/kvcoder/chat');
     expect(await page.locator('[data-test="session-title"]').count()).toBe(0);
     expect(await settled()).toEqual([]);

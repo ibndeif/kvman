@@ -79,7 +79,7 @@
   "kvai.ui.models.addSubmit": "Add model",
   "kvai.ui.models.makeDefault": "Make default",
   "kvai.ui.models.defaultSet": "The default model is set.",
-  "kvai.ui.status.usage": "Workspace {tokens} tokens · {cost}",
+  "kvai.ui.status.usage": "Workspace total, with cached: {tokens} tokens · {cost}",
   "kvai.title": "Models",
   "kvai.defaultModel.title": "Default model",
   "kvai.provider.get.description": "Gives one provider, with whether it can be called and its model count.",

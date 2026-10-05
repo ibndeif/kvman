@@ -1,6 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
-import ConversationHeader from '../../web/src/ConversationHeader.vue';
+import SessionModel from '../../web/src/SessionModel.vue';
 import ModelPicker from '../../web/src/ModelPicker.vue';
 import type { ModelGroup } from '../../web/src/model-groups.ts';
 import { searchGroups } from '../../web/src/model-groups.ts';
@@ -40,11 +40,11 @@ describe("the model picker's search (08 §8.7, ADR 0009, 140)", () => {
     wrapper.unmount();
   });
 
-  it('QA3-H1 picking in the header runs kvcoder.session.configure with the model', async () => {
+  it('QA3-H1 picking in the send box runs kvcoder.session.configure with the model', async () => {
     const fake = createFakeKvman();
     fake.handle('kvai.provider.list', () => [{ id: 'zai', title: 'Z.ai', status: 'ready' }]);
     fake.handle('kvai.model.list', () => [{ id: 'zai/glm-5.3', name: 'GLM-5.3', provider: 'zai' }, { id: 'zai/other', name: 'Other', provider: 'zai' }]);
-    const wrapper = mount(ConversationHeader, { props: { session: session({ model: 'zai/other' }), tab: 'chat', turns: 1 }, global: { provide: { kvman: fake.kvman } } });
+    const wrapper = mount(SessionModel, { props: { session: session({ model: 'zai/other' }) }, global: { provide: { kvman: fake.kvman } } });
     await flushPromises();
     await wrapper.find('[data-test="model-picker"]').trigger('click');
     await wrapper.find('[data-test="model-search"]').setValue('glm');

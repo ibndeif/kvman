@@ -15,6 +15,8 @@ export type CallView = {
   payload?: string;
   /** Whether the call asked to keep running in the background. */
   background?: boolean;
+  /** How long the model's answer that made the call took, when it is known (ADR 0017, 1). */
+  writtenMs?: number;
   /** An `ask` call's question: its kind and its payload. */
   ask?: { kind: AskKind; question: Record<string, unknown> };
 };

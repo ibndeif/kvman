@@ -36,7 +36,8 @@ describe('the artifact panel beside the conversation (08 §8.7, ADR 0009, 177 an
     serve(fake, world);
     const wrapper = await mounted(ConversationView, fake, { sessionId: 's1' });
     expect(wrapper.find('[data-test="artifact-panel"]').exists()).toBe(false);
-    expect(wrapper.find('[data-test="artifacts-toggle"]').text()).toBe('Artifacts (1)');
+    expect(wrapper.find('[data-test="artifacts-toggle"]').text()).toBe('1');
+    expect(wrapper.find('[data-test="artifacts-toggle"]').attributes()).toMatchObject({ 'aria-label': 'Artifacts (1)', title: 'Artifacts (1)' });
     await wrapper.find('[data-test="artifacts-toggle"]').trigger('click');
     await flushPromises();
     expect(wrapper.find('[data-test="artifact-panel"]').exists()).toBe(true);

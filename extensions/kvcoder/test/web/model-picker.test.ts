@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import ConversationHeader from '../../web/src/ConversationHeader.vue';
+import SessionModel from '../../web/src/SessionModel.vue';
 import { createFakeKvman } from './support/fake-kvman.ts';
 import { mounted, session } from './support/fixtures.ts';
 
@@ -19,12 +19,12 @@ async function openedFor(model: string) {
   const fake = createFakeKvman();
   fake.handle('kvai.provider.list', () => providers);
   fake.handle('kvai.model.list', () => models);
-  const wrapper = await mounted(ConversationHeader, fake, { session: session({ model }), tab: 'chat', turns: 1 });
+  const wrapper = await mounted(SessionModel, fake, { session: session({ model }) });
   await wrapper.find('[data-test="model-picker"]').trigger('click');
   return wrapper;
 }
 
-describe("the header's model picker (ADR 0009, 136, 140)", () => {
+describe("the chat's model picker (ADR 0009, 136, 140)", () => {
   it('QA1-H7 groups the models of callable providers by provider title', async () => {
     const wrapper = await openedFor('fake/m1');
     expect(wrapper.findAll('[data-test="model-group"]').map((group) => group.text())).toEqual(['Fake', 'Zed AI']);

@@ -31,7 +31,7 @@ describe("a call's card says what the call does (08 §8.7, ADR 0011, 13)", () =>
     const edit = await card({ description: 'Editing app.ts to add the save button', connector: 'fs', command: 'edit', payload: { path: 'src/app.ts', edits: [{ oldText: 'a', newText: 'b' }] } }, '{\n  "path": "src/app.ts",\n  "replacements": 1\n}');
     expect(found(edit, 'call-description').text()).toBe('Editing app.ts to add the save button');
     expect(found(edit, 'call-label').text()).toBe('fs · edit');
-    expect(found(edit, 'call-card').text()).toContain('0.2 s');
+    expect(found(edit, 'call-time').text()).toBe('200 ms');
     expect(found(edit, 'call-payload').exists()).toBe(false);
     await opened(edit);
     expect(JSON.parse(found(edit, 'call-payload').text())).toEqual({ path: 'src/app.ts', edits: [{ oldText: 'a', newText: 'b' }] });
@@ -76,7 +76,7 @@ describe("a call's card says what the call does (08 §8.7, ADR 0011, 13)", () =>
     const wrapper = await card({ description: 'Running the tests.', connector: 'shell', command: 'exec', payload: { line: 'npm test' } }, 'FAIL 1\n[exit code 1]', { exitCode: 1 }, true);
     expect(found(wrapper, 'exit-code').exists()).toBe(false);
     expect(found(wrapper, 'call-card').text()).not.toContain('exit');
-    expect(found(wrapper, 'call-card').text()).toContain('0.2 s');
+    expect(found(wrapper, 'call-time').text()).toBe('200 ms');
     await opened(wrapper);
     expect(found(wrapper, 'call-output').text()).toBe('FAIL 1');
     wrapper.unmount();

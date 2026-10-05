@@ -62,7 +62,7 @@ const markdown = (body: string) => ({ type: 'markdown' as const, text: 'kvcoder.
   </div>
   <ArtifactCard v-else-if="props.message.kind === 'toolResult' && artifact !== undefined" :id="artifact.id" :title="artifact.title" :format="artifact.format" :version="artifact.version" @open="emit('openArtifact', $event)" />
   <AnsweredCard v-else-if="answered !== undefined" :answered="answered" />
-  <CallCard v-else-if="props.message.kind === 'toolResult'" :description="card.description" :label="card.label" :line="card.line" :payload="card.payload" :failed="card.failed" :duration-ms="card.durationMs" :output="card.output" :background="card.background" />
+  <CallCard v-else-if="props.message.kind === 'toolResult'" :description="card.description" :label="card.label" :line="card.line" :payload="card.payload" :failed="card.failed" :duration-ms="card.durationMs" :written-ms="card.writtenMs" :output="card.output" :background="card.background" />
   <div v-else-if="props.message.kind === 'notice'" class="kvc-notice" data-test="notice">{{ notice }}</div>
   <div v-else-if="props.message.kind === 'note'" class="kvc-card kvc-card-row" role="note" data-test="note"><NotebookText :size="18" aria-hidden="true" />{{ note }}</div>
   <details v-else-if="props.message.kind === 'summary'" class="kvc-card" data-test="summary">

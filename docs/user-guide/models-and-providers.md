@@ -41,7 +41,7 @@ On the provider's page, click **Disconnect**. kvman deletes the key and the sign
 - On **Models**, click **Change model** and pick any model of a connected provider. The list is searchable: type any words of a model's name.
 - Or open **Extensions**, then **Models**, and pick it from the same list. There the switch at the top of the page says whether you set it for all workspaces or only for this one.
 - Or, on a provider's page, click **Make default** next to a model.
-- In a chat, picking a model in the header sets it as the default for new chats too.
+- In a chat, picking a model in the send box sets it as the default for new chats too.
 
 The default model is the `kvai.defaultModel` setting; it applies per workspace, falling back to the global value, then the preset, then nothing (unset means no default). The bundled `coder` preset sets it to `anthropic/claude-sonnet-5-5`.
 
@@ -57,7 +57,7 @@ Custom providers appear with **Manage** under **Connected**, and their models ca
 
 ## Usage
 
-The status bar shows the current workspace's tokens and cost (`Workspace … tokens · $…`), from kvai's usage totals. Usage is per workspace and per model.
+The status bar shows the current workspace's tokens and cost (`Workspace total, with cached: … tokens · $…`), from kvai's usage totals. Usage is per workspace and per model. This number is larger than the tokens a chat shows in its header: a chat counts what went in and what came out, while the workspace total also counts the cached tokens, the part of the conversation the model reads again at every step. The cost is the real cost in both places.
 
 ## Next
 

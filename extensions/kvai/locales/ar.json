@@ -79,7 +79,7 @@
   "kvai.ui.models.addSubmit": "إضافة النموذج",
   "kvai.ui.models.makeDefault": "تعيين كافتراضي",
   "kvai.ui.models.defaultSet": "تم تعيين النموذج الافتراضي.",
-  "kvai.ui.status.usage": "مساحة العمل: {tokens} توكن · {cost}",
+  "kvai.ui.status.usage": "إجمالي مساحة العمل، مع المخزَّن مؤقتًا: {tokens} توكن · {cost}",
   "kvai.title": "النماذج",
   "kvai.defaultModel.title": "النموذج الافتراضي",
   "kvai.provider.get.description": "يعيد مزوّدًا واحدًا، مع جاهزيته للاستدعاء وعدد نماذجه.",

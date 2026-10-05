@@ -48,7 +48,7 @@ describe('a workspace switch while a chat is open (08 §8.7, ADR 0016)', () => {
     expect(lists(fake)).toEqual([{ name: 'kvcoder.session.list', input: { limit: 1 } }]);
     expect(fake.navigate.mock.calls).toEqual([['kvcoder.session', { sessionId: 's9' }]]);
     expect(view.find('[data-test="session-title"]').exists()).toBe(false);
-    expect(view.find('[data-test="start-header"]').exists()).toBe(false);
+    expect(view.find('[data-test="chat-start"]').exists()).toBe(false);
     await vi.advanceTimersByTimeAsync(11_000);
     expect(reads(fake)).toBe(before);
     expect(fake.toast).not.toHaveBeenCalled();
@@ -63,7 +63,7 @@ describe('a workspace switch while a chat is open (08 §8.7, ADR 0016)', () => {
     expect(fake.navigate.mock.calls).toEqual([['kvcoder.chat']]);
     expect(fake.toast).not.toHaveBeenCalled();
     await view.setProps({ sessionId: undefined });
-    expect(view.find('[data-test="start-header"]').exists()).toBe(true);
+    expect(view.find('[data-test="chat-start"]').exists()).toBe(true);
     view.unmount();
   });
 
@@ -74,7 +74,7 @@ describe('a workspace switch while a chat is open (08 §8.7, ADR 0016)', () => {
     await flushPromises();
     expect(fake.navigate).not.toHaveBeenCalled();
     expect(lists(fake)).toEqual([]);
-    expect(view.find('[data-test="start-header"]').exists()).toBe(true);
+    expect(view.find('[data-test="chat-start"]').exists()).toBe(true);
     view.unmount();
   });
 

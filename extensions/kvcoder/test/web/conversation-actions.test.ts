@@ -7,7 +7,7 @@ import { mounted, serve, session, user } from './support/fixtures.ts';
 const ok = () => ({});
 
 describe("the conversation's actions (08 §8.7, ADR 0009, 104)", () => {
-  it('M2.4-E57 send with an image, Stop, the model picker, the Prompt tab, and the menu', async () => {
+  it('M2.4-E57 send with an image, Stop, the model picker, the prompt, and the menu', async () => {
     const fake = createFakeKvman();
     const world = { found: session({ status: 'running' }), messages: [user('go')], omitted: 0, turns: [] };
     serve(fake, world);
@@ -38,11 +38,12 @@ describe("the conversation's actions (08 §8.7, ADR 0009, 104)", () => {
     await flushPromises();
     expect(fake.calls.filter((call) => call.name === 'kvcoder.session.configure').map((call) => call.input)).toEqual([{ sessionId: 's1', model: 'fake/m2' }, { sessionId: 's1', thinking: 'high' }]);
 
-    await wrapper.find('[data-test="tab-prompt"]').trigger('click');
+    await wrapper.find('[data-test="chat-menu"]').trigger('click');
+    await wrapper.find('[data-test="menu-prompt"]').trigger('click');
     await flushPromises();
     expect(wrapper.find('[data-test="prompt-text"]').text()).toBe('You are kvman Coder');
     expect(wrapper.find('[data-test="prompt-section"]').text()).toContain('Guide · @kvman/kvcustomizer · every workspace · 120 bytes');
-    await wrapper.find('[data-test="tab-chat"]').trigger('click');
+    await wrapper.find('[data-test="prompt-back"]').trigger('click');
 
     await wrapper.find('[data-test="chat-menu"]').trigger('click');
     await wrapper.find('[data-test="menu-rename"]').trigger('click');

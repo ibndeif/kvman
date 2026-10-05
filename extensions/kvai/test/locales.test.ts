@@ -51,6 +51,14 @@ describe("kvai's catalogs (02 §2.11)", () => {
     expect(needed.filter((key) => en[key] === undefined)).toEqual([]);
   });
 
+  it('QA24-H8 the workspace total says that it counts cached tokens, in both languages with the same placeholders', () => {
+    const en = catalog('en');
+    const ar = catalog('ar');
+    expect(en['kvai.ui.status.usage']).toBe('Workspace total, with cached: {tokens} tokens · {cost}');
+    expect(ar['kvai.ui.status.usage']).toContain('المخزَّن');
+    expect(placeholders(ar['kvai.ui.status.usage'] ?? '')).toEqual(placeholders(en['kvai.ui.status.usage'] ?? ''));
+  });
+
   it('QA15-H13 the connection keys exist in both languages with the same placeholders', () => {
     const en = catalog('en');
     const ar = catalog('ar');

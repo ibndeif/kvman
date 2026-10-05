@@ -18,6 +18,14 @@ Type in the box at the bottom and press Enter (Shift+Enter for a new line). Whil
 - The **Stop** button cancels the turn: the current step, its helpers' turns, and its pending questions. Anything already in the transcript stays; you can send another message to go on.
 - After an answer, the conversation shows the turn's time, tokens, and cost, and the header keeps the chat's totals.
 
+The send box also holds:
+
+- **The model and the thinking level** of the chat, after the attach button. A change applies from the next step.
+- **Images.** Attach them with the paperclip, or paste one from the clipboard (PNG, JPEG, GIF, or WebP).
+- **Slash commands.** Type `/` at the start for the chat's own actions: `/compact` (summarize the earlier messages now), `/export`, `/fork`, `/new`, `/prompt` (show the exact prompt of the next step, or go back), and `/rename <title>`. Up and Down choose, Tab completes, Enter runs. A slash command is never sent to the agent. The same actions are in the **⋯** menu of the header.
+
+Each call the agent makes is a card. Its time is the whole wait: the model writing the call, then the call running (open the card for the two parts). A call that failed says **Failed**; the agent reads the error and usually tries another way.
+
 ## What a turn looks like
 
 A turn is a chain of steps. Each step calls the model, which streams its answer. The agent:
@@ -59,7 +67,7 @@ For a dev server or anything else that must keep running, the agent starts the l
 
 ## Artifacts
 
-When the agent has something for you to read — a plan, a report, a design, a page — it stores it as an **artifact**. The artifact panel opens beside the conversation (one artifact at a time, a row of titles when there are several), with **Preview** and **Source** views, a version number, and a **Copy** button. An update to an open artifact doesn't reopen a panel you closed. The **Artifacts (N)** button in the header opens and closes the panel.
+When the agent has something for you to read — a plan, a report, a design, a page — it stores it as an **artifact**. The artifact panel opens beside the conversation (one artifact at a time, a row of titles when there are several), with **Preview** and **Source** views, its kind and version, and icon buttons to open a page in a new tab, copy, and close. An update to an open artifact doesn't reopen a panel you closed. The artifacts button in the header (an icon with the count) opens and closes the panel.
 
 HTML artifacts run in an isolated frame: their scripts work, but they can't reach the network, kvman, or your browser data. A `url` artifact shows a local dev server page (`localhost` or `127.0.0.1`, never kvman itself).
 
