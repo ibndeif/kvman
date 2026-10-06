@@ -4,6 +4,10 @@ This page is for anyone who wants kvman's agent to change kvman itself. When you
 
 The tools for this come from **kvcustomizer**, which the `coder` preset loads. The agent uses them instead of shell lines, so its work is predictable and checked. You never have to know their names; this page lists them so you can tell what the agent is doing when you read its steps.
 
+## You don't need to know kvman's words
+
+Ask in your own words: "I want a page for my notes", "make the app look calmer". When you ask to change the app itself, the agent first reads its guide (`kvman init`), then asks what it still needs to know about the result, such as where something should appear, and not about extensions or settings. It tells you what it will change in plain words on the card that asks you to allow it, shows you a new extension running before it adds it, and tells you how to undo each change.
+
 ## What you can ask for
 
 | You say | The agent uses | Applies |

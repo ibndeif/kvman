@@ -1,0 +1,29 @@
+# QA 35 — `kvman init` in place of kvcustomizer's global prompt section (ADR 0023)
+
+Asked: the customizer's text "is loaded into kvcoder prompt by default" and "will affect the llm accuracy when the user builds something else rather than extensions or presets", and a person who "is not expert and don't know about kvman internal stuff" asks the agent "to customize the app to do x and y". The product owner proposed "a new command 'init customizer' that will load all customizer stuff" and "asks the user about the customization he needs", placed as `kvman init`. Decided in ADR 0023; plan 09 §9.1 and §9.4. This file is the contract; every scenario's test name starts with its id. Backend tests run a test kernel with the fake model.
+
+It changes QA17-E21, QA34-H12, and M2.5-E35, whose subject was the section: they now hold for `init`'s text and the connector index (below).
+
+## Happy path
+
+- **QA35-H1 `init` is the first command of `kvman`.** *Then* the `kvman` connector's first command is `init`, and it runs `kvcustomizer.app.guide.get`; no command of it but the five that change the app asks, `init` included. `extensions/kvcustomizer/test/registration.test.ts`
+- **QA35-H2 The connector's description opens with the trigger.** *Then* it starts "Call `init` first when the person asks to change, extend, or customize the app itself: what it does, how it looks, its model, or its settings.", and the prompt's connector index shows that line. `extensions/kvcustomizer/test/init.test.ts`
+- **QA35-H3 A prompt holds no text of kvcustomizer but its connector lines.** *Given* the `coder` extensions, *then* a new session's prompt has no section of `@kvman/kvcustomizer` and none called `guide`, and doesn't contain "Build an extension, in this order" or "Manage the app:". `extensions/kvcustomizer/test/init.test.ts`
+- **QA35-H4 `init` answers the guide.** *Then* `kvcustomizer.app.guide.get` answers `{ instructions }` equal to the file `docs/init.md`, and it is a public query. `extensions/kvcustomizer/test/init.test.ts`
+- **QA35-H5 The text has three parts, in order.** *Then* `instructions` has "Which app?" (kvman, or the project in the folder), then "What the person wants" (the questions), then "A person who isn't a developer", then "Build an extension, in this order:", "Improve an extension that exists:", and "Manage the app:". `extensions/kvcustomizer/test/init.test.ts`
+- **QA35-H6 It tells the agent how to ask.** *Then* the text says to ask which app with `ask choice` unless the request is clear, to use one `ask text` when the goal isn't known, to ask only about what is missing, one question per `ask` call, with outcomes as options and the recommended one first, and never what `extensions-list`, `settings-list`, or `preset-get` would answer. `extensions/kvcustomizer/test/init.test.ts`
+- **QA35-H7 It has the rules for a person who isn't a developer.** *Then* the text says never to ask about or say extensions, namespaces, presets, setting keys, or commands, not even in a call's `description`; to choose the smallest mechanism and say when kvman can't do it; to preview, give the address, and `ask confirm` before adding an extension; and to say how to undo each change and to restart kvman. `extensions/kvcustomizer/test/init.test.ts`
+- **QA35-H8 The method is kept.** *Then* the build steps are in order (`docs get`, `ext new`, `fs`, `ext check`, `ext test`, `preview start`, `preview query-get`, `preview command-run`, `kvman extensions-install` with `path:notes`), and the QA34-H12 sentences about checking in the preview, the approval, the restart, the four kvcoder settings, and secrets are in it. `extensions/kvcustomizer/test/init.test.ts`
+- **QA35-H9 The old section is removed at start.** *Given* a global section `guide` that `@kvman/kvcustomizer` stored in an earlier version, *when* kvman starts, *then* `kvcoder.section.list` no longer has it, and another extension's `guide` is untouched. `extensions/kvcustomizer/test/init-section-removed.test.ts`
+- **QA35-H10 `customizing` documents `init`.** *Then* the page's connector table lists `init`, and it has the part for a person who isn't a developer; `kvcustomizer.docs.list` still answers only `customizing`. `extensions/kvcustomizer/test/docs-own.test.ts`
+- **QA35-H11 The connectors are as before.** *Then* kvcustomizer's connectors and the commands of each are the QA34 ones, and `kvman` also has `init` (M2.5-E35 and QA34-H4 and H10 are read with it). `extensions/kvcustomizer/test/registration.test.ts`
+
+## Edge cases
+
+- **QA35-E1 `init` never asks, and writes nothing.** *Then* it runs at once under `kvcoder.shell.approval: 'ask'`, and the settings and the preset are unchanged after it. `extensions/kvcustomizer/test/init.test.ts`
+- **QA35-E2 `init` is not a page.** *Then* `kvcustomizer.docs.get { topic: 'init' }` and `{ topic: 'section' }` fail `NOT_FOUND`, and `docs list` doesn't show `init`. `extensions/kvcustomizer/test/docs-own.test.ts`
+- **QA35-E3 It isn't a gate.** *Then* `kvman settings-list` answers without `init` having run. `extensions/kvcustomizer/test/init.test.ts`
+- **QA35-E4 Removing the old section twice, or with none, is harmless.** *Then* two starts in a row, the first with no stored `guide`, both succeed. `extensions/kvcustomizer/test/init-section-removed.test.ts`
+- **QA35-E5 A summary may drop the guide.** *Then* the text says to call `init` again if the guide is no longer in view. `extensions/kvcustomizer/test/init.test.ts`
+- **QA35-E6 No secret.** *Then* the text says the agent never reads, lists, or changes a secret, and there is no command that runs an arbitrary command of the app (QA17-E15's rule). `extensions/kvcustomizer/test/init.test.ts`
+- **QA35-E7 The text is within a section's size.** *Then* `instructions` is at most 16 KB, so it fits any limit that a section had. `extensions/kvcustomizer/test/init.test.ts`

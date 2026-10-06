@@ -12,7 +12,7 @@ The product owner asked for a prompt that prioritizes connectors and makes the m
 - **QA5-H5 `fs` is for every file.** *Then* its index entry says to use it for every file the model creates or changes, and still names `write`, `edit`, and the `-h` hint. (`extensions/kvcoder/test/prompt.test.ts`)
 - **QA5-H6 The experience line is gone.** *Then* the base prompt has no "20 years" line. (`extensions/kvcoder/test/unit/prompt-build.test.ts`)
 - **QA5-H7 kvdev's connectors say when to use them.** *Then* `kvcoder.connector.list` gives `ext` a description that says to run `check`, then `test`, after changing an extension; `preset` one that says to check a preset before running it; `preview` one that says to stop it when done; and `docs` one that says to read it before writing an extension, preset, view, or component. (`extensions/kvdev/test/registration.test.ts`)
-- **QA5-H8 kvdev's guide sends file edits to `fs`.** *Then* the `guide` section says to use the `ext`, `preset`, `preview`, and `docs` connectors for everything they cover, and to edit a project's files with `fs`, and no longer says "with the shell". (`extensions/kvdev/test/registration.test.ts`)
+- **QA5-H8 kvdev's guide sends file edits to `fs`.** *Then* the `guide` section says to use the `ext`, `preset`, `preview`, and `docs` connectors for everything they cover, and to edit a project's files with `fs`, and no longer says "with the shell". (`extensions/kvdev/test/registration.test.ts`) *Changed by QA 35 (ADR 0023): there is no `guide` section; the text is `kvman init`'s result.*
 
 ## Edge cases
 

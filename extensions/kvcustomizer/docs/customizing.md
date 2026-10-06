@@ -1,6 +1,6 @@
 # Customizing kvman
 
-kvcustomizer is the extension that lets kvman's agent build and manage kvman itself. It adds connectors to kvcoder and a short guide to the agent's prompt. It has no agent of its own, and everything it does for extensions is also available to any other harness, or to a person, through the testkit's command-line tools.
+kvcustomizer is the extension that lets kvman's agent build and manage kvman itself. It adds connectors to kvcoder, and nothing else to the agent's prompt: the agent reads its guide with `kvman init` when the person asks to change the app itself. It has no agent of its own, and everything it does for extensions is also available to any other harness, or to a person, through the testkit's command-line tools.
 
 ## The connectors
 
@@ -8,7 +8,7 @@ The agent calls each connector with kvcoder's `run` tool: `run { description, co
 
 | Connector | Commands | Use it to |
 |---|---|---|
-| `kvman` | `model-list`, `model-set`, `settings-list`, `settings-set`, `settings-reset`, `extensions-list`, `extensions-install`, `extensions-uninstall`, `preset-get`, `workspaces-list`, `jobs-list`, `jobs-get`, `processes-list`, `health-get`, `query-get` | see and change the app you are running in: its default model, settings, extensions, and preset; its workspaces, jobs, processes, and health; and any public query of an installed extension |
+| `kvman` | `init`, `model-list`, `model-set`, `settings-list`, `settings-set`, `settings-reset`, `extensions-list`, `extensions-install`, `extensions-uninstall`, `preset-get`, `workspaces-list`, `jobs-list`, `jobs-get`, `processes-list`, `health-get`, `query-get` | read the guide for changing the app (`init`), and see and change the app you are running in: its default model, settings, extensions, and preset; its workspaces, jobs, processes, and health; and any public query of an installed extension |
 | `ext` | `new`, `list`, `check`, `test` | scaffold an extension project in the workspace, list the projects, type-check one and see what kvman would refuse, run its tests |
 | `preset` | `new`, `check` | write a preset file and check it before running it |
 | `preview` | `start`, `stop`, `status`, `query-get`, `command-run` | run projects in a separate kvman, get its URL, and call their commands and queries there |
@@ -33,6 +33,21 @@ The payload is the command's input as JSON:
 ```
 
 A command that takes nothing, such as `ext list`, `kvman preset-get`, `kvman health-get`, or `docs list`, needs no payload.
+
+## `kvman init`: the guide for changing the app
+
+The agent's prompt holds no guide to customizing. The `kvman` connector's description, which is always in the prompt's connector index, opens "Call `init` first when the person asks to change, extend, or customize the app itself: what it does, how it looks, its model, or its settings." `kvman init` takes nothing and answers `{ instructions }`: what to ask the person, the rules below, and the method of the next parts. It only reads, never asks the person, and isn't a gate: the other `kvman` commands work without it. A summary of the chat may drop its result, so the text says to call `init` again then.
+
+## Talking with a person who isn't a developer
+
+`init` tells the agent to choose the mechanism and leave the person to choose the result:
+
+- **Which app?** "The app" can mean kvman or the project in the workspace folder; the agent asks once, with a choice, unless the request is clear.
+- **Ask about the result, and only what is missing.** One question per `ask` call, the options written as outcomes, the recommended one first. It never asks what `extensions-list`, `settings-list`, or `preset-get` would answer.
+- **No kvman words.** Extensions, namespaces, presets, setting keys, and commands stay out of what the agent asks and says, and out of a call's `description`, which is the text of the approval card.
+- **Look, then use the smallest thing.** A setting, then an extension that is installed, then one the agent builds, and a new preset only for a different app. If kvman can't do it, the agent says so.
+- **Show before changing.** For an extension it built, the agent starts the preview, gives the address, and asks the person to confirm before it adds the extension to the app.
+- **Undo and restart.** The agent says how to undo each change (`settings-reset`, `extensions-uninstall`), that kvman must be restarted after a change to the extensions, and what is still unchecked.
 
 ## Building an extension, step by step
 

@@ -41,6 +41,7 @@ declare module '@kvman/sdk' {
     'kvcustomizer.app.processes.list': KernelQueries['kernel.processes.list'];
     'kvcustomizer.app.health.get': KernelQueries['kernel.health.get'];
     'kvcustomizer.app.query.get': { input: { name: string; input?: Record<string, unknown> }; output: unknown };
+    'kvcustomizer.app.guide.get': { input: Empty; output: { instructions: string } };
     'kvcustomizer.guides.list': { input: Empty; output: { pages: Guide[]; problems: { extension: string; problem: { code: string; message: string; params?: Record<string, unknown> } }[] } };
     'kvcustomizer.guides.get': { input: { extension?: string; topic: string }; output: Guide & { markdown: string } };
     'kvcustomizer.docs.list': { input: Empty; output: { topic: string; title: string }[] };

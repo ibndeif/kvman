@@ -2,17 +2,17 @@ import { fileURLToPath } from 'node:url';
 import { z, type Ctx } from '@kvman/sdk';
 import { listPages, noSuchTopic, readPage } from './pages.ts';
 
-// kvcustomizer's own docs pair (plan 09 §9.5, ADR 0010, 22): the pages in its `docs/` folder, except `section.md`,
-// which is prompt text. The folder sits next to `src/` and `dist/`.
+// kvcustomizer's own docs pair (plan 09 §9.5, ADR 0010, 22): the pages in its `docs/` folder, except `init.md`, which
+// is the text `kvman init` returns (ADR 0023). The folder sits next to `src/` and `dist/`.
 
 const docsFolder = fileURLToPath(new URL('../../docs/', import.meta.url));
 
-const notPages = ['section'] as const;
+const notPages = ['init'] as const;
 
-/** The text of the global prompt section (`docs/section.md`). */
-export function readSection(): string {
-  const page = readPage(docsFolder, 'section');
-  if (page === undefined) throw new Error('docs/section.md is missing.');
+/** The text `kvman init` returns (`docs/init.md`). */
+export function readInstructions(): string {
+  const page = readPage(docsFolder, 'init');
+  if (page === undefined) throw new Error('docs/init.md is missing.');
   return page.markdown;
 }
 

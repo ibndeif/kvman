@@ -14,8 +14,10 @@ describe("kvcustomizer's own docs pair (09 §9.5, ADR 0010, 22)", { timeout: 30_
     const { kernel } = await kvcustomizer.start();
     const markdown = readFileSync(path.join(docsFolder, 'customizing.md'), 'utf8');
     expect(await kernel.exec('kvcustomizer.docs.list', {})).toEqual([{ topic: 'customizing', title: 'Customizing kvman' }]);
+    expect(markdown).toContain('| `kvman` | `init`, `model-list`');
+    expect(markdown).toContain("## Talking with a person who isn't a developer");
     expect(await kernel.exec('kvcustomizer.docs.get', { topic: 'customizing' })).toEqual({ topic: 'customizing', title: 'Customizing kvman', markdown });
-    for (const topic of ['nope', '../x', 'section']) await expect(kernel.exec('kvcustomizer.docs.get', { topic }), topic).rejects.toEqual(failed('NOT_FOUND'));
+    for (const topic of ['nope', '../x', 'section', 'init']) await expect(kernel.exec('kvcustomizer.docs.get', { topic }), topic).rejects.toEqual(failed('NOT_FOUND'));
     const extension = (await kernel.exec('kernel.extensions.list', {})).find((candidate) => candidate.name === '@kvman/kvcustomizer');
     for (const name of ['kvcustomizer.docs.list', 'kvcustomizer.docs.get', 'kvcustomizer.guides.list', 'kvcustomizer.guides.get']) {
       expect(extension?.queries.find((query) => query.name === name)?.public, name).toBe(true);
