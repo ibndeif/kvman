@@ -4,13 +4,13 @@ This page is for someone who has never built a kvman extension. In about 15 minu
 
 You need Node.js 24 and npm.
 
-## 1. Install kvman
+## 1. Install kvman and its tools
 
 ```sh
-npm i -g kvman
+npm i -g kvman @kvman/testkit
 ```
 
-This also gives you the tools (`kvman-new`, `kvman-check`, …) through `@kvman/testkit`, which every scaffolded project depends on.
+`kvman` is the app. `@kvman/testkit` puts the tools on your PATH: `kvman-new`, `kvman-check`, `kvman-preset`, `kvman-preview`, and `kvman-docs`. Every scaffolded project also depends on it, for its tests and `npm run check`.
 
 ## 2. Scaffold an extension
 

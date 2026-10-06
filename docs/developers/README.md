@@ -22,6 +22,8 @@ The agent's connectors run the same tools underneath, so all three ways give the
 | `kvman-preview <folder>…` | runs the projects in a separate kvman on a temporary home |
 | `kvman-docs list\|get` | reads the guides and the pages every installed extension serves about itself |
 
+`npm i -g @kvman/testkit` puts these tools on your PATH; installing `kvman` alone doesn't.
+
 ## How the pieces fit
 
 - The **kernel** runs **extensions**: it keeps jobs, workers, storage, workspaces, settings, and secrets, and serves an HTTP API. It knows no product concept.
