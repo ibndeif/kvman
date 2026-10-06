@@ -1,6 +1,6 @@
 # 11 — Bundled presets
 
-The bundled preset uses bundled extensions only (ADR 0010, 4). Their titles are translation keys with `en` and `ar` entries.
+The bundled preset is a file of the `kvman` package, `packages/cli/presets/coder.json` (ADR 0026, 4). It uses bundled extensions only (ADR 0010, 4). Their titles are translation keys with `en` and `ar` entries.
 
 | Preset | Extensions | Settings |
 |---|---|---|

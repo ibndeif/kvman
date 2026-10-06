@@ -1,25 +1,32 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from '@kvman/sdk';
 
-// What ships with kvman (plan 01 §1.4): the bundled presets in `presets/`, and the bundled extensions in
-// `extensions/*`, each named by its package.json. Both folders sit at the root, beside `packages/`.
+// What ships with kvman (plan 01 §1.4, ADR 0026): the bundled presets in the package's own `presets/`, and the bundled
+// extensions, which are the package's dependencies that have a `kvman` field. Each is found as Node resolves any
+// module, so the repository and an installed kvman take the same path.
 
-const root = fileURLToPath(new URL('../../../', import.meta.url));
+const packageFolder = fileURLToPath(new URL('../', import.meta.url));
 
-export const bundledPresetsFolder = path.join(root, 'presets');
+export const bundledPresetsFolder = path.join(packageFolder, 'presets');
 
-const packageSchema = z.object({ name: z.string().min(1) });
+const packageSchema = z.object({ dependencies: z.record(z.string(), z.string()).optional() });
+const dependencySchema = z.object({ kvman: z.unknown().optional() });
 
-export function bundledExtensions(folder: string = path.join(root, 'extensions')): ReadonlyMap<string, string> {
-  if (!existsSync(folder)) return new Map();
+function readJson(file: string): unknown {
+  return JSON.parse(readFileSync(file, 'utf8'));
+}
+
+export function bundledExtensions(folder: string = packageFolder): ReadonlyMap<string, string> {
+  const manifestFile = path.join(folder, 'package.json');
+  const resolveFromPackage = createRequire(manifestFile).resolve;
   const extensions = new Map<string, string>();
-  for (const entry of readdirSync(folder, { withFileTypes: true })) {
-    const manifest = path.join(folder, entry.name, 'package.json');
-    if (!entry.isDirectory() || !existsSync(manifest)) continue;
-    const { name } = packageSchema.parse(JSON.parse(readFileSync(manifest, 'utf8')));
-    extensions.set(name, path.join(folder, entry.name));
+  for (const name of Object.keys(packageSchema.parse(readJson(manifestFile)).dependencies ?? {})) {
+    const dependencyManifest = resolveFromPackage(`${name}/package.json`);
+    if (dependencySchema.parse(readJson(dependencyManifest)).kvman === undefined) continue;
+    extensions.set(name, path.dirname(dependencyManifest));
   }
   return extensions;
 }

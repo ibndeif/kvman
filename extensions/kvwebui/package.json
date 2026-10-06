@@ -1,8 +1,17 @@
 {
   "name": "@kvman/kvwebui",
   "version": "0.1.0",
-  "private": true,
   "description": "kvwebui: the kvman web app, built from what the extensions contribute.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ibndeif/kvman.git",
+    "directory": "extensions/kvwebui"
+  },
+  "homepage": "https://github.com/ibndeif/kvman#readme",
+  "bugs": {
+    "url": "https://github.com/ibndeif/kvman/issues"
+  },
   "type": "module",
   "main": "dist/index.js",
   "exports": {
@@ -10,7 +19,8 @@
       "@kvman/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",

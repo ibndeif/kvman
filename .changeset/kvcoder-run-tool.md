@@ -1,5 +1,0 @@
----
-'@kvman/kvcoder': minor
----
-
-The agent's one tool is now `run { description, connector, command, payload }`, and a connector is the only way it acts (ADR 0011). The shell is the connector `shell` (`exec { line, background?, timeoutMs?, risky? }`); `fs` gains `read`, `list`, and `search`; the new `background` connector lists, reads, and stops what a chat left running; a binary connector is called by its name with `exec` and `help` (and may register `binary.help`). Every connector has `help`, and the prompt lists each connector with its description and command names. Every built-in connector command is a private kvcoder command or query run with `ctx.exec`. Removed: the `bash`/`powershell` tool, connector calls as shell lines, heredoc bodies, `--async`, the `jobs` connector, `kvcoder.connector.run`, and `subagent run`'s `shell` field. A connector command can't be named `help`. `runConnector` in `@kvman/kvcoder/testing` takes `{ connector, command, payload? }`. The custom component `kvcoder.shell-result` is now `kvcoder.call`. `kvcoder.connector.register` also takes `{ connectors: [ … ] }`, which registers several connectors together or none.

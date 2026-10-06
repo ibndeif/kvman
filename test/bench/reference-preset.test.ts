@@ -11,7 +11,7 @@ describe('the preset of the start benchmarks (plan 12 §12.3, ADR 0011, 27)', ()
   it("QA18-H28 cold start and idle RSS both run the coder preset with the reference machine's 3 workers", () => {
     const root = mkdtempSync(path.join(tmpdir(), 'bench-preset-'));
     try {
-      const coder = read(fileURLToPath(new URL('../../presets/coder.json', import.meta.url)));
+      const coder = read(fileURLToPath(new URL('../../packages/cli/presets/coder.json', import.meta.url)));
       const reference = read(writeReferencePreset(root));
       expect(reference.extensions).toEqual(coder.extensions);
       expect(reference.settings).toEqual({ ...coder.settings, 'kernel.workers': 3 });

@@ -2,6 +2,16 @@
   "name": "@kvman/sdk",
   "version": "0.1.0",
   "description": "The kvman extension API: the ctx types, zod, and the shared shapes.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ibndeif/kvman.git",
+    "directory": "packages/sdk"
+  },
+  "homepage": "https://github.com/ibndeif/kvman#readme",
+  "bugs": {
+    "url": "https://github.com/ibndeif/kvman/issues"
+  },
   "type": "module",
   "exports": {
     ".": {

@@ -34,7 +34,7 @@ Follow semver. Because users pin an exact version, a bad release is fixed by a n
 
 ## Changesets in this repository
 
-Contributors to kvman itself: every change to `@kvman/sdk`, `@kvman/testkit`, or an extension needs a changeset (`.changeset/<name>.md` with the package and the bump); the kernel and the CLI follow the root version. See [contributing.md](contributing.md).
+Contributors to kvman itself: every change to `@kvman/sdk`, `@kvman/testkit`, or an extension needs a changeset (`.changeset/<name>.md` with the package and the bump); the kernel and the CLI follow the root version. A release is a pushed tag `v<root version>`, which the release workflow publishes to npm; the steps are in the repository's README. See [contributing.md](contributing.md).
 
 ## Migrating from kvdev
 

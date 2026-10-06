@@ -131,7 +131,7 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 **Entry.** The entry (`main`, or `source`) default-exports `(ctx) => void`, which registers the extension's commands, queries, and settings (§3.1). It runs in every worker when the worker loads.
 
 **Sources** (named in the preset, §2.10):
-- `bundled`: a core extension shipped with kvman.
+- `bundled`: a core extension shipped with kvman: a dependency of the `kvman` package that has a `kvman` field (ADR 0026, 3).
 - `npm:<exact version>`: the kernel runs `npm install --ignore-scripts --omit=dev --legacy-peer-deps --prefix extensions/<name>@<version> <name>@<version>` (skipping peers, since the kernel supplies `@kvman/sdk`). npm must be on the PATH. A failed install fails `EXTENSION_INVALID` and removes the partial folder (ADR 0009, 47).
 - `path:<folder>`: a local folder, relative to the preset file.
 

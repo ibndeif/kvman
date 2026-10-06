@@ -1,8 +1,17 @@
 {
   "name": "@kvman/kvcoder",
   "version": "0.1.0",
-  "private": true,
   "description": "kvcoder: the app-building harness, with one run tool over connectors, sections, and its conversation UI.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ibndeif/kvman.git",
+    "directory": "extensions/kvcoder"
+  },
+  "homepage": "https://github.com/ibndeif/kvman#readme",
+  "bugs": {
+    "url": "https://github.com/ibndeif/kvman/issues"
+  },
   "type": "module",
   "main": "dist/index.js",
   "exports": {
@@ -15,7 +24,8 @@
       "@kvman/source": "./src/connector-call.ts",
       "types": "./dist/connector-call.d.ts",
       "default": "./dist/connector-call.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "docs",
@@ -30,13 +40,13 @@
     "@kvman/sdk": "^0.1.0"
   },
   "dependencies": {
+    "@kvman/kvai": "workspace:*",
     "@lucide/vue": "1.49.0",
     "@modelcontextprotocol/sdk": "1.32.1",
     "cross-spawn": "7.0.6",
     "vue": "3.5.43"
   },
   "devDependencies": {
-    "@kvman/kvai": "workspace:*",
     "@kvman/kvwebui": "workspace:*",
     "@kvman/sdk": "workspace:*",
     "@kvman/testkit": "workspace:*",

@@ -2,6 +2,16 @@
   "name": "@kvman/testkit",
   "version": "0.1.0",
   "description": "createTestKernel: the real kvman kernel for extension tests.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ibndeif/kvman.git",
+    "directory": "packages/testkit"
+  },
+  "homepage": "https://github.com/ibndeif/kvman#readme",
+  "bugs": {
+    "url": "https://github.com/ibndeif/kvman/issues"
+  },
   "type": "module",
   "exports": {
     ".": {

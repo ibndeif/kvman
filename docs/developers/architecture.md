@@ -45,11 +45,10 @@ A pnpm monorepo, Node 24, TypeScript 6.0 strict.
 | Package | Is | May import |
 |---|---|---|
 | `packages/sdk` | The extension API: `ctx` types, zod, and the shared shapes. Published as `@kvman/sdk`. | `zod` |
-| `packages/kernel` | Everything the kernel does, including HTTP. | `sdk`, its declared dependencies |
-| `packages/cli` | The `kvman` bin; it runs the kernel in the same process, with the bundled extensions and presets. | `kernel`, `sdk` |
-| `packages/testkit` | `createTestKernel` and the bins `kvman-check`, `kvman-new`, `kvman-preset`, `kvman-preview`, `kvman-docs`. | `kernel`, `sdk` |
-| `extensions/*` | kvai, kvwebui, kvcoder, kvcustomizer. | `sdk`, their own npm dependencies; never `kernel`; another extension only when it is a `kvman.dependencies` entry: `import type`, or a runtime import of a subpath it exports (which may import only `sdk` and holds no state) |
-| `presets/` | `coder.json`. | — |
+| `packages/kernel` | Everything the kernel does, including HTTP. Published as `@kvman/kernel`. | `sdk`, its declared dependencies |
+| `packages/cli` | The `kvman` bin; it runs the kernel in the same process. Published as `kvman`, with the bundled presets inside (`packages/cli/presets/`); the bundled extensions are its dependencies. | `kernel`, `sdk` |
+| `packages/testkit` | `createTestKernel` and the bins `kvman-check`, `kvman-new`, `kvman-preset`, `kvman-preview`, `kvman-docs`. Published as `@kvman/testkit`. | `kernel`, `sdk` |
+| `extensions/*` | kvai, kvwebui, kvcoder, kvcustomizer. Each is published under its own name, such as `@kvman/kvai`. | `sdk`, their own npm dependencies; never `kernel`; another extension only when it is a `kvman.dependencies` entry: `import type`, or a runtime import of a subpath it exports (which may import only `sdk` and holds no state) |
 
 The **import walls** are enforced by ESLint and are never bypassed. They make the kernel replaceable and extensions independent: an extension can't reach into the kernel, so everything it does goes through the SDK and the job calls, which is what makes a preset's extension set free to change. kvcustomizer finds the testkit's bins as files of its own dependency and runs them as child processes, so it never imports the testkit either.
 

@@ -2,13 +2,24 @@
   "name": "@kvman/kernel",
   "version": "0.1.0",
   "description": "The kvman kernel: jobs, workers, storage, extensions, and HTTP.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ibndeif/kvman.git",
+    "directory": "packages/kernel"
+  },
+  "homepage": "https://github.com/ibndeif/kvman#readme",
+  "bugs": {
+    "url": "https://github.com/ibndeif/kvman/issues"
+  },
   "type": "module",
   "exports": {
     ".": {
       "@kvman/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",

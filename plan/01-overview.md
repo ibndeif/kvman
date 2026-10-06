@@ -25,7 +25,7 @@ kvman --help | --version
 - **Exit codes.** A clean stop exits 0; a failed start exits 1; a second Ctrl+C or SIGTERM exits 130 at once (ADR 0009, 50).
 - **Platforms:** Linux, macOS, and Windows, natively.
 - There is no other `kvman` subcommand in this phase. Everything else goes through the web UI or the HTTP API (§4).
-- **Installing.** `npm i -g kvman`. The `kvman` package holds the kernel, the bundled extensions, and the bundled presets.
+- **Installing.** `npm i -g kvman`. The `kvman` package holds the CLI and the bundled presets, and depends on the kernel and the bundled extensions, so npm installs them with it (ADR 0026).
 
 ## 1.3 The home folder
 
@@ -44,18 +44,17 @@ The default is `~/.kvman`; `--home <dir>` or `KVMAN_HOME` overrides it.
 
 ## 1.4 Packages
 
-A pnpm monorepo, Node 24, TypeScript 6.0 strict (ADR 0009). The tools are ESLint with typescript-eslint, Vitest, and Changesets. There is no CI in this phase: the gates run locally, on the developer's OS.
+A pnpm monorepo, Node 24, TypeScript 6.0 strict (ADR 0009). The tools are ESLint with typescript-eslint, Vitest, and Changesets. The gates run locally, on the developer's OS. The only CI is the release workflow, which publishes to npm when a version tag is pushed (ADR 0026, 8).
 
 | Package | Is | May import |
 |---|---|---|
 | `packages/sdk` | The extension API: `ctx` types, zod, and the shared shapes (preset, extension manifest, Problem, job, envelope). Published as `@kvman/sdk`. | `zod` |
 | `packages/kernel` | Everything the kernel does, including HTTP. Published as `@kvman/kernel`, at the root version. | `sdk`, its declared dependencies |
-| `packages/cli` | The `kvman` bin; it runs the kernel in the same process. Published as `kvman`, with the bundled extensions and presets inside. | `kernel`, `sdk` |
+| `packages/cli` | The `kvman` bin; it runs the kernel in the same process. Published as `kvman`, with the bundled presets inside (`packages/cli/presets/`: `coder.json`); the bundled extensions are its dependencies that have a `kvman` field (ADR 0026, 3). | `kernel`, `sdk` |
 | `packages/testkit` | `createTestKernel` for tests, and the bins that build and check extensions for any harness: `kvman-check`, `kvman-new`, `kvman-preset`, `kvman-preview` (§10). Published as `@kvman/testkit`. | `kernel`, `sdk` |
-| `extensions/*` | kvai, kvwebui, kvcoder, kvcustomizer. Not published on their own. | `sdk`, their own npm dependencies; never `kernel`; another extension only when it is a `kvman.dependencies` entry: `import type`, or a runtime import of a subpath it exports (such a subpath may import only `sdk` and holds no state) |
-| `presets/` | `coder.json`. | — |
+| `extensions/*` | kvai, kvwebui, kvcoder, kvcustomizer. Published as `@kvman/kvai`, `@kvman/kvwebui`, `@kvman/kvcoder`, and `@kvman/kvcustomizer` (ADR 0026, 1). | `sdk`, their own npm dependencies; never `kernel`; another extension only when it is a `kvman.dependencies` entry: `import type`, or a runtime import of a subpath it exports (such a subpath may import only `sdk` and holds no state) |
 
-Extensions list `@kvman/sdk` as a peerDependency, and every extension shares the kernel's own copy (§2.9). At runtime, extensions talk to each other only through `ctx.exec` and the other job calls (§3). Type-only imports exist for typed calls (§3.2). An extension may export subpaths that its dependents import (ADR 0001, 89). To let others register things with it, an extension exposes public commands and keeps what it receives in its own store (ADR 0001, 91).
+Extensions list `@kvman/sdk` as a peerDependency, and every extension shares the kernel's own copy (§2.9). At runtime, extensions talk to each other only through `ctx.exec` and the other job calls (§3). Type-only imports exist for typed calls (§3.2). An extension may export subpaths that its dependents import (ADR 0001, 89); a dependent that imports one at runtime also lists that extension in its npm `dependencies` (ADR 0026, 5). To let others register things with it, an extension exposes public commands and keeps what it receives in its own store (ADR 0001, 91).
 
 ## 1.5 Core extensions
 

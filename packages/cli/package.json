@@ -2,9 +2,20 @@
   "name": "kvman",
   "version": "0.1.0",
   "description": "kvman, an app that works like a small operating system: a kernel runs extensions, and a preset shapes them.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ibndeif/kvman.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/ibndeif/kvman#readme",
+  "bugs": {
+    "url": "https://github.com/ibndeif/kvman/issues"
+  },
   "type": "module",
   "files": [
-    "dist"
+    "dist",
+    "presets"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -15,6 +26,10 @@
   },
   "dependencies": {
     "@kvman/kernel": "workspace:*",
+    "@kvman/kvai": "workspace:*",
+    "@kvman/kvcoder": "workspace:*",
+    "@kvman/kvcustomizer": "workspace:*",
+    "@kvman/kvwebui": "workspace:*",
     "@kvman/sdk": "workspace:*"
   }
 }

@@ -14,7 +14,7 @@ This page is for installing kvman on your computer and learning its command line
 npm i -g kvman
 ```
 
-The `kvman` package holds the kernel, the bundled extensions, and the bundled presets, so everything you need arrives in one install.
+The `kvman` package holds the bundled presets, and npm installs the kernel and the bundled extensions with it, so everything you need arrives in one install.
 
 Check it worked:
 

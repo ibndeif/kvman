@@ -198,7 +198,7 @@ importers:
     dependencies:
       '@earendil-works/pi-ai':
         specifier: 0.99.1
-        version: 0.99.1(@aws-sdk/credential-provider-node@3.972.84)(@smithy/signature-v4@5.7.4)(ws@8.22.0)(zod@4.6.5)
+        version: 0.99.1(@aws-sdk/credential-provider-node@3.972.84)(@modelcontextprotocol/sdk@1.32.1(zod@4.6.5))(@smithy/signature-v4@5.7.4)(ws@8.22.0)(zod@4.6.5)
       vue:
         specifier: 3.5.43
         version: 3.5.43(typescript@6.0.3)
@@ -227,6 +227,9 @@ importers:
 
   extensions/kvcoder:
     dependencies:
+      '@kvman/kvai':
+        specifier: workspace:*
+        version: link:../kvai
       '@lucide/vue':
         specifier: 1.49.0
         version: 1.49.0(vue@3.5.43(typescript@6.0.3))
@@ -240,9 +243,6 @@ importers:
         specifier: 3.5.43
         version: 3.5.43(typescript@6.0.3)
     devDependencies:
-      '@kvman/kvai':
-        specifier: workspace:*
-        version: link:../kvai
       '@kvman/kvwebui':
         specifier: workspace:*
         version: link:../kvwebui
@@ -365,6 +365,18 @@ importers:
       '@kvman/kernel':
         specifier: workspace:*
         version: link:../kernel
+      '@kvman/kvai':
+        specifier: workspace:*
+        version: link:../../extensions/kvai
+      '@kvman/kvcoder':
+        specifier: workspace:*
+        version: link:../../extensions/kvcoder
+      '@kvman/kvcustomizer':
+        specifier: workspace:*
+        version: link:../../extensions/kvcustomizer
+      '@kvman/kvwebui':
+        specifier: workspace:*
+        version: link:../../extensions/kvwebui
       '@kvman/sdk':
         specifier: workspace:*
         version: link:../sdk
@@ -3051,12 +3063,12 @@ snapshots:
       fast-wrap-ansi: 0.2.2
       sisteransi: 1.0.5
 
-  '@earendil-works/pi-ai@0.99.1(@aws-sdk/credential-provider-node@3.972.84)(@smithy/signature-v4@5.7.4)(ws@8.22.0)(zod@4.6.5)':
+  '@earendil-works/pi-ai@0.99.1(@aws-sdk/credential-provider-node@3.972.84)(@modelcontextprotocol/sdk@1.32.1(zod@4.6.5))(@smithy/signature-v4@5.7.4)(ws@8.22.0)(zod@4.6.5)':
     dependencies:
       '@anthropic-ai/sdk': 0.124.0(zod@4.6.5)
       '@aws-sdk/client-bedrock-runtime': 3.1127.0
       '@earendil-works/pi-telemetry': 0.99.1
-      '@google/genai': 2.21.0
+      '@google/genai': 2.21.0(@modelcontextprotocol/sdk@1.32.1(zod@4.6.5))
       '@smithy/node-http-handler': 4.12.1
       http-proxy-agent: 9.1.0
       https-proxy-agent: 9.1.0
@@ -3114,12 +3126,14 @@ snapshots:
 
   '@fontsource/ibm-plex-sans@5.3.0': {}
 
-  '@google/genai@2.21.0':
+  '@google/genai@2.21.0(@modelcontextprotocol/sdk@1.32.1(zod@4.6.5))':
     dependencies:
       google-auth-library: 10.9.1
       p-retry: 4.6.2
       protobufjs: 7.6.6
       ws: 8.22.0
+    optionalDependencies:
+      '@modelcontextprotocol/sdk': 1.32.1(zod@4.6.5)
     transitivePeerDependencies:
       - bufferutil
       - supports-color

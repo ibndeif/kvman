@@ -1,8 +1,17 @@
 {
   "name": "@kvman/kvcustomizer",
   "version": "0.1.0",
-  "private": true,
   "description": "kvcustomizer: the kvcoder extension for customizing kvman, building extensions and presets and managing the running app.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ibndeif/kvman.git",
+    "directory": "extensions/kvcustomizer"
+  },
+  "homepage": "https://github.com/ibndeif/kvman#readme",
+  "bugs": {
+    "url": "https://github.com/ibndeif/kvman/issues"
+  },
   "type": "module",
   "main": "dist/index.js",
   "exports": {
@@ -10,7 +19,8 @@
       "@kvman/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",
