@@ -38,4 +38,10 @@ describe('the release workflow (ADR 0026)', () => {
       expect(readFileSync(path.join(root, file), 'utf8'), file).not.toContain('_authToken');
     }
   });
+
+  it('QA38-E6 every action is pinned to a commit, with its version as a comment', () => {
+    const uses = workflow.match(/uses: .*/g) ?? [];
+    expect(uses).toHaveLength(3);
+    for (const line of uses) expect(line).toMatch(/^uses: [\w-]+\/[\w-]+@[0-9a-f]{40} # v\d+\.\d+\.\d+$/);
+  });
 });
