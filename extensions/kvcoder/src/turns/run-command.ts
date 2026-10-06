@@ -22,8 +22,8 @@ import type { HeldResult, SessionDoc } from '../schemas/records.ts';
 /** A call's result before it is held for its tool call. */
 export type CallDone = Pick<HeldResult, 'text' | 'details' | 'isError'>;
 
-/** The kernel job behind a connector command; `builtin` is set for kvcoder's own. */
-export type CommandTarget = { registration: string; builtin?: ConnectorCommand };
+/** The kernel job behind a connector command; `builtin` is set for kvcoder's own, and `asks` for a registered command the person approves first. */
+export type CommandTarget = { registration: string; builtin?: ConnectorCommand; asks?: boolean };
 
 /** The job a call's connector command runs, or `undefined` when the connector has no such command. */
 export function targetOf(connectors: readonly ConnectorRow[], call: Pick<RunCall, 'connector' | 'command'>): CommandTarget | undefined {
@@ -35,7 +35,7 @@ export function targetOf(connectors: readonly ConnectorRow[], call: Pick<RunCall
   const connector = connectors.find((candidate) => candidate.name === call.connector);
   if (connector?.kind === 'binary') return call.command === 'exec' ? { registration: binaryExec.registration, builtin: binaryExec } : undefined;
   const command = connector?.commands?.find((candidate) => candidate.name === call.command);
-  return command === undefined ? undefined : { registration: command.command };
+  return command === undefined ? undefined : { registration: command.command, asks: command.asks };
 }
 
 /** The commands a connector has, besides `help`, as a failed call lists them: one of kvcoder's own with its payload's signature (ADR 0012, 19). */

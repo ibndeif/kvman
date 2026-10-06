@@ -97,6 +97,8 @@ Five kinds of call can change things outside the agent's own work: a shell line,
 - **auto** (the default) — kvman asks unless the agent marks the call as not risky. A call is risky when it could lose something that isn't the agent's own work, or reaches outside the workspace.
 - **ask** — every such call asks.
 
+One more kind always asks, whatever this setting says: a connector's command that its extension marked as needing your approval. The `kvman` connector's changes to the app are such commands (see [customizing-with-the-agent.md](customizing-with-the-agent.md)).
+
 When a call asks, you see a card with its description and the line it would run, or the file it would change, with **Allow**, **Deny**, and **Allow all** / **Deny all** when several are pending. A denied call returns "denied by the user" to the agent. Reading, listing, and searching files never ask.
 
 A shell line times out after 120 s by default (the agent may ask for up to 600 s). When a line ends, anything it left running is stopped.

@@ -1,10 +1,13 @@
-// The `preview` connector (plan 09 §9.1 and §9.3): runs projects in a separate kvman.
+// The `preview` connector (plan 09 §9.1 and §9.3; ADR 0022, 8): runs projects in a separate kvman, and calls them there.
 export const previewConnector = {
   name: 'preview',
-  description: 'Run kvman extension projects in a separate kvman with a temporary home. Use it to show the person an extension project working, and stop it when you are done. It runs nothing else: start any other app or page with shell.',
+  description:
+    'Run kvman extension projects in a separate kvman with a temporary home. Use it to show the person an extension project working, to check a project by calling its commands and queries, and stop it when you are done. It runs nothing else: start any other app or page with shell.',
   commands: [
     { name: 'start', command: 'kvcustomizer.preview.start', examples: [{ description: 'Preview the notes project', input: { extensions: ['notes'] } }] },
     { name: 'stop', command: 'kvcustomizer.preview.stop' },
     { name: 'status', command: 'kvcustomizer.preview.status' },
+    { name: 'query-get', command: 'kvcustomizer.preview.query.get', examples: [{ description: "Read the previewed project's data", input: { name: 'notes.item.list' } }] },
+    { name: 'command-run', command: 'kvcustomizer.preview.command.run', examples: [{ description: 'Run a command of the previewed project', input: { name: 'notes.item.add', input: { text: 'Milk' } } }] },
   ],
 };

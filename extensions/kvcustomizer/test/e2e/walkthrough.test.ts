@@ -34,7 +34,7 @@ async function approveUntilDone(kvman: Kvman, sessionId: string): Promise<void> 
 }
 
 describe('the walkthrough (09, 13 M2.5)', () => {
-  it('M2.5-H1 in the coder preset the agent scaffolds, tests, lists, checks, and previews an extension, and an edit hot-reloads', async () => {
+  it('M2.5-H1 and QA34-H13 in the coder preset the agent scaffolds, tests, lists, checks, previews, and calls an extension, and an edit hot-reloads', async () => {
     const kvman = await world.start(['--preset', 'coder'], npmEnvironment());
     await useFakeModel(kvman, fake);
     fake.reply(
@@ -45,12 +45,13 @@ describe('the walkthrough (09, 13 M2.5)', () => {
       runs('ext', 'check', { folder: 'notes' }),
       shell('mv notes/index.backup notes/src/index.ts'),
       runs('preview', 'start', { extensions: ['notes'] }),
+      runs('preview', 'query-get', { name: 'notes.greeting.get' }),
       says('The notes extension is ready.'),
     );
     const session = z.object({ id: z.string() }).parse(await kvman.call('commands', 'kvcoder.session.create', { title: 'Walkthrough' }));
     await kvman.call('commands', 'kvcoder.message.send', { sessionId: session.id, text: 'Build a notes extension' });
     await approveUntilDone(kvman, session.id);
-    const [created, tested, listed, planted, checked, restored, previewed] = toolResults(fake);
+    const [created, tested, listed, planted, checked, restored, previewed, called] = toolResults(fake);
     expect(JSON.parse(created ?? '')).toEqual({ folder: 'notes', name: 'notes', namespace: 'notes', web: false });
     expect(tested).toMatch(/"passed": true/);
     expect(listed).toContain('"folder": "notes"');
@@ -59,6 +60,7 @@ describe('the walkthrough (09, 13 M2.5)', () => {
     expect(restored).toMatch(/\[exit code 0\]$/);
     const url = z.object({ url: z.string() }).parse(JSON.parse(previewed ?? '')).url;
     expect(Number(new URL(url).port)).toBeGreaterThanOrEqual(3738);
+    expect(JSON.parse(called ?? '')).toEqual({ ok: true, output: { text: 'Hello from notes!' } });
 
     const page = await browser.newPage();
     await page.goto(`${url}notes/hello`);

@@ -14,6 +14,8 @@ import { shellFor } from './shell-program.ts';
 // `help` of any connector (plan 08 §8.3 and §8.4, ADR 0011, 4 and 5): the connector's commands, or one command's
 // payload, result, and examples. A binary connector's help also prints the program's own.
 
+const asksNote = 'The person is asked before this runs.';
+
 const programHelpTimeoutMs = 5_000;
 
 const builtinDetail = (name: string, command: ConnectorCommand): HelpDetail => ({ name, description: command.description, notes: command.notes, payload: payloadJsonSchema(command.payload), result: command.result ?? {}, examples: [] });
@@ -36,7 +38,7 @@ async function commandsHelp(ctx: Ctx, connector: ConnectorRow, command: string |
   const found = commands.find((entry) => entry.name === command);
   if (found === undefined) throw notFound(noCommandMessage(connector.name, command, commands.map((entry) => entry.name)), { connector: connector.name, command });
   const registered = info(found.command);
-  return commandHelp(connector.name, { name: found.name, description: registered?.description ?? '', payload: registered?.input ?? {}, result: registered?.output ?? {}, examples: found.examples });
+  return commandHelp(connector.name, { name: found.name, description: registered?.description ?? '', notes: found.asks ? asksNote : undefined, payload: registered?.input ?? {}, result: registered?.output ?? {}, examples: found.examples });
 }
 
 // The line that prints a program's help: `<name> [command] --help`, or the registered line with `{command}` filled in.

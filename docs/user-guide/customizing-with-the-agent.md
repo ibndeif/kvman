@@ -8,14 +8,18 @@ The tools for this come from **kvcustomizer**, which the `coder` preset loads. T
 
 | You say | The agent uses | Applies |
 |---|---|---|
-| "Use the Claude Sonnet model" | `kvman model-list`, then `kvman model-set` | at once |
-| "Turn on dark mode" | `kvman settings-list`, then `kvman settings-set` | at once |
-| "Put the setting back" | `kvman settings-reset` | at once |
+| "Use the Claude Sonnet model" | `kvman model-list`, then `kvman model-set` | at once, after you allow it |
+| "Turn on dark mode" | `kvman settings-list`, then `kvman settings-set` | at once, after you allow it |
+| "Put the setting back" | `kvman settings-reset` | at once, after you allow it |
 | "What extensions are running?" | `kvman extensions-list` | — |
-| "Install `@acme/notes` 1.2.3" | `kvman extensions-install` | at the next start |
-| "Remove the notes extension" | `kvman extensions-uninstall` | at the next start |
+| "Install `@acme/notes` 1.2.3" | `kvman extensions-install` | at the next start, after you allow it |
+| "Add the notes extension you built to my kvman" | `kvman extensions-install` with the project's folder | at the next start, after you allow it |
+| "Remove the notes extension" | `kvman extensions-uninstall` | at the next start, after you allow it |
 | "Show me my preset" | `kvman preset-get` | — |
-| "Build a notes extension" | `ext new`, `ext check`, `ext test`, `preview start` | the preview shows it at once |
+| "Why did that fail?" | `kvman jobs-list`, `kvman jobs-get` | — |
+| "What is kvman running right now?" | `kvman health-get`, `kvman workspaces-list`, `kvman processes-list` | — |
+| "How many chats do I have?" | `kvman query-get` (a query of an installed extension) | — |
+| "Build a notes extension" | `ext new`, `ext check`, `ext test`, `preview start`, then `preview query-get` and `preview command-run` to check it | the preview shows it at once |
 | "Write me a preset for a notes app" | `preset new`, `preset check` | when you run it |
 | "How do I build on the notes extension?" | `docs list`, `docs get` | — |
 
@@ -29,7 +33,15 @@ Changes to the **model** and to **settings** apply at once.
 
 ## Approvals
 
-Your approval setting, `kvcoder.shell.approval`, decides when the agent asks before a shell line or a file change: `auto` (the default) asks unless the agent marks the call as not risky, and `ask` asks every time. The connectors on this page run without asking; a change they make to your extensions or your preset applies only when you restart kvman, so you can read it on the call's card first. Nothing the agent does here reads or changes a secret, and an API key is never sent to the model.
+**Every change to kvman asks you first.** Five commands change the app: `kvman model-set`, `settings-set`, `settings-reset`, `extensions-install`, and `extensions-uninstall`. Each call shows a card with what the agent says it is doing, the command, and the exact values, with **Allow** and **Deny**. Nothing changes until you allow it, and a denied call tells the agent "denied by the user". This doesn't depend on your approval setting: `kvcoder.shell.approval` covers shell lines, file changes, and MCP tools, and these five ask even when it is `auto`.
+
+Everything else on this page runs without asking, because it only reads (the lists, `preset-get`, `query-get`, `docs`), works inside your workspace folder (`ext`, `preset`), or works in the preview's temporary home (`preview`).
+
+What the agent can't do here:
+
+- read, list, or change a secret; an API key is never sent to the model;
+- run an arbitrary command of the app: it reaches a command only through a connector that names it;
+- restart kvman, or open or close a workspace.
 
 ## Looking things up
 
@@ -38,6 +50,8 @@ When the agent builds on an installed extension, it reads that extension's own p
 ## Previewing
 
 `preview start` runs your extension project in a **separate** kvman, with its own temporary home, so nothing touches your real data. It gives a link; open it to try the extension. Edits to the project's files show up live. `preview stop` ends it, and it also stops when your main kvman stops.
+
+The agent checks its own work there: `preview query-get` and `preview command-run` call the project's queries and commands inside the preview, and the agent reads what came back, including an error. These calls never touch your real kvman, so they don't ask you.
 
 ## Not using the agent
 

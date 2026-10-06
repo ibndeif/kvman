@@ -33,6 +33,7 @@ ctx.registerHandler('kernel.started', {
 - `description` is what the agent sees in the prompt's connector index. Say what it is for and when to use it. kvcoder adds the command names after it, so you never list them yourself.
 - Each command's `command` must be a public command or query of **your own** extension, or registration fails `VALIDATION_FAILED`. kvcoder runs it with `ctx.exec`, with the payload as its input, on a worker like any job, and it runs to its end inside the agent's step.
 - The result the agent reads is your output as indented JSON, or `error <code>: <message>`. A payload that doesn't fit your input schema returns the problems and the schema itself.
+- Add `asks: true` to a command that changes something the person didn't make in this chat (`{ name: 'clear', command: 'notes.note.clear', asks: true }`). Every call of it then becomes an approval card showing its description, command, and payload, whatever `kvcoder.shell.approval` says; **Deny** returns `denied by the user` and your command never runs. The field takes only `true`, and it isn't allowed on a `binary` connector. A command without it runs at once.
 - Every connector has `help`, built from what you registered: `help` with no payload lists your commands with their descriptions, and `help { "command": "add" }` gives that command's payload and result as JSON Schema, with your examples. Give every input field a `.describe()`, since the agent learns the payload from it.
 - A connector with `binary: { check, install?, help? }` instead of `commands` names a program on the system (`gh`). It is listed only while its `check` line exits 0, and the agent calls it with `exec { args }` and `help`. `help` runs `<name> --help`, or the line you give with `{command}` in it (`go help {command}`).
 - `shell`, `fs`, `artifact`, `background`, `ask`, `delegate`, and `mcp` are built in; their names are taken.
@@ -66,7 +67,7 @@ Prefer pull when the owner is optional, or when contributors shouldn't need the 
 
 ## Testing a connector
 
-`runConnector(kernel, { connector: 'notes', command: 'add', payload: { text: 'Buy milk' } })` from `@kvman/kvcoder/testing`, used with `createTestKernel`, runs a call exactly as kvcoder does and returns `{ output, exitCode }`, including for `help`. It runs your connector's commands only and never starts a shell.
+`runConnector(kernel, { connector: 'notes', command: 'add', payload: { text: 'Buy milk' } })` from `@kvman/kvcoder/testing`, used with `createTestKernel`, runs a call exactly as kvcoder does and returns `{ output, exitCode }`, including for `help`. It runs your connector's commands only and never starts a shell. It never asks: a command with `asks: true` runs at once, since a test has no person to answer. To test the approval itself, run a turn with the fake model and answer the pending question with `kvcoder.question.answer`.
 
 ## Next
 

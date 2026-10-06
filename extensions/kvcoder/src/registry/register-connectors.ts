@@ -14,7 +14,7 @@ const connectorRowSchema = z.object({
   description: z.string(),
   owner: z.string(),
   kind: z.enum(['commands', 'binary']),
-  commands: z.array(z.object({ name: z.string(), command: z.string(), examples: z.array(exampleSchema) })).exactOptional(),
+  commands: z.array(z.object({ name: z.string(), command: z.string(), examples: z.array(exampleSchema), asks: z.boolean() })).exactOptional(),
   binary: z.object({ check: z.string(), install: z.string().exactOptional(), help: z.string().exactOptional() }).exactOptional(),
 });
 
@@ -52,7 +52,7 @@ type Connector = z.output<typeof connectorSchema>;
 
 const docOf = (input: Connector): Omit<ConnectorDoc, 'owner'> =>
   'commands' in input
-    ? { name: input.name, description: input.description, kind: 'commands', commands: input.commands.map((command) => ({ name: command.name, command: command.command, examples: command.examples ?? [] })), binary: null }
+    ? { name: input.name, description: input.description, kind: 'commands', commands: input.commands.map((command) => ({ name: command.name, command: command.command, examples: command.examples ?? [], asks: command.asks === true })), binary: null }
     : { name: input.name, description: input.description, kind: 'binary', commands: null, binary: { check: input.binary.check, install: input.binary.install ?? null, help: input.binary.help ?? null } };
 
 // Every connector of a call is checked before any is stored, and they are stored in one transaction, so a call

@@ -7,6 +7,7 @@ export const jobOptions = {
   'kvcustomizer.ext.test': { retries: 0, timeoutMs: 600_000 },
   'kvcustomizer.preview.start': { retries: 0, timeoutMs: 300_000 },
   'kvcustomizer.preview.stop': { retries: 0 },
+  'kvcustomizer.preview.command.run': { retries: 0, timeoutMs: 120_000 },
   'kvcustomizer.preset.new': { retries: 0 },
   'kvcustomizer.preset.check': { retries: 0, timeoutMs: 300_000 },
 } as const;

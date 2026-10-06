@@ -15,8 +15,8 @@ import { commandNamesOf, failedCall, runHelp, runTarget, targetOf, textResult, t
 
 // How one call of a reply runs (plan 08 §8.3): the `run` tool names a connector's command, which runs as a kernel job.
 // `shell exec`, a binary's `exec`, `fs write`, and `fs edit` ask the person first when `kvcoder.shell.approval` is
-// `ask`, or unless the payload says `risky: false` (ADR 0009, 161; ADR 0011, 7). A call either returns its result now,
-// or waits on the person or on a worker's subagent.
+// `ask`, or unless the payload says `risky: false` (ADR 0009, 161; ADR 0011, 7). A registered command with `asks`
+// always asks (ADR 0022, 5). A call either returns its result now, or waits on the person or on a worker's subagent.
 
 export type ToolCall = { id: string; name: string; arguments: Record<string, JsonValue> };
 
@@ -85,6 +85,7 @@ export async function evaluateCall(env: CallEnv, toolCall: ToolCall): Promise<Ca
     if (invalid !== undefined) return result(toolCall.id, failedCall(call, invalid));
     if (env.approval === 'ask' || call.payload['risky'] !== false) return { kind: 'question', questionKind: 'approval', question: call };
   }
+  if (target.asks === true) return { kind: 'question', questionKind: 'approval', question: call };
   const done = await runTarget(ctx, session, call, target);
   if (done.isError || (call.connector !== 'ask' && call.connector !== 'delegate')) return result(toolCall.id, done);
   if (call.connector === 'delegate') return delegateOutcome(env, toolCall.id, call);

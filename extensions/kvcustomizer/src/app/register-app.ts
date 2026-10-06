@@ -1,10 +1,12 @@
 import { extensionSourceSchema, kernelCommandSchemas, kernelQuerySchemas, packageNameSchema, z, type Ctx } from '@kvman/sdk';
 import type {} from '@kvman/kvai';
 import { invalid } from '../problems.ts';
+import { installSource } from './install-source.ts';
 
 // The `kvman` connector's commands (plan 09 §9.1, ADR 0010, 6 and 8): the model, the settings, the extensions, and the
 // preset of the app the agent runs in. Each wraps a kernel command (or kvai's model list) and nothing here reads,
-// writes, or lists a secret (CLAUDE.md §6). A change to the extensions or the preset applies at the next start.
+// writes, or lists a secret (CLAUDE.md §6). A change to the extensions or the preset applies at the next start. The
+// commands that change the app are registered with kvcoder as ones the person approves first (ADR 0022, 5).
 
 const empty = z.object({});
 
@@ -97,15 +99,15 @@ export function registerApp(ctx: Ctx): void {
       })),
   });
   ctx.registerCommand('kvcustomizer.app.extensions.install', {
-    description: 'Adds an extension to the preset; it starts at the next start of kvman.',
+    description: 'Adds an extension to the preset; it starts at the next start of kvman. A path: folder is a project of the workspace.',
     public: true,
     retries: 0,
     input: z.object({
       name: packageNameSchema.describe('The extension package name, such as @acme/notes.'),
-      source: extensionSourceSchema.describe('npm:<exact version>, path:<folder>, or bundled (only for a bundled extension).'),
+      source: extensionSourceSchema.describe('npm:<exact version>, path:<a project folder, relative to the workspace folder>, or bundled (only for a bundled extension).'),
     }),
     output: editResultSchema,
-    handle: (input) => ctx.exec('kernel.extensions.install', input),
+    handle: (input) => ctx.exec('kernel.extensions.install', { name: input.name, source: installSource(ctx.job.workspace.path, input.name, input.source) }),
   });
   ctx.registerCommand('kvcustomizer.app.extensions.uninstall', {
     description: 'Removes an extension from the preset; it stops at the next start of kvman.',

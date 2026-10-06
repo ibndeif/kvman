@@ -31,6 +31,8 @@ What it does, in order:
 
 Through the agent: `preview start`, `preview stop`, and `preview status` run this same bin under kvman's process service, with `--name` set to the workspace id. A preview also stops when the kvman that started it stops.
 
+The agent also calls a previewed project: `preview query-get { name, input? }` and `preview command-run { name, input? }` send `POST <url>/api/queries/<name>` and `POST <url>/api/commands/<name>` to the running preview and answer its envelope, `{ ok: true, output }` or `{ ok: false, problem }`. By hand you do the same with any HTTP client, as [http-api.md](http-api.md) describes.
+
 ## Hot reload
 
 A `path:` extension's folder is watched (recursively, ignoring `node_modules`). Events are batched until 200 ms pass without one. On a change, the kernel starts fresh workers that load every extension with the new code. The old workers take no new jobs and exit when their running jobs end, so running jobs finish on the old code. (ES modules can't be unloaded, so a worker never reloads in place.)

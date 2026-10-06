@@ -12,7 +12,7 @@ Open the **Chat** page in a workspace folder you don't mind adding files to, and
 
 > Build me a notes extension: a page that lists my notes and a form to add one.
 
-The agent creates a project in a new folder, checks it, runs its tests, and starts a preview. It does this with its `ext` and `preview` tools, and it reads the guides first (`docs list`). You see each step in the chat.
+The agent reads the guides first (`docs list`), creates a project in a new folder, checks it, runs its tests, starts a preview, and calls the extension's own commands and queries in that preview to see that they work. It does this with its `docs`, `ext`, and `preview` tools. You see each step in the chat.
 
 ## Try it
 
@@ -20,7 +20,13 @@ When the agent says the preview is ready, open the link it gives. The preview is
 
 ## Keep it
 
-The project is just a folder in your workspace, with its own tests (`npm test`) and checks (`npm run check`). To use it in your everyday kvman:
+The project is just a folder in your workspace, with its own tests (`npm test`) and checks (`npm run check`). To use it in your everyday kvman, ask the agent:
+
+> Add the notes extension to my kvman.
+
+It calls `kvman extensions-install` with the project's folder. kvman shows you the call and asks you to allow it; then restart kvman and trust the extension when the terminal asks. The agent can't restart kvman for you.
+
+Or do it yourself:
 
 1. Open the **Extensions** page.
 2. Under **Add an extension**, type the package name from the project's `package.json` (for example `@me/notes`) and the source `path:` followed by the project's absolute folder.

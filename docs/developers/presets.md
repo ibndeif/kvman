@@ -54,7 +54,7 @@ Three public kernel calls edit the preset **file**; none installs, loads, or tru
 - A write that fails, or a stored file that isn't valid, fails `VALIDATION_FAILED` naming the file; kvman never overwrites a file it couldn't parse.
 - `kernel.settings.set` changes a setting at once and is **not** an edit of the preset.
 
-kvwebui's Extensions page and kvcustomizer's `kvman` connector (`extensions-install`, `extensions-uninstall`, `preset-get`) are built on these calls.
+kvwebui's Extensions page and kvcustomizer's `kvman` connector (`extensions-install`, `extensions-uninstall`, `preset-get`) are built on these calls. The connector differs in one way: its `extensions-install` resolves a `path:` folder against the **workspace** folder, checks that it is a project with the given package name, and stores the absolute folder, because the kernel's own command resolves a relative `path:` against the preset file.
 
 ## Tools
 

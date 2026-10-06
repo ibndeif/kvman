@@ -43,7 +43,7 @@ API keys, the values you give an MCP server (its environment variables and heade
 
 ## The agent's reach
 
-The agent works through connectors, and every call it makes is a card you can read in the chat. It runs shell lines inside the workspace you opened, asks before risky ones (see the `kvcoder.shell.approval` setting), and reads and edits files only inside that folder. It can change kvman's own model, settings, extensions, and preset through the `kvman` connector, but it can't read or change a secret.
+The agent works through connectors, and every call it makes is a card you can read in the chat. It runs shell lines inside the workspace you opened, asks before risky ones (see the `kvcoder.shell.approval` setting), and reads and edits files only inside that folder. It can see kvman's own state (settings, extensions, workspaces, jobs, processes) and run the public queries of installed extensions through the `kvman` connector. It can change the default model, a setting, and the extensions of your preset, and kvman asks you before each such change, whatever your approval setting is. It can't read, list, or change a secret, it can't run an arbitrary command of the app, and it can't restart kvman.
 
 ## Next
 

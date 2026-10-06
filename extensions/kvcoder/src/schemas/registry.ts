@@ -12,8 +12,13 @@ export const binarySchema = z.object({ check: z.string().min(1), install: z.stri
 
 export const exampleSchema = z.object({ description: z.string().min(1), input: z.json() });
 
-/** A commands connector's command: its name, the registering extension's public command, and examples. `help` is every connector's own. */
-export const connectorCommandSchema = z.object({ name: wordSchema.refine((name) => name !== 'help', "help is every connector's own command; name this one differently."), command: z.string().min(1), examples: z.array(exampleSchema).exactOptional() });
+/** A commands connector's command: its name, the registering extension's public command, and examples. `asks: true` makes the person approve each call first (ADR 0022, 5). `help` is every connector's own. */
+export const connectorCommandSchema = z.object({
+  name: wordSchema.refine((name) => name !== 'help', "help is every connector's own command; name this one differently."),
+  command: z.string().min(1),
+  examples: z.array(exampleSchema).exactOptional(),
+  asks: z.literal(true, 'asks takes only true; leave it out for a command that runs at once.').exactOptional(),
+});
 
 const commandsConnectorSchema = z.strictObject({ name: wordSchema, description: z.string().min(1), commands: z.array(connectorCommandSchema).min(1) });
 const programConnectorSchema = z.strictObject({ name: wordSchema, description: z.string().min(1), binary: binarySchema });
@@ -32,7 +37,7 @@ export const connectorDocSchema = z.object({
   name: z.string(),
   description: z.string(),
   kind: z.enum(['commands', 'binary']),
-  commands: z.array(z.object({ name: z.string(), command: z.string(), examples: z.array(exampleSchema) })).nullable(),
+  commands: z.array(z.object({ name: z.string(), command: z.string(), examples: z.array(exampleSchema), asks: z.boolean().default(false) })).nullable(),
   binary: z.object({ check: z.string(), install: z.string().nullable(), help: z.string().nullable().default(null) }).nullable(),
 });
 
