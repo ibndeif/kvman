@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { jsonSchema } from './json.ts';
 import { packageNameSchema } from './manifest.ts';
 import { extensionSourceSchema, presetStateSchema } from './preset.ts';
+import { problemSchema } from './problem.ts';
 import { fileSchema, isoTimeSchema, jobSchema, jobStatusSchema, workspaceSchema } from './rows.ts';
 
 const emptySchema = z.strictObject({});
@@ -69,7 +70,7 @@ export const folderListSchema = z.strictObject({
   truncated: z.boolean(),
 });
 
-/** Accepts the answer of `kernel.health.get`. */
+/** Accepts the answer of `kernel.health.get`; `rolledBack` is the Problem of the start that was undone before this one (ADR 0024, 5). */
 export const healthSchema = z.strictObject({
   version: z.string(),
   preset: z.string(),
@@ -77,6 +78,7 @@ export const healthSchema = z.strictObject({
   workers: z.number().int().positive(),
   uptimeMs: z.number().nonnegative(),
   languages: z.array(z.string()),
+  rolledBack: problemSchema.exactOptional(),
 });
 
 /** The input and output schemas of the kernel's own commands (plan 02 §2.12). */
@@ -97,6 +99,7 @@ export const kernelCommandSchemas = {
     input: z.strictObject({ name: packageNameSchema }),
     output: z.strictObject({ file: z.string(), restartRequired: z.literal(true) }),
   },
+  'kernel.restart': { input: emptySchema, output: z.strictObject({ restarting: z.literal(true) }) },
 } as const;
 
 /** The input and output schemas of the kernel's own queries (plan 02 §2.12). */

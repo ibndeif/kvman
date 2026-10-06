@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import type { Preset } from '@kvman/sdk';
+import type { Preset, Problem } from '@kvman/sdk';
 import { homeWorkspaceId, startKernel, type ExecOptions, type Kernel, type PresetSource } from '../../src/index.ts';
 
 // Shared setup for the preset-edit tests (plan 02 §2.10): temporary roots, a tiny `path:` extension package, starting a
@@ -63,6 +63,7 @@ export type StartPreset = {
   presetFolder: string;
   presetSource?: PresetSource;
   bundled?: ReadonlyMap<string, string>;
+  rolledBack?: Problem;
 };
 
 export function startPresetKernel(options: StartPreset): Promise<Kernel> {
@@ -78,6 +79,7 @@ export function startPresetKernel(options: StartPreset): Promise<Kernel> {
     terminalLog: false,
     startFolder: options.homeFolder,
     trust: () => Promise.resolve(true),
+    ...(options.rolledBack === undefined ? {} : { rolledBack: options.rolledBack }),
   });
 }
 

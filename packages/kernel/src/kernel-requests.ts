@@ -20,6 +20,7 @@ export type KernelRequestServices = {
   processes: ProcessService;
   preset: PresetStore;
   health: () => unknown;
+  requestRestart: () => void;
 };
 
 export async function answerWorker(services: KernelRequestServices, request: WorkerRequest): Promise<unknown> {
@@ -58,6 +59,9 @@ export async function answerWorker(services: KernelRequestServices, request: Wor
       return services.preset.uninstall(request.name);
     case 'health':
       return services.health();
+    case 'restart':
+      services.requestRestart();
+      return null;
     case 'start-process':
       return services.processes.start(request.extension, request.workspace, request.name, { ...request.options, cwd: request.options.cwd });
     case 'stop-process':

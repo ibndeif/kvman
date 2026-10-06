@@ -35,6 +35,7 @@ const jobId = await kernel.execAsync('notes.index.run', {});
 const job = await kernel.waitForJob(jobId);
 await kernel.clock.advance(60_000);                                            // the fake clock
 await kernel.restart();                                                        // stop as Ctrl+C does, start again on the same home
+await kernel.restartRequested();                                               // resolves once `kernel.restart` was called; a test kernel doesn't restart by itself
 await kernel.close();
 ```
 

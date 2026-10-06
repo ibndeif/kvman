@@ -46,6 +46,11 @@ function namedPreset(name: string, folders: PresetFolders): FoundPreset {
   throw invalid(`There is no preset named ${name}: neither a bundled one nor ${own}.`, { preset: name });
 }
 
+/** The file an edit of the preset `value` writes: the preset file given, or `<home>/presets/<name>.json` (ADR 0024, 5). */
+export function editableFile(value: string, folders: PresetFolders): string {
+  return isPresetFile(value) ? path.resolve(folders.start, value) : path.join(folders.home, 'presets', `${value}.json`);
+}
+
 export function findPreset(value: string, folders: PresetFolders): FoundPreset {
   if (isPresetFile(value)) {
     const file = path.resolve(folders.start, value);

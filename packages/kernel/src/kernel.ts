@@ -1,6 +1,6 @@
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
-import { z, type Caller, type Job, type Json, type Preset, type Workspace } from '@kvman/sdk';
+import { z, type Caller, type Job, type Json, type Preset, type Problem, type Workspace } from '@kvman/sdk';
 import { systemClock, type CancelTimer, type Clock } from './clock.ts';
 import { createIdGenerator } from './ids.ts';
 import { createDispatcher } from './jobs/dispatcher.ts';
@@ -50,6 +50,8 @@ export type KernelOptions = {
   terminalLog: boolean;
   // The folder kvman was started from, opened as a workspace (plan 01 §1.2).
   startFolder: string;
+  // The Problem of the start that was undone before this one (plan 02 §2.14, ADR 0024, 5); `kernel.health.get` has it.
+  rolledBack?: Problem;
   trust: TrustDecision;
   clock?: Clock;
 };
@@ -66,6 +68,8 @@ export type Kernel = {
   catalog(language: string): Catalog;
   web: KernelWeb;
   startWorkspace: Workspace;
+  // Resolves when `kernel.restart` is called; the embedder decides what a restart is (ADR 0024, 2).
+  restartRequested: Promise<void>;
   settled(): Promise<void>;
   close(): Promise<void>;
 };
@@ -99,6 +103,10 @@ export async function startKernel(options: KernelOptions): Promise<Kernel> {
   const dispatcher = createDispatcher({ connection, rows, schedules, clock, logger, workspaceOf: workspace });
   const processes = createProcessService({ connection, home: options.home, clock, logger, platform: process.platform, deliverAlong: (work) => dispatcher.deliverAlong(work) });
   const stopping = new AbortController();
+  let requestRestart: () => void = () => undefined;
+  const restartRequested = new Promise<void>((resolve) => {
+    requestRestart = resolve;
+  });
   let retention: CancelTimer | undefined;
   let watcher: ExtensionWatcher | undefined;
   const closeStorage = (): void => {
@@ -129,6 +137,7 @@ export async function startKernel(options: KernelOptions): Promise<Kernel> {
       workers: settings.workers,
       uptimeMs: clock.now() - startedAt,
       languages: run.catalogs().languages,
+      ...(options.rolledBack === undefined ? {} : { rolledBack: options.rolledBack }),
     });
     const run = await startExtensionRun({
       preset: options.preset,
@@ -142,7 +151,7 @@ export async function startKernel(options: KernelOptions): Promise<Kernel> {
         setup: { home: options.home, homeFolder: options.homeFolder, database, presetSettings, logLevel: options.logLevel, terminalLog: options.terminalLog },
         logger,
         events: {
-          request: (request) => answerWorker({ dispatcher, schedules, secrets, clock, workspaces, processes, preset, health }, request),
+          request: (request) => answerWorker({ dispatcher, schedules, secrets, clock, workspaces, processes, preset, health, requestRestart }, request),
           progress: (rootId, chunk) => hub.publish(rootId, chunk),
           syncEnded: (end) => dispatcher.deliverSyncEnd(end),
           slotFreed: () => dispatcher.slotFreed(),
@@ -179,6 +188,7 @@ export async function startKernel(options: KernelOptions): Promise<Kernel> {
       catalog: (language) => run.catalogs().catalog(language),
       web: createKernelWeb({ connection, run, files: createFiles({ connection, home: options.home, ids, clock }), settings: settings.settings, ids, workspace, logger }),
       startWorkspace,
+      restartRequested,
       settled: () => dispatcher.settled(),
       close: async () => {
         stopping.abort();

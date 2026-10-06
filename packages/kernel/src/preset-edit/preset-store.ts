@@ -1,5 +1,6 @@
 import type { ExtensionSource, Preset, PresetState } from '@kvman/sdk';
 import { kernelProblem } from '../problems.ts';
+import { keepPresetBackup } from './preset-backup.ts';
 import { readStoredPreset, targetFileFor, writePresetFile } from './preset-files.ts';
 import type { PresetSource } from './preset-source.ts';
 
@@ -65,6 +66,7 @@ export function createPresetStore(options: PresetStoreOptions): PresetStore {
           throw kernelProblem('VALIDATION_FAILED', `${name} is not a bundled extension.`, { name });
         }
         const edited: Preset = { ...current, extensions: { ...current.extensions, [name]: source } };
+        await keepPresetBackup(target, current);
         await writePresetFile(target, edited);
         return remember(edited, target);
       }),
@@ -82,6 +84,7 @@ export function createPresetStore(options: PresetStoreOptions): PresetStore {
           throw kernelProblem('VALIDATION_FAILED', `${name} is still needed by ${dependents.join(', ')}.`, { name, dependents });
         }
         const edited: Preset = { ...current, extensions: Object.fromEntries(Object.entries(current.extensions).filter(([other]) => other !== name)) };
+        await keepPresetBackup(target, current);
         await writePresetFile(target, edited);
         return remember(edited, target);
       }),

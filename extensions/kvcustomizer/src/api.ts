@@ -25,6 +25,7 @@ declare module '@kvman/sdk' {
     'kvcustomizer.app.settings.set': { input: { key: string; value: unknown; scope: 'global' | 'workspace' }; output: Empty };
     'kvcustomizer.app.settings.reset': { input: { key: string; scope: 'global' | 'workspace' }; output: Empty };
     'kvcustomizer.app.extensions.install': { input: { name: string; source: string }; output: { file: string; restartRequired: true } };
+    'kvcustomizer.app.restart': { input: Empty; output: { restarting: true } };
     'kvcustomizer.app.extensions.uninstall': { input: { name: string }; output: { file: string; restartRequired: true } };
   }
   interface Queries {

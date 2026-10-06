@@ -24,7 +24,7 @@ The project is just a folder in your workspace, with its own tests (`npm test`) 
 
 > Add the notes extension to my kvman.
 
-It calls `kvman extensions-install` with the project's folder. kvman shows you the call and asks you to allow it; then restart kvman and trust the extension when the terminal asks. The agent can't restart kvman for you.
+It calls `kvman extensions-install` with the project's folder. kvman shows you the call and asks you to allow it; then it asks to restart kvman, and you trust the extension when the terminal asks. The **Restart now** button on the Extensions page does the same.
 
 Or do it yourself:
 

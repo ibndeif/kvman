@@ -8,7 +8,7 @@ import { createFakeComponents, type FakeComponents } from './fake-components.ts'
 // Mounts the whole app against a fake API and fake components, the way the browser opens it, and cleans up after each
 // test: the app, the tab's storage, and the page's language, direction, and theme.
 
-export type Mounted = KvwebuiApp & { components: FakeComponents; root: HTMLElement; text(): string; find<Found extends HTMLElement = HTMLElement>(selector: string): Found | null; findAll(selector: string): HTMLElement[]; settle(): Promise<void> };
+export type Mounted = KvwebuiApp & { components: FakeComponents; reloads: () => number; root: HTMLElement; text(): string; find<Found extends HTMLElement = HTMLElement>(selector: string): Found | null; findAll(selector: string): HTMLElement[]; settle(): Promise<void> };
 
 const mounted: Mounted[] = [];
 
@@ -28,7 +28,8 @@ export async function settle(): Promise<void> {
 }
 
 export async function mountApp(api: FakeApi, path = '/', components = createFakeComponents()): Promise<Mounted> {
-  const kvwebui = createKvwebui({ history: createMemoryHistory(), fetch: api.fetch, components });
+  let reloads = 0;
+  const kvwebui = createKvwebui({ history: createMemoryHistory(), fetch: api.fetch, components, reload: () => (reloads += 1) });
   await kvwebui.router.push(path);
   const root = document.createElement('div');
   document.body.append(root);
@@ -38,6 +39,7 @@ export async function mountApp(api: FakeApi, path = '/', components = createFake
   const app: Mounted = {
     ...kvwebui,
     components,
+    reloads: () => reloads,
     root,
     text: () => root.textContent ?? '',
     find: <Found extends HTMLElement = HTMLElement>(selector: string) => root.querySelector<Found>(selector),

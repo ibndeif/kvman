@@ -48,7 +48,7 @@ A `Workspace` is `{ id, name, path }`.
 | `kernel.extensions.list` | query | `{}` → `[{ name, version, source, revision, namespace, commands, queries, settings, handlers }]`. `source` is `bundled`, `npm:…`, or `path:…`; `revision` starts at 0 and grows with each hot reload. Each command and query, private ones too, is `{ name, description, public, input, output }` (JSON Schema); each setting `{ key, description, scopes }`; each handler `{ point, description }`. The kernel itself isn't listed. |
 | `kernel.registrations.list` | query | `{}` → `[{ name, kind, extension, public, description }]`: every command and query of the run, private ones too, with its owner and no schema. Use it instead of `kernel.extensions.list` when you only need to know what exists and whose it is: it is much smaller and faster. |
 | `kernel.processes.list` | query | `{}` → `[{ extension, workspaceId, name, pid, startedAt }]`. |
-| `kernel.health.get` | query | `{}` → `{ version, preset, mode, workers, uptimeMs, languages }`: kvman's version, the preset's name, `web`, the pool size, the uptime, and the language codes the loaded catalogs have. |
+| `kernel.health.get` | query | `{}` → `{ version, preset, mode, workers, uptimeMs, languages, rolledBack? }`: kvman's version, the preset's name, `web`, the pool size, the uptime, the language codes the loaded catalogs have, and, only for a start that came after an undone one, the Problem that start failed with. |
 
 Schemas are converted with zod's `z.toJSONSchema`; a part JSON Schema can't express becomes `{}`.
 
@@ -59,6 +59,7 @@ Schemas are converted with zod's `z.toJSONSchema`; a part JSON Schema can't expr
 | `kernel.preset.get` | query | `{}` → `{ name, origin: 'bundled' \| 'home' \| 'file', file?, extensions, settings? }`: the preset as stored now. |
 | `kernel.extensions.install` | command | `{ name, source }` → `{ file, restartRequired: true }`: adds the extension to the preset file. |
 | `kernel.extensions.uninstall` | command | `{ name }` → `{ file, restartRequired: true }`: removes it. |
+| `kernel.restart` | command | `{}` → `{ restarting: true }`: asks kvman to restart. It stops and starts again in the same process, with its arguments, lock, and terminal; running jobs are aborted, processes stop, and the preset is read again. Sync only. |
 
 They write the preset file and nothing else; a restart applies the change. Details and errors: [presets.md](presets.md).
 

@@ -280,6 +280,8 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
 
 *Changed after this milestone by ADR 0023: kvcustomizer sets no global section; the agent reads its guide with `kvman init` (`09` §9.4).*
 
+*Changed after this milestone by ADR 0024: `kernel.restart` restarts kvman in the same process, a start that fails because of the preset is undone from a backup, and kvcustomizer's `kvman` connector has `restart` (`02` §2.14, `09` §9.1).*
+
 - **Read:** `09`; `10`; `11`; `12` §12.3.
 - **Build:**
   - `extensions/kvdev`: the `ext`, `preset`, `preview`, and `docs` connectors, the scaffold (with `kvman.source`, and the web template), the preview kvman (running `web:watch`), and its global section.

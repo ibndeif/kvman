@@ -64,7 +64,7 @@ describe("kvman init, the agent's guide for changing the app (09 §9.4, ADR 0023
       'a setting, an extension that is already installed, an extension you build, and a new preset only when they want a different app. If kvman can\'t do it, say so plainly.',
       'give them its address, and call `ask confirm`',
       '`settings-reset` for a setting, `extensions-uninstall` for an extension.',
-      'kvman must be restarted to finish, and what is still unchecked.',
+      'After a change to the extensions, finish it with one `restart` call (below), and say what is still unchecked.',
     ]) expect(text, sentence).toContain(sentence);
   });
 
@@ -77,11 +77,24 @@ describe("kvman init, the agent's guide for changing the app (09 §9.4, ADR 0023
       'Add it to this app only when the person asks',
       'read its code and its docs page first',
       'The person is asked before each of these runs, so make one call for one change and say in its description what changes.',
-      "tell the person to restart it; you can't restart it yourself.",
+      'which `restart` makes.',
       '`kvcoder.delegate.workers`, `kvcoder.mcp.servers`, `kvcoder.connectors`, and `kvcoder.connectors.disabled`',
       "Use the connectors `kvman`, `ext`, `preset`, `preview`, and `docs` for everything they cover, and `shell` only for the rest. Read and edit a project's files with `fs`.",
     ]) expect(text, sentence).toContain(sentence);
     expect(text.toLowerCase()).not.toContain('kv' + 'dev');
+  });
+
+  it('QA36-H14 the guide tells the agent to restart, what to say, and to read health-get for rolledBack', async () => {
+    const text = await instructions();
+    for (const sentence of [
+      'finish it with one `restart` call (below)',
+      'Then `restart` applies it.',
+      'Make one `restart` call, and say in its description what stops: the chats\' running work, a preview, and any server you started.',
+      'Your own turn ends when kvman stops, so say what you are doing in the same reply as the call.',
+      'the terminal where kvman runs may ask them to trust a new extension, and that the page may need a reload.',
+      'read `health-get`: if it has `rolledBack`, kvman couldn\'t start with the change and put the app back as it was, so say so, say why from its message, and fix the cause.',
+    ]) expect(text, sentence).toContain(sentence);
+    expect(text).not.toContain("you can't restart it yourself");
   });
 
   it('QA35-E1 and QA35-E3 init runs at once and changes nothing, and the other commands need no init', async () => {

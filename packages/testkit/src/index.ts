@@ -48,6 +48,8 @@ export type TestKernel = {
   watch(jobId: string, onProgress: (chunk: ProgressChunk) => void): () => void;
   /** Cancels a job. */
   cancel(jobId: string): void;
+  /** Resolves when `kernel.restart` is called on the kernel that runs now; a test kernel doesn't restart by itself. */
+  restartRequested(): Promise<void>;
   /** Stops the kernel as Ctrl+C does, moves the fake clock by `stoppedForMs` (default 0), then starts it again on the same home. */
   restart(options?: { stoppedForMs?: number }): Promise<void>;
   /** Stops the kernel and removes its temporary folders. */
@@ -143,6 +145,7 @@ export async function createTestKernel(options: TestKernelOptions): Promise<Test
       return stop;
     },
     cancel: (jobId) => kernel.cancel(jobId),
+    restartRequested: () => kernel.restartRequested,
     restart: async (restartOptions) => {
       stopAsyncWatches();
       await kernel.close();

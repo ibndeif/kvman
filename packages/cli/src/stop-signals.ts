@@ -3,7 +3,7 @@
 
 const signals = ['SIGINT', 'SIGTERM'] as const;
 
-export type StopSignals = { stopRequested: Promise<void>; dispose(): void };
+export type StopSignals = { stopRequested: Promise<void>; isRequested(): boolean; dispose(): void };
 
 export function listenForStop(atOnce: () => void): StopSignals {
   let requested = false;
@@ -22,6 +22,7 @@ export function listenForStop(atOnce: () => void): StopSignals {
   for (const signal of signals) process.on(signal, onSignal);
   return {
     stopRequested,
+    isRequested: () => requested,
     dispose: () => {
       for (const signal of signals) process.off(signal, onSignal);
     },

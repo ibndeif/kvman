@@ -6,6 +6,7 @@ import { registerJobsFilesApi } from './jobs-files-api.ts';
 import type { KernelApiServices } from './kernel-api-services.ts';
 import { kernelRegistrations } from './kernel-registrations.ts';
 import { registerPresetApi } from './preset-api.ts';
+import { registerRestartApi } from './restart-api.ts';
 import { registerSecretsApi } from './secrets-api.ts';
 import { registerSettingsApi } from './settings-api.ts';
 import { registerWorkspaceApi } from './workspace-api.ts';
@@ -21,4 +22,5 @@ export function registerKernelApi(registry: Registry, services: KernelApiService
   registerExtensionsApi(api, services);
   registerPresetApi(api, services);
   registerHealthApi(api, services);
+  registerRestartApi(api, services);
 }

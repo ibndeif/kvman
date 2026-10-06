@@ -109,6 +109,14 @@ export function registerApp(ctx: Ctx): void {
     output: editResultSchema,
     handle: (input) => ctx.exec('kernel.extensions.install', { name: input.name, source: installSource(ctx.job.workspace.path, input.name, input.source) }),
   });
+  ctx.registerCommand('kvcustomizer.app.restart', {
+    description: 'Restarts kvman: it stops running work and starts again with the preset as it is stored.',
+    public: true,
+    retries: 0,
+    input: empty,
+    output: z.object({ restarting: z.literal(true) }),
+    handle: () => ctx.exec('kernel.restart', {}),
+  });
   ctx.registerCommand('kvcustomizer.app.extensions.uninstall', {
     description: 'Removes an extension from the preset; it stops at the next start of kvman.',
     public: true,

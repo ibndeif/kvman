@@ -1,33 +1,11 @@
-import { startFakeOpenAI, type FakeOpenAI } from '@kvman/testkit/fake-openai';
 import type { TestKernel } from '@kvman/testkit';
-import { afterEach, describe, expect, it } from 'vitest';
-import { useKvcustomizer } from './support/kvcustomizer-kernel.ts';
+import { describe, expect, it } from 'vitest';
 import { runs, says, toolResults } from './support/model-script.ts';
+import { turn, useScriptedModel } from './support/scripted-world.ts';
 
-const kvcustomizer = useKvcustomizer();
-const fakes: FakeOpenAI[] = [];
-afterEach(async () => {
-  for (const fake of fakes.splice(0)) await fake.close();
-});
-
-// kvcustomizer with a model the test scripts, so a real turn makes the calls.
-async function withModel() {
-  const fake = await startFakeOpenAI();
-  fakes.push(fake);
-  const { kernel } = await kvcustomizer.start({ 'kvai.defaultModel': 'fake/m1', 'kvcoder.shell.approval': 'auto' });
-  await kernel.exec('kvai.provider.add', { id: 'fake', title: 'Fake', api: 'openai-completions', baseUrl: fake.baseUrl });
-  await kernel.exec('kvai.model.add', { provider: 'fake', id: 'm1', name: 'M1', input: ['text'], reasoning: true, contextWindow: 128_000, maxTokens: 8192 });
-  await kernel.clock.advance(0);
-  return { kernel, fake };
-}
+const { withModel } = useScriptedModel();
 
 const theme = async (kernel: TestKernel) => (await kernel.exec('kernel.settings.list', {})).find((setting) => setting.key === 'kvwebui.theme');
-
-async function turn(kernel: TestKernel, sessionId: string) {
-  const session = await kernel.exec('kvcoder.session.get', { sessionId });
-  const [newest] = await kernel.exec('kvcoder.turn.list', { sessionId, limit: 1 });
-  return { session, turn: newest };
-}
 
 describe('the kvman connector asks before it changes the app (09 §9.1, ADR 0022, 5)', { timeout: 60_000 }, () => {
   it('QA34-H5 a setting change waits for the person, and is made once allowed', async () => {

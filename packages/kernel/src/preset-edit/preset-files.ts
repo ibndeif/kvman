@@ -35,8 +35,8 @@ export async function readStoredPreset(file: string): Promise<Preset> {
   return result.data;
 }
 
-// The written keys are `name`, `extensions`, then `settings` when present; `<home>/presets/` is made when missing.
-export async function writePresetFile(file: string, preset: Preset): Promise<void> {
+// The written keys are `name`, `extensions`, then `settings` when present.
+export function presetFileText(file: string, preset: Preset): string {
   const ordered: Preset =
     preset.settings === undefined
       ? { name: preset.name, extensions: preset.extensions }
@@ -45,7 +45,12 @@ export async function writePresetFile(file: string, preset: Preset): Promise<voi
   if (!result.success) {
     throw invalid(file, result.error.issues.map((issue) => `${issue.path.join('.') || 'preset'}: ${issue.message}`).join('; '));
   }
-  const text = `${JSON.stringify(result.data, null, 2)}\n`;
+  return `${JSON.stringify(result.data, null, 2)}\n`;
+}
+
+// `<home>/presets/` is made when missing.
+export async function writePresetFile(file: string, preset: Preset): Promise<void> {
+  const text = presetFileText(file, preset);
   try {
     await mkdir(path.dirname(file), { recursive: true });
     await writeFile(`${file}.${String(process.pid)}.tmp`, text);

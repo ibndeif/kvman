@@ -46,6 +46,8 @@ export type Kvwebui = {
   narrow: Ref<boolean>;
   // Called with the tab's workspace when an answer says it was closed elsewhere.
   onWorkspaceGone: (workspaceId: string) => void;
+  // Loads the page again, once kvman has restarted (ADR 0024, 9).
+  reload: () => void;
 };
 
 export const kvwebuiKey: InjectionKey<Kvwebui> = Symbol('kvwebui');
@@ -68,7 +70,7 @@ function watchNarrow(): Ref<boolean> {
   return narrow;
 }
 
-export function createState(router: Router, fetcher: typeof fetch, loader: ComponentLoader): Kvwebui {
+export function createState(router: Router, fetcher: typeof fetch, loader: ComponentLoader, reload: () => void): Kvwebui {
   const workspace = ref(homeWorkspaceId);
   const extensions = shallowRef<ExtensionInfo[]>([]);
   const api = createApi({
@@ -103,6 +105,7 @@ export function createState(router: Router, fetcher: typeof fetch, loader: Compo
     navCollapsed: ref(localStorage.getItem(navCollapsedKey) === 'true'),
     narrow: watchNarrow(),
     onWorkspaceGone: () => undefined,
+    reload,
   };
   return state;
 }

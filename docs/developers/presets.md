@@ -53,6 +53,8 @@ Three public kernel calls edit the preset **file**; none installs, loads, or tru
 - Edits are written whole or not at all (a temporary file and a rename), in the key order `name`, `extensions`, `settings`, and one at a time: two at once both land.
 - A write that fails, or a stored file that isn't valid, fails `VALIDATION_FAILED` naming the file; kvman never overwrites a file it couldn't parse.
 - `kernel.settings.set` changes a setting at once and is **not** an edit of the preset.
+- **Restart.** `kernel.restart` (command, `{}` → `{ restarting: true }`) makes kvman stop and start again in the same process, with its arguments, its lock, and its terminal, and no new browser tab; the preset is read again, so an edit applies. Jobs are aborted, processes stop, and workspaces open again.
+- **The backup.** The first edit after a good start writes the preset as it was running to `<file>.good`; later edits keep it, and a start that succeeds deletes it. A start that fails with `EXTENSION_INVALID` or `VALIDATION_FAILED` while it exists restores the file from it, prints the Problem and "The last change to the preset was undone.", and starts once more; that start's `kernel.health.get` has `rolledBack` (the Problem). Any other failure, or a second one, exits 1 as before.
 
 kvwebui's Extensions page and kvcustomizer's `kvman` connector (`extensions-install`, `extensions-uninstall`, `preset-get`) are built on these calls. The connector differs in one way: its `extensions-install` resolves a `path:` folder against the **workspace** folder, checks that it is a project with the given package name, and stores the absolute folder, because the kernel's own command resolves a relative `path:` against the preset file.
 

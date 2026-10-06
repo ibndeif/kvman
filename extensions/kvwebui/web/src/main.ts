@@ -11,5 +11,5 @@ import { createWebHistory } from 'vue-router';
 import { browserComponentLoader } from './browser-loader.ts';
 import { createKvwebui } from './create-app.ts';
 
-const { app } = createKvwebui({ history: createWebHistory(), fetch: window.fetch.bind(window), components: browserComponentLoader });
+const { app } = createKvwebui({ history: createWebHistory(), fetch: window.fetch.bind(window), components: browserComponentLoader, reload: () => window.location.reload() });
 app.mount('#app');

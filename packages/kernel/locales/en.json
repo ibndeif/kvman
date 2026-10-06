@@ -57,6 +57,7 @@
   "kernel.preset.get.description": "Shows the running preset as stored now.",
   "kernel.extensions.install.description": "Adds an extension to the preset file; it takes effect at the next start.",
   "kernel.extensions.uninstall.description": "Removes an extension from the preset file; it takes effect at the next start.",
+  "kernel.restart.description": "Asks kvman to restart: it stops and starts again in the same process.",
   "kernel.processes.list.description": "Lists the running long-lived processes.",
   "kernel.health.get.description": "Describes the running kvman.",
   "kernel.title": "kvman",

@@ -10,9 +10,10 @@ import ErrorCard from '../shared/ErrorCard.vue';
 import AddExtension from './AddExtension.vue';
 import ExtensionCard from './ExtensionCard.vue';
 import PendingExtensionCard from './PendingExtensionCard.vue';
+import RestartNow from './RestartNow.vue';
 
 // The Extensions page (plan 06 §6.6, ADR 0010, 5, ADR 0014, 4): each extension as a link to its own page, with what the
-// stored preset changes at the next restart, and the form that adds an extension. At `/` without a home page it
+// stored preset changes at the next restart (with "Restart now", ADR 0024, 9), and the form that adds an extension. At `/` without a home page it
 // carries the HOME_UNAVAILABLE card (§6.3).
 const props = defineProps<{ homeUnavailable?: { page: string; problem: Problem | undefined } }>();
 const state = useKvwebui();
@@ -47,7 +48,9 @@ const changes = computed(() => pending.value.starting.length + pending.value.rem
     <div v-if="changes > 0" role="status" class="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-accent-soft px-4.5 py-3 text-accent-ink" data-test="restart-banner">
       <span class="font-semibold">{{ t('kvwebui.extensions.banner') }}</span>
       <span>{{ t('kvwebui.extensions.banner.count', { count: String(changes) }) }}</span>
+      <RestartNow />
     </div>
+    <ErrorCard v-if="state.health.value?.rolledBack" :problem="state.health.value.rolledBack" title="kvwebui.extensions.rolledBack" data-test="rolled-back" />
     <ErrorCard v-if="state.presetProblem.value" :problem="state.presetProblem.value" title="kvwebui.extensions.presetFailed" data-test="preset-error" />
     <ExtensionCard v-for="extension in shown" :key="extension.name" :extension="extension" :removed="pending.removed.has(extension.name)" />
     <p v-if="shown.length === 0" class="m-0 text-muted" data-test="extensions-none">{{ t('kvwebui.extensions.noMatch') }}</p>

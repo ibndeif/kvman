@@ -8,7 +8,7 @@ const kvcustomizer = useKvcustomizer();
 const expected = [
   { name: 'docs', commands: ['list', 'get'] },
   { name: 'ext', commands: ['new', 'list', 'check', 'test'] },
-  { name: 'kvman', commands: ['init', 'model-list', 'model-set', 'settings-list', 'settings-set', 'settings-reset', 'extensions-list', 'extensions-install', 'extensions-uninstall', 'preset-get', 'workspaces-list', 'jobs-list', 'jobs-get', 'processes-list', 'health-get', 'query-get'] },
+  { name: 'kvman', commands: ['init', 'model-list', 'model-set', 'settings-list', 'settings-set', 'settings-reset', 'extensions-list', 'extensions-install', 'extensions-uninstall', 'restart', 'preset-get', 'workspaces-list', 'jobs-list', 'jobs-get', 'processes-list', 'health-get', 'query-get'] },
   { name: 'preset', commands: ['new', 'check'] },
   { name: 'preview', commands: ['start', 'stop', 'status', 'query-get', 'command-run'] },
 ];
@@ -45,11 +45,11 @@ describe("kvcustomizer's connectors (09 §9.1, §9.4)", { timeout: 30_000 }, () 
     expect(kvman?.commands?.[0]).toMatchObject({ name: 'init', command: 'kvcustomizer.app.guide.get', asks: false });
   });
 
-  it('QA34-H4 and QA34-H10 only the five commands that change the app ask the person, and the new commands run their kernel commands', async () => {
+  it('QA34-H4, QA34-H10, and QA36-H11 only the six commands that change the app ask the person, and the new commands run their kernel commands', async () => {
     const { kernel } = await kvcustomizer.start();
     const own = (await kernel.exec('kvcoder.connector.list', {})).filter((connector) => connector.owner === '@kvman/kvcustomizer');
     const asking = own.flatMap((connector) => (connector.commands ?? []).filter((command) => command.asks).map((command) => `${connector.name} ${command.name}`));
-    expect(asking).toEqual(['kvman model-set', 'kvman settings-set', 'kvman settings-reset', 'kvman extensions-install', 'kvman extensions-uninstall']);
+    expect(asking).toEqual(['kvman model-set', 'kvman settings-set', 'kvman settings-reset', 'kvman extensions-install', 'kvman extensions-uninstall', 'kvman restart']);
     const commandOf = (connector: string, name: string) => own.find((candidate) => candidate.name === connector)?.commands?.find((command) => command.name === name)?.command;
     expect(['workspaces-list', 'jobs-list', 'jobs-get', 'processes-list', 'health-get', 'query-get'].map((name) => commandOf('kvman', name))).toEqual([
       'kvcustomizer.app.workspaces.list',
@@ -81,7 +81,7 @@ describe("kvcustomizer's connectors (09 §9.1, §9.4)", { timeout: 30_000 }, () 
     const extension = listed.find((entry) => entry.name === '@kvman/kvcustomizer');
     expect(extension?.namespace).toBe('kvcustomizer');
     expect(extension?.commands.map((command) => command.name).sort()).toEqual(
-      ['kvcustomizer.ext.new', 'kvcustomizer.ext.check', 'kvcustomizer.ext.test', 'kvcustomizer.preset.new', 'kvcustomizer.preset.check', 'kvcustomizer.preview.start', 'kvcustomizer.preview.stop', 'kvcustomizer.preview.command.run', 'kvcustomizer.app.model.set', 'kvcustomizer.app.settings.set', 'kvcustomizer.app.settings.reset', 'kvcustomizer.app.extensions.install', 'kvcustomizer.app.extensions.uninstall'].sort(),
+      ['kvcustomizer.ext.new', 'kvcustomizer.ext.check', 'kvcustomizer.ext.test', 'kvcustomizer.preset.new', 'kvcustomizer.preset.check', 'kvcustomizer.preview.start', 'kvcustomizer.preview.stop', 'kvcustomizer.preview.command.run', 'kvcustomizer.app.model.set', 'kvcustomizer.app.settings.set', 'kvcustomizer.app.settings.reset', 'kvcustomizer.app.extensions.install', 'kvcustomizer.app.extensions.uninstall', 'kvcustomizer.app.restart'].sort(),
     );
     expect(extension?.queries.map((query) => query.name).sort()).toEqual(['kvcustomizer.app.extensions.list', 'kvcustomizer.app.guide.get', 'kvcustomizer.app.model.list', 'kvcustomizer.app.preset.get', 'kvcustomizer.app.settings.list', 'kvcustomizer.docs.get', 'kvcustomizer.docs.list', 'kvcustomizer.ext.list', 'kvcustomizer.guides.get', 'kvcustomizer.guides.list', 'kvcustomizer.preview.status', 'kvcustomizer.preview.query.get', 'kvcustomizer.app.workspaces.list', 'kvcustomizer.app.jobs.list', 'kvcustomizer.app.jobs.get', 'kvcustomizer.app.processes.list', 'kvcustomizer.app.health.get', 'kvcustomizer.app.query.get'].sort());
     for (const command of extension?.commands ?? []) expect(command.public).toBe(true);

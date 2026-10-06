@@ -57,6 +57,7 @@
   "kernel.preset.get.description": "يعيد الإعداد المسبق الحالي كما هو مخزَّن الآن.",
   "kernel.extensions.install.description": "يضيف إضافة إلى ملف الإعداد المسبق؛ وتُطبَّق عند التشغيل التالي.",
   "kernel.extensions.uninstall.description": "يزيل إضافة من ملف الإعداد المسبق؛ وتُطبَّق الإزالة عند التشغيل التالي.",
+  "kernel.restart.description": "يطلب من kvman إعادة التشغيل: يتوقف ثم يبدأ من جديد في العملية نفسها.",
   "kernel.processes.list.description": "يسرد العمليات طويلة الأمد الجارية.",
   "kernel.health.get.description": "يصف حالة kvman الجاري.",
   "kernel.title": "kvman",

@@ -39,7 +39,7 @@ describe('the first edit of the bundled preset copies it (02 §2.10, ADR 0010, 5
         '@acme/notes': 'npm:1.2.3',
         '@acme/more': 'npm:2.0.0',
       });
-      expect(readdirSync(path.join(home, 'presets'))).toEqual(['coder.json']);
+      expect(readdirSync(path.join(home, 'presets')).sort()).toEqual(['coder.json', 'coder.json.good']);
       expect(readStoredFile(bundledFile)).toBe(bundledBefore);
     } finally {
       await kernel.close();

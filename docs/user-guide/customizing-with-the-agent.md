@@ -31,7 +31,9 @@ The model only offers models you can actually call: those of a provider you have
 
 ## What needs a restart
 
-Changes to **extensions** and to the **preset** are saved to your preset file and applied the next time kvman starts, because kvman reads the preset once, at the start. After such a change the agent tells you to restart kvman, and the Extensions page shows **Restart kvman to apply**. Press Ctrl+C in the terminal and run `kvman` again. A new extension that isn't bundled asks for your trust at that start.
+Changes to **extensions** and to the **preset** are saved to your preset file and applied the next time kvman starts, because kvman reads the preset once, at the start. After such a change the agent asks to restart kvman for you (you are asked first, like every change), and the Extensions page shows **Restart kvman to apply** with a **Restart now** button. A restart stops what is running, such as a chat that is still working, a preview, or a server the agent started; the page comes back by itself. A new extension that isn't bundled asks for your trust in the terminal where kvman runs, and kvman waits there for your answer.
+
+If kvman can't start with a change, it puts your preset back as it was and starts again, and the Extensions page says **The last change was undone because kvman couldn't start with it.** The agent reads this too, and fixes the cause.
 
 Changes to the **model** and to **settings** apply at once.
 
@@ -45,7 +47,7 @@ What the agent can't do here:
 
 - read, list, or change a secret; an API key is never sent to the model;
 - run an arbitrary command of the app: it reaches a command only through a connector that names it;
-- restart kvman, or open or close a workspace.
+- open or close a workspace.
 
 ## Looking things up
 

@@ -181,6 +181,7 @@ Registrations are sealed when the entry returns: a later `register*` call fails 
   - the file written is the person's: `<home>/presets/<name>.json` for a home preset, the given file for `--preset ./file.json`, and for the bundled preset its copy at `<home>/presets/<name>.json`, made at the first edit;
   - `npm install` and the trust question happen at the next start, as for any preset (§2.9);
   - `kernel.settings.set` still changes a setting at once and is not an edit of the preset.
+- **The backup** (ADR 0024, 4 and 5). The first edit after a good start writes the preset as it was running to `<file>.good` beside the file, unless that file exists; later edits before the next start keep it, and a first edit of the bundled preset backs up the bundled one. A start that succeeds, with its HTTP port listening, deletes it. A start that fails with `EXTENSION_INVALID` or `VALIDATION_FAILED` while it exists restores the file from it and starts once more (§2.14).
 
 ## 2.11 Localization
 
@@ -221,8 +222,9 @@ All are public. Types are in `@kvman/sdk`.
 | `kernel.preset.get` | query | `{}` → `{ name, origin: 'bundled' \| 'home' \| 'file', file?, extensions, settings }`: the running preset as stored now, so after an edit it shows the change before the restart; `file` is the file an edit writes (absent for `bundled` until the first edit) (ADR 0010, 5) |
 | `kernel.extensions.install` | command | `{ name, source }` → `{ file, restartRequired: true }`: adds `name` to the preset's `extensions`; `source` is `bundled` (only for a bundled extension's name; any other name fails `VALIDATION_FAILED`), `npm:<exact version>`, or `path:<folder>`. A bad source, or a `name` already in the preset, fails `VALIDATION_FAILED` (ADR 0010, 5) |
 | `kernel.extensions.uninstall` | command | `{ name }` → `{ file, restartRequired: true }`: removes `name` from the preset's `extensions`. `NOT_FOUND` when it isn't there; `VALIDATION_FAILED`, naming the dependents, when another extension of the preset depends on it (ADR 0010, 5) |
+| `kernel.restart` | command | `{}` → `{ restarting: true }`: asks the run to restart and answers at once (§2.14, ADR 0024, 2) |
 | `kernel.processes.list` | query | `{}` → `[{ extension, workspaceId, name, pid, startedAt }]` (§2.16) |
-| `kernel.health.get` | query | `{}` → `{ version, preset, mode, workers, uptimeMs, languages }`: kvman's version, the preset's name, `web`, the pool size, the uptime on the kernel's clock, and the codes the loaded catalogs have (ADR 0009, 29) |
+| `kernel.health.get` | query | `{}` → `{ version, preset, mode, workers, uptimeMs, languages, rolledBack? }`: kvman's version, the preset's name, `web`, the pool size, the uptime on the kernel's clock, the codes the loaded catalogs have (ADR 0009, 29), and, only for a start that came after an undone one, the Problem that start failed with (ADR 0024, 5 and 6) |
 
 There is no sandbox in this phase, so extensions can call these too.
 
@@ -265,6 +267,10 @@ Going over a limit fails loudly and never cuts anything off.
 5. Async attempts that didn't finish fail with `INTERRUPTED`: a job with retries left stays queued and runs at the next start; one without ends `failed` (§2.3).
 
 SIGTERM stops the same way, and kvman exits 0. A second Ctrl+C or SIGTERM stops at once, with exit code 130 (ADR 0009, 50).
+
+**Restart** (ADR 0024). `kernel.restart` makes kvman run the stop sequence above, then the start sequence again, in the same process: the same arguments, the same lock (its port updated), the same terminal, and no new browser tab. It prints `kvman is restarting…`, then the URL. Running jobs are aborted, and an attempt that didn't finish fails `INTERRUPTED` (§2.3); processes (§2.16) are stopped; open workspaces are remembered (§2.6) and open again. The preset is read again at step 3.
+
+**A start that fails because of the preset is undone** (ADR 0024, 5). When the start fails with `EXTENSION_INVALID` or `VALIDATION_FAILED` and the backup `<file>.good` exists (§2.10), the CLI restores the file from it, prints the Problem and `The last change to the preset was undone.`, and starts once more; that start's `kernel.health.get` has `rolledBack`. A second failure prints its Problem and exits 1; a start that fails for another reason, such as `PORT_IN_USE`, prints its Problem and exits 1, and the backup stays.
 
 ## 2.15 Handler points
 

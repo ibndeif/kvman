@@ -47,7 +47,7 @@ The agent's prompt holds no guide to customizing. The `kvman` connector's descri
 - **No kvman words.** Extensions, namespaces, presets, setting keys, and commands stay out of what the agent asks and says, and out of a call's `description`, which is the text of the approval card.
 - **Look, then use the smallest thing.** A setting, then an extension that is installed, then one the agent builds, and a new preset only for a different app. If kvman can't do it, the agent says so.
 - **Show before changing.** For an extension it built, the agent starts the preview, gives the address, and asks the person to confirm before it adds the extension to the app.
-- **Undo and restart.** The agent says how to undo each change (`settings-reset`, `extensions-uninstall`), that kvman must be restarted after a change to the extensions, and what is still unchecked.
+- **Undo and restart.** The agent says how to undo each change (`settings-reset`, `extensions-uninstall`), what is still unchecked, and, after a change to the extensions, restarts kvman (below).
 
 ## Building an extension, step by step
 
@@ -57,7 +57,7 @@ The agent's prompt holds no guide to customizing. The `kvman` connector's descri
 4. **Check.** After every change, `ext check { folder }`, then `ext test { folder }`. `ext check` answers `[{ file?, message, hint }]`: TypeScript's errors first, then what kvman would refuse or show untranslated.
 5. **Run.** `preview start { extensions: [folder] }` answers `{ url }`.
 6. **Check that it works.** Call the project in the preview (below), and open its page at the URL.
-7. **Install**, when the person asks: `kvman extensions-install { name, source: "path:<folder>" }`, then tell the person to restart kvman.
+7. **Install**, when the person asks: `kvman extensions-install { name, source: "path:<folder>" }`, then `kvman restart`.
 
 To improve an extension that exists, read its code and its docs page first, find what is wrong with `ext check`, `ext test`, and the preview, change the smallest thing, and run the checks again.
 
@@ -85,15 +85,17 @@ These `kvman` commands only read, and never ask the person:
 - a name under `kernel.secrets.` fails `VALIDATION_FAILED`;
 - the query's own failure comes back as it is.
 
-There is no `kvman` command that runs an arbitrary command of the app: a command is reached only through a connector that names it. There is also none that restarts kvman, or that opens or closes a workspace.
+There is no `kvman` command that runs an arbitrary command of the app: a command is reached only through a connector that names it. There is none that opens or closes a workspace.
 
 ## Changing the app you run in
 
-`kvman` is for the running app; `ext` is for a project in the workspace. Five commands change the app: `model-set`, `settings-set`, `settings-reset`, `extensions-install`, and `extensions-uninstall`.
+`kvman` is for the running app; `ext` is for a project in the workspace. Six commands change the app: `model-set`, `settings-set`, `settings-reset`, `extensions-install`, `extensions-uninstall`, and `restart`.
 
 - **The person is asked before each one runs.** The call becomes an approval card showing its description, the command, and its payload, whatever `kvcoder.shell.approval` says. Allowed, it runs; denied, the call answers `denied by the user` and nothing changed. Make one call for one change, and say in its `description` what changes.
 - **Model and settings change at once.** `model-set` takes the full model id of a model `model-list` shows (a model of a connected provider or of a custom provider); `settings-set` and `settings-reset` take a setting key and a scope, `global` or `workspace`. `settings-set` replaces the whole value, so for a list read it with `settings-list` first.
-- **Extensions and the preset change the preset file, and apply at the next start.** `extensions-install` takes a package name and a source, and `extensions-uninstall` takes a name. Both answer `{ file, restartRequired: true }`. Nothing is installed, loaded, or trusted by the call: tell the person to restart kvman, and the terminal asks them to trust a new extension then. The first change to the bundled preset saves a copy of it as `<home>/presets/<name>.json`.
+- **Extensions and the preset change the preset file, and apply at the next start.** `extensions-install` takes a package name and a source, and `extensions-uninstall` takes a name. Both answer `{ file, restartRequired: true }`. Nothing is installed, loaded, or trusted by the call: `restart` applies it, and the terminal asks the person to trust a new extension then. The first change to the bundled preset saves a copy of it as `<home>/presets/<name>.json`.
+
+`restart` takes nothing and answers `{ restarting: true }`. kvman stops and starts again in the same process, with the same arguments, the same terminal, and no new browser tab, and the person is asked first. It stops running work: a chat's step that is running ends `interrupted` (the person sends a message to go on), long-lived processes such as a preview or a server the agent started stop, and an async job that didn't finish runs again if it has retries left. Open workspaces stay open. If kvman can't start with the change, because an extension is invalid or a setting fails, it puts the preset back as it was, starts again, and `health-get` has `rolledBack` with the failure's Problem; that is only for the start that follows. A new extension that isn't bundled still asks for trust in the terminal, so the agent says so.
 
 The three sources of `extensions-install`:
 

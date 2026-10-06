@@ -22,6 +22,7 @@ export const kvmanConnector = {
       ],
     },
     { name: 'extensions-uninstall', command: 'kvcustomizer.app.extensions.uninstall', asks: true as const, examples: [{ description: 'Remove one', input: { name: '@acme/notes' } }] },
+    { name: 'restart', command: 'kvcustomizer.app.restart', asks: true as const, examples: [{ description: 'Restart kvman to finish adding the notes page', input: {} }] },
     { name: 'preset-get', command: 'kvcustomizer.app.preset.get' },
     { name: 'workspaces-list', command: 'kvcustomizer.app.workspaces.list' },
     { name: 'jobs-list', command: 'kvcustomizer.app.jobs.list', examples: [{ description: 'See the jobs that failed', input: { status: 'failed', limit: 20 } }] },
