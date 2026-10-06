@@ -44,8 +44,9 @@ describe("the program kinds in the delegate connector's dialog (08 §8.7, ADR 00
     await add(view, 'opencode', { 'worker-instructions': 'Be exact.', 'worker-minutes': '45', 'worker-program-model': 'zai/glm', 'worker-agent': 'build' });
     expect(view.findAll('[data-test="worker-kind-select"] option').map((option) => option.text())).toEqual(['Subagent', 'opencode', 'pi', 'Claude Code']);
     await part(view, 'worker-approval-auto').setValue(true);
+    await part(view, 'worker-auto-approve').setValue(false);
     await submit(view);
-    const opencode: OpencodeEntry = { name: 'opencode', description: 'Does work', enabled: true, kind: 'opencode', instructions: 'Be exact.', approval: 'auto', timeoutMs: 2_700_000, model: 'zai/glm', agent: 'build', autoApprove: true };
+    const opencode: OpencodeEntry = { name: 'opencode', description: 'Does work', enabled: true, kind: 'opencode', instructions: 'Be exact.', approval: 'auto', timeoutMs: 2_700_000, model: 'zai/glm', agent: 'build', autoApprove: false };
     expect(lastWritten(fake)).toEqual(opencode);
 
     await add(view, 'pi', { 'worker-tools': 'read\n\n bash ', 'worker-pi-thinking': 'xhigh' });
@@ -95,6 +96,25 @@ describe("the program kinds in the delegate connector's dialog (08 §8.7, ADR 00
     await flushPromises();
     expect(state().exists()).toBe(false);
     expect(fake.calls.filter((call) => call.name === 'kvcoder.delegate.worker.check').map((call) => call.input['name'])).toEqual(['coder', 'coder']);
+  });
+
+  it('QA32-E21 Start at once with its own approval on, or with a mode that asks nobody, shows under Before a run, and nothing is written', async () => {
+    const fake = world([general]);
+    const view = await mounted(DelegateWorkers, fake);
+    await flushPromises();
+    await add(view, 'opencode', {});
+    await part(view, 'worker-approval-auto').setValue(true);
+    await submit(view);
+    expect(part(view, 'worker-approval-error').text()).toBe('A worker that starts at once can\'t also approve its own actions. Choose "Ask me", or a stricter setting below.');
+    expect(settingWrites(fake)).toEqual([]);
+    await part(view, 'worker-kind-select').setValue('claude');
+    await part(view, 'worker-permission-mode').setValue('bypassPermissions');
+    await submit(view);
+    expect(part(view, 'worker-approval-error').exists()).toBe(true);
+    expect(settingWrites(fake)).toEqual([]);
+    await part(view, 'worker-approval-ask').setValue(true);
+    await submit(view);
+    expect(lastWritten(fake)).toMatchObject({ kind: 'claude', approval: 'ask', permissionMode: 'bypassPermissions' });
   });
 
   it.each(['0', '121', '2.5', 'ten', ''])('QA32-E18 a time limit of "%s" minutes shows under its field, and nothing is written', async (minutes) => {

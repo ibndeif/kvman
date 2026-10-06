@@ -24,7 +24,14 @@ export const subagentWorkerSchema = z.strictObject({ ...common, kind: z.literal(
 const program = { ...common, approval: z.enum(['ask', 'auto']), timeoutMs: z.number().int().min(60_000).max(7_200_000) };
 const flag = z.string().min(1).nullable();
 
-export const opencodeWorkerSchema = z.strictObject({ ...program, kind: z.literal('opencode'), model: flag, agent: flag, autoApprove: z.boolean() });
+// A run nobody is asked about must not also approve its own actions (ADR 0021, 39): the task comes from the model,
+// which may have been steered by what it read.
+const unattended = 'A worker that starts at once must not approve its own actions: set it to ask before a run, or choose a stricter mode.';
+
+/** The permission modes in which Claude Code acts without asking anyone. */
+export const unaskedModes: readonly string[] = ['bypassPermissions', 'auto', 'dontAsk'];
+
+export const opencodeWorkerSchema = z.strictObject({ ...program, kind: z.literal('opencode'), model: flag, agent: flag, autoApprove: z.boolean() }).refine((worker) => worker.approval === 'ask' || !worker.autoApprove, unattended);
 export const piWorkerSchema = z.strictObject({ ...program, kind: z.literal('pi'), model: flag, thinking: z.enum(['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max']).nullable(), tools: z.array(z.string().min(1)).nullable() });
 export const claudeWorkerSchema = z.strictObject({
   ...program,
@@ -32,7 +39,7 @@ export const claudeWorkerSchema = z.strictObject({
   model: flag,
   effort: z.enum(['low', 'medium', 'high', 'xhigh', 'max']).nullable(),
   permissionMode: z.enum(['acceptEdits', 'auto', 'bypassPermissions', 'dontAsk', 'plan']),
-});
+}).refine((worker) => worker.approval === 'ask' || !unaskedModes.includes(worker.permissionMode), unattended);
 
 /** One worker: a subagent, or a program of one of the kinds kvcoder knows (ADR 0021, 3). */
 export const workerSchema = z.discriminatedUnion('kind', [subagentWorkerSchema, opencodeWorkerSchema, piWorkerSchema, claudeWorkerSchema]);

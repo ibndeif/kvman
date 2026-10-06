@@ -16,7 +16,7 @@ describe('program workers: their entries, command lines, and answers (08 §8.5, 
   });
 
   it("QA32-H2 each kind's command line, with every field set and with every field null", () => {
-    expect(commandLine(parsed('oc', 'opencode'), 'Do it')).toEqual({ command: 'opencode', args: ['run', '--format', 'json', '--auto', '--', 'Do it'] });
+    expect(commandLine(parsed('oc', 'opencode', { approval: 'ask', autoApprove: true }), 'Do it')).toEqual({ command: 'opencode', args: ['run', '--format', 'json', '--auto', '--', 'Do it'] });
     expect(commandLine(parsed('oc', 'opencode', { model: 'zai/glm', agent: 'build', autoApprove: false, instructions: 'Be brief.' }), '-x Do it')).toEqual({ command: 'opencode', args: ['run', '--format', 'json', '--model', 'zai/glm', '--agent', 'build', '--', 'Be brief.\n\n-x Do it'] });
     expect(commandLine(parsed('pie', 'pi'), 'Do it')).toEqual({ command: 'pi', args: ['-p', '--', 'Do it'] });
     expect(commandLine(parsed('pie', 'pi', { model: 'a/b', thinking: 'high', tools: ['read', 'bash'], instructions: 'Be brief.' }), 'Do it')).toEqual({ command: 'pi', args: ['-p', '--model', 'a/b', '--thinking', 'high', '--tools', 'read,bash', '--append-system-prompt', 'Be brief.', '--', 'Do it'] });
@@ -47,6 +47,19 @@ describe('program workers: their entries, command lines, and answers (08 §8.5, 
     const { approval: _approval, ...missing } = programWorker('oc', 'opencode');
     expect(workerSchema.safeParse(missing).success).toBe(false);
     expect(workerSchema.safeParse(programWorker('cc', 'claude', { timeoutMs: 7_200_000 })).success).toBe(true);
+  });
+
+  it('QA32-E20 a worker that starts at once cannot approve its own actions, and one that asks first can', () => {
+    const refused = [programWorker('oc', 'opencode', { autoApprove: true }), ...['bypassPermissions', 'auto', 'dontAsk'].map((permissionMode) => programWorker('cc', 'claude', { permissionMode }))];
+    for (const entry of refused) {
+      const result = workerSchema.safeParse(entry);
+      expect(result.success, JSON.stringify(entry)).toBe(false);
+      expect(result.error?.issues[0]?.message).toBe('A worker that starts at once must not approve its own actions: set it to ask before a run, or choose a stricter mode.');
+      expect(workerSchema.safeParse({ ...entry, approval: 'ask' }).success).toBe(true);
+    }
+    for (const permissionMode of ['acceptEdits', 'plan']) expect(workerSchema.safeParse(programWorker('cc', 'claude', { permissionMode })).success).toBe(true);
+    expect(workerSchema.safeParse(programWorker('oc', 'opencode')).success).toBe(true);
+    expect(workerSchema.safeParse(programWorker('pie', 'pi')).success).toBe(true);
   });
 
   it('QA32-E5 a run that passes its time limit is killed, and says so', { timeout: 20_000 }, async () => {

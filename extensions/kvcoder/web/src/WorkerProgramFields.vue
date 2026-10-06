@@ -6,7 +6,7 @@ import { claudeEffort, permissionModes, piThinking, type WorkerDraft } from './w
 // the flags of its kind, each left empty for the program's own default.
 // The form's own draft, edited in place.
 const draft = defineModel<WorkerDraft>('draft', { required: true });
-const props = defineProps<{ minutesProblem?: string | undefined }>();
+const props = defineProps<{ minutesProblem?: string | undefined; approvalProblem?: string | undefined }>();
 const kvman = useKvman();
 const text = (key: string): string => kvman.t(`kvcoder.config.workers.form.${key}`);
 </script>
@@ -18,7 +18,8 @@ const text = (key: string): string => kvman.t(`kvcoder.config.workers.form.${key
       <input v-model="draft.approval" type="radio" name="kvc-worker-approval" :value="choice" :data-test="`worker-approval-${choice}`" />
       {{ text(`approval.${choice}`) }}
     </label>
-    <span class="kvc-muted">{{ text('approvalHint') }}</span>
+    <span v-if="props.approvalProblem !== undefined" class="kvc-form-error" role="alert" data-test="worker-approval-error">{{ kvman.t(props.approvalProblem) }}</span>
+    <span v-else class="kvc-muted">{{ text('approvalHint') }}</span>
   </fieldset>
   <label class="kvc-form-field">
     <span class="kvc-form-label">{{ text('minutes') }}</span>

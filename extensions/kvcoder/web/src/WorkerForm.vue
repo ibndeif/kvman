@@ -77,7 +77,7 @@ function submit(): void {
       <span v-if="problems.instructions !== undefined" class="kvc-form-error" role="alert" data-test="worker-instructions-error">{{ kvman.t(problems.instructions) }}</span>
       <span v-else class="kvc-muted">{{ text('instructionsHint') }}</span>
     </label>
-    <WorkerProgramFields v-if="draft.kind !== 'subagent'" v-model:draft="draft" :minutes-problem="problems.minutes" />
+    <WorkerProgramFields v-if="draft.kind !== 'subagent'" v-model:draft="draft" :minutes-problem="problems.minutes" :approval-problem="problems.approval" />
     <template v-else>
     <fieldset class="kvc-form-choice">
       <legend class="kvc-form-label">{{ text('connectors') }}</legend>

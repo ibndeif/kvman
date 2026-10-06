@@ -388,6 +388,7 @@
   "kvcoder.config.workers.form.permissionMode": "وضع الأذونات",
   "kvcoder.config.workers.form.permissionModeHint": "كيف يقرر البرنامج في تعديلاته وأوامره.",
   "kvcoder.config.workers.invalid.minutes": "أدخل عددًا صحيحًا من الدقائق من 1 إلى 120.",
+  "kvcoder.config.workers.invalid.unattended": "المساعد الذي يبدأ فورًا لا يمكنه أيضًا الموافقة على أفعاله. اختر «اسألني»، أو إعدادًا أشد أدناه.",
   "kvcoder.config.connectors.changed.global": "تم تغييره",
   "kvcoder.config.connectors.changed.workspace": "تم تغييره في {name}",
   "kvcoder.config.connectors.reset.global": "استعادة الافتراضي",

@@ -89,7 +89,11 @@ const namePattern = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 const instructionsLimit = 16 * 1024;
 const wholeMinutes = /^(?:[1-9]|[1-9]\d|1[01]\d|120)$/;
 
-export type DraftField = 'name' | 'description' | 'instructions' | 'connectors' | 'minutes';
+export type DraftField = 'name' | 'description' | 'instructions' | 'connectors' | 'minutes' | 'approval';
+
+// A run nobody is asked about must not also approve its own actions (ADR 0021, 39).
+const unaskedModes: readonly string[] = ['bypassPermissions', 'auto', 'dontAsk'];
+const unattended = (draft: WorkerDraft): boolean => draft.approval === 'auto' && ((draft.kind === 'opencode' && draft.autoApprove) || (draft.kind === 'claude' && unaskedModes.includes(draft.permissionMode)));
 
 /** What is wrong with a draft, as a translation key per field; `taken` are the other workers' names. */
 export function draftProblems(draft: WorkerDraft, taken: readonly string[]): Partial<Record<DraftField, string>> {
@@ -102,5 +106,6 @@ export function draftProblems(draft: WorkerDraft, taken: readonly string[]): Par
   if (new TextEncoder().encode(draft.instructions).length > instructionsLimit) problems.instructions = 'kvcoder.config.workers.invalid.instructionsLong';
   if (draft.kind === 'subagent' && !draft.all && draft.connectors.length === 0) problems.connectors = 'kvcoder.config.workers.invalid.connectorsEmpty';
   if (draft.kind !== 'subagent' && !wholeMinutes.test(draft.minutes.trim())) problems.minutes = 'kvcoder.config.workers.invalid.minutes';
+  if (unattended(draft)) problems.approval = 'kvcoder.config.workers.invalid.unattended';
   return problems;
 }

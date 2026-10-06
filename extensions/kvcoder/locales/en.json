@@ -388,6 +388,7 @@
   "kvcoder.config.workers.form.permissionMode": "Permission mode",
   "kvcoder.config.workers.form.permissionModeHint": "How the program decides about its own edits and commands.",
   "kvcoder.config.workers.invalid.minutes": "Give a whole number of minutes from 1 to 120.",
+  "kvcoder.config.workers.invalid.unattended": "A worker that starts at once can't also approve its own actions. Choose \"Ask me\", or a stricter setting below.",
   "kvcoder.config.connectors.changed.global": "Changed",
   "kvcoder.config.connectors.changed.workspace": "Changed for {name}",
   "kvcoder.config.connectors.reset.global": "Reset",

@@ -38,7 +38,7 @@ describe("a program worker's run (08 §8.5, ADR 0021, 10 to 16 and 31 to 36)", {
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await requests(fake, 2);
     expect(toolResults(fake, 1)).toEqual(['from opencode', 'from pi']);
-    expect(installed.calls('opencode')[0]?.args).toEqual(['run', '--format', 'json', '--auto', '--', 'Be brief.\n\nsay:from opencode']);
+    expect(installed.calls('opencode')[0]?.args).toEqual(['run', '--format', 'json', '--', 'Be brief.\n\nsay:from opencode']);
     expect(installed.calls('pi')[0]?.args).toEqual(['-p', '--', 'say:from pi']);
   });
 

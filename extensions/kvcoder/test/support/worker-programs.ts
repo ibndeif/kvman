@@ -88,6 +88,6 @@ const program = { enabled: true, instructions: '', approval: 'auto', timeoutMs: 
 
 /** A whole `opencode`, `pi`, or `claude` worker entry: turned on, starting at once, with every flag left out unless `fields` say otherwise. */
 export function programWorker(name: string, kind: ProgramKind, fields: Record<string, Json> = {}): Record<string, Json> {
-  const own: Record<ProgramKind, Record<string, Json>> = { opencode: { model: null, agent: null, autoApprove: true }, pi: { model: null, thinking: null, tools: null }, claude: { model: null, effort: null, permissionMode: 'acceptEdits' } };
+  const own: Record<ProgramKind, Record<string, Json>> = { opencode: { model: null, agent: null, autoApprove: false }, pi: { model: null, thinking: null, tools: null }, claude: { model: null, effort: null, permissionMode: 'acceptEdits' } };
   return { name, description: `The ${name} worker`, kind, ...program, ...own[kind], ...fields };
 }
