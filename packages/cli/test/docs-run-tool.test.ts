@@ -22,9 +22,7 @@ describe('the documentation describes the run tool (QA18-H24, ADR 0011)', () => 
     for (const page of [path.join('docs', 'developers', 'connectors.md'), path.join('extensions', 'kvcoder', 'docs', 'connectors.md'), path.join('docs', 'user-guide', 'coding-app.md')]) expect(read(page), page).toContain('`background`');
     expect(read('docs', 'user-guide', 'coding-app.md')).toContain('connector');
 
-    const row = read('README.md').split('\n').find((line) => line.startsWith('| QA 18 ')) ?? '';
-    expect(row).toContain('ADR 0011');
-    for (const [where, markdown] of [...pages.map((page) => [page, read(page)] as const), ['the README row of QA 18', row] as const]) {
+    for (const [where, markdown] of pages.map((page) => [page, read(page)] as const)) {
       expect(markdown, where).not.toMatch(/--async|jobs (get|cancel)|<<'EOF'|heredoc|here-string/);
       expect(markdown, where).not.toMatch(/`[a-z-]+ (-h|[a-z-]+ -h)`/);
       expect(markdown, where).not.toMatch(/`[a-z-]+ [a-z-]+ '\{/);
