@@ -17,12 +17,14 @@ const position = (text: string): number => {
 };
 
 describe('the release workflow (ADR 0026)', () => {
-  it('QA38-H6 it runs on a version tag only, may ask npm for an identity, and publishes after the gates', () => {
+  it('QA38-H6 it runs on a version tag only, may ask npm for an identity, and publishes after the build, typecheck, and lint, without the tests', () => {
     expect(workflow).toContain("on:\n  push:\n    tags:\n      - 'v*'\n");
     expect(workflow).not.toMatch(/branches:|pull_request|schedule:|workflow_dispatch/);
     expect(workflow).toContain('permissions:\n  contents: read\n  id-token: write\n');
 
-    const steps = [tagCheck, 'pnpm install --frozen-lockfile', 'pnpm build', 'pnpm typecheck', 'pnpm lint', 'pnpm test', 'pnpm changeset publish'].map(position);
+    expect(workflow).not.toMatch(/pnpm test|playwright/);
+
+    const steps = [tagCheck, 'pnpm install --frozen-lockfile', 'pnpm build', 'pnpm typecheck', 'pnpm lint', 'pnpm changeset publish'].map(position);
     expect(steps).toEqual([...steps].sort((left, right) => left - right));
   });
 
