@@ -1,9 +1,9 @@
 {
-  "kvcustomizer.title": "kvcustomizer",
-  "kvcustomizer.errors.FOLDER_NOT_EMPTY": "هذا المجلد غير فارغ. اختر مجلدًا جديدًا أو فارغًا.",
-  "kvcustomizer.errors.FILE_EXISTS": "هذا الملف موجود بالفعل.",
-  "kvcustomizer.errors.NOT_A_PROJECT": "هذا المجلد ليس مشروع إضافة (لا يحتوي على package.json فيه حقل kvman).",
-  "kvcustomizer.errors.NPM_FAILED": "فشل تنفيذ npm.",
-  "kvcustomizer.errors.NO_FREE_PORT": "لا يوجد منفذ متاح للمعاينة بين 3738 و3837.",
-  "kvcustomizer.errors.PREVIEW_FAILED": "لم يبدأ تشغيل kvman الخاص بالمعاينة."
+  "kvbuilder.title": "kvman builder",
+  "kvbuilder.errors.FOLDER_NOT_EMPTY": "هذا المجلد غير فارغ. اختر مجلدًا جديدًا أو فارغًا.",
+  "kvbuilder.errors.FILE_EXISTS": "هذا الملف موجود بالفعل.",
+  "kvbuilder.errors.NOT_A_PROJECT": "هذا المجلد ليس مشروع إضافة (لا يحتوي على package.json فيه حقل kvman).",
+  "kvbuilder.errors.NPM_FAILED": "فشل تنفيذ npm.",
+  "kvbuilder.errors.NO_FREE_PORT": "لا يوجد منفذ متاح للمعاينة بين 3738 و3837.",
+  "kvbuilder.errors.PREVIEW_FAILED": "لم يبدأ تشغيل kvman الخاص بالمعاينة."
 }

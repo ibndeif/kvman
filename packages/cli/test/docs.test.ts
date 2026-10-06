@@ -120,7 +120,7 @@ describe('the documentation (QA17-H22 to H24, E24)', () => {
     for (const file of allowed) expect(read(file), path.relative(root, file)).toMatch(/Migrating from kv/);
   });
 
-  it('QA17-E24 no page names a kernel name, a tool, or a kvcustomizer name that is not in the plan or the code', () => {
+  it('QA17-E24 no page names a kernel name, a tool, or a kvbuilder name that is not in the plan or the code', () => {
     const kernelPlan = planFile('02-kernel.md');
     const known = new Set([
       ...[...kernelPlan.slice(kernelPlan.indexOf('## 2.12'), kernelPlan.indexOf('## 2.13')).matchAll(/`(kernel\.[a-z.]+)`/g)].map((match) => match[1] ?? ''),
@@ -133,10 +133,10 @@ describe('the documentation (QA17-H22 to H24, E24)', () => {
       for (const entry of readdirSync(folder, { withFileTypes: true })) {
         const absolute = path.join(folder, entry.name);
         if (entry.isDirectory()) source(absolute);
-        else if (entry.name.endsWith('.ts')) for (const match of read(absolute).matchAll(/register(?:Command|Query)\(\s*'(kvcustomizer\.[a-z.-]+)'/g)) registered.add(match[1] ?? '');
+        else if (entry.name.endsWith('.ts')) for (const match of read(absolute).matchAll(/register(?:Command|Query)\(\s*'(kvbuilder\.[a-z.-]+)'/g)) registered.add(match[1] ?? '');
       }
     };
-    source(path.join(root, 'extensions', 'kvcustomizer', 'src'));
+    source(path.join(root, 'extensions', 'kvbuilder', 'src'));
     for (const file of allPages) {
       const markdown = read(file);
       const where = path.relative(root, file);
@@ -146,7 +146,7 @@ describe('the documentation (QA17-H22 to H24, E24)', () => {
         expect(known.has(name), `${where} names ${name}`).toBe(true);
       }
       for (const match of markdown.matchAll(/(?<![./\w-])kvman-[a-z]+\b/g)) expect(bins, `${where} names ${match[0]}`).toContain(match[0]);
-      for (const match of markdown.matchAll(/`(kvcustomizer\.[a-z.-]+)`/g)) {
+      for (const match of markdown.matchAll(/`(kvbuilder\.[a-z.-]+)`/g)) {
         const name = match[1] ?? '';
         if (name.endsWith('.')) continue;
         expect(registered.has(name), `${where} names ${name}`).toBe(true);

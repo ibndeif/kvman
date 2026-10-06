@@ -5,7 +5,7 @@ import { readInstructions } from '../docs/own-docs.ts';
 // writes nothing and never asks the person.
 
 export function registerAppGuide(ctx: Ctx): void {
-  ctx.registerQuery('kvcustomizer.app.guide.get', {
+  ctx.registerQuery('kvbuilder.app.guide.get', {
     description: 'Gives the guide for changing the app itself: what to ask the person, and how to build an extension and manage the app.',
     public: true,
     input: z.object({}),

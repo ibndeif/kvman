@@ -69,7 +69,7 @@ A preset names where each extension comes from ([presets.md](presets.md)):
 
 | Source | Meaning |
 |---|---|
-| `bundled` | A core extension that ships with kvman (kvai, kvwebui, kvcoder, kvcustomizer). |
+| `bundled` | A core extension that ships with kvman (kvai, kvwebui, kvcoder, kvbuilder). |
 | `npm:<exact version>` | kvman runs `npm install --ignore-scripts --omit=dev --legacy-peer-deps` for it into `<home>/extensions/<name>@<version>`. npm must be on the PATH. |
 | `path:<folder>` | A folder on this computer, relative to the preset file. Hot reloads ([preview-and-hot-reload.md](preview-and-hot-reload.md)). |
 

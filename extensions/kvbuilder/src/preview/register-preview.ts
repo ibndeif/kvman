@@ -17,10 +17,10 @@ const queryTimeoutMs = 120_000;
 const statusSchema = z.union([z.object({ running: z.literal(false) }), z.object({ running: z.literal(true), url: z.string(), extensions: z.array(z.string()), startedAt: z.string() })]);
 
 export function registerPreview(ctx: Ctx): void {
-  ctx.registerCommand('kvcustomizer.preview.start', {
+  ctx.registerCommand('kvbuilder.preview.start', {
     description: 'Starts a preview kvman with extension projects of the workspace, and gives its URL.',
     public: true,
-    ...jobOptions['kvcustomizer.preview.start'],
+    ...jobOptions['kvbuilder.preview.start'],
     input: z.object({
       extensions: z.array(z.string().min(1)).min(1).describe('The project folders, relative to the workspace folder.'),
       preset: z.string().min(1).optional().describe('A preset file to add the projects to, relative to the workspace folder.'),
@@ -28,10 +28,10 @@ export function registerPreview(ctx: Ctx): void {
     output: z.object({ url: z.string() }),
     handle: (input) => startPreview(ctx, input),
   });
-  ctx.registerCommand('kvcustomizer.preview.stop', {
+  ctx.registerCommand('kvbuilder.preview.stop', {
     description: 'Stops the preview kvman and its component watchers.',
     public: true,
-    ...jobOptions['kvcustomizer.preview.stop'],
+    ...jobOptions['kvbuilder.preview.stop'],
     input: z.object({}),
     output: z.object({}),
     handle: async () => {
@@ -40,7 +40,7 @@ export function registerPreview(ctx: Ctx): void {
       return {};
     },
   });
-  ctx.registerQuery('kvcustomizer.preview.status', {
+  ctx.registerQuery('kvbuilder.preview.status', {
     description: 'Tells whether the preview kvman runs, and its URL.',
     public: true,
     input: z.object({}),
@@ -52,7 +52,7 @@ export function registerPreview(ctx: Ctx): void {
       return { running: true as const, url: record.data.url, extensions: record.data.extensions, startedAt: preview.startedAt };
     },
   });
-  ctx.registerQuery('kvcustomizer.preview.query.get', {
+  ctx.registerQuery('kvbuilder.preview.query.get', {
     description: 'Runs one public query of the preview kvman and gives what it answered: its output, or its Problem.',
     public: true,
     timeoutMs: queryTimeoutMs,
@@ -60,10 +60,10 @@ export function registerPreview(ctx: Ctx): void {
     output: previewAnswerSchema,
     handle: ({ name, input }) => callPreview(ctx, 'queries', name, input ?? {}),
   });
-  ctx.registerCommand('kvcustomizer.preview.command.run', {
+  ctx.registerCommand('kvbuilder.preview.command.run', {
     description: 'Runs one public command of the preview kvman and gives what it answered: its output, or its Problem.',
     public: true,
-    ...jobOptions['kvcustomizer.preview.command.run'],
+    ...jobOptions['kvbuilder.preview.command.run'],
     input: callSchema,
     output: previewAnswerSchema,
     handle: ({ name, input }) => callPreview(ctx, 'commands', name, input ?? {}),
@@ -71,7 +71,7 @@ export function registerPreview(ctx: Ctx): void {
   ctx.registerHandler('kernel.process.exited', {
     description: 'Stops the component watchers and removes the home of a preview that exited by itself.',
     handle: async (exited) => {
-      if (exited.extension === '@kvman/kvcustomizer' && exited.name === 'preview') await cleanUpPreview(ctx);
+      if (exited.extension === '@kvman/kvbuilder' && exited.name === 'preview') await cleanUpPreview(ctx);
     },
   });
 }

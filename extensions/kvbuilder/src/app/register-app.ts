@@ -36,14 +36,14 @@ async function callableModels(ctx: Ctx): Promise<z.output<typeof callableModelSc
 }
 
 export function registerApp(ctx: Ctx): void {
-  ctx.registerQuery('kvcustomizer.app.model.list', {
+  ctx.registerQuery('kvbuilder.app.model.list', {
     description: 'Lists the models that can be called now: those of connected providers and of custom providers.',
     public: true,
     input: empty,
     output: z.array(callableModelSchema),
     handle: () => callableModels(ctx),
   });
-  ctx.registerCommand('kvcustomizer.app.model.set', {
+  ctx.registerCommand('kvbuilder.app.model.set', {
     description: 'Sets the default model, which must be one that model list shows.',
     public: true,
     retries: 0,
@@ -58,14 +58,14 @@ export function registerApp(ctx: Ctx): void {
     },
   });
 
-  ctx.registerQuery('kvcustomizer.app.settings.list', {
+  ctx.registerQuery('kvbuilder.app.settings.list', {
     description: 'Lists every setting with its description, schema, scopes, value, and where the value comes from.',
     public: true,
     input: empty,
     output: kernelQuerySchemas['kernel.settings.list'].output,
     handle: () => ctx.exec('kernel.settings.list', {}),
   });
-  ctx.registerCommand('kvcustomizer.app.settings.set', {
+  ctx.registerCommand('kvbuilder.app.settings.set', {
     description: 'Sets a setting, globally or for this workspace.',
     public: true,
     retries: 0,
@@ -73,7 +73,7 @@ export function registerApp(ctx: Ctx): void {
     output: empty,
     handle: (input) => ctx.exec('kernel.settings.set', input),
   });
-  ctx.registerCommand('kvcustomizer.app.settings.reset', {
+  ctx.registerCommand('kvbuilder.app.settings.reset', {
     description: 'Resets a setting to the value it would have without this scope.',
     public: true,
     retries: 0,
@@ -82,7 +82,7 @@ export function registerApp(ctx: Ctx): void {
     handle: (input) => ctx.exec('kernel.settings.reset', input),
   });
 
-  ctx.registerQuery('kvcustomizer.app.extensions.list', {
+  ctx.registerQuery('kvbuilder.app.extensions.list', {
     description: 'Lists the extensions that run now, with their version, source, and the names they register.',
     public: true,
     input: empty,
@@ -98,7 +98,7 @@ export function registerApp(ctx: Ctx): void {
         settings: extension.settings.map((setting) => setting.key),
       })),
   });
-  ctx.registerCommand('kvcustomizer.app.extensions.install', {
+  ctx.registerCommand('kvbuilder.app.extensions.install', {
     description: 'Adds an extension to the preset; it starts at the next start of kvman. A path: folder is a project of the workspace.',
     public: true,
     retries: 0,
@@ -108,7 +108,7 @@ export function registerApp(ctx: Ctx): void {
     output: editResultSchema,
     handle: (input) => ctx.exec('kernel.extensions.install', { source: installSource(ctx.job.workspace.path, input.source) }),
   });
-  ctx.registerCommand('kvcustomizer.app.restart', {
+  ctx.registerCommand('kvbuilder.app.restart', {
     description: 'Restarts kvman: it stops running work and starts again with the preset as it is stored.',
     public: true,
     retries: 0,
@@ -116,7 +116,7 @@ export function registerApp(ctx: Ctx): void {
     output: z.object({ restarting: z.literal(true) }),
     handle: () => ctx.exec('kernel.restart', {}),
   });
-  ctx.registerCommand('kvcustomizer.app.extensions.uninstall', {
+  ctx.registerCommand('kvbuilder.app.extensions.uninstall', {
     description: 'Removes an extension from the preset; it stops at the next start of kvman.',
     public: true,
     retries: 0,
@@ -125,7 +125,7 @@ export function registerApp(ctx: Ctx): void {
     handle: (input) => ctx.exec('kernel.extensions.uninstall', input),
   });
 
-  ctx.registerQuery('kvcustomizer.app.preset.get', {
+  ctx.registerQuery('kvbuilder.app.preset.get', {
     description: 'Gives the preset as stored now: its name, where it came from, its extensions, and its settings.',
     public: true,
     input: empty,

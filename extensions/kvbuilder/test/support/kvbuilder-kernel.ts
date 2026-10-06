@@ -7,14 +7,14 @@ import { createTestKernel, type TestKernel } from '@kvman/testkit';
 import type {} from '@kvman/kvcoder';
 import type {} from '../../src/index.ts';
 
-// kvcustomizer in a test kernel with kvai, kvwebui, and kvcoder, all as `path:` extensions. Its commands run in the Home
+// kvbuilder in a test kernel with kvai, kvwebui, and kvcoder, all as `path:` extensions. Its commands run in the Home
 // workspace, whose folder is the test kernel's own temporary folder; `write` puts files there. Closed after each test.
 
 export const extensionsFolder = fileURLToPath(new URL('../../..', import.meta.url));
 
-export const bundledFolders = ['kvai', 'kvwebui', 'kvcoder', 'kvcustomizer'].map((name) => path.join(extensionsFolder, name));
+export const bundledFolders = ['kvai', 'kvwebui', 'kvcoder', 'kvbuilder'].map((name) => path.join(extensionsFolder, name));
 
-export type KvcustomizerWorld = { kernel: TestKernel; workspace: string; write(file: string, content: string | Json): string };
+export type KvbuilderWorld = { kernel: TestKernel; workspace: string; write(file: string, content: string | Json): string };
 
 export function writeIn(root: string, file: string, content: string | Json): string {
   const absolute = path.join(root, file);
@@ -28,7 +28,7 @@ export function manifest(name: string, namespace: string, extra: Record<string, 
   return { name, version: '0.1.0', type: 'module', main: 'dist/index.js', peerDependencies: { '@kvman/sdk': '^0.1.0' }, kvman: { namespace, source: 'src/index.ts', dependencies: {} }, ...extra };
 }
 
-export function useKvcustomizer(): { start(settings?: Record<string, Json>, extra?: readonly string[]): Promise<KvcustomizerWorld> } {
+export function useKvbuilder(): { start(settings?: Record<string, Json>, extra?: readonly string[]): Promise<KvbuilderWorld> } {
   const kernels: TestKernel[] = [];
   afterEach(async () => {
     for (const kernel of kernels.splice(0)) await kernel.close();

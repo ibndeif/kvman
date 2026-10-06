@@ -24,7 +24,7 @@ async function requirePublicQuery(ctx: Ctx, name: string): Promise<void> {
 }
 
 export function registerAppQuery(ctx: Ctx): void {
-  ctx.registerQuery('kvcustomizer.app.query.get', {
+  ctx.registerQuery('kvbuilder.app.query.get', {
     description: 'Runs one public query of the running app, of the kernel or of any extension, and gives its output.',
     public: true,
     input: z.object({

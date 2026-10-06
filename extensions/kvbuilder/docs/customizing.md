@@ -1,6 +1,6 @@
 # Customizing kvman
 
-kvcustomizer is the extension that lets kvman's agent build and manage kvman itself. It adds connectors to kvcoder, and nothing else to the agent's prompt: the agent reads its guide with `kvman init` when the person asks to change the app itself. It has no agent of its own, and everything it does for extensions is also available to any other harness, or to a person, through the testkit's command-line tools.
+kvbuilder is the extension that lets kvman's agent build and manage kvman itself. It adds connectors to kvcoder, and nothing else to the agent's prompt: the agent reads its guide with `kvman init` when the person asks to change the app itself. It has no agent of its own, and everything it does for extensions is also available to any other harness, or to a person, through the testkit's command-line tools.
 
 ## The connectors
 
@@ -102,7 +102,7 @@ The three sources of `extensions-install`:
 | Source | Means | Checked by the call |
 |---|---|---|
 | `npm:<package name>@<exact version>` | a published package | its format only |
-| `path:<folder>` | a project in the workspace | the folder resolves against the workspace folder and must stay inside it (`VALIDATION_FAILED`); it must hold a package.json with a `kvman` field (`kvcustomizer/NOT_A_PROJECT`); kvman takes the extension's name from that package.json |
+| `path:<folder>` | a project in the workspace | the folder resolves against the workspace folder and must stay inside it (`VALIDATION_FAILED`); it must hold a package.json with a `kvman` field (`kvbuilder/NOT_A_PROJECT`); kvman takes the extension's name from that package.json |
 | `bundled:<package name>` | an extension that ships with kvman | the name must be a bundled extension's (`VALIDATION_FAILED`) |
 
 A `path:` source is stored with the absolute folder, because kvman resolves a relative one against the preset file, not the workspace. A `path:` extension reloads when its files change.
@@ -130,7 +130,7 @@ The connectors run the tools of `@kvman/testkit`, which you can run by hand in a
 - `<namespace>.docs.list` answers `[{ topic, title }]`;
 - `<namespace>.docs.get` takes `{ topic }` and answers `{ topic, title, markdown }`.
 
-A topic is a lowercase kebab-case word. kvcustomizer asks each extension itself, so nothing registers with kvcustomizer and no extension depends on it. An extension whose answer fails is listed with its error and hides no other. A project made with `kvman-new` already has the pair and a sample page in `extension-docs/usage.md`; `kvman-check` warns when the pair is half done.
+A topic is a lowercase kebab-case word. kvbuilder asks each extension itself, so nothing registers with kvbuilder and no extension depends on it. An extension whose answer fails is listed with its error and hides no other. A project made with `kvman-new` already has the pair and a sample page in `extension-docs/usage.md`; `kvman-check` warns when the pair is half done.
 
 ## Previews
 
@@ -145,4 +145,4 @@ A topic is a lowercase kebab-case word. kvcustomizer asks each extension itself,
 { "ok": false, "problem": { "code": "VALIDATION_FAILED", "message": "…", "params": { } } }
 ```
 
-A failure of the project's own command is therefore an answer to read, not a failed call. The call itself fails only when there is nothing to call: `NOT_FOUND` when no preview is running, and `kvcustomizer/PREVIEW_FAILED` when the preview doesn't answer or answers something that isn't kvman's. A query's name on `command-run`, or a command's on `query-get`, comes back as `{ ok: false }` with `NOT_FOUND`. Each call may take up to 2 minutes.
+A failure of the project's own command is therefore an answer to read, not a failed call. The call itself fails only when there is nothing to call: `NOT_FOUND` when no preview is running, and `kvbuilder/PREVIEW_FAILED` when the preview doesn't answer or answers something that isn't kvman's. A query's name on `command-run`, or a command's on `query-get`, comes back as `{ ok: false }` with `NOT_FOUND`. Each call may take up to 2 minutes.

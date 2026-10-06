@@ -37,7 +37,7 @@ describe('kvman-check docs pair (09 §9.5)', () => {
     const findings = await checkExtension(project({ source: docsSource(usageList) }));
     expect(findings).toEqual([
       {
-        message: "Only notes.docs.list is registered; kvcustomizer and kvman-docs show an extension's docs only when it has both notes.docs.list and notes.docs.get.",
+        message: "Only notes.docs.list is registered; kvbuilder and kvman-docs show an extension's docs only when it has both notes.docs.list and notes.docs.get.",
         hint: 'Register the other as a public query, or remove this one.',
         warning: true,
       },
@@ -48,7 +48,7 @@ describe('kvman-check docs pair (09 §9.5)', () => {
     const findings = await checkExtension(project({ source: docsSource(healthyGet) }));
     expect(findings).toEqual([
       {
-        message: "Only notes.docs.get is registered; kvcustomizer and kvman-docs show an extension's docs only when it has both notes.docs.list and notes.docs.get.",
+        message: "Only notes.docs.get is registered; kvbuilder and kvman-docs show an extension's docs only when it has both notes.docs.list and notes.docs.get.",
         hint: 'Register the other as a public query, or remove this one.',
         warning: true,
       },
@@ -58,7 +58,7 @@ describe('kvman-check docs pair (09 §9.5)', () => {
   it('QA17-E30 a private docs query warns', async () => {
     const findings = await checkExtension(project({ source: docsSource(listQuery(`() => [{ topic: 'usage', title: 'Using notes' }]`, ''), healthyGet) }));
     expect(findings).toEqual([
-      { message: "notes.docs.list isn't public, so kvcustomizer and kvman-docs can't read it.", hint: 'Add public: true to its registration.', warning: true },
+      { message: "notes.docs.list isn't public, so kvbuilder and kvman-docs can't read it.", hint: 'Add public: true to its registration.', warning: true },
     ]);
   });
 

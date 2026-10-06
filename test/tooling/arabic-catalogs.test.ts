@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
-const owners = ['packages/kernel', 'extensions/kvai', 'extensions/kvwebui', 'extensions/kvcoder', 'extensions/kvcustomizer'];
+const owners = ['packages/kernel', 'extensions/kvai', 'extensions/kvwebui', 'extensions/kvcoder', 'extensions/kvbuilder'];
 
 function arabicTexts(): [key: string, text: string][] {
   return owners.flatMap((owner) => {

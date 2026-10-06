@@ -65,7 +65,7 @@ Everything the agent does goes through a **connector**: a named set of commands.
 - `background` — checks on, or stops, something the agent left running (below).
 - `mcp` — uses the tools of the MCP servers you add (below). It is there only while you have at least one server.
 
-Other extensions add connectors (kvcustomizer adds `ext`, `preset`, `preview`, `kvman`, and `docs` — see [customizing-with-the-agent.md](customizing-with-the-agent.md)), and a preset can add a program on your machine, such as `git` or `gh`, as a connector with the `kvcoder.connectors` setting. A program is a connector like any other: it is in the same list on Coder's page, with the same switch.
+Other extensions add connectors (kvbuilder adds `ext`, `preset`, `preview`, `kvman`, and `docs` — see [customizing-with-the-agent.md](customizing-with-the-agent.md)), and a preset can add a program on your machine, such as `git` or `gh`, as a connector with the `kvcoder.connectors` setting. A program is a connector like any other: it is in the same list on Coder's page, with the same switch.
 
 ## MCP servers
 

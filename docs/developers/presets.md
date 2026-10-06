@@ -20,7 +20,7 @@ A preset is the whole app for one run:
 ```
 
 - `name` is a non-empty string. A preset with an unknown key is invalid.
-- `extensions` maps a package name to a source: `bundled` (a core extension that ships with kvman: kvai, kvwebui, kvcoder, kvcustomizer), `npm:<exact version>`, or `path:<folder>` (relative to the preset file).
+- `extensions` maps a package name to a source: `bundled` (a core extension that ships with kvman: kvai, kvwebui, kvcoder, kvbuilder), `npm:<exact version>`, or `path:<folder>` (relative to the preset file).
 - `settings` is the preset-level value of any setting. A key with no default must be set here; a preset-only key (`scopes: []`) can only be set here. `kvwebui.home` is required whenever kvwebui loads.
 
 kvman validates the preset at start, and its settings again once the extensions have loaded. An unknown key, an invalid value, or a missing required key stops kvman with `VALIDATION_FAILED`.
@@ -33,7 +33,7 @@ kvman --preset notes-app             # <home>/presets/notes-app.json
 kvman --preset ./notes-app.json      # a file, relative to the folder you start kvman in
 ```
 
-A value with `/` or `\`, or ending in `.json`, is a file. Any other value is a name: `<home>/presets/<name>.json` is looked at **first**, then a bundled preset. An unknown name or a missing file fails `VALIDATION_FAILED`. The one bundled preset is `coder`: kvai, kvwebui, kvcoder, and kvcustomizer, with `kvwebui.home` set to `kvcoder.chat`.
+A value with `/` or `\`, or ending in `.json`, is a file. Any other value is a name: `<home>/presets/<name>.json` is looked at **first**, then a bundled preset. An unknown name or a missing file fails `VALIDATION_FAILED`. The one bundled preset is `coder`: kvai, kvwebui, kvcoder, and kvbuilder, with `kvwebui.home` set to `kvcoder.chat`.
 
 ## A personal preset replaces a bundled one
 
@@ -56,7 +56,7 @@ Three public kernel calls edit the preset **file**; none installs, loads, or tru
 - **Restart.** `kernel.restart` (command, `{}` → `{ restarting: true }`) makes kvman stop and start again in the same process, with its arguments, its lock, and its terminal, and no new browser tab; the preset is read again, so an edit applies. Jobs are aborted, processes stop, and workspaces open again.
 - **The backup.** The first edit after a good start writes the preset as it was running to `<file>.good`; later edits keep it, and a start that succeeds deletes it. A start that fails with `EXTENSION_INVALID` or `VALIDATION_FAILED` while it exists restores the file from it, prints the Problem and "The last change to the preset was undone.", and starts once more; that start's `kernel.health.get` has `rolledBack` (the Problem). Any other failure, or a second one, exits 1 as before.
 
-kvwebui's Extensions page and kvcustomizer's `kvman` connector (`extensions-install`, `extensions-uninstall`, `preset-get`) are built on these calls. The connector differs in one way: its `extensions-install` resolves a `path:` folder against the **workspace** folder, checks that it is a project, and stores the absolute folder, because the kernel's own command resolves a relative `path:` against the preset file.
+kvwebui's Extensions page and kvbuilder's `kvman` connector (`extensions-install`, `extensions-uninstall`, `preset-get`) are built on these calls. The connector differs in one way: its `extensions-install` resolves a `path:` folder against the **workspace** folder, checks that it is a project, and stores the absolute folder, because the kernel's own command resolves a relative `path:` against the preset file.
 
 ## Tools
 

@@ -1,7 +1,7 @@
 import { setTimeout as delay } from 'node:timers/promises';
 import { ProblemError, z, type Ctx } from '@kvman/sdk';
 import { insideWorkspace, projectAt } from '../folders.ts';
-import { kvcustomizerProblem } from '../problems.ts';
+import { kvbuilderProblem } from '../problems.ts';
 import { binFailureProblem, binFailureSchema, binFile } from '../run-bin.ts';
 import { lastLines } from '../run-program.ts';
 import { cleanUpPreview, recordKey, type PreviewRecord } from './preview-state.ts';
@@ -28,7 +28,7 @@ function readyUrl(log: string): string | undefined {
   return undefined;
 }
 
-// The bin's failure: the last JSON failure line becomes its Problem; with none, `kvcustomizer/PREVIEW_FAILED` with
+// The bin's failure: the last JSON failure line becomes its Problem; with none, `kvbuilder/PREVIEW_FAILED` with
 // the last lines.
 function previewFailure(log: string): ProblemError {
   const lines = log.split('\n');
@@ -47,7 +47,7 @@ function previewFailure(log: string): ProblemError {
     if (problem !== undefined) return problem;
     break;
   }
-  return kvcustomizerProblem('PREVIEW_FAILED', `The preview exited before it was ready:\n${lastLines(log)}`);
+  return kvbuilderProblem('PREVIEW_FAILED', `The preview exited before it was ready:\n${lastLines(log)}`);
 }
 
 async function waitForReady(ctx: Ctx): Promise<string> {
@@ -74,7 +74,7 @@ export async function startPreview(ctx: Ctx, input: { extensions: string[]; pres
   for (const folder of input.extensions) projectAt(workspaceFolder, folder);
   if (input.preset !== undefined) insideWorkspace(workspaceFolder, input.preset, 'preset');
   const entry = process.argv[1];
-  if (entry === undefined) throw kvcustomizerProblem('PREVIEW_FAILED', "kvman's entry file isn't known in this process.");
+  if (entry === undefined) throw kvbuilderProblem('PREVIEW_FAILED', "kvman's entry file isn't known in this process.");
   if ((await ctx.processes.list()).some((process) => process.name === 'preview')) {
     throw new ProblemError({ code: 'PROCESS_RUNNING', message: 'A preview already runs in this workspace; run preview stop first.', params: { name: 'preview' } });
   }

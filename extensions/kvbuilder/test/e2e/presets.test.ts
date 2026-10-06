@@ -18,7 +18,7 @@ async function presetSettings(call: (route: 'queries', name: string, input: unkn
 }
 
 describe('the bundled presets (11)', () => {
-  it('M2.5-H3, QA4-H13 and QA17-H18 kvman with no preset flag starts the coder preset, with kvcustomizer, and its shell approval is the default auto', async () => {
+  it('M2.5-H3, QA4-H13 and QA17-H18 kvman with no preset flag starts the coder preset, with kvbuilder, and its shell approval is the default auto', async () => {
     world = kvmanWorld();
     const kvman = await world.start([]);
     expect(healthSchema.parse(await kvman.call('queries', 'kernel.health.get', {})).preset).toBe('coder');
@@ -26,7 +26,7 @@ describe('the bundled presets (11)', () => {
       ['@kvman/kvai', 'bundled'],
       ['@kvman/kvwebui', 'bundled'],
       ['@kvman/kvcoder', 'bundled'],
-      ['@kvman/kvcustomizer', 'bundled'],
+      ['@kvman/kvbuilder', 'bundled'],
     ]);
     expect(await presetSettings(kvman.call, ['kvwebui.title', 'kvwebui.home', 'kvai.defaultModel', 'kvcoder.shell.approval'])).toEqual({
       'kvwebui.title': expect.objectContaining({ value: 'kvcoder.app.title', source: 'preset' }),
@@ -35,6 +35,6 @@ describe('the bundled presets (11)', () => {
       'kvcoder.shell.approval': expect.objectContaining({ value: 'auto', source: 'default' }),
     });
     const connectors = z.array(z.object({ name: z.string(), owner: z.string() })).parse(await kvman.call('queries', 'kvcoder.connector.list', {}));
-    expect(connectors.filter((connector) => connector.owner === '@kvman/kvcustomizer').map((connector) => connector.name).sort()).toEqual(['docs', 'ext', 'kvman', 'preset', 'preview']);
+    expect(connectors.filter((connector) => connector.owner === '@kvman/kvbuilder').map((connector) => connector.name).sort()).toEqual(['docs', 'ext', 'kvman', 'preset', 'preview']);
   });
 });

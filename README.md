@@ -39,7 +39,7 @@ To run from source after `pnpm build`: `node packages/cli/dist/main.js`.
 
 ## Releasing
 
-Eight packages are published to npm under MIT: `kvman`, `@kvman/sdk`, `@kvman/kernel`, `@kvman/testkit`, and the four extensions (`@kvman/kvai`, `@kvman/kvwebui`, `@kvman/kvcoder`, `@kvman/kvcustomizer`), which `kvman` depends on ([ADR 0026](plan/adr/0026-npm-publishing.md)).
+Eight packages are published to npm under MIT: `kvman`, `@kvman/sdk`, `@kvman/kernel`, `@kvman/testkit`, and the four extensions (`@kvman/kvai`, `@kvman/kvwebui`, `@kvman/kvcoder`, `@kvman/kvbuilder`), which `kvman` depends on ([ADR 0026](plan/adr/0026-npm-publishing.md)).
 
 1. `pnpm changeset version` turns the pending changesets into versions and changelogs.
 2. Set the version of the root, `packages/kernel`, and `packages/cli`, then run every gate and commit. The release workflow runs no tests, so the tests that count are the ones run here.

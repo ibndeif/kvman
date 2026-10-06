@@ -2,17 +2,17 @@ import { z, type Ctx } from '@kvman/sdk';
 import { getGuide, guideListSchema, guideSchema, listGuides } from './guides.ts';
 import { registerOwnDocs } from './own-docs.ts';
 
-// What the `docs` connector calls (plan 09 §9.1), and kvcustomizer's own docs pair.
+// What the `docs` connector calls (plan 09 §9.1), and kvbuilder's own docs pair.
 
 export function registerDocs(ctx: Ctx): void {
-  ctx.registerQuery('kvcustomizer.guides.list', {
+  ctx.registerQuery('kvbuilder.guides.list', {
     description: 'Lists the guides of kvman and the documentation pages of every installed extension that serves docs.',
     public: true,
     input: z.object({}),
     output: guideListSchema,
     handle: () => listGuides(ctx),
   });
-  ctx.registerQuery('kvcustomizer.guides.get', {
+  ctx.registerQuery('kvbuilder.guides.get', {
     description: "Gives one guide of kvman, or one page of an installed extension's docs, as Markdown.",
     public: true,
     input: z.object({

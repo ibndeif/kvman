@@ -13,7 +13,7 @@ A preset is the whole app for one run: which extensions load, and the starting v
     "@kvman/kvai": "bundled",
     "@kvman/kvwebui": "bundled",
     "@kvman/kvcoder": "bundled",
-    "@kvman/kvcustomizer": "bundled"
+    "@kvman/kvbuilder": "bundled"
   },
   "settings": {
     "kvwebui.title": "kvcoder.app.title",
@@ -31,7 +31,7 @@ kvman checks the preset when it starts. A preset with an unknown key, a bad valu
 
 ## The bundled preset: `coder`
 
-kvman ships one preset, `coder`, and runs it when you give no `--preset`. It loads four extensions: **kvai** (models), **kvwebui** (the web app), **kvcoder** (the chat and the agent), and **kvcustomizer** (the tools that let the agent build and manage kvman). Its home page is the chat.
+kvman ships one preset, `coder`, and runs it when you give no `--preset`. It loads four extensions: **kvai** (models), **kvwebui** (the web app), **kvcoder** (the chat and the agent), and **kvbuilder** (the tools that let the agent build and manage kvman). Its home page is the chat.
 
 ## Run a different preset
 

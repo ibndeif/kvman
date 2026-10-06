@@ -2,7 +2,7 @@ import { ProblemError, z } from '@kvman/sdk';
 import type { TestKernel } from '../index.ts';
 import type { CheckedFinding } from './finding.ts';
 
-// The docs-pair warnings (plan 09 §9.5, QA17-E30): an extension's docs reach kvcustomizer and `kvman-docs` only
+// The docs-pair warnings (plan 09 §9.5, QA17-E30): an extension's docs reach kvbuilder and `kvman-docs` only
 // through both `<namespace>.docs.list` and `<namespace>.docs.get` as public queries, so a half-done or wrong pair
 // warns instead of silently hiding the pages. Every finding here is a warning.
 
@@ -58,11 +58,11 @@ export async function docsFindings(kernel: TestKernel, namespace: string, querie
   if (!hasList && !hasGet) return [];
   if (!hasList || !hasGet) {
     const only = hasList ? list : get;
-    return [docsWarning(`Only ${only} is registered; kvcustomizer and kvman-docs show an extension's docs only when it has both ${list} and ${get}.`, 'Register the other as a public query, or remove this one.')];
+    return [docsWarning(`Only ${only} is registered; kvbuilder and kvman-docs show an extension's docs only when it has both ${list} and ${get}.`, 'Register the other as a public query, or remove this one.')];
   }
   const privateOnes = [list, get].filter((name) => !queries.some((query) => query.name === name && query.public));
   if (privateOnes.length > 0) {
-    return privateOnes.map((name) => docsWarning(`${name} isn't public, so kvcustomizer and kvman-docs can't read it.`, 'Add public: true to its registration.'));
+    return privateOnes.map((name) => docsWarning(`${name} isn't public, so kvbuilder and kvman-docs can't read it.`, 'Add public: true to its registration.'));
   }
   return answeredFindings(kernel, list, get);
 }

@@ -2,7 +2,7 @@ import { createServer, type Server } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { z } from '@kvman/sdk';
-import { writeIn } from './kvcustomizer-kernel.ts';
+import { writeIn } from './kvbuilder-kernel.ts';
 import type { Kvman } from './kvman-child.ts';
 
 // Preview helpers: a minimal project written without npm (a `path:` extension gets `@kvman/sdk` from the kernel),
@@ -21,8 +21,8 @@ export function writeProject(folder: string, name: string, namespace: string): v
   );
 }
 
-export async function kvcustomizerProcesses(kvman: Kvman): Promise<{ name: string; pid: number }[]> {
-  return processesSchema.parse(await kvman.call('queries', 'kernel.processes.list', {})).filter((process) => process.extension === '@kvman/kvcustomizer' && process.workspaceId === kvman.workspaceId);
+export async function kvbuilderProcesses(kvman: Kvman): Promise<{ name: string; pid: number }[]> {
+  return processesSchema.parse(await kvman.call('queries', 'kernel.processes.list', {})).filter((process) => process.extension === '@kvman/kvbuilder' && process.workspaceId === kvman.workspaceId);
 }
 
 export function previewHomeOf(kvman: Kvman): string {

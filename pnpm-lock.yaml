@@ -225,6 +225,28 @@ importers:
         specifier: 3.3.11
         version: 3.3.11(typescript@6.0.3)
 
+  extensions/kvbuilder:
+    dependencies:
+      '@kvman/testkit':
+        specifier: workspace:*
+        version: link:../../packages/testkit
+    devDependencies:
+      '@kvman/kvai':
+        specifier: workspace:*
+        version: link:../kvai
+      '@kvman/kvcoder':
+        specifier: workspace:*
+        version: link:../kvcoder
+      '@kvman/kvwebui':
+        specifier: workspace:*
+        version: link:../kvwebui
+      '@kvman/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+      playwright:
+        specifier: 1.63.0
+        version: 1.63.0
+
   extensions/kvcoder:
     dependencies:
       '@kvman/kvai':
@@ -273,28 +295,6 @@ importers:
       vue-tsc:
         specifier: 3.3.11
         version: 3.3.11(typescript@6.0.3)
-
-  extensions/kvcustomizer:
-    dependencies:
-      '@kvman/testkit':
-        specifier: workspace:*
-        version: link:../../packages/testkit
-    devDependencies:
-      '@kvman/kvai':
-        specifier: workspace:*
-        version: link:../kvai
-      '@kvman/kvcoder':
-        specifier: workspace:*
-        version: link:../kvcoder
-      '@kvman/kvwebui':
-        specifier: workspace:*
-        version: link:../kvwebui
-      '@kvman/sdk':
-        specifier: workspace:*
-        version: link:../../packages/sdk
-      playwright:
-        specifier: 1.63.0
-        version: 1.63.0
 
   extensions/kvwebui:
     dependencies:
@@ -368,12 +368,12 @@ importers:
       '@kvman/kvai':
         specifier: workspace:*
         version: link:../../extensions/kvai
+      '@kvman/kvbuilder':
+        specifier: workspace:*
+        version: link:../../extensions/kvbuilder
       '@kvman/kvcoder':
         specifier: workspace:*
         version: link:../../extensions/kvcoder
-      '@kvman/kvcustomizer':
-        specifier: workspace:*
-        version: link:../../extensions/kvcustomizer
       '@kvman/kvwebui':
         specifier: workspace:*
         version: link:../../extensions/kvwebui

@@ -44,15 +44,15 @@ kvman shows a failure as a plain sentence. Under **Details** (in the app) or in 
 
 | What you see | What to do |
 |---|---|
-| `kvcustomizer/NPM_FAILED` while building an extension | Install Node.js with npm and check your network; the files the agent wrote are kept, so ask it to run `npm install` again. |
-| `kvcustomizer/FOLDER_NOT_EMPTY` | Ask for a new or empty folder. |
-| `kvcustomizer/NOT_A_PROJECT` | The folder has no `package.json` with a `kvman` field. |
-| `kvcustomizer/NO_FREE_PORT` | Ports 3738 to 3837 are all in use; stop something that uses them. |
-| `kvcustomizer/PREVIEW_FAILED` | The preview didn't start; the message ends with its last log lines. |
+| `kvbuilder/NPM_FAILED` while building an extension | Install Node.js with npm and check your network; the files the agent wrote are kept, so ask it to run `npm install` again. |
+| `kvbuilder/FOLDER_NOT_EMPTY` | Ask for a new or empty folder. |
+| `kvbuilder/NOT_A_PROJECT` | The folder has no `package.json` with a `kvman` field. |
+| `kvbuilder/NO_FREE_PORT` | Ports 3738 to 3837 are all in use; stop something that uses them. |
+| `kvbuilder/PREVIEW_FAILED` | The preview didn't start; the message ends with its last log lines. |
 
 ## Migrating from kvdev
 
-Older kvman versions had an extension called **kvdev** and a `dev` preset. kvdev is now **kvcustomizer**, and its tools are part of the `coder` preset: there is no `dev` preset any more. If you used `kvman --preset dev`, run plain `kvman`, or `kvman --preset coder`. Nothing else changes for you: the scaffold, the checks, and the preview now also work from a terminal, without kvman's agent.
+Older kvman versions had an extension called **kvdev** and a `dev` preset. kvdev is now **kvbuilder**, and its tools are part of the `coder` preset: there is no `dev` preset any more. If you used `kvman --preset dev`, run plain `kvman`, or `kvman --preset coder`. Nothing else changes for you: the scaffold, the checks, and the preview now also work from a terminal, without kvman's agent.
 
 ## Still stuck
 

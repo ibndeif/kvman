@@ -2,21 +2,21 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { runConnector } from '@kvman/kvcoder/testing';
 import { describe, expect, it } from 'vitest';
-import { useKvcustomizer } from './support/kvcustomizer-kernel.ts';
+import { useKvbuilder } from './support/kvbuilder-kernel.ts';
 
-const kvcustomizer = useKvcustomizer();
+const kvbuilder = useKvbuilder();
 
 const file = readFileSync(fileURLToPath(new URL('../docs/init.md', import.meta.url)), 'utf8');
 const inOrder = (text: string, parts: readonly string[]) => parts.map((part) => text.indexOf(part)).every((at, index, all) => at > (all[index - 1] ?? -1));
 
 async function instructions(): Promise<string> {
-  const { kernel } = await kvcustomizer.start();
-  return (await kernel.exec('kvcustomizer.app.guide.get', {})).instructions;
+  const { kernel } = await kvbuilder.start();
+  return (await kernel.exec('kvbuilder.app.guide.get', {})).instructions;
 }
 
 describe("kvman init, the agent's guide for changing the app (09 §9.4, ADR 0023)", { timeout: 30_000 }, () => {
   it('QA35-H2 the kvman connector opens with the trigger, and the prompt shows it', async () => {
-    const { kernel } = await kvcustomizer.start();
+    const { kernel } = await kvbuilder.start();
     const kvman = (await kernel.exec('kvcoder.connector.list', {})).find((connector) => connector.name === 'kvman');
     expect(kvman?.description.startsWith('Call `init` first when the person asks to change, extend, or customize the app itself: what it does, how it looks, its model, or its settings.')).toBe(true);
     const session = await kernel.exec('kvcoder.session.create', {});
@@ -24,20 +24,20 @@ describe("kvman init, the agent's guide for changing the app (09 §9.4, ADR 0023
     expect(prompt).toContain('- kvman: Call `init` first when the person asks to change, extend, or customize the app itself');
   });
 
-  it('QA35-H3 a prompt holds no text of kvcustomizer but its connector lines', async () => {
-    const { kernel } = await kvcustomizer.start();
+  it('QA35-H3 a prompt holds no text of kvbuilder but its connector lines', async () => {
+    const { kernel } = await kvbuilder.start();
     const session = await kernel.exec('kvcoder.session.create', {});
     const { prompt, sections } = await kernel.exec('kvcoder.prompt.get', { sessionId: session.id });
-    expect(sections.filter((section) => section.owner === '@kvman/kvcustomizer' || section.id === 'guide')).toEqual([]);
+    expect(sections.filter((section) => section.owner === '@kvman/kvbuilder' || section.id === 'guide')).toEqual([]);
     expect(prompt).not.toContain('Build an extension, in this order');
     expect(prompt).not.toContain('Manage the app:');
   });
 
   it('QA35-H4 init answers the file docs/init.md, as a public query', async () => {
-    const { kernel } = await kvcustomizer.start();
-    expect(await kernel.exec('kvcustomizer.app.guide.get', {})).toEqual({ instructions: file });
-    const own = (await kernel.exec('kernel.extensions.list', {})).find((extension) => extension.name === '@kvman/kvcustomizer');
-    expect(own?.queries.find((query) => query.name === 'kvcustomizer.app.guide.get')).toMatchObject({ public: true });
+    const { kernel } = await kvbuilder.start();
+    expect(await kernel.exec('kvbuilder.app.guide.get', {})).toEqual({ instructions: file });
+    const own = (await kernel.exec('kernel.extensions.list', {})).find((extension) => extension.name === '@kvman/kvbuilder');
+    expect(own?.queries.find((query) => query.name === 'kvbuilder.app.guide.get')).toMatchObject({ public: true });
   });
 
   it('QA35-H5 the text has the questions, then the rules, then the method, in order', async () => {
@@ -98,7 +98,7 @@ describe("kvman init, the agent's guide for changing the app (09 §9.4, ADR 0023
   });
 
   it('QA35-E1 and QA35-E3 init runs at once and changes nothing, and the other commands need no init', async () => {
-    const { kernel } = await kvcustomizer.start();
+    const { kernel } = await kvbuilder.start();
     const state = async () => JSON.stringify([await kernel.exec('kernel.settings.list', {}), await kernel.exec('kernel.preset.get', {})]);
     const before = await state();
     const guide = await runConnector(kernel, { connector: 'kvman', command: 'init' });

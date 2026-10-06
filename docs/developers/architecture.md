@@ -4,7 +4,7 @@ This page is for contributors and for anyone who wants to know how kvman is buil
 
 ## The idea
 
-kvman works like a small operating system. A **kernel** runs **extensions**; a **preset** chooses which extensions run and with what settings. Every feature is an extension: the web UI (kvwebui), the model access (kvai), the coding app (kvcoder), and the customizing tools (kvcustomizer). The kernel knows no product concept: no chat, no agent, no UI.
+kvman works like a small operating system. A **kernel** runs **extensions**; a **preset** chooses which extensions run and with what settings. Every feature is an extension: the web UI (kvwebui), the model access (kvai), the coding app (kvcoder), and the customizing tools (kvbuilder). The kernel knows no product concept: no chat, no agent, no UI.
 
 ## Running
 
@@ -48,9 +48,9 @@ A pnpm monorepo, Node 24, TypeScript 6.0 strict.
 | `packages/kernel` | Everything the kernel does, including HTTP. Published as `@kvman/kernel`. | `sdk`, its declared dependencies |
 | `packages/cli` | The `kvman` bin; it runs the kernel in the same process. Published as `kvman`, with the bundled presets inside (`packages/cli/presets/`); the bundled extensions are its dependencies. | `kernel`, `sdk` |
 | `packages/testkit` | `createTestKernel` and the bins `kvman-check`, `kvman-new`, `kvman-preset`, `kvman-preview`, `kvman-docs`. Published as `@kvman/testkit`. | `kernel`, `sdk` |
-| `extensions/*` | kvai, kvwebui, kvcoder, kvcustomizer. Each is published under its own name, such as `@kvman/kvai`. | `sdk`, their own npm dependencies; never `kernel`; another extension only when it is a `kvman.dependencies` entry: `import type`, or a runtime import of a subpath it exports (which may import only `sdk` and holds no state) |
+| `extensions/*` | kvai, kvwebui, kvcoder, kvbuilder. Each is published under its own name, such as `@kvman/kvai`. | `sdk`, their own npm dependencies; never `kernel`; another extension only when it is a `kvman.dependencies` entry: `import type`, or a runtime import of a subpath it exports (which may import only `sdk` and holds no state) |
 
-The **import walls** are enforced by ESLint and are never bypassed. They make the kernel replaceable and extensions independent: an extension can't reach into the kernel, so everything it does goes through the SDK and the job calls, which is what makes a preset's extension set free to change. kvcustomizer finds the testkit's bins as files of its own dependency and runs them as child processes, so it never imports the testkit either.
+The **import walls** are enforced by ESLint and are never bypassed. They make the kernel replaceable and extensions independent: an extension can't reach into the kernel, so everything it does goes through the SDK and the job calls, which is what makes a preset's extension set free to change. kvbuilder finds the testkit's bins as files of its own dependency and runs them as child processes, so it never imports the testkit either.
 
 ## Where the code lives
 

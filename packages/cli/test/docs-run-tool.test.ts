@@ -10,11 +10,11 @@ const root = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '..', '.
 const read = (...parts: string[]): string => readFileSync(path.join(root, ...parts), 'utf8');
 const markdownIn = (...parts: string[]): string[] => readdirSync(path.join(root, ...parts)).filter((name) => name.endsWith('.md')).map((name) => path.join(...parts, name));
 
-const pages = [...markdownIn('docs', 'developers'), ...markdownIn('docs', 'user-guide'), ...['kvcoder', 'kvcustomizer', 'kvwebui', 'kvai'].flatMap((extension) => markdownIn('extensions', extension, 'docs')), ...markdownIn('packages', 'testkit', 'docs')];
+const pages = [...markdownIn('docs', 'developers'), ...markdownIn('docs', 'user-guide'), ...['kvcoder', 'kvbuilder', 'kvwebui', 'kvai'].flatMap((extension) => markdownIn('extensions', extension, 'docs')), ...markdownIn('packages', 'testkit', 'docs')];
 
 describe('the documentation describes the run tool (QA18-H24, ADR 0011)', () => {
   it('QA18-H24 the pages about the agent name the run tool, help, and the background connector, and no page shows the old call forms', () => {
-    for (const page of [path.join('docs', 'developers', 'connectors.md'), path.join('extensions', 'kvcoder', 'docs', 'connectors.md'), path.join('extensions', 'kvcustomizer', 'docs', 'customizing.md')]) {
+    for (const page of [path.join('docs', 'developers', 'connectors.md'), path.join('extensions', 'kvcoder', 'docs', 'connectors.md'), path.join('extensions', 'kvbuilder', 'docs', 'customizing.md')]) {
       const markdown = read(page);
       expect(markdown, page).toContain('`run`');
       expect(markdown, page).toContain('`help`');

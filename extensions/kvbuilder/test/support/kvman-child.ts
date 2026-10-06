@@ -53,7 +53,7 @@ function stopped(child: ChildProcess): Promise<void> {
 }
 
 export function kvmanWorld(): KvmanWorld {
-  const root = mkdtempSync(path.join(tmpdir(), 'kvcustomizer-e2e-'));
+  const root = mkdtempSync(path.join(tmpdir(), 'kvbuilder-e2e-'));
   const [home, user, project] = ['home', 'user', 'project'].map((name) => path.join(root, name));
   for (const folder of [user ?? '', project ?? '']) mkdirSync(folder, { recursive: true });
   const children: ChildProcess[] = [];
@@ -84,11 +84,11 @@ export function kvmanWorld(): KvmanWorld {
 }
 
 /** Writes the test preset that loads the four bundled extensions into the world's folder and returns its path. */
-export function customizerPreset(world: KvmanWorld): string {
-  const file = path.join(world.root, 'customizer-test.json');
+export function builderPreset(world: KvmanWorld): string {
+  const file = path.join(world.root, 'builder-test.json');
   const preset = {
-    name: 'customizer-test',
-    extensions: { '@kvman/kvai': 'bundled', '@kvman/kvwebui': 'bundled', '@kvman/kvcoder': 'bundled', '@kvman/kvcustomizer': 'bundled' },
+    name: 'builder-test',
+    extensions: { '@kvman/kvai': 'bundled', '@kvman/kvwebui': 'bundled', '@kvman/kvcoder': 'bundled', '@kvman/kvbuilder': 'bundled' },
     settings: { 'kvwebui.home': 'kvcoder.chat' },
   };
   writeFileSync(file, `${JSON.stringify(preset, undefined, 2)}\n`);

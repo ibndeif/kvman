@@ -1,9 +1,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { z } from '@kvman/sdk';
-import { invalid, kvcustomizerProblem } from './problems.ts';
+import { invalid, kvbuilderProblem } from './problems.ts';
 
-// Where kvcustomizer reads and writes (ADR 0009, 121, 126): every `folder` and `file` resolves against the workspace folder
+// Where kvbuilder reads and writes (ADR 0009, 121, 126): every `folder` and `file` resolves against the workspace folder
 // and must stay inside it. A project is a folder whose package.json has a `kvman` field.
 
 export type ProjectManifest = { name: string; version: string; namespace: string; scripts: Record<string, string> };
@@ -27,7 +27,7 @@ export function insideWorkspace(workspaceFolder: string, relative: string, what:
   return resolved;
 }
 
-/** A path as kvcustomizer reports it: relative to the workspace folder, with `/`, and `.` for the folder itself. */
+/** A path as kvbuilder reports it: relative to the workspace folder, with `/`, and `.` for the folder itself. */
 export function workspaceRelative(workspaceFolder: string, absolute: string): string {
   return path.relative(workspaceFolder, absolute).split(path.sep).join('/') || '.';
 }
@@ -48,10 +48,10 @@ export function readProjectManifest(folder: string): ProjectManifest | undefined
   return { name: parsed.data.name, version: parsed.data.version, namespace: parsed.data.kvman.namespace, scripts: parsed.data.scripts ?? {} };
 }
 
-/** The project in `folder`, which must be inside the workspace folder; `kvcustomizer/NOT_A_PROJECT` otherwise. */
+/** The project in `folder`, which must be inside the workspace folder; `kvbuilder/NOT_A_PROJECT` otherwise. */
 export function projectAt(workspaceFolder: string, folder: string): { folder: string; manifest: ProjectManifest } {
   const absolute = insideWorkspace(workspaceFolder, folder, 'folder');
   const manifest = readProjectManifest(absolute);
-  if (manifest === undefined) throw kvcustomizerProblem('NOT_A_PROJECT', `${folder} has no package.json with a kvman field.`, { folder });
+  if (manifest === undefined) throw kvbuilderProblem('NOT_A_PROJECT', `${folder} has no package.json with a kvman field.`, { folder });
   return { folder: absolute, manifest };
 }

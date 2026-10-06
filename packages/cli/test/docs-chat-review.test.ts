@@ -10,7 +10,7 @@ const root = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '..', '.
 const read = (...parts: string[]): string => readFileSync(path.join(root, ...parts), 'utf8');
 const markdownIn = (...parts: string[]): string[] => readdirSync(path.join(root, ...parts)).filter((name) => name.endsWith('.md')).map((name) => path.join(...parts, name));
 
-const pages = [...markdownIn('docs', 'developers'), ...markdownIn('docs', 'user-guide'), ...['kvcoder', 'kvcustomizer', 'kvwebui', 'kvai'].flatMap((extension) => markdownIn('extensions', extension, 'docs'))];
+const pages = [...markdownIn('docs', 'developers'), ...markdownIn('docs', 'user-guide'), ...['kvcoder', 'kvbuilder', 'kvwebui', 'kvai'].flatMap((extension) => markdownIn('extensions', extension, 'docs'))];
 
 describe('the documentation after the chat review (QA19-H14, ADR 0012)', () => {
   it('QA19-H14 the docs follow', () => {

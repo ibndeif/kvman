@@ -40,8 +40,8 @@ Contributors to kvman itself: every change to `@kvman/sdk`, `@kvman/testkit`, or
 
 Earlier versions had an extension called kvdev and a `dev` preset. In this version:
 
-- kvdev is **kvcustomizer** (`@kvman/kvcustomizer`, namespace `kvcustomizer`); its commands are `kvcustomizer.*`, its errors `kvcustomizer/*`.
-- The `dev` preset is gone; `coder` loads kvcustomizer. A personal `<home>/presets/coder.json` replaces the bundled one.
+- kvdev, later kvcustomizer, is **kvbuilder** (`@kvman/kvbuilder`, namespace `kvbuilder`), shown as "kvman builder"; its commands are `kvbuilder.*`, its errors `kvbuilder/*`. A preset of your own that names `@kvman/kvcustomizer` must name `@kvman/kvbuilder` instead.
+- The `dev` preset is gone; `coder` loads kvbuilder. A personal `<home>/presets/coder.json` replaces the bundled one.
 - The scaffold, the preset tools, and the preview are the testkit's bins (`kvman-new`, `kvman-preset`, `kvman-preview`), usable without any agent; the six guides are split: `sdk`, `i18n`, and `presets` ship with the testkit, and each extension serves its own pages through `docs.list` and `docs.get`.
 
 ## Next

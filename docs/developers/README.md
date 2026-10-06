@@ -27,7 +27,7 @@ The agent's connectors run the same tools underneath, so all three ways give the
 ## How the pieces fit
 
 - The **kernel** runs **extensions**: it keeps jobs, workers, storage, workspaces, settings, and secrets, and serves an HTTP API. It knows no product concept.
-- An **extension** registers commands, queries, settings, and handlers. The chat app (kvcoder), the web app (kvwebui), model access (kvai), and the customizing tools (kvcustomizer) are all extensions, and any of them can be removed.
+- An **extension** registers commands, queries, settings, and handlers. The chat app (kvcoder), the web app (kvwebui), model access (kvai), and the customizing tools (kvbuilder) are all extensions, and any of them can be removed.
 - A **preset** chooses which extensions run and their starting settings.
 - `@kvman/sdk` is the whole API an extension sees; `@kvman/testkit` runs a real kernel for tests and holds the tools above.
 

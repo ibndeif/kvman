@@ -1,4 +1,4 @@
-# @kvman/kvcustomizer
+# @kvman/kvbuilder
 
 ## 0.1.1
 

@@ -2,19 +2,19 @@ import { runConnector } from '@kvman/kvcoder/testing';
 import { describe, expect, it } from 'vitest';
 import { runs, says } from './support/model-script.ts';
 import { turn, useScriptedModel } from './support/scripted-world.ts';
-import { useKvcustomizer } from './support/kvcustomizer-kernel.ts';
+import { useKvbuilder } from './support/kvbuilder-kernel.ts';
 
 const { withModel } = useScriptedModel();
-const kvcustomizer = useKvcustomizer();
+const kvbuilder = useKvbuilder();
 
 describe('kvman restart (09 §9.1, ADR 0024, 7)', { timeout: 60_000 }, () => {
-  it('QA36-H12 kvcustomizer.app.restart runs kernel.restart, and is a public command', async () => {
-    const { kernel } = await kvcustomizer.start();
+  it('QA36-H12 kvbuilder.app.restart runs kernel.restart, and is a public command', async () => {
+    const { kernel } = await kvbuilder.start();
     const requested = kernel.restartRequested().then(() => 'requested');
-    expect(await kernel.exec('kvcustomizer.app.restart', {})).toEqual({ restarting: true });
+    expect(await kernel.exec('kvbuilder.app.restart', {})).toEqual({ restarting: true });
     expect(await requested).toBe('requested');
-    const own = (await kernel.exec('kernel.extensions.list', {})).find((extension) => extension.name === '@kvman/kvcustomizer');
-    expect(own?.commands.find((command) => command.name === 'kvcustomizer.app.restart')).toMatchObject({ public: true });
+    const own = (await kernel.exec('kernel.extensions.list', {})).find((extension) => extension.name === '@kvman/kvbuilder');
+    expect(own?.commands.find((command) => command.name === 'kvbuilder.app.restart')).toMatchObject({ public: true });
   });
 
   it('QA36-H13 a turn that calls kvman restart waits for the person, and nothing restarts until it is allowed', async () => {
@@ -38,7 +38,7 @@ describe('kvman restart (09 §9.1, ADR 0024, 7)', { timeout: 60_000 }, () => {
   });
 
   it('QA36-E15 help says that the person is asked before kvman restart runs', async () => {
-    const { kernel } = await kvcustomizer.start();
+    const { kernel } = await kvbuilder.start();
     const help = await runConnector(kernel, { connector: 'kvman', command: 'help', payload: { command: 'restart' } });
     expect(help.output).toContain('The person is asked before this runs.');
   });

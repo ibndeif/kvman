@@ -2,7 +2,7 @@
 
 This page is for anyone who wants kvman's agent to change kvman itself. When you finish, you can ask it to switch the model, change a setting, add or remove an extension, edit your preset, or build and preview a new extension, and you know which of those need a restart.
 
-The tools for this come from **kvcustomizer**, which the `coder` preset loads. The agent uses them instead of shell lines, so its work is predictable and checked. You never have to know their names; this page lists them so you can tell what the agent is doing when you read its steps.
+The tools for this come from **kvbuilder**, which the `coder` preset loads. The agent uses them instead of shell lines, so its work is predictable and checked. You never have to know their names; this page lists them so you can tell what the agent is doing when you read its steps.
 
 ## You don't need to know kvman's words
 

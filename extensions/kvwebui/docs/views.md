@@ -1,6 +1,6 @@
 # Pages and views (kvwebui)
 
-This page is served by `kvwebui.docs.get`, so `kvman-docs get @kvman/kvwebui views` and kvcustomizer's `docs` connector read it.
+This page is served by `kvwebui.docs.get`, so `kvman-docs get @kvman/kvwebui views` and kvbuilder's `docs` connector read it.
 
 An extension adds UI by registering the public query `<namespace>.ui.get`, which takes `{}` and returns:
 

@@ -13,7 +13,7 @@ const packageFolder = fileURLToPath(new URL('../', import.meta.url));
 const root = path.resolve(packageFolder, '..', '..');
 const manifestSchema = z.object({ files: z.array(z.string()), dependencies: z.record(z.string(), z.string()) });
 const manifest = manifestSchema.parse(JSON.parse(readFileSync(path.join(packageFolder, 'package.json'), 'utf8')));
-const bundledNames = ['@kvman/kvai', '@kvman/kvcoder', '@kvman/kvcustomizer', '@kvman/kvwebui'];
+const bundledNames = ['@kvman/kvai', '@kvman/kvbuilder', '@kvman/kvcoder', '@kvman/kvwebui'];
 
 const temporaryFolders: string[] = [];
 

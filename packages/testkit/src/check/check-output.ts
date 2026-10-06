@@ -1,7 +1,7 @@
 import type { CheckedFinding, Finding } from './finding.ts';
 
 // How `kvman-check` prints its findings (ADR 0009, 116): readable lines for a person, or with `--json` the
-// `[{ file?, message, hint }]` array on one line, which kvcustomizer's `ext check` reads.
+// `[{ file?, message, hint }]` array on one line, which kvbuilder's `ext check` reads.
 
 export function readableFindings(findings: readonly CheckedFinding[]): string {
   if (findings.length === 0) return 'kvman-check: no findings.';

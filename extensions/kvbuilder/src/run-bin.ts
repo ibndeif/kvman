@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { jsonSchema, ProblemError, z, type Ctx, type Json } from '@kvman/sdk';
-import { invalid, kvcustomizerProblem, type KvcustomizerCode } from './problems.ts';
+import { invalid, kvbuilderProblem, type KvbuilderCode } from './problems.ts';
 import { killTree } from './run-program.ts';
 
 // Finding and running the `@kvman/testkit` bins (ADR 0010, 3): the extension never imports the testkit, it only
@@ -86,14 +86,14 @@ export function lastOutputLine(output: string): string | undefined {
   return undefined;
 }
 
-const kvcustomizerBinCodes: readonly KvcustomizerCode[] = ['FOLDER_NOT_EMPTY', 'FILE_EXISTS', 'NPM_FAILED', 'NO_FREE_PORT', 'PREVIEW_FAILED'];
+const kvbuilderBinCodes: readonly KvbuilderCode[] = ['FOLDER_NOT_EMPTY', 'FILE_EXISTS', 'NPM_FAILED', 'NO_FREE_PORT', 'PREVIEW_FAILED'];
 
 /** The Problem for a bin's structured failure, or `undefined` when its code has no mapping here. */
 export function binFailureProblem(failure: BinFailure): ProblemError | undefined {
   const params: Record<string, Json> = failure.params ?? {};
   if (failure.code === 'VALIDATION_FAILED') return invalid(failure.message, params);
   if (failure.code === 'NOT_FOUND') return new ProblemError({ code: 'NOT_FOUND', message: failure.message, params });
-  if (kvcustomizerBinCodes.includes(failure.code as KvcustomizerCode)) return kvcustomizerProblem(failure.code as KvcustomizerCode, failure.message, params);
+  if (kvbuilderBinCodes.includes(failure.code as KvbuilderCode)) return kvbuilderProblem(failure.code as KvbuilderCode, failure.message, params);
   return undefined;
 }
 

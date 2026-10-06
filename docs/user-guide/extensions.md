@@ -4,7 +4,7 @@ This page is for anyone who wants to see what kvman is running and to add or rem
 
 ## What an extension is
 
-kvman is built from extensions. The chat app is one (kvcoder), the web app is one (kvwebui), model access is one (kvai), and the tools that let the agent customize kvman are one (kvcustomizer). A preset chooses which extensions run. Everything you can do in kvman, an extension provides.
+kvman is built from extensions. The chat app is one (kvcoder), the web app is one (kvwebui), model access is one (kvai), and the tools that let the agent customize kvman are one (kvbuilder). A preset chooses which extensions run. Everything you can do in kvman, an extension provides.
 
 ## The Extensions page
 

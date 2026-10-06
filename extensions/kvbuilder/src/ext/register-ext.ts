@@ -18,33 +18,33 @@ const newInput = z.object({
 });
 
 export function registerExt(ctx: Ctx): void {
-  ctx.registerCommand('kvcustomizer.ext.new', {
+  ctx.registerCommand('kvbuilder.ext.new', {
     description: 'Scaffolds an extension project and runs npm install in it.',
     public: true,
-    ...jobOptions['kvcustomizer.ext.new'],
+    ...jobOptions['kvbuilder.ext.new'],
     input: newInput,
     output: z.object({ folder: z.string(), name: z.string(), namespace: z.string(), web: z.boolean() }),
     handle: (input) => newProject(ctx, ctx.job.workspace.path, { name: input.name, namespace: input.namespace, folder: input.folder, web: input.web ?? false }, ctx.job.signal),
   });
-  ctx.registerQuery('kvcustomizer.ext.list', {
+  ctx.registerQuery('kvbuilder.ext.list', {
     description: 'Lists the extension projects in the workspace folder.',
     public: true,
     input: z.object({}),
     output: z.array(z.object({ folder: z.string(), name: z.string(), namespace: z.string(), version: z.string() })),
     handle: () => listProjects(ctx.job.workspace.path),
   });
-  ctx.registerCommand('kvcustomizer.ext.check', {
+  ctx.registerCommand('kvbuilder.ext.check', {
     description: 'Type-checks a project and runs its kvman check.',
     public: true,
-    ...jobOptions['kvcustomizer.ext.check'],
+    ...jobOptions['kvbuilder.ext.check'],
     input: folderInput,
     output: z.array(findingSchema),
     handle: (input) => checkProject(projectAt(ctx.job.workspace.path, input.folder).folder, ctx.job.signal),
   });
-  ctx.registerCommand('kvcustomizer.ext.test', {
+  ctx.registerCommand('kvbuilder.ext.test', {
     description: "Runs a project's tests.",
     public: true,
-    ...jobOptions['kvcustomizer.ext.test'],
+    ...jobOptions['kvbuilder.ext.test'],
     input: folderInput,
     output: z.object({ passed: z.boolean(), exitCode: z.number(), output: z.string() }),
     handle: (input) => testProject(projectAt(ctx.job.workspace.path, input.folder).folder, ctx.job.signal),

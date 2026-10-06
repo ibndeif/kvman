@@ -1,9 +1,9 @@
 {
-  "kvcustomizer.title": "kvcustomizer",
-  "kvcustomizer.errors.FOLDER_NOT_EMPTY": "That folder isn't empty; choose a new or empty folder.",
-  "kvcustomizer.errors.FILE_EXISTS": "That file already exists.",
-  "kvcustomizer.errors.NOT_A_PROJECT": "That folder isn't an extension project (no package.json with a kvman field).",
-  "kvcustomizer.errors.NPM_FAILED": "npm failed.",
-  "kvcustomizer.errors.NO_FREE_PORT": "No port from 3738 to 3837 is free for the preview.",
-  "kvcustomizer.errors.PREVIEW_FAILED": "The preview kvman didn't start."
+  "kvbuilder.title": "kvman builder",
+  "kvbuilder.errors.FOLDER_NOT_EMPTY": "That folder isn't empty; choose a new or empty folder.",
+  "kvbuilder.errors.FILE_EXISTS": "That file already exists.",
+  "kvbuilder.errors.NOT_A_PROJECT": "That folder isn't an extension project (no package.json with a kvman field).",
+  "kvbuilder.errors.NPM_FAILED": "npm failed.",
+  "kvbuilder.errors.NO_FREE_PORT": "No port from 3738 to 3837 is free for the preview.",
+  "kvbuilder.errors.PREVIEW_FAILED": "The preview kvman didn't start."
 }

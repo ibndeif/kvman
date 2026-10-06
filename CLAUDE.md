@@ -41,7 +41,7 @@ Milestones are in `plan/13-milestones.md`. Do them strictly in order. For each o
   - `@kvman/sdk` is a peerDependency: every extension shares the kernel's copy, and its `z`.
   - Registrations are private unless `public: true`.
   - There's no sandbox in this phase: non-bundled versions need the person's trust at start.
-- **The kernel knows no product concept.** UI, agents, and tools live in extensions (kvai, kvwebui, kvcoder, kvcustomizer).
+- **The kernel knows no product concept.** UI, agents, and tools live in extensions (kvai, kvwebui, kvcoder, kvbuilder).
 - **Import walls** (enforced by ESLint; never bypass them):
 
   | Package | May import |

@@ -54,7 +54,7 @@ For async and scheduled jobs, `HANDLER_FAILED`, `TIMEOUT`, `WORKER_CRASHED`, and
 3. Add a text for each to every catalog: `"notes.errors.NOT_ALLOWED": "You can't do that to a note."`, in `locales/en.json` and `locales/ar.json` ([localization.md](localization.md)).
 4. Document them where others look: your extension's docs page ([documenting-your-extension.md](documenting-your-extension.md)).
 
-The core extensions follow this: `kvai/KEY_MISSING`, `kvcoder/NAME_TAKEN`, `kvcustomizer/NPM_FAILED`, and so on.
+The core extensions follow this: `kvai/KEY_MISSING`, `kvcoder/NAME_TAKEN`, `kvbuilder/NPM_FAILED`, and so on.
 
 ## What never goes in a Problem
 

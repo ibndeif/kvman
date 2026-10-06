@@ -1,9 +1,9 @@
 import { spawn } from 'node:child_process';
-import { kvcustomizerProblem } from './problems.ts';
+import { kvbuilderProblem } from './problems.ts';
 import { programCommand, treeKill, type Program } from './program-command.ts';
-// One npm or npx run inside a kvcustomizer job (plan 02 §2.16: short-lived processes stay in their job): stdin empty, its
+// One npm or npx run inside a kvbuilder job (plan 02 §2.16: short-lived processes stay in their job): stdin empty, its
 // stdout kept apart and stdout and stderr together, and its tree killed when the job is cancelled. npm missing from
-// the PATH fails `kvcustomizer/NPM_FAILED` (ADR 0009, 126).
+// the PATH fails `kvbuilder/NPM_FAILED` (ADR 0009, 126).
 
 export type ProgramRun = { exitCode: number; stdout: string; output: string };
 
@@ -39,7 +39,7 @@ export function runProgram(program: Program, args: readonly string[], cwd: strin
     child.once('error', (error) => {
       signal.removeEventListener('abort', abort);
       const missing = 'code' in error && error.code === 'ENOENT';
-      reject(missing ? kvcustomizerProblem('NPM_FAILED', `${program} isn't on the PATH; install Node.js with npm.`, { program }) : error);
+      reject(missing ? kvbuilderProblem('NPM_FAILED', `${program} isn't on the PATH; install Node.js with npm.`, { program }) : error);
     });
     child.once('close', (code) => {
       signal.removeEventListener('abort', abort);

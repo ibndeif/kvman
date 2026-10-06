@@ -4,9 +4,9 @@ import path from 'node:path';
 import { chromium, type Browser } from 'playwright';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { z } from '@kvman/sdk';
-import { childWait, customizerPreset, kvmanWorld, until, type KvmanWorld } from '../support/kvman-child.ts';
+import { childWait, builderPreset, kvmanWorld, until, type KvmanWorld } from '../support/kvman-child.ts';
 import { npmEnvironment } from '../support/npm-environment.ts';
-import { kvcustomizerProcesses } from '../support/preview-world.ts';
+import { kvbuilderProcesses } from '../support/preview-world.ts';
 
 let browser: Browser;
 let world: KvmanWorld;
@@ -21,14 +21,14 @@ afterAll(async () => {
 
 describe('the web scaffold (09 §9.2–9.3, 06 §6.4)', () => {
   it('M2.5-H2 a web scaffold builds, its page shows the component in the preview, and a component edit shows after a refresh', async () => {
-    const kvman = await world.start(['--preset', customizerPreset(world)], npmEnvironment());
-    await kvman.call('commands', 'kvcustomizer.ext.new', { name: 'cards', namespace: 'cards', folder: 'cards', web: true });
+    const kvman = await world.start(['--preset', builderPreset(world)], npmEnvironment());
+    await kvman.call('commands', 'kvbuilder.ext.new', { name: 'cards', namespace: 'cards', folder: 'cards', web: true });
     const folder = path.join(world.project, 'cards');
     execFileSync('npm', ['run', 'web:build'], { cwd: folder, env: { ...process.env, ...npmEnvironment() }, stdio: 'pipe' });
     const built = path.join(folder, 'dist', 'web', 'components', 'hello.js');
     expect(existsSync(built)).toBe(true);
     expect(existsSync(path.join(folder, 'dist', 'web', 'components', 'hello.css'))).toBe(true);
-    const url = z.object({ url: z.string() }).parse(await kvman.call('commands', 'kvcustomizer.preview.start', { extensions: ['cards'] })).url;
+    const url = z.object({ url: z.string() }).parse(await kvman.call('commands', 'kvbuilder.preview.start', { extensions: ['cards'] })).url;
 
     const page = await browser.newPage();
     await page.goto(`${url}cards/hello`);
@@ -40,7 +40,7 @@ describe('the web scaffold (09 §9.2–9.3, 06 §6.4)', () => {
     await page.reload();
     await page.getByText('Edited. Hello from a Vue component!').waitFor({ timeout: childWait.timeout });
 
-    await kvman.call('commands', 'kvcustomizer.preview.stop', {});
-    expect(await kvcustomizerProcesses(kvman)).toEqual([]);
+    await kvman.call('commands', 'kvbuilder.preview.stop', {});
+    expect(await kvbuilderProcesses(kvman)).toEqual([]);
   });
 });

@@ -4,7 +4,7 @@ import { programCommand, type Program } from './program-command.ts';
 
 // One npm or npx run inside a testkit bin: stdin empty, its stdout kept apart and stdout and stderr together.
 // npm missing from the PATH fails `NPM_FAILED`. It runs in the bin's own process group, not a group of its own, so a
-// kill of the bin's group (a cancelled kvcustomizer job) reaches it.
+// kill of the bin's group (a cancelled kvbuilder job) reaches it.
 
 export type ProgramRun = { exitCode: number; stdout: string; output: string };
 

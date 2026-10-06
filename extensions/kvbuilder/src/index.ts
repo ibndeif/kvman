@@ -11,7 +11,7 @@ import { registerWithKvcoder } from './register-with-kvcoder.ts';
 
 export type {} from './api.ts';
 
-// kvcustomizer (plan 09): the harness for developing kvman extensions and presets, and for seeing and changing the app
+// kvbuilder (plan 09): the harness for developing kvman extensions and presets, and for seeing and changing the app
 // itself. It has no loop of its own; it extends kvcoder with the kvman, ext, preset, preview, and docs connectors, and
 // the agent reads its guide with `kvman init`.
 export default (ctx: Ctx): void => {

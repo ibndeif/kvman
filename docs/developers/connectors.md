@@ -61,7 +61,7 @@ There are two shapes, and the choice matters for who depends on whom.
 
 **Push (register with an owner).** The owner exposes public commands; contributors call them from their `kernel.started` handler and the owner stores entries keyed by the caller. kvcoder's connectors work this way. Contributors **depend on the owner**, so the owner loads first and clears the registry, and the owner needs a store and a rule for stale entries.
 
-**Pull (the owner asks).** The owner calls a public query named under each contributor's own namespace and needs no registration, no load order, and no dependency in either direction. kvwebui pulls `<namespace>.ui.get`; kvcustomizer pulls `<namespace>.docs.list` and `<namespace>.docs.get` ([documenting-your-extension.md](documenting-your-extension.md)).
+**Pull (the owner asks).** The owner calls a public query named under each contributor's own namespace and needs no registration, no load order, and no dependency in either direction. kvwebui pulls `<namespace>.ui.get`; kvbuilder pulls `<namespace>.docs.list` and `<namespace>.docs.get` ([documenting-your-extension.md](documenting-your-extension.md)).
 
 Prefer pull when the owner is optional, or when contributors shouldn't need the owner installed, which is why the core extensions document themselves by pull. Use push when the owner must keep state about its contributors.
 

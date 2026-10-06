@@ -69,7 +69,7 @@ export async function runKvman(args: RunArguments, environment: CliEnvironment):
   const folders: PresetFolders = { bundled: bundledPresetsFolder, home, start: environment.startFolder };
   const lock = takeLock(home);
   if (lock.kind === 'held') return joinRunning(args, lock.lock, folders, environment);
-  // A program kvman runs (kvcustomizer's `kvman-docs`) finds this kvman through `<home>/kvman.lock` (plan 01 §1.2).
+  // A program kvman runs (kvbuilder's `kvman-docs`) finds this kvman through `<home>/kvman.lock` (plan 01 §1.2).
   process.env['KVMAN_HOME'] = home;
   const presetFile = editableFile(args.preset ?? defaultPreset, folders);
   try {

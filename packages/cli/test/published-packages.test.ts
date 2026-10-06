@@ -9,7 +9,7 @@ import { z } from '@kvman/sdk';
 
 const root = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '..', '..', '..');
 const packages = ['packages/sdk', 'packages/kernel', 'packages/testkit', 'packages/cli'];
-const extensions = ['extensions/kvai', 'extensions/kvwebui', 'extensions/kvcoder', 'extensions/kvcustomizer'];
+const extensions = ['extensions/kvai', 'extensions/kvwebui', 'extensions/kvcoder', 'extensions/kvbuilder'];
 const released = ['packages/sdk', 'packages/testkit', ...extensions];
 
 const ranges = z.record(z.string(), z.string());

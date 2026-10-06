@@ -5,7 +5,7 @@ import { listPages, noSuchTopic, readPage, topicPattern } from './pages.ts';
 
 // The `docs` connector's two queries (plan 09 §9.1 and §9.5, ADR 0010, 15–17 and 22): the built-in guides of kvman
 // (the testkit's `docs/`), then the pages every loaded extension serves through its public `<namespace>.docs.list`
-// and `<namespace>.docs.get`. kvcustomizer pulls them, so no extension registers anything with it.
+// and `<namespace>.docs.get`. kvbuilder pulls them, so no extension registers anything with it.
 
 const builtIn = 'kvman';
 

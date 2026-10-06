@@ -40,7 +40,7 @@ describe("the bin's output and errors (ADR 0010, 14, 20)", () => {
     for (const code of ['FOLDER_NOT_EMPTY', 'FILE_EXISTS', 'NPM_FAILED', 'NO_FREE_PORT', 'PREVIEW_FAILED'] as const) {
       const problem = binFailureProblem({ code, message: 'taken', params: { folder: 'taken' } });
       expect(problem).toBeInstanceOf(ProblemError);
-      expect(problem?.problem).toEqual({ code: `kvcustomizer/${code}`, message: 'taken', params: { folder: 'taken' } });
+      expect(problem?.problem).toEqual({ code: `kvbuilder/${code}`, message: 'taken', params: { folder: 'taken' } });
     }
     expect(binFailureProblem({ code: 'VALIDATION_FAILED', message: 'bad', params: { field: 'name' } })?.problem).toEqual({ code: 'VALIDATION_FAILED', message: 'bad', params: { field: 'name' } });
     expect(binFailureProblem({ code: 'NOT_FOUND', message: 'gone' })?.problem).toEqual({ code: 'NOT_FOUND', message: 'gone', params: {} });
@@ -64,7 +64,7 @@ describe("the bin's output and errors (ADR 0010, 14, 20)", () => {
     }
   });
 
-  it('QA17-E14 exit 1 with a structured failure becomes the matching kvcustomizer Problem', () => {
+  it('QA17-E14 exit 1 with a structured failure becomes the matching kvbuilder Problem', () => {
     for (const code of ['FOLDER_NOT_EMPTY', 'FILE_EXISTS', 'NPM_FAILED', 'NO_FREE_PORT', 'PREVIEW_FAILED'] as const) {
       const { log } = makeLog();
       let error: unknown;
@@ -74,7 +74,7 @@ describe("the bin's output and errors (ADR 0010, 14, 20)", () => {
         error = thrown;
       }
       expect(error).toBeInstanceOf(ProblemError);
-      expect((error as ProblemError).problem).toEqual({ code: `kvcustomizer/${code}`, message: 'taken', params: { folder: 'taken' } });
+      expect((error as ProblemError).problem).toEqual({ code: `kvbuilder/${code}`, message: 'taken', params: { folder: 'taken' } });
     }
   });
 

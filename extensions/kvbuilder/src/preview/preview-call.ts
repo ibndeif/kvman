@@ -1,5 +1,5 @@
 import { ProblemError, z, type Ctx } from '@kvman/sdk';
-import { kvcustomizerProblem } from '../problems.ts';
+import { kvbuilderProblem } from '../problems.ts';
 import { previewRecordSchema, recordKey } from './preview-state.ts';
 
 // `preview query-get` and `preview command-run` (plan 09 §9.3, ADR 0022, 8 and 14): one call of the preview kvman over
@@ -16,10 +16,10 @@ export const previewAnswerSchema = z.union([
 
 export type PreviewAnswer = z.output<typeof previewAnswerSchema>;
 
-/** What the preview answered, or `kvcustomizer/PREVIEW_FAILED` when it isn't kvman's envelope. */
+/** What the preview answered, or `kvbuilder/PREVIEW_FAILED` when it isn't kvman's envelope. */
 export function previewAnswer(body: unknown): PreviewAnswer {
   const parsed = previewAnswerSchema.safeParse(body);
-  if (!parsed.success) throw kvcustomizerProblem('PREVIEW_FAILED', "The preview's answer isn't one kvman gives.");
+  if (!parsed.success) throw kvbuilderProblem('PREVIEW_FAILED', "The preview's answer isn't one kvman gives.");
   return parsed.data.ok ? { ok: true, output: parsed.data.output } : { ok: false, problem: parsed.data.problem };
 }
 
@@ -35,7 +35,7 @@ async function post(address: URL, input: Record<string, unknown>, signal: AbortS
     const response = await fetch(address, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ input }), signal });
     return await response.json();
   } catch (error) {
-    if (error instanceof TypeError || error instanceof SyntaxError) throw kvcustomizerProblem('PREVIEW_FAILED', `The preview didn't answer the call: ${error.message}`);
+    if (error instanceof TypeError || error instanceof SyntaxError) throw kvbuilderProblem('PREVIEW_FAILED', `The preview didn't answer the call: ${error.message}`);
     throw error;
   }
 }

@@ -2,15 +2,15 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { runConnector } from '@kvman/kvcoder/testing';
-import { useKvcustomizer } from './support/kvcustomizer-kernel.ts';
+import { useKvbuilder } from './support/kvbuilder-kernel.ts';
 
-const kvcustomizer = useKvcustomizer();
+const kvbuilder = useKvbuilder();
 
 const page = (name: string): string => readFileSync(fileURLToPath(new URL(`../docs/${name}.md`, import.meta.url)), 'utf8');
 
-describe("kvcustomizer's connectors through the run tool (09 §9.1, ADR 0011)", { timeout: 60_000 }, () => {
+describe("kvbuilder's connectors through the run tool (09 §9.1, ADR 0011)", { timeout: 60_000 }, () => {
   it('QA18-H22 the connectors answer through run, every one has help, and the guide texts write calls in the run form', async () => {
-    const { kernel } = await kvcustomizer.start();
+    const { kernel } = await kvbuilder.start();
     const listed = await runConnector(kernel, { connector: 'ext', command: 'list' });
     expect(listed).toEqual({ exitCode: 0, output: '[]' });
     const guide = await runConnector(kernel, { connector: 'docs', command: 'get', payload: { topic: 'sdk' } });

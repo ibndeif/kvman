@@ -40,18 +40,18 @@ async function checkPreset(ctx: Ctx, workspaceFolder: string, file: string): Pro
 }
 
 export function registerPreset(ctx: Ctx): void {
-  ctx.registerCommand('kvcustomizer.preset.new', {
+  ctx.registerCommand('kvbuilder.preset.new', {
     description: 'Writes a preset that runs as-is, for adding extensions and settings to.',
     public: true,
-    ...jobOptions['kvcustomizer.preset.new'],
+    ...jobOptions['kvbuilder.preset.new'],
     input: z.object({ name: z.string().min(1).describe('The preset name, as kernel.health.get reports it.'), file: fileField }),
     output: z.object({ file: z.string() }),
     handle: (input) => newPreset(ctx, ctx.job.workspace.path, input.name, input.file),
   });
-  ctx.registerCommand('kvcustomizer.preset.check', {
+  ctx.registerCommand('kvbuilder.preset.check', {
     description: "Checks a preset's schema and its extensions, settings, and home page.",
     public: true,
-    ...jobOptions['kvcustomizer.preset.check'],
+    ...jobOptions['kvbuilder.preset.check'],
     input: z.object({ file: fileField }),
     output: z.array(z.object({ file: z.string(), message: z.string(), hint: z.string() })),
     handle: (input) => checkPreset(ctx, ctx.job.workspace.path, input.file),

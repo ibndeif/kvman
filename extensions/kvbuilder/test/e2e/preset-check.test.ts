@@ -3,9 +3,9 @@ import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Json } from '@kvman/sdk';
 import { kvmanWorld, type Kvman, type KvmanWorld } from '../support/kvman-child.ts';
-import { manifest, writeIn } from '../support/kvcustomizer-kernel.ts';
+import { manifest, writeIn } from '../support/kvbuilder-kernel.ts';
 
-// One kvman in the coder preset, where kvai, kvwebui, kvcoder, and kvcustomizer are bundled; each test writes its files into a folder
+// One kvman in the coder preset, where kvai, kvwebui, kvcoder, and kvbuilder are bundled; each test writes its files into a folder
 // of its own inside the workspace.
 let world: KvmanWorld;
 let kvman: Kvman;
@@ -24,21 +24,21 @@ async function check(preset: Json, files: Record<string, Json | string> = {}) {
   const folder = `case-${String(round)}`;
   for (const [file, content] of Object.entries(files)) writeIn(world.project, path.join(folder, file), content);
   writeIn(world.project, path.join(folder, 'app.json'), preset);
-  const findings = await kvman.call('commands', 'kvcustomizer.preset.check', { file: `${folder}/app.json` });
+  const findings = await kvman.call('commands', 'kvbuilder.preset.check', { file: `${folder}/app.json` });
   return { findings, finding: (message: string | RegExp) => ({ file: `${folder}/app.json`, message: typeof message === 'string' ? message : expect.stringMatching(message), hint: expect.any(String) }) };
 }
 
 describe('preset new (09 §9.1, ADR 0009, 123)', () => {
   it('M2.5-E22 writes a runnable skeleton that passes preset check; an existing or outside file fails', async () => {
-    expect(await kvman.call('commands', 'kvcustomizer.preset.new', { name: 'notes-app', file: 'presets/notes-app.json' })).toEqual({ file: 'presets/notes-app.json' });
+    expect(await kvman.call('commands', 'kvbuilder.preset.new', { name: 'notes-app', file: 'presets/notes-app.json' })).toEqual({ file: 'presets/notes-app.json' });
     expect(JSON.parse(readFileSync(path.join(world.project, 'presets', 'notes-app.json'), 'utf8'))).toEqual({
       name: 'notes-app',
       extensions: { '@kvman/kvai': 'bundled', '@kvman/kvwebui': 'bundled' },
       settings: { 'kvwebui.home': 'kvwebui.extensions' },
     });
-    expect(await kvman.call('commands', 'kvcustomizer.preset.check', { file: 'presets/notes-app.json' })).toEqual([]);
-    await expect(kvman.call('commands', 'kvcustomizer.preset.new', { name: 'again', file: 'presets/notes-app.json' })).rejects.toEqual(failed('kvcustomizer/FILE_EXISTS'));
-    await expect(kvman.call('commands', 'kvcustomizer.preset.new', { name: 'out', file: '../out.json' })).rejects.toEqual(failed('VALIDATION_FAILED'));
+    expect(await kvman.call('commands', 'kvbuilder.preset.check', { file: 'presets/notes-app.json' })).toEqual([]);
+    await expect(kvman.call('commands', 'kvbuilder.preset.new', { name: 'again', file: 'presets/notes-app.json' })).rejects.toEqual(failed('kvbuilder/FILE_EXISTS'));
+    await expect(kvman.call('commands', 'kvbuilder.preset.new', { name: 'out', file: '../out.json' })).rejects.toEqual(failed('VALIDATION_FAILED'));
   });
 });
 
@@ -53,7 +53,7 @@ describe('preset check (09 §9.1, ADR 0009, 122)', () => {
       sources.finding(/^@me\/plain: .*plain has no package\.json with a kvman field\.$/),
     ]);
     writeIn(world.project, 'broken.json', '{ not json');
-    expect(await kvman.call('commands', 'kvcustomizer.preset.check', { file: 'broken.json' })).toEqual([{ file: 'broken.json', message: expect.stringMatching(/^The preset can't be read/), hint: expect.any(String) }]);
+    expect(await kvman.call('commands', 'kvbuilder.preset.check', { file: 'broken.json' })).toEqual([{ file: 'broken.json', message: expect.stringMatching(/^The preset can't be read/), hint: expect.any(String) }]);
   });
 
   it('M2.5-E24 settings: a foreign namespace, an unregistered key, and a wrong value are findings; a path: extension key is not checked', async () => {

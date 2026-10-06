@@ -1,12 +1,12 @@
 {
-  "name": "@kvman/kvcustomizer",
+  "name": "@kvman/kvbuilder",
   "version": "0.1.1",
-  "description": "kvcustomizer: the kvcoder extension for customizing kvman, building extensions and presets and managing the running app.",
+  "description": "kvbuilder: the kvcoder extension for building kvman, developing extensions and presets and managing the running app.",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ibndeif/kvman.git",
-    "directory": "extensions/kvcustomizer"
+    "directory": "extensions/kvbuilder"
   },
   "homepage": "https://github.com/ibndeif/kvman#readme",
   "bugs": {
@@ -42,7 +42,7 @@
     "playwright": "1.63.0"
   },
   "kvman": {
-    "namespace": "kvcustomizer",
+    "namespace": "kvbuilder",
     "source": "src/index.ts",
     "dependencies": {
       "@kvman/kvai": "^0.1.0",

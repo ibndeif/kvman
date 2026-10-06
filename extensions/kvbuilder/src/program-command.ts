@@ -1,4 +1,4 @@
-// How kvcustomizer starts npm and npx, per OS (plan 02 §2.16, CLAUDE.md §3): directly on Linux and macOS, in its own process
+// How kvbuilder starts npm and npx, per OS (plan 02 §2.16, CLAUDE.md §3): directly on Linux and macOS, in its own process
 // group so a cancel ends the whole tree; on Windows through `cmd.exe /d /s /c`, since `npm` there is a `.cmd` file,
 // and a cancel runs `taskkill /T /F`.
 

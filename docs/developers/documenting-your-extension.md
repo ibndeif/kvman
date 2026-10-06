@@ -15,7 +15,7 @@ An extension documents itself by registering two public queries:
 - Both must be `public: true`. An extension with one of the two missing, or private, simply isn't documented: nobody sees an error.
 - `docs.get` of an unknown topic fails with the kernel's `NOT_FOUND`.
 
-Nothing registers with anyone: kvcustomizer **pulls** the pair from each loaded extension, as kvwebui pulls `ui.get`. So the pair works with kvcustomizer installed or not, and in any preset.
+Nothing registers with anyone: kvbuilder **pulls** the pair from each loaded extension, as kvwebui pulls `ui.get`. So the pair works with kvbuilder installed or not, and in any preset.
 
 ```ts
 const pages = { usage: 'Using notes' };
@@ -59,7 +59,7 @@ kvman-docs get kvman sdk                 # a platform guide (sdk, i18n, presets)
 
 ## The core extensions
 
-kvwebui serves `views` and `components`, kvcoder `connectors` and `sections`, kvai `models` and `providers`, and kvcustomizer `customizing`. None is required: remove them all and the pages go with them.
+kvwebui serves `views` and `components`, kvcoder `connectors` and `sections`, kvai `models` and `providers`, and kvbuilder `customizing`. None is required: remove them all and the pages go with them.
 
 ## What `kvman-check` warns about
 

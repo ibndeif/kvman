@@ -6,10 +6,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { binFile } from '../../src/run-bin.ts';
-import { useKvcustomizer } from '../support/kvcustomizer-kernel.ts';
+import { useKvbuilder } from '../support/kvbuilder-kernel.ts';
 import { npmEnvironment } from '../support/npm-environment.ts';
 
-const kvcustomizer = useKvcustomizer();
+const kvbuilder = useKvbuilder();
 const saved = { ...process.env };
 const roots: string[] = [];
 
@@ -30,28 +30,28 @@ describe('the connectors run the testkit bins (ADR 0010, 2, 3)', () => {
   });
 
   it('QA17-H15 ext new answers the bin JSON with a workspace-relative folder and writes the scaffold', async () => {
-    const world = await kvcustomizer.start();
-    expect(await world.kernel.exec('kvcustomizer.ext.new', { name: 'notes', namespace: 'notes', folder: 'notes' })).toEqual({ folder: 'notes', name: 'notes', namespace: 'notes', web: false });
+    const world = await kvbuilder.start();
+    expect(await world.kernel.exec('kvbuilder.ext.new', { name: 'notes', namespace: 'notes', folder: 'notes' })).toEqual({ folder: 'notes', name: 'notes', namespace: 'notes', web: false });
     const folder = path.join(world.workspace, 'notes');
     for (const file of ['package.json', 'src/index.ts', 'src/docs.ts', 'AGENTS.md', 'docs/sdk.md']) expect(existsSync(path.join(folder, file)), file).toBe(true);
-    const second = await kvcustomizer.start();
-    expect(await second.kernel.exec('kvcustomizer.ext.new', { name: '@me/cards', namespace: 'cards', folder: 'cards', web: true })).toMatchObject({ folder: 'cards', web: true });
+    const second = await kvbuilder.start();
+    expect(await second.kernel.exec('kvbuilder.ext.new', { name: '@me/cards', namespace: 'cards', folder: 'cards', web: true })).toMatchObject({ folder: 'cards', web: true });
   });
 
   it('QA17-H15 preset new writes the skeleton and preset check answers its findings with the file as given', async () => {
-    const world = await kvcustomizer.start();
-    const emptyHome = mkdtempSync(path.join(tmpdir(), 'kvcustomizer-no-kvman-'));
+    const world = await kvbuilder.start();
+    const emptyHome = mkdtempSync(path.join(tmpdir(), 'kvbuilder-no-kvman-'));
     roots.push(emptyHome);
     process.env['KVMAN_HOME'] = emptyHome;
-    expect(await world.kernel.exec('kvcustomizer.preset.new', { name: 'mine', file: 'presets/mine.json' })).toEqual({ file: 'presets/mine.json' });
+    expect(await world.kernel.exec('kvbuilder.preset.new', { name: 'mine', file: 'presets/mine.json' })).toEqual({ file: 'presets/mine.json' });
     expect(JSON.parse(readFileSync(path.join(world.workspace, 'presets', 'mine.json'), 'utf8'))).toEqual({
       name: 'mine',
       extensions: { '@kvman/kvai': 'bundled', '@kvman/kvwebui': 'bundled' },
       settings: { 'kvwebui.home': 'kvwebui.extensions' },
     });
-    expect(await world.kernel.exec('kvcustomizer.preset.check', { file: 'presets/mine.json' })).toEqual([]);
+    expect(await world.kernel.exec('kvbuilder.preset.check', { file: 'presets/mine.json' })).toEqual([]);
     world.write('presets/bad.json', { name: 'app', extensions: { '@kvman/kvai': 'bundled' }, colour: 'red' });
-    const findings = await world.kernel.exec('kvcustomizer.preset.check', { file: 'presets/bad.json' });
+    const findings = await world.kernel.exec('kvbuilder.preset.check', { file: 'presets/bad.json' });
     expect(findings).toHaveLength(1);
     expect(findings[0]?.file).toBe('presets/bad.json');
   });
@@ -65,7 +65,7 @@ describe('the connectors run the testkit bins (ADR 0010, 2, 3)', () => {
         else if (entry.isFile() && entry.name.endsWith('.ts')) sources.push(absolute);
       }
     };
-    walk(path.join(repositoryRoot, 'extensions', 'kvcustomizer', 'src'));
+    walk(path.join(repositoryRoot, 'extensions', 'kvbuilder', 'src'));
     expect(sources.length).toBeGreaterThan(0);
     for (const file of sources) {
       const text = readFileSync(file, 'utf8');
@@ -94,11 +94,11 @@ describe('the connectors run the testkit bins (ADR 0010, 2, 3)', () => {
     const address = server.address();
     const port = typeof address === 'object' && address !== null ? address.port : 0;
     try {
-      const cache = mkdtempSync(path.join(tmpdir(), 'kvcustomizer-cancel-cache-'));
+      const cache = mkdtempSync(path.join(tmpdir(), 'kvbuilder-cancel-cache-'));
       roots.push(cache);
       Object.assign(process.env, { npm_config_registry: `http://127.0.0.1:${String(port)}/`, npm_config_fetch_retries: '0', npm_config_cache: cache });
-      const world = await kvcustomizer.start();
-      const jobId = await world.kernel.execAsync('kvcustomizer.ext.new', { name: 'notes', namespace: 'notes', folder: 'notes' });
+      const world = await kvbuilder.start();
+      const jobId = await world.kernel.execAsync('kvbuilder.ext.new', { name: 'notes', namespace: 'notes', folder: 'notes' });
       await connected;
       world.kernel.cancel(jobId);
       expect(await world.kernel.waitForJob(jobId)).toMatchObject({ status: 'cancelled' });

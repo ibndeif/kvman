@@ -28,7 +28,7 @@
     "@kvman/kernel": "workspace:*",
     "@kvman/kvai": "workspace:*",
     "@kvman/kvcoder": "workspace:*",
-    "@kvman/kvcustomizer": "workspace:*",
+    "@kvman/kvbuilder": "workspace:*",
     "@kvman/kvwebui": "workspace:*",
     "@kvman/sdk": "workspace:*"
   }

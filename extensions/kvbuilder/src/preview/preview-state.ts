@@ -4,7 +4,7 @@ import path from 'node:path';
 import { z, type Ctx } from '@kvman/sdk';
 
 // The preview's record in the workspace store, its home folder, and its cleanup (plan 09 §9.3, ADR 0010, 21). The
-// bin owns the preview kvman and its `web:watch` children; kvcustomizer only removes the home the bin left behind
+// bin owns the preview kvman and its `web:watch` children; kvbuilder only removes the home the bin left behind
 // (a Windows tree-kill skips the bin's own cleanup) and forgets the record.
 
 export const previewRecordSchema = z.object({ url: z.string(), extensions: z.array(z.string()) });
