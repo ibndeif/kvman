@@ -1,5 +1,12 @@
 # @kvman/kvcoder
 
+## 0.1.1
+
+### Patch Changes
+
+- Updated dependencies [be303fb]
+  - @kvman/kvai@0.1.1
+
 ## 0.1.0
 
 The first published version. What it holds, in the order it was built:

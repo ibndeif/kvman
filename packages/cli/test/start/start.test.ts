@@ -2,11 +2,13 @@ import { chmodSync, existsSync, readFileSync, realpathSync, writeFileSync } from
 import { createServer } from 'node:net';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
+import { z } from '@kvman/sdk';
 import { api, childWait, outputOf } from '../support/api.ts';
 import { runKvman, startKvman } from '../support/kvman-child.ts';
 import { useSandbox, type Sandbox } from '../support/sandbox.ts';
 
 const sandbox = useSandbox();
+const kvmanVersion = z.object({ version: z.string() }).parse(JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'))).version;
 
 // A fake browser command first on the PATH, which records the URL it's given and exits with `exitCode`.
 function fakeBrowser(world: Sandbox, exitCode: number): { env: Record<string, string>; opened: string } {
@@ -54,7 +56,7 @@ describe('starting kvman (01 §1.2)', { timeout: 60_000 }, () => {
     expect(help).toMatchObject({ code: 0, errors: '' });
     expect(help.output).toContain('kvman [--mode web] [--preset coder]');
     const version = await runKvman(world, ['--version'], { defaults: false });
-    expect(version).toEqual({ code: 0, output: '0.1.0\n', errors: '' });
+    expect(version).toEqual({ code: 0, output: `${kvmanVersion}\n`, errors: '' });
   });
 
   it('M1.8-E9 kvman started in its user folder prints the URL of Home', async () => {

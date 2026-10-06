@@ -1,6 +1,6 @@
 {
   "name": "@kvman/kvcoder",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "kvcoder: the app-building harness, with one run tool over connectors, sections, and its conversation UI.",
   "license": "MIT",
   "repository": {

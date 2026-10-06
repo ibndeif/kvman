@@ -1,7 +1,10 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { z } from '@kvman/sdk';
 import { entry, useHarness } from '../extension-folders.ts';
 
 const harness = useHarness();
+const kernelVersion = z.object({ version: z.string() }).parse(JSON.parse(readFileSync(new URL('../../../kernel/package.json', import.meta.url), 'utf8'))).version;
 
 const described = {
   name: '@test/e',
@@ -34,7 +37,7 @@ describe('kernel.extensions.list and kernel.health.get (02 §2.12)', () => {
     });
     expect(extension?.commands.map((command) => [command.name, command.public])).toEqual([['e.do', true], ['e.transformed', false], ['e.dated', false]]);
     expect(extension?.commands[0]).toMatchObject({ input: { type: 'object', properties: { text: { type: 'string' } } }, output: { properties: { ok: { type: 'boolean' } } } });
-    expect(await kernel.exec('kernel.health.get', {})).toEqual({ version: '0.1.0', preset: 'test', mode: 'web', workers: 1, uptimeMs: 0, languages: ['ar', 'en'] });
+    expect(await kernel.exec('kernel.health.get', {})).toEqual({ version: kernelVersion, preset: 'test', mode: 'web', workers: 1, uptimeMs: 0, languages: ['ar', 'en'] });
   });
 
   it('M1.6-E16 parts JSON Schema cannot express are {}', async () => {

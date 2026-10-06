@@ -1,5 +1,11 @@
 # @kvman/kvcustomizer
 
+## 0.1.1
+
+### Patch Changes
+
+- @kvman/testkit@0.1.1
+
 ## 0.1.0
 
 The first published version. What it holds, in the order it was built:

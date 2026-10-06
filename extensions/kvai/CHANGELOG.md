@@ -1,5 +1,11 @@
 # @kvman/kvai
 
+## 0.1.1
+
+### Patch Changes
+
+- be303fb: kvai uses `@earendil-works/pi-ai` 1.0.4, the latest version.
+
 ## 0.1.0
 
 The first published version. What it holds, in the order it was built:

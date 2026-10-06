@@ -51,13 +51,19 @@ describe('the packages published to npm (ADR 0026)', () => {
   it.each([...packages, ...extensions])('QA38-H3 %s is public under MIT, with its repository folder, files, licence, and README', (folder) => {
     const manifest = manifestOf(folder);
     expect(manifest.private).toBeUndefined();
-    expect(manifest.version).toBe('0.1.0');
+    expect(manifest.version).toMatch(/^\d+\.\d+\.\d+$/);
     expect(manifest.license).toBe('MIT');
     expect(manifest.repository).toEqual({ type: 'git', url: 'git+https://github.com/ibndeif/kvman.git', directory: folder });
     expect(manifest.homepage).toBe('https://github.com/ibndeif/kvman#readme');
     expect(manifest.bugs).toEqual({ url: 'https://github.com/ibndeif/kvman/issues' });
     expect(readFileSync(path.join(root, folder, 'LICENSE'), 'utf8')).toBe(readFileSync(path.join(root, 'LICENSE'), 'utf8'));
     expect(readFileSync(path.join(root, folder, 'README.md'), 'utf8')).toContain(`# ${manifest.name}\n`);
+  });
+
+  it('QA38-H10 the kernel and the CLI have the root version', () => {
+    const rootVersion = z.object({ version: z.string() }).parse(JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'))).version;
+    expect(manifestOf('packages/kernel').version).toBe(rootVersion);
+    expect(manifestOf('packages/cli').version).toBe(rootVersion);
   });
 
   it.each(['packages/kernel', ...extensions])('QA38-H4 %s exports its package.json', (folder) => {
