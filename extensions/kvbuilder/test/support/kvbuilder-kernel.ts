@@ -41,3 +41,10 @@ export function useKvbuilder(): { start(settings?: Record<string, Json>, extra?:
     },
   };
 }
+
+/** A new chat with building kvman on, as after `/build-kvman` (ADR 0027): kvbuilder's connectors are off in any other. */
+export async function buildingSession(kernel: TestKernel, title: string): Promise<string> {
+  const { id } = await kernel.exec('kvcoder.session.create', { title });
+  await kernel.exec('kvbuilder.build.start', { sessionId: id, argument: '' });
+  return id;
+}

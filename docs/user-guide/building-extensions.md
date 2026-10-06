@@ -44,6 +44,6 @@ The developer documentation starts with a 15-minute tutorial that works with or 
 
 ## Next
 
-- [customizing-with-the-agent.md](customizing-with-the-agent.md)
+- [building-kvman.md](building-kvman.md)
 - [extensions.md](extensions.md)
 - [../developers/README.md](../developers/README.md)

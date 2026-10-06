@@ -30,6 +30,7 @@ export async function newSession(ctx: Ctx, title: Title | undefined): Promise<St
     durationMs: 0,
     checks: null,
     connectors: null,
+    optedIn: [],
     createdAt: stamp,
     updatedAt: stamp,
   });

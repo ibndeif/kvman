@@ -32,7 +32,7 @@ describe('the docs connector pulls every extension\'s pages (09 §9.1 and §9.5,
       { extension: '@fix/ok', topic: 'usage', title: 'Using ok' },
       { extension: '@fix/ok', topic: 'settings', title: 'Ok settings' },
     ]);
-    expect(pages.filter((page) => page.extension === '@kvman/kvbuilder').map((page) => page.topic)).toEqual(['customizing']);
+    expect(pages.filter((page) => page.extension === '@kvman/kvbuilder').map((page) => page.topic)).toEqual(['building']);
     for (const topic of builtIn) {
       const expected = readFileSync(`${testkitDocs}${topic}.md`, 'utf8');
       expect(await kernel.exec('kvbuilder.guides.get', { topic })).toMatchObject({ extension: 'kvman', topic, markdown: expected });

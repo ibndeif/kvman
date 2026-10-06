@@ -1,10 +1,11 @@
 import type { Store, Transaction } from '@kvman/sdk';
 import { artifactDocSchema, backgroundDocSchema, messageDocSchema, processDocSchema, questionDocSchema, queuedDocSchema, runDocSchema, sessionDocSchema, turnDocSchema } from '../schemas/records.ts';
 import { signInDocSchema } from '../mcp/sign-in-record.ts';
-import { connectorDocSchema, handlerDocSchema, handlerJobDocSchema, sectionDocSchema } from '../schemas/registry.ts';
+import { connectorDocSchema, handlerDocSchema, handlerJobDocSchema, sectionDocSchema, slashDocSchema } from '../schemas/registry.ts';
 
 // kvcoder's collections (plan 08 §8.4 "Where entries live"): sessions and their records, and workspace sections, in
-// the workspace store; connectors, session handlers, handler-job ids, global sections, background processes, and started MCP sign-ins in the global store.
+// the workspace store; connectors, slash commands, session handlers, handler-job ids, global sections, background
+// processes, and started MCP sign-ins in the global store.
 
 /** The collections through the store's Promise calls. */
 export function records(store: Store) {
@@ -21,6 +22,7 @@ export function records(store: Store) {
     globalSections: store.global.collection('sections', sectionDocSchema),
     processes: store.global.collection('processes', processDocSchema),
     connectors: store.global.collection('connectors', connectorDocSchema),
+    slashCommands: store.global.collection('slash-commands', slashDocSchema),
     handlers: store.global.collection('handlers', handlerDocSchema),
     handlerJobs: store.global.collection('handler-jobs', handlerJobDocSchema),
     signIns: store.global.collection('mcp-sign-ins', signInDocSchema),
@@ -42,6 +44,7 @@ export function txRecords(tx: Transaction) {
     globalSections: tx.global.collection('sections', sectionDocSchema),
     processes: tx.global.collection('processes', processDocSchema),
     connectors: tx.global.collection('connectors', connectorDocSchema),
+    slashCommands: tx.global.collection('slash-commands', slashDocSchema),
     handlers: tx.global.collection('handlers', handlerDocSchema),
     handlerJobs: tx.global.collection('handler-jobs', handlerJobDocSchema),
     signIns: tx.global.collection('mcp-sign-ins', signInDocSchema),

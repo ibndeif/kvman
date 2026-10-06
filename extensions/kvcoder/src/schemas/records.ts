@@ -54,6 +54,8 @@ export const sessionDocSchema = z.object({
   durationMs: z.number().nonnegative(),
   checks: z.array(checkSchema).nullable(),
   connectors: z.array(z.string()).nullable(),
+  // The `optIn` connectors enabled for this chat (ADR 0027, 10).
+  optedIn: z.array(z.string()).default([]),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

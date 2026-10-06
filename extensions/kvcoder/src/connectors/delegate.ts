@@ -69,6 +69,7 @@ export async function createChild(ctx: Ctx, parent: Stored<SessionDoc>, worker: 
       durationMs: 0,
       checks: null,
       connectors: worker.connectors,
+      optedIn: [],
       createdAt: stamp,
       updatedAt: stamp,
     });

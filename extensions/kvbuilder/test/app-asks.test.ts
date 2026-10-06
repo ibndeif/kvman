@@ -1,5 +1,6 @@
 import type { TestKernel } from '@kvman/testkit';
 import { describe, expect, it } from 'vitest';
+import { buildingSession } from './support/kvbuilder-kernel.ts';
 import { runs, says, toolResults } from './support/model-script.ts';
 import { turn, useScriptedModel } from './support/scripted-world.ts';
 
@@ -11,7 +12,7 @@ describe('the kvman connector asks before it changes the app (09 §9.1, ADR 0022
   it('QA34-H5 a setting change waits for the person, and is made once allowed', async () => {
     const { kernel, fake } = await withModel();
     const before = await theme(kernel);
-    const { id: sessionId } = await kernel.exec('kvcoder.session.create', { title: 'Theme' });
+    const sessionId = await buildingSession(kernel, 'Theme');
     fake.reply(runs('kvman', 'settings-set', { key: 'kvwebui.theme', value: 'dark', scope: 'global' }), says('done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'Use the dark theme' });
     await kernel.clock.advance(0);
@@ -30,7 +31,7 @@ describe('the kvman connector asks before it changes the app (09 §9.1, ADR 0022
   it('QA34-H5 a denied change leaves the setting as it was', async () => {
     const { kernel, fake } = await withModel();
     const before = await theme(kernel);
-    const { id: sessionId } = await kernel.exec('kvcoder.session.create', { title: 'Theme' });
+    const sessionId = await buildingSession(kernel, 'Theme');
     fake.reply(runs('kvman', 'settings-set', { key: 'kvwebui.theme', value: 'dark', scope: 'global' }), says('done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'Use the dark theme' });
     await kernel.clock.advance(0);
@@ -43,7 +44,7 @@ describe('the kvman connector asks before it changes the app (09 §9.1, ADR 0022
 
   it('QA34-E6 the reads never ask', async () => {
     const { kernel, fake } = await withModel();
-    const { id: sessionId } = await kernel.exec('kvcoder.session.create', { title: 'Reads' });
+    const sessionId = await buildingSession(kernel, 'Reads');
     fake.reply(runs('kvman', 'settings-list'), runs('kvman', 'health-get'), runs('kvman', 'query-get', { name: 'kernel.health.get' }), says('done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'Look around' });
     await kernel.clock.advance(0);

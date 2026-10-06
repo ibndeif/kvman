@@ -22,7 +22,7 @@ The send box also holds:
 
 - **The model and the thinking level** of the chat, after the attach button. A change applies from the next step.
 - **Files.** Attach them with the paperclip, or paste them from the clipboard. An image (PNG, JPEG, GIF, or WebP) goes to the model as a picture. Any other file is copied into your workspace folder under `attachments/` when you send, and the message names it, so the agent opens it with its file commands. Nothing there is overwritten: a second `notes.md` becomes `notes-2.md`.
-- **Slash commands.** Type `/` at the start for the chat's own actions: `/compact` (summarize the earlier messages now), `/export`, `/fork`, `/new`, `/prompt` (show the exact prompt of the next step, or go back), and `/rename <title>`. Up and Down choose, Tab completes, Enter runs. A slash command is never sent to the agent, and it needs a chat: before your first message the list is greyed. The same actions are in the **⋯** menu of the header.
+- **Slash commands.** Type `/` at the start for the chat's own actions: `/compact` (summarize the earlier messages now), `/export`, `/fork`, `/new`, `/prompt` (show the exact prompt of the next step, or go back), and `/rename <title>`. Extensions add their own after these: kvbuilder adds `/build-kvman`, which starts changing kvman itself in this chat ([building-kvman.md](building-kvman.md)). Up and Down choose, Tab completes, Enter runs. A slash command is never sent to the agent, and it needs a chat: before your first message the list is greyed. The same actions are in the **⋯** menu of the header.
 
 Each call the agent makes is a card. Its time is the whole wait: the model writing the call, then the call running (open the card for the two parts). A call that failed says **Failed**; the agent reads the error and usually tries another way.
 
@@ -65,7 +65,7 @@ Everything the agent does goes through a **connector**: a named set of commands.
 - `background` — checks on, or stops, something the agent left running (below).
 - `mcp` — uses the tools of the MCP servers you add (below). It is there only while you have at least one server.
 
-Other extensions add connectors (kvbuilder adds `ext`, `preset`, `preview`, `kvman`, and `docs` — see [customizing-with-the-agent.md](customizing-with-the-agent.md)), and a preset can add a program on your machine, such as `git` or `gh`, as a connector with the `kvcoder.connectors` setting. A program is a connector like any other: it is in the same list on Coder's page, with the same switch.
+Other extensions add connectors (kvbuilder adds `ext`, `preset`, `preview`, `kvman`, and `docs`, in a chat where you typed `/build-kvman` — see [building-kvman.md](building-kvman.md)), and a preset can add a program on your machine, such as `git` or `gh`, as a connector with the `kvcoder.connectors` setting. A program is a connector like any other: it is in the same list on Coder's page, with the same switch.
 
 ## MCP servers
 
@@ -97,7 +97,7 @@ Five kinds of call can change things outside the agent's own work: a shell line,
 - **auto** (the default) — kvman asks unless the agent marks the call as not risky. A call is risky when it could lose something that isn't the agent's own work, or reaches outside the workspace.
 - **ask** — every such call asks.
 
-One more kind always asks, whatever this setting says: a connector's command that its extension marked as needing your approval. The `kvman` connector's changes to the app are such commands (see [customizing-with-the-agent.md](customizing-with-the-agent.md)).
+One more kind always asks, whatever this setting says: a connector's command that its extension marked as needing your approval. The `kvman` connector's changes to the app are such commands (see [building-kvman.md](building-kvman.md)).
 
 When a call asks, you see a card with its description and the line it would run, or the file it would change, with **Allow**, **Deny**, and **Allow all** / **Deny all** when several are pending. A denied call returns "denied by the user" to the agent. Reading, listing, and searching files never ask.
 
@@ -143,4 +143,4 @@ On Coder's page (open **Extensions**, then **Coder**): the model a new chat star
 ## Next
 
 - [extensions.md](extensions.md)
-- [customizing-with-the-agent.md](customizing-with-the-agent.md)
+- [building-kvman.md](building-kvman.md)

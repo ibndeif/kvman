@@ -24,10 +24,10 @@ describe("kvbuilder's connectors through the run tool (09 §9.1, ADR 0011)", { t
     }
     const install = await runConnector(kernel, { connector: 'kvman', command: 'help', payload: { command: 'extensions-install' } });
     expect(install.output).toContain('{ "connector": "kvman", "command": "extensions-install", "payload": {"source":"npm:@acme/notes@1.2.3"} }');
-    for (const text of [page('init'), page('customizing')]) {
+    for (const text of [page('guide'), page('building')]) {
       expect(text).not.toMatch(/'\{[^']*\}'/);
       expect(text).not.toMatch(/ -h\b|--async|heredoc/);
     }
-    expect(page('customizing')).toContain('`run { description, connector, command, payload }`');
+    expect(page('building')).toContain('`run { description, connector, command, payload }`');
   });
 });

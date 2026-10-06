@@ -1,6 +1,7 @@
 // The `preview` connector (plan 09 §9.1 and §9.3; ADR 0022, 8): runs projects in a separate kvman, and calls them there.
 export const previewConnector = {
   name: 'preview',
+  optIn: true as const,
   description:
     'Run kvman extension projects in a separate kvman with a temporary home. Use it to show the person an extension project working, to check a project by calling its commands and queries, and stop it when you are done. It runs nothing else: start any other app or page with shell.',
   commands: [

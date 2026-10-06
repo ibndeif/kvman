@@ -1,4 +1,4 @@
-The person wants something about the app itself. kvman is an app built from extensions: a kernel runs them, and a preset chooses which run and how they are set up. If this text is no longer in view later in the chat, call `kvman init` again.
+The person wants something about the app itself. kvman is an app built from extensions: a kernel runs them, and a preset chooses which run and how they are set up.
 
 Which app? "The app" can mean kvman, the app you run in, which you change with the `kvman` connector, or the project in this workspace folder, which you edit with `fs`. If the request doesn't make clear which, ask once with `ask choice`.
 

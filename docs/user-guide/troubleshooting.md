@@ -40,10 +40,11 @@ kvman shows a failure as a plain sentence. Under **Details** (in the app) or in 
 | `kvai/RATE_LIMITED` | The provider says you called too often or used up your quota. | Wait and try again, or use another model. |
 | `kvai/SIGNIN_EXPIRED` | The plan sign-in no longer works. | Sign in again on the provider's page. |
 
-## Customizing
+## Building kvman
 
 | What you see | What to do |
 |---|---|
+| The agent says there is no connector `kvman`, `ext`, `preset`, `preview`, or `docs` | Type `/build-kvman` in that chat first: the tools for changing kvman are off until you do. |
 | `kvbuilder/NPM_FAILED` while building an extension | Install Node.js with npm and check your network; the files the agent wrote are kept, so ask it to run `npm install` again. |
 | `kvbuilder/FOLDER_NOT_EMPTY` | Ask for a new or empty folder. |
 | `kvbuilder/NOT_A_PROJECT` | The folder has no `package.json` with a `kvman` field. |

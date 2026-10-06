@@ -72,4 +72,4 @@ Settings you change on the Settings page are not written to the preset. They are
 
 - [extensions.md](extensions.md)
 - [settings-and-secrets.md](settings-and-secrets.md)
-- [customizing-with-the-agent.md](customizing-with-the-agent.md)
+- [building-kvman.md](building-kvman.md)

@@ -61,4 +61,4 @@ Nothing is installed, loaded, or trusted when you press **Install**; that all ha
 
 - [presets.md](presets.md)
 - [settings-and-secrets.md](settings-and-secrets.md)
-- [customizing-with-the-agent.md](customizing-with-the-agent.md)
+- [building-kvman.md](building-kvman.md)

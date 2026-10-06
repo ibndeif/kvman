@@ -25,6 +25,7 @@ ${gateCode}
   ctx.registerQuery('todo.item.list', { description: 'Lists the items.', input: z.object({}), output: z.array(z.object({ text: z.string() })), public: true,
     handle: async () => (await items().find({}, { limit: 100 })).map(({ text }) => ({ text })) });
   ctx.registerCommand('todo.private', { description: 'A private command.', input: z.object({}), output: z.object({}), handle: () => ({}) });
+  ctx.registerCommand('todo.list.start', { description: 'Starts a todo list from a slash command.', input: z.object({ sessionId: z.string(), argument: z.string() }), output: z.object({}), public: true, handle: () => ({}) });
   ctx.registerCommand('todo.file.write', { description: 'Writes a file.', input: z.object({ name: z.string(), base64: z.string(), type: z.string() }), output: z.object({ id: z.string() }), public: true,
     handle: async ({ name, base64, type }) => ({ id: (await ctx.files.write(name, Buffer.from(base64, 'base64'), type)).id }) });
   ctx.registerQuery('todo.file.read', { description: 'Reads a file as text.', input: z.object({ id: z.string() }), output: z.object({ name: z.string(), text: z.string() }), public: true,

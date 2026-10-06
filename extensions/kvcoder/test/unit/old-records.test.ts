@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { backgroundDocSchema, heldResultSchema } from '../../src/schemas/records.ts';
+import { backgroundDocSchema, heldResultSchema, sessionDocSchema } from '../../src/schemas/records.ts';
 import { runApproved } from '../../src/turns/run-calls.ts';
 
 describe('records stored before the run tool (08 §8.3, ADR 0011, 12)', () => {
@@ -12,5 +12,11 @@ describe('records stored before the run tool (08 §8.3, ADR 0011, 12)', () => {
   it('QA18-E23 a background row of the removed kind still parses', () => {
     const row = { sessionId: 's1', ref: 'job-1', kind: 'connector', call: 'todo wait --async', startedAt: '2026-10-01T00:00:00.000Z' };
     expect(backgroundDocSchema.parse(row)).toEqual(row);
+  });
+
+  it('QA39-E19 a session stored before optIn connectors reads as none enabled', () => {
+    const usage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0 };
+    const stored = { title: 'Old', autoTitle: false, status: 'idle', parentId: null, worker: null, model: 'fake/m1', thinking: 'off', stepJobId: null, turnId: null, endedTurns: 0, nextSeq: 0, usage, durationMs: 0, checks: null, connectors: null, createdAt: '2026-10-01T00:00:00.000Z', updatedAt: '2026-10-01T00:00:00.000Z' };
+    expect(sessionDocSchema.parse(stored)).toEqual({ ...stored, optedIn: [] });
   });
 });

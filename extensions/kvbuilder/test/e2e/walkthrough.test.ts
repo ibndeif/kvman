@@ -49,6 +49,7 @@ describe('the walkthrough (09, 13 M2.5)', () => {
       says('The notes extension is ready.'),
     );
     const session = z.object({ id: z.string() }).parse(await kvman.call('commands', 'kvcoder.session.create', { title: 'Walkthrough' }));
+    await kvman.call('commands', 'kvbuilder.build.start', { sessionId: session.id, argument: '' });
     await kvman.call('commands', 'kvcoder.message.send', { sessionId: session.id, text: 'Build a notes extension' });
     await approveUntilDone(kvman, session.id);
     const [created, tested, listed, planted, checked, restored, previewed, called] = toolResults(fake);

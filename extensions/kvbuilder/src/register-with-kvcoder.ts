@@ -6,16 +6,18 @@ import { kvmanConnector } from './connectors/kvman.ts';
 import { presetConnector } from './connectors/preset.ts';
 import { previewConnector } from './connectors/preview.ts';
 
-// kvbuilder extends kvcoder (plan 09, §9.1 and §9.4): at each start it registers its connectors in one call, since
-// kvcoder clears them at its own start. Earlier versions also stored a global section `guide`, which kvcoder keeps until
-// its owner removes it (ADR 0023, 1). Each connector is in its own file.
+// kvbuilder extends kvcoder (plan 09, §9.1 and §9.4; ADR 0027, 14): at each start it registers its connectors, which
+// are `optIn`, and its slash command `/build-kvman`, since kvcoder clears both at its own start. Each connector is in
+// its own file.
 
 export function registerWithKvcoder(ctx: Ctx): void {
   ctx.registerHandler('kernel.started', {
-    description: "Registers kvbuilder's connectors with kvcoder, and removes the guide section that earlier versions stored.",
+    description: "Registers kvbuilder's connectors and its slash command with kvcoder.",
     handle: async () => {
       await ctx.exec('kvcoder.connector.register', { connectors: [kvmanConnector, extConnector, presetConnector, previewConnector, docsConnector] });
-      await ctx.exec('kvcoder.section.remove', { id: 'guide', global: true });
+      await ctx.exec('kvcoder.slash.register', {
+        commands: [{ name: 'build-kvman', description: 'kvbuilder.slash.build-kvman', command: 'kvbuilder.build.start', message: 'kvbuilder.slash.build-kvman.message' }],
+      });
     },
   });
 }

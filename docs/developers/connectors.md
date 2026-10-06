@@ -47,6 +47,28 @@ A tool that is a plain function, for an agent that your own extension runs, need
 
 `kvcoder.connector.unregister { name }` removes one of your own; `kvcoder.connector.list` answers every registered connector and program, each with `enabled`: the person sees them in one list, by name and description, and turns one off on Coder's page under Extensions (the setting `kvcoder.connectors.disabled`, a list of names, which a preset may set too), and one that is off is left out of the prompt and can't be called. A name owned by another extension fails `kvcoder/NAME_TAKEN`. Connectors last one run: kvcoder clears them at its own start, and each owner registers again.
 
+## Connectors that are off until you enable them
+
+Register a connector with `optIn: true` when it belongs only in chats that asked for it: `{ name, description, optIn: true, commands: [ … ] }`. It is then in no chat's prompt, and a call to it answers as a connector that doesn't exist, until your extension switches it on for one chat with `kvcoder.connector.enable { sessionId, names }`. That is kept with the chat, so it outlasts a restart; a subagent follows its chat; a fork starts with none; and nothing switches one off again. You can enable only your own `optIn` connectors (`VALIDATION_FAILED` otherwise). `kvcoder.connector.list` rows have `optIn`.
+
+## Slash commands
+
+The send box runs a one-line text that starts with `/` as a command. Add your own, from your `kernel.started` handler, as you register connectors:
+
+```ts
+await ctx.exec('kvcoder.slash.register', {
+  commands: [{ name: 'build-kvman', description: 'kvbuilder.slash.build-kvman', command: 'kvbuilder.build.start', message: 'kvbuilder.slash.build-kvman.message' }],
+});
+```
+
+- `name` is lowercase kebab case. kvcoder's own (`compact`, `export`, `fork`, `new`, `prompt`, `rename`) and another extension's fail `kvcoder/NAME_TAKEN`.
+- `description` is a translation key of your catalog; the list shows its text.
+- `command` is one of your public commands. The send box calls it with `{ sessionId, argument }`: the open chat, and the text after the command's name (`''` when there is none). A Problem it throws is shown as a toast.
+- `message` is optional, and a translation key too. When your command succeeds, the send box sends the argument, or with none the text of `message`, as the person's own message, which starts a turn. Without `message` nothing is sent.
+- `kvcoder.slash.unregister { name }` removes one of your own, and `kvcoder.slash.list` answers every one. Like connectors, they are cleared at each start.
+
+Together these let the person, and not the agent, switch a capability on: kvbuilder's `/build-kvman` runs a command that enables its `optIn` connectors for the chat and sets a session section with its guide.
+
 ## Sections
 
 A **section** is text added to the agent's system prompt. Set one with `kvcoder.section.set { id, title, order, content, global?, sessionId? }`: `global: true` reaches every workspace's prompts, `sessionId` one session's, neither the calling job's workspace. A section is at most 16 KB, and all sections a prompt could reach are at most 64 KB together (`TOO_LARGE`). Sections are stored until removed (`kvcoder.section.remove`). See `kvman-docs get @kvman/kvcoder sections`.

@@ -20,8 +20,8 @@ export const connectorCommandSchema = z.object({
   asks: z.literal(true, 'asks takes only true; leave it out for a command that runs at once.').exactOptional(),
 });
 
-const commandsConnectorSchema = z.strictObject({ name: wordSchema, description: z.string().min(1), commands: z.array(connectorCommandSchema).min(1) });
-const programConnectorSchema = z.strictObject({ name: wordSchema, description: z.string().min(1), binary: binarySchema });
+const commandsConnectorSchema = z.strictObject({ name: wordSchema, description: z.string().min(1), commands: z.array(connectorCommandSchema).min(1), optIn: z.literal(true, 'optIn takes only true; leave it out for a connector every chat has.').exactOptional() });
+const programConnectorSchema = z.strictObject({ name: wordSchema, description: z.string().min(1), binary: binarySchema, optIn: z.literal(true, 'optIn takes only true; leave it out for a connector every chat has.').exactOptional() });
 
 /** One connector as an extension registers it: its own commands, or a program. */
 export const connectorSchema = z.union([commandsConnectorSchema, programConnectorSchema]);
@@ -39,7 +39,17 @@ export const connectorDocSchema = z.object({
   kind: z.enum(['commands', 'binary']),
   commands: z.array(z.object({ name: z.string(), command: z.string(), examples: z.array(exampleSchema), asks: z.boolean().default(false) })).nullable(),
   binary: z.object({ check: z.string(), install: z.string().nullable(), help: z.string().nullable().default(null) }).nullable(),
+  optIn: z.boolean().default(false),
 });
+
+/** A slash command as an extension registers it: its name, what the send box shows, the caller's public command it runs, and the optional message it sends on success. */
+export const slashCommandSchema = z.strictObject({ name: wordSchema, description: z.string().min(1), command: z.string().min(1), message: z.string().min(1).exactOptional() });
+
+/** What `kvcoder.slash.register` takes: the caller's slash commands, stored together or not at all. */
+export const slashRegisterSchema = z.strictObject({ commands: z.array(slashCommandSchema).min(1) });
+
+/** A slash command in kvcoder's global store, owned by its registering extension. */
+export const slashDocSchema = z.object({ owner: z.string(), name: z.string(), description: z.string(), command: z.string(), message: z.string().nullable() });
 
 /** The session points (plan 08 §8.4). */
 export const sessionPointSchema = z.enum(['kvcoder.session.created', 'kvcoder.session.deleted', 'kvcoder.session.forked', 'kvcoder.turn.started', 'kvcoder.turn.ended', 'kvcoder.session.waiting']);
@@ -53,3 +63,4 @@ export const sectionDocSchema = z.object({ owner: z.string(), sectionId: z.strin
 export type ConnectorDoc = z.output<typeof connectorDocSchema>;
 export type SectionDoc = z.output<typeof sectionDocSchema>;
 export type SessionPoint = z.output<typeof sessionPointSchema>;
+export type SlashDoc = z.output<typeof slashDocSchema>;

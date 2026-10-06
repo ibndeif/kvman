@@ -16,7 +16,7 @@ import PendingCards from './PendingCards.vue';
 import RecoveryActions from './RecoveryActions.vue';
 import PromptTab from './PromptTab.vue';
 import SessionModel from './SessionModel.vue';
-import type { SlashName } from './slash-commands.ts';
+import type { RegisteredSlash, SlashName } from './slash-commands.ts';
 import SubagentCard from './SubagentCard.vue';
 import WorkerCard from './WorkerCard.vue';
 import { useAnswers } from './use-answers.ts';
@@ -24,6 +24,7 @@ import { useArtifacts } from './use-artifacts.ts';
 import { useConversation } from './use-conversation.ts';
 import { useFollowLatest } from './use-follow-latest.ts';
 import { useSessionActions } from './use-session-actions.ts';
+import { useSlashCommands } from './use-slash-commands.ts';
 import { useWorkspaceSession } from './use-workspace-session.ts';
 
 // kvcoder's conversation (plan 08 §8.7): without a session it is the Chat page's start, whose first message creates
@@ -88,6 +89,7 @@ const recoverable = computed(() => {
 });
 // A slash command of the send box runs what the chat's menu runs (ADR 0017, 6). One that waits shows its line in the
 // chat, so it leaves the prompt, and a summary says how it ended (ADR 0019, 1, 4, and 5).
+const slashCommands = useSlashCommands(kvman);
 const actions = useSessionActions(kvman, () => sessionId.value ?? '', () => conversation.refresh());
 const list = useTemplateRef<HTMLElement>('list');
 const follow = useFollowLatest(list, () => [messages.value, live.text, live.thinking, live.calls.length, live.summarizing, running.value, pending.value, children.size, answers.hidden.value, actions.working.value], () => sessionId.value);
@@ -127,6 +129,14 @@ function command(name: SlashName | 'delete', argument: string): void {
   else void actions.fork();
 }
 
+// A registered slash command runs its extension's command, then sends its text as the person's message (ADR 0027, 9).
+async function registered(entry: RegisteredSlash, argument: string): Promise<void> {
+  if (actions.working.value !== undefined) return;
+  tab.value = 'chat';
+  if (!(await actions.runRegistered(entry, argument)) || entry.message === undefined) return;
+  await send({ text: argument === '' ? kvman.t(entry.message) : argument, fileIds: [] });
+}
+
 const key = (message: Message): string => message.id;
 </script>
 
@@ -135,7 +145,7 @@ const key = (message: Message): string => message.id;
     <ConversationHeader v-if="session && sessionId !== undefined" :session="session" :tab="tab" :turns="turns.length" :running-since="runningSince" :artifacts="artifacts.list.value.length" :artifacts-open="artifacts.open.value" :working="actions.working.value !== undefined" @tab="tab = $event" @action="command" @toggle-artifacts="artifacts.toggle()" />
     <div class="kvc-stage">
     <section class="kvc-conversation" data-test="conversation">
-      <ChatStart v-if="props.sessionId === undefined" />
+      <ChatStart v-if="props.sessionId === undefined" :registered="slashCommands" />
       <template v-else-if="session && sessionId !== undefined">
         <div class="kvc-scrollport">
           <div ref="list" class="kvc-scroll" @scroll="follow.onScroll">
@@ -162,7 +172,7 @@ const key = (message: Message): string => message.id;
           </div>
           <button v-if="follow.away.value" type="button" class="kvc-button kvc-jump" data-test="jump-to-latest" @click="follow.resume"><ArrowDown :size="16" aria-hidden="true" />{{ kvman.t('kvcoder.ui.jumpToLatest') }}</button>
         </div>
-        <MessageComposer :running="running" :placeholder="kvman.t('kvcoder.ui.placeholder')" :blocked="actions.working.value !== undefined" commands="run" @send="send" @stop="stop" @command="command">
+        <MessageComposer :running="running" :placeholder="kvman.t('kvcoder.ui.placeholder')" :blocked="actions.working.value !== undefined" commands="run" :registered="slashCommands" @send="send" @stop="stop" @command="command" @registered="registered">
           <template #controls><SessionModel :session="session" @changed="conversation.refresh()" /></template>
         </MessageComposer>
       </template>

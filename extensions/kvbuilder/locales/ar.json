@@ -1,5 +1,8 @@
 {
   "kvbuilder.title": "kvman builder",
+  "kvbuilder.slash.build-kvman": "ابدأ بناء kvman في هذه المحادثة",
+  "kvbuilder.slash.build-kvman.message": "أريد تغيير هذا التطبيق.",
+  "kvbuilder.build.started": "بناء kvman مفعّل في هذه المحادثة",
   "kvbuilder.errors.FOLDER_NOT_EMPTY": "هذا المجلد غير فارغ. اختر مجلدًا جديدًا أو فارغًا.",
   "kvbuilder.errors.FILE_EXISTS": "هذا الملف موجود بالفعل.",
   "kvbuilder.errors.NOT_A_PROJECT": "هذا المجلد ليس مشروع إضافة (لا يحتوي على package.json فيه حقل kvman).",

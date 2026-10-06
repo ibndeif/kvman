@@ -16,7 +16,7 @@ const developerPages = [
 ];
 const userPages = [
   'README', 'installing', 'first-run', 'web-app', 'workspaces', 'models-and-providers', 'coding-app', 'extensions', 'presets', 'settings-and-secrets',
-  'customizing-with-the-agent', 'building-extensions', 'troubleshooting', 'privacy-and-security',
+  'building-kvman', 'building-extensions', 'troubleshooting', 'privacy-and-security',
 ];
 
 const read = (file: string): string => readFileSync(file, 'utf8');

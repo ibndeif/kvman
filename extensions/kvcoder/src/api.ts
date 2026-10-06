@@ -11,9 +11,10 @@ type SessionId = { sessionId: string };
 type Example = { description: string; input: Json };
 type Binary = { check: string; install?: string; help?: string };
 type Connector =
-  | { name: string; description: string; commands: { name: string; command: string; examples?: Example[]; asks?: true }[] }
-  | { name: string; description: string; binary: Binary };
-type ConnectorRow = { name: string; description: string; owner: string; kind: 'commands' | 'binary'; commands?: { name: string; command: string; examples: Example[]; asks: boolean }[]; binary?: Binary };
+  | { name: string; description: string; commands: { name: string; command: string; examples?: Example[]; asks?: true }[]; optIn?: true }
+  | { name: string; description: string; binary: Binary; optIn?: true };
+type ConnectorRow = { name: string; description: string; owner: string; kind: 'commands' | 'binary'; commands?: { name: string; command: string; examples: Example[]; asks: boolean }[]; binary?: Binary; optIn: boolean };
+type SlashCommand = { name: string; description: string; command: string; message?: string };
 type Point = 'kvcoder.session.created' | 'kvcoder.session.deleted' | 'kvcoder.session.forked' | 'kvcoder.turn.started' | 'kvcoder.turn.ended' | 'kvcoder.session.waiting';
 type Place = { global?: boolean; sessionId?: string };
 type JobRow = { id: string; kind: 'process' | 'subagent' | 'worker'; title: string; call: string; status: string; startedAt: string; endedAt?: string; exitCode?: number; links: string[] };
@@ -42,6 +43,9 @@ declare module '@kvman/sdk' {
     'kvcoder.question.answer': { input: { questionId: string; answer: Json }; output: { jobId: string | null } };
     'kvcoder.connector.register': { input: Connector | { connectors: Connector[] }; output: Empty };
     'kvcoder.connector.unregister': { input: { name: string }; output: Empty };
+    'kvcoder.connector.enable': { input: { sessionId: string; names: string[] }; output: Empty };
+    'kvcoder.slash.register': { input: { commands: SlashCommand[] }; output: Empty };
+    'kvcoder.slash.unregister': { input: { name: string }; output: Empty };
     'kvcoder.section.set': { input: { id: string; title: string; order: number; content: string } & Place; output: Empty };
     'kvcoder.section.remove': { input: { id: string } & Place; output: Empty };
     'kvcoder.handler.register': { input: { point: Point; command: string }; output: Empty };
@@ -57,6 +61,7 @@ declare module '@kvman/sdk' {
     'kvcoder.turn.list': { input: { sessionId: string; limit: number }; output: Turn[] };
     'kvcoder.prompt.get': { input: SessionId; output: { prompt: string; sections: { id: string; title: string; owner: string; reach: 'global' | 'workspace' | 'session'; size: number; included: boolean }[] } };
     'kvcoder.connector.list': { input: Empty; output: (ConnectorRow & { enabled: boolean })[] };
+    'kvcoder.slash.list': { input: Empty; output: (SlashCommand & { owner: string })[] };
     'kvcoder.section.list': { input: { sessionId?: string }; output: { id: string; title: string; order: number; owner: string; global: boolean; sessionId?: string; size: number }[] };
     'kvcoder.handler.list': { input: Empty; output: { point: Point; command: string; owner: string }[] };
     'kvcoder.artifact.list': { input: SessionId; output: { id: string; title: string; format: 'markdown' | 'html' | 'url'; version: number; size: number; updatedAt: string }[] };

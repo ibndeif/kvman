@@ -10,6 +10,7 @@ import { mcpServers } from '../mcp/servers.ts';
 import { activeConnectors, type ConnectorRow } from '../registry/register-connectors.ts';
 import { disabledConnectors } from '../register-settings.ts';
 import { sectionsFor } from '../registry/register-sections.ts';
+import { records } from '../store/collections.ts';
 import type { SessionDoc } from '../schemas/records.ts';
 import { buildPrompt, type BuiltPrompt } from './build-prompt.ts';
 
@@ -28,21 +29,35 @@ export type SessionTools = {
   connectors: ConnectorRow[];
   /** The connectors the session may call, in the prompt's order. */
   listed: ListedConnector[];
-  /** The names that are turned off (ADR 0014, 7). */
+  /** The names that are turned off, or are optIn connectors this chat never enabled (ADR 0014, 7; ADR 0027, 10). */
   disabled: ReadonlySet<string>;
 };
 
-// The connector names a session may use: none that is turned off (ADR 0014, 7), and for a subagent only its worker's (ADR 0021, 24).
+// The connector names a session may use: none that is turned off (ADR 0014, 7), none that is an optIn connector the
+// chat never enabled, and for a subagent only its worker's (ADR 0021, 24).
 function allowedNames(session: SessionDoc, connectors: readonly ConnectorRow[], disabled: ReadonlySet<string>): Set<string> {
   const names = [...builtinConnectors, ...connectors.map((connector) => connector.name)].filter((name) => !disabled.has(name));
   if (session.parentId === null) return new Set(names);
   return new Set(names.filter((name) => name === 'ask' || (name !== 'delegate' && (session.connectors === null || session.connectors.includes(name)))));
 }
 
+// The chat (a subagent's top-level session) a session's optIn connectors are taken from, walking `parentId` up (ADR 0027, 10).
+async function topLevelSession(ctx: Ctx, session: Stored<SessionDoc>): Promise<Stored<SessionDoc>> {
+  let current = session;
+  while (current.parentId !== null) {
+    const parent = await records(ctx.store).sessions.get(current.parentId);
+    if (parent === undefined) return current;
+    current = parent;
+  }
+  return current;
+}
+
 export async function sessionTools(ctx: Ctx, session: Stored<SessionDoc>): Promise<SessionTools> {
   const shell = await shellFor(ctx);
   const connectors = await activeConnectors(ctx);
-  const disabled = await disabledConnectors(ctx);
+  const topLevel = await topLevelSession(ctx, session);
+  const notEnabled = new Set(connectors.filter((connector) => connector.optIn && !topLevel.optedIn.includes(connector.name)).map((connector) => connector.name));
+  const disabled = new Set([...(await disabledConnectors(ctx)), ...notEnabled]);
   const allowed = allowedNames(session, connectors, disabled);
   const passed = new Set((session.checks ?? []).filter((check) => check.passed).map((check) => check.name));
   const servers = await mcpServers(ctx);

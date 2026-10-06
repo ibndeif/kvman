@@ -3,12 +3,14 @@ import { toastProblem, useKvman } from './kvman.ts';
 import MessageComposer from './MessageComposer.vue';
 import ModelControls from './ModelControls.vue';
 import { rememberModel } from './remember-model.ts';
+import type { RegisteredSlash } from './slash-commands.ts';
 import { useChatModel } from './use-chat-model.ts';
 
 // The Chat page's new chat, with no session yet (plan 08 §8.7, ADR 0009, 104 and 194; ADR 0017, 3): the question, and
 // the send box with the model and thinking pickers. Sending creates the chat, applies what the person picked, and sends
-// the first message.
+// the first message. The `registered` slash commands show greyed, as kvcoder's own do (ADR 0027, 9).
 const kvman = useKvman();
+const props = defineProps<{ registered?: readonly RegisteredSlash[] | undefined }>();
 const chat = useChatModel(kvman, (error) => toastProblem(kvman, error));
 
 async function pickModel(modelId: string): Promise<void> {
@@ -39,7 +41,7 @@ async function send(message: { text: string; fileIds: string[] }): Promise<void>
     <p v-else-if="chat.state.value === 'noModel'" class="kvc-muted kvc-start-note" role="status" data-test="choose-model">{{ kvman.t('kvcoder.ui.chooseModelHint') }}</p>
     <p v-else class="kvc-muted kvc-start-note">{{ kvman.t('kvcoder.ui.startHint') }}</p>
   </div>
-  <MessageComposer :running="false" :placeholder="kvman.t('kvcoder.ui.startPlaceholder')" :blocked="chat.state.value !== 'ready'" commands="wait" @send="send">
+  <MessageComposer :running="false" :placeholder="kvman.t('kvcoder.ui.startPlaceholder')" :blocked="chat.state.value !== 'ready'" commands="wait" :registered="props.registered" @send="send">
     <template #controls>
       <ModelControls :groups="chat.groups.value" :model="chat.current.value" :thinking="chat.thinking.value" :empty="chat.state.value === 'loading' ? '' : kvman.t('kvcoder.ui.chooseModel')" @model="pickModel" @thinking="chat.pickThinking" />
     </template>

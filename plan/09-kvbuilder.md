@@ -93,8 +93,8 @@ The person starts building kvman; the agent never does (ADR 0027). kvbuilder reg
 
 `kvbuilder.build.start { sessionId, argument }` → `{}` is public and does three things, in this order (ADR 0027, 12):
 
-1. sets the session section `guide`, `kvcoder.section.set { id: 'guide', title: 'Building kvman', order: 20, sessionId, content }`, with the text of `docs/guide.md`, which is not a page of `kvbuilder.docs.get`; a section is in every prompt of the chat, so a summary never drops it;
-2. enables its five connectors for the session, `kvcoder.connector.enable { sessionId, names: ['kvman', 'ext', 'preset', 'preview', 'docs'] }`;
+1. enables its five connectors for the session, `kvcoder.connector.enable { sessionId, names: ['kvman', 'ext', 'preset', 'preview', 'docs'] }`, first, so a session that kvcoder refuses leaves nothing behind;
+2. sets the session section `guide`, `kvcoder.section.set { id: 'guide', title: 'Building kvman', order: 20, sessionId, content }`, with the text of `docs/guide.md`, which is not a page of `kvbuilder.docs.get`; a section is in every prompt of the chat, so a summary never drops it;
 3. only when the section wasn't there before, adds the note `kvbuilder.build.started` ("Building kvman is on for this chat") with `kvcoder.note.add`.
 
 It ignores `argument`, which the send box sends. A second `/build-kvman` in a chat renews the guide and adds no second note. Nothing switches building off: a new chat starts without it (ADR 0027, 11). There is no `kvman init` and no `kvbuilder.app.guide.get` (ADR 0027, 13). kvcoder's Problems pass through: `kvcoder/SESSION_NOT_FOUND` for an unknown session, and `VALIDATION_FAILED` for a subagent's.

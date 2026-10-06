@@ -59,7 +59,7 @@ kvman-docs get kvman sdk                 # a platform guide (sdk, i18n, presets)
 
 ## The core extensions
 
-kvwebui serves `views` and `components`, kvcoder `connectors` and `sections`, kvai `models` and `providers`, and kvbuilder `customizing`. None is required: remove them all and the pages go with them.
+kvwebui serves `views` and `components`, kvcoder `connectors` and `sections`, kvai `models` and `providers`, and kvbuilder `building`. None is required: remove them all and the pages go with them.
 
 ## What `kvman-check` warns about
 

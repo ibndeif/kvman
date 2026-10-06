@@ -34,7 +34,8 @@ export const MarkdownStub = defineComponent({
 type Channel = { events: StreamEvent[]; ended: boolean; wake: (() => void) | undefined };
 
 export function createFakeKvman(): FakeKvman {
-  const handlers = new Map<string, Handler>();
+  // No extension registered a slash command, unless a test says so.
+  const handlers = new Map<string, Handler>([['kvcoder.slash.list', () => []]]);
   const calls: FakeKvman['calls'] = [];
   const channels = new Map<string, Channel>();
   const language = { value: 'en' };

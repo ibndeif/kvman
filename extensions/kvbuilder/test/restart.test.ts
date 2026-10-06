@@ -2,7 +2,7 @@ import { runConnector } from '@kvman/kvcoder/testing';
 import { describe, expect, it } from 'vitest';
 import { runs, says } from './support/model-script.ts';
 import { turn, useScriptedModel } from './support/scripted-world.ts';
-import { useKvbuilder } from './support/kvbuilder-kernel.ts';
+import { buildingSession, useKvbuilder } from './support/kvbuilder-kernel.ts';
 
 const { withModel } = useScriptedModel();
 const kvbuilder = useKvbuilder();
@@ -19,7 +19,7 @@ describe('kvman restart (09 §9.1, ADR 0024, 7)', { timeout: 60_000 }, () => {
 
   it('QA36-H13 a turn that calls kvman restart waits for the person, and nothing restarts until it is allowed', async () => {
     const { kernel, fake } = await withModel();
-    const { id: sessionId } = await kernel.exec('kvcoder.session.create', { title: 'Restart' });
+    const sessionId = await buildingSession(kernel, 'Restart');
     fake.reply(runs('kvman', 'restart'), says('done'));
     let requested = false;
     void kernel.restartRequested().then(() => (requested = true));

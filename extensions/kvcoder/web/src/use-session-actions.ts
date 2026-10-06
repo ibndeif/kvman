@@ -3,6 +3,7 @@ import type { Kvman } from '@kvman/sdk/web';
 import { toastProblem } from './kvman.ts';
 import type { Thinking } from './model-groups.ts';
 import { rememberModel } from './remember-model.ts';
+import type { RegisteredSlash } from './slash-commands.ts';
 
 // What the person does to the open chat (plan 08 §8.7), from its menu, its send box, or a slash command: each runs its
 // command, says `changed` so the chat is read again, and toasts a Problem. The four that wait for kvman are `working`
@@ -57,6 +58,17 @@ export function useSessionActions(kvman: Kvman, sessionId: () => string, changed
         const { fileId } = await kvman.exec('kvcoder.session.export', { sessionId: sessionId() });
         window.location.assign(`/api/files/${encodeURIComponent(fileId)}?workspaceId=${encodeURIComponent(kvman.workspace.value.id)}`);
       }),
+    // A slash command an extension registered (ADR 0027, 9): whether its command ran, so its message is sent only then.
+    runRegistered: async (command: RegisteredSlash, argument: string): Promise<boolean> => {
+      try {
+        await kvman.exec(command.command, { sessionId: sessionId(), argument });
+        await changed();
+        return true;
+      } catch (error) {
+        toastProblem(kvman, error);
+        return false;
+      }
+    },
     remove: () =>
       run(async () => {
         await kvman.exec('kvcoder.session.delete', { sessionId: sessionId() });

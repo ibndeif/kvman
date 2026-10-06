@@ -14,7 +14,7 @@ const pages = [...markdownIn('docs', 'developers'), ...markdownIn('docs', 'user-
 
 describe('the documentation describes the run tool (QA18-H24, ADR 0011)', () => {
   it('QA18-H24 the pages about the agent name the run tool, help, and the background connector, and no page shows the old call forms', () => {
-    for (const page of [path.join('docs', 'developers', 'connectors.md'), path.join('extensions', 'kvcoder', 'docs', 'connectors.md'), path.join('extensions', 'kvbuilder', 'docs', 'customizing.md')]) {
+    for (const page of [path.join('docs', 'developers', 'connectors.md'), path.join('extensions', 'kvcoder', 'docs', 'connectors.md'), path.join('extensions', 'kvbuilder', 'docs', 'building.md')]) {
       const markdown = read(page);
       expect(markdown, page).toContain('`run`');
       expect(markdown, page).toContain('`help`');

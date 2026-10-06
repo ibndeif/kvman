@@ -4,10 +4,12 @@ import { invalid } from '../problems.ts';
 import { disabledConnectors, readSettings } from '../register-settings.ts';
 import { connectorRegisterSchema, connectorSchema, exampleSchema, type ConnectorDoc } from '../schemas/registry.ts';
 import { records, txRecords } from '../store/collections.ts';
+import { ownSession } from '../sessions/session-lookup.ts';
 import { callerExtension, loadedOwners, ownsPublicCall, registrations } from './loaded.ts';
 
 // Connectors (plan 08 §8.4): named sets of commands the agent runs with `run`, registered by other extensions, kept in
-// kvcoder's global store for one run, and owned by their registering extension.
+// kvcoder's global store for one run, and owned by their registering extension. One registered with `optIn: true` is
+// off in every chat until the owner enables it for that chat (ADR 0027, 10).
 
 const connectorRowSchema = z.object({
   name: z.string(),
@@ -16,6 +18,7 @@ const connectorRowSchema = z.object({
   kind: z.enum(['commands', 'binary']),
   commands: z.array(z.object({ name: z.string(), command: z.string(), examples: z.array(exampleSchema), asks: z.boolean() })).exactOptional(),
   binary: z.object({ check: z.string(), install: z.string().exactOptional(), help: z.string().exactOptional() }).exactOptional(),
+  optIn: z.boolean(),
 });
 
 export type ConnectorRow = z.output<typeof connectorRowSchema>;
@@ -26,6 +29,7 @@ function rowOf(doc: ConnectorDoc): ConnectorRow {
     description: doc.description,
     owner: doc.owner,
     kind: doc.kind,
+    optIn: doc.optIn,
     ...(doc.commands === null ? {} : { commands: doc.commands }),
     ...(doc.binary === null ? {} : { binary: { check: doc.binary.check, ...(doc.binary.install === null ? {} : { install: doc.binary.install }), ...(doc.binary.help === null ? {} : { help: doc.binary.help }) } }),
   };
@@ -43,7 +47,7 @@ export async function activeConnectors(ctx: Ctx): Promise<ConnectorRow[]> {
       ctx.log.warn('A binary connector from kvcoder.connectors has a registered name and is ignored.', { name: entry.name });
       continue;
     }
-    fromSetting.push({ name: entry.name, description: entry.description, owner: 'kvcoder.connectors', kind: 'binary', binary: entry.binary });
+    fromSetting.push({ name: entry.name, description: entry.description, owner: 'kvcoder.connectors', kind: 'binary', binary: entry.binary, optIn: false });
   }
   return [...registered, ...fromSetting];
 }
@@ -52,8 +56,8 @@ type Connector = z.output<typeof connectorSchema>;
 
 const docOf = (input: Connector): Omit<ConnectorDoc, 'owner'> =>
   'commands' in input
-    ? { name: input.name, description: input.description, kind: 'commands', commands: input.commands.map((command) => ({ name: command.name, command: command.command, examples: command.examples ?? [], asks: command.asks === true })), binary: null }
-    : { name: input.name, description: input.description, kind: 'binary', commands: null, binary: { check: input.binary.check, install: input.binary.install ?? null, help: input.binary.help ?? null } };
+    ? { name: input.name, description: input.description, kind: 'commands', commands: input.commands.map((command) => ({ name: command.name, command: command.command, examples: command.examples ?? [], asks: command.asks === true })), binary: null, optIn: input.optIn === true }
+    : { name: input.name, description: input.description, kind: 'binary', commands: null, binary: { check: input.binary.check, install: input.binary.install ?? null, help: input.binary.help ?? null }, optIn: input.optIn === true };
 
 // Every connector of a call is checked before any is stored, and they are stored in one transaction, so a call
 // registers all of its connectors or none (ADR 0011, 26).
@@ -114,6 +118,28 @@ export function registerConnectors(ctx: Ctx): void {
     handle: async () => {
       const disabled = await disabledConnectors(ctx);
       return (await activeConnectors(ctx)).map((connector) => ({ ...connector, enabled: !disabled.has(connector.name) }));
+    },
+  });
+  ctx.registerCommand('kvcoder.connector.enable', {
+    description: "Switches the caller's own optIn connectors on for one chat.",
+    input: z.object({ sessionId: z.string().min(1), names: z.array(z.string().min(1)).min(1) }),
+    output: z.object({}),
+    public: true,
+    handle: async ({ sessionId, names }) => {
+      const owner = callerExtension(ctx, 'connectors');
+      await ownSession(ctx, sessionId);
+      const stored = await records(ctx.store).connectors.find({}, { limit: 1000 });
+      for (const name of names) {
+        const doc = stored.find((candidate) => candidate.name === name);
+        if (doc === undefined || doc.owner !== owner || doc.optIn !== true) throw invalid(`${name} isn't an optIn connector of ${owner}.`, { name });
+      }
+      await ctx.store.transaction((tx) => {
+        const sessions = txRecords(tx).sessions;
+        const current = sessions.get(sessionId);
+        if (current === undefined) throw ctx.problem('kvcoder/SESSION_NOT_FOUND', { sessionId });
+        sessions.update(sessionId, { optedIn: [...new Set([...current.optedIn, ...names])] });
+      });
+      return {};
     },
   });
 }

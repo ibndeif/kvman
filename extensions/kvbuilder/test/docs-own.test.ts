@@ -10,14 +10,14 @@ const testkitPackage = fileURLToPath(new URL('../../../packages/testkit/package.
 const failed = (code: string) => expect.objectContaining({ problem: expect.objectContaining({ code }) });
 
 describe("kvbuilder's own docs pair (09 §9.5, ADR 0010, 22)", { timeout: 30_000 }, () => {
-  it('QA17-H25 docs.list answers customizing, docs.get its file, both public, and the page keeps its promises', async () => {
+  it('QA17-H25 docs.list answers building, docs.get its file, both public, and the page keeps its promises', async () => {
     const { kernel } = await kvbuilder.start();
-    const markdown = readFileSync(path.join(docsFolder, 'customizing.md'), 'utf8');
-    expect(await kernel.exec('kvbuilder.docs.list', {})).toEqual([{ topic: 'customizing', title: 'Customizing kvman' }]);
-    expect(markdown).toContain('| `kvman` | `init`, `model-list`');
+    const markdown = readFileSync(path.join(docsFolder, 'building.md'), 'utf8');
+    expect(await kernel.exec('kvbuilder.docs.list', {})).toEqual([{ topic: 'building', title: 'Building kvman' }]);
+    expect(markdown).toContain('| `kvman` | `model-list`');
     expect(markdown).toContain("## Talking with a person who isn't a developer");
-    expect(await kernel.exec('kvbuilder.docs.get', { topic: 'customizing' })).toEqual({ topic: 'customizing', title: 'Customizing kvman', markdown });
-    for (const topic of ['nope', '../x', 'section', 'init']) await expect(kernel.exec('kvbuilder.docs.get', { topic }), topic).rejects.toEqual(failed('NOT_FOUND'));
+    expect(await kernel.exec('kvbuilder.docs.get', { topic: 'building' })).toEqual({ topic: 'building', title: 'Building kvman', markdown });
+    for (const topic of ['nope', '../x', 'section', 'init', 'customizing']) await expect(kernel.exec('kvbuilder.docs.get', { topic }), topic).rejects.toEqual(failed('NOT_FOUND'));
     const extension = (await kernel.exec('kernel.extensions.list', {})).find((candidate) => candidate.name === '@kvman/kvbuilder');
     for (const name of ['kvbuilder.docs.list', 'kvbuilder.docs.get', 'kvbuilder.guides.list', 'kvbuilder.guides.get']) {
       expect(extension?.queries.find((query) => query.name === name)?.public, name).toBe(true);
@@ -29,5 +29,16 @@ describe("kvbuilder's own docs pair (09 §9.5, ADR 0010, 22)", { timeout: 30_000
     for (const word of ['kvman', 'ext', 'preset', 'preview', 'docs']) expect(connectors, word).toContain(word);
     const bins = Object.keys((JSON.parse(readFileSync(testkitPackage, 'utf8')) as { bin: Record<string, string> }).bin);
     for (const bin of markdown.match(/kvman-[a-z]+/g) ?? []) expect(bins, bin).toContain(bin);
+  });
+
+  it('QA39-H10 the page is building: it describes /build-kvman, has no init, and the guide is not a page', async () => {
+    const { kernel } = await kvbuilder.start();
+    const { markdown } = await kernel.exec('kvbuilder.docs.get', { topic: 'building' });
+    expect(markdown).toContain('## `/build-kvman`: starting to build kvman in a chat');
+    expect(markdown).toContain('`kvbuilder.build.start { sessionId, argument }`');
+    expect(markdown).toContain('registered with `optIn: true`');
+    expect(markdown).not.toContain('init');
+    expect((await kernel.exec('kvbuilder.docs.list', {})).map((page) => page.topic)).toEqual(['building']);
+    await expect(kernel.exec('kvbuilder.docs.get', { topic: 'guide' })).rejects.toEqual(failed('NOT_FOUND'));
   });
 });

@@ -82,7 +82,7 @@ describe("the conversation's actions (08 §8.7, ADR 0009, 104)", () => {
     await wrapper.find('[data-test="composer-text"]').setValue('Make a notes page');
     await wrapper.find('[data-test="composer-text"]').trigger('keydown', { key: 'Enter' });
     await flushPromises();
-    expect(fake.calls.slice(3)).toEqual([{ name: 'kvcoder.session.create', input: {} }, { name: 'kvcoder.message.send', input: { sessionId: 's9', text: 'Make a notes page' } }]);
+    expect(fake.calls.slice(4)).toEqual([{ name: 'kvcoder.session.create', input: {} }, { name: 'kvcoder.message.send', input: { sessionId: 's9', text: 'Make a notes page' } }]);
     expect(fake.navigate).toHaveBeenCalledWith('kvcoder.session', { sessionId: 's9' });
     wrapper.unmount();
   });

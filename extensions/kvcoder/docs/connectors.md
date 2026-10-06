@@ -68,6 +68,26 @@ The agent calls a binary connector with two commands. `exec { args?, background?
 
 `kvcoder.connector.unregister { name }` removes one of the caller's own connectors; a missing name does nothing. `kvcoder.connector.list` answers every registered connector and program, each with `enabled`. The setting `kvcoder.connectors.disabled` lists the names that are turned off, kvcoder's own seven included: such a connector is left out of the prompt and can't be called, from the next step.
 
+## A connector that is off until enabled
+
+Register a connector with `optIn: true`, the only value the field takes, when it belongs only in chats that asked for it.
+
+- It is in no chat's connector index and no `run` enum, and a call to it gets the answer for a connector that doesn't exist.
+- Its owner switches it on for one chat: `kvcoder.connector.enable { sessionId, names }`. Each name must be an `optIn` connector of the caller (`VALIDATION_FAILED`); an unknown session fails `kvcoder/SESSION_NOT_FOUND`, and a subagent's `VALIDATION_FAILED`.
+- The chat keeps it across restarts. A subagent has it only when its chat enabled it and its worker lists it. A fork starts with none. Nothing switches one off again, and `kvcoder.connectors.disabled` still turns it off.
+- `kvcoder.connector.list` rows have `optIn`.
+
+## Slash commands
+
+`kvcoder.slash.register { commands: [{ name, description, command, message? }] }` adds commands to the send box, after kvcoder's own six.
+
+- `name`: lowercase kebab case; kvcoder's own names and another extension's fail `kvcoder/NAME_TAKEN`, and a name given twice `VALIDATION_FAILED`. All of a call's commands are stored, or none.
+- `description` and `message`: translation keys of the caller's catalog.
+- `command`: a public command of the caller (`VALIDATION_FAILED` otherwise). The send box calls it with `{ sessionId, argument }`, where `argument` is the text after the name, `''` when there is none.
+- With `message`, a command that succeeded is followed by the person's message: the argument, or with none the text of `message`. A command that failed shows its Problem and sends nothing.
+- `kvcoder.slash.unregister { name }` removes the caller's own; `kvcoder.slash.list` answers `[{ name, description, command, message?, owner }]`, by name.
+- With no chat open yet, the list is greyed and nothing runs.
+
 ## Built-in connectors
 
 kvcoder's own connectors are `shell` (one line in the real shell), `fs` (read, list, search, write, and edit files in the workspace folder), `artifact` (a document shown beside the chat), `background` (follow up on what was started with `background: true`), `ask` (a question that suspends the turn), `delegate` (`delegate run { worker, task, background? }` hands a task to a worker, which runs it in a helper session; the workers are the setting `kvcoder.delegate.workers`, and it is a connector of a session only while a worker is turned on), and `mcp` (the tools of the MCP servers the person added; it is a connector of a session only while the workspace has a server). Their names are taken: registering one fails `kvcoder/NAME_TAKEN`.
@@ -81,6 +101,6 @@ kvcoder's own connectors are `shell` (one line in the real shell), `fs` (read, l
 
 ## Lifetime
 
-- Connectors last one run. kvcoder clears them in its own `kernel.started` handler, which runs first because registering extensions declare kvcoder as a dependency. Each extension registers its connectors again from its own `kernel.started` handler. A hot reload of kvcoder reruns its dependents' handlers too.
+- Connectors and slash commands last one run. kvcoder clears them in its own `kernel.started` handler, which runs first because registering extensions declare kvcoder as a dependency. Each extension registers its connectors and slash commands again from its own `kernel.started` handler. A hot reload of kvcoder reruns its dependents' handlers too.
 - Sections are stored until removed; see [Sections](sections.md).
 - When kvcoder reads, it ignores any connector whose owner isn't loaded.

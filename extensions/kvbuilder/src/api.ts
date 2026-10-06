@@ -26,6 +26,7 @@ declare module '@kvman/sdk' {
     'kvbuilder.app.settings.reset': { input: { key: string; scope: 'global' | 'workspace' }; output: Empty };
     'kvbuilder.app.extensions.install': { input: { source: string }; output: { file: string; restartRequired: true } };
     'kvbuilder.app.restart': { input: Empty; output: { restarting: true } };
+    'kvbuilder.build.start': { input: { sessionId: string; argument: string }; output: Empty };
     'kvbuilder.app.extensions.uninstall': { input: { name: string }; output: { file: string; restartRequired: true } };
   }
   interface Queries {
@@ -42,7 +43,6 @@ declare module '@kvman/sdk' {
     'kvbuilder.app.processes.list': KernelQueries['kernel.processes.list'];
     'kvbuilder.app.health.get': KernelQueries['kernel.health.get'];
     'kvbuilder.app.query.get': { input: { name: string; input?: Record<string, unknown> }; output: unknown };
-    'kvbuilder.app.guide.get': { input: Empty; output: { instructions: string } };
     'kvbuilder.guides.list': { input: Empty; output: { pages: Guide[]; problems: { extension: string; problem: { code: string; message: string; params?: Record<string, unknown> } }[] } };
     'kvbuilder.guides.get': { input: { extension?: string; topic: string }; output: Guide & { markdown: string } };
     'kvbuilder.docs.list': { input: Empty; output: { topic: string; title: string }[] };

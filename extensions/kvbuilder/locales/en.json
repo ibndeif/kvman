@@ -1,5 +1,8 @@
 {
   "kvbuilder.title": "kvman builder",
+  "kvbuilder.slash.build-kvman": "Start building kvman in this chat",
+  "kvbuilder.slash.build-kvman.message": "I want to change this app.",
+  "kvbuilder.build.started": "Building kvman is on for this chat",
   "kvbuilder.errors.FOLDER_NOT_EMPTY": "That folder isn't empty; choose a new or empty folder.",
   "kvbuilder.errors.FILE_EXISTS": "That file already exists.",
   "kvbuilder.errors.NOT_A_PROJECT": "That folder isn't an extension project (no package.json with a kvman field).",

@@ -18,6 +18,7 @@ import { registerMessages } from './messages/register-messages.ts';
 import { registerPrompt } from './prompt/register-prompt.ts';
 import { clearConnectors, registerConnectors } from './registry/register-connectors.ts';
 import { registerSections } from './registry/register-sections.ts';
+import { clearSlashCommands, registerSlashCommands } from './registry/register-slash-commands.ts';
 import { clearSessionPoints, registerSessionPoints } from './registry/session-points.ts';
 import { registerSettings } from './register-settings.ts';
 import { registerForkExport } from './sessions/register-fork-export.ts';
@@ -56,15 +57,17 @@ export default (ctx: Ctx): void => {
   registerArtifacts(ctx);
   registerProcessHandlers(ctx);
   registerConnectors(ctx);
+  registerSlashCommands(ctx);
   registerSections(ctx);
   registerDocs(ctx);
   registerSessionPoints(ctx);
   registerPrompt(ctx);
   registerUi(ctx);
   ctx.registerHandler('kernel.started', {
-    description: 'Clears the connectors and session handlers, which extensions register again at each start, and marks the processes that no longer run.',
+    description: 'Clears the connectors, slash commands, and session handlers, which extensions register again at each start, and marks the processes that no longer run.',
     handle: async () => {
       await clearConnectors(ctx);
+      await clearSlashCommands(ctx);
       await clearSessionPoints(ctx);
       await interruptLeftovers(ctx);
     },
