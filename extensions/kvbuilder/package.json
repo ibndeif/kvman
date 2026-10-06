@@ -1,6 +1,6 @@
 {
   "name": "@kvman/kvbuilder",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "kvbuilder: the kvcoder extension for building kvman, developing extensions and presets and managing the running app.",
   "license": "MIT",
   "repository": {
@@ -46,7 +46,7 @@
     "source": "src/index.ts",
     "dependencies": {
       "@kvman/kvai": "^0.1.0",
-      "@kvman/kvcoder": "^0.1.0"
+      "@kvman/kvcoder": "^0.1.2"
     }
   },
   "dependencies": {

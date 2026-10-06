@@ -1,5 +1,17 @@
 # @kvman/kvbuilder
 
+## 0.2.0
+
+### Minor Changes
+
+- 9aaa779: The person starts building kvman with the slash command `/build-kvman` (ADR 0027). Until it runs in a chat, nothing of kvbuilder is in that chat's prompt: its five connectors are registered with `optIn: true`. `kvbuilder.build.start { sessionId, argument }` enables them for the chat, sets the guide as the chat's section, and adds a note; the send box then sends the text after the command, or "I want to change this app.", as the person's message. `kvman init` and `kvbuilder.app.guide.get` are gone, and the docs page `customizing` is `building`.
+- d1d1fe4: kvcustomizer is renamed to kvbuilder, shown as "kvman builder" (ADR 0027, 7): the package is `@kvman/kvbuilder`, its namespace `kvbuilder`, its commands and queries `kvbuilder.*`, and its errors `kvbuilder/*`. The `coder` preset lists it. A preset of your own that names `@kvman/kvcustomizer` must name `@kvman/kvbuilder` instead. The docs of the testkit, kvwebui, and kvcoder use the new name.
+
+### Patch Changes
+
+- Updated dependencies [d1d1fe4]
+  - @kvman/testkit@0.1.2
+
 ## 0.1.1
 
 ### Patch Changes

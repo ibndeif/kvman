@@ -1,6 +1,6 @@
 {
   "name": "@kvman/testkit",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "createTestKernel: the real kvman kernel for extension tests.",
   "license": "MIT",
   "repository": {
