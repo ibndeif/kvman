@@ -82,7 +82,7 @@ describe('the prompt builder (08 §8.2)', () => {
 
   it('QA19-H15 the prompt says when to set risky, to request a started server, and what a small task skips', () => {
     const { prompt } = buildPrompt({ workspacePath: '/w', language: 'en', platform: 'linux', shell: 'bash', sections: [], connectors: [] });
-    expect(prompt).toContain("`shell exec`, `fs write`, and `fs edit` take risky, which you always send: true when the call could lose or damage something that isn't your own work or reaches outside the workspace folder, and the person is then asked first; false otherwise.");
+    expect(prompt).toContain("`shell exec`, `fs write`, `fs edit`, and `mcp call` take risky, which you always send: true when the call could lose, damage, change, or send something that isn't your own work or reaches outside the workspace folder, and the person is then asked first; false otherwise, such as for a tool that only reads.");
     const check = "\nBefore you say that something runs or works, check it the way the person would: run it, request its address, or run its test; if you couldn't, say what is unchecked. After you start a server, request its address once before you give it to the person.\n";
     expect(prompt).toContain(check);
     expect(prompt.split('\n').find((line) => line.startsWith('4. '))).not.toContain('Before you say');

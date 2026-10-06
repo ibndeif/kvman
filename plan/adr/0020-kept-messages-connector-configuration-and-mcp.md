@@ -23,6 +23,8 @@ After ADR 0019 the product owner asked (2026-10-05) for three changes to kvcoder
 
 17. **kvcoder starts a command itself, with `cross-spawn`** (asked, while building, 2026-10-05; chosen over the client's own stdio transport, which stops only the direct child on Linux and macOS, and over a start on Windows written by kvcoder). The client's stdio transport can't start a process in its own group, so kvcoder has its own: it starts the command with `cross-spawn` (pinned exactly, with its types as a dev dependency), in its own process group on Linux and macOS, and kills the tree as a shell call's is killed.
 
+18. **The base prompt names `mcp call` among the calls that take `risky`** (found in a real chat, 2026-10-06: gpt-6-luna left `risky` out of its first `mcp call` and had to make the call again). Decision 7 made `risky` required on `mcp call`, but the prompt's sentence still named only `shell exec`, `fs write`, and `fs edit`. It now names all four, and says `true` also covers a call that changes or sends something, and `false` a tool that only reads. This corrects plan 08 §8.2.
+
 ## Shapes
 
 - **A server**, an entry of `kvcoder.mcp.servers`: `{ name, description, command, args: string[], env: string[] }` or `{ name, description, url, headers: string[] }`, strict; `name` is lowercase kebab case and unique in the list; `env` and `headers` hold names.
