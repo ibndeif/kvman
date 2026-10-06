@@ -34,6 +34,6 @@ describe('the Extensions page (06 §6.6, ADR 0014, 4 and 5)', () => {
     const card = app.find('[data-test="extension-notes"]');
     expect([card?.querySelector('[data-test="extension-name"]')?.textContent, card?.querySelector('[data-test="extension-name"]')?.getAttribute('dir')]).toEqual(['@test/notes', 'ltr']);
     expect(card?.querySelector('[data-test="extension-version"]')?.getAttribute('dir')).toBe('ltr');
-    expect(app.find<HTMLInputElement>('[data-test="add-name"]')?.dir).toBe('ltr');
+    expect(app.find<HTMLInputElement>('[data-test="add-source"]')?.dir).toBe('ltr');
   });
 });

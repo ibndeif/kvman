@@ -18,7 +18,7 @@ describe('preset files are always valid, whole, and named (02 §2.10, ADR 0010, 
     writePresetFile(file, preset);
     const kernel = await startPresetKernel({ home, homeFolder, preset, presetFolder: presetsDir, presetSource: { origin: 'home', file } });
     try {
-      await kernel.exec('kernel.extensions.install', { name: '@acme/notes', source: 'npm:1.2.3' }, userCall());
+      await kernel.exec('kernel.extensions.install', { source: 'npm:@acme/notes@1.2.3' }, userCall());
       const text = readStoredFile(file);
       expect(presetSchema.safeParse(JSON.parse(text)).success).toBe(true);
       expect(text.endsWith('\n')).toBe(true);
@@ -37,7 +37,7 @@ describe('preset files are always valid, whole, and named (02 §2.10, ADR 0010, 
     const target = path.join(blocked.home, 'presets', 'mine.json');
     const blockedKernel = await startPresetKernel({ home: blocked.home, homeFolder: blocked.homeFolder, preset, presetFolder: blocked.homeFolder });
     try {
-      await expect(blockedKernel.exec('kernel.extensions.install', { name: '@acme/notes', source: 'npm:1.2.3' }, userCall())).rejects.toMatchObject(
+      await expect(blockedKernel.exec('kernel.extensions.install', { source: 'npm:@acme/notes@1.2.3' }, userCall())).rejects.toMatchObject(
         {
           problem: { code: 'VALIDATION_FAILED', params: { file: target } },
         },
@@ -62,7 +62,7 @@ describe('preset files are always valid, whole, and named (02 §2.10, ADR 0010, 
         await expect(kernel.exec('kernel.preset.get', {}, userCall()), broken).rejects.toMatchObject({
           problem: { code: 'VALIDATION_FAILED', params: { file } },
         });
-        await expect(kernel.exec('kernel.extensions.install', { name: '@acme/notes', source: 'npm:1.2.3' }, userCall()), broken).rejects.toMatchObject(
+        await expect(kernel.exec('kernel.extensions.install', { source: 'npm:@acme/notes@1.2.3' }, userCall()), broken).rejects.toMatchObject(
           {
             problem: { code: 'VALIDATION_FAILED', params: { file } },
           },

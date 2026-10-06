@@ -20,7 +20,7 @@ Build an extension, in this order:
 4. Check after every change: `ext check` with `{"folder":"notes"}` type-checks it and reports what kvman would refuse, then `ext test` with the same payload runs its tests. Fix every finding before you go on.
 5. Run it. `preview start` with `{"extensions":["notes"]}` runs a separate kvman with those projects and returns its URL; edits to `src/` reload live, and `preview stop` ends it.
 6. Check that it works, in the preview: `preview query-get` with `{"name":"notes.greeting.get"}` runs one of its public queries (this one is the scaffold's own), and `preview command-run` with `{"name":"notes.item.add","input":{"text":"Milk"}}` a public command you wrote. Each answers `{ ok: true, output }`, or `{ ok: false, problem }` when the call failed. The preview's data is temporary, so call freely.
-7. Add it to this app only when the person asks: `kvman extensions-install` with `{"name":"notes","source":"path:notes"}`, where `name` is the project's package name and the folder is relative to the workspace folder. Then `restart` applies it.
+7. Add it to this app only when the person asks: `kvman extensions-install` with `{"source":"path:notes"}`, where the folder is relative to the workspace folder; kvman reads the project's name from its package.json. Then `restart` applies it.
 
 Improve an extension that exists: read its code and its docs page first, and find what is wrong with `ext check`, `ext test`, and the preview before you change anything. Make the smallest change that fixes or improves it, keep its names and shapes unless the person asked to change them, then run `ext check`, `ext test`, and the preview calls again. `kvman extensions-list` names the commands, queries, and settings of every extension that runs.
 

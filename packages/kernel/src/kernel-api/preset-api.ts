@@ -15,7 +15,7 @@ export function registerPresetApi(api: KernelRegistrations, services: KernelApiS
     'Adds an extension to the preset file; it takes effect at the next start.',
     async (input) =>
       kernelCommandSchemas['kernel.extensions.install'].output.parse(
-        await services.request({ kind: 'preset-install', name: input.name, source: input.source }),
+        await services.request({ kind: 'preset-install', source: input.source }),
       ),
   );
   api.command(

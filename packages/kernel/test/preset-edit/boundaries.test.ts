@@ -36,7 +36,7 @@ describe('only the preset commands touch the preset (02 §2.10, ADR 0010, 5)', (
       await expect(kernel.exec('kernel.extensions.uninstall', { name: '@acme/missing' }, probe)).rejects.toMatchObject({
         problem: { code: 'NOT_FOUND' },
       });
-      await expect(kernel.exec('kernel.extensions.install', { name: 'not a name!', source: 'npm:1.0.0' }, probe)).rejects.toMatchObject({
+      await expect(kernel.exec('kernel.extensions.install', { source: 'npm:not a name!@1.0.0' }, probe)).rejects.toMatchObject({
         problem: { code: 'VALIDATION_FAILED' },
       });
       expect(presetFiles(home)).toEqual(filesBefore);

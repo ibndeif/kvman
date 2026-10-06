@@ -17,8 +17,8 @@ export const kvmanConnector = {
       command: 'kvcustomizer.app.extensions.install',
       asks: true as const,
       examples: [
-        { description: 'Add an npm extension', input: { name: '@acme/notes', source: 'npm:1.2.3' } },
-        { description: 'Add the project in the workspace folder notes', input: { name: 'notes', source: 'path:notes' } },
+        { description: 'Add an npm extension', input: { source: 'npm:@acme/notes@1.2.3' } },
+        { description: 'Add the project in the workspace folder notes', input: { source: 'path:notes' } },
       ],
     },
     { name: 'extensions-uninstall', command: 'kvcustomizer.app.extensions.uninstall', asks: true as const, examples: [{ description: 'Remove one', input: { name: '@acme/notes' } }] },

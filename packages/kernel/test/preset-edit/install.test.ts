@@ -25,7 +25,7 @@ describe('install writes the person\'s preset (02 §2.10, ADR 0010, 5)', () => {
     const kernel = await homeRun(home, homeFolder, file, preset);
     try {
       const before = await kernel.exec('kernel.extensions.list', {}, userCall());
-      expect(await kernel.exec('kernel.extensions.install', { name: '@acme/notes', source: 'npm:1.2.3' }, userCall())).toEqual({
+      expect(await kernel.exec('kernel.extensions.install', { source: 'npm:@acme/notes@1.2.3' }, userCall())).toEqual({
         file,
         restartRequired: true,
       });
@@ -48,7 +48,7 @@ describe('install writes the person\'s preset (02 §2.10, ADR 0010, 5)', () => {
     const bundled = new Map([['@kvman/kvcoder', path.join(root, 'bundled-kvcoder')]]);
     const kernel = await startPresetKernel({ home, homeFolder, preset, presetFolder: path.dirname(file), presetSource: { origin: 'home', file }, bundled });
     try {
-      expect(await kernel.exec('kernel.extensions.install', { name: '@kvman/kvcoder', source: 'bundled' }, userCall())).toEqual({
+      expect(await kernel.exec('kernel.extensions.install', { source: 'bundled:@kvman/kvcoder' }, userCall())).toEqual({
         file,
         restartRequired: true,
       });
@@ -67,20 +67,13 @@ describe('install writes the person\'s preset (02 §2.10, ADR 0010, 5)', () => {
     const kernel = await homeRun(home, homeFolder, file, preset);
     try {
       const before = readStoredFile(file);
-      const bad: Array<{ name: string; source: string }> = [
-        { name: '@acme/a', source: 'npm:^1.2.3' },
-        { name: '@acme/a', source: 'npm:' },
-        { name: '@acme/a', source: 'path:' },
-        { name: '@acme/a', source: 'git:x' },
-        { name: '@acme/a', source: '' },
-        { name: '@acme/a', source: 'bundled' },
-      ];
-      for (const input of bad) {
-        await expect(kernel.exec('kernel.extensions.install', input, userCall()), input.source).rejects.toMatchObject({
+      const bad = ['npm:@acme/a@^1.2.3', 'npm:', 'path:', 'git:x', '', 'bundled'];
+      for (const source of bad) {
+        await expect(kernel.exec('kernel.extensions.install', { source }, userCall()), source).rejects.toMatchObject({
           problem: { code: 'VALIDATION_FAILED' },
         });
       }
-      await expect(kernel.exec('kernel.extensions.install', { name: '@acme/a', source: 'bundled' }, userCall())).rejects.toMatchObject({
+      await expect(kernel.exec('kernel.extensions.install', { source: 'bundled:@acme/a' }, userCall())).rejects.toMatchObject({
         problem: { code: 'VALIDATION_FAILED', message: expect.stringContaining('bundled') },
       });
       expect(readStoredFile(file)).toBe(before);
@@ -99,10 +92,10 @@ describe('install writes the person\'s preset (02 §2.10, ADR 0010, 5)', () => {
     const kernel = await homeRun(home, homeFolder, file, preset);
     try {
       const before = readStoredFile(file);
-      await expect(kernel.exec('kernel.extensions.install', { name: '@test/notes', source: 'npm:1.2.3' }, userCall())).rejects.toMatchObject({
+      await expect(kernel.exec('kernel.extensions.install', { source: 'npm:@test/notes@1.2.3' }, userCall())).rejects.toMatchObject({
         problem: { code: 'VALIDATION_FAILED', message: expect.stringContaining('already in the preset') },
       });
-      await expect(kernel.exec('kernel.extensions.install', { name: 'not a name!', source: 'npm:1.0.0' }, userCall())).rejects.toMatchObject({
+      await expect(kernel.exec('kernel.extensions.install', { source: 'npm:not a name!@1.0.0' }, userCall())).rejects.toMatchObject({
         problem: { code: 'VALIDATION_FAILED' },
       });
       expect(readStoredFile(file)).toBe(before);

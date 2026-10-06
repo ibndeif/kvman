@@ -11,13 +11,13 @@ const sandbox = useSandbox();
 const lockOf = (home: string): { pid: number; port: number } => JSON.parse(readFileSync(path.join(home, 'kvman.lock'), 'utf8')) as { pid: number; port: number };
 
 describe('restarting kvman (02 §2.14, ADR 0024, 1 to 3)', { timeout: 120_000 }, () => {
-  it('QA36-H6, QA36-H7, and QA36-H10 a restart applies an installed project, keeps the lock and the workspaces, and deletes the backup', async () => {
+  it('QA36-H6, QA36-H7, QA36-H10, and QA37-H12 a restart applies a project installed by its folder, listed under its package name, keeps the lock and the workspaces, and deletes the backup', async () => {
     const world = sandbox();
     const preset = world.appPreset();
     const kvman = await startKvman(world, ['--preset', preset]);
     const second = outputOf(await api(kvman.port).command('kernel.workspace.open', { path: world.folder('second') })) as { id: string };
     const lockBefore = lockOf(world.home);
-    await api(kvman.port).command('kernel.extensions.install', { name: '@test/notes', source: `path:${notesProject(world)}` });
+    await api(kvman.port).command('kernel.extensions.install', { source: `path:${notesProject(world)}` });
     expect(existsSync(`${preset}.good`)).toBe(true);
     expect(outputOf(await api(kvman.port).command('kernel.restart', {}))).toEqual({ restarting: true });
 
@@ -25,6 +25,7 @@ describe('restarting kvman (02 §2.14, ADR 0024, 1 to 3)', { timeout: 120_000 },
     expect(kvman.output()).toContain('kvman is restarting…');
     expect(lockOf(world.home)).toEqual({ pid: lockBefore.pid, port });
     expect(outputOf(await api(port).query('notes.ping', {}))).toEqual({ text: 'pong' });
+    expect((outputOf(await api(port).query('kernel.extensions.list', {})) as { name: string }[]).map((extension) => extension.name)).toContain('@test/notes');
     expect((outputOf(await api(port).query('kernel.workspace.list', {})) as { id: string }[]).map((workspace) => workspace.id)).toContain(second.id);
     expect(existsSync(`${preset}.good`)).toBe(false);
     expect(await stopKvman(kvman)).toBe(0);

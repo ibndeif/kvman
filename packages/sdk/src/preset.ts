@@ -12,6 +12,16 @@ export const extensionSourceSchema = z.union([
 /** Where an extension comes from. */
 export type ExtensionSource = z.infer<typeof extensionSourceSchema>;
 
+/** Accepts a source that carries the extension's name: `bundled:<name>`, `npm:<name>@<exact version>`, or `path:<folder>`. */
+export const installSourceSchema = z.union([
+  z.templateLiteral(['bundled:', packageNameSchema]),
+  z.templateLiteral(['npm:', packageNameSchema, '@', exactVersionSchema]),
+  z.templateLiteral(['path:', z.string().min(1)]),
+]);
+
+/** A source as a person gives it to `kernel.extensions.install`. */
+export type InstallSource = z.infer<typeof installSourceSchema>;
+
 /** Accepts a preset: its name, the extensions of the run, and preset-level setting values; unknown keys fail. */
 export const presetSchema = z.strictObject({
   name: z.string().min(1),

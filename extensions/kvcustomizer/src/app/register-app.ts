@@ -1,4 +1,4 @@
-import { extensionSourceSchema, kernelCommandSchemas, kernelQuerySchemas, packageNameSchema, z, type Ctx } from '@kvman/sdk';
+import { extensionSourceSchema, installSourceSchema, kernelCommandSchemas, kernelQuerySchemas, packageNameSchema, z, type Ctx } from '@kvman/sdk';
 import type {} from '@kvman/kvai';
 import { invalid } from '../problems.ts';
 import { installSource } from './install-source.ts';
@@ -102,12 +102,11 @@ export function registerApp(ctx: Ctx): void {
     description: 'Adds an extension to the preset; it starts at the next start of kvman. A path: folder is a project of the workspace.',
     public: true,
     retries: 0,
-    input: z.object({
-      name: packageNameSchema.describe('The extension package name, such as @acme/notes.'),
-      source: extensionSourceSchema.describe('npm:<exact version>, path:<a project folder, relative to the workspace folder>, or bundled (only for a bundled extension).'),
+    input: z.strictObject({
+      source: installSourceSchema.describe('npm:<package name>@<exact version>, path:<a project folder, relative to the workspace folder>, or bundled:<package name> (only for a bundled extension).'),
     }),
     output: editResultSchema,
-    handle: (input) => ctx.exec('kernel.extensions.install', { name: input.name, source: installSource(ctx.job.workspace.path, input.name, input.source) }),
+    handle: (input) => ctx.exec('kernel.extensions.install', { source: installSource(ctx.job.workspace.path, input.source) }),
   });
   ctx.registerCommand('kvcustomizer.app.restart', {
     description: 'Restarts kvman: it stops running work and starts again with the preset as it is stored.',

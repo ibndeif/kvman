@@ -22,8 +22,8 @@ The payload is the command's input as JSON:
 { "description": "Scaffolding the notes extension", "connector": "ext", "command": "new", "payload": { "name": "notes", "namespace": "notes", "folder": "notes" } }
 { "description": "Checking the notes project", "connector": "ext", "command": "check", "payload": { "folder": "notes" } }
 { "description": "Switching the default model", "connector": "kvman", "command": "model-set", "payload": { "model": "anthropic/claude-sonnet-5-5" } }
-{ "description": "Adding the notes extension to the app", "connector": "kvman", "command": "extensions-install", "payload": { "name": "@acme/notes", "source": "npm:1.2.3" } }
-{ "description": "Adding the notes project of this workspace to the app", "connector": "kvman", "command": "extensions-install", "payload": { "name": "notes", "source": "path:notes" } }
+{ "description": "Adding the notes extension to the app", "connector": "kvman", "command": "extensions-install", "payload": { "source": "npm:@acme/notes@1.2.3" } }
+{ "description": "Adding the notes project of this workspace to the app", "connector": "kvman", "command": "extensions-install", "payload": { "source": "path:notes" } }
 { "description": "Finding the jobs that failed", "connector": "kvman", "command": "jobs-list", "payload": { "status": "failed", "limit": 20 } }
 { "description": "Listing the chats", "connector": "kvman", "command": "query-get", "payload": { "name": "kvcoder.session.list", "input": { "limit": 10 } } }
 { "description": "Previewing the notes project", "connector": "preview", "command": "start", "payload": { "extensions": ["notes"] } }
@@ -57,7 +57,7 @@ The agent's prompt holds no guide to customizing. The `kvman` connector's descri
 4. **Check.** After every change, `ext check { folder }`, then `ext test { folder }`. `ext check` answers `[{ file?, message, hint }]`: TypeScript's errors first, then what kvman would refuse or show untranslated.
 5. **Run.** `preview start { extensions: [folder] }` answers `{ url }`.
 6. **Check that it works.** Call the project in the preview (below), and open its page at the URL.
-7. **Install**, when the person asks: `kvman extensions-install { name, source: "path:<folder>" }`, then `kvman restart`.
+7. **Install**, when the person asks: `kvman extensions-install { source: "path:<folder>" }`, then `kvman restart`.
 
 To improve an extension that exists, read its code and its docs page first, find what is wrong with `ext check`, `ext test`, and the preview, change the smallest thing, and run the checks again.
 
@@ -93,7 +93,7 @@ There is no `kvman` command that runs an arbitrary command of the app: a command
 
 - **The person is asked before each one runs.** The call becomes an approval card showing its description, the command, and its payload, whatever `kvcoder.shell.approval` says. Allowed, it runs; denied, the call answers `denied by the user` and nothing changed. Make one call for one change, and say in its `description` what changes.
 - **Model and settings change at once.** `model-set` takes the full model id of a model `model-list` shows (a model of a connected provider or of a custom provider); `settings-set` and `settings-reset` take a setting key and a scope, `global` or `workspace`. `settings-set` replaces the whole value, so for a list read it with `settings-list` first.
-- **Extensions and the preset change the preset file, and apply at the next start.** `extensions-install` takes a package name and a source, and `extensions-uninstall` takes a name. Both answer `{ file, restartRequired: true }`. Nothing is installed, loaded, or trusted by the call: `restart` applies it, and the terminal asks the person to trust a new extension then. The first change to the bundled preset saves a copy of it as `<home>/presets/<name>.json`.
+- **Extensions and the preset change the preset file, and apply at the next start.** `extensions-install` takes a source, which carries the package name, and `extensions-uninstall` takes a name. Both answer `{ file, restartRequired: true }`. Nothing is installed, loaded, or trusted by the call: `restart` applies it, and the terminal asks the person to trust a new extension then. The first change to the bundled preset saves a copy of it as `<home>/presets/<name>.json`.
 
 `restart` takes nothing and answers `{ restarting: true }`. kvman stops and starts again in the same process, with the same arguments, the same terminal, and no new browser tab, and the person is asked first. It stops running work: a chat's step that is running ends `interrupted` (the person sends a message to go on), long-lived processes such as a preview or a server the agent started stop, and an async job that didn't finish runs again if it has retries left. Open workspaces stay open. If kvman can't start with the change, because an extension is invalid or a setting fails, it puts the preset back as it was, starts again, and `health-get` has `rolledBack` with the failure's Problem; that is only for the start that follows. A new extension that isn't bundled still asks for trust in the terminal, so the agent says so.
 
@@ -101,9 +101,9 @@ The three sources of `extensions-install`:
 
 | Source | Means | Checked by the call |
 |---|---|---|
-| `npm:<exact version>` | a published package | its format only |
-| `path:<folder>` | a project in the workspace | the folder resolves against the workspace folder and must stay inside it (`VALIDATION_FAILED`); it must hold a package.json with a `kvman` field (`kvcustomizer/NOT_A_PROJECT`); that package's `name` must be the `name` given (`VALIDATION_FAILED`) |
-| `bundled` | an extension that ships with kvman | the name must be a bundled extension's (`VALIDATION_FAILED`) |
+| `npm:<package name>@<exact version>` | a published package | its format only |
+| `path:<folder>` | a project in the workspace | the folder resolves against the workspace folder and must stay inside it (`VALIDATION_FAILED`); it must hold a package.json with a `kvman` field (`kvcustomizer/NOT_A_PROJECT`); kvman takes the extension's name from that package.json |
+| `bundled:<package name>` | an extension that ships with kvman | the name must be a bundled extension's (`VALIDATION_FAILED`) |
 
 A `path:` source is stored with the absolute folder, because kvman resolves a relative one against the preset file, not the workspace. A `path:` extension reloads when its files change.
 

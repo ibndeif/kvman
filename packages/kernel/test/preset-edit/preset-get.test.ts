@@ -21,7 +21,7 @@ describe('kernel.preset.get shows the stored preset (02 §2.12, ADR 0010, 5)', (
       expect(stored).toEqual({ name: 'coder', extensions: {}, settings: { 'kernel.workers': 1 }, origin: 'bundled' });
       expect(stored).not.toHaveProperty('file');
       const copy = path.join(home, 'presets', 'coder.json');
-      expect(await bundled.exec('kernel.extensions.install', { name: '@acme/notes', source: 'npm:1.2.3' }, userCall())).toEqual({
+      expect(await bundled.exec('kernel.extensions.install', { source: 'npm:@acme/notes@1.2.3' }, userCall())).toEqual({
         file: copy,
         restartRequired: true,
       });
@@ -49,7 +49,7 @@ describe('kernel.preset.get shows the stored preset (02 §2.12, ADR 0010, 5)', (
         file,
       });
       expect(readStoredFile(file)).toContain('"app"');
-      await fromFile.exec('kernel.extensions.install', { name: '@acme/notes', source: 'npm:1.2.3' }, userCall());
+      await fromFile.exec('kernel.extensions.install', { source: 'npm:@acme/notes@1.2.3' }, userCall());
       expect(presetStateSchema.parse(await fromFile.exec('kernel.preset.get', {}, userCall()))).toMatchObject({
         origin: 'file',
         file,

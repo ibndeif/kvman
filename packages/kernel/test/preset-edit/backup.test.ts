@@ -22,7 +22,7 @@ describe('the first edit after a good start keeps a backup (02 §2.10, ADR 0024,
     const kernel = await startPresetKernel({ home, homeFolder, preset, presetFolder: path.dirname(file), presetSource: { origin: 'home', file } });
     try {
       expect(existsSync(presetBackupFor(file))).toBe(false);
-      await kernel.exec('kernel.extensions.install', { name: '@acme/notes', source: 'npm:1.2.3' }, userCall());
+      await kernel.exec('kernel.extensions.install', { source: 'npm:@acme/notes@1.2.3' }, userCall());
       expect(parsed(presetBackupFor(file))).toEqual(preset);
       await kernel.exec('kernel.extensions.uninstall', { name: '@acme/old' }, userCall());
       expect(parsed(presetBackupFor(file))).toEqual(preset);
@@ -55,7 +55,7 @@ describe('the first edit after a good start keeps a backup (02 §2.10, ADR 0024,
     writePresetFile(path.join(bundledDir, 'coder.json'), bundledPreset);
     const kernel = await startPresetKernel({ home, homeFolder, preset: bundledPreset, presetFolder: bundledDir });
     try {
-      await kernel.exec('kernel.extensions.install', { name: '@acme/notes', source: 'npm:1.2.3' }, userCall());
+      await kernel.exec('kernel.extensions.install', { source: 'npm:@acme/notes@1.2.3' }, userCall());
       const copy = path.join(home, 'presets', 'coder.json');
       expect(parsed(copy).extensions).toEqual({ '@acme/notes': 'npm:1.2.3' });
       expect(parsed(presetBackupFor(copy))).toEqual(bundledPreset);
@@ -71,7 +71,7 @@ describe('the first edit after a good start keeps a backup (02 §2.10, ADR 0024,
     writePresetFile(file, preset);
     const kernel = await startPresetKernel({ home, homeFolder, preset, presetFolder: root, presetSource: { origin: 'file', file } });
     try {
-      await kernel.exec('kernel.extensions.install', { name: '@acme/notes', source: 'npm:1.2.3' }, userCall());
+      await kernel.exec('kernel.extensions.install', { source: 'npm:@acme/notes@1.2.3' }, userCall());
       expect(presetBackupFor(file)).toBe(`${file}.good`);
       expect(parsed(`${file}.good`)).toEqual(preset);
     } finally {

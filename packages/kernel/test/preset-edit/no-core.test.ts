@@ -29,7 +29,7 @@ describe('nothing requires a core extension (ADR 0010, 16)', () => {
         file,
       });
       expect(await kernel.exec('solo.ping', {}, userCall())).toEqual({ answer: 'pong' });
-      expect(await kernel.exec('kernel.extensions.install', { name: '@acme/extra', source: 'npm:1.0.0' }, userCall())).toEqual({
+      expect(await kernel.exec('kernel.extensions.install', { source: 'npm:@acme/extra@1.0.0' }, userCall())).toEqual({
         file,
         restartRequired: true,
       });

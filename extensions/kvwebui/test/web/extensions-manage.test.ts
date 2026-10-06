@@ -13,14 +13,13 @@ const pending = (app: Mounted, name: string) => app.find(`[data-test="pending-${
 const presetOf = (extensions: Record<string, string>) =>
   kernelQuerySchemas['kernel.preset.get'].output.parse({ name: 'test', origin: 'home', file: '/home/ahmed/.kvman/presets/test.json', extensions });
 
-async function install(app: Mounted, name: string, source: string): Promise<void> {
-  await type(app.find('[data-test="add-name"]'), name);
+async function install(app: Mounted, source: string): Promise<void> {
   await type(app.find('[data-test="add-source"]'), source);
   await click(app.find('[data-test="add-install"]'));
 }
 
 describe('the Extensions page manages extensions (06 §6.6, ADR 0010, 5)', () => {
-  it('QA17-H19 the page marks a pending extension, and Install saves exactly the typed name and source', async () => {
+  it('QA17-H19 the page marks a pending extension, and Install saves exactly the typed source', async () => {
     const api = notesApi();
     api.preset = presetOf({ '@test/notes': 'bundled', '@acme/later': 'npm:2.0.0' });
     const app = await mountApp(api, '/kvwebui/extensions');
@@ -30,9 +29,8 @@ describe('the Extensions page manages extensions (06 §6.6, ADR 0010, 5)', () =>
     expect(pending(app, '@acme/later')?.textContent).toContain('Starts after restart');
     expect(pending(app, '@acme/later')?.textContent).toContain('npm');
 
-    await install(app, '  @acme/notes ', ' npm:1.2.3  ');
-    expect(api.callsTo('kernel.extensions.install').map((call) => call.input)).toEqual([{ name: '@acme/notes', source: 'npm:1.2.3' }]);
-    expect(app.find<HTMLInputElement>('[data-test="add-name"]')?.value).toBe('');
+    await install(app, ' npm:@acme/notes@1.2.3  ');
+    expect(api.callsTo('kernel.extensions.install').map((call) => call.input)).toEqual([{ source: 'npm:@acme/notes@1.2.3' }]);
     expect(app.find<HTMLInputElement>('[data-test="add-source"]')?.value).toBe('');
     expect(pending(app, '@acme/notes')?.textContent).toContain('Starts after restart');
     expect(app.find('[data-test="restart-banner"]')?.textContent).toContain('Pending changes: 2');
@@ -64,7 +62,7 @@ describe('the Extensions page manages extensions (06 §6.6, ADR 0010, 5)', () =>
   it('QA17-H21 adding and removing set no setting and no secret', async () => {
     const api = notesApi();
     const app = await mountApp(api, '/kvwebui/extensions');
-    await install(app, '@acme/notes', 'npm:1.2.3');
+    await install(app, 'npm:@acme/notes@1.2.3');
     await click(card(app, 'notes'));
     await click(page(app)?.querySelector<HTMLElement>('[data-test="remove"]') ?? null);
     await click(page(app)?.querySelector<HTMLElement>('[data-test="remove-confirm"]') ?? null);
@@ -77,18 +75,12 @@ describe('the Extensions page manages extensions (06 §6.6, ADR 0010, 5)', () =>
     const api = notesApi();
     const app = await mountApp(api, '/kvwebui/extensions');
     expect(app.find('[data-test="add-bundled-copy"]')?.textContent).toContain('saves your own copy of the bundled preset');
-    expect(app.find('[data-test="add-hint"]')?.textContent).toContain('an exact version (npm:1.2.3)');
+    expect(app.find('[data-test="add-hint"]')?.textContent).toContain('an exact version (npm:@acme/notes@1.2.3)');
     expect(app.find<HTMLButtonElement>('[data-test="add-install"]')?.disabled).toBe(true);
-    await type(app.find('[data-test="add-name"]'), '   ');
-    await type(app.find('[data-test="add-source"]'), 'npm:1.2.3');
-    expect(app.find<HTMLButtonElement>('[data-test="add-install"]')?.disabled).toBe(true);
-
-    api.handlers.set('kernel.extensions.install', () => fail('VALIDATION_FAILED', { name: '@acme/notes' }));
-    await type(app.find('[data-test="add-name"]'), '@acme/notes');
-    await click(app.find('[data-test="add-install"]'));
+    api.handlers.set('kernel.extensions.install', () => fail('VALIDATION_FAILED', { source: 'npm:@acme/notes@1.2.3' }));
+    await install(app, 'npm:@acme/notes@1.2.3');
     expect(app.find('[data-test="add-error"]')?.textContent).toContain("Something isn't valid.");
-    expect(app.find<HTMLInputElement>('[data-test="add-name"]')?.value).toBe('@acme/notes');
-    expect(app.find<HTMLInputElement>('[data-test="add-source"]')?.value).toBe('npm:1.2.3');
+    expect(app.find<HTMLInputElement>('[data-test="add-source"]')?.value).toBe('npm:@acme/notes@1.2.3');
     expect(app.find('[data-test="restart-banner"]')).toBeNull();
     expect(app.root.textContent).not.toContain('Added.');
 
@@ -131,7 +123,7 @@ describe('the Extensions page manages extensions (06 §6.6, ADR 0010, 5)', () =>
       api.preset = presetOf({ '@test/notes': 'bundled', '@acme/later': 'npm:2.0.0' });
       const app = await mountApp(api, '/kvwebui/extensions');
       api.handlers.set('kernel.extensions.install', () => fail('VALIDATION_FAILED'));
-      await install(app, '@acme/notes', 'npm:1.2.3');
+      await install(app, 'npm:@acme/notes@1.2.3');
       await settle();
       const texts = [app.find('main')?.textContent ?? app.text()];
       await click(card(app, 'notes'));

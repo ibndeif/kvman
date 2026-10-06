@@ -70,7 +70,7 @@ describe("kvman init, the agent's guide for changing the app (09 §9.4, ADR 0023
 
   it('QA35-H8 the method is kept, with the build steps in order', async () => {
     const text = await instructions();
-    const steps = ['`docs get`', '`ext new`', 'Write it with `fs`', '`ext check`', '`ext test`', '`preview start`', '`preview query-get`', '`preview command-run`', '`kvman extensions-install` with `{"name":"notes","source":"path:notes"}`'];
+    const steps = ['`docs get`', '`ext new`', 'Write it with `fs`', '`ext check`', '`ext test`', '`preview start`', '`preview query-get`', '`preview command-run`', '`kvman extensions-install` with `{"source":"path:notes"}`'];
     expect(inOrder(text.slice(text.indexOf('Build an extension')), steps), 'the build steps are in order').toBe(true);
     for (const sentence of [
       'Each answers `{ ok: true, output }`, or `{ ok: false, problem }` when the call failed.',

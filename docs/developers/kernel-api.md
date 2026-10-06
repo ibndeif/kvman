@@ -57,7 +57,7 @@ Schemas are converted with zod's `z.toJSONSchema`; a part JSON Schema can't expr
 | Name | Kind | Input → output |
 |---|---|---|
 | `kernel.preset.get` | query | `{}` → `{ name, origin: 'bundled' \| 'home' \| 'file', file?, extensions, settings? }`: the preset as stored now. |
-| `kernel.extensions.install` | command | `{ name, source }` → `{ file, restartRequired: true }`: adds the extension to the preset file. |
+| `kernel.extensions.install` | command | `{ source }` → `{ file, restartRequired: true }`: adds the extension to the preset file; the source carries its name (`bundled:<name>`, `npm:<name>@<exact version>`, or `path:<folder>`). |
 | `kernel.extensions.uninstall` | command | `{ name }` → `{ file, restartRequired: true }`: removes it. |
 | `kernel.restart` | command | `{}` → `{ restarting: true }`: asks kvman to restart. It stops and starts again in the same process, with its arguments, lock, and terminal; running jobs are aborted, processes stop, and the preset is read again. Sync only. |
 

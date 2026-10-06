@@ -27,18 +27,19 @@ At the top of the page a switch, **All workspaces** or **Only \<your workspace\>
 
 ## Add an extension
 
-In **Add an extension**, fill in two fields and press **Install**:
+In **Add an extension**, type the source and press **Install**. The source says where the extension comes from, and kvman reads the extension's name from it:
 
-| Field | What to type | Example |
+| Source | What it means | Example |
 |---|---|---|
-| **Name** | The extension's package name | `@acme/notes` |
-| **Source** | Where it comes from: `npm:<exact version>`, `path:<an absolute folder>`, or `bundled` | `npm:1.2.3` or `path:/home/me/notes` |
+| `npm:<package name>@<exact version>` | A published package | `npm:@acme/notes@1.2.3` |
+| `path:<an absolute folder>` | An extension project on this computer; its name is the one in its package.json | `path:/home/me/notes` |
+| `bundled:<package name>` | An extension that ships with kvman | `bundled:@kvman/kvcoder` |
 
-- `npm:` takes an exact version, such as `npm:1.2.3`. Ranges such as `^1.2.3` are not accepted.
-- `path:` takes the folder of an extension project on this computer. kvman reloads it whenever you save a file in it.
-- `bundled` puts back an extension that ships with kvman, if you removed it. It works only for a bundled extension's name.
+- `npm:` takes an exact version, such as `1.2.3`. Ranges such as `^1.2.3` are not accepted.
+- `path:` takes the folder of an extension project. kvman reloads it whenever you save a file in it.
+- `bundled:` puts back an extension that ships with kvman, if you removed it. It works only for a bundled extension's name.
 
-**Install** stays grey until both fields have text. When it works, you see **Added. Restart kvman to apply.** and a new row marked **Starts after restart**. If something is wrong, for example the name is already in your preset, the card shows the reason and keeps what you typed, so you can fix it.
+**Install** stays grey until the field has text. When it works, you see **Added. Restart kvman to apply.** and a new row marked **Starts after restart**. If something is wrong, for example the name is already in your preset, the card shows the reason and keeps what you typed, so you can fix it.
 
 ## Remove an extension
 

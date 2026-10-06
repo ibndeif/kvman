@@ -1,5 +1,7 @@
-import type { ExtensionSource, Preset, PresetState } from '@kvman/sdk';
+import path from 'node:path';
+import type { InstallSource, Preset, PresetState } from '@kvman/sdk';
 import { kernelProblem } from '../problems.ts';
+import { resolveInstallSource } from './install-source.ts';
 import { keepPresetBackup } from './preset-backup.ts';
 import { readStoredPreset, targetFileFor, writePresetFile } from './preset-files.ts';
 import type { PresetSource } from './preset-source.ts';
@@ -18,7 +20,7 @@ export type PresetStoreOptions = {
 
 export type PresetStore = {
   get(): Promise<PresetState>;
-  install(name: string, source: ExtensionSource): Promise<{ file: string; restartRequired: true }>;
+  install(source: InstallSource): Promise<{ file: string; restartRequired: true }>;
   uninstall(name: string): Promise<{ file: string; restartRequired: true }>;
 };
 
@@ -56,16 +58,17 @@ export function createPresetStore(options: PresetStoreOptions): PresetStore {
         stored = await readStoredPreset(target);
         return { ...stored, origin, file: target };
       }),
-    install: (name, source) =>
+    install: (source) =>
       serial(async () => {
         const { current, target } = await currentAndTarget();
+        const { name, storedSource } = await resolveInstallSource(source, path.dirname(target));
         if (current.extensions[name] !== undefined) {
           throw kernelProblem('VALIDATION_FAILED', `${name} is already in the preset.`, { name });
         }
-        if (source === 'bundled' && !options.bundled.has(name)) {
+        if (storedSource === 'bundled' && !options.bundled.has(name)) {
           throw kernelProblem('VALIDATION_FAILED', `${name} is not a bundled extension.`, { name });
         }
-        const edited: Preset = { ...current, extensions: { ...current.extensions, [name]: source } };
+        const edited: Preset = { ...current, extensions: { ...current.extensions, [name]: storedSource } };
         await keepPresetBackup(target, current);
         await writePresetFile(target, edited);
         return remember(edited, target);

@@ -30,7 +30,7 @@ describe('a start that fails because of the preset is undone (02 §2.14, ADR 002
     const file = world.appPreset();
     const before = stored(file);
     const kvman = await startKvman(world, ['--preset', file]);
-    await api(kvman.port).command('kernel.extensions.install', { name: '@test/broken', source: `path:${brokenProject(world)}` });
+    await api(kvman.port).command('kernel.extensions.install', { source: `path:${brokenProject(world)}` });
     await api(kvman.port).command('kernel.restart', {});
 
     const port = await nthPort(kvman, 2);

@@ -20,7 +20,7 @@ describe('an edit applies at the next start (02 §2.10, ADR 0010, 5)', () => {
     const preset: Preset = { name: 'mine', extensions: {}, settings: { 'kernel.workers': 1 } };
     writePresetFile(file, preset);
     const first = await startPresetKernel({ home, homeFolder, preset, presetFolder: presetsDir, presetSource: { origin: 'home', file } });
-    expect(await first.exec('kernel.extensions.install', { name: '@test/notes', source }, userCall())).toEqual({ file, restartRequired: true });
+    expect(await first.exec('kernel.extensions.install', { source }, userCall())).toEqual({ file, restartRequired: true });
     await first.close();
     const edited = presetSchema.parse(JSON.parse(readStoredFile(file)));
     const second = await startPresetKernel({ home, homeFolder, preset: edited, presetFolder: presetsDir, presetSource: { origin: 'home', file } });

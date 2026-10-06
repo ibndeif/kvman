@@ -19,7 +19,7 @@ describe('an edit never loads, installs, or trusts (02 §2.10, ADR 0010, 5)', ()
     const kernel = await startPresetKernel({ home, homeFolder, preset, presetFolder: path.dirname(file), presetSource: { origin: 'home', file } });
     try {
       expect(await kernel.exec('kernel.extensions.list', {}, userCall())).toEqual([]);
-      expect(await kernel.exec('kernel.extensions.install', { name: '@acme/notes', source: 'npm:1.2.3' }, userCall())).toEqual({
+      expect(await kernel.exec('kernel.extensions.install', { source: 'npm:@acme/notes@1.2.3' }, userCall())).toEqual({
         file,
         restartRequired: true,
       });

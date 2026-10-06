@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { jsonSchema } from './json.ts';
 import { packageNameSchema } from './manifest.ts';
-import { extensionSourceSchema, presetStateSchema } from './preset.ts';
+import { extensionSourceSchema, installSourceSchema, presetStateSchema } from './preset.ts';
 import { problemSchema } from './problem.ts';
 import { fileSchema, isoTimeSchema, jobSchema, jobStatusSchema, workspaceSchema } from './rows.ts';
 
@@ -92,7 +92,7 @@ export const kernelCommandSchemas = {
   'kernel.secrets.delete': { input: z.strictObject({ extension: z.string().min(1), name: z.string().min(1) }), output: emptySchema },
   'kernel.files.unlink': { input: z.strictObject({ id: z.string().min(1) }), output: emptySchema },
   'kernel.extensions.install': {
-    input: z.strictObject({ name: packageNameSchema, source: extensionSourceSchema }),
+    input: z.strictObject({ source: installSourceSchema }),
     output: z.strictObject({ file: z.string(), restartRequired: z.literal(true) }),
   },
   'kernel.extensions.uninstall': {

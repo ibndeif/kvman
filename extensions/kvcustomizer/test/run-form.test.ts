@@ -23,7 +23,7 @@ describe("kvcustomizer's connectors through the run tool (09 §9.1, ADR 0011)", 
       expect(help.output, connector).toMatch(new RegExp(`^${connector}: [\\s\\S]*\\n  help +\\S`));
     }
     const install = await runConnector(kernel, { connector: 'kvman', command: 'help', payload: { command: 'extensions-install' } });
-    expect(install.output).toContain('{ "connector": "kvman", "command": "extensions-install", "payload": {"name":"@acme/notes","source":"npm:1.2.3"} }');
+    expect(install.output).toContain('{ "connector": "kvman", "command": "extensions-install", "payload": {"source":"npm:@acme/notes@1.2.3"} }');
     for (const text of [page('init'), page('customizing')]) {
       expect(text).not.toMatch(/'\{[^']*\}'/);
       expect(text).not.toMatch(/ -h\b|--async|heredoc/);

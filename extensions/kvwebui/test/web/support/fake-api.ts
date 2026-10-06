@@ -142,6 +142,16 @@ function presetSchemaOf(preset: unknown): PresetState {
   return kernelQuerySchemas['kernel.preset.get'].output.parse(preset);
 }
 
+// The name and stored source the kernel gives an install source; a fake `path:` folder is named by its last segment.
+function installedAs(given: string): { name: string; source: string } {
+  if (given.startsWith('bundled:')) return { name: given.slice('bundled:'.length), source: 'bundled' };
+  if (given.startsWith('npm:')) {
+    const at = given.lastIndexOf('@');
+    return { name: given.slice('npm:'.length, at), source: `npm:${given.slice(at + 1)}` };
+  }
+  return { name: given.slice(given.lastIndexOf('/') + 1), source: given };
+}
+
 function installKernelHandlers(api: FakeApi): void {
   const record = (input: Json) => z.record(z.string(), z.json()).parse(input);
   api.handlers.set('kernel.health.get', () => ({ version: '0.1.0', preset: 'test', mode: 'web', workers: 1, uptimeMs: 1, languages: api.languages }));
@@ -149,7 +159,8 @@ function installKernelHandlers(api: FakeApi): void {
   const storedPreset = (): PresetState => api.preset ?? { name: 'test', origin: 'bundled', extensions: Object.fromEntries(api.extensions.map((info) => [info.name, info.source])) };
   api.handlers.set('kernel.preset.get', () => storedPreset());
   api.handlers.set('kernel.extensions.install', (input) => {
-    const { name, source } = z.object({ name: z.string(), source: z.string() }).parse(input);
+    const { source: given } = z.object({ source: z.string() }).parse(input);
+    const { name, source } = installedAs(given);
     const stored = storedPreset();
     const file = '/home/ahmed/.kvman/presets/test.json';
     api.preset = presetSchemaOf({ ...stored, origin: 'home', file, extensions: { ...stored.extensions, [name]: source } });

@@ -38,7 +38,7 @@ describe('the kvman connector\'s commands (09 §9.1, ADR 0010, 6 and 8)', { time
     expect(own?.queries).toContain('kvcustomizer.guides.list');
     expect(JSON.stringify(extensions)).not.toContain('"schema"');
 
-    const installed = await kernel.exec('kvcustomizer.app.extensions.install', { name: '@acme/notes', source: 'npm:1.2.3' });
+    const installed = await kernel.exec('kvcustomizer.app.extensions.install', { source: 'npm:@acme/notes@1.2.3' });
     expect(installed).toEqual({ file: expect.stringMatching(/presets[\\/].+\.json$/), restartRequired: true });
     expect(await kernel.exec('kvcustomizer.app.preset.get', {})).toMatchObject({ origin: 'home', file: installed.file, extensions: { '@acme/notes': 'npm:1.2.3' } });
     expect(await kernel.exec('kvcustomizer.app.extensions.uninstall', { name: '@acme/notes' })).toEqual({ file: installed.file, restartRequired: true });
@@ -64,7 +64,7 @@ describe('the kvman connector\'s commands (09 §9.1, ADR 0010, 6 and 8)', { time
       await kernel.exec('kvcustomizer.app.extensions.list', {}),
       await kernel.exec('kvcustomizer.app.preset.get', {}),
       await kernel.exec('kvcustomizer.app.model.set', { model: 'relay/m1' }),
-      await kernel.exec('kvcustomizer.app.extensions.install', { name: '@acme/notes', source: 'npm:1.2.3' }),
+      await kernel.exec('kvcustomizer.app.extensions.install', { source: 'npm:@acme/notes@1.2.3' }),
       await kernel.exec('kvcustomizer.app.extensions.uninstall', { name: '@acme/notes' }),
     ];
     expect(JSON.stringify(answers)).not.toContain('S3CRET-VALUE');

@@ -21,7 +21,7 @@ describe('the first edit of the bundled preset copies it (02 §2.10, ADR 0010, 5
     const kernel = await startPresetKernel({ home, homeFolder, preset: bundledPreset, presetFolder: bundledDir });
     try {
       const copy = path.join(home, 'presets', 'coder.json');
-      expect(await kernel.exec('kernel.extensions.install', { name: '@acme/notes', source: 'npm:1.2.3' }, userCall())).toEqual({
+      expect(await kernel.exec('kernel.extensions.install', { source: 'npm:@acme/notes@1.2.3' }, userCall())).toEqual({
         file: copy,
         restartRequired: true,
       });
@@ -31,7 +31,7 @@ describe('the first edit of the bundled preset copies it (02 §2.10, ADR 0010, 5
         settings: { 'kernel.workers': 1 },
       });
       expect(readStoredFile(bundledFile)).toBe(bundledBefore);
-      expect(await kernel.exec('kernel.extensions.install', { name: '@acme/more', source: 'npm:2.0.0' }, userCall())).toEqual({
+      expect(await kernel.exec('kernel.extensions.install', { source: 'npm:@acme/more@2.0.0' }, userCall())).toEqual({
         file: copy,
         restartRequired: true,
       });
