@@ -17,7 +17,7 @@ kvman --help | --version
 - **Restart.** `kernel.restart` (§2.14, ADR 0024) stops kvman and starts it again in the same process, with the arguments it was given, the same lock, and the same terminal; it doesn't open the browser again. A start that fails because of the preset is undone from a backup (§2.10).
 - **Modes:** `web` now; `tui` comes later.
 - **Presets:** one is bundled: `coder` (the default), the coding harness, which also customizes kvman (§9). `--preset <name>` names a bundled preset or `<home>/presets/<name>.json` (a person's preset replaces a bundled one of the same name, ADR 0010, 4), and `--preset ./file.json` names a preset file: a value with `/` or `\`, or ending in `.json`, is a file, relative to the start folder. An unknown name or a missing file fails `VALIDATION_FAILED` (ADR 0009, 45).
-- **Environment.** kvman sets `KVMAN_HOME` to its home in its own environment at start, so a program it runs (such as kvcustomizer's `kvman-docs`) finds this kvman through `<home>/kvman.lock` (ADR 0010, 19).
+- **Environment.** kvman sets `KVMAN_HOME` to its home in its own environment at start, so a program it runs (such as kvbuilder's `kvman-docs`) finds this kvman through `<home>/kvman.lock` (ADR 0010, 19).
 - **Trust:** before loading, kvman lists every non-bundled extension version that hasn't been accepted before and asks y/N in the terminal. `--yes` accepts them without asking; with no terminal and no `--yes`, kvman refuses to start (§2.9).
 - **Browser.** kvman opens the URL with `xdg-open` (Linux), `open` (macOS), or `cmd /c start ""` (Windows). `--no-open` turns this off. A browser that can't be opened logs a warning, and kvman keeps running (ADR 0009, 50).
 - **Logs.** `--log-level` is `debug`, `info` (the default), `warn`, or `error`. It filters `logs/kvman.log` and the terminal, which shows each record as one line (`HH:MM:SS LEVEL message`) on stderr; the URL and the trust prompt go to stdout. Terminal text is English (ADR 0009, 49).
@@ -52,7 +52,7 @@ A pnpm monorepo, Node 24, TypeScript 6.0 strict (ADR 0009). The tools are ESLint
 | `packages/kernel` | Everything the kernel does, including HTTP. Published as `@kvman/kernel`, at the root version. | `sdk`, its declared dependencies |
 | `packages/cli` | The `kvman` bin; it runs the kernel in the same process. Published as `kvman`, with the bundled presets inside (`packages/cli/presets/`: `coder.json`); the bundled extensions are its dependencies that have a `kvman` field (ADR 0026, 3). | `kernel`, `sdk` |
 | `packages/testkit` | `createTestKernel` for tests, and the bins that build and check extensions for any harness: `kvman-check`, `kvman-new`, `kvman-preset`, `kvman-preview` (§10). Published as `@kvman/testkit`. | `kernel`, `sdk` |
-| `extensions/*` | kvai, kvwebui, kvcoder, kvcustomizer. Published as `@kvman/kvai`, `@kvman/kvwebui`, `@kvman/kvcoder`, and `@kvman/kvcustomizer` (ADR 0026, 1). | `sdk`, their own npm dependencies; never `kernel`; another extension only when it is a `kvman.dependencies` entry: `import type`, or a runtime import of a subpath it exports (such a subpath may import only `sdk` and holds no state) |
+| `extensions/*` | kvai, kvwebui, kvcoder, kvbuilder. Published as `@kvman/kvai`, `@kvman/kvwebui`, `@kvman/kvcoder`, and `@kvman/kvbuilder` (ADR 0026, 1). | `sdk`, their own npm dependencies; never `kernel`; another extension only when it is a `kvman.dependencies` entry: `import type`, or a runtime import of a subpath it exports (such a subpath may import only `sdk` and holds no state) |
 
 Extensions list `@kvman/sdk` as a peerDependency, and every extension shares the kernel's own copy (§2.9). At runtime, extensions talk to each other only through `ctx.exec` and the other job calls (§3). Type-only imports exist for typed calls (§3.2). An extension may export subpaths that its dependents import (ADR 0001, 89); a dependent that imports one at runtime also lists that extension in its npm `dependencies` (ADR 0026, 5). To let others register things with it, an extension exposes public commands and keeps what it receives in its own store (ADR 0001, 91).
 
@@ -63,7 +63,7 @@ Each is designed in its own round, after the kernel.
 - **kvai**: LLM calls, providers, and models. The pi-ai package's providers and models come by default, and other extensions can add theirs. Agents, tools, and loops are built by the extensions that need them (§7).
 - **kvwebui**: the Vue web app, plus a `kvwebui.*` API other extensions use to shape the UI.
 - **kvcoder**: the app-building harness on kvai and kvwebui. Its agent has one tool, `run`, which runs a command of a connector (the built-in `shell`, `fs`, `artifact`, `background`, `ask`, `delegate`, and `mcp`, and those other extensions register); connectors and sections extend it (ADR 0011; ADR 0021). Its conversation UI is its own (§8).
-- **kvcustomizer**: the kvcoder extension for customizing kvman: it adds connectors and a prompt for developing extensions and presets, and for managing the running app (§9, ADR 0010).
+- **kvbuilder** ("kvman builder"): the kvcoder extension for building kvman: the person's `/build-kvman` gives a chat its connectors and its guide for developing extensions and presets, and for managing the running app (§9, ADR 0010, ADR 0027).
 
 ## 1.6 Principles for this phase
 

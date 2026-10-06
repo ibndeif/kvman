@@ -163,7 +163,7 @@ Registrations are sealed when the entry returns: a later `register*` call fails 
 - A registration is private by default: only its own extension can call it.
 - With `public: true`, other extensions and HTTP clients can call it too. Calling a private name from outside fails with `NOT_PUBLIC`.
 - `public` is the only check between extensions: a caller doesn't have to declare the callee as a dependency. Declared dependencies are for presence and version checks, load order, and imports.
-- **Registering with another extension.** An extension that wants others to register things with it (kvcoder's connectors) exposes public commands, and stores entries in its own store keyed by the caller. An owner that only reads from others pulls instead, from public queries named under the other's namespace (`<namespace>.ui.get` for kvwebui, `<namespace>.docs.list` and `.docs.get` for kvcustomizer, plan 09 §9.5), so it needs no load order. Contributors call them from their `kernel.started` handler (§2.15).
+- **Registering with another extension.** An extension that wants others to register things with it (kvcoder's connectors) exposes public commands, and stores entries in its own store keyed by the caller. An owner that only reads from others pulls instead, from public queries named under the other's namespace (`<namespace>.ui.get` for kvwebui, `<namespace>.docs.list` and `.docs.get` for kvbuilder, plan 09 §9.5), so it needs no load order. Contributors call them from their `kernel.started` handler (§2.15).
 
 ## 2.10 Presets
 
@@ -304,7 +304,7 @@ The three job points share the base `{ jobId, rootId, name, caller, workspaceId 
 
 ## 2.16 Processes
 
-The process service is for long-lived child processes, such as kvcustomizer's preview kvman. Short ones, such as a kvcoder shell call, stay plain `node:child_process` inside their job.
+The process service is for long-lived child processes, such as kvbuilder's preview kvman. Short ones, such as a kvcoder shell call, stay plain `node:child_process` inside their job.
 
 | Call | Does |
 |---|---|

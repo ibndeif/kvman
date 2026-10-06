@@ -276,11 +276,13 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
 
 ### M2.5 kvdev, presets, and the walkthrough
 
-*Changed after this milestone by ADR 0010: kvdev is now kvcustomizer (`09`), the scaffold, guides, and preview are testkit bins, the `dev` preset is gone and `coder` loads kvcustomizer, and the kernel gains `kernel.preset.get`, `kernel.extensions.install`, and `kernel.extensions.uninstall`.*
+*Changed after this milestone by ADR 0010: kvdev is now kvbuilder (`09`), the scaffold, guides, and preview are testkit bins, the `dev` preset is gone and `coder` loads kvbuilder, and the kernel gains `kernel.preset.get`, `kernel.extensions.install`, and `kernel.extensions.uninstall`.*
 
-*Changed after this milestone by ADR 0023: kvcustomizer sets no global section; the agent reads its guide with `kvman init` (`09` §9.4).*
+*Changed after this milestone by ADR 0023: kvbuilder sets no global section; the agent reads its guide with `kvman init` (`09` §9.4).*
 
-*Changed after this milestone by ADR 0024: `kernel.restart` restarts kvman in the same process, a start that fails because of the preset is undone from a backup, and kvcustomizer's `kvman` connector has `restart` (`02` §2.14, `09` §9.1).*
+*Changed after this milestone by ADR 0027: kvbuilder is now kvbuilder (`09`), `kvman init` is gone, and the person's `/build-kvman` gives a chat kvbuilder's guide and connectors, through kvcoder's slash-command registry and `optIn` connectors (`08` §8.4, `09` §9.4).*
+
+*Changed after this milestone by ADR 0024: `kernel.restart` restarts kvman in the same process, a start that fails because of the preset is undone from a backup, and kvbuilder's `kvman` connector has `restart` (`02` §2.14, `09` §9.1).*
 
 - **Read:** `09`; `10`; `11`; `12` §12.3.
 - **Build:**
