@@ -63,7 +63,7 @@ await ctx.exec('kvcoder.slash.register', {
 
 - `name` is lowercase kebab case. kvcoder's own (`compact`, `export`, `fork`, `new`, `prompt`, `rename`) and another extension's fail `kvcoder/NAME_TAKEN`.
 - `description` is a translation key of your catalog; the list shows its text.
-- `command` is one of your public commands. The send box calls it with `{ sessionId, argument }`: the open chat, and the text after the command's name (`''` when there is none). A Problem it throws is shown as a toast.
+- `command` is one of your public commands. The send box calls it with `{ sessionId, argument }`: the open chat (on the Chat page the send box creates the chat first, so it is the new chat), and the text after the command's name (`''` when there is none). A Problem it throws is shown as a toast.
 - `message` is optional, and a translation key too. When your command succeeds, the send box sends the argument, or with none the text of `message`, as the person's own message, which starts a turn. Without `message` nothing is sent.
 - `kvcoder.slash.unregister { name }` removes one of your own, and `kvcoder.slash.list` answers every one. Like connectors, they are cleared at each start.
 

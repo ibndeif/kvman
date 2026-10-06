@@ -9,7 +9,7 @@ kvman [--mode web] [--preset coder] [--home <dir>] [--port <n>] [--yes] [--no-op
 
 kvman runs in the foreground on `127.0.0.1:3737` and opens the folder you start it from as a workspace. It needs Node.js 24.
 
-To change kvman itself from a chat (its model, its settings, its extensions, or a new extension built for you), type `/build-kvman` in the chat's send box, alone or followed by what you want. Until you do, the agent in that chat has no tool for changing kvman ([building kvman](docs/user-guide/building-kvman.md)).
+To change kvman itself from a chat (its model, its settings, its extensions, or a new extension built for you), type `/build-kvman` in the send box, on the Chat page or in a chat, alone or followed by what you want. Until you do, the agent in that chat has no tool for changing kvman ([building kvman](docs/user-guide/building-kvman.md)).
 
 ## Documentation
 

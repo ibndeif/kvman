@@ -8,9 +8,10 @@ import { matchingCommands, typedCommand, type ListedSlash, type RegisteredSlash,
 // files are uploaded to the kernel's files (`POST /api/files`), from the attach button or a paste, and sent as
 // `fileIds`; while a step runs, Stop cancels the turn. The `controls` slot holds the chat's model and thinking level.
 // A one-line text that starts with `/` is a slash command, never a message: a list above the box names the matching
-// ones, and with `commands` `run`, Enter runs the highlighted one; with `wait` (no chat yet) the list is greyed and
-// nothing runs. While `blocked`, the box takes text and neither sends nor runs a command (ADR 0019, 3). After kvcoder's
-// own commands the list has the `registered` ones of other extensions, which run as `registered` (ADR 0027, 9).
+// ones, and with `commands` `run`, Enter runs the highlighted one; with `wait` (no chat yet) kvcoder's own commands are
+// greyed and only the `registered` ones run. While `blocked`, the box takes text and neither sends nor runs a command
+// (ADR 0019, 3). After kvcoder's own commands the list has the `registered` ones of other extensions, which run as
+// `registered` (ADR 0027, 9; ADR 0028, 1 and 3).
 const props = defineProps<{ running: boolean; placeholder: string; blocked?: boolean | undefined; commands?: 'run' | 'wait' | undefined; registered?: readonly RegisteredSlash[] | undefined }>();
 const emit = defineEmits<{ send: [message: { text: string; fileIds: string[] }]; stop: []; command: [name: SlashName, argument: string]; registered: [command: RegisteredSlash, argument: string] }>();
 const kvman = useKvman();
@@ -24,6 +25,10 @@ const hidden = ref(false);
 const typed = computed(() => (props.commands === undefined ? undefined : typedCommand(text.value)));
 const waiting = computed(() => props.commands === 'wait');
 const found = computed(() => (typed.value === undefined ? [] : matchingCommands(typed.value, props.registered ?? [])));
+const canRun = (row: ListedSlash): boolean => !waiting.value || row.kind === 'registered';
+const runnable = computed(() => found.value.filter(canRun));
+const active = computed(() => runnable.value[highlight.value]);
+const greyed = computed(() => runnable.value.length < found.value.length);
 const needsArgument = (row: ListedSlash): boolean => row.kind === 'own' && 'argument' in row.command;
 const described = (row: ListedSlash): string => kvman.t(row.kind === 'own' ? `kvcoder.ui.slash.${row.command.name}` : row.command.description);
 watch(text, () => {
@@ -63,9 +68,9 @@ function pasted(event: ClipboardEvent): void {
 }
 
 function runCommand(): void {
-  const row = found.value[highlight.value];
+  const row = active.value;
   const argument = typed.value?.argument ?? '';
-  if (waiting.value || props.blocked === true || row === undefined || (needsArgument(row) && argument === '')) return;
+  if (props.blocked === true || row === undefined || (needsArgument(row) && argument === '')) return;
   if (row.kind === 'own') emit('command', row.command.name, argument);
   else emit('registered', row.command, argument);
   text.value = '';
@@ -81,16 +86,26 @@ function send(): void {
 }
 
 function move(step: number): void {
-  if (!waiting.value && found.value.length > 0) highlight.value = (highlight.value + step + found.value.length) % found.value.length;
+  if (runnable.value.length > 0) highlight.value = (highlight.value + step + runnable.value.length) % runnable.value.length;
+}
+
+function hover(row: ListedSlash): void {
+  if (canRun(row)) highlight.value = runnable.value.indexOf(row);
+}
+
+function choose(row: ListedSlash): void {
+  if (!canRun(row)) return;
+  hover(row);
+  runCommand();
 }
 
 function commandKey(event: KeyboardEvent): boolean {
   if (typed.value === undefined) return false;
-  const completed = found.value[highlight.value];
+  const completed = active.value;
   if (event.key === 'Escape') hidden.value = true;
   else if (event.key === 'ArrowDown') move(1);
   else if (event.key === 'ArrowUp') move(-1);
-  else if (event.key === 'Tab' && completed !== undefined && !waiting.value) text.value = `/${completed.command.name} `;
+  else if (event.key === 'Tab' && completed !== undefined) text.value = `/${completed.command.name} `;
   else return false;
   return true;
 }
@@ -107,8 +122,8 @@ function onKey(event: KeyboardEvent): void {
   <div class="kvc-composer">
     <div class="kvc-box">
       <div v-if="typed !== undefined && !hidden" class="kvc-slash" role="listbox" :aria-label="kvman.t('kvcoder.ui.slash.title')" data-test="slash-list">
-        <p v-if="waiting" class="kvc-muted kvc-none" data-test="slash-wait">{{ kvman.t('kvcoder.ui.slash.wait') }}</p>
-        <div v-for="(row, index) in found" :key="row.command.name" class="kvc-slash-row" role="option" :aria-disabled="waiting" :aria-selected="!waiting && index === highlight" :data-active="!waiting && index === highlight" :data-test="`slash-${row.command.name}`" @mousemove="highlight = index" @click="highlight = index; runCommand()">
+        <p v-if="greyed" class="kvc-muted kvc-none" data-test="slash-wait">{{ kvman.t('kvcoder.ui.slash.wait') }}</p>
+        <div v-for="row in found" :key="row.command.name" class="kvc-slash-row" role="option" :aria-disabled="!canRun(row)" :aria-selected="row === active" :data-active="row === active" :data-test="`slash-${row.command.name}`" @mousemove="hover(row)" @click="choose(row)">
           <span class="kvc-slash-name"><span class="kvc-mono" dir="ltr">/{{ row.command.name }}<template v-if="needsArgument(row)"> &lt;{{ kvman.t(`kvcoder.ui.slash.${row.command.name}.argument`) }}&gt;</template></span></span>
           <span class="kvc-muted">{{ described(row) }}</span>
         </div>

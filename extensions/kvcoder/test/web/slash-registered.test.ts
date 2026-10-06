@@ -75,21 +75,6 @@ describe('slash commands that extensions registered, in the send box (08 §8.7, 
     view.unmount();
   });
 
-  it('QA39-E21 with no chat yet a registered command is greyed, and nothing runs or is sent', async () => {
-    const fake = world([build]);
-    fake.handle('kernel.settings.list', () => [{ key: 'kvai.defaultModel', value: 'fake/m1' }]);
-    const start = await mounted(ConversationView, fake);
-    await box(start).setValue('/build');
-    expect(start.find('[data-test="slash-wait"]').text()).toBe('Send a first message to use commands');
-    expect(start.findAll('.kvc-slash-row').map((row) => [row.find('.kvc-mono').text(), row.attributes('aria-disabled'), row.attributes('data-active')])).toEqual([['/build-kvman', 'true', 'false']]);
-    await key(start, 'Enter');
-    await start.find('[data-test="slash-build-kvman"]').trigger('click');
-    await flushPromises();
-    expect(ran(fake)).toEqual([]);
-    expect(fake.calls.filter((call) => call.name.startsWith('kvcoder.session.'))).toEqual([]);
-    start.unmount();
-  });
-
   it('QA39-E22 while the send box is blocked a registered command does not run', async () => {
     const fake = createFakeKvman();
     const blocked = await mounted(MessageComposer, fake, { running: false, placeholder: 'Message', commands: 'run', registered: [todo], blocked: true });

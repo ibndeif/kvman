@@ -42,7 +42,7 @@ Building kvman starts with the person, never with the agent. In a chat's send bo
 - sets the chat's prompt section `guide` from `docs/guide.md`: what to ask the person, the rules below, and the method of the next parts. A section is in every prompt of the chat, so a summary of the chat never drops it;
 - adds the note "Building kvman is on for this chat", the first time.
 
-The send box then sends the text after the command as the person's message, or "I want to change this app." when there was none, and the agent's turn starts. Running `/build-kvman` again in the same chat renews the guide and adds no second note. Nothing switches building off: a new chat starts without it. `guide` is not a page of `docs get`.
+On the Chat page the send box creates the chat first, so `sessionId` is the new chat's. The send box then sends the text after the command as the person's message, or "I want to change this app." when there was none, and the agent's turn starts. Running `/build-kvman` again in the same chat renews the guide and adds no second note. Nothing switches building off: a new chat starts without it. `guide` is not a page of `docs get`.
 
 ## Talking with a person who isn't a developer
 

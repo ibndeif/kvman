@@ -16,7 +16,7 @@ The chat shows **Building kvman is on for this chat**, your request is sent as y
 
 - Until you do this, the agent in that chat has none of the tools on this page and knows nothing about changing kvman, so a chat about your own project stays about your project. Ask it to "turn on dark mode" there and it will say it can't.
 - It is on for that chat only, and stays on. A new chat starts without it.
-- The command needs an open chat: on the Chat page, send a first message, then type `/build-kvman`.
+- The command works in an open chat and on the Chat page, where it starts a new chat.
 
 ## You don't need to know kvman's words
 

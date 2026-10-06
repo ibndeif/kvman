@@ -86,7 +86,7 @@ Register a connector with `optIn: true`, the only value the field takes, when it
 - `command`: a public command of the caller (`VALIDATION_FAILED` otherwise). The send box calls it with `{ sessionId, argument }`, where `argument` is the text after the name, `''` when there is none.
 - With `message`, a command that succeeded is followed by the person's message: the argument, or with none the text of `message`. A command that failed shows its Problem and sends nothing.
 - `kvcoder.slash.unregister { name }` removes the caller's own; `kvcoder.slash.list` answers `[{ name, description, command, message?, owner }]`, by name.
-- With no chat open yet, the list is greyed and nothing runs.
+- On the Chat page, with no chat yet, a registered command runs in a new chat that the send box creates and opens; kvcoder's own six are greyed there.
 
 ## Built-in connectors
 

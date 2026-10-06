@@ -38,7 +38,8 @@ async function ended(sessionId: string) {
   return messages.map((message) => (message.kind === 'note' ? ['note', message.content['key']] : [message.kind, message.kind === 'user' ? message.content['content'] : undefined, message.source?.kind]));
 }
 
-const systemPrompt = (): string => String(requestSchema.parse(fake.requests().at(-1)?.body).messages.find((message) => message.role === 'system' || message.role === 'developer')?.content ?? '');
+const systemPrompts = (from = 0): string[] => fake.requests().slice(from).map((request) => String(requestSchema.parse(request.body).messages.find((message) => message.role === 'system' || message.role === 'developer')?.content ?? ''));
+const systemPrompt = (): string => systemPrompts().at(-1) ?? '';
 
 describe('/build-kvman in the send box (09 §9.4, ADR 0027)', () => {
   it('QA39-H1 /build-kvman is in the list, with what it does', async () => {
@@ -75,6 +76,24 @@ describe('/build-kvman in the send box (09 §9.4, ADR 0027)', () => {
     expect(await ended(sessionId)).toEqual([['note', 'kvbuilder.build.started'], ['user', 'add a notes page', 'user'], ['assistant', undefined, undefined]]);
     await page.locator('[data-test="user-message"]').getByText('add a notes page').waitFor({ timeout: childWait.timeout });
     expect(await page.getByText('I want to change this app.').count()).toBe(0);
+    await page.close();
+  });
+
+  it('QA40-H1 /build-kvman on the Chat page starts building kvman in a new chat', async () => {
+    const requestsBefore = fake.requests().length;
+    const page = await browser.newPage();
+    await page.goto(`${kvman.origin}/kvcoder/chat?workspace=${kvman.workspaceId}`);
+    await page.locator('[data-test="model-picker"]', { hasText: 'M1' }).waitFor({ timeout: childWait.timeout });
+    fake.reply(says('What should the app do?'));
+    await page.locator('[data-test="composer-text"]').fill('/build-kvman');
+    await page.locator('[data-test="slash-build-kvman"]').waitFor();
+    await page.keyboard.press('Enter');
+    await page.waitForURL(/\/kvcoder\/session\/[^/?]+/, { timeout: childWait.timeout });
+    const sessionId = new URL(page.url()).pathname.split('/').at(-1) ?? '';
+    expect(await ended(sessionId)).toEqual([['note', 'kvbuilder.build.started'], ['user', 'I want to change this app.', 'user'], ['assistant', undefined, undefined]]);
+    await page.locator('[data-test="note"]').getByText('Building kvman is on for this chat').waitFor({ timeout: childWait.timeout });
+    await page.locator('[data-test="user-message"]').getByText('I want to change this app.').waitFor({ timeout: childWait.timeout });
+    expect(systemPrompts(requestsBefore).filter((prompt) => prompt.includes('Build an extension, in this order:'))).toHaveLength(1);
     await page.close();
   });
 });
