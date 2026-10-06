@@ -26,13 +26,13 @@ describe("kvcoder's UI contributions (08 §8.7, ADR 0009, 104)", { timeout: 30_0
     expect(info?.queries.find((query) => query.name === 'kvcoder.ui.get')?.public).toBe(true);
   });
 
-  it("QA21-H10, QA22-H3, QA27-H5, and QA28-H7 the configuration names kvcoder's own settings in three cards, with the model row and the connectors list", async () => {
+  it("QA21-H10, QA22-H3, QA27-H5, QA28-H7, and QA33-H11 the configuration names kvcoder's own settings in three cards, with the model row and the connectors list", async () => {
     const { kernel } = await kvcoder.start();
     const answer = z.object({ configuration: z.object({ children: z.array(z.object({ title: z.string(), children: z.array(z.record(z.string(), z.json())) })) }) }).parse(await kernel.exec('kvcoder.ui.get', {}));
     const cards = answer.configuration.children.map((card) => [card.title, card.children.map((child) => child['key'] ?? child['component'] ?? child['text'])]);
     expect(cards).toEqual([
       ['kvcoder.config.agent', ['kvcoder.model', 'kvcoder.thinking', 'kvcoder.maxSteps', 'kvcoder.compactAt', 'kvcoder.compactKeep']],
-      ['kvcoder.config.chats', ['kvcoder.sessions.keep', 'kvcoder.welcome']],
+      ['kvcoder.config.chats', ['kvcoder.sessions.keep']],
       ['kvcoder.config.connectors', ['kvcoder.config.connectors.intro', 'kvcoder.connectors']],
     ]);
     expect(answer.configuration.children[0]?.children[0]).toEqual({ type: 'custom', component: 'kvcoder.model', props: {} });

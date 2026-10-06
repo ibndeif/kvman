@@ -1,14 +1,12 @@
 import { ProblemError, z, type Ctx } from '@kvman/sdk';
 import type {} from '@kvman/kvai';
 import { settingSchemas } from '../register-settings.ts';
-import { records, txRecords } from '../store/collections.ts';
-import { appendMessage } from '../turns/history.ts';
+import { records } from '../store/collections.ts';
 import { messagesFrom } from '../turns/message-blocks.ts';
 import { textOf } from '../turns/model-context.ts';
-import { deleteSessionTree, newSession } from './new-session.ts';
+import { deleteSessionTree } from './new-session.ts';
 
-// A session's life around its turns (plan 08 §8.1): the title kvai writes after the first turn, the welcome session of
-// a new workspace, and daily retention.
+// A session's life around its turns (plan 08 §8.1): the title kvai writes after the first turn, and daily retention.
 
 const titler = 'Write a title of 3 to 6 words for the conversation below, in the language it is written in. Reply with the title only.';
 
@@ -27,13 +25,6 @@ async function writeTitle(ctx: Ctx, sessionId: string): Promise<void> {
     if (!(error instanceof ProblemError)) throw error;
     ctx.log.info('A session title could not be written; the placeholder stays.', { code: error.problem.code });
   }
-}
-
-async function welcome(ctx: Ctx): Promise<void> {
-  const key = settingSchemas.welcome.parse(await ctx.settings.get('kvcoder.welcome'));
-  if (key === null) return;
-  const session = await newSession(ctx, { key: 'kvcoder.ui.welcomeChat' });
-  await ctx.store.transaction((tx) => appendMessage(txRecords(tx), session, { kind: 'note', content: { key } }));
 }
 
 async function prune(ctx: Ctx): Promise<void> {
@@ -62,9 +53,5 @@ export function registerLifecycle(ctx: Ctx): void {
       await prune(ctx);
       return {};
     },
-  });
-  ctx.registerHandler('kernel.workspace.opened', {
-    description: "Creates a new workspace's welcome session.",
-    handle: () => welcome(ctx),
   });
 }

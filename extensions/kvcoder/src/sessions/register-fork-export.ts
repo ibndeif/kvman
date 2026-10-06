@@ -17,9 +17,9 @@ async function sessionExport(ctx: Ctx, sessionId: string): Promise<Record<string
   return { session: sessionView(session), turns, messages };
 }
 
-/** An export file's name: the title with characters files can't hold replaced, or the id for a translated title. */
-export function exportName(title: string | { key: string }, sessionId: string): string {
-  if (typeof title !== 'string' || title === '') return `${sessionId}.json`;
+/** An export file's name: the title with characters files can't hold replaced, or the id for a chat with no title. */
+export function exportName(title: string, sessionId: string): string {
+  if (title === '') return `${sessionId}.json`;
   return `${title.replace(/[/\\:*?"<>|]/g, '-').slice(0, 100)}.json`;
 }
 

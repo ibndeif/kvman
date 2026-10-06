@@ -46,8 +46,8 @@ describe('fork and export (08 §8.6, ADR 0009, 103)', { timeout: 30_000 }, () =>
     ]);
   });
 
-  it('M2.4-E8 export writes the session, its turns and messages, and its subagents to a file named from the title', async () => {
-    const { kernel, fake } = await kvcoder.start({ settings: { 'kvcoder.welcome': 'kvcoder.welcome.default' } });
+  it('M2.4-E8 export writes the session, its turns and messages, and its subagents to a file named from the title, or from the id of a chat with no title', async () => {
+    const { kernel, fake } = await kvcoder.start();
     const sessionId = (await kernel.exec('kvcoder.session.create', { title: 'Plan: a/b "c" <d>*' })).id;
     await turns(kernel, fake, sessionId, 1);
     const { fileId } = await kernel.exec('kvcoder.session.export', { sessionId });
@@ -58,8 +58,8 @@ describe('fork and export (08 §8.6, ADR 0009, 103)', { timeout: 30_000 }, () =>
     expect(data.turns).toHaveLength(1);
     expect(data.messages.map((message) => message.kind)).toEqual(['user', 'assistant']);
     expect(data.subagents).toEqual([]);
-    const [welcome] = (await kernel.exec('kvcoder.session.list', { limit: 10 })).filter((session) => typeof session.title !== 'string');
-    const welcomeFile = await kernel.exec('kvcoder.session.export', { sessionId: String(welcome?.id) });
-    expect(fileSchema.parse(await kernel.exec('todo.file.read', { id: welcomeFile.fileId }, { as: '@test/todo' })).name).toBe(`${String(welcome?.id)}.json`);
+    const untitled = await kernel.exec('kvcoder.session.create', {});
+    const untitledFile = await kernel.exec('kvcoder.session.export', { sessionId: untitled.id });
+    expect(fileSchema.parse(await kernel.exec('todo.file.read', { id: untitledFile.fileId }, { as: '@test/todo' })).name).toBe(`${untitled.id}.json`);
   });
 });

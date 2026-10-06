@@ -20,9 +20,8 @@ export function fields(value: unknown): Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value) ? Object.fromEntries(Object.entries(value)) : {};
 }
 
-/** A session title: a string, or a translation key; an empty one is a new chat. */
-export function titleText(t: Translate, title: string | { key: string }): string {
-  if (typeof title !== 'string') return t(title.key);
+/** A session title; an empty one is a new chat. */
+export function titleText(t: Translate, title: string): string {
   return title === '' ? t('kvcoder.ui.newChat') : title;
 }
 

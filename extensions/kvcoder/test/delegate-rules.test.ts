@@ -32,7 +32,7 @@ describe("the rules of a worker's subagent (08 §8.5, ADR 0009, 102; ADR 0021)",
     expect(prompt).not.toContain('- fs: ');
     expect(prompt).not.toContain('- shell: ');
     expect(prompt).toContain('Connectors are the only way you act.');
-    expect(prompt).toContain('If another agent gave you your task, do that task and return the result');
+    expect(prompt).toContain("Do the task you were given and return the result; don't re-plan it or widen it");
     expect(prompt).toContain('## Connectors\n- ask: ');
   });
 

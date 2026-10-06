@@ -57,7 +57,7 @@ function rename(): void {
     <div ref="more" style="position: relative">
       <button type="button" class="kvc-button kvc-ghost" :aria-label="kvman.t('kvcoder.ui.menu')" :aria-expanded="menu" data-test="chat-menu" @click="menu = !menu; confirming = false"><Ellipsis :size="18" /></button>
       <div v-if="menu" class="kvc-menu" role="menu" data-test="chat-menu-items">
-        <button type="button" role="menuitem" class="kvc-button kvc-ghost" data-test="menu-rename" :disabled="props.working" @click="pick(() => (renaming = typeof props.session.title === 'string' ? props.session.title : ''))">{{ kvman.t('kvcoder.ui.rename') }}</button>
+        <button type="button" role="menuitem" class="kvc-button kvc-ghost" data-test="menu-rename" :disabled="props.working" @click="pick(() => (renaming = props.session.title))">{{ kvman.t('kvcoder.ui.rename') }}</button>
         <button type="button" role="menuitem" class="kvc-button kvc-ghost" data-test="menu-fork" :disabled="props.working" @click="pick(() => emit('action', 'fork', ''))">{{ kvman.t('kvcoder.ui.fork') }}</button>
         <button type="button" role="menuitem" class="kvc-button kvc-ghost" data-test="menu-export" :disabled="props.working" @click="pick(() => emit('action', 'export', ''))">{{ kvman.t('kvcoder.ui.export') }}</button>
         <button type="button" role="menuitem" class="kvc-button kvc-ghost" data-test="menu-compact" :disabled="props.working" @click="pick(() => emit('action', 'compact', ''))">{{ kvman.t('kvcoder.ui.compact') }}</button>

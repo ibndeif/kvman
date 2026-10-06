@@ -13,7 +13,7 @@ describe('the conversation shows its messages (08 §8.7)', () => {
       message('toolResult', { role: 'toolResult', toolCallId: 'c1', toolName: 'bash', content: [{ type: 'text', text: 'FAIL 1\n[exit code 1]' }], isError: true, details: { command: 'npm test', exitCode: 1, output: 'FAIL 1', durationMs: 4200 } }),
       answer('One test fails.', { turnId: 't1' }),
       message('notice', { code: 'STEP_FAILED', params: { code: 'kvai/RATE_LIMITED' } }),
-      message('note', { key: 'kvcoder.welcome.default' }),
+      message('note', { key: 'kvcoder.ui.newChat' }),
       message('summary', { text: 'We set up the notes page.', coversThroughSeq: 3 }),
       user('The background call `todo wait --async` finished:\n{}', { source: { kind: 'job', jobId: 'j9' } }),
     ];
@@ -36,7 +36,7 @@ describe('the conversation shows its messages (08 §8.7)', () => {
     expect(shell.find('[data-test="call-output"]').text()).toBe('FAIL 1');
     expect(wrapper.findAll('[data-test="turn-totals"]').map((node) => node.text())).toEqual(['12 s · 1.5K tokens · $0.02']);
     expect(wrapper.find('[data-test="notice"]').text()).toBe('The turn stopped: kvai.errors.RATE_LIMITED');
-    expect(wrapper.find('[data-test="note"]').text()).toContain('Welcome! This is a new workspace.');
+    expect(wrapper.find('[data-test="note"]').text()).toContain('New chat');
     expect(wrapper.find('[data-test="summary"]').text()).toContain('Earlier messages were summarized');
     expect(wrapper.find('[data-test="background-result"]').text()).toContain('Background job finished');
     await wrapper.find('[data-test="earlier"]').trigger('click');
@@ -46,13 +46,13 @@ describe('the conversation shows its messages (08 §8.7)', () => {
     wrapper.unmount();
   });
 
-  it("M2.4-H8 a note and a welcome title show in the person's language", async () => {
+  it("M2.4-H8 and QA33-E6 a note shows in the person's language, under a title that is shown as it is", async () => {
     const fake = createFakeKvman();
     fake.language.value = 'ar';
-    serve(fake, { found: session({ title: { key: 'kvcoder.ui.welcomeChat' } }), messages: [message('note', { key: 'kvcoder.welcome.default' })], omitted: 0, turns: [] });
+    serve(fake, { found: session({ title: 'Notes page' }), messages: [message('note', { key: 'kvcoder.ui.newChat' })], omitted: 0, turns: [] });
     const wrapper = await mounted(ConversationView, fake, { sessionId: 's1' });
-    expect(wrapper.find('[data-test="session-title"]').text()).toBe('مرحبًا بك في kvman للبرمجة');
-    expect(wrapper.find('[data-test="note"]').text()).toContain('أهلًا بك! هذه مساحة عمل جديدة.');
+    expect(wrapper.find('[data-test="session-title"]').text()).toBe('Notes page');
+    expect(wrapper.find('[data-test="note"]').text()).toContain('محادثة جديدة');
     wrapper.unmount();
   });
 });

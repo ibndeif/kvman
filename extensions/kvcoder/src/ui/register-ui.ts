@@ -14,7 +14,7 @@ const configuration = {
   direction: 'vertical',
   children: [
     { type: 'card', title: 'kvcoder.config.agent', children: [{ type: 'custom', component: 'kvcoder.model', props: {} }, ...settings(['kvcoder.thinking', 'kvcoder.maxSteps', 'kvcoder.compactAt', 'kvcoder.compactKeep'])] },
-    { type: 'card', title: 'kvcoder.config.chats', children: settings(['kvcoder.sessions.keep', 'kvcoder.welcome']) },
+    { type: 'card', title: 'kvcoder.config.chats', children: settings(['kvcoder.sessions.keep']) },
     {
       type: 'card',
       title: 'kvcoder.config.connectors',

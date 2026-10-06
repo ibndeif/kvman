@@ -4,7 +4,7 @@ Found by building a todo app in Arabic on a fresh home: the first message failed
 
 ## Happy path
 
-- **QA9-H1 No welcome by default.** *Given* a test kernel with the default settings, *then* Home has no session, and a workspace opened later has none. (`extensions/kvcoder/test/welcome.test.ts`)
+- **QA9-H1 No welcome by default.** Retired by QA 33 (ADR 0022, 1): QA33-H10 covers it.
 - **QA9-H2 The Chat page shows the model a new chat would use.** *Given* `kvai.defaultModel` `fake/m1` and `kvcoder.model` `null`, *then* the picker in the header reads `M1`, and the thinking select shows `kvcoder.thinking` (`medium` by default, `high` when set); *given* `kvcoder.model` `zed/z1`, *then* the picker reads `Z1`. (`extensions/kvcoder/test/web/chat-start.test.ts`)
 - **QA9-H3 A picked model and thinking level are set before the first message.** *Given* the person picks `Z1` and the thinking level `low` and sends, *then* the calls run in this order: `kvcoder.session.create`, `kvcoder.session.configure { sessionId, model: 'zed/z1', thinking: 'low' }`, `kvcoder.message.send`, and the page opens the new chat; *given* only the model was picked, `configure` carries only `model`. (`extensions/kvcoder/test/web/chat-start.test.ts`)
 - **QA9-H4 No pick, no configure.** *Given* the person sends without picking anything, *then* `kvcoder.session.configure` is not called. (`extensions/kvcoder/test/web/chat-start.test.ts`)
@@ -25,7 +25,7 @@ Found by building a todo app in Arabic on a fresh home: the first message failed
 
 ## Edge cases
 
-- **QA9-E1 A preset can still turn the welcome on.** *Given* `kvcoder.welcome` set to `kvcoder.welcome.default`, *then* Home and a new workspace each get one welcome session with its note, once, as before (M2.4-H8); `null` creates none (M2.4-E52). (`extensions/kvcoder/test/welcome.test.ts`)
+- **QA9-E1 A preset can still turn the welcome on.** Retired by QA 33 (ADR 0022, 1): the welcome is removed.
 - **QA9-E2 The header's picker lists ready providers' models and the shown model only.** *Given* providers `zed` (ready), `fake` (`noKey`), and `locked` (`needsKey`) and the default model `locked/l1`, *then* the groups are Fake, Locked (with `L1` only), and Zed AI. (`extensions/kvcoder/test/web/chat-start.test.ts`)
 - **QA9-E3 A failed load doesn't lock the page.** *Given* `kvai.provider.list` rejects, *then* an error toast shows and sending is on; while the lists load, sending is off. (`extensions/kvcoder/test/web/chat-start.test.ts`)
 - **QA9-E4 A failed `configure` stops the send.** *Given* `kvcoder.session.configure` rejects, *then* a toast shows and `kvcoder.message.send` is not called. (`extensions/kvcoder/test/web/chat-start.test.ts`)

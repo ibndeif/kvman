@@ -37,8 +37,8 @@ describe('the prompt (08 §8.2, §8.4)', { timeout: 30_000 }, () => {
     await kernel.exec('kvcoder.message.send', { sessionId: await newSession(kernel), text: 'go' });
     await kernel.clock.advance(0);
     const prompt = systemPrompt(fake, 0);
-    expect(prompt).toContain('5. Delegate when it helps. Hand a separate, self-contained part to a worker of the `delegate` connector when a specialist view or parallel work is worth it; its entry lists the workers and what each is for. Brief the worker with the goal, the facts it needs, its limits, and what to return.');
-    expect(prompt).toContain('what each step uses (a connector, a worker)');
+    expect(prompt).toContain('5. Delegate. Hand a separate, self-contained part to a worker of the `delegate` connector when a specialist view or parallel work is worth it; its entry lists the workers and what each is for. Several `delegate run` calls in one reply run in parallel. Brief the worker with the goal, the facts it needs, its limits, and what to return.');
+    expect(prompt).toContain('what each step uses (a connector from the list below, a worker)');
     expect(prompt).not.toContain('to a subagent');
   });
 

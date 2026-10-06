@@ -15,7 +15,7 @@ const tokens = z.number().int().nonnegative();
 export const usageSchema = z.object({ input: tokens, output: tokens, cacheRead: tokens, cacheWrite: tokens, cost: z.number().nonnegative() });
 
 /** A session title: a string, or a translation key. */
-export const titleSchema = z.union([z.string(), z.object({ key: z.string().min(1) })]);
+export const titleSchema = z.string();
 
 /** A session's status. */
 export const statusSchema = z.enum(['idle', 'running', 'waiting']);

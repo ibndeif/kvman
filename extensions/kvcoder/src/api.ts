@@ -1,4 +1,5 @@
 import type { Json } from '@kvman/sdk';
+import type { Worker } from './delegate/workers.ts';
 import type { Message, Session, Turn } from './sessions/session-view.ts';
 
 // kvcoder's public names for typed calls (plan 03 §3.2): a caller gets them after `import type {} from '@kvman/kvcoder'`.
@@ -72,7 +73,7 @@ declare module '@kvman/sdk' {
     'kvcoder.connectors': { name: string; description: string; binary: Binary }[];
     'kvcoder.connectors.disabled': string[];
     'kvcoder.mcp.servers': McpServer[];
+    'kvcoder.delegate.workers': Worker[];
     'kvcoder.sessions.keep': number;
-    'kvcoder.welcome': string | null;
   }
 }

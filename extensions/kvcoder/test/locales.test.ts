@@ -34,7 +34,7 @@ const dynamic = [
 ];
 
 describe("kvcoder's catalogs (02 §2.11)", { timeout: 30_000 }, () => {
-  it('M2.4-E61 en and ar have the same keys, covering descriptions, errors, notices, the welcome, the pages, and every UI text', async () => {
+  it('M2.4-E61 en and ar have the same keys, covering descriptions, errors, notices, the pages, and every UI text', async () => {
     const en = catalog('en');
     const ar = catalog('ar');
     expect(Object.keys(ar).sort()).toEqual(Object.keys(en).sort());
@@ -47,9 +47,6 @@ describe("kvcoder's catalogs (02 §2.11)", { timeout: 30_000 }, () => {
       ...(info?.settings ?? []).map((setting) => `${setting.key}.description`),
       ...codes.map((code) => `kvcoder.errors.${code}`),
       ...notices.map((code) => `kvcoder.notices.${code}`),
-      'kvcoder.welcome.title',
-      'kvcoder.ui.welcomeChat',
-      'kvcoder.welcome.default',
       'kvcoder.pages.chat',
       'kvcoder.pages.session',
       'kvcoder.pages.mcpSignIn',
@@ -77,10 +74,10 @@ describe("kvcoder's catalogs (02 §2.11)", { timeout: 30_000 }, () => {
     }
   });
 
-  it('QA20-E8 the welcome setting has its own title, apart from the welcome chat', () => {
-    expect(catalog('en')['kvcoder.welcome.title']).toBe('Welcome note');
-    for (const language of ['en', 'ar'] as const) expect(catalog(language)['kvcoder.ui.welcomeChat'], language).toBeTypeOf('string');
-    expect(catalog('en')['kvcoder.ui.welcomeChat']).toBe('Welcome to kvman Coder');
+  it('QA33-E4 the texts of the welcome are gone from both catalogs', () => {
+    for (const language of ['en', 'ar'] as const) {
+      for (const key of ['kvcoder.welcome.title', 'kvcoder.welcome.default', 'kvcoder.welcome.description', 'kvcoder.ui.welcomeChat']) expect(catalog(language)[key], `${language} ${key}`).toBeUndefined();
+    }
   });
 
   it("QA20-E9 every choice of kvcoder's settings has a name in both languages", () => {

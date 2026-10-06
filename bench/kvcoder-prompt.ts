@@ -32,7 +32,7 @@ async function measure(): Promise<Record<string, number>> {
     writeBenchExtension(folder);
     const kernel = await createTestKernel({
       extensions: [path.join(extensions, 'kvai'), path.join(extensions, 'kvwebui'), path.join(extensions, 'kvcoder'), folder],
-      settings: { 'kvwebui.home': 'kvcoder.chat', 'kvcoder.welcome': null },
+      settings: { 'kvwebui.home': 'kvcoder.chat' },
       logLevel: 'error',
     });
     try {

@@ -253,8 +253,8 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
   - Section caps.
   - `ask` and `subagent` (fresh or fork, the parent's model, connector subsets, parallel, `--async`).
   - Compaction, cancel, interrupted steps through a `kernel.job.failed` handler, and retention (`kvcoder.sessions.keep`, keyed schedule).
-  - Message, turn, and session records with usage and time totals, titles (strings or keys), `omitted` counts, JSON export, fork, `session.configure`, and image `fileIds`.
-  - Display-only notices and notes (`kvcoder.note.add`), and the welcome session at `kernel.workspace.opened` when `kvcoder.welcome` is set (it is `null` by default, ADR 0009, 193).
+  - Message, turn, and session records with usage and time totals, titles, `omitted` counts, JSON export, fork, `session.configure`, and image `fileIds`.
+  - Display-only notices and notes (`kvcoder.note.add`).
   - Session points (`kvcoder.handler.*`), with handler-job ids so their injections don't start turns.
   - The UI: the Chat and session pages, the `kvcoder.conversation` and `kvcoder.sessions` components, the question and shell-result cards, the status item, and the Prompt tab (ADR 0009, 104).
   - Settings.
@@ -266,7 +266,7 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
   - A denied shell call reaches the model as denied.
   - An `--async` connector result arrives as a message and starts a turn.
   - A global section reaches a second workspace's prompt.
-  - With `kvcoder.welcome` set, opening a new workspace creates the welcome session with its note, shown in the current language; by default it creates none; notes and notices never reach the model.
+  - A new workspace opens with no session; a note is shown in the current language; notes and notices never reach the model.
   - Compaction keeps the last 10 messages.
   - Cancel stops children and questions.
   - An image attachment reaches an image model, and fails `VALIDATION_FAILED` for a text-only one.

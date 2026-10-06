@@ -37,6 +37,22 @@ A turn is a chain of steps. Each step calls the model, which streams its answer.
 
 Long answers and results are stored as **artifacts**, not dumped into the chat.
 
+## How the agent works
+
+The agent of a chat is told to work as a lead engineer who owns the result: it decides, plans, and executes, and it scales the process to the task.
+
+- **A small task** (one file, or a few steps) is just done: no plan, no worker.
+- **A larger task** goes through six steps:
+  1. **Understand.** It reads your request, then the files, config, and tests, and the guides where there are any. It is told never to assume or invent a name, a path, an API, or a behavior.
+  2. **Clarify.** When the request is unclear, contradicts the code, or leaves out something that changes the result, it asks you, one question per card, with its recommended option first. It doesn't ask what it can find by looking.
+  3. **Plan.** It writes the plan as the artifact `plan`: the goal, the steps as a checklist, what each step uses (a connector or a worker), which steps can run at the same time, and how each is checked. For a large, ambiguous, or risky task it asks you to confirm the plan before it starts.
+  4. **Execute.** It works through the steps, running independent ones together, checks each with the project's own checks or tests, and ticks it off in the plan.
+  5. **Delegate.** It hands separate, self-contained parts to workers, several at once when they don't depend on each other, and checks what they return.
+  6. **Finish.** It treats the work as done when it is ready for production: it does what you asked, handles the errors and edge cases that will happen, follows the project's conventions, passes its checks and tests, and leaves nothing temporary behind.
+- **Always.** It decides from evidence (something it read, ran, or was told) and says what it checked and what it didn't. Before it tells you something works, it runs it or requests its address.
+
+These are instructions to a model, not guarantees: read the plan and the call cards, and stop the turn when it goes the wrong way. `/prompt` shows the exact text.
+
 ## Connectors: how the agent acts
 
 Everything the agent does goes through a **connector**: a named set of commands. It has no other way to touch your files or your machine. Built in:
@@ -101,7 +117,7 @@ When the agent needs a decision, it shows a question card: free text, a choice (
 
 ## Workers
 
-The agent can delegate a separate, self-contained part to a worker: another agent that does it in a hidden helper chat. You see its steps stream in its card, which names the worker, and its questions and approvals show up in your chat. A worker the agent left working in the background shows in the **Running** chip too.
+The agent can delegate a separate, self-contained part to a worker: another agent that does it in a hidden helper chat. You see its steps stream in its card, which names the worker, and its questions and approvals show up in your chat. A worker gets a shorter set of instructions than the chat's agent: do the one task it was given without re-planning or widening it, check it, and return what it did, the evidence, and what is left. It can't delegate further. A worker the agent left working in the background shows in the **Running** chip too.
 
 kvman comes with five workers: `general` for any separate task, and the specialists `ui-ux`, `architect`, `tester`, and `reviewer`, each with its own instructions. To manage them, open **Extensions → Coder**, and press the cog on the `delegate` row. There you turn a worker off (the agent then no longer sees it), edit its instructions, choose which connectors it may use, give it its own model or thinking level (or leave them the same as the chat), remove it, or add your own. Reset brings the five back.
 

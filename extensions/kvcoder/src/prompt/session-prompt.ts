@@ -56,6 +56,7 @@ export async function sessionTools(ctx: Ctx, session: Stored<SessionDoc>): Promi
       .map((connector) => ({ name: connector.name, description: connector.description, commands: connector.commands?.map((command) => command.name) ?? ['exec'] })),
   ];
   const built = buildPrompt({
+    role: session.parentId === null ? 'lead' : 'worker',
     workspacePath: ctx.job.workspace.path,
     platform: process.platform,
     shell: shell.kind,
