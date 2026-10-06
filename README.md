@@ -45,6 +45,6 @@ Eight packages are published to npm under MIT: `kvman`, `@kvman/sdk`, `@kvman/ke
 2. Set the version of the root, `packages/kernel`, and `packages/cli`, then run the gates and commit.
 3. Tag the commit `v<root version>` and push the tag.
 
-[`.github/workflows/release.yml`](.github/workflows/release.yml) runs on the tag: it stops unless the tag is `v<root version>`, runs `pnpm typecheck`, `pnpm lint`, `pnpm test`, and `pnpm build`, then `pnpm changeset publish`, which publishes each version that isn't on npm yet. It publishes through npm trusted publishing; only the first release needs a token, in the repository secret `NPM_TOKEN`.
+[`.github/workflows/release.yml`](.github/workflows/release.yml) runs on the tag: it stops unless the tag is `v<root version>`, runs `pnpm build`, `pnpm typecheck`, `pnpm lint`, and `pnpm test`, then `pnpm changeset publish`, which publishes each version that isn't on npm yet. It publishes through npm trusted publishing; only the first release needs a token, in the repository secret `NPM_TOKEN`.
 
 The rules for changing kvman are in [`docs/developers/contributing.md`](docs/developers/contributing.md) and `CLAUDE.md`. What each milestone built, and how it is tested, is in [`milestones/`](milestones/), and every decision is an ADR in [`plan/adr/`](plan/adr/).

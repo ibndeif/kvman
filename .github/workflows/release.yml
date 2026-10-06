@@ -27,11 +27,12 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm --filter @kvman/kvwebui exec playwright install --with-deps chromium
+      # A fresh checkout has no dist, and the end-to-end tests start kvman from the built extensions.
+      - run: pnpm build
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test
-      - run: pnpm build
       # Only the first release needs the token; after it, npm trusts this workflow and the secret is deleted.
       - name: Use the npm token when the secret is set
         env:

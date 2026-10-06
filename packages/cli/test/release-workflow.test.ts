@@ -22,7 +22,7 @@ describe('the release workflow (ADR 0026)', () => {
     expect(workflow).not.toMatch(/branches:|pull_request|schedule:|workflow_dispatch/);
     expect(workflow).toContain('permissions:\n  contents: read\n  id-token: write\n');
 
-    const steps = [tagCheck, 'pnpm install --frozen-lockfile', 'pnpm typecheck', 'pnpm lint', 'pnpm test', 'pnpm build', 'pnpm changeset publish'].map(position);
+    const steps = [tagCheck, 'pnpm install --frozen-lockfile', 'pnpm build', 'pnpm typecheck', 'pnpm lint', 'pnpm test', 'pnpm changeset publish'].map(position);
     expect(steps).toEqual([...steps].sort((left, right) => left - right));
   });
 
