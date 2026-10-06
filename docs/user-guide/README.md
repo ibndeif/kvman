@@ -9,7 +9,7 @@ Every page starts with who it is for, and ends with where to go next. All comman
 ### 1. Install
 
 ```sh
-npm i -g kvman
+npm i -g kvman --no-fund --loglevel=error
 ```
 
 You need Node.js 24. See [installing.md](installing.md) for details and platform notes.

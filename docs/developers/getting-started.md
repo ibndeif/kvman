@@ -7,7 +7,7 @@ You need Node.js 24 and npm.
 ## 1. Install kvman and its tools
 
 ```sh
-npm i -g kvman @kvman/testkit
+npm i -g kvman @kvman/testkit --no-fund --loglevel=error
 ```
 
 `kvman` is the app. `@kvman/testkit` puts the tools on your PATH: `kvman-new`, `kvman-check`, `kvman-preset`, `kvman-preview`, and `kvman-docs`. Every scaffolded project also depends on it, for its tests and `npm run check`.

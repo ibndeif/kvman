@@ -3,9 +3,11 @@
 An app that works like a small operating system for every kind of user: a kernel runs extensions, and a preset shapes them into the app a person uses. Every feature is an extension, including the web UI and the AI agent.
 
 ```
-npm i -g kvman
+npm i -g kvman --no-fund --loglevel=error
 kvman
 ```
+
+The two flags only keep npm quiet: it shows its progress, then `added … packages`. Without them npm also prints notices that come from a model client kvman includes; they are harmless.
 
 kvman runs in the foreground on `127.0.0.1:3737` and opens the folder you start it from as a workspace. It needs Node.js 24, on Linux, macOS, or Windows.
 

@@ -54,7 +54,7 @@
     "web": "dist/web"
   },
   "dependencies": {
-    "@earendil-works/pi-ai": "0.99.1",
+    "@earendil-works/pi-ai": "1.0.4",
     "vue": "3.5.43"
   }
 }

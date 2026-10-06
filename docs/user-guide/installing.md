@@ -11,8 +11,18 @@ This page is for installing kvman on your computer and learning its command line
 ## Install
 
 ```sh
-npm i -g kvman
+npm i -g kvman --no-fund --loglevel=error
 ```
+
+npm shows its progress while it works, then one line such as `added 283 packages in 24s`.
+
+The two flags only keep npm quiet. Without them the install works the same, and npm also prints three notices that you can ignore:
+
+- `packages are looking for funding`: npm's own notice.
+- `deprecated node-domexception`: a small package that Google's model client still uses.
+- `install-scripts … not yet covered by allowScripts`: npm didn't run the install scripts of `@google/genai` and `protobufjs`. kvman doesn't need them, so don't allow them as npm suggests.
+
+All three come from the Google model client inside the library that kvman's models use.
 
 The `kvman` package holds the bundled presets, and npm installs the kernel and the bundled extensions with it, so everything you need arrives in one install.
 
@@ -89,7 +99,7 @@ Press Ctrl+C once. kvman finishes running jobs where it can, stops the HTTP serv
 ## Updating
 
 ```sh
-npm i -g kvman@latest
+npm i -g kvman@latest --no-fund --loglevel=error
 ```
 
 Your home folder is kept as-is; settings, secrets, and workspaces carry over. When a new extension version appears in your preset, kvman asks for your trust at the next start (`--yes` accepts without asking).

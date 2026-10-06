@@ -25,7 +25,7 @@ kvman --help | --version
 - **Exit codes.** A clean stop exits 0; a failed start exits 1; a second Ctrl+C or SIGTERM exits 130 at once (ADR 0009, 50).
 - **Platforms:** Linux, macOS, and Windows, natively.
 - There is no other `kvman` subcommand in this phase. Everything else goes through the web UI or the HTTP API (§4).
-- **Installing.** `npm i -g kvman`. The `kvman` package holds the CLI and the bundled presets, and depends on the kernel and the bundled extensions, so npm installs them with it (ADR 0026).
+- **Installing.** `npm i -g kvman`; the documentation gives it as `npm i -g kvman --no-fund --loglevel=error`, which shows npm's progress and none of its notices (ADR 0026, 12). The `kvman` package holds the CLI and the bundled presets, and depends on the kernel and the bundled extensions, so npm installs them with it (ADR 0026).
 
 ## 1.3 The home folder
 

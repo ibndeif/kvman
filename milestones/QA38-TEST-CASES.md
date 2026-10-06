@@ -22,3 +22,9 @@ Eight packages are published under MIT. `kvman` depends on the four extensions, 
 - **QA38-E4 A tag that isn't the root version stops the release.** *Then* the workflow's first step after the checkout compares the tag with `v<root version>`, and it runs before the install and the publish. `packages/cli/test/release-workflow.test.ts`
 - **QA38-E5 The token is never written into the repository.** *Then* the workflow reads the token only from `secrets.NPM_TOKEN`, and no `.npmrc` in the repository holds an `_authToken`. `packages/cli/test/release-workflow.test.ts`
 - **QA38-E6 Every action is pinned to a commit.** *Then* each `uses:` line of the workflow names a 40-character commit, with its version as a comment, so a moved tag can't change what runs with the right to publish. `packages/cli/test/release-workflow.test.ts`
+
+## After the first release
+
+- **QA38-H8 The documented install is the quiet command.** *Then* the root README, the `kvman` package's README, the user guide's first page and its install page (the install and the update), and the developers' getting-started page give the install with `--no-fund --loglevel=error`; the install page names the three notices and says not to allow the scripts. `packages/cli/test/install-command.test.ts`
+- **QA38-H9 kvai uses pi-ai 1.0.4.** *Then* kvai's `dependencies` pin `@earendil-works/pi-ai` at `1.0.4`, and the built-in list still has `anthropic/claude-sonnet-5-5` (M2.1's own check). `packages/cli/test/install-command.test.ts`
+- **QA38-E7 No page gives the install without the flags.** *Then* every `npm i -g kvman` line in the README files and in `docs/` ends with the two flags. `packages/cli/test/install-command.test.ts`

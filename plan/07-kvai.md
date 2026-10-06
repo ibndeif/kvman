@@ -2,7 +2,7 @@
 
 kvai gives every extension LLM calls through providers and models. It exposes nothing else. Agents, tools, context, harnesses, and loops belong to the extensions that need them.
 
-It depends on `@earendil-works/pi-ai` (0.99.1), pinned exactly (ADR 0009, 51).
+It depends on `@earendil-works/pi-ai` (1.0.4), pinned exactly (ADR 0009, 51; ADR 0026, 11).
 
 ## 7.1 The call: `kvai.complete`
 

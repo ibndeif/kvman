@@ -3,7 +3,7 @@
 An app that works like a small operating system for every kind of user: a kernel runs extensions, and a preset shapes them into the app a person uses. Every feature is an extension, including the web UI and the AI agent.
 
 ```
-npm i -g kvman
+npm i -g kvman --no-fund --loglevel=error
 kvman [--mode web] [--preset coder] [--home <dir>] [--port <n>] [--yes] [--no-open] [--log-level <level>]
 ```
 
