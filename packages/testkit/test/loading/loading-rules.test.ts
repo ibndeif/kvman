@@ -26,7 +26,7 @@ describe('loading rules (02 §2.9)', () => {
   });
 
   it('M1.4-E3 an sdk peer range the kernel does not satisfy, or no sdk peer', async () => {
-    await startFails([{ ...noop('a'), sdkRange: '^9.0.0' }], /@test\/a needs @kvman\/sdk \^9\.0\.0, but this kvman has 0\.1\.0/);
+    await startFails([{ ...noop('a'), sdkRange: '^9.0.0' }], /@test\/a needs @kvman\/sdk \^9\.0\.0, but this kvman has \d+\.\d+\.\d+\./);
     await startFails([{ ...noop('a'), sdkRange: '' }], /@test\/a: its manifest is invalid \(peerDependencies/);
   });
 
