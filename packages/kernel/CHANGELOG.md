@@ -1,5 +1,11 @@
 # @kvman/kernel
 
+## 0.3.1
+
+### Patch Changes
+
+- The kernel follows the root version. Its own behavior is unchanged.
+
 ## 0.3.0
 
 ### Minor Changes

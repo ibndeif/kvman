@@ -1,5 +1,13 @@
 # @kvman/kvcoder
 
+## 0.1.4
+
+### Patch Changes
+
+- d2e007d: Following ADR 0032, a person's message reaches the model with the date and time it was sent, taken from its stored time so the provider's prompt cache still matches; a summary is asked for with the step's own request, so the older messages are read from the cache, and one with no text adds a `SUMMARY_FAILED` notice with `kvcoder/SUMMARY_EMPTY`; and the chat page no longer scrolls past a conversation that has an answered question.
+- bc49671: Following ADR 0034, a chat uses fewer tokens and its page is lighter: `fs edit` returns the lines around what it changed, `fs read` says when a file is unchanged since an earlier read still in the chat, a connector command's JSON output has no indentation (the call card indents it for the person), `fs search` groups its matches by file, and the lead is told to brief a worker with what it already knows. A stored tool result keeps its output once. `kvcoder.message.list` takes `afterSeq`, so the conversation fetches only new messages; the new query `kvcoder.context.get` feeds a context line in the chat's header; a conversation that can't load says why and offers the export; and a summary's 10% minimum counts what is sent.
+- 19fdbf0: Following ADR 0033, `kvcoder.message.list` has a 32 MiB output limit and returns the newest messages that fit in it, so a long chat no longer fails `TOO_LARGE` when it opens; and compaction measures the prompt by the provider's own token count (the last call's input, cached tokens, and output, plus what was added since) in place of the stored content's characters / 4, which summarized chats at less than half of `kvcoder.compactAt`.
+
 ## 0.1.3
 
 ### Patch Changes
