@@ -66,6 +66,8 @@
   "kvcoder.ui.denyAll": "Deny all",
   "kvcoder.ui.backgroundFinished": "Background job finished",
   "kvcoder.ui.helperFinished": "A helper finished",
+  "kvcoder.ui.backgroundFinishedNamed": "Background job finished: {name}",
+  "kvcoder.ui.helperFinishedNamed": "A helper finished: {name}",
   "kvcoder.ui.toModel": "kvcoder told the model",
   "kvcoder.ui.attachment": "Attached image",
   "kvcoder.ui.attachedFiles": "Attached files:",

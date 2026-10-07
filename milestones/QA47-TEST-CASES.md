@@ -10,6 +10,7 @@ Asked: the text of a chat's page, "to identify issues and fix them".
 - **QA47-H4 A refused edit says nothing was written.** *Then* every refusal of `applyEdits` ends with `Nothing was written.`, and the file is as it was. `extensions/kvcoder/test/unit/edit-text.test.ts`
 - **QA47-H5 The header is one line.** *Given* a chat in a window 1280 px wide, *then* the header is at most 48 px high, and its title and its numbers start on the same row. `extensions/kvcoder/test/e2e/chat-header.test.ts`
 - **QA47-H6 The header shows the time, the cost, and how full the memory is.** *Then* the header's numbers read `48 s · $0.02 · Memory 43% full`; the first's tooltip is `Turns: 1 · 1.5K tokens used`, and the memory's is `The model now holds 116.3K of its 272K tokens. Older messages are summarized at 80%.`; in Arabic the memory reads `الذاكرة ممتلئة 43%`; and a turn's line reads `12 s · $0.02` with `1.5K tokens used` as its tooltip. `extensions/kvcoder/test/web/context-line.test.ts` and `extensions/kvcoder/test/web/conversation-messages.test.ts`
+- **QA47-H7 A finished background job's card has its name.** *Given* the result of a background call described `node test.js`, and a subagent's result described `Review the plan`, *then* the first card's title is `Background job finished: node test.js` and the second's `A helper finished: Review the plan`; in Arabic the first is `انتهت المهمة الخلفية:` with the name. `extensions/kvcoder/test/web/turn-totals.test.ts`
 
 ## Edge cases
 
@@ -17,3 +18,4 @@ Asked: the text of a chat's page, "to identify issues and fix them".
 - **QA47-E2 Only the line at the end is replaced.** *Then* a message that says `Attached files:` in its own text, with no list after it at its end, is shown as it is. `extensions/kvcoder/test/web/turn-totals.test.ts`
 - **QA47-E3 A narrow window wraps the numbers.** *Given* a window 420 px wide, *then* the numbers are under the title, and nothing in the header is wider than the conversation. `extensions/kvcoder/test/e2e/chat-header.test.ts`
 - **QA47-E4 A long word doesn't make the list scroll sideways.** *Given* a chat whose message has a 300-character word with no spaces, in a window 700 px wide, *then* the message list's `scrollWidth` equals its `clientWidth`, and the message's bubble is inside the list. `extensions/kvcoder/test/e2e/chat-header.test.ts`
+- **QA47-E5 A background message with no name keeps the plain title.** *Then* a job's message that doesn't start with the background line shows `Background job finished`. `extensions/kvcoder/test/web/turn-totals.test.ts`

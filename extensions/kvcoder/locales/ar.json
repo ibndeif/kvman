@@ -66,6 +66,8 @@
   "kvcoder.ui.denyAll": "رفض الكل",
   "kvcoder.ui.backgroundFinished": "انتهت مهمة خلفية",
   "kvcoder.ui.helperFinished": "أنهى وكيل مساعد عمله",
+  "kvcoder.ui.backgroundFinishedNamed": "انتهت المهمة الخلفية: {name}",
+  "kvcoder.ui.helperFinishedNamed": "أنهى الوكيل المساعد عمله: {name}",
   "kvcoder.ui.toModel": "رسالة من kvcoder إلى النموذج",
   "kvcoder.ui.attachment": "صورة مرفقة",
   "kvcoder.ui.attachedFiles": "الملفات المرفقة:",

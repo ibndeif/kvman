@@ -3,7 +3,7 @@ import { BellRing, Info, NotebookText, ScrollText } from '@lucide/vue';
 import { computed } from 'vue';
 import type { Message } from '../../src/index.ts';
 import { failureReason, fields, isolateValue, problemKey, stringValues, useKvman } from './kvman.ts';
-import { answeredQuestion, artifactOf, isBackground, isKvcoderHint, resultCard, shownUserText, textOf, thinkingOf } from './message-parts.ts';
+import { answeredQuestion, artifactOf, backgroundName, isBackground, isKvcoderHint, resultCard, shownUserText, textOf, thinkingOf } from './message-parts.ts';
 import AnsweredCard from './AnsweredCard.vue';
 import ArtifactCard from './ArtifactCard.vue';
 import CallCard from './CallCard.vue';
@@ -18,6 +18,12 @@ const text = computed(() => textOf(props.message.content['content']));
 const thinking = computed(() => thinkingOf(props.message));
 const card = computed(() => resultCard(props.message, props.calls));
 const artifact = computed(() => artifactOf(props.message));
+// A finished background job's card says which one it was (ADR 0035, 7).
+const finished = computed(() => {
+  const key = props.message.source?.kind === 'subagent' ? 'kvcoder.ui.helperFinished' : 'kvcoder.ui.backgroundFinished';
+  const name = backgroundName(props.message);
+  return name === undefined ? kvman.t(key) : kvman.t(`${key}Named`, { name: isolateValue(name) });
+});
 const answered = computed(() => answeredQuestion(props.message, props.calls));
 const notice = computed(() => {
   const params = fields(props.message.content['params']);
@@ -39,7 +45,7 @@ const markdown = (body: string) => ({ type: 'markdown' as const, text: 'kvcoder.
 <template>
   <div v-if="isBackground(props.message)" class="kvc-card" data-test="background-result">
     <details>
-      <summary class="kvc-card-row"><BellRing :size="16" aria-hidden="true" />{{ kvman.t(props.message.source?.kind === 'subagent' ? 'kvcoder.ui.helperFinished' : 'kvcoder.ui.backgroundFinished') }}</summary>
+      <summary class="kvc-card-row"><BellRing :size="16" aria-hidden="true" /><span data-test="background-title">{{ finished }}</span></summary>
       <pre class="kvc-output">{{ text }}</pre>
     </details>
   </div>

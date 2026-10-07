@@ -125,3 +125,12 @@ const attachedFiles = /\n\nAttached files:\n((?:- .+\n?)+)$/;
 export function shownUserText(text: string, label: string): string {
   return text.replace(attachedFiles, (_whole, files: string) => `\n\n${label}\n${files}`);
 }
+
+// A background result's text, as kvcoder writes it for the model (`backgroundText`): the call's own words come first.
+const backgroundCall = /^The background call `([\s\S]*?)` \(job [^)\n]+\) finished:\n/;
+
+/** What a finished background job or helper was called, for its card's title (ADR 0035, 7); nothing for a message with no such first line. */
+export function backgroundName(message: Message): string | undefined {
+  const name = backgroundCall.exec(textOf(message.content['content']))?.[1]?.trim();
+  return name === undefined || name === '' ? undefined : name;
+}
