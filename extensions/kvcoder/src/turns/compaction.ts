@@ -6,8 +6,9 @@ import { txRecords } from '../store/collections.ts';
 import { appendMessage, appendNotice } from './history.ts';
 import { modelInfo } from './model-info.ts';
 import { modelMessages, sentHistory, textOf, type History } from './model-context.ts';
+import { sentCharacters } from './sent-size.ts';
 
-// Compaction (plan 08 §8.1): above `kvcoder.compactAt` of the model's window (characters / 4), kvai summarizes the
+// Compaction (plan 08 §8.1): above `kvcoder.compactAt` of the model's window, by the provider's own count, kvai summarizes the
 // older messages, the last `kvcoder.compactKeep` stay whole (ADR 0020, 1), and a summary message is stored. The request
 // is a step's own, with the instruction as its last message, so the older messages are read from the provider's cache
 // (ADR 0032, 2). A step marks it in its stream with `compaction` chunks (ADR 0009, 99); a failed summary, or one with
@@ -21,7 +22,20 @@ const instruction =
 
 const sizeOf = (messages: readonly Stored<MessageDoc>[]): number => messages.reduce((total, message) => total + JSON.stringify(message.content).length, 0) / 4;
 
-const estimate = (prompt: string, history: History): number => (prompt.length + JSON.stringify(history.summary?.content ?? '').length) / 4 + sizeOf(history.messages);
+const sentTokens = (messages: readonly Stored<MessageDoc>[]): number => messages.reduce((total, message) => total + sentCharacters(message), 0) / 4;
+
+// The whole prompt of a model call, as its provider counted it; 0 when the provider reported none.
+const reportedPrompt = (message: Stored<MessageDoc>): number => (message.usage === null ? 0 : message.usage.input + message.usage.cacheRead + message.usage.cacheWrite);
+
+// The prompt's size in tokens (ADR 0033, 4 and 5): the provider's count at the chat's last call, with what was added
+// since. A call from before the latest summary held the messages the summary replaced, so it doesn't count.
+function promptTokens(prompt: string, history: History): number {
+  const summarizedAt = history.summary?.seq ?? -1;
+  const index = history.messages.findLastIndex((message) => message.seq > summarizedAt && reportedPrompt(message) > 0);
+  const counted = history.messages[index];
+  if (counted === undefined) return (prompt.length + String(history.summary?.content['text'] ?? '').length) / 4 + sentTokens(history.messages);
+  return reportedPrompt(counted) + (counted.usage?.output ?? 0) + sentTokens(history.messages.slice(index + 1));
+}
 
 /** `prompt` and `tools` are the step's own: its system prompt and the connectors its `run` tool names. */
 export type CompactOptions = { force: boolean; compactAt: number; keep: number; prompt: string; tools: readonly string[]; turnId: string | null };
@@ -35,7 +49,7 @@ async function summaryFailed(ctx: Ctx, session: Stored<SessionDoc>, code: string
 export async function compact(ctx: Ctx, session: Stored<SessionDoc>, options: CompactOptions): Promise<boolean> {
   const history = await sentHistory(ctx, session.id, session.nextSeq);
   const info = await modelInfo(ctx, session.model);
-  if (!options.force && (info === undefined || estimate(options.prompt, history) <= info.contextWindow * options.compactAt)) return false;
+  if (!options.force && (info === undefined || promptTokens(options.prompt, history) <= info.contextWindow * options.compactAt)) return false;
   const older = history.messages.slice(0, Math.max(history.messages.length - options.keep, 0));
   const last = older.at(-1);
   if (last === undefined || (info !== undefined && sizeOf(older) < info.contextWindow * minimumShare)) return false;

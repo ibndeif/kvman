@@ -5,6 +5,7 @@ import { messageSchema, messageView, queuedView } from '../sessions/session-view
 import { records, txRecords } from '../store/collections.ts';
 import { appendMessage } from '../turns/history.ts';
 import { newestMessages } from '../turns/message-blocks.ts';
+import { jsonBytes, listOutputBytes, newestThatFit } from './fitting-messages.ts';
 import { receiveMessage } from './receive-message.ts';
 
 // Messages (plan 08 §8.6): the person's `message.send`, extensions' `message.inject`, display-only notes, and the list.
@@ -54,12 +55,15 @@ export function registerMessages(ctx: Ctx): void {
     input: z.object({ sessionId: z.string(), limit: z.number().int().positive().max(1000) }),
     output: z.object({ messages: z.array(messageSchema), omitted: z.number().int() }),
     public: true,
+    maxOutputBytes: listOutputBytes,
     handle: async ({ sessionId, limit }) => {
       const session = await findSession(ctx, sessionId);
       const store = records(ctx.store);
-      const newest = await newestMessages(ctx, sessionId, limit, session.nextSeq);
-      const queued = await store.queued.find({ sessionId }, { limit: 1000 });
-      return { messages: [...newest.map(messageView), ...queued.map(queuedView)], omitted: (await store.messages.count({ sessionId })) - newest.length };
+      const queued = (await store.queued.find({ sessionId }, { limit: 1000 })).map(queuedView);
+      const stored = await store.messages.count({ sessionId });
+      const newest = (await newestMessages(ctx, sessionId, limit, session.nextSeq)).map(messageView);
+      const fitting = newestThatFit(newest, listOutputBytes - jsonBytes({ messages: queued, omitted: stored }));
+      return { messages: [...fitting, ...queued], omitted: stored - fitting.length };
     },
   });
 }
