@@ -6,7 +6,8 @@ import type { LogLevel } from '@kvman/kernel';
 
 // kvman's flags (plan 01 §1.2). `--mode` and `--preset` stay undefined when not given, since a hand-over compares only
 // the flags given (ADR 0009, 44); `--port 0` asks the OS for a free port (ADR 0009, 46). `uninstall`, as the first
-// word, is the one subcommand, with its own flags (ADR 0031, 4).
+// word, is the one subcommand, with its own flags (ADR 0031, 4). `--pipe` is for a program that starts kvman (plan 14
+// §14.2).
 
 export type RunArguments = {
   kind: 'run';
@@ -17,6 +18,7 @@ export type RunArguments = {
   yes: boolean;
   open: boolean;
   logLevel: LogLevel;
+  pipe: boolean;
 };
 
 export type UninstallArguments = { kind: 'uninstall'; home: string | undefined; yes: boolean; data: 'ask' | 'keep' | 'delete' };
@@ -24,7 +26,7 @@ export type UninstallArguments = { kind: 'uninstall'; home: string | undefined; 
 export type CliArguments = { kind: 'help' } | { kind: 'version' } | RunArguments | UninstallArguments;
 
 export const usage = `Usage:
-  kvman [--mode web] [--preset coder] [--home <dir>] [--port <n>] [--yes] [--no-open] [--log-level <level>]
+  kvman [--mode web] [--preset coder] [--home <dir>] [--port <n>] [--yes] [--no-open] [--log-level <level>] [--pipe]
   kvman uninstall [--home <dir>] [--yes] [--keep-data | --delete-data]
   kvman --help | --version
 
@@ -36,6 +38,7 @@ Options:
   --yes                 Accept new extension versions without asking.
   --no-open             Don't open the browser.
   --log-level <level>   debug, info (the default), warn, or error.
+  --pipe                For a program that starts kvman: JSON lines on stdout, the trust answer on stdin, and a stop when stdin closes.
   --help                Show this help.
   --version             Show kvman's version.
 
@@ -54,6 +57,7 @@ const flags = {
   yes: { type: 'boolean' },
   'no-open': { type: 'boolean' },
   'log-level': { type: 'string' },
+  pipe: { type: 'boolean' },
   help: { type: 'boolean' },
   version: { type: 'boolean' },
 } as const;
@@ -123,6 +127,7 @@ export function parseArguments(argv: readonly string[]): CliArguments {
     yes: values.yes === true,
     open: values['no-open'] !== true,
     logLevel: parsed(logLevelSchema, values['log-level']),
+    pipe: values.pipe === true,
   };
 }
 

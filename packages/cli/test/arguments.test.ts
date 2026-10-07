@@ -41,7 +41,7 @@ describe('arguments (01 §1.2, ADR 0009, 46)', () => {
 
   it('M1.8-E4 --port 0 is a port, and without --port none is given', () => {
     expect(parseArguments(['--port', '0'])).toMatchObject({ port: 0 });
-    expect(parseArguments([])).toEqual({ kind: 'run', mode: undefined, preset: undefined, home: undefined, port: undefined, yes: false, open: true, logLevel: 'info' });
+    expect(parseArguments([])).toEqual({ kind: 'run', mode: undefined, preset: undefined, home: undefined, port: undefined, yes: false, open: true, logLevel: 'info', pipe: false });
     expect(parseArguments(['--mode', 'web', '--preset', 'dev', '--yes', '--no-open', '--log-level', 'warn', '--port', '3738'])).toEqual({
       kind: 'run',
       mode: 'web',
@@ -51,6 +51,18 @@ describe('arguments (01 §1.2, ADR 0009, 46)', () => {
       yes: true,
       open: false,
       logLevel: 'warn',
+      pipe: false,
     });
+  });
+
+  it('M3.1-H10 kvman uninstall --pipe fails VALIDATION_FAILED', () => {
+    expect(() => parseArguments(['uninstall', '--pipe'])).toThrow(invalid);
+  });
+
+  it('M3.1-E1 --pipe is a flag of a run that leaves the browser alone, and the help has it', () => {
+    expect(parseArguments(['--pipe'])).toMatchObject({ kind: 'run', pipe: true, open: true });
+    expect(parseArguments([])).toMatchObject({ kind: 'run', pipe: false });
+    expect(usage).toContain(' [--log-level <level>] [--pipe]\n  kvman uninstall');
+    expect(usage).toContain('\n  --pipe                For a program that starts kvman: JSON lines on stdout, the trust answer on stdin, and a stop when stdin closes.\n');
   });
 });

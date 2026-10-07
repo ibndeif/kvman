@@ -10,3 +10,4 @@ export type { Catalog } from './localization/catalogs.ts';
 export { startHttp, type HttpServer } from './http/http-server.ts';
 export type { ExtensionVersion, TrustDecision } from './extensions/trust.ts';
 export { kernelVersion } from './kernel-version.ts';
+export { storedLanguage } from './settings/stored-language.ts';

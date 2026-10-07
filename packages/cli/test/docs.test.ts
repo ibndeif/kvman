@@ -116,6 +116,13 @@ describe('the documentation (QA17-H22 to H24, E24)', () => {
     expect(installing).not.toContain('There is no other `kvman` subcommand');
   });
 
+  it('M3.1-E13 the install page and the README have --pipe', () => {
+    const installing = read(path.join(userGuide, 'installing.md'));
+    expect(installing).toContain(usage);
+    expect(installing).toContain('\n| `--pipe` | For a program that starts kvman, such as the desktop app:');
+    expect(read(path.join(root, 'README.md'))).toContain(' [--log-level <level>] [--pipe]\n');
+  });
+
   it('QA17-E24 no page names the old extension or a dev preset outside the two migration notes', () => {
     const allowed = [path.join(developers, 'publishing.md'), path.join(userGuide, 'troubleshooting.md')];
     const oldName = new RegExp('kv' + 'dev', 'i');

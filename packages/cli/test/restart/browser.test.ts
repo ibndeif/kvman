@@ -24,7 +24,7 @@ describe('the browser and a restart (01 §1.2, ADR 0024, 1)', { timeout: 120_000
     const output = new PassThrough();
     let printed = '';
     output.setEncoding('utf8').on('data', (text: string) => (printed += text));
-    const args: RunArguments = { kind: 'run', mode: undefined, preset: world.appPreset(), home: world.home, port: 0, yes: true, open: true, logLevel: 'error' };
+    const args: RunArguments = { kind: 'run', mode: undefined, preset: world.appPreset(), home: world.home, port: 0, yes: true, open: true, logLevel: 'error', pipe: false };
     const running = runKvman(args, {
       variables: {},
       startFolder: world.start,

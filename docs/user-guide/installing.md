@@ -42,7 +42,7 @@ which prints the usage text:
 
 ```text
 Usage:
-  kvman [--mode web] [--preset coder] [--home <dir>] [--port <n>] [--yes] [--no-open] [--log-level <level>]
+  kvman [--mode web] [--preset coder] [--home <dir>] [--port <n>] [--yes] [--no-open] [--log-level <level>] [--pipe]
   kvman uninstall [--home <dir>] [--yes] [--keep-data | --delete-data]
   kvman --help | --version
 
@@ -54,6 +54,7 @@ Options:
   --yes                 Accept new extension versions without asking.
   --no-open             Don't open the browser.
   --log-level <level>   debug, info (the default), warn, or error.
+  --pipe                For a program that starts kvman: JSON lines on stdout, the trust answer on stdin, and a stop when stdin closes.
   --help                Show this help.
   --version             Show kvman's version.
 
@@ -77,6 +78,7 @@ Each flag changes one thing about how kvman starts. You can combine them: `kvman
 | `--yes` | Accept new extension versions without asking. | `kvman --yes` |
 | `--no-open` | Don't open the browser. kvman still prints the URL. | `kvman --no-open` |
 | `--log-level <level>` | How much to log: `debug`, `info` (the default), `warn`, or `error`. | `kvman --log-level debug` |
+| `--pipe` | For a program that starts kvman, such as the desktop app: kvman writes JSON lines instead of its terminal text, and stops when its input closes. You don't need it in a terminal. | `kvman --pipe --no-open` |
 | `--help` | Show the help text and exit. | `kvman --help` |
 | `--version` | Show kvman's version and exit. | `kvman --version` |
 
