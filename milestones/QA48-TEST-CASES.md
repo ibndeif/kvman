@@ -22,6 +22,7 @@ Every scenario is in `extensions/kvcoder/test/`.
 - **QA48-H14 A finished background job's card shows how long it ran.** *Given* a job's result whose run started at 09:00:00 and ended at 09:01:09, and a subagent's that took 36 s, both in the chat's job list, *then* the first card's row ends with `1 min 9 s` and the second's with `36 s`. `web/background-time.test.ts`
 - **QA48-H15 The panel's titles stay on one line.** *Given* a chat with five artifacts with long Arabic titles in a window 1280 px wide, *then* every title's tab is one line high (under 40 px), the header is under 96 px high, and the shown artifact's tab is inside the row's visible part; a title longer than 14 rem is cut and has its whole text as tooltip. `e2e/artifact-panel.test.ts`
 - **QA48-H16 A summary keeps a reply with its results.** *Given* a chat whose last turn's reply made three calls, and `kvcoder.compactKeep` 3, so the count alone would end the summary on the first result, *when* the chat is summarized, *then* the summary covers through the message before that reply, and the next step's request has the reply before its three results. `compaction-keep.test.ts`
+- **QA48-H17 A long output shows its start and its end.** *Given* a `shell exec` whose output has 40 lines, *then* the opened card shows lines 1 to 12, a line `⋯`, and lines 36 to 40, with `Show all 40 lines`; pressed, all 40 with no dots; an output of 17 lines shows whole with no button. `web/call-views.test.ts`
 
 ## Edge cases
 

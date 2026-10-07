@@ -39,7 +39,7 @@ describe('connectors that are turned off (08 §8.4, ADR 0014, 7)', { timeout: 30
   it("QA21-E7 a subagent gets no connector that is off, not even ask, and its worker can't give it one", async () => {
     const { kernel, fake } = await kvcoder.start({ settings: { ...off('ask', 'fs'), ...workers(worker('limited', { connectors: ['fs', 'todo'] })) } });
     const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', { worker: 'limited', task: 'Review' })), runs(command('ask', 'text', { prompt: 'Name?' })), says('child done'), says('parent done'));
+    fake.reply(runs(command('delegate', 'run', { worker: 'limited', title: 'Helper', task: 'Review' })), runs(command('ask', 'text', { prompt: 'Name?' })), says('child done'), says('parent done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     expect(indexed(systemPrompt(fake, 1))).toEqual(['todo']);
@@ -49,7 +49,7 @@ describe('connectors that are turned off (08 §8.4, ADR 0014, 7)', { timeout: 30
   it('QA31-E6 delegate can be turned off, and a subagent entry names no connector', async () => {
     const { kernel, fake } = await kvcoder.start({ settings: off('delegate') });
     const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', { worker: 'general', task: 'Review' })), says('done'));
+    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Review' })), says('done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     expect(indexed(systemPrompt(fake, 0))).toEqual(['shell', 'fs', 'artifact', 'background', 'ask', 'todo']);

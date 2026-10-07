@@ -49,8 +49,9 @@
 .kvc-failed { border-color: var(--kv-color-danger); }
 .kvc-mono { font-family: var(--kv-font-mono); font-size: 12.5px; overflow-wrap: anywhere; direction: ltr; unicode-bidi: isolate; }
 .kvc-card-row > .kvc-muted, .kvc-card-row > .kvc-chip { flex: 0 0 auto; white-space: nowrap; }
-.kvc-output { margin: 0; padding: 10px 14px; background: #15171b; color: #e6e8ec; font-family: var(--kv-font-mono); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; max-block-size: 320px; overflow-y: auto; }
-.kvc-output + .kvc-output { border-block-start: 1px solid #2c3037; }
+.kvc-card-row > svg { flex: 0 0 auto; }
+.kvc-output { margin: 0; padding: 10px 14px; background: var(--kv-color-surface); color: var(--kv-color-text); font-family: var(--kv-font-mono); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; max-block-size: 320px; overflow-y: auto; }
+.kvc-output + .kvc-output { border-block-start: 1px solid var(--kv-color-border); }
 .kvc-output-block > .kvc-output { max-block-size: none; overflow-y: visible; }
 .kvc-output .kvc-link { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .kvc-chip { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding-block: 2px; padding-inline: 8px; font-size: 12px; font-weight: 500; white-space: nowrap; border: 1px solid var(--kv-color-border); }
@@ -123,7 +124,7 @@ a.kvc-button { text-decoration: none; color: inherit; }
 .kvc-job-head > .kvc-muted, .kvc-job-head > .kvc-chip { flex: 0 0 auto; white-space: nowrap; }
 .kvc-job-links { display: flex; flex-wrap: wrap; gap: 4px 12px; }
 .kvc-job-links .kvc-link { color: var(--kv-color-primary); text-decoration: underline; text-underline-offset: 2px; }
-.kvc-job .kvc-output { border-radius: 8px; }
+.kvc-job .kvc-output { border-radius: 8px; background: var(--kv-color-background); }
 
 /* The connectors of kvcoder's configuration (ADR 0014, 10). */
 .kvc-connectors { display: flex; flex-direction: column; }
@@ -208,7 +209,7 @@ a.kvc-button { text-decoration: none; color: inherit; }
 .kvc-code-lines .kvc-link, .kvc-fields .kvc-link, .kvc-error .kvc-link { color: var(--kv-color-primary); text-decoration: underline; text-underline-offset: 2px; }
 .kvc-prose-lines { font-family: inherit; font-size: 13px; }
 .kvc-fold { display: block; margin-block-start: 6px; margin-inline: 14px; }
-.kvc-output-block { border-block-start: 1px solid #2c3037; }
+.kvc-output-block { border-block-start: 1px solid var(--kv-color-border); }
 .kvc-output-block > .kvc-fold { margin-block: 6px; }
 .kvc-error { color: var(--kv-color-danger); font-family: inherit; white-space: pre-wrap; overflow-wrap: anywhere; }
 .kvc-entries { display: flex; flex-direction: column; gap: 2px; }

@@ -92,7 +92,7 @@ describe('a reply lost on the way is not the end of the turn (08 §8.2, ADR 0009
 
   it("QA8-E11 a subagent's lost reply is retried too, and its answer reaches the parent", async () => {
     const { fake, sessionId, kernel, send } = await started();
-    fake.reply(runs(command('delegate', 'run', { worker: 'general', task: 'Do it' })), lost(3400), says('child done'), says('parent done'));
+    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Do it' })), lost(3400), says('child done'), says('parent done'));
     await send('go');
     expect((await turnState(kernel, sessionId)).turn).toMatchObject({ outcome: 'done' });
     expect(textOf(requestMessages(fake, 2).at(-1))).toContain('Your last reply was lost on the way');

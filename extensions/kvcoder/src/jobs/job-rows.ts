@@ -24,7 +24,7 @@ async function subagentRow(ctx: Ctx, entry: Stored<BackgroundDoc>): Promise<JobD
   const [turn] = await store.turns.find({ sessionId: entry.ref }, { limit: 1, order: 'desc' });
   const outcome = turn?.outcome ?? null;
   const status = child === undefined || outcome === null ? 'running' : outcome === 'done' ? 'succeeded' : outcome === 'cancelled' ? 'cancelled' : 'failed';
-  const row: JobRow = { id: entry.ref, kind: 'subagent', title: entry.call, call: entry.call, status, startedAt: entry.startedAt, ...(turn?.endedAt === null || turn === undefined ? {} : { endedAt: turn.endedAt }) };
+  const row: JobRow = { id: entry.ref, kind: 'subagent', title: child?.title ?? entry.call, call: entry.call, status, startedAt: entry.startedAt, ...(turn?.endedAt === null || turn === undefined ? {} : { endedAt: turn.endedAt }) };
   return { row, detail: outcome === null ? {} : { output: (await childResult(ctx, entry.ref, outcome)).text } };
 }
 

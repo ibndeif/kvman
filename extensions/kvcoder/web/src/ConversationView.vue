@@ -23,7 +23,7 @@ import { useAnswers } from './use-answers.ts';
 import { useArtifacts } from './use-artifacts.ts';
 import { useConversation } from './use-conversation.ts';
 import { useFollowLatest } from './use-follow-latest.ts';
-import { useRunTimes } from './use-run-times.ts';
+import { useFinishedRuns } from './use-finished-runs.ts';
 import { useSessionActions } from './use-session-actions.ts';
 import { useSlashCommands } from './use-slash-commands.ts';
 import { useWorkspaceSession } from './use-workspace-session.ts';
@@ -41,7 +41,7 @@ const { session, messages, omitted, turns, live, children } = conversation;
 const artifacts = useArtifacts(kvman, () => sessionId.value, () => session.value?.updatedAt, (error) => toastProblem(kvman, error));
 const panelShown = computed(() => artifacts.open.value && artifacts.shown.value !== undefined);
 const calls = computed(() => callViews(messages.value));
-const runTimes = useRunTimes(kvman, () => sessionId.value, messages, (error) => toastProblem(kvman, error));
+const finishedRuns = useFinishedRuns(kvman, () => sessionId.value, messages, (error) => toastProblem(kvman, error));
 const recoverableNotices = new Set(['STEP_FAILED', 'REPLY_LOST', 'INTERRUPTED']);
 const running = computed(() => session.value?.status === 'running');
 // When the running turn started, for the header's time (ADR 0018, 9).
@@ -83,6 +83,11 @@ async function stop(): Promise<void> {
 
 // An answered question or approval leaves the conversation at once (ADR 0009, 141, 142).
 const answers = useAnswers(kvman, (ran) => conversation.refresh(ran));
+// What each waiting helper was asked, by its session: the task of the call that started it (ADR 0037, 2).
+const tasks = computed(() => new Map(pending.value.flatMap((item) => {
+  const task = calls.value.get(item.toolCallId)?.fields?.['task'];
+  return typeof item.childSessionId === 'string' && typeof task === 'string' ? [[item.childSessionId, task] as const] : [];
+})));
 const runs = computed(() => pending.value.flatMap((item) => (item.kind === 'worker' && item.runId !== undefined ? [item.runId] : [])));
 const waitingOnYou = computed(() => pending.value.filter((item) => item.questionId === null || !answers.hidden.value.has(String(item.questionId))));
 const recoverable = computed(() => {
@@ -168,7 +173,7 @@ const key = (message: Message): string => message.id;
             <div v-else class="kvc-column">
               <button v-if="omitted > 0" type="button" class="kvc-button" style="align-self: center" data-test="earlier" @click="exportEarlier">{{ kvman.t('kvcoder.ui.earlierMessages', { count: omitted }) }}</button>
               <template v-for="message in messages" :key="key(message)">
-                <MessageItem :message="message" :calls="calls" :run-times="runTimes" @open-artifact="artifacts.openArtifact($event)" />
+                <MessageItem :message="message" :calls="calls" :finished-runs="finishedRuns" @open-artifact="artifacts.openArtifact($event)" />
                 <span v-if="turnTotals.has(message.id)" class="kvc-muted" :title="turnTotals.get(message.id)?.tokens" data-test="turn-totals">{{ turnTotals.get(message.id)?.text }}</span>
               </template>
               <RecoveryActions v-if="recoverable" :session-id="session.id" @sent="follow.resume(); conversation.refresh()" />
@@ -179,7 +184,7 @@ const key = (message: Message): string => message.id;
               </div>
               <ActivityLine v-if="running" :live="live" />
               <CommandProgress v-if="actions.working.value" :working="actions.working.value" />
-              <SubagentCard v-for="[id, child] in children" :key="id" :child="child" :hidden="answers.hidden.value" @answer="answers.answer" @decide="answers.decide" />
+              <SubagentCard v-for="[id, child] in children" :key="id" :child="child" :task="tasks.get(id)" :hidden="answers.hidden.value" @answer="answers.answer" @decide="answers.decide" />
               <WorkerCard v-for="run in runs" :key="run" :session-id="session.id" :run-id="run" />
               <PendingCards :pending="pending" :hidden="answers.hidden.value" @answer="answers.answer" @decide="answers.decide" />
               <p v-if="waitingOnYou.some((item) => item.kind !== 'subagent' && item.kind !== 'worker')" class="kvc-muted" style="text-align: center; margin: 0">{{ kvman.t('kvcoder.ui.messageDismisses') }}</p>

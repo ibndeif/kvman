@@ -24,6 +24,7 @@ export function delegateIndexDescription(workers: readonly Worker[]): string {
 
 export const delegateRunSchema = z.strictObject({
   worker: z.string().min(1).describe('The worker to hand the task to, by a name the system prompt lists.'),
+  title: z.string().min(1).max(60).describe("The role this run plays, in a few words, such as UI expert or Node.js expert: the person sees it as the helper's name. Up to 60 characters."),
   task: z.string().min(1).describe("The worker's whole brief: the goal, the facts it needs, its limits, and what to return."),
   background: z.boolean().describe('true lets you go on at once; the answer arrives later as a message.').exactOptional(),
 });
@@ -48,13 +49,13 @@ export function registerDelegateConnector(ctx: Ctx): void {
   });
 }
 
-/** Creates the worker's child session, with the task as its first message. */
-export async function createChild(ctx: Ctx, parent: Stored<SessionDoc>, worker: SubagentWorker, task: string): Promise<string> {
+/** Creates the worker's child session, named by the run's title (ADR 0037, 2), with the task as its first message. */
+export async function createChild(ctx: Ctx, parent: Stored<SessionDoc>, worker: SubagentWorker, run: { title: string; task: string }): Promise<string> {
   const childId = await ctx.store.transaction((tx) => {
     const store = txRecords(tx);
     const stamp = now();
     const child = store.sessions.insert({
-      title: task.slice(0, 60),
+      title: run.title,
       autoTitle: false,
       status: 'idle',
       parentId: parent.id,
@@ -73,7 +74,7 @@ export async function createChild(ctx: Ctx, parent: Stored<SessionDoc>, worker: 
       createdAt: stamp,
       updatedAt: stamp,
     });
-    appendMessage(store, child, { kind: 'user', content: userContent(task), source: { kind: 'subagent', sessionId: parent.id } });
+    appendMessage(store, child, { kind: 'user', content: userContent(run.task), source: { kind: 'subagent', sessionId: parent.id } });
     return child.id;
   });
   await firePoint(ctx, 'kvcoder.session.created', { sessionId: childId, parentId: parent.id });

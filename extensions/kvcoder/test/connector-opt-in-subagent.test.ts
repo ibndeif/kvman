@@ -16,7 +16,7 @@ describe("a subagent and its chat's optIn connectors (08 §8.4, ADR 0027, 10)", 
   it('QA39-E17 a subagent has an optIn connector its worker lists only when its top-level session enabled it', async () => {
     const { kernel, fake } = await kvcoder.start({ settings: workers(worker('helper', { connectors: ['todo', 'notes'] })) });
     await kernel.exec('kvcoder.connector.register', { name: 'notes', description: 'Notes.', optIn: true, commands: [{ name: 'add', command: 'todo.item.add' }] }, { as: '@test/todo' });
-    const delegated = () => fake.reply(runs(command('delegate', 'run', { worker: 'helper', task: 'Review' })), says('child done'), says('parent done'));
+    const delegated = () => fake.reply(runs(command('delegate', 'run', { worker: 'helper', title: 'Helper', task: 'Review' })), says('child done'), says('parent done'));
 
     const without = await newSession(kernel);
     delegated();

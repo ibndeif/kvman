@@ -59,7 +59,7 @@ describe("an opened card shows the call by its kind (08 §8.7, ADR 0036, 3 and 5
   });
 
   it('QA48-H9 a delegate run shows its task as text and the answer in Markdown', async () => {
-    const card = await ranCard(call('delegate', 'run', { worker: 'reviewer', task: 'Review the plan.\nSay what is missing.' }), '**Nothing** is missing.');
+    const card = await ranCard(call('delegate', 'run', { worker: 'reviewer', title: 'Helper', task: 'Review the plan.\nSay what is missing.' }), '**Nothing** is missing.');
     await pressed(card);
     expect(shownLines(card, 'call-task')).toEqual(['Review the plan.', 'Say what is missing.']);
     expect(part(card, 'call-answer').find('[data-test="markdown"]').text()).toBe('**Nothing** is missing.');
@@ -75,6 +75,20 @@ describe("an opened card shows the call by its kind (08 §8.7, ADR 0036, 3 and 5
     expect(part(card, 'show-all').text()).toBe('Show fewer');
     await part(card, 'show-all').trigger('click');
     expect(shownLines(card, 'call-content')).toHaveLength(12);
+  });
+
+  it('QA48-H17 a long output shows its first 12 lines, a line of dots, and its last 5', async () => {
+    const output = (count: number): string => Array.from({ length: count }, (_line, index) => `line ${index + 1}`).join('\n');
+    const card = await ranCard(call('shell', 'exec', { line: 'pnpm test', risky: false }), output(40));
+    await pressed(card);
+    expect(part(card, 'call-output').text().split('\n')).toEqual([...Array.from({ length: 12 }, (_line, index) => `line ${index + 1}`), '⋯', 'line 36', 'line 37', 'line 38', 'line 39', 'line 40']);
+    expect(part(card, 'show-all').text()).toBe('Show all 40 lines');
+    await part(card, 'show-all').trigger('click');
+    expect(part(card, 'call-output').text()).toBe(output(40));
+    const short = await ranCard(call('shell', 'exec', { line: 'ls', risky: false }), output(17));
+    await pressed(short);
+    expect(part(short, 'call-output').text()).toBe(output(17));
+    expect(part(short, 'show-all').exists()).toBe(false);
   });
 
   it('QA48-E5 a failed call is open and shows its error before what it asked for', async () => {

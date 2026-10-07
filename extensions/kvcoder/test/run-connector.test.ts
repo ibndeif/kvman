@@ -52,7 +52,7 @@ describe('runConnector (08 §8.4, ADR 0009, 96; ADR 0011, 18)', { timeout: 30_00
     const { kernel } = await kvcoder.start();
     const help = await runConnector(kernel, { connector: 'delegate', command: 'help' });
     expect(help).toMatchObject({ exitCode: 0, output: expect.stringMatching(/^delegate: Hand a self-contained task to a worker/) as unknown });
-    expect(await runConnector(kernel, { connector: 'delegate', command: 'run', payload: { worker: 'general', task: 'x' } })).toEqual({ exitCode: 1, output: 'delegate runs only inside a turn' });
+    expect(await runConnector(kernel, { connector: 'delegate', command: 'run', payload: { worker: 'general', title: 'Helper', task: 'x' } })).toEqual({ exitCode: 1, output: 'delegate runs only inside a turn' });
     expect(await kernel.exec('kvcoder.session.list', { limit: 10 })).toEqual([]);
   });
 

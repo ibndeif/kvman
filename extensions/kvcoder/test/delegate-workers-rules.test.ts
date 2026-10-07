@@ -9,7 +9,7 @@ import { worker, workers } from './support/workers.ts';
 
 const kvcoder = useKvcoder();
 
-const delegate = (name: string, task = 'Do it') => command('delegate', 'run', { worker: name, task });
+const delegate = (name: string, task = 'Do it') => command('delegate', 'run', { worker: name, title: 'Helper', task });
 const indexed = (prompt: string): string[] => prompt.split('\n').filter((line) => line.startsWith('- ')).map((line) => line.slice(2, line.indexOf(':')));
 
 describe("the rules of a worker's child and of the workers setting (08 §8.5, ADR 0021, 20 and 24)", { timeout: 30_000 }, () => {

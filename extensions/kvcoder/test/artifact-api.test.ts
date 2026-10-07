@@ -31,7 +31,7 @@ describe('the artifact queries (08 §8.6, ADR 0009, 175 and 176)', { timeout: 30
   it("QA6-H8 a subagent's artifact belongs to the chat at its root", async () => {
     const world = await started();
     world.fake.reply(
-      runs(command('delegate', 'run', { worker: 'general', task: 'Review' })),
+      runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Review' })),
       runs(command('artifact', 'write', { id: 'review', title: 'Review', content: 'looks good' }), command('ask', 'text', {"prompt":"Done?"})),
       says('child done'),
       says('parent done'),
@@ -66,7 +66,7 @@ describe('the artifact queries (08 §8.6, ADR 0009, 175 and 176)', { timeout: 30
   it("QA6-H11 deleting the chat deletes its artifacts", async () => {
     const world = await started();
     world.fake.reply(
-      runs(command('delegate', 'run', { worker: 'general', task: 'Help' })),
+      runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Help' })),
       runs(command('artifact', 'write', { id: 'notes', title: 'Notes', content: 'from the helper' })),
       says('child done'),
       says('parent done'),

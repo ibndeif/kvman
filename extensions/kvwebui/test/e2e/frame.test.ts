@@ -46,7 +46,7 @@ describe('kvwebui in Chromium (06 §6.1–§6.3, plan 12 §12.1)', { timeout: 60
     });
     await page.goto(`${kvman.origin}/notes/note/n1`);
     await page.getByText('Showing note n1').waitFor();
-    expect(await page.evaluate('getComputedStyle(document.body).backgroundColor')).toBe('rgb(246, 245, 241)');
+    expect(await page.evaluate('getComputedStyle(document.body).backgroundColor')).toBe('rgb(233, 237, 242)');
     await page.evaluate('document.fonts.ready.then(() => true)');
     expect(fonts.length).toBeGreaterThan(0);
     expect(fonts.every((status) => status === 200)).toBe(true);

@@ -2,7 +2,7 @@ import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import ConversationView from '../../web/src/ConversationView.vue';
 import { createFakeKvman, progress } from './support/fake-kvman.ts';
-import { answer, mounted, serve, session, turn, user } from './support/fixtures.ts';
+import { answer, message, mounted, serve, session, turn, user } from './support/fixtures.ts';
 
 describe('the conversation streams a step (08 §8.7, ADR 0009, 99)', () => {
   it('M2.4-E55 deltas, folded thinking, a question card, follow chunks, compaction, and a subagent card', async () => {
@@ -63,6 +63,32 @@ describe('the conversation streams a step (08 §8.7, ADR 0009, 99)', () => {
     const wrapper = await mounted(ConversationView, fake, { sessionId: 's1' });
     await vi.waitFor(() => expect(wrapper.find('[data-test="subagent-worker"]').text()).toBe('reviewer'));
     expect(wrapper.find('[data-test="subagent-card"]').text()).toContain('Review the diff');
+    wrapper.unmount();
+  });
+
+  it("QA49-H2 a subagent's card shows the title its run was given, its worker, and the first line of its task", async () => {
+    const fake = createFakeKvman();
+    const pending = [{ toolCallId: 'c2', kind: 'subagent' as const, questionId: null, question: null, childSessionId: 'child' }];
+    const asked = message('assistant', { role: 'assistant', content: [{ type: 'toolCall', id: 'c2', name: 'run', arguments: { description: 'Designing the page', connector: 'delegate', command: 'run', payload: { worker: 'ui-ux', title: 'UI expert', task: 'Design the empty state of the notes page.\nShow it in an artifact.' } } }] });
+    const world = { found: session({ status: 'waiting' }), messages: [user('go'), asked], omitted: 0, turns: [turn({ pending })] };
+    serve(fake, world);
+    fake.handle('kvcoder.session.get', (input) => (input['sessionId'] === 'child' ? session({ id: 'child', title: 'UI expert', parentId: 's1', worker: 'ui-ux', status: 'running' }) : world.found));
+    const wrapper = await mounted(ConversationView, fake, { sessionId: 's1' });
+    await vi.waitFor(() => expect(wrapper.find('[data-test="subagent-title"]').text()).toBe('UI expert'));
+    expect(wrapper.find('[data-test="subagent-worker"]').text()).toBe('ui-ux');
+    expect(wrapper.find('[data-test="subagent-task"]').text()).toBe('Design the empty state of the notes page.');
+    wrapper.unmount();
+  });
+
+  it('QA49-E3 a card whose call is not among the messages shows no task line', async () => {
+    const fake = createFakeKvman();
+    const pending = [{ toolCallId: 'c2', kind: 'subagent' as const, questionId: null, question: null, childSessionId: 'child' }];
+    const world = { found: session({ status: 'waiting' }), messages: [user('go')], omitted: 0, turns: [turn({ pending })] };
+    serve(fake, world);
+    fake.handle('kvcoder.session.get', (input) => (input['sessionId'] === 'child' ? session({ id: 'child', title: 'UI expert', parentId: 's1', worker: 'ui-ux', status: 'running' }) : world.found));
+    const wrapper = await mounted(ConversationView, fake, { sessionId: 's1' });
+    await vi.waitFor(() => expect(wrapper.find('[data-test="subagent-title"]').text()).toBe('UI expert'));
+    expect(wrapper.find('[data-test="subagent-task"]').exists()).toBe(false);
     wrapper.unmount();
   });
 });

@@ -91,7 +91,7 @@ describe('a registered command that asks the person first (08 §8.3 and §8.4, A
 
   it("QA34-E4 a subagent's call of it waits on the person, and runs when allowed", async () => {
     const world = await started(workers(worker('helper', { connectors: ['guarded'] })) as Record<string, string>);
-    const sessionId = await sent(world, runs(command('delegate', 'run', { worker: 'helper', task: 'Add milk.' })), runs(command('guarded', 'add', { text: 'milk' })), says('child done'), says('parent done'));
+    const sessionId = await sent(world, runs(command('delegate', 'run', { worker: 'helper', title: 'Helper', task: 'Add milk.' })), runs(command('guarded', 'add', { text: 'milk' })), says('child done'), says('parent done'));
     const parent = await turnState(world.kernel, sessionId);
     const childId = String(parent.turn?.pending[0]?.childSessionId);
     const child = await turnState(world.kernel, childId);

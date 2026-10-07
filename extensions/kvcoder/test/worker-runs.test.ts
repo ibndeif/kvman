@@ -9,7 +9,7 @@ import { workers } from './support/workers.ts';
 const kvcoder = useKvcoder();
 const programs = useWorkerPrograms();
 
-const delegate = (worker: string, task: string, fields: Record<string, unknown> = {}) => command('delegate', 'run', { worker, task, ...fields });
+const delegate = (worker: string, task: string, fields: Record<string, unknown> = {}) => command('delegate', 'run', { worker, title: 'Helper', task, ...fields });
 const requests = (fake: { requests(): readonly unknown[] }, count: number) => vi.waitFor(() => expect(fake.requests()).toHaveLength(count), wait);
 
 describe("a program worker's run (08 §8.5, ADR 0021, 10 to 16 and 31 to 36)", { timeout: 30_000 }, () => {
@@ -51,7 +51,7 @@ describe("a program worker's run (08 §8.5, ADR 0021, 10 to 16 and 31 to 36)", {
     await kernel.clock.advance(0);
     const asked = (await turnState(kernel, sessionId)).turn?.pending ?? [];
     expect(asked.map((item) => item.kind)).toEqual(['approval', 'approval']);
-    expect(asked[0]?.question).toMatchObject({ connector: 'delegate', command: 'run', payload: { worker: 'cc', task: `wait:${installed.gate}` } });
+    expect(asked[0]?.question).toMatchObject({ connector: 'delegate', command: 'run', payload: { worker: 'cc', title: 'Helper', task: `wait:${installed.gate}` } });
     expect(installed.calls('claude')).toEqual([]);
     expect(await kernel.exec('kvcoder.question.answer', { questionId: String(asked[0]?.questionId), answer: { confirmed: true } })).toEqual({ jobId: null });
     await kernel.exec('kvcoder.question.answer', { questionId: String(asked[1]?.questionId), answer: { confirmed: false } });

@@ -8,7 +8,7 @@ import { worker, workers } from './support/workers.ts';
 const kvcoder = useKvcoder();
 
 const reviewer = shippedWorkers.find((entry) => entry.name === 'reviewer');
-const delegate = (name: string, task = 'Do it') => command('delegate', 'run', { worker: name, task });
+const delegate = (name: string, task = 'Do it') => command('delegate', 'run', { worker: name, title: 'Helper', task });
 const indexLine = (prompt: string, connector: string): string => prompt.split('\n').find((line) => line.startsWith(`- ${connector}: `)) ?? '';
 
 async function turn(settings: Record<string, unknown>, ...replies: Parameters<Awaited<ReturnType<typeof kvcoder.start>>['fake']['reply']>) {
@@ -26,7 +26,7 @@ describe('the delegate connector and its workers (08 §8.5, ADR 0021)', { timeou
     const prompt = systemPrompt(fake, 0);
     expect(prompt.split('\n').filter((line) => line.startsWith('- ')).map((line) => line.slice(2, line.indexOf(':')))).toEqual(['shell', 'fs', 'artifact', 'background', 'ask', 'delegate', 'todo']);
     expect(prompt).not.toContain('- subagent: ');
-    expect(prompt).toContain('\n  run  { worker, task, background? }\n  help { command? }');
+    expect(prompt).toContain('\n  run  { worker, title, task, background? }\n  help { command? }');
     expect(toolResults(fake)).toEqual(['error VALIDATION_FAILED: There is no connector subagent. The connectors are: shell, fs, artifact, background, ask, delegate, todo.']);
   });
 
@@ -110,7 +110,7 @@ describe('the delegate connector and its workers (08 §8.5, ADR 0021)', { timeou
     expect(refused).toMatch(/^error VALIDATION_FAILED: /);
     expect(refused).toContain('worker: ');
     expect(refused).toContain('Unrecognized key: "mode"');
-    expect(refused?.endsWith('The payload of delegate run is\n{ worker, task, background? }')).toBe(true);
+    expect(refused?.endsWith('The payload of delegate run is\n{ worker, title, task, background? }')).toBe(true);
   });
 
   it.each([

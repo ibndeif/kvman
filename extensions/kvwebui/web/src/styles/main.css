@@ -49,19 +49,19 @@
 }
 
 :root {
-  --kvwebui-ground: #f6f5f1;
-  --kvwebui-surface: #ffffff;
-  --kvwebui-sunken: #fbfaf7;
-  --kvwebui-ink: #1d1c1a;
-  --kvwebui-muted: #6b675e;
-  --kvwebui-line: #e7e4dc;
-  --kvwebui-line-soft: #f0eee8;
-  --kvwebui-primary: #1f3a5f;
+  --kvwebui-ground: #e9edf2;
+  --kvwebui-surface: #f7f8fa;
+  --kvwebui-sunken: #eff2f5;
+  --kvwebui-ink: #242a31;
+  --kvwebui-muted: #5a6470;
+  --kvwebui-line: #d3d9e0;
+  --kvwebui-line-soft: #e1e6ec;
+  --kvwebui-primary: #35507a;
   --kvwebui-on-primary: #ffffff;
-  --kvwebui-accent-soft: #e6ecf5;
-  --kvwebui-accent-ink: #1f3a5f;
-  --kvwebui-neutral-soft: #efede7;
-  --kvwebui-neutral-ink: #4f4c45;
+  --kvwebui-accent-soft: #dbe5f2;
+  --kvwebui-accent-ink: #24385a;
+  --kvwebui-neutral-soft: #e1e6ec;
+  --kvwebui-neutral-ink: #454c56;
   --kvwebui-success-soft: #e3f1e7;
   --kvwebui-success-ink: #1f6b3a;
   --kvwebui-warning-soft: #fcebd9;
@@ -70,8 +70,8 @@
   --kvwebui-danger-soft: #fcefe8;
   --kvwebui-danger-ink: #5c2410;
   --kvwebui-danger-line: #f2d2c2;
-  --kvwebui-toast: #1d1c1a;
-  --kvwebui-on-toast: #f4f2ec;
+  --kvwebui-toast: #242a31;
+  --kvwebui-on-toast: #f7f8fa;
   --kvwebui-online: #2f8a4f;
 }
 

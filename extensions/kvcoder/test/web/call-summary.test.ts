@@ -20,7 +20,7 @@ describe("a closed card's line (08 §8.7, ADR 0036, 2)", () => {
       [call('git', 'exec', { args: 'status', risky: false }), 'clean'],
       [call('mcp', 'call', { server: 'github', tool: 'list_issues', risky: false }), 'none'],
       [call('mcp', 'tools', { server: 'github' }), { server: 'github', tools: Array.from({ length: 12 }, (_tool, index) => ({ name: `t${index}`, description: '' })) }],
-      [call('delegate', 'run', { worker: 'reviewer', task: 'Review the plan.' }), 'Fine.'],
+      [call('delegate', 'run', { worker: 'reviewer', title: 'Security reviewer', task: 'Review the plan.' }), 'Fine.'],
       [call('background', 'list'), [{ id: 'j1', kind: 'process', call: 'npm run dev', status: 'running', startedAt: 'x' }, { id: 'j2', kind: 'process', call: 'npm test', status: 'exited', startedAt: 'x' }]],
       [call('background', 'output', { id: 'j1' }), { id: 'j1', status: 'running', output: 'ready' }],
       [call('background', 'stop', { id: 'j1' }), { stopped: true }],
@@ -33,7 +33,7 @@ describe("a closed card's line (08 §8.7, ADR 0036, 2)", () => {
       shown.push(closedLine(card));
       card.unmount();
     }
-    expect(shown).toEqual(['Edit src/app.ts +2 −1', 'Write notes.md Created · 1.2 KB', 'Read src/app.ts Lines 24–98 of 120', 'List src 14 entries', 'Search markStatus 9 matches in 3 files', '$ pnpm test', '$ git status', 'github · list_issues', 'Tools github 12 tools', 'Delegate reviewer', 'Background runs 2 runs', 'Output j1', 'Stop j1', 'Read artifact plan']);
+    expect(shown).toEqual(['Edit src/app.ts +2 −1', 'Write notes.md Created · 1.2 KB', 'Read src/app.ts Lines 24–98 of 120', 'List src 14 entries', 'Search markStatus 9 matches in 3 files', '$ pnpm test', '$ git status', 'github · list_issues', 'Tools github 12 tools', 'Delegate reviewer · Security reviewer', 'Background runs 2 runs', 'Output j1', 'Stop j1', 'Read artifact plan']);
   });
 
   it('QA48-H12 a risky call says so, and another does not', async () => {

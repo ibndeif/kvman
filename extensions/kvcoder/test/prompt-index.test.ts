@@ -53,7 +53,7 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
       '  choice  { prompt, multiple, options: [{ id, label, description? }], other? }',
       '  confirm { prompt, danger? }',
       '  help    { command? }',
-      '  run  { worker, task, background? }',
+      '  run  { worker, title, task, background? }',
       '  help { command? }',
     ]);
   });
@@ -68,7 +68,7 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
   it("QA19-E12 a subagent's index", async () => {
     const { kernel, fake } = await kvcoder.start({ settings: workers(worker('files', { connectors: ['fs'] })) });
     const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', { worker: 'files', task: 'List files.' })), runs(command('fs', 'list')), says('child done'), says('parent done'));
+    fake.reply(runs(command('delegate', 'run', { worker: 'files', title: 'Helper', task: 'List files.' })), runs(command('fs', 'list')), says('child done'), says('parent done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     const prompt = systemPrompt(fake, 1);

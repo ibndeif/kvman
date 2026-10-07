@@ -9,10 +9,11 @@ import ArtifactCard from './ArtifactCard.vue';
 import CallCard from './CallCard.vue';
 import type { CallView } from './call-view.ts';
 import { durationText } from './durations.ts';
+import type { FinishedRun } from './use-finished-runs.ts';
 
 // One stored message (plan 08 §8.7): the person's text and images, an answer in Markdown with its thinking folded, a
 // tool result's card (an answered question shows its answer), kvcoder's notices and other extensions' notes translated, a summary, and background results with how long they ran.
-const props = defineProps<{ message: Message; calls: ReadonlyMap<string, CallView>; runTimes?: ReadonlyMap<string, number> | undefined }>();
+const props = defineProps<{ message: Message; calls: ReadonlyMap<string, CallView>; finishedRuns?: ReadonlyMap<string, FinishedRun> | undefined }>();
 const emit = defineEmits<{ openArtifact: [id: string] }>();
 const kvman = useKvman();
 const text = computed(() => textOf(props.message.content['content']));
@@ -22,13 +23,15 @@ const artifact = computed(() => artifactOf(props.message));
 // A finished background job's card says which one it was (ADR 0035, 7).
 const finished = computed(() => {
   const key = props.message.source?.kind === 'subagent' ? 'kvcoder.ui.helperFinished' : 'kvcoder.ui.backgroundFinished';
-  const name = backgroundName(props.message);
+  // A helper is named by the title its run was given, while its run is among the chat's newest (ADR 0037, 2).
+  const helper = props.message.source?.kind === 'subagent' ? props.finishedRuns?.get(props.message.source.sessionId)?.title : undefined;
+  const name = helper ?? backgroundName(props.message);
   return name === undefined ? kvman.t(key) : kvman.t(`${key}Named`, { name: isolateValue(name) });
 });
 // How long the run took, while it is among the chat's newest runs (ADR 0036, 14).
 const ran = computed(() => {
-  const milliseconds = props.runTimes?.get(backgroundRef(props.message) ?? '');
-  return milliseconds === undefined ? undefined : durationText(kvman.t, milliseconds);
+  const run = props.finishedRuns?.get(backgroundRef(props.message) ?? '');
+  return run === undefined ? undefined : durationText(kvman.t, run.ranMs);
 });
 const answered = computed(() => answeredQuestion(props.message, props.calls));
 const notice = computed(() => {

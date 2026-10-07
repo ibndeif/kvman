@@ -66,7 +66,7 @@ describe('connectors that are off until their owner enables them for a chat (08 
     await registerNotes(kernel);
     await expect(enable(kernel, 'nope', ['notes'])).rejects.toMatchObject(failed('kvcoder/SESSION_NOT_FOUND'));
     const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', { worker: 'general', task: 'Wait' })), runs(command('ask', 'text', { prompt: '?' })));
+    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Wait' })), runs(command('ask', 'text', { prompt: '?' })));
     await send(kernel, sessionId);
     const childId = String((await turnState(kernel, sessionId)).turn?.pending[0]?.childSessionId);
     await expect(enable(kernel, childId, ['notes'])).rejects.toMatchObject(failed('VALIDATION_FAILED', { sessionId: childId }));

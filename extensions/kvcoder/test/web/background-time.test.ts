@@ -20,7 +20,7 @@ describe("a finished background job's card shows how long it ran (08 §8.7, ADR 
   it("QA48-H14 a job's and a helper's card end with the time between the run's start and its end", async () => {
     const jobs = [
       job({ id: 'j1', status: 'exited', startedAt: '2026-10-01T09:00:00.000Z', endedAt: '2026-10-01T09:01:09.000Z' }),
-      job({ id: 's2', kind: 'subagent', status: 'done', startedAt: '2026-10-01T09:00:00.000Z', endedAt: '2026-10-01T09:00:36.000Z' }),
+      job({ id: 's2', kind: 'subagent', title: 'Plan reviewer', status: 'done', startedAt: '2026-10-01T09:00:00.000Z', endedAt: '2026-10-01T09:00:36.000Z' }),
     ];
     expect(await times([jobResult('j1', 'node test.js'), helperResult('s2', 'Review the plan')], jobs)).toEqual(['1 min 9 s', '36 s']);
   });
@@ -28,5 +28,22 @@ describe("a finished background job's card shows how long it ran (08 §8.7, ADR 
   it("QA48-E17 a card whose run isn't in the list, or hasn't ended, has no time", async () => {
     const jobs = [job({ id: 'j2', status: 'running', startedAt: '2026-10-01T09:00:00.000Z' })];
     expect(await times([jobResult('j1', 'node test.js'), jobResult('j2', 'npm run dev')], jobs)).toEqual([null, null]);
+  });
+
+  it("QA49-H3 a finished helper's card has the title its run was given", async () => {
+    const fake = createFakeKvman();
+    const jobs = [job({ id: 's2', kind: 'subagent', title: 'Plan reviewer', status: 'succeeded', startedAt: '2026-10-01T09:00:00.000Z', endedAt: '2026-10-01T09:00:36.000Z' })];
+    serve(fake, { found: session(), messages: [helperResult('s2', 'Review the plan')], omitted: 0, turns: [turn()], jobs });
+    const wrapper = await mounted(ConversationView, fake, { sessionId: 's1' });
+    expect(wrapper.find('[data-test="background-title"]').text()).toBe('A helper finished: Plan reviewer');
+    wrapper.unmount();
+  });
+
+  it("QA49-E2 a helper whose run isn't in the list keeps the call's words", async () => {
+    const fake = createFakeKvman();
+    serve(fake, { found: session(), messages: [helperResult('s9', 'Review the plan')], omitted: 0, turns: [turn()], jobs: [] });
+    const wrapper = await mounted(ConversationView, fake, { sessionId: 's1' });
+    expect(wrapper.find('[data-test="background-title"]').text()).toBe('A helper finished: Review the plan');
+    wrapper.unmount();
   });
 });

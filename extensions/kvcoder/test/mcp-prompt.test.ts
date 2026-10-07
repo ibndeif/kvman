@@ -69,7 +69,7 @@ describe('the mcp connector in the prompt and the run tool (08 §8.2, ADR 0020, 
   });
 
   it('QA29-E3 a subagent calls mcp when it was given it, and not otherwise', async () => {
-    const helper = runs(command('delegate', 'run', { worker: 'helper', task: 'Use the tool' }));
+    const helper = runs(command('delegate', 'run', { worker: 'helper', title: 'Helper', task: 'Use the tool' }));
     const given = await turn({ 'kvcoder.mcp.servers': [commandEntry()], ...workers(worker('helper', { connectors: ['mcp'] })) }, helper, runs(echo), says('child done'), says('parent done'));
     expect(connectorsOf(requestTools(given.fake, 1)[0])).toEqual(['ask', 'mcp']);
     expect(toolResults(given.fake, 2)).toEqual(['hi']);

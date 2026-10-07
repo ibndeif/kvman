@@ -148,16 +148,18 @@ describe('a long chat in Chromium (08 §8.7, ADR 0009, 195–199)', { timeout: 1
     await page.close();
   });
 
-  it('QA9-H12 a card opened in either theme shows its command and output on dark blocks', async () => {
+  it('QA9-H12 a card opened in either theme shows its command and output on blocks of that theme: light in light, dark in dark (ADR 0037, 3)', async () => {
     const { kvman, sessionId } = await chatWith(runs(shell('echo hello')), says('Done.'));
     const page = await openChat(kvman, sessionId);
     await page.locator('[data-test="call-card"] button').click();
     for (const scheme of ['dark', 'light'] as const) {
       await page.emulateMedia({ colorScheme: scheme });
+      await page.waitForFunction(`document.documentElement.classList.contains('dark') === ${String(scheme === 'dark')}`);
       for (const block of ['call-payload', 'call-output']) {
         const colors = colorsSchema.parse(await page.evaluate(`(() => { const style = getComputedStyle(document.querySelector('[data-test="${block}"]')); return { background: style.backgroundColor, text: style.color }; })()`));
-        expect(luminance(colors.background), `${scheme} ${block} background`).toBeLessThan(0.2);
-        expect(luminance(colors.text), `${scheme} ${block} text`).toBeGreaterThan(0.6);
+        const [paper, ink] = scheme === 'dark' ? [colors.text, colors.background] : [colors.background, colors.text];
+        expect(luminance(paper), `${scheme} ${block} lighter color`).toBeGreaterThan(0.6);
+        expect(luminance(ink), `${scheme} ${block} darker color`).toBeLessThan(0.2);
       }
     }
     await page.close();

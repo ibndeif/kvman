@@ -41,7 +41,7 @@ describe('custom components in Chromium (06 §6.4, ADR 0009, 83–85)', { timeou
   it("M2.3-H1 a custom component shares kvwebui's Vue, streams a job's progress, renders Markdown through View, and its CSS loads", async () => {
     const { page, requests } = await demoPage();
     expect(await page.locator('[data-test="demo-progress"] h2').textContent()).toBe('Counting');
-    expect(await style(page, '[data-test="demo-progress"]', 'borderTopColor')).toBe('rgb(31, 58, 95)');
+    expect(await style(page, '[data-test="demo-progress"]', 'borderTopColor')).toBe('rgb(53, 80, 122)');
     expect(await page.locator('[data-test="demo-progress"] strong').textContent()).toBe('done');
     await page.getByRole('button', { name: 'Start' }).click();
     await page.locator('[data-test="chunks"] li').first().waitFor();
@@ -59,7 +59,7 @@ describe('custom components in Chromium (06 §6.4, ADR 0009, 83–85)', { timeou
   it('M2.3-H3 a component styled with the theme variables follows a theme switch', async () => {
     const { page } = await demoPage();
     await pickTheme(page, 'light');
-    expect([await style(page, '[data-test="demo-progress"]', 'backgroundColor'), await style(page, '[data-test="demo-progress"]', 'color')]).toEqual(['rgb(255, 255, 255)', 'rgb(29, 28, 26)']);
+    expect([await style(page, '[data-test="demo-progress"]', 'backgroundColor'), await style(page, '[data-test="demo-progress"]', 'color')]).toEqual(['rgb(247, 248, 250)', 'rgb(36, 42, 49)']);
     await pickTheme(page, 'dark');
     expect([await style(page, '[data-test="demo-progress"]', 'backgroundColor'), await style(page, '[data-test="demo-progress"]', 'color')]).toEqual(['rgb(29, 28, 26)', 'rgb(236, 234, 228)']);
     await pickTheme(page, 'light');

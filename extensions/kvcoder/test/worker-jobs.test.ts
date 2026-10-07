@@ -12,7 +12,7 @@ const kvcoder = useKvcoder();
 const programs = useWorkerPrograms();
 
 type World = Awaited<ReturnType<typeof kvcoder.start>>;
-const delegate = (task: string, fields: Record<string, unknown> = {}) => ({ ...command('delegate', 'run', { worker: 'pie', task, ...fields }), description: 'Asking pi to look.' });
+const delegate = (task: string, fields: Record<string, unknown> = {}) => ({ ...command('delegate', 'run', { worker: 'pie', title: 'Helper', task, ...fields }), description: 'Asking pi to look.' });
 const requests = (fake: { requests(): readonly unknown[] }, count: number) => vi.waitFor(() => expect(fake.requests()).toHaveLength(count), wait);
 const gone = (pid: number) => vi.waitFor(() => expect(alive(pid)).toBe(false), wait);
 

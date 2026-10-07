@@ -30,7 +30,7 @@ describe("a program worker's check (08 §8.5, ADR 0021, 17 and 37)", { timeout: 
     programs.install();
     const { kernel, fake } = await kvcoder.start({ settings: workers(worker('general'), programWorker('pie', 'pi')) });
     const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', { worker: 'pie', task: 'x' })), says('done'));
+    fake.reply(runs(command('delegate', 'run', { worker: 'pie', title: 'Helper', task: 'x' })), says('done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await vi.waitFor(() => expect(fake.requests()).toHaveLength(2), wait);
     expect((await turnState(kernel, sessionId)).session.checks).toEqual([{ name: 'worker:pie', passed: false }]);
@@ -57,7 +57,7 @@ describe("a program worker's check (08 §8.5, ADR 0021, 17 and 37)", { timeout: 
     const installed = programs.install('pi');
     const { kernel, fake } = await kvcoder.start({ settings: workers(worker('general'), programWorker('pie', 'pi')) });
     const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', { worker: 'general', task: 'Hand it on' })), runs(command('delegate', 'run', { worker: 'pie', task: 'say:hi' })), says('child done'), says('parent done'));
+    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Hand it on' })), runs(command('delegate', 'run', { worker: 'pie', title: 'Helper', task: 'say:hi' })), says('child done'), says('parent done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await vi.waitFor(() => expect(fake.requests()).toHaveLength(4), wait);
     expect(indexed(systemPrompt(fake, 1))).not.toContain('delegate');

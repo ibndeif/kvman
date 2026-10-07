@@ -47,7 +47,7 @@ describe('the background connector (08 §8.5, ADR 0011, 6)', { timeout: 60_000 }
     const sessionId = await newSession(kernel);
     let release = (): void => undefined;
     const held = new Promise<void>((resolve) => (release = resolve));
-    fake.reply(runs({ ...command('delegate', 'run', { worker: 'general', task: 'Look around', background: true }), description: 'Asking a helper to look around.' }), { chunks: [{ wait: held }, { text: 'found it' }] }, says('parent went on'), says('after the answer'));
+    fake.reply(runs({ ...command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Look around', background: true }), description: 'Asking a helper to look around.' }), { chunks: [{ wait: held }, { text: 'found it' }] }, says('parent went on'), says('after the answer'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await vi.waitFor(async () => expect((await turnState(kernel, sessionId)).turn).toMatchObject({ outcome: 'done' }), wait);
     const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });

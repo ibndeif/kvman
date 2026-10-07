@@ -10,7 +10,7 @@ describe('the prompt of a chat and of its subagent (08 §8.2 and §8.5, ADR 0022
   it("QA33-H9 a chat's prompt is the lead's, and a subagent's is the worker's, followed by its worker's instructions", async () => {
     const { kernel, fake } = await kvcoder.start({ settings: workers(worker('reader', { instructions: 'Read only.' })) });
     const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', { worker: 'reader', task: 'Read the notes.' })), says('child done'), says('parent done'));
+    fake.reply(runs(command('delegate', 'run', { worker: 'reader', title: 'Helper', task: 'Read the notes.' })), says('child done'), says('parent done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
 

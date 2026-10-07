@@ -115,7 +115,7 @@ export function callSummary(t: Translate, view: CallView, result?: unknown): Cal
   if (connector === 'fs') return fsSummary(t, command, payload, result);
   if (connector === 'mcp') return mcpSummary(t, command, payload, result);
   if (connector === 'background') return backgroundSummary(t, command, payload, result);
-  if (connector === 'delegate' && command === 'run') return summary(t('kvcoder.ui.call.delegate'), text(payload['worker']));
+  if (connector === 'delegate' && command === 'run') return summary(t('kvcoder.ui.call.delegate'), [text(payload['worker']), text(payload['title'])].filter((part) => part !== undefined).join(' · '));
   if (connector === 'artifact' && command === 'get') return summary(t('kvcoder.ui.call.readArtifact'), text(payload['id']));
   return undefined;
 }

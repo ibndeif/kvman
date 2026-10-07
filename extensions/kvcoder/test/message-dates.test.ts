@@ -64,7 +64,7 @@ describe("the date on a person's message (08 §8.2, ADR 0032, 1, 5, and 6)", { t
   it("QA44-E1 a subagent's task, which isn't the person's message, has no stamp", async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', { worker: 'general', task: 'Check it' })), says('child done'), says('parent done'));
+    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Check it' })), says('child done'), says('parent done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await vi.waitFor(() => expect(fake.requests()).toHaveLength(3), wait);
     const [stored] = await personMessages(kernel, sessionId);

@@ -15,7 +15,7 @@ describe('delegate runs (08 §8.5, ADR 0021)', { timeout: 30_000 }, () => {
     let release = (): void => undefined;
     const both = new Promise<void>((resolve) => (release = resolve));
     fake.reply(
-      { ...runs(command('delegate', 'run', { worker: 'general', task: 'Task A' }), command('delegate', 'run', { worker: 'general', task: 'Task B' })), usage },
+      { ...runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Task A' }), command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Task B' })), usage },
       { chunks: [{ wait: both }, { text: 'first answer' }], usage },
       { chunks: [{ wait: both }, { text: 'second answer' }], usage },
       says('done'),
@@ -45,7 +45,7 @@ describe('delegate runs (08 §8.5, ADR 0021)', { timeout: 30_000 }, () => {
   it('M2.4-E44 a background subagent returns its id, and its answer arrives later as a message', async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', { worker: 'general', task: 'Background task', background: true })), says('one'), says('two'), says('three'), says('four'));
+    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Background task', background: true })), says('one'), says('two'), says('three'), says('four'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     const [started] = toolResults(fake, 1).length > 0 ? toolResults(fake, 1) : toolResults(fake, 2);
@@ -57,10 +57,38 @@ describe('delegate runs (08 §8.5, ADR 0021)', { timeout: 30_000 }, () => {
     expect(String(arrived?.content['content'])).toMatch(new RegExp(`^The background call \`A test call\\.\` \\(job ${childId}\\) finished:\\n(one|two|three)$`));
   });
 
+  it("QA49-H1 a run's title names its helper: the child session's title, and the run's title in the job list", async () => {
+    const { kernel, fake } = await kvcoder.start();
+    const sessionId = await newSession(kernel);
+    fake.reply(runs({ ...command('delegate', 'run', { worker: 'general', title: 'Node.js expert', task: 'Find why the pool leaks handles.\nReport the cause.', background: true }), description: 'Finding the leak' }), says('one'), says('two'), says('three'), says('four'));
+    await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
+    await kernel.clock.advance(0);
+    const [started] = toolResults(fake, 1).length > 0 ? toolResults(fake, 1) : toolResults(fake, 2);
+    const childId = /^started (\S+)$/.exec(started ?? '')?.[1] ?? '';
+    expect((await kernel.exec('kvcoder.session.get', { sessionId: childId })).title).toBe('Node.js expert');
+    expect((await kernel.exec('kvcoder.job.list', { sessionId })).map((job) => [job.id, job.kind, job.title, job.call])).toEqual([[childId, 'subagent', 'Node.js expert', 'Finding the leak']]);
+  });
+
+  it('QA49-E1 a run needs its title: none, or one of 61 characters, fails VALIDATION_FAILED and makes no helper', async () => {
+    const { kernel, fake } = await kvcoder.start();
+    const sessionId = await newSession(kernel);
+    fake.reply(runs(command('delegate', 'run', { worker: 'general', task: 'Task A' }), command('delegate', 'run', { worker: 'general', title: 't'.repeat(61), task: 'Task B' })), says('done'));
+    await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
+    await kernel.clock.advance(0);
+    const refused = toolResults(fake);
+    expect(refused).toHaveLength(2);
+    for (const text of refused) {
+      expect(text).toMatch(/^error VALIDATION_FAILED: title: /);
+      expect(text.endsWith('The payload of delegate run is\n{ worker, title, task, background? }')).toBe(true);
+    }
+    expect(await kernel.exec('kvcoder.job.list', { sessionId })).toEqual([]);
+    expect((await turnState(kernel, sessionId)).turn?.pending ?? []).toEqual([]);
+  });
+
   it("M2.4-E46 a child's approval shows in the root: the parent waits on the child, and the answer continues the child", async () => {
     const { kernel, fake } = await kvcoder.start({ settings: { 'kvcoder.shell.approval': 'ask' } });
     const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', { worker: 'general', task: 'Check' })), runs(shell('echo child')), says('child done'), says('parent done'));
+    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Check' })), runs(shell('echo child')), says('child done'), says('parent done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     const parent = await turnState(kernel, sessionId);

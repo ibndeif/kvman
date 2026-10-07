@@ -36,7 +36,7 @@ describe('fs read says when nothing changed (08 §8.5, ADR 0034, 2 and 3)', { ti
   it('QA46-H3 the lead is told what a worker costs, and a subagent is not', async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', { worker: 'general', task: 'Check it' })), says('child done'), says('parent done'));
+    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Check it' })), says('child done'), says('parent done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await vi.waitFor(() => expect(fake.requests()).toHaveLength(3), wait);
     expect(systemPrompt(fake, 0)).toContain(`what to return. ${briefing} Read what a worker returns`);

@@ -63,7 +63,7 @@ async function delegateOutcome(env: CallEnv, toolCallId: string, call: RunCall):
     await launchRun(ctx, started.id);
     return result(toolCallId, textResult(call, `started ${started.id}`));
   }
-  const childId = await createChild(ctx, session, worker, run.task);
+  const childId = await createChild(ctx, session, worker, run);
   if (run.background !== true) return { kind: 'subagent', childSessionId: childId };
   await records(ctx.store).background.insert({ sessionId: session.id, ref: childId, kind: 'subagent', call: call.description, startedAt: now() });
   await startChild(ctx, childId);

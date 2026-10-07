@@ -36,7 +36,7 @@ describe('sessions (08 §8.6)', { timeout: 30_000 }, () => {
     const { kernel, fake } = await kvcoder.start();
     const first = await newSession(kernel);
     const second = await newSession(kernel);
-    fake.reply(runs(command('ask', 'text', {"prompt":"?"})), runs(command('delegate', 'run', { worker: 'general', task: 't' })), says('child'));
+    fake.reply(runs(command('ask', 'text', {"prompt":"?"})), runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 't' })), says('child'));
     await kernel.exec('kvcoder.message.send', { sessionId: first, text: 'go' });
     await kernel.clock.advance(0);
     expect((await kernel.exec('kvcoder.session.list', { limit: 10 })).map((session) => session.id)).toEqual([second, first]);
@@ -67,7 +67,7 @@ describe('sessions (08 §8.6)', { timeout: 30_000 }, () => {
     await kernel.exec('kvcoder.handler.register', { point: 'kvcoder.session.deleted', command: 'todo.seen' }, { as: '@test/todo' });
     const sessionId = await newSession(kernel);
     await kernel.exec('kvcoder.section.set', { id: 'mine', title: 'Mine', order: 1, content: 'x', sessionId }, { as: '@test/todo' });
-    fake.reply(runs(command('delegate', 'run', { worker: 'general', task: 't' })), runs(command('ask', 'text', {"prompt":"?"})));
+    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 't' })), runs(command('ask', 'text', {"prompt":"?"})));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     const childId = String((await turnState(kernel, sessionId)).turn?.pending[0]?.childSessionId);
