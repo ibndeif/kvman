@@ -14,6 +14,8 @@ const packageWalls: Record<string, PackageWall> = {
   kernel: { kvmanPackages: ['sdk'], thirdParty: 'declared', nodeBuiltins: true },
   cli: { kvmanPackages: ['kernel', 'sdk'], thirdParty: [], nodeBuiltins: true },
   testkit: { kvmanPackages: ['kernel', 'sdk'], thirdParty: [], nodeBuiltins: true },
+  // The desktop shell runs kvman as a program and imports nothing of it (plan 14 §14.1).
+  desktop: { kvmanPackages: [], thirdParty: [], nodeBuiltins: false },
 };
 
 const extensionWall: PackageWall = { kvmanPackages: ['sdk'], thirdParty: 'declared', nodeBuiltins: true };

@@ -51,7 +51,7 @@ Milestones are in `plan/13-milestones.md`. Do them strictly in order. For each o
   | `kernel` | `sdk`, its declared dependencies |
   | `cli` | `kernel`, `sdk` |
   | `testkit` | `kernel`, `sdk` |
-  | `desktop` | `@tauri-apps/api`; nothing of kvman's: it runs `kvman` as a program |
+  | `desktop` | nothing: it runs `kvman` as a program |
   | `extensions/*` | `sdk`, their own declared dependencies; never `kernel`; another extension only when it is a `kvman.dependencies` entry: `import type`, or a runtime import of a subpath it exports (such a subpath may import only `sdk` and holds no state) |
 
 ## 4. Naming

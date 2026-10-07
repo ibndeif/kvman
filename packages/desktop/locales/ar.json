@@ -1,0 +1,21 @@
+{
+  "desktop.home.title": "اختر مساحة عمل",
+  "desktop.home.home": "الرئيسية",
+  "desktop.home.openFolder": "فتح مجلد…",
+  "desktop.home.openTitle": "فتح مجلد",
+  "desktop.home.remove": "إزالة {name}",
+  "desktop.home.failure": "لم ينجح ذلك. حاول مرة أخرى.",
+  "desktop.trust.intro": "هذه الإضافات ليست جزءًا من kvman، وتستطيع فعل كل ما تستطيع أنت فعله:",
+  "desktop.trust.question": "هل تريد تشغيلها؟",
+  "desktop.trust.accept": "قبول",
+  "desktop.trust.decline": "عدم التشغيل",
+  "desktop.quit": "إنهاء",
+  "desktop.failed.title": "تعذّر بدء kvman",
+  "desktop.failed.hint.KVMAN_RUNNING": "يوجد kvman آخر يستخدم هذا المجلد الرئيسي ولم يُجب. أغلقه، أو انتظر حتى يكتمل بدؤه، ثم افتح التطبيق من جديد.",
+  "desktop.failed.hint.PORT_IN_USE": "يوجد برنامج آخر يستخدم منفذ kvman. أغلقه، ثم افتح التطبيق من جديد.",
+  "desktop.failed.hint.EXTENSION_INVALID": "تعذّر تحميل إحدى الإضافات. أصلحها، أو أزلها من الإعداد المسبق.",
+  "desktop.failed.hint.VALIDATION_FAILED": "الإعداد المسبق، أو أحد إعداداته، غير صالح.",
+  "desktop.failed.hint.other": "التفاصيل في {file}.",
+  "desktop.stopped.title": "توقف kvman على نحو غير متوقع",
+  "desktop.stopped.details": "التفاصيل في {file}."
+}

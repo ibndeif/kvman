@@ -10,7 +10,15 @@ kvman uninstall [--home <dir>] [--yes] [--keep-data | --delete-data]
 
 kvman runs in the foreground on `127.0.0.1:3737` and opens the folder you start it from as a workspace. It needs Node.js 24. `kvman uninstall` removes it again, and asks before it deletes your data ([installing](docs/user-guide/installing.md#removing-kvman)).
 
-A program can run kvman too: with `--pipe`, kvman writes one JSON object per line instead of its terminal text (`running` with the URL, `trust` when it needs an answer about new extensions, `restarting`, `joined`, `failed`), takes the trust answer as a line on its input, and stops cleanly when its input closes ([the plan](plan/14-desktop.md), §14.2). The desktop app that is being built runs kvman this way.
+A program can run kvman too: with `--pipe`, kvman writes one JSON object per line instead of its terminal text (`running` with the URL, `trust` when it needs an answer about new extensions, `restarting`, `joined`, `failed`), takes the trust answer as a line on its input, and stops cleanly when its input closes ([the plan](plan/14-desktop.md), §14.2). The desktop app runs kvman this way.
+
+**The desktop app** (`packages/desktop`, [the plan](plan/14-desktop.md)) is a Tauri shell around the same kvman: it starts kvman, shows a home screen where you choose a workspace or open a folder, and then shows kvman in its own window. Closing the window stops kvman. It asks about new extensions in a dialog instead of the terminal, and it joins a kvman that already runs on the home. For now it runs from the repository, against the built `packages/cli` and the Node on your `PATH`; the installers come next.
+
+```
+pnpm build && pnpm desktop:dev
+```
+
+It needs Rust with `rustfmt` and `clippy`, and on Linux Tauri's libraries (`libwebkit2gtk-4.1-dev` and the others in [Tauri's prerequisites](https://v2.tauri.app/start/prerequisites/)).
 
 To change kvman itself from a chat (its model, its settings, its extensions, or a new extension built for you), type `/build-kvman` in the send box, on the Chat page or in a chat, alone or followed by what you want. The agent can also change the app's name and home page, and build a separate app you start with `kvman --preset <name>`. Until you do, the agent in that chat has no tool for changing kvman ([building kvman](docs/user-guide/building-kvman.md)).
 
@@ -40,6 +48,8 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm bench:check
 | `pnpm test` | Vitest |
 | `pnpm build` | Builds each package into its `dist/` |
 | `pnpm bench:check` | Runs the benchmarks against `bench/baseline.json`; `pnpm bench:record` stores a new baseline |
+| `pnpm desktop:check` | The desktop shell's Rust: `cargo fmt --check`, `cargo clippy` with warnings as errors, and `cargo test` |
+| `pnpm desktop:dev` | Runs the desktop app from the repository |
 | `pnpm changeset` | Adds a changeset (needed for every change to `@kvman/sdk`, `@kvman/testkit`, or an extension) |
 
 To run from source after `pnpm build`: `node packages/cli/dist/main.js`.

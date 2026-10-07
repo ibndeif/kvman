@@ -1,0 +1,186 @@
+/* The home screen's styles (plan 14 §14.5). The colours are kvwebui's (plan 06 §6.4; ADR 0037, 3): light by default,
+   dark when `kvwebui.theme` says so, and the system's choice when it says `system` or isn't there. */
+
+:root {
+  --kv-color-background: #e9edf2;
+  --kv-color-surface: #f7f8fa;
+  --kv-color-text: #242a31;
+  --kv-color-muted: #5a6470;
+  --kv-color-border: #d3d9e0;
+  --kv-color-primary: #35507a;
+  --kv-color-on-primary: #ffffff;
+  --kv-color-danger: #b4380e;
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --kv-color-background: #151513;
+  --kv-color-surface: #1d1c1a;
+  --kv-color-text: #eceae4;
+  --kv-color-muted: #a8a398;
+  --kv-color-border: #34322d;
+  --kv-color-primary: #8fb0e8;
+  --kv-color-on-primary: #0f1b2d;
+  --kv-color-danger: #ff9b73;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --kv-color-background: #151513;
+    --kv-color-surface: #1d1c1a;
+    --kv-color-text: #eceae4;
+    --kv-color-muted: #a8a398;
+    --kv-color-border: #34322d;
+    --kv-color-primary: #8fb0e8;
+    --kv-color-on-primary: #0f1b2d;
+    --kv-color-danger: #ff9b73;
+    color-scheme: dark;
+  }
+}
+
+html,
+body {
+  block-size: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--kv-color-background);
+  color: var(--kv-color-text);
+  font-family: system-ui, sans-serif;
+  font-size: 15px;
+}
+
+#home {
+  box-sizing: border-box;
+  max-inline-size: 640px;
+  margin-inline: auto;
+  padding-block: 48px;
+  padding-inline: 24px;
+}
+
+.brand {
+  margin-block: 96px 16px;
+  text-align: center;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.progress {
+  inline-size: 160px;
+  block-size: 4px;
+  margin-inline: auto;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--kv-color-border) 0%, var(--kv-color-primary) 50%, var(--kv-color-border) 100%);
+  background-size: 200% 100%;
+  animation: progress 1.2s linear infinite;
+}
+
+@keyframes progress {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+
+.title {
+  margin-block: 0 24px;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.failure {
+  margin-block: 0 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--kv-color-danger);
+  border-radius: 12px;
+  color: var(--kv-color-danger);
+}
+
+.rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--kv-color-border);
+  border-radius: 12px;
+  background: var(--kv-color-surface);
+  overflow: hidden;
+}
+
+.row {
+  display: flex;
+  align-items: stretch;
+}
+
+.row + .row {
+  border-block-start: 1px solid var(--kv-color-border);
+}
+
+.row-open {
+  flex: 1;
+  display: flex;
+  gap: 16px;
+  align-items: baseline;
+  min-inline-size: 0;
+  padding: 14px 16px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.row-name {
+  font-weight: 600;
+}
+
+.row-folder {
+  overflow: hidden;
+  color: var(--kv-color-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: ltr;
+}
+
+.row-remove {
+  padding-inline: 16px;
+  border: 0;
+  background: none;
+  color: var(--kv-color-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.row-open:hover,
+.row-open:focus-visible,
+.row-remove:hover,
+.row-remove:focus-visible {
+  background: var(--kv-color-background);
+  outline: none;
+}
+
+.row-remove:hover,
+.row-remove:focus-visible {
+  color: var(--kv-color-danger);
+}
+
+.open-folder {
+  margin-block-start: 24px;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--kv-color-primary);
+  color: var(--kv-color-on-primary);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.open-folder:focus-visible {
+  outline: 2px solid var(--kv-color-text);
+  outline-offset: 2px;
+}

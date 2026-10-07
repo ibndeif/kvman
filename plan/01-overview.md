@@ -60,7 +60,7 @@ A pnpm monorepo, Node 24, TypeScript 6.0 strict (ADR 0009). The tools are ESLint
 | `packages/sdk` | The extension API: `ctx` types, zod, and the shared shapes (preset, extension manifest, Problem, job, envelope). Published as `@kvman/sdk`. | `zod` |
 | `packages/kernel` | Everything the kernel does, including HTTP. Published as `@kvman/kernel`, at the root version. | `sdk`, its declared dependencies |
 | `packages/cli` | The `kvman` bin; it runs the kernel in the same process. Published as `kvman`, with the bundled presets inside (`packages/cli/presets/`: `coder.json`); the bundled extensions are its dependencies that have a `kvman` field (ADR 0026, 3). | `kernel`, `sdk` |
-| `packages/desktop` | The desktop app's shell (§14): Tauri, with the home screen's page. Private, at the root version; it runs `kvman` as a program. | `@tauri-apps/api`; nothing of kvman's |
+| `packages/desktop` | The desktop app's shell (§14): Tauri, with the home screen's page. Private, at the root version; it runs `kvman` as a program. | Nothing: no kvman package, no third-party package, no Node built-in (ADR 0038, 46) |
 | `packages/testkit` | `createTestKernel` for tests, and the bins that build and check extensions for any harness: `kvman-check`, `kvman-new`, `kvman-preset`, `kvman-preview` (§10). Published as `@kvman/testkit`. | `kernel`, `sdk` |
 | `extensions/*` | kvai, kvwebui, kvcoder, kvbuilder. Published as `@kvman/kvai`, `@kvman/kvwebui`, `@kvman/kvcoder`, and `@kvman/kvbuilder` (ADR 0026, 1). | `sdk`, their own npm dependencies; never `kernel`; another extension only when it is a `kvman.dependencies` entry: `import type`, or a runtime import of a subpath it exports (such a subpath may import only `sdk` and holds no state) |
 

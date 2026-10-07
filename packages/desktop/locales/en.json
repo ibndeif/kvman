@@ -1,0 +1,21 @@
+{
+  "desktop.home.title": "Choose a workspace",
+  "desktop.home.home": "Home",
+  "desktop.home.openFolder": "Open a folder…",
+  "desktop.home.openTitle": "Open a folder",
+  "desktop.home.remove": "Remove {name}",
+  "desktop.home.failure": "That didn't work. Try again.",
+  "desktop.trust.intro": "These extensions are not part of kvman and can do anything you can:",
+  "desktop.trust.question": "Run them?",
+  "desktop.trust.accept": "Accept",
+  "desktop.trust.decline": "Don't run",
+  "desktop.quit": "Quit",
+  "desktop.failed.title": "kvman could not start",
+  "desktop.failed.hint.KVMAN_RUNNING": "Another kvman uses this home and didn't answer. Close it, or wait until it has started, then open the app again.",
+  "desktop.failed.hint.PORT_IN_USE": "Another program uses kvman's port. Close it, then open the app again.",
+  "desktop.failed.hint.EXTENSION_INVALID": "An extension could not be loaded. Fix it, or remove it from the preset.",
+  "desktop.failed.hint.VALIDATION_FAILED": "The preset, or one of its settings, is not valid.",
+  "desktop.failed.hint.other": "Details are in {file}.",
+  "desktop.stopped.title": "kvman stopped unexpectedly",
+  "desktop.stopped.details": "Details are in {file}."
+}

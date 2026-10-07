@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "page/script",
+    "lib": ["es2024", "dom", "dom.iterable"],
+    "declaration": false,
+    "declarationMap": false
+  },
+  "include": ["src"]
+}

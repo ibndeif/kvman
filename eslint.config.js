@@ -23,7 +23,7 @@ const focusedOrSkippedTests = ['describe', 'it', 'test', 'suite'].flatMap((objec
 
 export default defineConfig(
   {
-    ignores: ['**/node_modules/**', '**/dist/**', 'test/fixtures/**'],
+    ignores: ['**/node_modules/**', '**/dist/**', 'test/fixtures/**', 'packages/desktop/page/script/**', 'packages/desktop/src-tauri/target/**'],
   },
   {
     linterOptions: { noInlineConfig: true, reportUnusedDisableDirectives: 'error' },

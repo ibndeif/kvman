@@ -41,6 +41,16 @@ describe('package import walls (plan 01 §1.4)', () => {
     }
   });
 
+  it('M3.2-E25 the desktop shell imports nothing of kvman, no third-party package, and no Node built-in', async () => {
+    const desktop = 'packages/desktop/src/fixture.ts';
+    await expectClean('imports-relative-inside.ts', desktop);
+    await expectBlocked('imports-sdk.ts', desktop, /packages\/desktop may not import @kvman\/sdk/);
+    await expectBlocked('imports-kernel.ts', desktop, /packages\/desktop may not import @kvman\/kernel/);
+    await expectBlocked('imports-cli.ts', desktop, /packages\/desktop may not import kvman/);
+    await expectBlocked('imports-marked.ts', desktop, /may import no third-party package, not "marked"/);
+    await expectBlocked('imports-node-fs.ts', desktop, /may not import a Node built-in/);
+  });
+
   it('M1.1-E6 a kvman package is imported only through an entry point it exports', async () => {
     await expectClean('imports-sdk-web.ts', kernel);
     await expectBlocked('imports-sdk-internal.ts', kernel, /only through an entry point it exports/);

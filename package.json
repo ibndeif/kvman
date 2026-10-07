@@ -14,7 +14,9 @@
     "build": "pnpm -r build",
     "bench:check": "node --conditions=@kvman/source bench/main.ts check",
     "bench:record": "node --conditions=@kvman/source bench/main.ts record",
-    "changeset": "changeset"
+    "changeset": "changeset",
+    "desktop:check": "cd packages/desktop/src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test",
+    "desktop:dev": "pnpm --filter @kvman/desktop exec tauri dev"
   },
   "devDependencies": {
     "@changesets/cli": "3.0.3",

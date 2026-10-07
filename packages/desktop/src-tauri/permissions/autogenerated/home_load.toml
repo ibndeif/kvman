@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-home-load"
+description = "Enables the home_load command without any pre-configured scope."
+commands.allow = ["home_load"]
+
+[[permission]]
+identifier = "deny-home-load"
+description = "Denies the home_load command without any pre-configured scope."
+commands.deny = ["home_load"]

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "kvman",
+  "identifier": "com.ibndeif.kvman",
+  "build": {
+    "frontendDist": "../page",
+    "beforeDevCommand": "pnpm --filter @kvman/desktop build",
+    "beforeBuildCommand": "pnpm --filter @kvman/desktop build"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; connect-src ipc: http://ipc.localhost",
+      "capabilities": ["home"]
+    }
+  },
+  "bundle": {
+    "active": false
+  }
+}

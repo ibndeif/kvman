@@ -1,0 +1,6 @@
+{
+  "identifier": "home",
+  "description": "What the app's own page, the home screen, may ask of the shell. kvman's pages get nothing.",
+  "windows": ["main"],
+  "permissions": ["allow-home-load", "allow-home-continue", "allow-home-remove", "allow-home-open-folder"]
+}

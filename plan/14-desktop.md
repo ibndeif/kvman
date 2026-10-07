@@ -106,7 +106,7 @@ The shell's calls to kvman carry the Host `127.0.0.1:<port>` and no `Origin`, so
 
 ## 14.6 The window
 
-- **Links.** The window never opens a second window. A request for a new window, and a navigation to any origin but kvman's, opens in the system's browser.
+- **Links.** The window never opens a second window: a request for one opens its address in the system's browser. When the window itself, not a frame inside it, begins to load an address of any origin but kvman's, that address is opened in the system's browser and the window goes back to kvman. A frame inside a page, such as an artifact kvcoder shows, loads any origin (ADR 0038, 47). Only an `http:` or `https:` address is ever handed to the system's browser; an address of any other scheme is dropped (ADR 0038, 50).
 - **Downloads.** A file download (§4.1) is saved in the person's Downloads folder, under its own name. A name that is taken there gets a number, `report (1).pdf`, then `report (2).pdf`; nothing is replaced (ADR 0038, 42).
 - **A restart** (`kernel.restart`, §2.14) keeps the window, and kvwebui waits for kvman as it does in a browser. A `trust` line during it opens the trust dialog again, with "Don't run" in place of Quit: it answers `{ "trust": false }`, that start fails, the undo of the last preset edit applies (§2.14), and the window stays (ADR 0038, 43). A `running` line with another port moves a window that is past the home screen to that line's `url`; the home screen only takes the new port.
 - **A line the shell can't read** (not JSON, or not one of the five shapes) is treated as a kvman that ended by itself, below, and kvman is stopped (ADR 0038, 44).

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-home-remove"
+description = "Enables the home_remove command without any pre-configured scope."
+commands.allow = ["home_remove"]
+
+[[permission]]
+identifier = "deny-home-remove"
+description = "Denies the home_remove command without any pre-configured scope."
+commands.deny = ["home_remove"]
