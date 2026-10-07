@@ -1,6 +1,6 @@
 {
   "name": "@kvman/kernel",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "The kvman kernel: jobs, workers, storage, extensions, and HTTP.",
   "license": "MIT",
   "repository": {

@@ -1,6 +1,6 @@
 {
   "name": "kvman",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "kvman, an app that works like a small operating system: a kernel runs extensions, and a preset shapes them.",
   "license": "MIT",
   "repository": {
