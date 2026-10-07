@@ -1,5 +1,15 @@
 # @kvman/kvcoder
 
+## 0.1.3
+
+### Patch Changes
+
+- 7574df4: A turn has no step limit by default: `kvcoder.maxSteps` is now a positive whole number or `null`, and its default is `null` (it was 50). Set a number to cap a turn; it then ends with the "stopped after N steps" notice as before (ADR 0029).
+- 919540c: A slash command that an extension registered, such as `/build-kvman`, now runs on the Chat page: the send box creates the chat, runs the command in it, sends its message, and opens the chat. kvcoder's own six stay greyed there (ADR 0028).
+- Updated dependencies [85e9ff8]
+  - @kvman/sdk@0.1.1
+  - @kvman/kvai@0.1.1
+
 ## 0.1.2
 
 ### Patch Changes

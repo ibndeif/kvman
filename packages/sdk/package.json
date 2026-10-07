@@ -1,6 +1,6 @@
 {
   "name": "@kvman/sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "The kvman extension API: the ctx types, zod, and the shared shapes.",
   "license": "MIT",
   "repository": {

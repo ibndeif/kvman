@@ -1,5 +1,11 @@
 # @kvman/sdk
 
+## 0.1.1
+
+### Patch Changes
+
+- 85e9ff8: Three kernel commands: `kernel.preset.settings.set { key, value }` and `kernel.preset.settings.reset { key }` edit one value of the running preset's `settings` in its file (`{ file, restartRequired: true }`, applied at the next start, as `kernel.extensions.install` does), and `kernel.presets.save { preset, replace? }` writes a preset to `<home>/presets/<name>.json` so that `kvman --preset <name>` can start it later (ADR 0030).
+
 ## 0.1.0
 
 The first published version. What it holds, in the order it was built:

@@ -1,5 +1,20 @@
 # @kvman/kvbuilder
 
+## 0.3.0
+
+### Minor Changes
+
+- 134f341: Following ADR 0030, kvbuilder can edit the running preset's values, save a checked workspace preset by name, and give each `/build-kvman` chat an installed-extension index alongside its guide. The guide and documentation now teach how to change this app or build a separate one.
+
+### Patch Changes
+
+- 919540c: A slash command that an extension registered, such as `/build-kvman`, now runs on the Chat page: the send box creates the chat, runs the command in it, sends its message, and opens the chat. kvcoder's own six stay greyed there (ADR 0028).
+- b2dc3f9: A fourth built-in guide, `conventions`, states kvman's rules for an extension in one place: names, public and private, errors, jobs and what ends with them, handler points in place of events, storage, settings and their scopes, secrets, validation, text for people, who owns UI, the docs pair, dependencies, and checks. `kvman-docs`, `docs list` and `docs get`, and the scaffold's copy into a project's `docs/` now have four guides, and kvbuilder's `building` page names it (ADR 0030).
+- Updated dependencies [85e9ff8]
+- Updated dependencies [b2dc3f9]
+  - @kvman/sdk@0.1.1
+  - @kvman/testkit@0.1.3
+
 ## 0.2.0
 
 ### Minor Changes
