@@ -27,8 +27,8 @@ describe('kvman-new writes the harness files and the guides (09 §9.2, ADR 0010,
     const agents = readFileSync(path.join(folder, 'AGENTS.md'), 'utf8');
     for (const mention of ['docs/', 'kvman-docs', 'npm run check', 'npm test', 'dist/']) expect(agents, mention).toContain(mention);
     expect(readFileSync(path.join(folder, 'CLAUDE.md'), 'utf8')).toBe('@AGENTS.md\n');
-    expect(readdirSync(path.join(folder, 'docs')).sort()).toEqual(['i18n.md', 'presets.md', 'sdk.md']);
-    for (const guide of ['i18n.md', 'presets.md', 'sdk.md']) {
+    expect(readdirSync(path.join(folder, 'docs')).sort()).toEqual(['conventions.md', 'i18n.md', 'presets.md', 'sdk.md']);
+    for (const guide of ['conventions.md', 'i18n.md', 'presets.md', 'sdk.md']) {
       expect(readFileSync(path.join(folder, 'docs', guide))).toEqual(readFileSync(path.join(repositoryRoot, 'packages/testkit/docs', guide)));
     }
     expect(readFileSync(path.join(folder, 'extension-docs', 'usage.md'), 'utf8').startsWith('# Using notes')).toBe(true);

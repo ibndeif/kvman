@@ -14,7 +14,7 @@ const failureSchema = z.object({ code: z.string(), message: z.string() });
 
 const notRunningLine = "kvman isn't running; start it to read the extensions' docs.\n";
 
-const builtInHuman = ['kvman', '  i18n: Texts and languages', '  presets: Presets', '  sdk: The extension API (`@kvman/sdk`)', ''].join('\n');
+const builtInHuman = ['kvman', '  conventions: Conventions', '  i18n: Texts and languages', '  presets: Presets', '  sdk: The extension API (`@kvman/sdk`)', ''].join('\n');
 
 function expectNoInputLeak(run: BinRun): void {
   expect(run.stdout).not.toContain('{"input"');
@@ -122,6 +122,21 @@ describe('kvman-docs with no kvman running (ADR 0010, 17, 19)', () => {
     expectNoInputLeak(get);
   });
 
+  it('QA42-E23 kvman-docs list prints the four built-in guides, conventions first, with no kvman running', async () => {
+    const sandbox = makeSandbox();
+    const home = homeFolder(sandbox, 'four-guides');
+    const run = await runBin('docs/docs-bin.js', ['list', '--home', home, '--json'], { cwd: sandbox.root });
+    expect(run.exitCode).toBe(0);
+    expect(run.stderr).toBe(notRunningLine);
+    const pages = z.object({ pages: z.array(z.object({ extension: z.string(), topic: z.string() })) }).parse(JSON.parse(run.stdout)).pages;
+    expect(pages.map((page) => [page.extension, page.topic])).toEqual([
+      ['kvman', 'conventions'],
+      ['kvman', 'i18n'],
+      ['kvman', 'presets'],
+      ['kvman', 'sdk'],
+    ]);
+  });
+
   it('QA17-E29 a --url that is not a 127.0.0.1 or localhost http URL fails VALIDATION_FAILED before any request', async () => {
     const sandbox = makeSandbox();
     const counting = await startCountingServer();
@@ -150,6 +165,7 @@ describe('kvman-docs with no kvman running (ADR 0010, 17, 19)', () => {
       expect(run.stderr).toBe('');
       expect(JSON.parse(run.stdout)).toEqual({
         pages: [
+          { extension: 'kvman', topic: 'conventions', title: 'Conventions' },
           { extension: 'kvman', topic: 'i18n', title: 'Texts and languages' },
           { extension: 'kvman', topic: 'presets', title: 'Presets' },
           { extension: 'kvman', topic: 'sdk', title: 'The extension API (`@kvman/sdk`)' },

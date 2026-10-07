@@ -101,6 +101,7 @@ export function scaffoldFiles(input: ScaffoldInput): Record<string, string> {
     'README.md': template('README.md', input, { __WEB_README__: input.web ? webReadme : '' }),
     'AGENTS.md': template('AGENTS.md', input, { __WEB_AGENTS__: input.web ? webAgents : '' }),
     'CLAUDE.md': '@AGENTS.md\n',
+    'docs/conventions.md': guide('conventions.md'),
     'docs/sdk.md': guide('sdk.md'),
     'docs/i18n.md': guide('i18n.md'),
     'docs/presets.md': guide('presets.md'),

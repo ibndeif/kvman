@@ -5,7 +5,7 @@ A kvman extension, namespace `__NAMESPACE__`.
 - `src/index.ts` registers its commands, queries, and settings. A kvman that loads this folder as `path:` (a preset entry `"__NAME__": "path:<folder>"`) reloads it on every save, with no build.
 - `locales/en.json` and `locales/ar.json` hold its texts.
 - `extension-docs/usage.md` documents the extension for other builders, served by `__NAMESPACE__.docs.list` and `__NAMESPACE__.docs.get`.
-- `AGENTS.md` guides an agent working here; `docs/` holds the platform guides (`sdk`, `i18n`, `presets`).
+- `AGENTS.md` guides an agent working here; `docs/` holds the platform guides (`conventions`, `sdk`, `i18n`, `presets`).
 - `npm test` runs `test/` against a real kernel (`@kvman/testkit`).
 - `npm run check` loads it in a test kernel and reports what kvman would refuse or show untranslated.
 - `npm run build` compiles `dist/`, for publishing.

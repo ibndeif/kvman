@@ -30,6 +30,7 @@ function failureOf(run: BinRun): { code: string; message: string } {
 }
 
 const builtInPages = [
+  { extension: 'kvman', topic: 'conventions', title: 'Conventions' },
   { extension: 'kvman', topic: 'i18n', title: 'Texts and languages' },
   { extension: 'kvman', topic: 'presets', title: 'Presets' },
   { extension: 'kvman', topic: 'sdk', title: 'The extension API (`@kvman/sdk`)' },
@@ -47,6 +48,7 @@ const expectedProblems = [
 
 const expectedHuman = [
   'kvman',
+  '  conventions: Conventions',
   '  i18n: Texts and languages',
   '  presets: Presets',
   '  sdk: The extension API (`@kvman/sdk`)',

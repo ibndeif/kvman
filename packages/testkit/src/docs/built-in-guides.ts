@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 /** A built-in guide: `extension` is always `"kvman"`. */
 export type BuiltInGuide = { extension: 'kvman'; topic: string; title: string; markdown: string };
 
-const builtInTopics = ['i18n', 'presets', 'sdk'] as const;
+const builtInTopics = ['conventions', 'i18n', 'presets', 'sdk'] as const;
 
 function titleOf(topic: string, markdown: string): string {
   const first = markdown.split('\n', 1)[0];
@@ -18,7 +18,7 @@ function readGuide(topic: string): BuiltInGuide {
   return { extension: 'kvman', topic, title: titleOf(topic, markdown), markdown };
 }
 
-/** The three built-in guides, sorted by topic. */
+/** The four built-in guides, sorted by topic. */
 export function listBuiltInGuides(): BuiltInGuide[] {
   return builtInTopics.map((topic) => readGuide(topic));
 }

@@ -2,7 +2,7 @@
 
 This folder is the kvman extension `__NAME__` (namespace `__NAMESPACE__`).
 
-- Read `docs/` first: the platform guides `sdk.md`, `i18n.md`, and `presets.md`.
+- Read `docs/` first: the platform guides `conventions.md`, `sdk.md`, `i18n.md`, and `presets.md`.
 - For the docs of the extensions this one builds on, run `kvman-docs list` and `kvman-docs get <extension> <topic>`; they need a running kvman.
 - Keep this extension's own docs in `extension-docs/`; they are served by `__NAMESPACE__.docs.list` and `__NAMESPACE__.docs.get`.
 - After every change, run `npm run check` and `npm test`.

@@ -1,11 +1,12 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { z } from '@kvman/sdk';
 import { scaffoldVersions } from '../../src/new/scaffold-versions.ts';
 import { npmEnvironment } from '../support/npm-environment.ts';
+import { repositoryRoot } from '../support/npm-mirror.ts';
 import { runBin } from '../support/run-bin.ts';
 
 // `kvman-new` runs against the in-test registry (plan 12 §12.1): each test scaffolds into its own temporary folder,
@@ -87,5 +88,15 @@ describe('kvman-new scaffolds a project (09 §9.2, ADR 0010, 2, 9, 18)', () => {
     expect(sample).toContain('docs.list');
     expect(sample).toContain('docs.get');
     checkClean(folder);
+  });
+
+  it('QA42-H20 the scaffold copies the four built-in guides into docs/, byte for byte', async () => {
+    const parent = makeParent();
+    const { folder } = await scaffolded(parent);
+    const guides = ['conventions.md', 'i18n.md', 'presets.md', 'sdk.md'];
+    expect(readdirSync(path.join(folder, 'docs')).sort()).toEqual(guides);
+    for (const guide of guides) {
+      expect(readFileSync(path.join(folder, 'docs', guide)), guide).toEqual(readFileSync(path.join(repositoryRoot, 'packages/testkit/docs', guide)));
+    }
   });
 });

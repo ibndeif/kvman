@@ -32,6 +32,7 @@ describe('kvman-docs with no core extension loaded (ADR 0010, 16)', () => {
     expect(list.stderr).toBe('');
     expect(JSON.parse(list.stdout)).toEqual({
       pages: [
+        { extension: 'kvman', topic: 'conventions', title: 'Conventions' },
         { extension: 'kvman', topic: 'i18n', title: 'Texts and languages' },
         { extension: 'kvman', topic: 'presets', title: 'Presets' },
         { extension: 'kvman', topic: 'sdk', title: 'The extension API (`@kvman/sdk`)' },

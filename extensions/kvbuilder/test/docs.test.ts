@@ -13,7 +13,7 @@ afterEach(() => {
 });
 
 const testkitDocs = fileURLToPath(new URL('../../../packages/testkit/docs/', import.meta.url));
-const builtIn = ['i18n', 'presets', 'sdk'];
+const builtIn = ['conventions', 'i18n', 'presets', 'sdk'];
 const failed = (code: string) => expect.objectContaining({ problem: expect.objectContaining({ code }) });
 
 async function start() {
@@ -27,7 +27,7 @@ describe('the docs connector pulls every extension\'s pages (09 §9.1 and §9.5,
     const { kernel } = await start();
     const { pages } = await kernel.exec('kvbuilder.guides.list', {});
     const titleOf = (topic: string) => (readFileSync(`${testkitDocs}${topic}.md`, 'utf8').split('\n').find((line) => line.startsWith('# ')) ?? '').slice(2);
-    expect(pages.slice(0, 3)).toEqual(builtIn.map((topic) => ({ extension: 'kvman', topic, title: titleOf(topic) })));
+    expect(pages.slice(0, builtIn.length)).toEqual(builtIn.map((topic) => ({ extension: 'kvman', topic, title: titleOf(topic) })));
     expect(pages.filter((page) => page.extension === '@fix/ok')).toEqual([
       { extension: '@fix/ok', topic: 'usage', title: 'Using ok' },
       { extension: '@fix/ok', topic: 'settings', title: 'Ok settings' },
@@ -44,6 +44,19 @@ describe('the docs connector pulls every extension\'s pages (09 §9.1 and §9.5,
       title: 'Using ok',
       markdown: '# Using ok\n\nBody of usage.\n',
     });
+  });
+
+  it('QA42-H19 guides.list starts with the four built-in guides, and guides.get answers conventions', async () => {
+    const { kernel } = await start();
+    const { pages } = await kernel.exec('kvbuilder.guides.list', {});
+    expect(pages.slice(0, 4).map((page) => [page.extension, page.topic])).toEqual([
+      ['kvman', 'conventions'],
+      ['kvman', 'i18n'],
+      ['kvman', 'presets'],
+      ['kvman', 'sdk'],
+    ]);
+    const markdown = readFileSync(`${testkitDocs}conventions.md`, 'utf8');
+    expect(await kernel.exec('kvbuilder.guides.get', { topic: 'conventions' })).toEqual({ extension: 'kvman', topic: 'conventions', title: 'Conventions', markdown });
   });
 
   it('QA17-E25 one failing extension hides no other, and its Problem leaks nothing', async () => {

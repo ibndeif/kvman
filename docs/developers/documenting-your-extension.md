@@ -50,10 +50,10 @@ A project from `kvman-new` already has the pair, served by `src/docs.ts` from th
 ```sh
 kvman-docs list                          # the platform guides, and every installed extension's pages
 kvman-docs get @me/notes usage           # one page
-kvman-docs get kvman sdk                 # a platform guide (sdk, i18n, presets), no kvman needed
+kvman-docs get kvman sdk                 # a platform guide (conventions, sdk, i18n, presets), no kvman needed
 ```
 
-`kvman-docs` asks the running kvman over HTTP (`--home`, `--url`, or `KVMAN_HOME` choose which one; kvman sets `KVMAN_HOME` for programs it runs). With no kvman running, `list` prints the three platform guides and says to start kvman. kvman's agent reads the same pages with its `docs` connector (`docs list`, `docs get`).
+`kvman-docs` asks the running kvman over HTTP (`--home`, `--url`, or `KVMAN_HOME` choose which one; kvman sets `KVMAN_HOME` for programs it runs). With no kvman running, `list` prints the four platform guides and says to start kvman. kvman's agent reads the same pages with its `docs` connector (`docs list`, `docs get`).
 
 `docs list` and `kvman-docs list --json` answer `{ pages: [{ extension, topic, title }], problems: [{ extension, problem }] }`: an extension whose docs failed is listed in `problems` with its Problem and hides no other.
 

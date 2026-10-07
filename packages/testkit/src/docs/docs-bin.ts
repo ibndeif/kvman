@@ -6,7 +6,7 @@ import { readDocsPage } from './docs-get.ts';
 import { findRunningKvman } from '../running/running-kvman.ts';
 
 // The `kvman-docs` bin (plan 09 §9.5, plan 10, ADR 0010, 17): reads the docs of the extensions a running kvman has
-// loaded over HTTP, plus the three built-in guides with no kvman running. With `--json` it prints the data as one
+// loaded over HTTP, plus the four built-in guides with no kvman running. With `--json` it prints the data as one
 // JSON line.
 
 const usage = 'Usage: kvman-docs list [--json] [--home <dir>] [--url <url>]\nUsage: kvman-docs get <extension> <topic> [--json] [--home <dir>] [--url <url>]';

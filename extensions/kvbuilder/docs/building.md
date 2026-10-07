@@ -131,7 +131,7 @@ The connectors run the tools of `@kvman/testkit`, which you can run by hand in a
 
 ## Docs: what `docs list` shows
 
-`docs list` answers every page, grouped by extension. The built-in guides belong to `kvman`: `sdk`, `i18n`, and `presets`. Every installed extension that documents itself adds its own pages. An extension documents itself with two public queries:
+`docs list` answers every page, grouped by extension. The built-in guides belong to `kvman`: `conventions`, `sdk`, `i18n`, and `presets`. Every installed extension that documents itself adds its own pages. An extension documents itself with two public queries:
 
 - `<namespace>.docs.list` answers `[{ topic, title }]`;
 - `<namespace>.docs.get` takes `{ topic }` and answers `{ topic, title, markdown }`.

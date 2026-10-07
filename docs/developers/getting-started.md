@@ -91,7 +91,7 @@ kvman-preview ./notes
 kvman-docs list
 ```
 
-With kvman running, this lists the platform guides (`sdk`, `i18n`, `presets`) and the pages each installed extension serves, including your own `usage` page. `kvman-docs get @me/notes usage` prints it.
+With kvman running, this lists the platform guides (`conventions`, `sdk`, `i18n`, `presets`) and the pages each installed extension serves, including your own `usage` page. `kvman-docs get @me/notes usage` prints it.
 
 ## What next
 
