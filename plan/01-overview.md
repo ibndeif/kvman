@@ -24,6 +24,13 @@ kvman --help | --version
 - **Port.** `--port` overrides `kernel.port`; `--port 0` lets the OS pick a free port (ADR 0009, 46).
 - **Exit codes.** A clean stop exits 0; a failed start exits 1; a second Ctrl+C or SIGTERM exits 130 at once (ADR 0009, 50).
 - **Platforms:** Linux, macOS, and Windows, natively.
+- **Uninstalling** (ADR 0031). `kvman uninstall [--home <dir>] [--yes] [--keep-data | --delete-data]` is the one subcommand. It asks `Remove kvman? [y/N]`, then, naming the home folder, `Delete it too? [y/N]`; only `y` agrees. `--yes` answers the first, `--keep-data` and `--delete-data` the second (both together fail `VALIDATION_FAILED`), and `--yes` alone keeps the data. With no terminal, a question no flag answers stops the command, which removes nothing and exits 1. Then, in order:
+  - it checks that this kvman is npm's global one: its package folder must be `<npm root -g>/kvman`, compared as real paths. Otherwise, or with no `npm` on the PATH, it removes nothing and exits 1;
+  - it stops a kvman that runs on that home (SIGTERM on Linux and macOS, `taskkill /PID <pid> /T /F` on Windows) and waits until it is gone, at most 15 seconds, else removes nothing and exits 1;
+  - it runs `npm uninstall -g kvman` with its output shown; a failure leaves the data alone and exits 1;
+  - it deletes the home folder, only when that was agreed. Nothing outside the home is deleted.
+
+  A `no` to the first question prints `Nothing was removed.` and exits 0.
 - There is no other `kvman` subcommand in this phase. Everything else goes through the web UI or the HTTP API (§4).
 - **Installing.** `npm i -g kvman`; the documentation gives it as `npm i -g kvman --no-fund --loglevel=error`, which shows npm's progress and none of its notices (ADR 0026, 12). The `kvman` package holds the CLI and the bundled presets, and depends on the kernel and the bundled extensions, so npm installs them with it (ADR 0026).
 
