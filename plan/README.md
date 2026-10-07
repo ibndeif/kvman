@@ -39,6 +39,7 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `adr/0029-turns-have-no-step-limit-by-default.md` | `kvcoder.maxSteps` defaults to `null`, no limit; a number still caps a turn |
 | `adr/0030-kvbuilder-presets-and-knowledge.md` | kvbuilder edits the running preset's values, saves a new preset by name, gets an index of what is installed, and a `conventions` guide |
 | `adr/0031-kvman-uninstall.md` | `kvman uninstall`: removes the program with npm, stops a running kvman first, and deletes the data only when the person agrees |
+| `adr/0032-cached-compaction-and-message-dates.md` | A summary is asked for with the step's own request, so it reads the cache; a person's message is sent with its date; the chat page no longer scrolls past the conversation |
 | `adr/0026-npm-publishing.md` | Publishing to npm: the eight public packages under MIT, the extensions as dependencies of `kvman`, the presets inside it, version 0.1.0, and the release workflow on a version tag |
 | `adr/0025-install-by-source.md` | Installing an extension by its source alone: `kernel.extensions.install { source }` with `bundled:<name>`, `npm:<name>@<version>`, or `path:<folder>`, and no name field |
 | `adr/0024-restart.md` | Restarting kvman in the same process with `kernel.restart`, `kvman restart` for the agent, a "Restart now" button, and a backup that undoes a change that stops kvman from starting |
