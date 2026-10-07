@@ -20,3 +20,5 @@ Decisions 1 to 3 are the smallest fix of each, and the product owner may overrul
    - The tooltip of the time and cost is `Turns: N · {tokens} tokens used`. The tooltip and accessible name of the memory is `The model now holds {tokens} of its {window} tokens. Older messages are summarized at {at}%.`
    - A turn's line under its last message is `{time} · {cost}` too, with `{tokens} tokens used` as its tooltip (asked; chosen over keeping its tokens).
    - This replaces the text of ADR 0034, 9 and the tokens in the totals of ADR 0009, 147.
+6. **A long word never widens the message list.** The product owner asked "Why there is a horizontal scroll in the chat view". With the artifact panel open, the list was 739 px wide and its content 895 px: a message that pasted an error held a URL and file paths with no spaces, and text in the conversation broke only at spaces. Text in the message column now breaks inside a word when it has no other place to break (`overflow-wrap: anywhere`). A code block and a call's output keep their own sideways scroll.
+

@@ -16,7 +16,7 @@ Type in the box at the bottom and press Enter (Shift+Enter for a new line). Whil
 
 - You can send another message; it is queued and the agent reads it after its current step.
 - The **Stop** button cancels the turn: the current step, its helpers' turns, and its pending questions. Anything already in the transcript stays; you can send another message to go on.
-- After an answer, the conversation shows the turn's time, tokens, and cost, and the header keeps the chat's totals.
+- After an answer, the conversation shows the turn's time and cost (hover for its tokens), and the header keeps the chat's totals.
 
 The send box also holds:
 
