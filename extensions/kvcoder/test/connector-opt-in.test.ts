@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Json } from '@kvman/sdk';
+import { z, type Json } from '@kvman/sdk';
 import type { TestKernel } from '@kvman/testkit';
 import { todo, useKvcoder } from './support/kvcoder-kernel.ts';
 import { command, requestTools, runs, says, systemPrompt, toolResults } from './support/model-script.ts';
@@ -11,6 +11,8 @@ const kvcoder = useKvcoder();
 const owner = '@test/todo';
 const notes = { name: 'notes', description: 'Notes.', optIn: true as const, commands: [{ name: 'add', command: 'todo.item.add' }] };
 const always = ['shell', 'fs', 'artifact', 'background', 'ask', 'delegate', 'todo'];
+const runToolSchema = z.object({ function: z.object({ parameters: z.object({ properties: z.object({ connector: z.object({ enum: z.array(z.string()) }) }) }) }) });
+const runEnum = (tools: unknown[]): string[] => runToolSchema.parse(tools[0]).function.parameters.properties.connector.enum;
 
 const registerNotes = (kernel: TestKernel) => kernel.exec('kvcoder.connector.register', notes, { as: owner });
 const enable = (kernel: TestKernel, sessionId: string, names: string[], as: string | null = owner) => kernel.exec('kvcoder.connector.enable', { sessionId, names }, as === null ? {} : { as });
@@ -36,13 +38,13 @@ describe('connectors that are off until their owner enables them for a chat (08 
     fake.reply(says('before'));
     await send(kernel, sessionId);
     expect(await indexed(kernel, sessionId)).toEqual(always);
-    expect(JSON.stringify(requestTools(fake, 0))).not.toContain('notes');
+    expect(runEnum(requestTools(fake, 0))).toEqual(always);
 
     expect(await enable(kernel, sessionId, ['notes'])).toEqual({});
     expect(await indexed(kernel, sessionId)).toEqual([...always, 'notes']);
     fake.reply(runs(command('notes', 'add', { text: 'milk' })), says('done'));
     await send(kernel, sessionId);
-    expect(JSON.stringify(requestTools(fake, 1))).toContain('notes');
+    expect(runEnum(requestTools(fake, 1))).toEqual([...always, 'notes']);
     expect(await kernel.exec('todo.item.list', {})).toEqual([{ text: 'milk' }]);
   });
 
@@ -53,6 +55,7 @@ describe('connectors that are off until their owner enables them for a chat (08 
     const sessionId = await newSession(kernel);
     for (const name of ['todo', 'theirs', 'nope', 'shell']) {
       await expect(enable(kernel, sessionId, ['notes', name]), name).rejects.toMatchObject(failed('VALIDATION_FAILED', { name }));
+      expect(await indexed(kernel, sessionId)).toEqual(always);
     }
     await expect(enable(kernel, sessionId, ['notes'], null)).rejects.toMatchObject(failed('VALIDATION_FAILED'));
     expect(await indexed(kernel, sessionId)).toEqual(always);
