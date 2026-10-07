@@ -36,6 +36,7 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `adr/0022-lead-prompt-no-welcome-kvman-control.md` | The lead agent's prompt and a worker's, the welcome removed, and the agent's control of kvman: commands that ask the person, installing a workspace project, reading the app's state, and calling queries and a preview's commands |
 | `adr/0027-build-kvman-and-kvbuilder.md` | `/build-kvman` in place of `kvman init`: a slash-command registry and `optIn` connectors in kvcoder, and kvbuilder renamed to kvbuilder |
 | `adr/0028-registered-slash-commands-on-the-chat-page.md` | A registered slash command runs on the Chat page: the send box creates the chat first; kvcoder's own six stay greyed there |
+| `adr/0029-turns-have-no-step-limit-by-default.md` | `kvcoder.maxSteps` defaults to `null`, no limit; a number still caps a turn |
 | `adr/0026-npm-publishing.md` | Publishing to npm: the eight public packages under MIT, the extensions as dependencies of `kvman`, the presets inside it, version 0.1.0, and the release workflow on a version tag |
 | `adr/0025-install-by-source.md` | Installing an extension by its source alone: `kernel.extensions.install { source }` with `bundled:<name>`, `npm:<name>@<version>`, or `path:<folder>`, and no name field |
 | `adr/0024-restart.md` | Restarting kvman in the same process with `kernel.restart`, `kvman restart` for the agent, a "Restart now" button, and a backup that undoes a change that stops kvman from starting |

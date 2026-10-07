@@ -46,7 +46,7 @@ kvcoder is the app-building harness, built on kvai and kvwebui. Its agent has on
   - The older messages are summarized only when they are at least 10% of the model's context window (their stored content's characters / 4); smaller, they stay whole and are sent as they are, so a full chat isn't summarized again on every step (ADR 0019, 7).
   - `kvcoder.session.compact` compacts by hand, with the same minimum, and answers whether a summary was stored: `false` when nothing was summarized or the summary failed (ADR 0019, 5 and 8).
   - A failed summary adds a notice and the step goes on; `kvai/CONTEXT_TOO_LONG` then ends the turn.
-- **Limits.** A turn ends with a notice after `kvcoder.maxSteps` steps. When `kvcoder.sessions.keep` is above 0, the oldest idle top-level sessions beyond it are deleted daily: creating a session schedules `kvcoder.session.prune` in its workspace with the key `session-prune` (§2.4), daily at 03:00 (ADR 0009, 103). The default, 0, keeps every session.
+- **Limits.** A turn has no step limit unless `kvcoder.maxSteps` is a number: then it ends with a notice after that many steps (ADR 0029). When `kvcoder.sessions.keep` is above 0, the oldest idle top-level sessions beyond it are deleted daily: creating a session schedules `kvcoder.session.prune` in its workspace with the key `session-prune` (§2.4), daily at 03:00 (ADR 0009, 103). The default, 0, keeps every session.
 
 ## 8.2 A step
 
@@ -408,7 +408,7 @@ kvcoder owns its conversation UI. kvwebui only hosts it: kvcoder contributes pag
 |---|---|
 | `kvcoder.model` | `null`: use `kvai.defaultModel` |
 | `kvcoder.thinking` | `medium` (`off`, `minimal`, `low`, `medium`, `high`) |
-| `kvcoder.maxSteps` | 50 |
+| `kvcoder.maxSteps` | `null` (no limit; a positive whole number caps a turn) |
 | `kvcoder.shell.approval` | `auto`: ask only for a risky call (`ask`: ask for every call) |
 | `kvcoder.shell.path` | `null`: find bash, or `pwsh` then `powershell.exe` on Windows |
 | `kvcoder.compactAt` | 0.8 |
