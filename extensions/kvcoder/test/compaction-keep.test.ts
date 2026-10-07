@@ -3,7 +3,7 @@ import type { TestKernel } from '@kvman/testkit';
 import type { FakeOpenAI } from '@kvman/testkit/fake-openai';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { padded, unpadded } from './support/long-messages.ts';
-import { requestMessages, says, textOf, unstamped } from './support/model-script.ts';
+import { fsCall, requestMessages, runs, says, textOf, unstamped } from './support/model-script.ts';
 import { newSession } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
@@ -97,5 +97,25 @@ describe('the messages a summary keeps whole (08 §8.1, ADR 0020, 1)', { timeout
     expect(await kernel.exec('kvcoder.session.compact', { sessionId })).toEqual({ summarized: false });
     expect(fake.requests()).toHaveLength(calls);
     expect(await summaries(kernel, sessionId)).toEqual([]);
+  });
+
+  it("QA48-H16 a summary never ends between a reply's calls and their results, and the next step sends each result after its call", async () => {
+    const { kernel, fake } = await kvcoder.start();
+    const sessionId = await newSession(kernel);
+    await history(kernel, fake, sessionId);
+    // Seq 14 the message, 15 the reply with three calls, 16 to 18 their results, 19 the answer.
+    fake.reply(runs(fsCall('list'), fsCall('list'), fsCall('list')), says('answer 8'));
+    await kernel.exec('kvcoder.message.send', { sessionId, text: 'message 8' });
+    await kernel.clock.advance(0);
+    await keep(kernel, 3);
+    fake.reply(says('SUMMARY'));
+    expect(await kernel.exec('kvcoder.session.compact', { sessionId })).toEqual({ summarized: true });
+    expect(await summaries(kernel, sessionId)).toEqual([{ text: 'SUMMARY', coversThroughSeq: 14 }]);
+    fake.reply(says('answer 9'));
+    await kernel.exec('kvcoder.message.send', { sessionId, text: 'message 9' });
+    await kernel.clock.advance(0);
+    const wire = requestMessages(fake).filter((message) => message.role !== 'system' && message.role !== 'developer');
+    expect(wire.map((message) => message.role)).toEqual(['user', 'assistant', 'tool', 'tool', 'tool', 'assistant', 'user']);
+    expect(wire[1]?.tool_calls).toHaveLength(3);
   });
 });

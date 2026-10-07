@@ -1,11 +1,14 @@
 import { ProblemError, type Ctx, type Json, type Stored } from '@kvman/sdk';
 import { messageSchema } from '@kvman/kvai/messages';
 import type { MessageDoc } from '../schemas/records.ts';
+import { withCallingReply } from './call-groups.ts';
+import { blockSize } from './history.ts';
 import { latestSummary, messagesFrom } from './message-blocks.ts';
 import { messageStamp } from './message-stamp.ts';
 
 // What a step sends the model (plan 08 §8.1): the latest summary, then the messages after it; notices, notes, and
-// older messages stay visible but aren't sent. Images are read from their files at each step (ADR 0009, 103).
+// older messages stay visible but aren't sent. Images are read from their files at each step (ADR 0009, 103). A summary
+// stored before ADR 0036, 16 may end between a reply's calls and their results: the messages then start at that reply.
 
 export type History = { summary: Stored<MessageDoc> | undefined; messages: Stored<MessageDoc>[] };
 
@@ -16,7 +19,9 @@ export async function sentHistory(ctx: Ctx, sessionId: string, nextSeq: number):
   const summary = await latestSummary(ctx, sessionId);
   const from = summary === undefined ? 0 : Number(summary.content['coversThroughSeq'] ?? -1) + 1;
   const messages = (await messagesFrom(ctx, sessionId, from, nextSeq)).filter((message) => sent.has(message.kind));
-  return { summary, messages };
+  if (messages[0]?.kind !== 'toolResult') return { summary, messages };
+  const before = (await messagesFrom(ctx, sessionId, Math.max(from - blockSize, 0), from)).filter((message) => sent.has(message.kind));
+  return { summary, messages: withCallingReply(before, messages) };
 }
 
 /** A message's text: a string, or its text blocks joined. */

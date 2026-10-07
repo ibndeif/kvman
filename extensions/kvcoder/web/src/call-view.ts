@@ -1,6 +1,6 @@
-// What a call shows the person (plan 08 §8.7, ADR 0011, 13): the description the model wrote, the connector and its
-// command, and the payload, which for a line in the shell is the line itself. A call stored before the `run` tool has
-// only its command line and the words it came with.
+// What a call shows the person (plan 08 §8.7, ADR 0011, 13; ADR 0036): the description the model wrote, the connector
+// and its command, and the payload, which for a line in the shell is the line itself. A call stored before the `run`
+// tool has only its command line and the words it came with.
 
 const lineLimit = 200;
 
@@ -11,8 +11,13 @@ export type CallView = {
   label?: string;
   /** The line a shell or binary call runs, or an old call's command. */
   line?: string;
-  /** Any other call's payload, as indented JSON. */
-  payload?: string;
+  /** The call's connector and its command. */
+  connector?: string;
+  command?: string;
+  /** The call's payload; a call stored before `run` has none. */
+  fields?: Record<string, unknown>;
+  /** Whether the call said it is risky. */
+  risky?: boolean;
   /** Whether the call asked to keep running in the background. */
   background?: boolean;
   /** How long the model's answer that made the call took, when it is known (ADR 0017, 1). */
@@ -50,12 +55,32 @@ export function callView(given: Record<string, unknown>): CallView {
   if (connector === undefined) return oldView(given);
   const description = text(given['description']);
   const payload = record(typeof given['payload'] === 'string' ? undefined : given['payload']) ?? {};
-  const shown = command === 'exec' ? { line: execLine(connector, payload) } : Object.keys(payload).length === 0 ? {} : { payload: JSON.stringify(payload, null, 2) };
   const kind = connector === 'ask' ? askKinds.find((candidate) => candidate === command) : undefined;
-  return { ...(description === undefined ? {} : { description }), ...(command === undefined ? {} : { label: `${connector} · ${command}` }), ...shown, ...(payload['background'] === true ? { background: true } : {}), ...(kind === undefined ? {} : { ask: { kind, question: payload } }) };
+  return {
+    ...(description === undefined ? {} : { description }),
+    connector,
+    ...(command === undefined ? {} : { command, label: `${connector} · ${command}` }),
+    ...(command === 'exec' ? { line: execLine(connector, payload) } : {}),
+    fields: payload,
+    ...(payload['risky'] === true ? { risky: true } : {}),
+    ...(payload['background'] === true ? { background: true } : {}),
+    ...(kind === undefined ? {} : { ask: { kind, question: payload } }),
+  };
 }
 
-/** A line or a payload cut to what a card's row shows (ADR 0009, 195). */
+export type CallKind = 'edit' | 'write' | 'read' | 'list' | 'search' | 'line' | 'mcp-call' | 'delegate' | 'fields';
+
+const fsKinds = ['edit', 'write', 'read', 'list', 'search'] as const;
+
+/** Which view shows the call (ADR 0036, 1): its own, or the fields view. */
+export function callKind(view: CallView): CallKind {
+  if (view.line !== undefined) return 'line';
+  if (view.connector === 'fs') return fsKinds.find((kind) => kind === view.command) ?? 'fields';
+  if (view.connector === 'mcp' && view.command === 'call') return 'mcp-call';
+  return view.connector === 'delegate' && view.command === 'run' ? 'delegate' : 'fields';
+}
+
+/** A line cut to what a card's row shows (ADR 0009, 195). */
 export function shortLine(line: string): string {
   const oneLine = line.replace(/\s+/g, ' ');
   return oneLine.length > lineLimit ? `${oneLine.slice(0, lineLimit)}…` : oneLine;

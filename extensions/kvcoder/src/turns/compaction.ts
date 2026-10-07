@@ -3,13 +3,15 @@ import type {} from '@kvman/kvai';
 import type { MessageDoc, SessionDoc } from '../schemas/records.ts';
 import { runTool } from '../calls/run-tool.ts';
 import { txRecords } from '../store/collections.ts';
+import { olderCount } from './call-groups.ts';
 import { appendMessage, appendNotice } from './history.ts';
 import { modelInfo } from './model-info.ts';
 import { modelMessages, sentHistory, textOf, type History } from './model-context.ts';
 import { sentCharacters } from './sent-size.ts';
 
 // Compaction (plan 08 §8.1): above `kvcoder.compactAt` of the model's window, by the provider's own count, kvai summarizes the
-// older messages, the last `kvcoder.compactKeep` stay whole (ADR 0020, 1), and a summary message is stored. The request
+// older messages, the last `kvcoder.compactKeep` stay whole (ADR 0020, 1) with the reply whose results they start at
+// (ADR 0036, 16), and a summary message is stored. The request
 // is a step's own, with the instruction as its last message, so the older messages are read from the provider's cache
 // (ADR 0032, 2). A step marks it in its stream with `compaction` chunks (ADR 0009, 99); a failed summary, or one with
 // no text, adds a notice and the step goes on. Older messages smaller than a tenth of the model's window aren't
@@ -48,7 +50,7 @@ export async function compact(ctx: Ctx, session: Stored<SessionDoc>, options: Co
   const history = await sentHistory(ctx, session.id, session.nextSeq);
   const info = await modelInfo(ctx, session.model);
   if (!options.force && (info === undefined || promptTokens(options.prompt, history) <= info.contextWindow * options.compactAt)) return false;
-  const older = history.messages.slice(0, Math.max(history.messages.length - options.keep, 0));
+  const older = history.messages.slice(0, olderCount(history.messages, options.keep));
   const last = older.at(-1);
   if (last === undefined || (info !== undefined && sentTokens(older) < info.contextWindow * minimumShare)) return false;
   ctx.job.progress({ type: 'compaction', state: 'started' });

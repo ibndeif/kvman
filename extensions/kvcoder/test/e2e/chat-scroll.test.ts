@@ -37,7 +37,7 @@ const edgesExpression = `(() => {
     const { left, right } = range.getBoundingClientRect();
     return { left, right };
   };
-  return { description: edge('[data-test="call-description"]'), label: edge('[data-test="call-label"]') };
+  return { description: edge('[data-test="call-description"]'), label: edge('[data-test="call-summary"]') };
 })()`;
 // The popover re-fits on the frame after the conversation changes size, so a test waits for it to lie inside (ADR 0009, 221).
 const insideExpression = `(() => {

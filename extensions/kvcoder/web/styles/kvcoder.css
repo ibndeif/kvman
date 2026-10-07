@@ -6,7 +6,9 @@
 .kvc-conversation { display: flex; flex-direction: column; flex: 1 1 0; min-inline-size: 0; background: var(--kv-color-surface); color: var(--kv-color-text); }
 .kvc-artifact-panel { display: flex; flex-direction: column; background: var(--kv-color-surface); border-inline-start: 1px solid var(--kv-color-border); flex: 0 0 min(40%, 32rem); min-inline-size: 0; container-type: inline-size; }
 .kvc-artifact-head { display: flex; align-items: center; gap: var(--kv-space-sm); padding-block: 12px; padding-inline: var(--kv-space-lg); border-block-end: 1px solid var(--kv-color-border); }
-.kvc-artifact-tabs { display: flex; gap: 2px; padding: 3px; border: 1px solid var(--kv-color-border); border-radius: 10px; min-inline-size: 0; overflow-x: auto; }
+.kvc-artifact-tabs { display: flex; gap: 2px; padding: 3px; border: 1px solid var(--kv-color-border); border-radius: 10px; min-inline-size: 0; overflow-x: auto; scrollbar-width: thin; }
+/* Each title keeps its own width on one line, and the row scrolls (ADR 0036, 15). */
+.kvc-artifact-tabs > .kvc-tab { flex: 0 0 auto; max-inline-size: 14rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .kvc-artifact-title { font-size: 15px; font-weight: 600; }
 .kvc-artifact-name { display: flex; flex-direction: column; gap: 2px; flex: 1 1 0; min-inline-size: 0; }
 .kvc-artifact-name > .kvc-muted { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -49,6 +51,7 @@
 .kvc-card-row > .kvc-muted, .kvc-card-row > .kvc-chip { flex: 0 0 auto; white-space: nowrap; }
 .kvc-output { margin: 0; padding: 10px 14px; background: #15171b; color: #e6e8ec; font-family: var(--kv-font-mono); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; max-block-size: 320px; overflow-y: auto; }
 .kvc-output + .kvc-output { border-block-start: 1px solid #2c3037; }
+.kvc-output-block > .kvc-output { max-block-size: none; overflow-y: visible; }
 .kvc-output .kvc-link { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .kvc-chip { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding-block: 2px; padding-inline: 8px; font-size: 12px; font-weight: 500; white-space: nowrap; border: 1px solid var(--kv-color-border); }
 .kvc-ok { color: var(--kv-color-success); }
@@ -190,5 +193,40 @@ a.kvc-button { text-decoration: none; color: inherit; }
 .kvc-slash-name { flex: 0 0 9rem; }
 .kvc-slash-row .kvc-mono { font-size: 13px; font-weight: 600; }
 .kvc-call-parts { margin: 0; padding-block: 8px; padding-inline: 14px; border-block-start: 1px solid var(--kv-color-border); }
+/* A call's views by its kind (ADR 0036): the closed line, blocks of lines that each read in their own direction, and fields. */
+.kvc-summary { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; min-inline-size: 0; font-size: 13px; }
+.kvc-summary > .kvc-mono { min-inline-size: 0; }
+.kvc-block { margin: 0; padding-block: 8px; border-block-start: 1px solid var(--kv-color-border); font-size: 13px; }
+.kvc-block:not(.kvc-code-lines) { padding-inline: 14px; }
+.kvc-code-lines { font-family: var(--kv-font-mono); font-size: 12px; line-height: 1.55; }
+.kvc-code-line { display: flex; gap: 8px; padding-inline: 14px; min-block-size: 1.55em; }
+.kvc-code-line[data-kind='removed'] { background: color-mix(in srgb, var(--kv-color-danger) 14%, transparent); }
+.kvc-code-line[data-kind='added'] { background: color-mix(in srgb, var(--kv-color-success) 14%, transparent); }
+.kvc-line-number { flex: 0 0 auto; min-inline-size: 3ch; text-align: end; color: var(--kv-color-muted); user-select: none; }
+.kvc-line-mark { flex: 0 0 1ch; color: var(--kv-color-muted); user-select: none; }
+.kvc-line-text { flex: 1 1 auto; min-inline-size: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.kvc-code-lines .kvc-link, .kvc-fields .kvc-link, .kvc-error .kvc-link { color: var(--kv-color-primary); text-decoration: underline; text-underline-offset: 2px; }
+.kvc-prose-lines { font-family: inherit; font-size: 13px; }
+.kvc-fold { display: block; margin-block-start: 6px; margin-inline: 14px; }
+.kvc-output-block { border-block-start: 1px solid #2c3037; }
+.kvc-output-block > .kvc-fold { margin-block: 6px; }
+.kvc-error { color: var(--kv-color-danger); font-family: inherit; white-space: pre-wrap; overflow-wrap: anywhere; }
+.kvc-entries { display: flex; flex-direction: column; gap: 2px; }
+.kvc-entry { display: flex; align-items: center; gap: 8px; }
+.kvc-entry > .kvc-mono { flex: 1 1 auto; min-inline-size: 0; }
+.kvc-file-path { padding-block-end: 4px; font-weight: 600; }
+.kvc-block > .kvc-code-lines > .kvc-code-line { padding-inline: 0; }
+.kvc-block > .kvc-code-lines > .kvc-fold { margin-inline: 0; }
+.kvc-fields { display: grid; grid-template-columns: minmax(6rem, max-content) minmax(0, 1fr); gap: 4px 12px; margin: 0; }
+.kvc-field-row { display: contents; }
+.kvc-field-row > dt { font-family: var(--kv-font-mono); font-size: 12px; }
+.kvc-field-row > dd { margin: 0; min-inline-size: 0; overflow-wrap: anywhere; }
+.kvc-field-block > .kvc-code-line, .kvc-field-block > .kvc-fold { padding-inline: 0; margin-inline: 0; }
+.kvc-field-table { overflow-x: auto; }
+.kvc-field-table table { border-collapse: collapse; font-size: 12.5px; }
+.kvc-field-table th, .kvc-field-table td { padding-block: 3px; padding-inline: 0 14px; text-align: start; vertical-align: top; }
+.kvc-field-table th { color: var(--kv-color-muted); font-weight: 500; font-family: var(--kv-font-mono); font-size: 12px; }
+.kvc-field-items { display: flex; flex-direction: column; gap: 2px; }
+.kvc-approval { border-block-start: 1px solid var(--kv-color-border); }
 :dir(rtl) .kvc-flip { transform: scaleX(-1); }
 .kvc-slash-row[aria-disabled='true'] { opacity: 0.55; cursor: default; }

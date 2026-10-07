@@ -32,8 +32,6 @@ describe('the conversation shows its messages (08 §8.7)', () => {
     expect(shell.text()).toContain('Test.');
     expect(shell.classes()).toContain('kvc-failed');
     expect(shell.find('[data-test="exit-code"]').exists()).toBe(false);
-    expect(shell.find('[data-test="call-output"]').exists()).toBe(false);
-    await shell.find('button').trigger('click');
     expect(shell.find('[data-test="call-output"]').text()).toBe('FAIL 1');
     expect(wrapper.findAll('[data-test="turn-totals"]').map((node) => node.text())).toEqual(['12 s · $0.02']);
     expect(wrapper.find('[data-test="turn-totals"]').attributes('title')).toBe('1.5K tokens used');

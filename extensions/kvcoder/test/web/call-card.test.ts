@@ -27,24 +27,23 @@ const opened = (wrapper: Wrapper) => wrapper.find('[data-test="call-card"] butto
 const found = (wrapper: Wrapper, name: string) => wrapper.find(`[data-test="${name}"]`);
 
 describe("a call's card says what the call does (08 §8.7, ADR 0011, 13)", () => {
-  it('QA18-H19 closed, the card shows the description, then the connector and command and the time; opened, the payload and the output', async () => {
-    const edit = await card({ description: 'Editing app.ts to add the save button', connector: 'fs', command: 'edit', payload: { path: 'src/app.ts', edits: [{ oldText: 'a', newText: 'b' }] } }, '{\n  "path": "src/app.ts",\n  "replacements": 1\n}');
+  it('QA18-H19 closed, the card shows the description, then what the call did and the time; opened, the call by its kind (ADR 0036)', async () => {
+    const edit = await card({ description: 'Editing app.ts to add the save button', connector: 'fs', command: 'edit', payload: { path: 'src/app.ts', edits: [{ oldText: 'a', newText: 'b' }] } }, '{"path":"src/app.ts","replacements":1,"firstChangedLine":1,"fromLine":1,"content":"b"}');
     expect(found(edit, 'call-description').text()).toBe('Editing app.ts to add the save button');
-    expect(found(edit, 'call-label').text()).toBe('fs · edit');
+    expect([found(edit, 'call-words').text(), found(edit, 'call-subject').text(), found(edit, 'call-outcome').text()]).toEqual(['Edit', 'src/app.ts', '+1 −1']);
+    expect(found(edit, 'call-label').exists()).toBe(false);
     expect(found(edit, 'call-time').text()).toBe('200 ms');
-    expect(found(edit, 'call-payload').exists()).toBe(false);
-    await opened(edit);
-    expect(JSON.parse(found(edit, 'call-payload').text())).toEqual({ path: 'src/app.ts', edits: [{ oldText: 'a', newText: 'b' }] });
-    expect(found(edit, 'call-output').text()).toContain('"replacements": 1');
-    const html = edit.html();
-    expect(html.indexOf('data-test="call-payload"')).toBeLessThan(html.indexOf('data-test="call-output"'));
+    expect(edit.findAll('[data-test="call-diff"] [data-test="call-line-row"]').map((row) => [row.attributes('data-kind'), row.text()])).toEqual([['removed', '−a'], ['added', '+b']]);
     edit.unmount();
 
     const shell = await card({ description: "Listing the folder's files", connector: 'shell', command: 'exec', payload: { line: 'ls -a | wc -l', risky: false } }, '14\n[exit code 0]', { exitCode: 0 });
-    expect(found(shell, 'call-label').text()).toBe('shell · exec');
+    expect(found(shell, 'call-subject').text()).toBe('$ ls -a | wc -l');
+    expect(found(shell, 'call-payload').exists()).toBe(false);
     await opened(shell);
-    expect(found(shell, 'call-payload').text()).toBe('ls -a | wc -l');
+    expect(found(shell, 'call-payload').text()).toBe('$ ls -a | wc -l');
     expect(found(shell, 'call-output').text()).toBe('14');
+    const html = shell.html();
+    expect(html.indexOf('data-test="call-payload"')).toBeLessThan(html.indexOf('data-test="call-output"'));
     shell.unmount();
   });
 
@@ -53,21 +52,21 @@ describe("a call's card says what the call does (08 §8.7, ADR 0011, 13)", () =>
     expect(found(bare, 'call-line').text()).toBe('ls -a');
     expect(found(bare, 'call-description').exists()).toBe(false);
     await opened(bare);
-    expect(found(bare, 'call-payload').text()).toBe('ls -a');
+    expect(found(bare, 'call-payload').text()).toBe('$ ls -a');
     expect(found(bare, 'call-output').text()).toBe('a\nb');
     bare.unmount();
 
     const titled = await oldCard({ title: 'Run the tests', description: 'Checks the page.', command: 'npm test' }, 'ok\n[exit code 0]');
     expect(found(titled, 'call-description').text()).toBe('Run the tests');
     await opened(titled);
-    expect(found(titled, 'call-payload').text()).toBe('npm test');
+    expect(found(titled, 'call-payload').text()).toBe('$ npm test');
     titled.unmount();
   });
 
   it('QA9-H10 an empty output has no block', async () => {
     const wrapper = await card({ description: 'Making the folder.', connector: 'shell', command: 'exec', payload: { line: 'mkdir out' } }, '[exit code 0]', { exitCode: 0 });
     await opened(wrapper);
-    expect(found(wrapper, 'call-payload').text()).toBe('mkdir out');
+    expect(found(wrapper, 'call-payload').text()).toBe('$ mkdir out');
     expect(found(wrapper, 'call-output').exists()).toBe(false);
     wrapper.unmount();
   });
@@ -77,7 +76,6 @@ describe("a call's card says what the call does (08 §8.7, ADR 0011, 13)", () =>
     expect(found(wrapper, 'exit-code').exists()).toBe(false);
     expect(found(wrapper, 'call-card').text()).not.toContain('exit');
     expect(found(wrapper, 'call-time').text()).toBe('200 ms');
-    await opened(wrapper);
     expect(found(wrapper, 'call-output').text()).toBe('FAIL 1');
     wrapper.unmount();
   });
@@ -120,10 +118,22 @@ describe("a call's card says what the call does (08 §8.7, ADR 0011, 13)", () =>
     said.unmount();
   });
 
-  it('QA46-H11 a JSON output on one line is shown indented, and any other output as it is', async () => {
-    const list = await card({ description: 'Listing the folder', connector: 'fs', command: 'list' }, '{"path":".","entries":[{"name":"a.txt"}]}');
+  it('QA48-E15 a call stored before the run tool is as before: its command line closed, the line and the output opened', async () => {
+    const old = await oldCard({ command: 'ls -a' }, 'a\nb\n[exit code 0]');
+    expect(found(old, 'call-line').text()).toBe('ls -a');
+    expect(found(old, 'call-summary').exists()).toBe(false);
+    expect(found(old, 'call-label').exists()).toBe(false);
+    expect(found(old, 'call-output').exists()).toBe(false);
+    await opened(old);
+    expect([found(old, 'call-payload').text(), found(old, 'call-output').text()]).toEqual(['$ ls -a', 'a\nb']);
+    old.unmount();
+  });
+
+  it('QA46-H11 a JSON output shows as fields, never as JSON (ADR 0036, 9), and any other output as it is', async () => {
+    const list = await card({ description: 'Listing the notes', connector: 'notes', command: 'list' }, '{"folder":".","count":1}');
     await opened(list);
-    expect(found(list, 'call-output').text()).toBe('{\n  "path": ".",\n  "entries": [\n    {\n      "name": "a.txt"\n    }\n  ]\n}');
+    expect(list.findAll('[data-test="call-result-fields"] [data-test="field-row"]').map((row) => row.text())).toEqual(['folder.', 'count1']);
+    expect(found(list, 'call-output').exists()).toBe(false);
     const plain = await card({ description: 'Saying hi', connector: 'shell', command: 'exec' }, '{not json');
     await opened(plain);
     expect(found(plain, 'call-output').text()).toBe('{not json');

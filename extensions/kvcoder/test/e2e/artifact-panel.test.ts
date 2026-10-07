@@ -59,4 +59,49 @@ describe('the artifact panel in Chromium (08 §8.7, ADR 0009, 177 and 182)', { t
     expect(await page.locator('[data-test="artifact-panel"]').count()).toBe(0);
     await page.close();
   });
+
+  it("QA48-H15 the panel's titles stay on one line, the long one is cut, and the shown one is in view", async () => {
+    world = await kvmanWorld();
+    const kvman = await world.start();
+    const titles = ['دليل القوالب — تصور بصري', 'دليل القوالب — موجز التصميم والمحتوى الكامل لكل صفحات المشروع', 'صفحة دليل إعداد قوالب Word', 'المواصفات الفنية للقوالب', 'خطة التنفيذ والمراجعة'];
+    world.fake.reply(runs(...titles.map((title, index) => command('artifact', 'write', { id: `doc-${index + 1}`, title, content: `# ${title}` }))), says('Done.'));
+    await kvman.call('commands', 'kernel.settings.set', { key: 'kernel.language', value: 'ar', scope: 'global' });
+    const sessionId = sessionSchema.parse(await kvman.call('commands', 'kvcoder.session.create', { title: 'Artifacts' })).id;
+    await kvman.call('commands', 'kvcoder.message.send', { sessionId, text: 'Write them' });
+    await until(() => kvman.call('queries', 'kvcoder.session.get', { sessionId }), sessionSchema, (found) => found.status === 'idle');
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    await page.goto(`${kvman.origin}/kvcoder/session/${sessionId}`);
+    await page.locator('[data-test="artifact-open"]').last().click();
+    await page.locator('[data-test="artifact-tab-doc-5"][aria-selected="true"]').waitFor();
+    for (let index = 1; index <= titles.length; index += 1) expect((await rectOf(page, `[data-test="artifact-tab-doc-${index}"]`)).height, `title ${index}`).toBeLessThan(40);
+    expect((await rectOf(page, '.kvc-artifact-head')).height).toBeLessThan(96);
+    const row = await rectOf(page, '[role="tablist"]');
+    const shown = await rectOf(page, '[data-test="artifact-tab-doc-5"]');
+    expect(shown.x).toBeGreaterThanOrEqual(row.x - 1);
+    expect(shown.right).toBeLessThanOrEqual(row.right + 1);
+    const long = page.locator('[data-test="artifact-tab-doc-2"]');
+    expect(await long.getAttribute('title')).toBe(titles[1]);
+    expect(await long.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
+    expect((await rectOf(page, '[data-test="artifact-tab-doc-2"]')).width).toBeLessThanOrEqual(14 * 16 + 1);
+    await page.locator('[data-test="artifact-tab-doc-1"]').evaluate((element) => element.scrollIntoView({ inline: 'nearest' }));
+    await page.locator('[data-test="artifact-tab-doc-1"]').click();
+    await page.locator('[data-test="artifact-tab-doc-1"][aria-selected="true"]').waitFor();
+    expect(await scrollsSideways(page)).toBe(false);
+    await page.close();
+  });
+
+  it('QA48-E18 a chat with one artifact shows its title, with no row of titles', async () => {
+    world = await kvmanWorld();
+    const kvman = await world.start();
+    world.fake.reply(runs(command('artifact', 'write', { id: 'plan', title: 'The plan', content: '# The plan' })), says('Done.'));
+    const sessionId = sessionSchema.parse(await kvman.call('commands', 'kvcoder.session.create', { title: 'Artifact' })).id;
+    await kvman.call('commands', 'kvcoder.message.send', { sessionId, text: 'Write the plan' });
+    await until(() => kvman.call('queries', 'kvcoder.session.get', { sessionId }), sessionSchema, (found) => found.status === 'idle');
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    await page.goto(`${kvman.origin}/kvcoder/session/${sessionId}`);
+    await page.locator('[data-test="artifact-open"]').first().click();
+    expect(await page.locator('[data-test="artifact-title"]').textContent()).toBe('The plan');
+    expect(await page.locator('[role="tablist"]').count()).toBe(0);
+    await page.close();
+  });
 });

@@ -9,8 +9,8 @@ type Wrapper = Awaited<ReturnType<typeof mounted>>;
 
 // A step as kvcoder stores it: the answer that made the calls, with how long the model took, and each call's result.
 function step(writtenMs: number | undefined, runs: { ms: number; failed?: boolean }[]) {
-  const answer = message('assistant', { role: 'assistant', content: runs.map((_run, index) => ({ type: 'toolCall', id: `c${index}`, name: 'run', arguments: { description: `Call ${index}`, connector: 'fs', command: 'write', payload: { path: 'a.txt' } } })) }, writtenMs === undefined ? {} : { durationMs: writtenMs });
-  const results = runs.map((run, index) => message('toolResult', { role: 'toolResult', toolCallId: `c${index}`, toolName: 'run', content: [{ type: 'text', text: 'done' }], isError: run.failed === true, details: { description: `Call ${index}`, connector: 'fs', command: 'write', output: 'done', durationMs: run.ms } }));
+  const answer = message('assistant', { role: 'assistant', content: runs.map((_run, index) => ({ type: 'toolCall', id: `c${index}`, name: 'run', arguments: { description: `Call ${index}`, connector: 'notes', command: 'add', payload: { title: 'a' } } })) }, writtenMs === undefined ? {} : { durationMs: writtenMs });
+  const results = runs.map((run, index) => message('toolResult', { role: 'toolResult', toolCallId: `c${index}`, toolName: 'run', content: [{ type: 'text', text: 'done' }], isError: run.failed === true, details: { description: `Call ${index}`, connector: 'notes', command: 'add', output: 'done', durationMs: run.ms } }));
   const calls = callViews([answer, ...results]);
   return Promise.all(results.map((result) => mounted(MessageItem, createFakeKvman(), { message: result, calls })));
 }

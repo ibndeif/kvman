@@ -49,8 +49,9 @@ function detailsView(details: Record<string, unknown>, call: CallView | undefine
   if (typeof connector !== 'string') return { ...call, ...callView(details) };
   return {
     ...call,
+    connector,
     ...(typeof description === 'string' ? { description } : {}),
-    ...(typeof command === 'string' ? { label: `${connector} · ${command}` } : {}),
+    ...(typeof command === 'string' ? { command, label: `${connector} · ${command}` } : {}),
     ...(details['background'] === true ? { background: true } : {}),
   };
 }
@@ -124,6 +125,13 @@ const attachedFiles = /\n\nAttached files:\n((?:- .+\n?)+)$/;
 /** A person's message as the page shows it: the line above its attached files is in the page's language (ADR 0035, 2). */
 export function shownUserText(text: string, label: string): string {
   return text.replace(attachedFiles, (_whole, files: string) => `\n\n${label}\n${files}`);
+}
+
+/** The id of the run a background result is of: its job, or its subagent's session (ADR 0036, 14). */
+export function backgroundRef(message: Message): string | undefined {
+  if (message.kind !== 'user') return undefined;
+  if (message.source?.kind === 'job') return message.source.jobId;
+  return message.source?.kind === 'subagent' ? message.source.sessionId : undefined;
 }
 
 // A background result's text, as kvcoder writes it for the model (`backgroundText`): the call's own words come first.

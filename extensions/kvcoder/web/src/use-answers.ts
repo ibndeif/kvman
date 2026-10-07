@@ -19,8 +19,8 @@ export type Answers = {
 };
 
 const allowedCall = (approval: Approval): LiveCall => {
-  const description = approval.description ?? approval.subject;
-  return { name: 'run', ...(description === undefined ? {} : { description }), ...(approval.label === undefined ? {} : { label: approval.label }), complete: true };
+  const description = approval.view.description ?? approval.view.line;
+  return { name: 'run', ...(description === undefined ? {} : { description }), ...(approval.view.label === undefined ? {} : { label: approval.view.label }), complete: true };
 };
 
 export function useAnswers(kvman: Kvman, refresh: (ran: readonly LiveCall[]) => Promise<void>): Answers {

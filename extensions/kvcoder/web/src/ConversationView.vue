@@ -23,6 +23,7 @@ import { useAnswers } from './use-answers.ts';
 import { useArtifacts } from './use-artifacts.ts';
 import { useConversation } from './use-conversation.ts';
 import { useFollowLatest } from './use-follow-latest.ts';
+import { useRunTimes } from './use-run-times.ts';
 import { useSessionActions } from './use-session-actions.ts';
 import { useSlashCommands } from './use-slash-commands.ts';
 import { useWorkspaceSession } from './use-workspace-session.ts';
@@ -40,6 +41,7 @@ const { session, messages, omitted, turns, live, children } = conversation;
 const artifacts = useArtifacts(kvman, () => sessionId.value, () => session.value?.updatedAt, (error) => toastProblem(kvman, error));
 const panelShown = computed(() => artifacts.open.value && artifacts.shown.value !== undefined);
 const calls = computed(() => callViews(messages.value));
+const runTimes = useRunTimes(kvman, () => sessionId.value, messages, (error) => toastProblem(kvman, error));
 const recoverableNotices = new Set(['STEP_FAILED', 'REPLY_LOST', 'INTERRUPTED']);
 const running = computed(() => session.value?.status === 'running');
 // When the running turn started, for the header's time (ADR 0018, 9).
@@ -166,7 +168,7 @@ const key = (message: Message): string => message.id;
             <div v-else class="kvc-column">
               <button v-if="omitted > 0" type="button" class="kvc-button" style="align-self: center" data-test="earlier" @click="exportEarlier">{{ kvman.t('kvcoder.ui.earlierMessages', { count: omitted }) }}</button>
               <template v-for="message in messages" :key="key(message)">
-                <MessageItem :message="message" :calls="calls" @open-artifact="artifacts.openArtifact($event)" />
+                <MessageItem :message="message" :calls="calls" :run-times="runTimes" @open-artifact="artifacts.openArtifact($event)" />
                 <span v-if="turnTotals.has(message.id)" class="kvc-muted" :title="turnTotals.get(message.id)?.tokens" data-test="turn-totals">{{ turnTotals.get(message.id)?.text }}</span>
               </template>
               <RecoveryActions v-if="recoverable" :session-id="session.id" @sent="follow.resume(); conversation.refresh()" />

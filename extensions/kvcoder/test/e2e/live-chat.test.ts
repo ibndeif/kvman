@@ -51,9 +51,9 @@ describe('what a person sees while a step runs, in Chromium (08 §8.7, ADR 0009,
     await page.locator('[data-test="assistant-message"]', { hasText: 'Done.' }).waitFor();
     await activity.waitFor({ state: 'detached' });
     const card = page.locator('[data-test="call-card"]', { hasText: 'Creating the todo file' });
-    expect(await card.locator('[data-test="call-label"]').textContent()).toBe('shell · exec');
+    expect(await card.locator('[data-test="call-subject"]').textContent()).toBe('$ echo hi');
     await card.locator('button').click();
-    expect(await card.locator('[data-test="call-payload"]').textContent()).toBe('echo hi');
+    expect(await card.locator('[data-test="call-payload"]').textContent()).toBe('$ echo hi');
     await page.close();
   });
 

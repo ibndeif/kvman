@@ -1,6 +1,6 @@
 # QA 48 — A call's card reads as what the call did (ADR 0036)
 
-Asked: an opened `fs edit` card that showed its payload and output as JSON, "optimize the user experience" for "all tool call types"; then "the completed background tools should also show the elapsed time"; then a picture of the artifact panel's titles squeezed to a word per line.
+Asked: a turn that stopped on OpenAI's `No tool call found for function call output`; an opened `fs edit` card that showed its payload and output as JSON, "optimize the user experience" for "all tool call types"; then "the completed background tools should also show the elapsed time"; then a picture of the artifact panel's titles squeezed to a word per line.
 
 Every scenario is in `extensions/kvcoder/test/`.
 
@@ -20,7 +20,8 @@ Every scenario is in `extensions/kvcoder/test/`.
 - **QA48-H12 A risky call says so.** *Then* a call with `risky: true` has the chip `Risky`, and one with `risky: false` has none. `web/call-summary.test.ts`
 - **QA48-H13 The approval card shows the same view.** *Given* a turn waiting on a risky `fs edit`, an `fs write`, a `shell exec`, and an `mcp call`, *then* each approval shows its description and the closed line of ADR 0036, 2; the edit's shows its diff, the write's its content, the `mcp call`'s its arguments, and the line's shows the whole line; and Allow and Deny still answer. `web/approval-view.test.ts`
 - **QA48-H14 A finished background job's card shows how long it ran.** *Given* a job's result whose run started at 09:00:00 and ended at 09:01:09, and a subagent's that took 36 s, both in the chat's job list, *then* the first card's row ends with `1 min 9 s` and the second's with `36 s`. `web/background-time.test.ts`
-- **QA48-H15 The panel's titles stay on one line.** *Given* a chat with five artifacts with long Arabic titles in a window 1280 px wide, *then* every title's tab is one line high (under 40 px), the header is under 80 px high, and the shown artifact's tab is inside the row's visible part; a title longer than 14 rem is cut and has its whole text as tooltip. `e2e/artifact-panel.test.ts`
+- **QA48-H15 The panel's titles stay on one line.** *Given* a chat with five artifacts with long Arabic titles in a window 1280 px wide, *then* every title's tab is one line high (under 40 px), the header is under 96 px high, and the shown artifact's tab is inside the row's visible part; a title longer than 14 rem is cut and has its whole text as tooltip. `e2e/artifact-panel.test.ts`
+- **QA48-H16 A summary keeps a reply with its results.** *Given* a chat whose last turn's reply made three calls, and `kvcoder.compactKeep` 3, so the count alone would end the summary on the first result, *when* the chat is summarized, *then* the summary covers through the message before that reply, and the next step's request has the reply before its three results. `compaction-keep.test.ts`
 
 ## Edge cases
 
@@ -42,3 +43,5 @@ Every scenario is in `extensions/kvcoder/test/`.
 - **QA48-E16 Arabic.** *Then* in an Arabic page the edit's closed line reads `تعديل`, then the path left to right, and `Show all 40 lines` reads in Arabic with the count. `web/call-summary.test.ts`
 - **QA48-E17 A background card with no known run has no time.** *Given* a result whose job isn't in the list, and one whose run is there but hasn't ended, *then* neither card shows a time. `web/background-time.test.ts`
 - **QA48-E18 One artifact has no row of titles.** *Then* a chat with one artifact shows its title as before. `e2e/artifact-panel.test.ts`
+- **QA48-E19 The kept messages never start at a tool result.** *Given* a user message, a reply, three results, and an answer, *then* keeping 2, 3, 4, or 5 leaves 1 older message, keeping 1 leaves 5, and keeping 6 or more leaves none. `unit/call-groups.test.ts`
+- **QA48-E20 A history that starts at a tool result starts at its reply.** *Given* a summary stored through seq 387, the first result of the reply at seq 386, *then* the history is 386, 387, then the messages from 388; a history that starts at any other message, or whose message before the results isn't a reply, is as it was. `unit/call-groups.test.ts`

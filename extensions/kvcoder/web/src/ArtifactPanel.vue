@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Code, Copy, ExternalLink, Eye, X } from '@lucide/vue';
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, ref, useTemplateRef, watch } from 'vue';
 import ArtifactFrame from './ArtifactFrame.vue';
 import ArtifactUrlFrame from './ArtifactUrlFrame.vue';
 import { frameableUrl } from './artifact-url.ts';
@@ -23,6 +23,12 @@ const body = computed(() => current.value?.content ?? '');
 const frameLabel = computed(() => kvman.t('kvcoder.ui.artifacts.frameLabel', { title: title.value }));
 const mode = ref<'preview' | 'source'>('preview');
 watch(() => props.shown, () => (mode.value = 'preview'));
+// The shown artifact's title stays in view in a row of titles too long to fit (ADR 0036, 15).
+const titles = useTemplateRef<HTMLElement>('titles');
+watch(() => [props.shown, props.list.length], async () => {
+  await nextTick();
+  titles.value?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}, { immediate: true });
 
 async function copy(): Promise<void> {
   try {
@@ -40,8 +46,8 @@ const markdownView = computed(() => ({ type: 'markdown' as const, text: 'kvcoder
   <aside class="kvc-artifact-panel" data-test="artifact-panel" :aria-label="kvman.t('kvcoder.ui.artifacts.title')">
     <div class="kvc-artifact-head">
       <div class="kvc-artifact-name">
-        <div v-if="props.list.length > 1" role="tablist" class="kvc-artifact-tabs">
-          <button v-for="item in props.list" :key="item.id" type="button" role="tab" class="kvc-tab" :aria-selected="item.id === props.shown" :data-test="`artifact-tab-${item.id}`" @click="emit('select', item.id)">{{ item.title }}</button>
+        <div v-if="props.list.length > 1" ref="titles" role="tablist" class="kvc-artifact-tabs">
+          <button v-for="item in props.list" :key="item.id" type="button" role="tab" class="kvc-tab" :aria-selected="item.id === props.shown" :title="item.title" :data-test="`artifact-tab-${item.id}`" @click="emit('select', item.id)">{{ item.title }}</button>
         </div>
         <span v-else class="kvc-artifact-title kvc-oneline" data-test="artifact-title">{{ title }}</span>
         <span class="kvc-muted" data-test="artifact-meta"><span data-test="artifact-format">{{ kvman.t(`kvcoder.ui.artifacts.format.${format}`) }}</span> · <span data-test="artifact-version">{{ kvman.t('kvcoder.ui.artifacts.version', { version: version }) }}</span></span>

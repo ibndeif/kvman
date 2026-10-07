@@ -72,7 +72,7 @@ describe('the live view of a running step (08 §8.7, ADR 0009, 142, 143)', () =>
     wrapper.unmount();
   });
 
-  it("QA3-H5 a stored result card shows the call's description and its connector command, and QA3-E5 an old one with no words shows its command", async () => {
+  it("QA3-H5 a stored result card shows the call's description and its line (ADR 0036, 2), and QA3-E5 an old one with no words shows its command", async () => {
     const fake = createFakeKvman();
     const labelled = { type: 'toolCall', id: 'c1', name: 'run', arguments: { description: 'Running the tests.', connector: 'shell', command: 'exec', payload: { line: 'npm test' } } };
     const bare = { type: 'toolCall', id: 'c2', name: 'bash', arguments: { command: 'ls -la' } };
@@ -86,7 +86,7 @@ describe('the live view of a running step (08 §8.7, ADR 0009, 142, 143)', () =>
     const wrapper = await mounted(ConversationView, fake, { sessionId: 's1' });
     const [first, second] = wrapper.findAll('[data-test="call-card"]');
     expect(first?.find('[data-test="call-description"]').text()).toBe('Running the tests.');
-    expect(first?.find('[data-test="call-label"]').text()).toBe('shell · exec');
+    expect(first?.find('[data-test="call-subject"]').text()).toBe('$ npm test');
     expect(second?.find('[data-test="call-description"]').exists()).toBe(false);
     expect(second?.find('[data-test="call-label"]').exists()).toBe(false);
     expect(second?.find('[data-test="call-line"]').text()).toBe('ls -la');
