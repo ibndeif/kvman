@@ -8,7 +8,8 @@ import { z } from '@kvman/sdk';
 // extensions, which are the package's dependencies that have a `kvman` field. Each is found as Node resolves any
 // module, so the repository and an installed kvman take the same path.
 
-const packageFolder = fileURLToPath(new URL('../', import.meta.url));
+/** The `kvman` package's own folder, which holds `dist/` (or `src/`) and `presets/`. */
+export const packageFolder = fileURLToPath(new URL('../', import.meta.url));
 
 export const bundledPresetsFolder = path.join(packageFolder, 'presets');
 

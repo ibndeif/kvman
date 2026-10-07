@@ -17,6 +17,7 @@ The tests give the command a fake terminal, a fake `npm`, a temporary home, and 
 - **QA43-H9 The help has it.** *Then* `kvman --help` has the line `kvman uninstall [--home <dir>] [--yes] [--keep-data | --delete-data]` and a line for each of the two flags. `packages/cli/test/arguments.test.ts`
 - **QA43-H10 The install page says how to remove kvman.** *Then* `docs/user-guide/installing.md` has `kvman uninstall`, says the two questions, and no longer says that there is no subcommand. `packages/cli/test/docs.test.ts`
 - **QA43-H11 The real program stops a real kvman and keeps its data.** *Given* a kvman child running on a temporary home, and a fake `npm` first on the PATH whose `root -g` answers the folder that holds this kvman, *when* `kvman uninstall --home <home> --yes` runs as a child, *then* the running kvman exits, the fake npm was called with `uninstall -g kvman`, the home folder is whole, and the child exits 0. `packages/cli/test/uninstall/uninstall-child.test.ts`
+- **QA43-H12 A program starts the platform's way.** *Then* on Linux and on macOS `npm` starts directly, and on Windows through a shell, since `npm` is `npm.cmd` there; a captured run prints nothing, a shown one prints the program's output, and a program that can't start answers that it didn't. `packages/cli/test/uninstall/run-program.test.ts`
 
 ## Edge cases
 

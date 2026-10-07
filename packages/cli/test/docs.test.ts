@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { usage } from '../src/arguments.ts';
 
 // The documentation (QA17-H22 to H24, E24): the pages exist and have content, every relative link and anchor resolves,
 // the references name every kernel command, error code, and flag, and no page promises what isn't built.
@@ -106,6 +107,13 @@ describe('the documentation (QA17-H22 to H24, E24)', () => {
     expect(flags).toEqual(expect.arrayContaining(['--mode', '--preset', '--home', '--port', '--yes', '--no-open', '--log-level', '--help', '--version']));
     const installing = read(path.join(userGuide, 'installing.md'));
     for (const flag of flags) expect(installing, flag).toContain(`\`${flag}`);
+  });
+
+  it('QA43-H10 the install page says how to remove kvman, and prints the help as it is', () => {
+    const installing = read(path.join(userGuide, 'installing.md'));
+    expect(installing).toContain(usage);
+    for (const text of ['## Removing kvman', 'kvman uninstall', '**Remove kvman?**', '**Delete it too?**', '`--keep-data`', '`--delete-data`', 'npm uninstall -g kvman']) expect(installing, text).toContain(text);
+    expect(installing).not.toContain('There is no other `kvman` subcommand');
   });
 
   it('QA17-E24 no page names the old extension or a dev preset outside the two migration notes', () => {

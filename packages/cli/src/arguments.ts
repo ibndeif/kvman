@@ -5,7 +5,8 @@ import { ProblemError, z } from '@kvman/sdk';
 import type { LogLevel } from '@kvman/kernel';
 
 // kvman's flags (plan 01 §1.2). `--mode` and `--preset` stay undefined when not given, since a hand-over compares only
-// the flags given (ADR 0009, 44); `--port 0` asks the OS for a free port (ADR 0009, 46).
+// the flags given (ADR 0009, 44); `--port 0` asks the OS for a free port (ADR 0009, 46). `uninstall`, as the first
+// word, is the one subcommand, with its own flags (ADR 0031, 4).
 
 export type RunArguments = {
   kind: 'run';
@@ -18,10 +19,13 @@ export type RunArguments = {
   logLevel: LogLevel;
 };
 
-export type CliArguments = { kind: 'help' } | { kind: 'version' } | RunArguments;
+export type UninstallArguments = { kind: 'uninstall'; home: string | undefined; yes: boolean; data: 'ask' | 'keep' | 'delete' };
+
+export type CliArguments = { kind: 'help' } | { kind: 'version' } | RunArguments | UninstallArguments;
 
 export const usage = `Usage:
   kvman [--mode web] [--preset coder] [--home <dir>] [--port <n>] [--yes] [--no-open] [--log-level <level>]
+  kvman uninstall [--home <dir>] [--yes] [--keep-data | --delete-data]
   kvman --help | --version
 
 Options:
@@ -34,6 +38,12 @@ Options:
   --log-level <level>   debug, info (the default), warn, or error.
   --help                Show this help.
   --version             Show kvman's version.
+
+Uninstall options:
+  --home <dir>          The home folder whose data and running kvman are meant.
+  --yes                 Remove kvman without asking; its data is kept unless --delete-data is given.
+  --keep-data           Keep kvman's data without asking.
+  --delete-data         Delete kvman's data without asking.
 `;
 
 const flags = {
@@ -46,6 +56,13 @@ const flags = {
   'log-level': { type: 'string' },
   help: { type: 'boolean' },
   version: { type: 'boolean' },
+} as const;
+
+const uninstallFlags = {
+  home: { type: 'string' },
+  yes: { type: 'boolean' },
+  'keep-data': { type: 'boolean' },
+  'delete-data': { type: 'boolean' },
 } as const;
 
 const modeSchema = z.literal('web', { error: 'The mode must be web.' }).optional();
@@ -76,7 +93,24 @@ function readFlags(argv: readonly string[]) {
   }
 }
 
+function readUninstallFlags(argv: readonly string[]) {
+  try {
+    return parseArgs({ args: [...argv], options: uninstallFlags, strict: true, allowPositionals: false });
+  } catch (error) {
+    if (error instanceof TypeError) throw invalid(error.message);
+    throw error;
+  }
+}
+
+function parseUninstall(argv: readonly string[]): UninstallArguments {
+  const { values } = readUninstallFlags(argv);
+  if (values['keep-data'] === true && values['delete-data'] === true) throw invalid('Give --keep-data or --delete-data, not both.');
+  const data = values['keep-data'] === true ? 'keep' : values['delete-data'] === true ? 'delete' : 'ask';
+  return { kind: 'uninstall', home: values.home, yes: values.yes === true, data };
+}
+
 export function parseArguments(argv: readonly string[]): CliArguments {
+  if (argv[0] === 'uninstall') return parseUninstall(argv.slice(1));
   const { values } = readFlags(argv);
   if (values.help === true) return { kind: 'help' };
   if (values.version === true) return { kind: 'version' };

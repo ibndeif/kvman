@@ -75,6 +75,12 @@ function removeStale(file: string, staleText: string): void {
   rmSync(aside, { force: true });
 }
 
+/** The home's lock when a live process holds it: the kvman that runs on that home. */
+export function liveLock(home: string, alive: (pid: number) => boolean = isAlive): Lock | undefined {
+  const found = readLock(path.join(home, 'kvman.lock'));
+  return found?.lock !== undefined && alive(found.lock.pid) ? found.lock : undefined;
+}
+
 function taken(file: string, pid: number): TakenLock {
   return {
     kind: 'taken',

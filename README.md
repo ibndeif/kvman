@@ -5,9 +5,10 @@ An app that works like a small operating system for every kind of user: a kernel
 ```
 npm i -g kvman --no-fund --loglevel=error
 kvman [--mode web] [--preset coder] [--home <dir>] [--port <n>] [--yes] [--no-open] [--log-level <level>]
+kvman uninstall [--home <dir>] [--yes] [--keep-data | --delete-data]
 ```
 
-kvman runs in the foreground on `127.0.0.1:3737` and opens the folder you start it from as a workspace. It needs Node.js 24.
+kvman runs in the foreground on `127.0.0.1:3737` and opens the folder you start it from as a workspace. It needs Node.js 24. `kvman uninstall` removes it again, and asks before it deletes your data ([installing](docs/user-guide/installing.md#removing-kvman)).
 
 To change kvman itself from a chat (its model, its settings, its extensions, or a new extension built for you), type `/build-kvman` in the send box, on the Chat page or in a chat, alone or followed by what you want. The agent can also change the app's name and home page, and build a separate app you start with `kvman --preset <name>`. Until you do, the agent in that chat has no tool for changing kvman ([building kvman](docs/user-guide/building-kvman.md)).
 

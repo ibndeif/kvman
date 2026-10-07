@@ -43,6 +43,7 @@ which prints the usage text:
 ```text
 Usage:
   kvman [--mode web] [--preset coder] [--home <dir>] [--port <n>] [--yes] [--no-open] [--log-level <level>]
+  kvman uninstall [--home <dir>] [--yes] [--keep-data | --delete-data]
   kvman --help | --version
 
 Options:
@@ -55,6 +56,12 @@ Options:
   --log-level <level>   debug, info (the default), warn, or error.
   --help                Show this help.
   --version             Show kvman's version.
+
+Uninstall options:
+  --home <dir>          The home folder whose data and running kvman are meant.
+  --yes                 Remove kvman without asking; its data is kept unless --delete-data is given.
+  --keep-data           Keep kvman's data without asking.
+  --delete-data         Delete kvman's data without asking.
 ```
 
 ## Every flag
@@ -73,7 +80,29 @@ Each flag changes one thing about how kvman starts. You can combine them: `kvman
 | `--help` | Show the help text and exit. | `kvman --help` |
 | `--version` | Show kvman's version and exit. | `kvman --version` |
 
-There is no other `kvman` subcommand in this phase. Everything else — settings, extensions, providers — happens in the web app or through its HTTP API.
+`kvman uninstall` is the only subcommand ([Removing kvman](#removing-kvman)). Everything else — settings, extensions, providers — happens in the web app or through its HTTP API.
+
+## Removing kvman
+
+```
+kvman uninstall
+```
+
+It asks two questions, and only `y` agrees:
+
+1. **Remove kvman?** This removes the program from this computer. If kvman is running, it says so and stops it first.
+2. **Delete it too?** This is about your data: everything in the home folder (your chats, provider keys, presets, installed extensions, and logs). Answer `n`, or just press Enter, to keep it; a later install finds it again.
+
+Nothing changes until both questions are answered, and nothing outside the home folder is ever deleted: your workspace folders and any preset file you keep elsewhere stay.
+
+| Flag | What it does |
+|---|---|
+| `--home <dir>` | The home folder whose data, and whose running kvman, are meant. |
+| `--yes` | Remove kvman without asking. Your data is kept unless you also give `--delete-data`. |
+| `--keep-data` | Keep your data without asking. |
+| `--delete-data` | Delete your data without asking. |
+
+kvman removes itself with `npm uninstall -g kvman`, so this works for a kvman installed with `npm i -g kvman`. One installed another way says so and removes nothing: remove it the way you installed it. If npm fails, your data is left alone and kvman prints the line to run yourself.
 
 ## The home folder
 
