@@ -8,7 +8,7 @@ import MessageComposer from './MessageComposer.vue';
 import ChatStart from './ChatStart.vue';
 import CommandProgress from './CommandProgress.vue';
 import ConversationHeader from './ConversationHeader.vue';
-import { problemKey, problemOf, toastProblem, totals, useKvman } from './kvman.ts';
+import { problemKey, problemOf, toastProblem, tokensUsed, totals, useKvman } from './kvman.ts';
 import ActivityLine from './ActivityLine.vue';
 import { callViews } from './message-parts.ts';
 import MessageItem from './MessageItem.vue';
@@ -46,14 +46,14 @@ const running = computed(() => session.value?.status === 'running');
 const runningSince = computed(() => (running.value && turns.value[0]?.outcome === undefined ? turns.value[0]?.startedAt : undefined));
 const pending = computed(() => (session.value?.status === 'waiting' ? (turns.value[0]?.pending ?? []) : []));
 
-// Each ended turn's totals go under its last answer (plan 08 §8.1).
+// Each ended turn's totals go under its last message: its last answer, or the cards of its last calls (ADR 0035, 1).
 const turnTotals = computed(() => {
   const last = new Map<string, string>();
-  for (const message of messages.value) if (message.kind === 'assistant' && message.turnId !== undefined) last.set(message.turnId, message.id);
-  const shown = new Map<string, string>();
+  for (const message of messages.value) if ((message.kind === 'assistant' || message.kind === 'toolResult') && message.turnId !== undefined) last.set(message.turnId, message.id);
+  const shown = new Map<string, { text: string; tokens: string }>();
   for (const turn of turns.value) {
     const messageId = last.get(turn.id);
-    if (messageId !== undefined && turn.outcome !== undefined) shown.set(messageId, totals(kvman.t, turn.usage, turn.durationMs));
+    if (messageId !== undefined && turn.outcome !== undefined) shown.set(messageId, { text: totals(kvman.t, turn.usage, turn.durationMs), tokens: tokensUsed(kvman.t, turn.usage) });
   }
   return shown;
 });
@@ -167,7 +167,7 @@ const key = (message: Message): string => message.id;
               <button v-if="omitted > 0" type="button" class="kvc-button" style="align-self: center" data-test="earlier" @click="exportEarlier">{{ kvman.t('kvcoder.ui.earlierMessages', { count: omitted }) }}</button>
               <template v-for="message in messages" :key="key(message)">
                 <MessageItem :message="message" :calls="calls" @open-artifact="artifacts.openArtifact($event)" />
-                <span v-if="turnTotals.has(message.id)" class="kvc-muted" data-test="turn-totals">{{ turnTotals.get(message.id) }}</span>
+                <span v-if="turnTotals.has(message.id)" class="kvc-muted" :title="turnTotals.get(message.id)?.tokens" data-test="turn-totals">{{ turnTotals.get(message.id)?.text }}</span>
               </template>
               <RecoveryActions v-if="recoverable" :session-id="session.id" @sent="follow.resume(); conversation.refresh()" />
             <div v-if="live.summarizing" class="kvc-notice" data-test="summarizing">{{ kvman.t('kvcoder.ui.summarizing') }}</div>

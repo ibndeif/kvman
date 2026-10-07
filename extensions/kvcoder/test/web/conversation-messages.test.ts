@@ -25,7 +25,7 @@ describe('the conversation shows its messages (08 §8.7)', () => {
     const wrapper = await mounted(ConversationView, fake, { sessionId: 's1' });
 
     expect(wrapper.find('[data-test="session-title"]').text()).toBe('Notes page');
-    expect(wrapper.find('[data-test="session-totals"]').text()).toBe('Turns: 1 · 48 s · 1.5K tokens · $0.02');
+    expect(wrapper.find('[data-test="session-totals"]').text()).toBe('48 s · $0.02');
     expect(wrapper.find('[data-test="thinking"]').text()).toContain('Plan it');
     expect(wrapper.findAll('[data-test="markdown"]').map((node) => node.text())).toContain('Running the tests.');
     const shell = wrapper.find('[data-test="call-card"]');
@@ -35,7 +35,8 @@ describe('the conversation shows its messages (08 §8.7)', () => {
     expect(shell.find('[data-test="call-output"]').exists()).toBe(false);
     await shell.find('button').trigger('click');
     expect(shell.find('[data-test="call-output"]').text()).toBe('FAIL 1');
-    expect(wrapper.findAll('[data-test="turn-totals"]').map((node) => node.text())).toEqual(['12 s · 1.5K tokens · $0.02']);
+    expect(wrapper.findAll('[data-test="turn-totals"]').map((node) => node.text())).toEqual(['12 s · $0.02']);
+    expect(wrapper.find('[data-test="turn-totals"]').attributes('title')).toBe('1.5K tokens used');
     expect(wrapper.find('[data-test="notice"]').text()).toBe('The turn stopped: kvai.errors.RATE_LIMITED');
     expect(wrapper.find('[data-test="note"]').text()).toContain('New chat');
     expect(wrapper.find('[data-test="summary"]').text()).toContain('Earlier messages were summarized');

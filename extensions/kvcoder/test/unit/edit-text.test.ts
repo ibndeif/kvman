@@ -53,4 +53,15 @@ describe('applyEdits (08 §8.5, ADR 0009, 159)', () => {
   it('QA4-E9 an edit that changes nothing is refused', () => {
     refused('abc', [{ oldText: 'b', newText: 'b' }], /^The edits change nothing in the file/);
   });
+
+  it('QA47-H4 every refusal says that nothing was written', () => {
+    const refusals: [string, { oldText: string; newText: string }[]][] = [
+      ['abc', [{ oldText: 'zzz', newText: 'x' }]],
+      ['aaa', [{ oldText: 'aa', newText: 'b' }]],
+      ['abcdef', [{ oldText: 'abcd', newText: '1' }, { oldText: 'cdef', newText: '2' }]],
+      ['abc', [{ oldText: '', newText: 'x' }]],
+      ['abc', [{ oldText: 'b', newText: 'b' }]],
+    ];
+    for (const [text, edits] of refusals) refused(text, edits, / Nothing was written\.$/);
+  });
 });

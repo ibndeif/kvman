@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import SessionList from '../../web/src/SessionList.vue';
-import { formatCost, totals } from '../../web/src/kvman.ts';
+import { formatCost, tokensUsed, totals } from '../../web/src/kvman.ts';
 import { createFakeKvman } from './support/fake-kvman.ts';
 import { mounted, session } from './support/fixtures.ts';
 
@@ -17,16 +17,17 @@ describe('times and numbers in the page language (ADR 0009, 132)', () => {
     document.documentElement.lang = 'ar';
     const wrapper = await mounted(SessionList, fake, {});
     expect(wrapper.find('[data-test="session-a"]').text()).toMatch(/(ص|م)$/u);
-    expect(totals(fake.kvman.t, usage, 48_000)).toContain('ألف');
+    expect(tokensUsed(fake.kvman.t, usage)).toContain('ألف');
     document.documentElement.lang = 'en';
-    expect(totals(fake.kvman.t, usage, 48_000)).toContain('1.5K');
+    expect(tokensUsed(fake.kvman.t, usage)).toBe('1.5K tokens used');
+    expect(totals(fake.kvman.t, usage, 48_000)).toBe('48 s · $0.02');
     wrapper.unmount();
   });
 
   it('QA3-E9 costs read well at any size, in the chat header too', () => {
     document.documentElement.lang = 'en';
     expect([0, 1.5, 0.0004181, 0.00004344, 0.5, 0.009].map(formatCost)).toEqual(['$0.00', '$1.50', '$0.0004', '$0.00004', '$0.50', '$0.0090']);
-    expect(totals(createFakeKvman().kvman.t, { input: 100, output: 20, cost: 0.0004181 }, 3000)).toContain('$0.0004');
+    expect(totals(createFakeKvman().kvman.t, { cost: 0.0004181 }, 3000)).toContain('$0.0004');
     document.documentElement.lang = 'ar';
     expect(formatCost(0.0004181)).toBe(`\u2066${new Intl.NumberFormat('ar', { style: 'currency', currency: 'USD', minimumFractionDigits: 4 }).format(0.0004181)}\u2069`);
   });

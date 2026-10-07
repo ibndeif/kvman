@@ -117,3 +117,11 @@ export function artifactOf(message: Message): ArtifactRef | undefined {
   if (format !== 'markdown' && format !== 'html' && format !== 'url') return undefined;
   return { id, title, format, version };
 }
+
+// The files a person's message names at its end are stored under an English line for the model (ADR 0018, 4).
+const attachedFiles = /\n\nAttached files:\n((?:- .+\n?)+)$/;
+
+/** A person's message as the page shows it: the line above its attached files is in the page's language (ADR 0035, 2). */
+export function shownUserText(text: string, label: string): string {
+  return text.replace(attachedFiles, (_whole, files: string) => `\n\n${label}\n${files}`);
+}

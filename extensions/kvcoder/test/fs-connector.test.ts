@@ -100,7 +100,7 @@ describe('the fs connector (08 §8.5, ADR 0009, 157 to 160)', { timeout: 30_000 
 
   it('QA4-E9 an edit that changes nothing leaves the file alone', async () => {
     const { results, folder } = await runWith((home) => writeFileSync(path.join(home, 'same.txt'), 'same\n'), [fsCall('edit', { path: 'same.txt', edits: [{ oldText: 'same', newText: 'same' }] })]);
-    expect(results[0]).toBe('error VALIDATION_FAILED: The edits change nothing in the file.');
+    expect(results[0]).toBe('error VALIDATION_FAILED: The edits change nothing in the file. Nothing was written.');
     expect(read(folder, 'same.txt')).toBe('same\n');
   });
 

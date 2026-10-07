@@ -92,19 +92,23 @@ export function formatCost(amount: number): string {
   return isolated(new Intl.NumberFormat(language, amount < 0.0001 ? { ...currency, maximumSignificantDigits: 1 } : { ...currency, minimumFractionDigits: 4 }).format(amount), language);
 }
 
-/** Tokens, cost, and time, in the UI language. */
-export function totals(t: Translate, usage: { input: number; output: number; cost: number }, durationMs: number): string {
-  const tokens = new Intl.NumberFormat(pageLanguage(), { notation: 'compact', maximumFractionDigits: 1 }).format(usage.input + usage.output);
-  const cost = formatCost(usage.cost);
+const compact = (count: number): string => new Intl.NumberFormat(pageLanguage(), { notation: 'compact', maximumFractionDigits: 1 }).format(count);
+
+/** Time and cost, in the UI language (ADR 0035, 5): what a chat or a turn took. */
+export function totals(t: Translate, usage: { cost: number }, durationMs: number): string {
   const seconds = Math.round(durationMs / 1000);
   const time = seconds < 60 ? t('kvcoder.ui.seconds', { count: seconds }) : t('kvcoder.ui.minutes', { count: Math.round(seconds / 60) });
-  return t('kvcoder.ui.totals', { time, tokens, cost });
+  return t('kvcoder.ui.totals', { time, cost: formatCost(usage.cost) });
 }
 
-/** How full the model's window is and where a summary happens (ADR 0034, 9), or nothing when the window isn't known. */
-export function contextLine(t: Translate, context: { tokens: number; window: number | null; compactAt: number } | null): string | undefined {
+/** The tokens the model calls used, input and output, for a tooltip. */
+export function tokensUsed(t: Translate, usage: { input: number; output: number }): string {
+  return t('kvcoder.ui.tokensUsed', { tokens: compact(usage.input + usage.output) });
+}
+
+/** How full the model's memory is now (ADR 0034, 9; ADR 0035, 5), short for the header and in full for its tooltip; nothing when the window isn't known. */
+export function contextLine(t: Translate, context: { tokens: number; window: number | null; compactAt: number } | null): { short: string; full: string } | undefined {
   if (context === null || context.window === null) return undefined;
-  const language = pageLanguage();
-  const window = new Intl.NumberFormat(language, { notation: 'compact', maximumFractionDigits: 1 }).format(context.window);
-  return t('kvcoder.ui.context', { percent: Math.round((context.tokens / context.window) * 100), window, at: Math.round(context.compactAt * 100) });
+  const percent = Math.round((context.tokens / context.window) * 100);
+  return { short: t('kvcoder.ui.memory', { percent }), full: t('kvcoder.ui.memoryDetail', { tokens: compact(context.tokens), window: compact(context.window), at: Math.round(context.compactAt * 100) }) };
 }

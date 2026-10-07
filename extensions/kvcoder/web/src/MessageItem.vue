@@ -3,7 +3,7 @@ import { BellRing, Info, NotebookText, ScrollText } from '@lucide/vue';
 import { computed } from 'vue';
 import type { Message } from '../../src/index.ts';
 import { failureReason, fields, isolateValue, problemKey, stringValues, useKvman } from './kvman.ts';
-import { answeredQuestion, artifactOf, isBackground, isKvcoderHint, resultCard, textOf, thinkingOf } from './message-parts.ts';
+import { answeredQuestion, artifactOf, isBackground, isKvcoderHint, resultCard, shownUserText, textOf, thinkingOf } from './message-parts.ts';
 import AnsweredCard from './AnsweredCard.vue';
 import ArtifactCard from './ArtifactCard.vue';
 import CallCard from './CallCard.vue';
@@ -50,7 +50,7 @@ const markdown = (body: string) => ({ type: 'markdown' as const, text: 'kvcoder.
     </details>
   </div>
   <div v-else-if="props.message.kind === 'user'" dir="auto" class="kvc-user" :class="{ 'kvc-queued': props.message.queued }" data-test="user-message">
-    <span>{{ text }}</span>
+    <span>{{ shownUserText(text, kvman.t('kvcoder.ui.attachedFiles')) }}</span>
     <span v-if="props.message.fileIds" style="display: flex; gap: 6px; margin-block-start: 6px">
       <img v-for="fileId in props.message.fileIds" :key="fileId" :src="imageUrl(fileId)" :alt="kvman.t('kvcoder.ui.attachment')" style="block-size: 48px; border-radius: 6px" />
     </span>

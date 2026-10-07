@@ -26,7 +26,7 @@ The send box also holds:
 
 The agent knows the date and time: each message you send reaches it with the day, date, and time you sent it, in your computer's time zone. What you see in the chat doesn't change.
 
-Under the chat's title, **Context** says how full the model's window is and at what share the earlier messages are summarized, for example "Context 43% of 272K · summary at 80%". If a chat can't be loaded, the page says why and offers **Try again** and **Export as JSON**.
+Beside the chat's title are its time and cost, and **Memory**, which says how full the model's memory is now, for example "44 min · $1.72 · Memory 15% full". Hover either one for the tokens: how many the chat has used, and how many the model holds now out of how many, with the share at which earlier messages are summarized. If a chat can't be loaded, the page says why and offers **Try again** and **Export as JSON**.
 
 Each call the agent makes is a card. Its time is the whole wait: the model writing the call, then the call running (open the card for the two parts). A call that failed says **Failed**; the agent reads the error and usually tries another way.
 

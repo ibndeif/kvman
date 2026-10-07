@@ -1,5 +1,8 @@
 import { invalid } from '../problems.ts';
 
+// A refused edit says that nothing was written, so the model doesn't read the file again to check (ADR 0035, 3).
+const refused = (reason: string) => invalid(`${reason} Nothing was written.`);
+
 // The text side of `fs edit` (plan 08 §8.5, ADR 0009, 159): every edit is matched exactly, once, against the file as
 // it was, the edits are applied together, and the file's BOM and first line ending are kept.
 
@@ -23,11 +26,11 @@ function occurrences(content: string, needle: string): number[] {
 
 function locate(content: string, edit: TextEdit, editIndex: number): Match {
   const oldText = withLineFeeds(edit.oldText);
-  if (oldText === '') throw invalid(`edits[${editIndex}].oldText is empty.`);
+  if (oldText === '') throw refused(`edits[${editIndex}].oldText is empty.`);
   const found = occurrences(content, oldText);
   const [index] = found;
-  if (index === undefined) throw invalid(`edits[${editIndex}] was not found; oldText must match the file exactly, including whitespace and line breaks.`);
-  if (found.length > 1) throw invalid(`edits[${editIndex}] was found ${found.length} times; add more surrounding text so it matches once.`);
+  if (index === undefined) throw refused(`edits[${editIndex}] was not found; oldText must match the file exactly, including whitespace and line breaks.`);
+  if (found.length > 1) throw refused(`edits[${editIndex}] was found ${found.length} times; add more surrounding text so it matches once.`);
   return { index, length: oldText.length, edit: editIndex, newText: withLineFeeds(edit.newText) };
 }
 
@@ -35,7 +38,7 @@ function checkDisjoint(matches: readonly Match[]): void {
   for (let position = 1; position < matches.length; position += 1) {
     const before = matches[position - 1];
     const after = matches[position];
-    if (before !== undefined && after !== undefined && before.index + before.length > after.index) throw invalid(`edits[${before.edit}] and edits[${after.edit}] overlap; merge them into one edit.`);
+    if (before !== undefined && after !== undefined && before.index + before.length > after.index) throw refused(`edits[${before.edit}] and edits[${after.edit}] overlap; merge them into one edit.`);
   }
 }
 
@@ -48,7 +51,7 @@ export function applyEdits(original: string, edits: readonly TextEdit[]): Edited
   const matches = edits.map((edit, editIndex) => locate(content, edit, editIndex)).sort((first, second) => first.index - second.index);
   checkDisjoint(matches);
   const edited = matches.reduceRight((text, match) => text.slice(0, match.index) + match.newText + text.slice(match.index + match.length), content);
-  if (edited === content) throw invalid('The edits change nothing in the file.');
+  if (edited === content) throw refused('The edits change nothing in the file.');
   const first = matches[0]?.index ?? 0;
   const lines = content.slice(0, first).split('\n').length;
   // The last change's last character in the edited text; a removal has none, so its own place counts.

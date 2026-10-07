@@ -97,13 +97,13 @@ describe("the chat's header, its menu, and the send box's pickers (08 §8.7, ADR
     serve(fake, running);
     const view = await mounted(ConversationView, fake, { sessionId: 's1' });
     const totals = (): string => view.find('[data-test="session-totals"]').text();
-    expect(totals()).toContain('· 2 min ·');
+    expect(totals()).toMatch(/^2 min ·/);
     await vi.advanceTimersByTimeAsync(60_000);
-    expect(totals()).toContain('· 3 min ·');
+    expect(totals()).toMatch(/^3 min ·/);
     running.found = session({ status: 'idle', durationMs: 60_000 });
     running.turns = [turn({ startedAt: '2026-10-01T09:00:00.000Z', outcome: 'done' })];
     await vi.advanceTimersByTimeAsync(5000);
-    expect(totals()).toContain('· 1 min ·');
+    expect(totals()).toMatch(/^1 min ·/);
     view.unmount();
   });
 });
