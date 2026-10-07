@@ -1,5 +1,6 @@
 import type { Ctx } from '@kvman/sdk';
 import { registerApp } from './app/register-app.ts';
+import { registerAppPreset } from './app/register-app-preset.ts';
 import { registerAppReads } from './app/register-app-reads.ts';
 import { registerBuild } from './build/register-build.ts';
 import { registerDocs } from './docs/register-docs.ts';
@@ -16,6 +17,7 @@ export type {} from './api.ts';
 // its guide, which a chat has once the person runs `/build-kvman` in it (ADR 0027).
 export default (ctx: Ctx): void => {
   registerApp(ctx);
+  registerAppPreset(ctx);
   registerBuild(ctx);
   registerAppReads(ctx);
   registerAppQuery(ctx);

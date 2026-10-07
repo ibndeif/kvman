@@ -34,6 +34,8 @@ Ask in your own words: "I want a page for my notes", "make the app look calmer".
 | "Add the notes extension you built to my kvman" | `kvman extensions-install` with the project's folder | at the next start, after you allow it |
 | "Remove the notes extension" | `kvman extensions-uninstall` | at the next start, after you allow it |
 | "Show me my preset" | `kvman preset-get` | — |
+| "Call my app Notes" / "Open on my notes page" | `kvman preset-set` | at the next start, after you allow it |
+| "Make me a separate app for my notes" | a new preset saved with `kvman preset-save`, started with `kvman --preset <name>` | when you start it, after you allow the save |
 | "Why did that fail?" | `kvman jobs-list`, `kvman jobs-get` | — |
 | "What is kvman running right now?" | `kvman health-get`, `kvman workspaces-list`, `kvman processes-list` | — |
 | "How many chats do I have?" | `kvman query-get` (a query of an installed extension) | — |
@@ -53,7 +55,7 @@ Changes to the **model** and to **settings** apply at once.
 
 ## Approvals
 
-**Every change to kvman asks you first.** Five commands change the app: `kvman model-set`, `settings-set`, `settings-reset`, `extensions-install`, and `extensions-uninstall`. Each call shows a card with what the agent says it is doing, the command, and the exact values, with **Allow** and **Deny**. Nothing changes until you allow it, and a denied call tells the agent "denied by the user". This doesn't depend on your approval setting: `kvcoder.shell.approval` covers shell lines, file changes, and MCP tools, and these five ask even when it is `auto`.
+**Every change to kvman asks you first.** Eight commands change the app or save another one: `kvman model-set`, `settings-set`, `settings-reset`, `extensions-install`, `extensions-uninstall`, `preset-set`, `preset-reset`, and `preset-save`. Each call shows a card with what the agent says it is doing, the command, and the exact values, with **Allow** and **Deny**. Nothing changes until you allow it, and a denied call tells the agent "denied by the user". This doesn't depend on your approval setting: `kvcoder.shell.approval` covers shell lines, file changes, and MCP tools, and these eight ask even when it is `auto`.
 
 Everything else on this page runs without asking, because it only reads (the lists, `preset-get`, `query-get`, `docs`), works inside your workspace folder (`ext`, `preset`), or works in the preview's temporary home (`preview`).
 

@@ -8,7 +8,7 @@ The agent calls each connector with kvcoder's `run` tool: `run { description, co
 
 | Connector | Commands | Use it to |
 |---|---|---|
-| `kvman` | `model-list`, `model-set`, `settings-list`, `settings-set`, `settings-reset`, `extensions-list`, `extensions-install`, `extensions-uninstall`, `preset-get`, `workspaces-list`, `jobs-list`, `jobs-get`, `processes-list`, `health-get`, `query-get` | see and change the app you are running in: its default model, settings, extensions, and preset; its workspaces, jobs, processes, and health; and any public query of an installed extension |
+| `kvman` | `model-list`, `model-set`, `settings-list`, `settings-set`, `settings-reset`, `extensions-list`, `extensions-install`, `extensions-uninstall`, `preset-get`, `preset-set`, `preset-reset`, `preset-save`, `workspaces-list`, `jobs-list`, `jobs-get`, `processes-list`, `health-get`, `query-get` | see and change the app you are running in: its default model, settings, extensions, and preset; its workspaces, jobs, processes, and health; and any public query of an installed extension |
 | `ext` | `new`, `list`, `check`, `test` | scaffold an extension project in the workspace, list the projects, type-check one and see what kvman would refuse, run its tests |
 | `preset` | `new`, `check` | write a preset file and check it before running it |
 | `preview` | `start`, `stop`, `status`, `query-get`, `command-run` | run projects in a separate kvman, get its URL, and call their commands and queries there |
@@ -40,6 +40,7 @@ Building kvman starts with the person, never with the agent. In a chat's send bo
 
 - enables the five connectors for that chat only. They are registered with `optIn: true`, so no other chat has them in its prompt or can call them;
 - sets the chat's prompt section `guide` from `docs/guide.md`: what to ask the person, the rules below, and the method of the next parts. A section is in every prompt of the chat, so a summary of the chat never drops it;
+- sets the `installed` section, an index of the running preset, each installed extension's settings and public commands and queries, and its docs pages. Run `/build-kvman` again to renew this snapshot;
 - adds the note "Building kvman is on for this chat", the first time.
 
 On the Chat page the send box creates the chat first, so `sessionId` is the new chat's. The send box then sends the text after the command as the person's message, or "I want to change this app." when there was none, and the agent's turn starts. Running `/build-kvman` again in the same chat renews the guide and adds no second note. Nothing switches building off: a new chat starts without it. `guide` is not a page of `docs get`.
@@ -116,6 +117,12 @@ A `path:` source is stored with the absolute folder, because kvman resolves a re
 kvcoder's own configuration is settings too: `kvcoder.delegate.workers` (the workers of `delegate`), `kvcoder.mcp.servers` (the MCP servers), `kvcoder.connectors` (programs as connectors), and `kvcoder.connectors.disabled` (the connectors that are off).
 
 None of these calls reads, lists, or changes a secret.
+
+## Editing the running preset and saving another app
+
+`kvman preset-set { key, value }` changes one value of the running preset, such as `kvwebui.title` or `kvwebui.home`; `kvman preset-reset { key }` removes a preset value. Both ask the person and answer `{ file, restartRequired: true }`: restart once to apply the edits. For a setting the person may later change on the Settings page, use `kvman settings-set` instead.
+
+For a separate app, write a workspace file with `preset new { name, file }`, edit its extensions and settings, run `preset check { file }`, and preview it with `preview start { extensions: [folder], preset: file }` (at least one project folder is required). After the person confirms, `kvman preset-save { file, replace? }` saves the preset by its own name in the home. Relative `path:` entries are resolved against the file's folder. It answers `{ file, name }`; the person starts it with `kvman --preset <name>`. Saving does not change the running app.
 
 ## The tools underneath
 

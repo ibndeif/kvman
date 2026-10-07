@@ -8,7 +8,7 @@ const kvbuilder = useKvbuilder();
 const expected = [
   { name: 'docs', commands: ['list', 'get'] },
   { name: 'ext', commands: ['new', 'list', 'check', 'test'] },
-  { name: 'kvman', commands: ['model-list', 'model-set', 'settings-list', 'settings-set', 'settings-reset', 'extensions-list', 'extensions-install', 'extensions-uninstall', 'restart', 'preset-get', 'workspaces-list', 'jobs-list', 'jobs-get', 'processes-list', 'health-get', 'query-get'] },
+  { name: 'kvman', commands: ['model-list', 'model-set', 'settings-list', 'settings-set', 'settings-reset', 'extensions-list', 'extensions-install', 'extensions-uninstall', 'restart', 'preset-get', 'preset-set', 'preset-reset', 'preset-save', 'workspaces-list', 'jobs-list', 'jobs-get', 'processes-list', 'health-get', 'query-get'] },
   { name: 'preset', commands: ['new', 'check'] },
   { name: 'preview', commands: ['start', 'stop', 'status', 'query-get', 'command-run'] },
 ];
@@ -76,7 +76,7 @@ describe("kvbuilder's connectors (09 §9.1, §9.4)", { timeout: 30_000 }, () => 
     const { kernel } = await kvbuilder.start();
     const own = (await kernel.exec('kvcoder.connector.list', {})).filter((connector) => connector.owner === '@kvman/kvbuilder');
     const asking = own.flatMap((connector) => (connector.commands ?? []).filter((command) => command.asks).map((command) => `${connector.name} ${command.name}`));
-    expect(asking).toEqual(['kvman model-set', 'kvman settings-set', 'kvman settings-reset', 'kvman extensions-install', 'kvman extensions-uninstall', 'kvman restart']);
+    expect(asking).toEqual(['kvman model-set', 'kvman settings-set', 'kvman settings-reset', 'kvman extensions-install', 'kvman extensions-uninstall', 'kvman restart', 'kvman preset-set', 'kvman preset-reset', 'kvman preset-save']);
     const commandOf = (connector: string, name: string) => own.find((candidate) => candidate.name === connector)?.commands?.find((command) => command.name === name)?.command;
     expect(['workspaces-list', 'jobs-list', 'jobs-get', 'processes-list', 'health-get', 'query-get'].map((name) => commandOf('kvman', name))).toEqual([
       'kvbuilder.app.workspaces.list',
@@ -87,6 +87,22 @@ describe("kvbuilder's connectors (09 §9.1, §9.4)", { timeout: 30_000 }, () => 
       'kvbuilder.app.query.get',
     ]);
     expect(['query-get', 'command-run'].map((name) => commandOf('preview', name))).toEqual(['kvbuilder.preview.query.get', 'kvbuilder.preview.command.run']);
+  });
+
+  it('QA42-H13 the three public kvman preset commands ask and both connectors explain saving', async () => {
+    const { kernel } = await kvbuilder.start();
+    const connectors = await kernel.exec('kvcoder.connector.list', {});
+    const kvman = connectors.find((connector) => connector.name === 'kvman');
+    const commands = kvman?.commands?.filter((command) => ['preset-set', 'preset-reset', 'preset-save'].includes(command.name));
+    expect(commands?.map((command) => ({ name: command.name, command: command.command, asks: command.asks }))).toEqual([
+      { name: 'preset-set', command: 'kvbuilder.app.preset.settings.set', asks: true },
+      { name: 'preset-reset', command: 'kvbuilder.app.preset.settings.reset', asks: true },
+      { name: 'preset-save', command: 'kvbuilder.app.preset.save', asks: true },
+    ]);
+    const registrations = (await kernel.exec('kernel.extensions.list', {})).find((entry) => entry.name === '@kvman/kvbuilder')?.commands;
+    for (const command of commands ?? []) expect(registrations?.find((row) => row.name === command.command)?.public).toBe(true);
+    expect(kvman?.description).toContain('preset-save saves a preset file from the workspace');
+    expect(connectors.find((connector) => connector.name === 'preset')?.description).toContain('A checked preset is saved with kvman preset-save.');
   });
 
   it('QA5-H7 each connector says when to use it', async () => {
@@ -108,7 +124,7 @@ describe("kvbuilder's connectors (09 §9.1, §9.4)", { timeout: 30_000 }, () => 
     const extension = listed.find((entry) => entry.name === '@kvman/kvbuilder');
     expect(extension?.namespace).toBe('kvbuilder');
     expect(extension?.commands.map((command) => command.name).sort()).toEqual(
-      ['kvbuilder.build.start', 'kvbuilder.ext.new', 'kvbuilder.ext.check', 'kvbuilder.ext.test', 'kvbuilder.preset.new', 'kvbuilder.preset.check', 'kvbuilder.preview.start', 'kvbuilder.preview.stop', 'kvbuilder.preview.command.run', 'kvbuilder.app.model.set', 'kvbuilder.app.settings.set', 'kvbuilder.app.settings.reset', 'kvbuilder.app.extensions.install', 'kvbuilder.app.extensions.uninstall', 'kvbuilder.app.restart'].sort(),
+      ['kvbuilder.build.start', 'kvbuilder.ext.new', 'kvbuilder.ext.check', 'kvbuilder.ext.test', 'kvbuilder.preset.new', 'kvbuilder.preset.check', 'kvbuilder.preview.start', 'kvbuilder.preview.stop', 'kvbuilder.preview.command.run', 'kvbuilder.app.model.set', 'kvbuilder.app.settings.set', 'kvbuilder.app.settings.reset', 'kvbuilder.app.extensions.install', 'kvbuilder.app.extensions.uninstall', 'kvbuilder.app.restart', 'kvbuilder.app.preset.settings.set', 'kvbuilder.app.preset.settings.reset', 'kvbuilder.app.preset.save'].sort(),
     );
     expect(extension?.queries.map((query) => query.name).sort()).toEqual(['kvbuilder.app.extensions.list', 'kvbuilder.app.model.list', 'kvbuilder.app.preset.get', 'kvbuilder.app.settings.list', 'kvbuilder.docs.get', 'kvbuilder.docs.list', 'kvbuilder.ext.list', 'kvbuilder.guides.get', 'kvbuilder.guides.list', 'kvbuilder.preview.status', 'kvbuilder.preview.query.get', 'kvbuilder.app.workspaces.list', 'kvbuilder.app.jobs.list', 'kvbuilder.app.jobs.get', 'kvbuilder.app.processes.list', 'kvbuilder.app.health.get', 'kvbuilder.app.query.get'].sort());
     for (const command of extension?.commands ?? []) expect(command.public).toBe(true);

@@ -30,7 +30,7 @@ describe("the agent's guide for building kvman (09 §9.4, ADR 0023, 4; ADR 0027,
       "Leave those words out of a call's `description` too, since it is the text of the card that asks them",
       'a setting, an extension that is already installed, an extension you build, and a new preset only when they want a different app. If kvman can\'t do it, say so plainly.',
       'give them its address, and call `ask confirm`',
-      '`settings-reset` for a setting, `extensions-uninstall` for an extension.',
+      '`settings-reset` for a setting, `extensions-uninstall` for an extension, `preset-reset` (or `preset-set` with the earlier value) for a value of the app',
       'After a change to the extensions, finish it with one `restart` call (below), and say what is still unchecked.',
     ]) expect(text, sentence).toContain(sentence);
   });
@@ -70,6 +70,24 @@ describe("the agent's guide for building kvman (09 §9.4, ADR 0023, 4; ADR 0027,
 
   it('QA35-E7 the text fits the size of a section', () => {
     expect(Buffer.byteLength(guide, 'utf8')).toBeLessThanOrEqual(16 * 1024);
+  });
+
+  it('QA42-H21 the guide teaches editing this app and the ordered new-preset path', () => {
+    expect(inOrder(guide, ["A person who isn't a developer.", 'Installed in this app', 'This app, or a different app.', 'Build an extension, in this order:'])).toBe(true);
+    for (const text of ['`preset-set` with `{"key":"kvwebui.home","value":"notes.list"}`', '`preset-reset`', '`kvwebui.title`', '`kvwebui.home`', '`settings-set` instead', 'kvman --preset notes-app']) expect(guide).toContain(text);
+    expect(inOrder(guide.slice(guide.indexOf('A different app is a new preset.')), ['`preset new`', 'Edit the file with `fs`', '`preset check`', '`preview start`', '`ask confirm`', '`kvman preset-save`'])).toBe(true);
+    expect(guide).toContain('{"extensions":["notes"],"preset":"notes-app.json"}');
+  });
+
+  it('QA42-H22 the guide requires conventions and extension pages before writing or changing', () => {
+    expect(guide).toContain('the built-in guides (`conventions`, `sdk`, `i18n`, `presets`)');
+    expect(guide).toContain("Read `conventions` before you write or change an extension or a preset, the other guides before writing an extension, and an extension's pages before building on it.");
+  });
+
+  it('QA42-E22 the guide fits and retains its questions, rules, and method in order', () => {
+    expect(Buffer.byteLength(guide, 'utf8')).toBeLessThanOrEqual(16 * 1024);
+    expect(inOrder(guide, ['Which app?', 'What the person wants.', "A person who isn't a developer.", 'This app, or a different app.', 'Build an extension, in this order:', 'Improve an extension that exists:', 'Manage the app:'])).toBe(true);
+    expect(guide).toContain('Never ask them about, or say to them, extensions, namespaces, presets, setting keys, or commands.');
   });
 
   it('QA39-E28 the guide never mentions init', () => {

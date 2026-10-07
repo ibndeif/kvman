@@ -1,4 +1,4 @@
-import type { KernelQueries } from '@kvman/sdk';
+import type { KernelCommands, KernelQueries } from '@kvman/sdk';
 
 // kvbuilder's public names for typed calls (plan 03 §3.2): a caller gets them after `import type {} from '@kvman/kvbuilder'`.
 
@@ -26,6 +26,9 @@ declare module '@kvman/sdk' {
     'kvbuilder.app.settings.reset': { input: { key: string; scope: 'global' | 'workspace' }; output: Empty };
     'kvbuilder.app.extensions.install': { input: { source: string }; output: { file: string; restartRequired: true } };
     'kvbuilder.app.restart': { input: Empty; output: { restarting: true } };
+    'kvbuilder.app.preset.settings.set': KernelCommands['kernel.preset.settings.set'];
+    'kvbuilder.app.preset.settings.reset': KernelCommands['kernel.preset.settings.reset'];
+    'kvbuilder.app.preset.save': { input: { file: string; replace?: boolean }; output: { file: string; name: string } };
     'kvbuilder.build.start': { input: { sessionId: string; argument: string }; output: Empty };
     'kvbuilder.app.extensions.uninstall': { input: { name: string }; output: { file: string; restartRequired: true } };
   }

@@ -42,6 +42,23 @@ describe('the kvman connector asks before it changes the app (09 §9.1, ADR 0022
     expect(await theme(kernel)).toEqual(before);
   });
 
+  it('QA42-H14 preset-set waits on an approval and leaves the preset unchanged until allowed', async () => {
+    const { kernel, fake } = await withModel();
+    const sessionId = await buildingSession(kernel, 'Home page');
+    const before = await kernel.exec('kvbuilder.app.preset.get', {});
+    fake.reply(runs('kvman', 'preset-set', { key: 'kvwebui.home', value: 'kvwebui.extensions' }), says('done'));
+    await kernel.exec('kvcoder.message.send', { sessionId, text: 'Open on extensions' });
+    await kernel.clock.advance(0);
+    const waiting = await turn(kernel, sessionId);
+    expect(waiting.session.status).toBe('waiting');
+    expect(waiting.turn?.pending).toEqual([expect.objectContaining({ kind: 'approval', question: { description: 'A walkthrough step.', connector: 'kvman', command: 'preset-set', payload: { key: 'kvwebui.home', value: 'kvwebui.extensions' } } })]);
+    expect(await kernel.exec('kvbuilder.app.preset.get', {})).toEqual(before);
+    await kernel.exec('kvcoder.question.answer', { questionId: String(waiting.turn?.pending[0]?.questionId), answer: { confirmed: true } });
+    await kernel.clock.advance(0);
+    expect((await kernel.exec('kvbuilder.app.preset.get', {})).settings?.['kvwebui.home']).toBe('kvwebui.extensions');
+    expect((await turn(kernel, sessionId)).turn).toMatchObject({ outcome: 'done' });
+  });
+
   it('QA34-E6 the reads never ask', async () => {
     const { kernel, fake } = await withModel();
     const sessionId = await buildingSession(kernel, 'Reads');

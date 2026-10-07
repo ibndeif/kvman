@@ -46,6 +46,7 @@ describe('/build-kvman: the person starts building kvman in a chat (09 §9.4, AD
     expect(await start(kernel, sessionId)).toEqual({});
     expect((await kernel.exec('kvcoder.section.list', { sessionId })).filter((section) => section.owner === '@kvman/kvbuilder')).toEqual([
       { id: 'guide', title: 'Building kvman', order: 20, owner: '@kvman/kvbuilder', global: false, sessionId, size: Buffer.byteLength(guide, 'utf8') },
+      { id: 'installed', title: 'Installed in this app', order: 21, owner: '@kvman/kvbuilder', global: false, sessionId, size: expect.any(Number) },
     ]);
     const { prompt, index } = await prompted(kernel, sessionId);
     expect(prompt).toContain(guide.trim());
@@ -62,7 +63,46 @@ describe('/build-kvman: the person starts building kvman in a chat (09 §9.4, AD
     await start(kernel, sessionId);
     await start(kernel, sessionId);
     expect(await notes(kernel, sessionId)).toEqual([{ key: 'kvbuilder.build.started' }]);
-    expect((await prompted(kernel, sessionId)).sections.map((section) => section.id)).toEqual(['guide']);
+    expect((await prompted(kernel, sessionId)).sections.map((section) => section.id)).toEqual(['guide', 'installed']);
+  });
+
+  it('QA42-H15 build.start sets the installed section after the guide and includes it in the prompt', async () => {
+    const { kernel } = await kvbuilder.start();
+    await kernel.clock.advance(0);
+    const sessionId = await newSession(kernel);
+    await start(kernel, sessionId);
+    const sections = (await kernel.exec('kvcoder.section.list', { sessionId })).filter((section) => section.owner === '@kvman/kvbuilder');
+    expect(sections.map((section) => ({ id: section.id, title: section.title, order: section.order, owner: section.owner, global: section.global, sessionId: section.sessionId }))).toEqual([
+      { id: 'guide', title: 'Building kvman', order: 20, owner: '@kvman/kvbuilder', global: false, sessionId },
+      { id: 'installed', title: 'Installed in this app', order: 21, owner: '@kvman/kvbuilder', global: false, sessionId },
+    ]);
+    const { prompt } = await prompted(kernel, sessionId);
+    expect(prompt).toContain('Installed in this app');
+    expect(prompt).toContain('Preset: ');
+    expect(prompt).toContain('- @kvman/kvwebui (kvwebui), ');
+    expect(prompt).toContain('  pages: components (Custom components (Vue)), views (Pages and views (kvwebui))');
+    expect(prompt).toContain('This is what ran when /build-kvman was typed.');
+  });
+
+  it('QA42-H17 running /build-kvman again renews one installed section and adds no note', async () => {
+    const { kernel } = await kvbuilder.start();
+    await kernel.clock.advance(0);
+    const sessionId = await newSession(kernel);
+    await start(kernel, sessionId);
+    await start(kernel, sessionId);
+    const sections = (await kernel.exec('kvcoder.section.list', { sessionId })).filter((section) => section.owner === '@kvman/kvbuilder');
+    expect(sections.map((section) => section.id)).toEqual(['guide', 'installed']);
+    const prompt = (await prompted(kernel, sessionId)).prompt;
+    expect(prompt.split('Preset: ')).toHaveLength(2);
+    expect(await notes(kernel, sessionId)).toEqual([{ key: 'kvbuilder.build.started' }]);
+  });
+
+  it('QA42-E21 a refused session leaves no installed section', async () => {
+    const { kernel } = await kvbuilder.start();
+    await kernel.clock.advance(0);
+    const valid = await newSession(kernel);
+    await expect(start(kernel, 'unknown-session')).rejects.toMatchObject({ problem: { code: 'kvcoder/SESSION_NOT_FOUND' } });
+    expect((await kernel.exec('kvcoder.section.list', { sessionId: valid })).filter((section) => section.owner === '@kvman/kvbuilder')).toEqual([]);
   });
 
   it('QA39-E25 another chat stays clean', async () => {

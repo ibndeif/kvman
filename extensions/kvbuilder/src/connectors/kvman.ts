@@ -4,7 +4,7 @@ export const kvmanConnector = {
   name: 'kvman',
   optIn: true as const,
   description:
-    'See and change the app you are running in: its default model, settings, extensions, and preset, and its workspaces, jobs, processes, and health. Use it for any change to kvman itself. The person is asked before each change. query-get runs a public query of any installed extension. A change to the extensions or the preset is saved to the preset file and applies at the next start of kvman.',
+    'See and change the app you are running in: its default model, settings, extensions, and preset, and its workspaces, jobs, processes, and health. Use it for any change to kvman itself. The person is asked before each change. query-get runs a public query of any installed extension. preset-set and preset-reset change one value of the app\'s preset, such as its name and home page. preset-save saves a preset file from the workspace so the person can start it later by name. A change to the extensions or the preset is saved to the preset file and applies at the next start of kvman.',
   commands: [
     { name: 'model-list', command: 'kvbuilder.app.model.list' },
     { name: 'model-set', command: 'kvbuilder.app.model.set', asks: true as const, examples: [{ description: 'Use another model', input: { model: 'anthropic/claude-sonnet-5-5' } }] },
@@ -24,6 +24,9 @@ export const kvmanConnector = {
     { name: 'extensions-uninstall', command: 'kvbuilder.app.extensions.uninstall', asks: true as const, examples: [{ description: 'Remove one', input: { name: '@acme/notes' } }] },
     { name: 'restart', command: 'kvbuilder.app.restart', asks: true as const, examples: [{ description: 'Restart kvman to finish adding the notes page', input: {} }] },
     { name: 'preset-get', command: 'kvbuilder.app.preset.get' },
+    { name: 'preset-set', command: 'kvbuilder.app.preset.settings.set', asks: true as const, examples: [{ description: 'Open the app on its extensions page', input: { key: 'kvwebui.home', value: 'kvwebui.extensions' } }] },
+    { name: 'preset-reset', command: 'kvbuilder.app.preset.settings.reset', asks: true as const, examples: [{ description: "Go back to the app's own default", input: { key: 'kvwebui.theme' } }] },
+    { name: 'preset-save', command: 'kvbuilder.app.preset.save', asks: true as const, examples: [{ description: 'Save the notes app so it can be started by its name', input: { file: 'notes-app.json' } }] },
     { name: 'workspaces-list', command: 'kvbuilder.app.workspaces.list' },
     { name: 'jobs-list', command: 'kvbuilder.app.jobs.list', examples: [{ description: 'See the jobs that failed', input: { status: 'failed', limit: 20 } }] },
     { name: 'jobs-get', command: 'kvbuilder.app.jobs.get', examples: [{ description: 'Read one job', input: { id: 'the job id' } }] },
