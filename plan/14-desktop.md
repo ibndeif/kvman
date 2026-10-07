@@ -71,7 +71,7 @@ The app adds the bundled Node's folder to the end of kvman's `PATH`. Extension i
    ```
 
    Accept answers `{ "trust": true }`. Quit, and closing the dialog, answer `{ "trust": false }`; the app then quits with no second dialog.
-5. **A `failed` line** opens a dialog, in the line's `language`, or the system's when it has none: "kvman could not start", the Problem's `code` and `message`, and a hint. The hint is one of four, for `KVMAN_RUNNING`, `PORT_IN_USE`, `EXTENSION_INVALID`, and `VALIDATION_FAILED`, and otherwise names `<home>/logs/kvman.log`. Its one button, Quit, quits the app.
+5. **A `failed` line** opens a dialog, in the line's `language`, or in English when it has none (ADR 0038, 41): "kvman could not start", the Problem's `code` and `message`, and a hint. The hint is one of four, for `KVMAN_RUNNING`, `PORT_IN_USE`, `EXTENSION_INVALID`, and `VALIDATION_FAILED`, and otherwise names `<home>/logs/kvman.log`. Its one button, Quit, quits the app.
 6. **A `running` line** shows the home screen (§14.5). The app owns this kvman and stops it when the window closes (§14.6).
 7. **A `joined` line** shows the same home screen, on the kvman that already runs. The app doesn't own that kvman: closing the window quits the app and leaves kvman running.
 
@@ -107,8 +107,9 @@ The shell's calls to kvman carry the Host `127.0.0.1:<port>` and no `Origin`, so
 ## 14.6 The window
 
 - **Links.** The window never opens a second window. A request for a new window, and a navigation to any origin but kvman's, opens in the system's browser.
-- **Downloads.** A file download (§4.1) is saved in the person's Downloads folder.
-- **A restart** (`kernel.restart`, §2.14) keeps the window, and kvwebui waits for kvman as it does in a browser. A `trust` line during it opens the trust dialog again; a decline fails that start, and the undo of the last preset edit applies (§2.14). A `running` line with another port moves the window to the new address.
+- **Downloads.** A file download (§4.1) is saved in the person's Downloads folder, under its own name. A name that is taken there gets a number, `report (1).pdf`, then `report (2).pdf`; nothing is replaced (ADR 0038, 42).
+- **A restart** (`kernel.restart`, §2.14) keeps the window, and kvwebui waits for kvman as it does in a browser. A `trust` line during it opens the trust dialog again, with "Don't run" in place of Quit: it answers `{ "trust": false }`, that start fails, the undo of the last preset edit applies (§2.14), and the window stays (ADR 0038, 43). A `running` line with another port moves a window that is past the home screen to that line's `url`; the home screen only takes the new port.
+- **A line the shell can't read** (not JSON, or not one of the five shapes) is treated as a kvman that ended by itself, below, and kvman is stopped (ADR 0038, 44).
 - **Closing the window quits kvman.** The app closes kvman's input, hides the window, and waits for the process to end, at most 15 seconds. After that it ends the process tree (SIGKILL to the group on Linux and macOS, `taskkill /PID <pid> /T /F` on Windows), and the crash invariants hold at the next start (§12.2). Then the app quits. On a joined kvman the app quits at once.
 - **A kvman that ends by itself** while the window is open opens a dialog: "kvman stopped unexpectedly", naming `<home>/logs/kvman.log`. Its one button, Quit, quits the app.
 

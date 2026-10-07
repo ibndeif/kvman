@@ -56,6 +56,14 @@ Decisions 1 to 18 were asked with alternatives, the screens with mockups and the
 39. **Removing the app** is the system's own way, and it leaves `~/.kvman`. `kvman uninstall` (ADR 0031) is unchanged and is for the npm install.
 40. **The release.** The tag that publishes to npm (ADR 0026, 8) also builds the five installers, each on a runner of its own system, since Tauri doesn't build across systems. Each runner first runs the bundle it built with no window: it starts the bundled kvman with `--pipe --yes` on a new home, reads the `running` line, calls `kernel.health.get`, closes the input, and expects exit 0. The installers and the updater's `latest.json` are attached to the GitHub Release of that tag. The updater's private key is the repository secret `TAURI_SIGNING_PRIVATE_KEY`, with `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`; the product owner makes and keeps it, and an app can't be updated without it. This is still the only CI (ADR 0026, 10).
 
+### Asked while building M3.2
+
+41. **A `failed` line with no language shows its dialog in English** (asked; chosen over the system's language, which needs the `sys-locale` crate). It replaces "the system's" in decision 25's dialog and in plan 14 §14.4, step 5. It happens only for a failure before kvman has read its preset, such as `KVMAN_RUNNING`.
+42. **A download whose name is taken gets a number** (asked; chosen over the system's save dialog for every download, and over replacing the old file): `report.pdf` is saved as `report (1).pdf`, then `report (2).pdf`. Nothing in the Downloads folder is replaced.
+43. **At a restart, the trust dialog's first button is "Don't run"** (asked; chosen over "Quit" in both places). It declines, kvman undoes the last preset change and runs as before, and the window stays open. At the app's launch the button is "Quit", since there is nothing to go back to. A decline at a restart with no backup to restore is a failed start, with its dialog (decision 25).
+44. **A line the shell can't read ends the session** (the smallest way to carry out decision 37): it shows the dialog of a kvman that ended by itself, and stops kvman as closing the window does.
+45. **A port that changed at a restart** moves a window that is past the home screen to the `running` line's `url`; on the home screen only the port is taken, for the next choice. A restart on the same port moves nothing.
+
 ## Plan changes
 
 - `14-desktop.md` is new: the `--pipe` flag, what the app holds, starting, the home screen, the window, updates, installers, and text and security.
