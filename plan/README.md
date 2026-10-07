@@ -16,7 +16,8 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `10-testkit.md` | `createTestKernel` |
 | `11-presets.md` | The bundled `coder` preset |
 | `12-testing.md` | Test layers, crash invariants, benchmarks |
-| `13-milestones.md` | The 13 milestones: Read, Build, Done when |
+| `13-milestones.md` | The 16 milestones: Read, Build, Done when |
+| `14-desktop.md` | The desktop app: `kvman --pipe`, what the app holds, starting, the home screen, the window, updates, installers |
 | `adr/0001-kernel.md` | Every kernel decision, with the product owner's answers |
 | `adr/0002-kvwebui.md` | Every kvwebui decision |
 | `adr/0003-kvai.md` | Every kvai decision |
@@ -45,6 +46,7 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `adr/0035-conversation-review-after-0-3-1.md` | A turn's totals come after its last call cards, the attached-files line is in the page's language, and a refused edit says nothing was written |
 | `adr/0036-call-cards-by-kind.md` | A call's card reads as what the call did: a closed line of verb, subject, and outcome, a view per kind of call (a diff for an edit), the same view in the approval card, a finished background job's time, and artifact titles on one line |
 | `adr/0037-output-end-run-titles-and-light-palette.md` | `delegate run` takes a `title` that names the helper, the light theme is soft slate, and a command's and an output's blocks follow the theme |
+| `adr/0038-desktop-app.md` | The desktop app: a Tauri shell around the same `kvman`, the `--pipe` flag and its JSON lines, the trust dialog, the workspace home screen drawn by the shell, the updater, and five unsigned installers |
 | `adr/0026-npm-publishing.md` | Publishing to npm: the eight public packages under MIT, the extensions as dependencies of `kvman`, the presets inside it, version 0.1.0, and the release workflow on a version tag |
 | `adr/0025-install-by-source.md` | Installing an extension by its source alone: `kernel.extensions.install { source }` with `bundled:<name>`, `npm:<name>@<version>`, or `path:<folder>`, and no name field |
 | `adr/0024-restart.md` | Restarting kvman in the same process with `kernel.restart`, `kvman restart` for the agent, a "Restart now" button, and a backup that undoes a change that stops kvman from starting |

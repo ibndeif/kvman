@@ -139,6 +139,7 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 - A non-bundled version is loaded only after it's accepted. At start, kvman lists the name, version, and source of each version not yet accepted, and asks y/N in the terminal.
 - `--yes` accepts them. Accepted versions are remembered in SQLite, and a new version asks again.
 - With no terminal and no `--yes`, kvman refuses to start. Refusing, and any answer but `y`, fail `EXTENSION_INVALID`. A `path:` version is remembered by its absolute folder (ADR 0009, 48).
+- With `--pipe`, the question is a `trust` line on stdout and the answer a line on stdin, with or without a terminal; only `{ "trust": true }` accepts (§14.2). The desktop app shows it as a dialog (§14.4).
 
 **Loading.** Extensions load in dependency order. kvman stops with `EXTENSION_INVALID` (§2.14) when:
 - the manifest is invalid: no `main`, no `@kvman/sdk` in `peerDependencies`, or an unknown key in the `kvman` field (ADR 0009, 6);
@@ -256,13 +257,13 @@ Going over a limit fails loudly and never cuts anything off.
 2. Open the database.
 3. Read and validate the preset.
 4. Install missing npm extensions.
-5. Ask for trust.
+5. Ask for trust (§2.9; with `--pipe`, a `trust` line, §14.2).
 6. Start the workers, which load the extensions (`EXTENSION_INVALID`). In `web` mode, the extension whose namespace is `kernel.web.home` must exist and declare `kvman.web` (`EXTENSION_INVALID` otherwise), checked where kvman starts HTTP (ADR 0009, 41).
 7. Check the preset's settings against the registered keys, including required keys (`VALIDATION_FAILED`, §2.8).
 8. Delete expired job rows. Attempts that were running when kvman last stopped or died fail with `INTERRUPTED` (§2.3). Then resume queued jobs and due schedules of open workspaces.
 9. Open the start folder as a workspace (§1.2).
 10. Run the `kernel.started` handlers in dependency order (10 s budget; a failure is logged, and start goes on).
-11. Listen on the port (`PORT_IN_USE`), then print the URL and open the browser.
+11. Listen on the port (`PORT_IN_USE`), then print the URL and open the browser. With `--pipe`, the URL is a `running` line, and a start that fails at any step is a `failed` line (§14.2).
 
 **Stop (Ctrl+C).**
 1. HTTP stops taking requests.
@@ -271,9 +272,9 @@ Going over a limit fails loudly and never cuts anything off.
 4. kvman waits up to 10 s for handlers to return, then stops the workers. Every process from §2.16 is stopped (§2.16), with the kill at the 10 s mark.
 5. Async attempts that didn't finish fail with `INTERRUPTED`: a job with retries left stays queued and runs at the next start; one without ends `failed` (§2.3).
 
-SIGTERM stops the same way, and kvman exits 0. A second Ctrl+C or SIGTERM stops at once, with exit code 130 (ADR 0009, 50).
+SIGTERM stops the same way, and kvman exits 0. A second Ctrl+C or SIGTERM stops at once, with exit code 130 (ADR 0009, 50). With `--pipe`, an input that closes stops the same way too, and kvman exits 0; one that closes during the start lets the start finish first (§14.2; ADR 0038, 16 and 20).
 
-**Restart** (ADR 0024). `kernel.restart` makes kvman run the stop sequence above, then the start sequence again, in the same process: the same arguments, the same lock (its port updated), the same terminal, and no new browser tab. It prints `kvman is restarting…`, then the URL. Running jobs are aborted, and an attempt that didn't finish fails `INTERRUPTED` (§2.3); processes (§2.16) are stopped; open workspaces are remembered (§2.6) and open again. The preset is read again at step 3.
+**Restart** (ADR 0024). `kernel.restart` makes kvman run the stop sequence above, then the start sequence again, in the same process: the same arguments, the same lock (its port updated), the same terminal, and no new browser tab. It prints `kvman is restarting…`, then the URL; with `--pipe`, a `restarting` line, then a `running` line (§14.2). Running jobs are aborted, and an attempt that didn't finish fails `INTERRUPTED` (§2.3); processes (§2.16) are stopped; open workspaces are remembered (§2.6) and open again. The preset is read again at step 3.
 
 **A start that fails because of the preset is undone** (ADR 0024, 5). When the start fails with `EXTENSION_INVALID` or `VALIDATION_FAILED` and the backup `<file>.good` exists (§2.10), the CLI restores the file from it, prints the Problem and `The last change to the preset was undone.`, and starts once more; that start's `kernel.health.get` has `rolledBack`. A second failure prints its Problem and exits 1; a start that fails for another reason, such as `PORT_IN_USE`, prints its Problem and exits 1, and the backup stays.
 

@@ -295,3 +295,79 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
   - A `web: true` scaffold builds, its sample page shows the component in the preview, and a component edit shows after a refresh.
   - `kvman` with no flags starts the `coder` preset.
   - Every benchmark meets its target.
+
+## M3 — Desktop
+
+ADR 0038. M3.2 and M3.3 also pass `pnpm desktop:check` (`cargo fmt --check`, `cargo clippy` with warnings as errors, `cargo test`).
+
+### M3.1 `kvman --pipe`
+
+- **Read:** `01` §1.2; `02` §2.9 (trust), §2.14; `14` §14.2; `12` §12.1.
+- **Build:** in the `kvman` bin:
+  - the `--pipe` flag, in the usage text too;
+  - the `trust`, `running`, `joined`, `restarting`, and `failed` lines in place of the terminal text on stdout;
+  - the trust answer as a line on stdin, with or without a terminal;
+  - the stop sequence when the input closes, on each OS, and the start that finishes first.
+- **Done when:**
+  - `kvman --pipe` writes one `running` line with the start workspace's URL and the port, and nothing else on stdout.
+  - Closing its input stops it as the first Ctrl+C does: it exits 0, and unfinished attempts fail `INTERRUPTED`, with jobs that have retries left kept queued.
+  - An input that closes while kvman starts lets the start finish, and kvman then stops and exits 0.
+  - An extension version that isn't accepted writes a `trust` line with the language and the versions, with no terminal too. `{ "trust": true }` loads it and remembers it.
+  - `{ "trust": false }`, any other line, and a closed input fail the start with a `failed` line carrying `EXTENSION_INVALID`, and exit 1.
+  - `--yes` writes no `trust` line.
+  - A second `kvman --pipe` on the same home writes a `joined` line and exits 0; with another preset it writes `failed` with `KVMAN_RUNNING` and no `language`.
+  - A taken port writes `failed` with `PORT_IN_USE` and the language.
+  - `kernel.restart` writes `restarting`, then `running`.
+  - `kvman uninstall --pipe` fails `VALIDATION_FAILED`.
+  - Without `--pipe`, the terminal text, the trust prompt, and the stop are as they were.
+
+### M3.2 The desktop app
+
+- **Read:** `14` §14.1, §14.3–§14.6, §14.9; `02` §2.6, §2.12 (workspaces, `kernel.settings.list`); `04` §4.2; `06` §6.2 (the start URL), §6.4 (the colours); `12` §12.1.
+- **Build:** `packages/desktop`, a Tauri app run against the repository's own `kvman`:
+  - one app at a time, and the window with its starting state;
+  - starting `kvman --pipe --no-open` in the user's home folder, with the Node folder added last to its `PATH`;
+  - the trust dialog and the failed-start dialog, in the line's language;
+  - the home screen: the list, continuing into a workspace, remove, "Open a folder…" with the system's dialog, a failed call's text, the language and direction, and the colours;
+  - joining a kvman that already runs;
+  - the window: new windows and other origins in the system's browser, downloads, a restart, a port that changes;
+  - closing: the closed input, the wait, and the end of the process tree, with a branch per OS;
+  - a kvman that ends by itself;
+  - the `en` and `ar` catalog, `pnpm desktop:check`, and the `desktop` import wall in ESLint.
+- **Done when:**
+  - A second launch focuses the open window and starts no second kvman.
+  - A `trust` line shows the dialog with each version; Accept answers `{ "trust": true }`, and Quit or closing it answers `{ "trust": false }` and quits with no second dialog.
+  - A `failed` line shows the Problem's code and message with the hint for its code, or the log file's path for another code, in the line's language, and Quit quits.
+  - A `running` line shows the home screen with Home first and each open workspace's name and folder, with `~` for the user's home folder.
+  - A click on a row loads `http://127.0.0.1:<port>/?workspace=<id>` in the same window.
+  - The remove button closes that workspace and the list no longer has it; Home has no remove button.
+  - "Open a folder…" opens the chosen folder as a workspace and continues into it.
+  - A call that fails shows its Problem's translated text above the list, and the list stays.
+  - With `kernel.language` `ar` the home screen is Arabic and right to left; with any language but `ar` it is English.
+  - `kvwebui.theme` `light` and `dark` choose the colours, and `system`, or a preset with no `kvwebui.theme`, follows the system.
+  - A `joined` line shows the same home screen, and closing the window then leaves that kvman running.
+  - A request for a new window, and a navigation to another origin, open in the system's browser, and the window stays on kvman.
+  - Closing the window closes kvman's input and the app quits once kvman has exited; a kvman that is still alive after 15 seconds has its process tree ended, on each OS.
+  - A `running` line with another port after a restart moves the window to the new address.
+  - A kvman that ends by itself shows the dialog that names the log file, and Quit quits.
+  - The shell's calls to kvman carry no `Origin`, and its page makes no call to kvman.
+
+### M3.3 Installers, updates, and the release
+
+- **Read:** `14` §14.3, §14.7, §14.8; `01` §1.2 (installing); ADR 0026, 8 to 10; ADR 0038, 31 to 33 and 40.
+- **Build:**
+  - the bundle: the pinned Node 24 build and its npm for each system, checked against nodejs.org's checksums, and the `kvman` package with its production dependencies and `better-sqlite3`'s binary for that system;
+  - the five installers, the macOS ad-hoc signature, and the Windows install for the current user;
+  - the updater: the check at launch, the line on the home screen, "Install and restart", the `.deb` install's "Download", and the public key;
+  - `.github/workflows/release.yml`: a job per system that builds, runs the bundle with no window, and attaches the installers, their signatures, and `latest.json` to the GitHub Release;
+  - `pnpm desktop:build`, which builds the installer of the developer's OS;
+  - the user guide's install page: the downloads, the macOS and Windows warnings and how to pass them, updating, and removing the app.
+- **Done when:**
+  - The app built on the developer's OS starts with no Node and no npm on the `PATH`, and installs an `npm:` extension with the bundled npm.
+  - With a Node and an npm of the person's own on the `PATH`, kvman's `PATH` has theirs first.
+  - A newer version in `latest.json` shows "kvman `<version>` is available." on the home screen, and the same or an older one shows nothing.
+  - A check that fails shows nothing, and the home screen works.
+  - "Install and restart" stops kvman only after the update is downloaded and its signature holds; an update with a wrong signature shows "The update could not be installed." and kvman keeps running.
+  - A `.deb` install's button is "Download" and opens the release's page.
+  - The workflow's run of the bundle fails the job when the `running` line doesn't come, when `kernel.health.get` fails, or when kvman doesn't exit 0 after its input closes.
+  - A Node build whose checksum differs fails the build.

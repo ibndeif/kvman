@@ -28,6 +28,7 @@ Milestones are in `plan/13-milestones.md`. Do them strictly in order. For each o
 ## 3. Architecture in one page
 
 - **Running.** `kvman [--mode web] [--preset coder]` is a foreground app that runs locally, one per home folder (`~/.kvman`). It opens the folder it's started from as a workspace, and a second run hands its folder over to the running one. HTTP listens on `127.0.0.1:3737`.
+- **Desktop.** The desktop app (`plan/14-desktop.md`) is a Tauri shell that runs this same `kvman` with `--pipe` and shows it in a window. It holds no kvman logic, and the kernel and kvwebui don't know about it.
 - **Platforms.** Linux, macOS, and Windows, natively. Code that depends on the OS (shells, process trees, file modes) has an explicit branch per OS, and its tests cover each branch.
 - **Not a chat app.** kvman is a platform: the kernel and kvwebui hold no product concept (no chat, no agent). Product UI belongs to the extension that owns it, and presets place it.
 - **Jobs.** Everything runs as a job: a **command** (may write) or a **query** (read-only).
@@ -50,6 +51,7 @@ Milestones are in `plan/13-milestones.md`. Do them strictly in order. For each o
   | `kernel` | `sdk`, its declared dependencies |
   | `cli` | `kernel`, `sdk` |
   | `testkit` | `kernel`, `sdk` |
+  | `desktop` | `@tauri-apps/api`; nothing of kvman's: it runs `kvman` as a program |
   | `extensions/*` | `sdk`, their own declared dependencies; never `kernel`; another extension only when it is a `kvman.dependencies` entry: `import type`, or a runtime import of a subpath it exports (such a subpath may import only `sdk` and holds no state) |
 
 ## 4. Naming
@@ -62,6 +64,7 @@ Milestones are in `plan/13-milestones.md`. Do them strictly in order. For each o
 ## 5. Code rules
 
 - TypeScript strict, with `verbatimModuleSyntax`, `noUncheckedIndexedAccess`, and `exactOptionalPropertyTypes`. No `any`. No default exports except an extension's entry.
+- **Rust** is only the desktop shell (`packages/desktop`): no `unsafe`, no `unwrap` or `expect` outside tests, and `pnpm desktop:check` passes (`cargo fmt --check`, `cargo clippy` with warnings as errors, `cargo test`). The rules below apply to it too.
 - **Explicit and clean.** Small functions, one responsibility per module, no clever tricks, no dead code, no premature abstraction. Files, tests included, are at most 300 lines (lint-enforced).
 - **Comments.** Minimal: comment only a non-obvious invariant. Every public export of `@kvman/sdk` has a one-line TSDoc comment.
 - **Validation.** Validate every boundary with zod: handler inputs and outputs, settings, presets, manifests, HTTP bodies, and persisted JSON.

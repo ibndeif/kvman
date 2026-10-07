@@ -10,11 +10,13 @@
 | Crash | vitest + a real kvman child process | SIGKILL and restart invariants (§12.2) |
 | Components | vitest + `@vue/test-utils` (`happy-dom`) | kvwebui components and view rendering |
 | End to end | Playwright (Chromium) + a real kvman + the fake OpenAI server | kvcoder's conversation streaming, questions, subagents, right-to-left |
+| Desktop shell | `cargo test` + a fake `kvman` program that speaks the lines | the shell's Rust side: the lines, the dialogs' choices, joining, closing, a kvman that ends by itself (§14; ADR 0038, 36) |
+| Desktop page | vitest (`happy-dom`) + a fake of the shell's Rust side | the home screen: rows, remove, open a folder, a failed call, language and direction, colours, the update line |
 | Performance | `bench:check` | §12.3 |
 
 Tests are deterministic. They use fake clocks where time matters and no network: npm tests use a tiny in-test registry (an HTTP server on 127.0.0.1 serving package metadata and `npm pack` tarballs; for the `kvman-new` scaffold, kvman's own packages and the scaffold's dependencies packed from the monorepo's installed copies, ADR 0009, 113), and LLM tests use the fake OpenAI-compatible server (§7.4). Tests never touch the real `~/.kvman`.
 
-**Platforms.** There is no CI in this phase; the gates run locally on the developer's OS. Tests that depend on the OS (shells, process trees, file modes) cover each OS's branch and run the one that matches. Playwright and the benchmarks run on Linux.
+**Platforms.** There is no CI in this phase; the gates run locally on the developer's OS. Tests that depend on the OS (shells, process trees, file modes) cover each OS's branch and run the one that matches. Playwright and the benchmarks run on Linux. The one run on all three systems is the release's: each runner starts the bundle it built, with no window, before it publishes an installer (§14.8). No test drives the real window in this phase (ADR 0038, 36).
 
 ## 12.2 Crash invariants
 

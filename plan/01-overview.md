@@ -7,7 +7,7 @@ kvman is an app that works like a small operating system for every kind of user:
 ## 1.2 Running kvman
 
 ```
-kvman [--mode web] [--preset coder] [--home <dir>] [--port <n>] [--yes] [--no-open] [--log-level <level>]
+kvman [--mode web] [--preset coder] [--home <dir>] [--port <n>] [--yes] [--no-open] [--log-level <level>] [--pipe]
 kvman --help | --version
 ```
 
@@ -16,6 +16,8 @@ kvman --help | --version
 - **One kvman per home**, enforced by `kvman.lock`. When one is already running, a second `kvman` hands over: it reads the port from `kvman.lock`, calls the running kvman's `kernel.workspace.open` for its folder, prints and opens that workspace's URL, and exits 0. If a `--preset` or `--mode` it was given differs from the running kvman's (`kernel.health.get`; a preset is compared by its `name`), it fails `KVMAN_RUNNING` instead. A bare `kvman` hands over to whatever runs (ADR 0009, 44). A running kvman that is still starting, or doesn't answer, also fails `KVMAN_RUNNING` (ADR 0009, 43).
 - **Restart.** `kernel.restart` (§2.14, ADR 0024) stops kvman and starts it again in the same process, with the arguments it was given, the same lock, and the same terminal; it doesn't open the browser again. A start that fails because of the preset is undone from a backup (§2.10).
 - **Modes:** `web` now; `tui` comes later.
+- **Driven by a program.** `--pipe` is for a program that starts kvman: kvman writes one JSON object per line on stdout in place of its terminal text, takes the trust answer as a line on stdin, and stops when its input closes (§14.2, ADR 0038).
+- **The desktop app** (§14, ADR 0038) is the second way to run kvman: a download for Windows, macOS, and Linux that brings its own Node and npm, runs this same program with `--pipe` in `web` mode on the same home, and shows it in a window of its own. It starts on a screen where the person chooses a workspace.
 - **Presets:** one is bundled: `coder` (the default), the coding harness, which also customizes kvman (§9). `--preset <name>` names a bundled preset or `<home>/presets/<name>.json` (a person's preset replaces a bundled one of the same name, ADR 0010, 4), and `--preset ./file.json` names a preset file: a value with `/` or `\`, or ending in `.json`, is a file, relative to the start folder. An unknown name or a missing file fails `VALIDATION_FAILED` (ADR 0009, 45).
 - **Environment.** kvman sets `KVMAN_HOME` to its home in its own environment at start, so a program it runs (such as kvbuilder's `kvman-docs`) finds this kvman through `<home>/kvman.lock` (ADR 0010, 19).
 - **Trust:** before loading, kvman lists every non-bundled extension version that hasn't been accepted before and asks y/N in the terminal. `--yes` accepts them without asking; with no terminal and no `--yes`, kvman refuses to start (§2.9).
@@ -51,13 +53,14 @@ The default is `~/.kvman`; `--home <dir>` or `KVMAN_HOME` overrides it.
 
 ## 1.4 Packages
 
-A pnpm monorepo, Node 24, TypeScript 6.0 strict (ADR 0009). The tools are ESLint with typescript-eslint, Vitest, and Changesets. The gates run locally, on the developer's OS. The only CI is the release workflow, which publishes to npm when a version tag is pushed (ADR 0026, 8).
+A pnpm monorepo, Node 24, TypeScript 6.0 strict (ADR 0009). The tools are ESLint with typescript-eslint, Vitest, and Changesets, and Rust's own (`cargo fmt`, `cargo clippy`, `cargo test`) for the desktop shell (ADR 0038, 36). The gates run locally, on the developer's OS. The only CI is the release workflow, which publishes to npm and builds the desktop installers when a version tag is pushed (ADR 0026, 8; ADR 0038, 40).
 
 | Package | Is | May import |
 |---|---|---|
 | `packages/sdk` | The extension API: `ctx` types, zod, and the shared shapes (preset, extension manifest, Problem, job, envelope). Published as `@kvman/sdk`. | `zod` |
 | `packages/kernel` | Everything the kernel does, including HTTP. Published as `@kvman/kernel`, at the root version. | `sdk`, its declared dependencies |
 | `packages/cli` | The `kvman` bin; it runs the kernel in the same process. Published as `kvman`, with the bundled presets inside (`packages/cli/presets/`: `coder.json`); the bundled extensions are its dependencies that have a `kvman` field (ADR 0026, 3). | `kernel`, `sdk` |
+| `packages/desktop` | The desktop app's shell (§14): Tauri, with the home screen's page. Private, at the root version; it runs `kvman` as a program. | `@tauri-apps/api`; nothing of kvman's |
 | `packages/testkit` | `createTestKernel` for tests, and the bins that build and check extensions for any harness: `kvman-check`, `kvman-new`, `kvman-preset`, `kvman-preview` (§10). Published as `@kvman/testkit`. | `kernel`, `sdk` |
 | `extensions/*` | kvai, kvwebui, kvcoder, kvbuilder. Published as `@kvman/kvai`, `@kvman/kvwebui`, `@kvman/kvcoder`, and `@kvman/kvbuilder` (ADR 0026, 1). | `sdk`, their own npm dependencies; never `kernel`; another extension only when it is a `kvman.dependencies` entry: `import type`, or a runtime import of a subpath it exports (such a subpath may import only `sdk` and holds no state) |
 
