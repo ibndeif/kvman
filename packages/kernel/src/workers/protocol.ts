@@ -1,4 +1,4 @@
-import { callerSchema, extensionSourceSchema, installSourceSchema, jsonSchema, problemSchema, workspaceSchema, z } from '@kvman/sdk';
+import { callerSchema, extensionSourceSchema, installSourceSchema, jsonSchema, presetSchema, problemSchema, workspaceSchema, z } from '@kvman/sdk';
 
 // The messages between the main thread and a worker, checked on arrival like any other boundary.
 
@@ -41,6 +41,9 @@ const workerRequestSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('preset-get') }),
   z.object({ kind: z.literal('preset-install'), source: installSourceSchema }),
   z.object({ kind: z.literal('preset-uninstall'), name: z.string() }),
+  z.object({ kind: z.literal('preset-settings-set'), key: z.string(), value: jsonSchema, registered: z.boolean() }),
+  z.object({ kind: z.literal('preset-settings-reset'), key: z.string(), required: z.boolean() }),
+  z.object({ kind: z.literal('preset-save'), preset: presetSchema, replace: z.boolean() }),
   z.object({ kind: z.literal('health') }),
   z.object({ kind: z.literal('restart') }),
   z.object({

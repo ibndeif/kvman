@@ -57,6 +57,12 @@ export async function answerWorker(services: KernelRequestServices, request: Wor
       return services.preset.install(request.source);
     case 'preset-uninstall':
       return services.preset.uninstall(request.name);
+    case 'preset-settings-set':
+      return services.preset.setSetting(request.key, request.value, request.registered);
+    case 'preset-settings-reset':
+      return services.preset.resetSetting(request.key, request.required);
+    case 'preset-save':
+      return services.preset.save(request.preset, request.replace);
     case 'health':
       return services.health();
     case 'restart':

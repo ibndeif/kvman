@@ -2,7 +2,7 @@ import { rmSync } from 'node:fs';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { presetSchema, type Preset } from '@kvman/sdk';
-import { makeRoot, readStoredFile, startPresetKernel, userCall, writePresetFile } from './support.ts';
+import { makeRoot, readStoredFile, startPresetKernel, startSettingsRun, storedPreset, userCall, writePresetFile } from './support.ts';
 
 const roots: string[] = [];
 afterEach(() => {
@@ -34,6 +34,33 @@ describe('preset edits are serialized (02 §2.10, ADR 0010, 13)', () => {
       expect(presetSchema.parse(JSON.parse(readStoredFile(file))).extensions).toEqual({
         '@acme/beta': 'npm:2.0.0',
         '@acme/gamma': 'npm:3.0.0',
+      });
+    } finally {
+      await kernel.close();
+    }
+  });
+
+  it('QA42-E8 a value edit, an install, and another value edit at once all land', async () => {
+    const settings = [
+      { key: 'a.one', type: 'number', default: 0 },
+      { key: 'a.two', type: 'number', default: 0 },
+    ] as const;
+    const { kernel, file, preset } = await startSettingsRun(roots, settings, undefined);
+    try {
+      const answers = await Promise.all([
+        kernel.exec('kernel.preset.settings.set', { key: 'a.one', value: 1 }, userCall()),
+        kernel.exec('kernel.extensions.install', { source: 'npm:@acme/alpha@1.0.0' }, userCall()),
+        kernel.exec('kernel.preset.settings.set', { key: 'a.two', value: 2 }, userCall()),
+      ]);
+      expect(answers).toEqual([
+        { file, restartRequired: true },
+        { file, restartRequired: true },
+        { file, restartRequired: true },
+      ]);
+      expect(storedPreset(file)).toEqual({
+        name: 'mine',
+        extensions: { ...preset.extensions, '@acme/alpha': 'npm:1.0.0' },
+        settings: { 'a.one': 1, 'a.two': 2 },
       });
     } finally {
       await kernel.close();

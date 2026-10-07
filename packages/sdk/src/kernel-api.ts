@@ -1,13 +1,15 @@
 import { z } from 'zod';
 import { jsonSchema } from './json.ts';
 import { packageNameSchema } from './manifest.ts';
-import { extensionSourceSchema, installSourceSchema, presetStateSchema } from './preset.ts';
+import { extensionSourceSchema, installSourceSchema, presetSchema, presetStateSchema } from './preset.ts';
 import { problemSchema } from './problem.ts';
 import { fileSchema, isoTimeSchema, jobSchema, jobStatusSchema, workspaceSchema } from './rows.ts';
 
 const emptySchema = z.strictObject({});
 const scopeSchema = z.enum(['global', 'workspace']);
 const listLimitSchema = z.number().int().positive().max(1000);
+const settingKeySchema = z.string().min(1);
+const presetEditOutputSchema = z.strictObject({ file: z.string(), restartRequired: z.literal(true) });
 
 /** Accepts a JSON Schema, as the kernel lists schemas for forms (plan 02 §2.12). */
 export const jsonSchemaDocumentSchema = z.record(z.string(), jsonSchema);
@@ -86,8 +88,8 @@ export const kernelCommandSchemas = {
   'kernel.workspace.open': { input: z.strictObject({ path: z.string().min(1) }), output: workspaceSchema },
   'kernel.workspace.close': { input: z.strictObject({ workspaceId: z.string().min(1) }), output: emptySchema },
   'kernel.folder.create': { input: z.strictObject({ path: z.string().min(1), name: z.string() }), output: z.strictObject({ path: z.string() }) },
-  'kernel.settings.set': { input: z.strictObject({ key: z.string().min(1), value: jsonSchema, scope: scopeSchema }), output: emptySchema },
-  'kernel.settings.reset': { input: z.strictObject({ key: z.string().min(1), scope: scopeSchema }), output: emptySchema },
+  'kernel.settings.set': { input: z.strictObject({ key: settingKeySchema, value: jsonSchema, scope: scopeSchema }), output: emptySchema },
+  'kernel.settings.reset': { input: z.strictObject({ key: settingKeySchema, scope: scopeSchema }), output: emptySchema },
   'kernel.secrets.set': { input: z.strictObject({ extension: z.string().min(1), name: z.string().min(1), value: z.string() }), output: emptySchema },
   'kernel.secrets.delete': { input: z.strictObject({ extension: z.string().min(1), name: z.string().min(1) }), output: emptySchema },
   'kernel.files.unlink': { input: z.strictObject({ id: z.string().min(1) }), output: emptySchema },
@@ -98,6 +100,12 @@ export const kernelCommandSchemas = {
   'kernel.extensions.uninstall': {
     input: z.strictObject({ name: packageNameSchema }),
     output: z.strictObject({ file: z.string(), restartRequired: z.literal(true) }),
+  },
+  'kernel.preset.settings.set': { input: z.strictObject({ key: settingKeySchema, value: jsonSchema }), output: presetEditOutputSchema },
+  'kernel.preset.settings.reset': { input: z.strictObject({ key: settingKeySchema }), output: presetEditOutputSchema },
+  'kernel.presets.save': {
+    input: z.strictObject({ preset: presetSchema, replace: z.boolean().exactOptional() }),
+    output: z.strictObject({ file: z.string() }),
   },
   'kernel.restart': { input: emptySchema, output: z.strictObject({ restarting: z.literal(true) }) },
 } as const;

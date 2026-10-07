@@ -1,9 +1,10 @@
 import path from 'node:path';
-import type { InstallSource, Preset, PresetState } from '@kvman/sdk';
+import type { InstallSource, Json, Preset, PresetState } from '@kvman/sdk';
 import { kernelProblem } from '../problems.ts';
 import { resolveInstallSource } from './install-source.ts';
 import { keepPresetBackup } from './preset-backup.ts';
 import { readStoredPreset, targetFileFor, writePresetFile } from './preset-files.ts';
+import { checkedSaveTarget } from './preset-save.ts';
 import type { PresetSource } from './preset-source.ts';
 
 // The run's stored preset on the main thread (plan 02 §2.10, ADR 0010, 5 and 13): `get` shows the file as it is on
@@ -22,6 +23,10 @@ export type PresetStore = {
   get(): Promise<PresetState>;
   install(source: InstallSource): Promise<{ file: string; restartRequired: true }>;
   uninstall(name: string): Promise<{ file: string; restartRequired: true }>;
+  // `registered`: the key is registered in this run, so the caller has checked its value. `required`: it has no default.
+  setSetting(key: string, value: Json, registered: boolean): Promise<{ file: string; restartRequired: true }>;
+  resetSetting(key: string, required: boolean): Promise<{ file: string; restartRequired: true }>;
+  save(preset: Preset, replace: boolean): Promise<{ file: string }>;
 };
 
 export function createPresetStore(options: PresetStoreOptions): PresetStore {
@@ -49,6 +54,9 @@ export function createPresetStore(options: PresetStoreOptions): PresetStore {
     file = target;
     return { file: target, restartRequired: true };
   };
+
+  // A value for a key no extension of this run registers waits for an extension that isn't loaded yet.
+  const waitsForExtension = (current: Preset): boolean => Object.keys(current.extensions).some((name) => !options.dependencies.has(name));
 
   return {
     get: () =>
@@ -90,6 +98,41 @@ export function createPresetStore(options: PresetStoreOptions): PresetStore {
         await keepPresetBackup(target, current);
         await writePresetFile(target, edited);
         return remember(edited, target);
+      }),
+    setSetting: (key, value, registered) =>
+      serial(async () => {
+        const { current, target } = await currentAndTarget();
+        if (!registered && !waitsForExtension(current)) {
+          throw kernelProblem('VALIDATION_FAILED', `No extension registers the setting "${key}".`, { key });
+        }
+        const edited: Preset = { ...current, settings: { ...current.settings, [key]: value } };
+        await keepPresetBackup(target, current);
+        await writePresetFile(target, edited);
+        return remember(edited, target);
+      }),
+    resetSetting: (key, required) =>
+      serial(async () => {
+        const { current, target } = await currentAndTarget();
+        const { settings = {} } = current;
+        if (!Object.hasOwn(settings, key)) {
+          throw kernelProblem('NOT_FOUND', `The preset has no value for "${key}".`, { key });
+        }
+        if (required) {
+          throw kernelProblem('VALIDATION_FAILED', `The setting "${key}" has no default, so the preset must set it.`, { key });
+        }
+        const remaining = Object.fromEntries(Object.entries(settings).filter(([other]) => other !== key));
+        const edited: Preset =
+          Object.keys(remaining).length === 0 ? { name: current.name, extensions: current.extensions } : { ...current, settings: remaining };
+        await keepPresetBackup(target, current);
+        await writePresetFile(target, edited);
+        return remember(edited, target);
+      }),
+    // Another preset's file: no backup, and the stored state of the running preset stays as it is.
+    save: (preset, replace) =>
+      serial(async () => {
+        const target = await checkedSaveTarget(options.home, options.preset.name, preset, replace);
+        await writePresetFile(target, preset);
+        return { file: target };
       }),
   };
 }

@@ -59,6 +59,9 @@ Schemas are converted with zod's `z.toJSONSchema`; a part JSON Schema can't expr
 | `kernel.preset.get` | query | `{}` → `{ name, origin: 'bundled' \| 'home' \| 'file', file?, extensions, settings? }`: the preset as stored now. |
 | `kernel.extensions.install` | command | `{ source }` → `{ file, restartRequired: true }`: adds the extension to the preset file; the source carries its name (`bundled:<name>`, `npm:<name>@<exact version>`, or `path:<folder>`). |
 | `kernel.extensions.uninstall` | command | `{ name }` → `{ file, restartRequired: true }`: removes it. |
+| `kernel.preset.settings.set` | command | `{ key, value }` → `{ file, restartRequired: true }`: sets one value of the preset file's `settings`. A key registered in this run has its value checked against its schema; an unregistered key is taken only while the preset names an extension that isn't loaded in this run. |
+| `kernel.preset.settings.reset` | command | `{ key }` → `{ file, restartRequired: true }`: removes one value from the preset file's `settings`. `NOT_FOUND` when it isn't there; `VALIDATION_FAILED` when the key is registered without a default. |
+| `kernel.presets.save` | command | `{ preset, replace? }` → `{ file }`: writes `preset` to `<home>/presets/<preset.name>.json`, to start later with `kvman --preset <name>`. `VALIDATION_FAILED` for a name that isn't lowercase kebab case, a `path:` folder that isn't absolute, a file that exists without `replace: true`, or the running preset's name. |
 | `kernel.restart` | command | `{}` → `{ restarting: true }`: asks kvman to restart. It stops and starts again in the same process, with its arguments, lock, and terminal; running jobs are aborted, processes stop, and the preset is read again. Sync only. |
 
 They write the preset file and nothing else; a restart applies the change. Details and errors: [presets.md](presets.md).

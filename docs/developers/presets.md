@@ -41,18 +41,21 @@ If `<home>/presets/coder.json` exists, it **is** the `coder` preset: the bundled
 
 ## Editing the running preset
 
-Three public kernel calls edit the preset **file**; none installs, loads, or trusts anything, and a restart applies the change:
+Five public kernel calls edit the preset **file**; none installs, loads, or trusts anything, and a restart applies the change:
 
 | Call | Does |
 |---|---|
 | `kernel.preset.get` (query) | `{}` → `{ name, origin: 'bundled' \| 'home' \| 'file', file?, extensions, settings? }`: the preset as stored now. After an edit it shows the change before the restart. |
 | `kernel.extensions.install` (command) | `{ source }` → `{ file, restartRequired: true }`. `source` is `bundled:<name>` (only for a bundled extension), `npm:<name>@<exact version>`, or `path:<folder>`, whose name is the `name` in the folder's package.json (a relative folder resolves against the preset file). The preset stores `bundled`, `npm:<exact version>`, or `path:<folder>` under that name. A name already present, or a bad source, fails `VALIDATION_FAILED`. |
 | `kernel.extensions.uninstall` (command) | `{ name }` → `{ file, restartRequired: true }`. `NOT_FOUND` when it isn't there; `VALIDATION_FAILED`, naming the dependents, when another extension of the preset depends on it. |
+| `kernel.preset.settings.set` (command) | `{ key, value }` → `{ file, restartRequired: true }`. A key registered in this run has its value checked against its schema (`VALIDATION_FAILED`); an unregistered key is taken unchecked only while the preset names an extension that isn't loaded in this run, and otherwise fails `VALIDATION_FAILED`. |
+| `kernel.preset.settings.reset` (command) | `{ key }` → `{ file, restartRequired: true }`. `NOT_FOUND` when the preset has no value for it; `VALIDATION_FAILED` when the key is registered without a default. |
 
 - The file written is the person's: `<home>/presets/<name>.json` for a home preset, the given file for `--preset ./file.json`, and for the bundled preset its copy at `<home>/presets/<name>.json`, made at the first edit.
 - Edits are written whole or not at all (a temporary file and a rename), in the key order `name`, `extensions`, `settings`, and one at a time: two at once both land.
 - A write that fails, or a stored file that isn't valid, fails `VALIDATION_FAILED` naming the file; kvman never overwrites a file it couldn't parse.
 - `kernel.settings.set` changes a setting at once and is **not** an edit of the preset.
+- `kernel.presets.save` (command) `{ preset, replace? }` → `{ file }` writes another preset to `<home>/presets/<preset.name>.json`, so that `kvman --preset <name>` starts it. It never edits the running preset, keeps no backup, and installs, loads, and trusts nothing. `VALIDATION_FAILED` for a name that isn't lowercase kebab case (`^[a-z0-9]+(-[a-z0-9]+)*$`), a `path:` folder that isn't absolute, a file that exists unless `replace` is `true`, and the running preset's name.
 - **Restart.** `kernel.restart` (command, `{}` → `{ restarting: true }`) makes kvman stop and start again in the same process, with its arguments, its lock, and its terminal, and no new browser tab; the preset is read again, so an edit applies. Jobs are aborted, processes stop, and workspaces open again.
 - **The backup.** The first edit after a good start writes the preset as it was running to `<file>.good`; later edits keep it, and a start that succeeds deletes it. A start that fails with `EXTENSION_INVALID` or `VALIDATION_FAILED` while it exists restores the file from it, prints the Problem and "The last change to the preset was undone.", and starts once more; that start's `kernel.health.get` has `rolledBack` (the Problem). Any other failure, or a second one, exits 1 as before.
 

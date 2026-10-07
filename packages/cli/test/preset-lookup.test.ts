@@ -2,6 +2,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { homeWorkspaceId, startKernel } from '@kvman/kernel';
+import type { Preset } from '@kvman/sdk';
 import { findPreset, isPresetFile, type PresetFolders } from '../src/preset-lookup.ts';
 
 const roots: string[] = [];
@@ -86,5 +88,32 @@ describe('finding the preset (01 §1.2, ADR 0010, 4)', () => {
     });
     write(path.join(where.bundled, 'coder.json'), { name: 'coder', extensions: {} });
     expect(findPreset('coder', where)).toEqual({ preset: { name: 'coder', extensions: {} }, presetFolder: where.bundled, source: { origin: 'bundled' } });
+  });
+
+  it('QA42-H10 a preset saved by kernel.presets.save is found by its name, with the saved file', async () => {
+    const where = folders();
+    const homeFolder = path.join(path.dirname(where.home), 'home-folder');
+    mkdirSync(homeFolder, { recursive: true });
+    const running: Preset = { name: 'first', extensions: {}, settings: { 'kernel.workers': 1 } };
+    const kernel = await startKernel({
+      home: where.home,
+      homeFolder,
+      preset: running,
+      presetFolder: where.bundled,
+      bundled: new Map(),
+      mode: 'web',
+      logLevel: 'error',
+      terminalLog: false,
+      startFolder: where.start,
+      trust: () => Promise.resolve(true),
+    });
+    const second: Preset = { name: 'second', extensions: {}, settings: { 'kernel.workers': 1 } };
+    try {
+      await kernel.exec('kernel.presets.save', { preset: second }, { caller: { kind: 'user' }, workspaceId: homeWorkspaceId });
+    } finally {
+      await kernel.close();
+    }
+    const file = path.join(where.home, 'presets', 'second.json');
+    expect(findPreset('second', where)).toEqual({ preset: second, presetFolder: path.dirname(file), source: { origin: 'home', file } });
   });
 });
