@@ -21,6 +21,14 @@ afterEach(async () => {
 });
 
 const sessionSchema = z.object({ id: z.string() });
+const scrollSchema = z.object({ pageScroll: z.number(), pageClient: z.number(), listScrolls: z.boolean() });
+
+// The page expression is a string: it runs in Chromium, where the DOM is, not in this Node process.
+const scrollExpression = `(() => {
+  const main = document.querySelector('main');
+  const list = document.querySelector('.kvc-scroll');
+  return { pageScroll: main.scrollHeight, pageClient: main.clientHeight, listScrolls: list.scrollHeight > list.clientHeight };
+})()`;
 
 const question = {
   prompt: 'ما مجموعة الوظائف التي تريدها في النسخة الأولى؟',
@@ -55,6 +63,28 @@ describe('an answered question in Chromium (08 §8.7, ADR 0013, 1)', { timeout: 
     expect(await answered.textContent()).not.toContain('"selected"');
     expect(await page.locator('[data-test="question-card"]').count()).toBe(0);
     expect(await page.locator('[data-test="call-card"]').count()).toBe(0);
+    await page.close();
+  });
+
+  it('QA44-H5 the page does not scroll past a chat whose answered question is far down the list', async () => {
+    world = await kvmanWorld();
+    const kvman = await world.start();
+    const long = Array.from({ length: 80 }, (_, index) => `Paragraph ${index + 1}.`).join('\n\n');
+    const ask = { toolCall: { id: 'call-ask', name: 'run', arguments: { description: 'A test call.', connector: 'ask', command: 'choice', payload: question } } };
+    world.fake.reply({ chunks: [{ text: long }, ask] }, says('Done.'));
+    const sessionId = sessionSchema.parse(await kvman.call('commands', 'kvcoder.session.create', { title: 'Scope' })).id;
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await page.goto(`${kvman.origin}/kvcoder/session/${sessionId}`);
+    await page.locator('[data-test="composer-text"]').fill('Build it');
+    await page.locator('[data-test="send"]').click();
+    await page.locator('[data-test="question-card"]').waitFor();
+    await page.locator('[data-test="option-core"] input').check();
+    await page.locator('[data-test="answer"]').click();
+    await page.locator('[data-test="answered-card"]').waitFor();
+    await page.getByText('Done.').waitFor();
+    const scroll = scrollSchema.parse(await page.evaluate(scrollExpression));
+    expect(scroll.listScrolls).toBe(true);
+    expect(scroll.pageScroll).toBe(scroll.pageClient);
     await page.close();
   });
 });

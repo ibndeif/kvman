@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { command, requestMessages, runs, says, shell, textOf, toolResults } from './support/model-script.ts';
+import { command, requestMessages, runs, says, shell, textOf, toolResults, unstamped } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
@@ -21,7 +21,7 @@ describe('questions and approvals (08 §8.1, §8.5)', { timeout: 30_000 }, () =>
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'skip that' });
     await kernel.clock.advance(0);
     expect(toolResults(fake)).toEqual(['dismissed by the user', 'denied by the user']);
-    expect(textOf(requestMessages(fake).at(-1))).toBe('skip that');
+    expect(unstamped(textOf(requestMessages(fake).at(-1)))).toBe('skip that');
     expect(existsSync(path.join(kernel.homeFolder, 'never.txt'))).toBe(false);
     for (const item of turn?.pending ?? []) await expect(kernel.exec('kvcoder.question.answer', { questionId: String(item.questionId), answer: { dismissed: true } })).rejects.toMatchObject({ problem: { code: 'kvcoder/QUESTION_NOT_FOUND' } });
   });

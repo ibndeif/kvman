@@ -5,7 +5,7 @@ import { heldReply } from './support/held-reply.ts';
 import { padded, unpadded } from './support/long-messages.ts';
 import { wait } from './support/wait.ts';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { requestMessages, says, textOf } from './support/model-script.ts';
+import { requestMessages, says, textOf, unstamped } from './support/model-script.ts';
 import { kvcoderChunks, newSession, sendStreamed } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
@@ -20,7 +20,7 @@ async function history(kernel: TestKernel, fake: FakeOpenAI, sessionId: string):
   await kernel.exec('kernel.settings.set', { key: 'kvcoder.compactAt', value: 0.0001, scope: 'global' });
 }
 
-const sent = (fake: FakeOpenAI) => requestMessages(fake).filter((message) => message.role !== 'system' && message.role !== 'developer').map((message) => unpadded(textOf(message)));
+const sent = (fake: FakeOpenAI) => requestMessages(fake).filter((message) => message.role !== 'system' && message.role !== 'developer').map((message) => unpadded(unstamped(textOf(message))));
 
 describe('compaction (08 §8.1)', { timeout: 30_000 }, () => {
   it('M2.4-H9 above compactAt the older messages are summarized and the last 10 kept whole', async () => {

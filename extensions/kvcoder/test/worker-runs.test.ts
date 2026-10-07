@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { command, requestMessages, runs, says, textOf, toolResults } from './support/model-script.ts';
+import { command, requestMessages, runs, says, textOf, toolResults, unstamped } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 import { wait } from './support/wait.ts';
 import { programWorker, useWorkerPrograms } from './support/worker-programs.ts';
@@ -132,7 +132,7 @@ describe("a program worker's run (08 §8.5, ADR 0021, 10 to 16 and 31 to 36)", {
     expect(fake.requests()).toHaveLength(1);
     installed.release();
     await requests(fake, 2);
-    expect(requestMessages(fake, 1).slice(-2).map((message) => [message.role, textOf(message)])).toEqual([['tool', 'released'], ['user', 'also this']]);
+    expect(requestMessages(fake, 1).slice(-2).map((message) => [message.role, unstamped(textOf(message))])).toEqual([['tool', 'released'], ['user', 'also this']]);
     await vi.waitFor(async () => expect((await turnState(kernel, sessionId)).turn?.pending.map((item) => item.kind)).toEqual(['approval']), wait);
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'never mind' });
     await requests(fake, 3);

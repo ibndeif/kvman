@@ -22,7 +22,7 @@ function webKeys(): string[] {
   return readdirSync(folder).flatMap((file) => [...readFileSync(path.join(folder, file), 'utf8').matchAll(/t\('(kvcoder\.[\w.]+)'/g)].map((match) => match[1] ?? ''));
 }
 
-const codes = ['NAME_TAKEN', 'QUESTION_NOT_FOUND', 'SESSION_NOT_FOUND', 'SESSION_BUSY', 'JOB_NOT_FOUND', 'MCP_SERVER_NOT_FOUND', 'MCP_CONNECT_FAILED', 'MCP_SIGN_IN_NEEDED', 'MCP_SIGN_IN_FAILED', 'WORKER_NOT_FOUND'];
+const codes = ['NAME_TAKEN', 'QUESTION_NOT_FOUND', 'SESSION_NOT_FOUND', 'SESSION_BUSY', 'JOB_NOT_FOUND', 'MCP_SERVER_NOT_FOUND', 'MCP_CONNECT_FAILED', 'MCP_SIGN_IN_NEEDED', 'MCP_SIGN_IN_FAILED', 'WORKER_NOT_FOUND', 'SUMMARY_EMPTY'];
 const notices = ['CANCELLED', 'INTERRUPTED', 'STEP_FAILED', 'MAX_STEPS', 'SUMMARY_FAILED', 'REPLY_LOST'];
 const dynamic = [
   ...['idle', 'running', 'waiting'].map((status) => `kvcoder.ui.status.${status}`),
@@ -103,5 +103,10 @@ describe("kvcoder's catalogs (02 §2.11)", { timeout: 30_000 }, () => {
       expect(placeholders(ar[key] ?? ''), key).toEqual(placeholders(en[key] ?? ''));
     }
     expect(Object.keys(en).filter((key) => key.includes('subagent.check') || key === 'kvcoder.config.connector.subagent')).toEqual([]);
+  });
+
+  it('QA44-E6 the error of a summary with no text is in both languages', () => {
+    expect(catalog('en')['kvcoder.errors.SUMMARY_EMPTY']).toBe('The model returned no summary.');
+    expect(catalog('ar')['kvcoder.errors.SUMMARY_EMPTY']).toBe('لم يُرجع النموذج ملخصًا.');
   });
 });

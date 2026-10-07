@@ -24,6 +24,8 @@ The send box also holds:
 - **Files.** Attach them with the paperclip, or paste them from the clipboard. An image (PNG, JPEG, GIF, or WebP) goes to the model as a picture. Any other file is copied into your workspace folder under `attachments/` when you send, and the message names it, so the agent opens it with its file commands. Nothing there is overwritten: a second `notes.md` becomes `notes-2.md`.
 - **Slash commands.** Type `/` at the start for the chat's own actions: `/compact` (summarize the earlier messages now), `/export`, `/fork`, `/new`, `/prompt` (show the exact prompt of the next step, or go back), and `/rename <title>`. Extensions add their own after these: kvbuilder adds `/build-kvman`, which starts changing kvman itself in this chat ([building-kvman.md](building-kvman.md)). Up and Down choose, Tab completes, Enter runs. A slash command is never sent to the agent. On the Chat page, before a chat exists, only the commands extensions add (such as `/build-kvman`) run, and they start a new chat; the chat's own actions are greyed there. The same actions are in the **⋯** menu of the header.
 
+The agent knows the date and time: each message you send reaches it with the day, date, and time you sent it, in your computer's time zone. What you see in the chat doesn't change.
+
 Each call the agent makes is a card. Its time is the whole wait: the model writing the call, then the call running (open the card for the two parts). A call that failed says **Failed**; the agent reads the error and usually tries another way.
 
 ## What a turn looks like

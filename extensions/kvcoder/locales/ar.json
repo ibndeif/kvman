@@ -11,6 +11,7 @@
   "kvcoder.errors.QUESTION_NOT_FOUND": "هذا السؤال أُجيب عنه أو تم تخطيه أو إلغاؤه من قبل.",
   "kvcoder.errors.SESSION_NOT_FOUND": "هذه المحادثة غير موجودة في مساحة العمل الحالية.",
   "kvcoder.errors.SESSION_BUSY": "المحادثة مشغولة الآن. حاول مجددًا بعد انتهاء الخطوة الجارية.",
+  "kvcoder.errors.SUMMARY_EMPTY": "لم يُرجع النموذج ملخصًا.",
   "kvcoder.errors.JOB_NOT_FOUND": "لا توجد في هذه المحادثة مهمة خلفية بهذا المعرّف.",
   "kvcoder.errors.MCP_SERVER_NOT_FOUND": "لا يوجد خادم MCP باسم {server}.",
   "kvcoder.errors.WORKER_NOT_FOUND": "لا يوجد مساعد باسم {worker}.",

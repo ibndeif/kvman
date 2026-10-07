@@ -88,7 +88,7 @@ export function registerSessions(ctx: Ctx): void {
       if (session.status === 'running') throw ctx.problem('kvcoder/SESSION_BUSY', { sessionId });
       const tools = await sessionTools(ctx, session);
       const settings = await readSettings(ctx);
-      return { summarized: await compact(ctx, session, { force: true, compactAt: settings.compactAt, keep: settings.compactKeep, prompt: tools.built.prompt, turnId: null }) };
+      return { summarized: await compact(ctx, session, { force: true, compactAt: settings.compactAt, keep: settings.compactKeep, prompt: tools.built.prompt, tools: tools.listed.map((listed) => listed.name), turnId: null }) };
     },
   });
 }

@@ -2,12 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { heldReply } from './support/held-reply.ts';
 import { wait } from './support/wait.ts';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { command, requestMessages, runs, says, textOf } from './support/model-script.ts';
+import { command, requestMessages, runs, says, textOf, unstamped } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
 
-const roles = (messages: ReturnType<typeof requestMessages>) => messages.filter((message) => message.role !== 'system' && message.role !== 'developer').map((message) => `${message.role}:${textOf(message)}`);
+const roles = (messages: ReturnType<typeof requestMessages>) => messages.filter((message) => message.role !== 'system' && message.role !== 'developer').map((message) => `${message.role}:${unstamped(textOf(message))}`);
 
 describe('steering (08 §8.1, ADR 0009, 90 and 102)', { timeout: 30_000 }, () => {
   it("M2.4-E15 a message sent while a step runs is queued, then appended after the step's results", async () => {

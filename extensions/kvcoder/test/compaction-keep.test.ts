@@ -3,7 +3,7 @@ import type { TestKernel } from '@kvman/testkit';
 import type { FakeOpenAI } from '@kvman/testkit/fake-openai';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { padded, unpadded } from './support/long-messages.ts';
-import { requestMessages, says, textOf } from './support/model-script.ts';
+import { requestMessages, says, textOf, unstamped } from './support/model-script.ts';
 import { newSession } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
@@ -23,7 +23,7 @@ async function summaries(kernel: TestKernel, sessionId: string) {
   return (await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 })).messages.filter((message) => message.kind === 'summary').map((message) => message.content);
 }
 
-const sent = (fake: FakeOpenAI) => requestMessages(fake).filter((message) => message.role !== 'system' && message.role !== 'developer').map((message) => unpadded(textOf(message)));
+const sent = (fake: FakeOpenAI) => requestMessages(fake).filter((message) => message.role !== 'system' && message.role !== 'developer').map((message) => unpadded(unstamped(textOf(message))));
 
 describe('the messages a summary keeps whole (08 §8.1, ADR 0020, 1)', { timeout: 30_000 }, () => {
   it('QA27-H1 a step above compactAt keeps kvcoder.compactKeep messages whole', async () => {

@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { shippedWorkers } from '../src/delegate/workers.ts';
 import { heldReply } from './support/held-reply.ts';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { requestMessages, says } from './support/model-script.ts';
+import { requestMessages, says, unstamped } from './support/model-script.ts';
 import { newSession } from './support/turns.ts';
 import { wait } from './support/wait.ts';
 
@@ -51,6 +51,6 @@ describe('a new workspace has no welcome (08 §8.1, ADR 0022, 1)', { timeout: 30
     const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 10 });
     expect(messages.map((message) => message.kind)).toEqual(['note', 'user', 'notice', 'user', 'assistant']);
     expect(messages[0]).toMatchObject({ kind: 'note', content: { key: 'kvcoder.ui.newChat' } });
-    expect(requestMessages(fake).filter((message) => message.role !== 'system' && message.role !== 'developer').map((message) => `${message.role}:${String(message.content)}`)).toEqual(['user:first', 'user:second']);
+    expect(requestMessages(fake).filter((message) => message.role !== 'system' && message.role !== 'developer').map((message) => `${message.role}:${unstamped(String(message.content))}`)).toEqual(['user:first', 'user:second']);
   });
 });

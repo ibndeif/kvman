@@ -11,6 +11,7 @@
   "kvcoder.errors.QUESTION_NOT_FOUND": "This question was already answered, dismissed, or cancelled.",
   "kvcoder.errors.SESSION_NOT_FOUND": "This chat doesn't exist in this workspace.",
   "kvcoder.errors.SESSION_BUSY": "The chat is working; try again when its step ends.",
+  "kvcoder.errors.SUMMARY_EMPTY": "The model returned no summary.",
   "kvcoder.errors.JOB_NOT_FOUND": "This chat started no such background job.",
   "kvcoder.errors.MCP_SERVER_NOT_FOUND": "There is no MCP server named {server}.",
   "kvcoder.errors.WORKER_NOT_FOUND": "There is no worker named {worker}.",

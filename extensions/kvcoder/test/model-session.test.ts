@@ -50,8 +50,9 @@ describe('model session id (ADR 0012, 6)', { timeout: 30_000 }, () => {
     fake.reply(says('SUMMARY'));
     await kernel.exec('kvcoder.session.compact', { sessionId });
     const calls = (await kernel.exec('relay.calls.list', {})) as { sessionId: string | null; systemPrompt: string | null }[];
-    const kinds = ['You are kvman Coder', 'Write a title of 3 to 6 words', 'Summarize the conversation below'].map((start) => calls.filter((call) => call.systemPrompt?.startsWith(start) === true).length);
-    expect(kinds).toEqual([6, 1, 1]);
+    // The summary's request has the step's own system prompt (ADR 0032, 2): six steps and one summary, then the title.
+    const kinds = ['You are kvman Coder', 'Write a title of 3 to 6 words'].map((start) => calls.filter((call) => call.systemPrompt?.startsWith(start) === true).length);
+    expect(kinds).toEqual([7, 1]);
     expect(calls.map((call) => call.sessionId)).toEqual(Array.from({ length: 8 }, () => sessionId));
   });
 

@@ -33,7 +33,7 @@
 .kvc-tab { border: 0; border-radius: 7px; background: transparent; color: var(--kv-color-muted); font: inherit; padding-block: 4px; padding-inline: 12px; cursor: pointer; }
 .kvc-tab[aria-selected='true'], .kvc-tab[aria-pressed='true'] { background: var(--kv-color-background); color: var(--kv-color-text); font-weight: 500; }
 .kvc-scrollport { position: relative; flex: 1 1 auto; min-block-size: 0; display: flex; flex-direction: column; }
-.kvc-scroll { flex: 1 1 auto; min-block-size: 0; overflow-y: auto; }
+.kvc-scroll { position: relative; flex: 1 1 auto; min-block-size: 0; overflow-y: auto; }
 .kvc-jump { position: absolute; inset-block-end: 12px; inset-inline: 0; margin-inline: auto; inline-size: max-content; box-shadow: 0 4px 16px rgb(0 0 0 / 0.16); }
 .kvc-column { box-sizing: border-box; inline-size: 100%; max-inline-size: 800px; margin-inline: auto; padding: var(--kv-space-md) var(--kv-space-lg); display: flex; flex-direction: column; gap: var(--kv-space-md); }
 .kvc-user { align-self: flex-end; max-inline-size: 80%; background: var(--kv-color-background); border-radius: 16px; border-end-end-radius: 4px; padding-block: 10px; padding-inline: 14px; white-space: pre-wrap; }

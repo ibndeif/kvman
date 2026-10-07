@@ -63,6 +63,11 @@ export function textOf(message: WireMessage | undefined): string {
   return content.flatMap((part) => (typeof part === 'object' && part !== null && 'text' in part && typeof part.text === 'string' ? [part.text] : [])).join('\n');
 }
 
+/** A text without the date line a person's message is sent with (ADR 0032, 5). */
+export function unstamped(text: string): string {
+  return text.replace(/^\[[A-Z][a-z]+day \d{4}-\d{2}-\d{2} \d{2}:\d{2} [+-]\d{2}:\d{2}\]\n/, '');
+}
+
 /** The tool results of a request, in order. */
 export function toolResults(fake: FakeOpenAI, index = -1): string[] {
   return requestMessages(fake, index).filter((message) => message.role === 'tool').map(textOf);

@@ -12,6 +12,8 @@ kvman runs in the foreground on `127.0.0.1:3737` and opens the folder you start 
 
 To change kvman itself from a chat (its model, its settings, its extensions, or a new extension built for you), type `/build-kvman` in the send box, on the Chat page or in a chat, alone or followed by what you want. The agent can also change the app's name and home page, and build a separate app you start with `kvman --preset <name>`. Until you do, the agent in that chat has no tool for changing kvman ([building kvman](docs/user-guide/building-kvman.md)).
 
+The agent in a chat knows the date and time of each message you send, and a long chat's summary reuses what the model's provider has already cached, so it costs far less ([the coding app](docs/user-guide/coding-app.md)).
+
 ## Documentation
 
 | For | Start at |

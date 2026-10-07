@@ -1,39 +1,35 @@
 import { ProblemError, type Ctx, type Stored } from '@kvman/sdk';
 import type {} from '@kvman/kvai';
 import type { MessageDoc, SessionDoc } from '../schemas/records.ts';
+import { runTool } from '../calls/run-tool.ts';
 import { txRecords } from '../store/collections.ts';
 import { appendMessage, appendNotice } from './history.ts';
 import { modelInfo } from './model-info.ts';
-import { sentHistory, textOf, type History } from './model-context.ts';
+import { modelMessages, sentHistory, textOf, type History } from './model-context.ts';
 
 // Compaction (plan 08 §8.1): above `kvcoder.compactAt` of the model's window (characters / 4), kvai summarizes the
-// older messages, the last `kvcoder.compactKeep` stay whole (ADR 0020, 1), and a summary message is stored. A step marks it in its stream with
-// `compaction` chunks (ADR 0009, 99); a failed summary adds a notice and the step goes on. Older messages smaller
-// than a tenth of the model's window aren't summarized, so a full chat isn't summarized again on every step (ADR 0019, 7).
+// older messages, the last `kvcoder.compactKeep` stay whole (ADR 0020, 1), and a summary message is stored. The request
+// is a step's own, with the instruction as its last message, so the older messages are read from the provider's cache
+// (ADR 0032, 2). A step marks it in its stream with `compaction` chunks (ADR 0009, 99); a failed summary, or one with
+// no text, adds a notice and the step goes on. Older messages smaller than a tenth of the model's window aren't
+// summarized, so a full chat isn't summarized again on every step (ADR 0019, 7).
 
 const minimumShare = 0.1;
 
-const summarizer =
-  'Summarize the conversation below for the agent that continues it: the goal, the decisions, the files and commands that matter, what is done, and what is left. Keep names, paths, and numbers exact. Reply with the summary only.';
-
-function lineOf(message: Stored<MessageDoc>): string {
-  const content = message.content;
-  if (message.kind === 'toolResult') return `Tool result: ${textOf(content['content'])}`;
-  if (message.kind === 'user') return `User: ${textOf(content['content'])}`;
-  const calls = Array.isArray(content['content']) ? content['content'].flatMap((block) => (typeof block === 'object' && block !== null && !Array.isArray(block) && block['type'] === 'toolCall' ? [`[called ${String(block['name'])} ${JSON.stringify(block['arguments'] ?? {})}]`] : [])) : [];
-  return `Assistant: ${[textOf(content['content']), ...calls].filter((part) => part !== '').join(' ')}`;
-}
-
-function transcript(history: History, older: readonly Stored<MessageDoc>[]): string {
-  const summary = history.summary === undefined ? [] : [`Earlier summary: ${String(history.summary.content['text'] ?? '')}`];
-  return [...summary, ...older.map(lineOf)].join('\n\n');
-}
+const instruction =
+  'Summarize the conversation above for the agent that continues it: the goal, the decisions, the files and commands that matter, what is done, and what is left. Keep names, paths, and numbers exact. Reply with the summary only, and call no tool.';
 
 const sizeOf = (messages: readonly Stored<MessageDoc>[]): number => messages.reduce((total, message) => total + JSON.stringify(message.content).length, 0) / 4;
 
 const estimate = (prompt: string, history: History): number => (prompt.length + JSON.stringify(history.summary?.content ?? '').length) / 4 + sizeOf(history.messages);
 
-export type CompactOptions = { force: boolean; compactAt: number; keep: number; prompt: string; turnId: string | null };
+/** `prompt` and `tools` are the step's own: its system prompt and the connectors its `run` tool names. */
+export type CompactOptions = { force: boolean; compactAt: number; keep: number; prompt: string; tools: readonly string[]; turnId: string | null };
+
+async function summaryFailed(ctx: Ctx, session: Stored<SessionDoc>, code: string, turnId: string | null): Promise<false> {
+  await ctx.store.transaction((tx) => appendNotice(txRecords(tx), session, 'SUMMARY_FAILED', { code }, turnId));
+  return false;
+}
 
 /** Summarizes the session's older messages when they pass the threshold, or with `force` whatever the threshold; says whether a summary was stored. */
 export async function compact(ctx: Ctx, session: Stored<SessionDoc>, options: CompactOptions): Promise<boolean> {
@@ -45,15 +41,15 @@ export async function compact(ctx: Ctx, session: Stored<SessionDoc>, options: Co
   if (last === undefined || (info !== undefined && sizeOf(older) < info.contextWindow * minimumShare)) return false;
   ctx.job.progress({ type: 'compaction', state: 'started' });
   try {
-    const answer = await ctx.exec('kvai.complete', { ...(session.model === null ? {} : { model: session.model }), sessionId: session.id, systemPrompt: summarizer, messages: [{ role: 'user', content: transcript(history, older), timestamp: Date.now() }] });
+    const messages = [...(await modelMessages(ctx, { summary: history.summary, messages: older })), { role: 'user' as const, content: instruction, timestamp: Date.now() }];
+    const answer = await ctx.exec('kvai.complete', { ...(session.model === null ? {} : { model: session.model }), sessionId: session.id, systemPrompt: options.prompt, messages, tools: [runTool(options.tools)], thinking: session.thinking });
     const text = textOf(answer.message.content);
+    if (text.trim() === '') return await summaryFailed(ctx, session, 'kvcoder/SUMMARY_EMPTY', options.turnId);
     await ctx.store.transaction((tx) => appendMessage(txRecords(tx), session, { kind: 'summary', content: { text, coversThroughSeq: last.seq }, turnId: options.turnId }));
     return true;
   } catch (error) {
     if (!(error instanceof ProblemError) || ctx.job.signal.aborted) throw error;
-    const problem = error.problem;
-    await ctx.store.transaction((tx) => appendNotice(txRecords(tx), session, 'SUMMARY_FAILED', { code: problem.code }, options.turnId));
-    return false;
+    return await summaryFailed(ctx, session, error.problem.code, options.turnId);
   } finally {
     ctx.job.progress({ type: 'compaction', state: 'done' });
   }

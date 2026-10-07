@@ -2,6 +2,7 @@ import { ProblemError, type Ctx, type Json, type Stored } from '@kvman/sdk';
 import { messageSchema } from '@kvman/kvai/messages';
 import type { MessageDoc } from '../schemas/records.ts';
 import { latestSummary, messagesFrom } from './message-blocks.ts';
+import { messageStamp } from './message-stamp.ts';
 
 // What a step sends the model (plan 08 §8.1): the latest summary, then the messages after it; notices, notes, and
 // older messages stay visible but aren't sent. Images are read from their files at each step (ADR 0009, 103).
@@ -37,10 +38,17 @@ async function imageBlock(ctx: Ctx, fileId: string, name: string): Promise<Json>
   }
 }
 
+// The person's own message starts with its date (ADR 0032, 5); one from a job, a subagent, or an extension doesn't.
+function sentText(message: Stored<MessageDoc>): string {
+  const text = textOf(message.content['content']);
+  if (message.source?.kind !== 'user') return text;
+  return `${messageStamp(message.createdAt, -new Date(message.createdAt).getTimezoneOffset())}\n${text}`;
+}
+
 async function userMessage(ctx: Ctx, message: Stored<MessageDoc>): Promise<Json> {
-  if (message.fileIds === null || message.fileIds.length === 0) return message.content;
+  if (message.fileIds === null || message.fileIds.length === 0) return { ...message.content, content: sentText(message) };
   const images = await Promise.all(message.fileIds.map((fileId, index) => imageBlock(ctx, fileId, message.fileNames?.[index] ?? fileId)));
-  return { ...message.content, content: [{ type: 'text', text: textOf(message.content['content']) }, ...images] };
+  return { ...message.content, content: [{ type: 'text', text: sentText(message) }, ...images] };
 }
 
 const summaryLead = 'A summary of the earlier conversation:';

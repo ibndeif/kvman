@@ -6,7 +6,7 @@ import { z } from '@kvman/sdk';
 import type { TestKernel } from '@kvman/testkit';
 import { safeName } from '../src/messages/attachments.ts';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { requestMessages, says } from './support/model-script.ts';
+import { requestMessages, says, textOf, unstamped } from './support/model-script.ts';
 import { newSession } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
@@ -35,7 +35,7 @@ describe("a message's files that aren't images (08 §8.1, ADR 0018)", { timeout:
     const [message] = await stored(kernel, sessionId);
     expect(message?.content.content).toBe(text);
     expect(message?.fileIds ?? null).toBeNull();
-    expect(requestMessages(fake).find((sent) => sent.role === 'user')?.content).toBe(text);
+    expect(unstamped(textOf(requestMessages(fake).find((sent) => sent.role === 'user')))).toBe(text);
     expect(await kernel.exec('todo.file.read', { id: fileId }, { as: '@test/todo' })).toEqual({ name: 'notes.md', text: '# Notes' });
   });
 
