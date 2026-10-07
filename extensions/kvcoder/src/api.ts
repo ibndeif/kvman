@@ -70,7 +70,7 @@ declare module '@kvman/sdk' {
   interface Settings {
     'kvcoder.model': string | null;
     'kvcoder.thinking': Thinking;
-    'kvcoder.maxSteps': number;
+    'kvcoder.maxSteps': number | null;
     'kvcoder.shell.approval': 'ask' | 'auto';
     'kvcoder.shell.path': string | null;
     'kvcoder.compactAt': number;

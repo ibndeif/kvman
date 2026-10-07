@@ -184,7 +184,7 @@
   "kvcoder.thinking.title": "التفكير",
   "kvcoder.thinking.description": "مقدار تفكير النموذج في المحادثة الجديدة.",
   "kvcoder.maxSteps.title": "الخطوات في كل جولة",
-  "kvcoder.maxSteps.description": "أقصى عدد من الخطوات تنفّذه الجولة قبل أن تتوقف.",
+  "kvcoder.maxSteps.description": "أقصى عدد من الخطوات تنفّذه الجولة قبل أن تتوقف. اتركه فارغًا لتبقى الجولة بلا حدّ.",
   "kvcoder.shell.approval.title": "الموافقة على الأوامر",
   "kvcoder.shell.approval.description": "متى يطلب الوكيل موافقتك قبل تنفيذ أمر أو تعديل ملف.",
   "kvcoder.shell.path.title": "برنامج الطرفية",

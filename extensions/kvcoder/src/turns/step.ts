@@ -27,7 +27,7 @@ import { currentTurn } from './start-turn.ts';
 /** The step job's options (plan 08 §8.1, ADR 0008, 67). */
 export const stepOptions = { retries: 0, timeoutMs: 1_200_000 };
 
-async function beginStep(ctx: Ctx, sessionId: string, turnId: string, maxSteps: number): Promise<Stored<SessionDoc> | undefined> {
+async function beginStep(ctx: Ctx, sessionId: string, turnId: string, maxSteps: number | null): Promise<Stored<SessionDoc> | undefined> {
   const found = await currentTurn(ctx, sessionId, turnId);
   if (found === undefined || found.session.status !== 'running') return undefined;
   const { turn } = found;
@@ -43,7 +43,7 @@ async function beginStep(ctx: Ctx, sessionId: string, turnId: string, maxSteps: 
     return live.turn.steps;
   });
   if (steps === undefined) return undefined;
-  if (steps >= maxSteps) {
+  if (maxSteps !== null && steps >= maxSteps) {
     await endTurn(ctx, sessionId, turnId, 'maxSteps', 'step', { code: 'MAX_STEPS', params: { steps: maxSteps } });
     return undefined;
   }
@@ -109,7 +109,7 @@ function failureDetails(error: ProblemError): JsonValue {
 
 // What follows a reply with no call (plan 08 §8.2): the turn ends, or goes on with the messages that arrived, or, when the
 // reply was lost on the way, goes on after a hint to the model, at most `lostRetries` times in a turn (ADR 0009, 188).
-async function finishWithoutCalls(ctx: Ctx, sessionId: string, turnId: string, maxSteps: number, lost: number | undefined): Promise<void> {
+async function finishWithoutCalls(ctx: Ctx, sessionId: string, turnId: string, maxSteps: number | null, lost: number | undefined): Promise<void> {
   const after = await ctx.store.transaction((tx) => {
     const store = txRecords(tx);
     const live = liveTurn(store, sessionId, turnId);

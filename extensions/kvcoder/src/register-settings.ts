@@ -8,7 +8,7 @@ import { binaryConnectorSchema, wordSchema } from './schemas/registry.ts';
 export const settingSchemas = {
   model: z.string().min(1).nullable(),
   thinking: thinkingSchema,
-  maxSteps: z.number().int().positive(),
+  maxSteps: z.number().int().positive().nullable(),
   approval: z.enum(['ask', 'auto']),
   shellPath: z.string().min(1).nullable(),
   compactAt: z.number().gt(0).max(1),
@@ -23,7 +23,7 @@ export const settingSchemas = {
 export function registerSettings(ctx: Ctx): void {
   ctx.registerSetting('kvcoder.model', { description: 'The model a new session starts with; null uses kvai.defaultModel.', schema: settingSchemas.model, default: null });
   ctx.registerSetting('kvcoder.thinking', { description: 'How hard the model thinks in a new session.', schema: settingSchemas.thinking, default: 'medium' });
-  ctx.registerSetting('kvcoder.maxSteps', { description: 'The most steps a turn takes before it stops.', schema: settingSchemas.maxSteps, default: 50 });
+  ctx.registerSetting('kvcoder.maxSteps', { description: 'The most steps a turn takes before it stops; null sets no limit.', schema: settingSchemas.maxSteps, default: null });
   ctx.registerSetting('kvcoder.shell.approval', { description: 'Whether shell and file calls ask the person first: only the ones the model marks risky (auto), or every one (ask).', schema: settingSchemas.approval, default: 'auto' });
   ctx.registerSetting('kvcoder.shell.path', { description: 'The shell program to run; null finds bash, or pwsh then powershell.exe on Windows.', schema: settingSchemas.shellPath, default: null });
   ctx.registerSetting('kvcoder.compactAt', { description: "The share of the model's context window above which older messages are summarized.", schema: settingSchemas.compactAt, default: 0.8 });

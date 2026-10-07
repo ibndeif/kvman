@@ -184,7 +184,7 @@
   "kvcoder.thinking.title": "Thinking",
   "kvcoder.thinking.description": "How hard the model thinks in a new chat.",
   "kvcoder.maxSteps.title": "Steps per turn",
-  "kvcoder.maxSteps.description": "The most steps a turn takes before it stops.",
+  "kvcoder.maxSteps.description": "The most steps a turn takes before it stops. Leave it empty for no limit.",
   "kvcoder.shell.approval.title": "Shell approval",
   "kvcoder.shell.approval.description": "When the agent asks you before it runs a command or changes a file.",
   "kvcoder.shell.path.title": "Shell program",

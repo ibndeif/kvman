@@ -35,9 +35,9 @@ export function liveTurn(store: TxRecords, sessionId: string, turnId: string): {
 }
 
 /** Queues the next step, or ends the turn at `kvcoder.maxSteps` (ADR 0009, 102). */
-export async function continueTurn(ctx: Ctx, sessionId: string, turnId: string, maxSteps: number): Promise<void> {
+export async function continueTurn(ctx: Ctx, sessionId: string, turnId: string, maxSteps: number | null): Promise<void> {
   const turn = await records(ctx.store).turns.get(turnId);
-  if (turn !== undefined && turn.steps >= maxSteps) await endTurn(ctx, sessionId, turnId, 'maxSteps', 'step', { code: 'MAX_STEPS', params: { steps: maxSteps } });
+  if (turn !== undefined && maxSteps !== null && turn.steps >= maxSteps) await endTurn(ctx, sessionId, turnId, 'maxSteps', 'step', { code: 'MAX_STEPS', params: { steps: maxSteps } });
   else await queueStep(ctx, sessionId, turnId, true);
 }
 
@@ -49,7 +49,7 @@ function pendingOf(store: TxRecords, sessionId: string, rootSessionId: string, t
   return { toolCallId, kind: outcome.questionKind === 'approval' ? 'approval' : 'question', questionId: question.id, question: shown, childSessionId: null, runId: null };
 }
 
-export async function settleCalls(ctx: Ctx, sessionId: string, turnId: string, calls: readonly ToolCall[], outcomes: readonly CallOutcome[], maxSteps: number): Promise<void> {
+export async function settleCalls(ctx: Ctx, sessionId: string, turnId: string, calls: readonly ToolCall[], outcomes: readonly CallOutcome[], maxSteps: number | null): Promise<void> {
   const order: Calls = calls.map((call) => ({ toolCallId: call.id, toolName: call.name }));
   const held = outcomes.flatMap((outcome) => (outcome.kind === 'result' ? [outcome.held] : []));
   if (held.length === outcomes.length) {

@@ -34,6 +34,14 @@ const dynamic = [
 ];
 
 describe("kvcoder's catalogs (02 §2.11)", { timeout: 30_000 }, () => {
+  it('QA41-H4 the step-limit setting explains how to have no limit in both languages', () => {
+    const en = catalog('en')['kvcoder.maxSteps.description'];
+    const ar = catalog('ar')['kvcoder.maxSteps.description'];
+    expect(en).toBe('The most steps a turn takes before it stops. Leave it empty for no limit.');
+    expect(ar).toBeTruthy();
+    expect(ar).not.toBe(en);
+  });
+
   it('M2.4-E61 en and ar have the same keys, covering descriptions, errors, notices, the pages, and every UI text', async () => {
     const en = catalog('en');
     const ar = catalog('ar');
