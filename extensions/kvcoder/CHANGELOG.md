@@ -1,5 +1,13 @@
 # @kvman/kvcoder
 
+## 0.1.5
+
+### Patch Changes
+
+- 4b3e5fa: The card of a finished background job, and of a helper that finished, says which one it was: "Background job finished: node test.js" (ADR 0035, 7).
+- 1dac5fd: Following ADR 0035, the chat's header is one line with the time, the cost, and how full the model's memory is ("Memory 15% full"), and the token counts are in tooltips, on a turn's line too; a turn's totals come after the cards of its last calls; the line above a message's attached files is shown in the page's language; and a refused `fs edit` or `artifact edit` ends with `Nothing was written.`, so the model doesn't read the file again to check.
+- bb26705: A long word with no spaces, such as a pasted URL or file path, now breaks inside the message column, so the message list no longer scrolls sideways (ADR 0035, 6).
+
 ## 0.1.4
 
 ### Patch Changes
