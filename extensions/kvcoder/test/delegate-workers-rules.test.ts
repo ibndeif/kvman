@@ -30,7 +30,7 @@ describe("the rules of a worker's child and of the workers setting (08 §8.5, AD
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     expect(indexed(systemPrompt(fake, 1))).toEqual(['fs', 'ask']);
-    expect(toolResults(fake, 2)[0]).toMatch(/^\{\n {2}"path": /);
+    expect(toolResults(fake, 2)[0]).toMatch(/^\{"path":/);
     expect(toolResults(fake, 3)).toEqual(['child done']);
   });
 

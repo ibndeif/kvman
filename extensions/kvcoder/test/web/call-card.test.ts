@@ -119,4 +119,13 @@ describe("a call's card says what the call does (08 §8.7, ADR 0011, 13)", () =>
     expect(found(said, 'assistant-message').text()).toContain('Done.');
     said.unmount();
   });
+
+  it('QA46-H11 a JSON output on one line is shown indented, and any other output as it is', async () => {
+    const list = await card({ description: 'Listing the folder', connector: 'fs', command: 'list' }, '{"path":".","entries":[{"name":"a.txt"}]}');
+    await opened(list);
+    expect(found(list, 'call-output').text()).toBe('{\n  "path": ".",\n  "entries": [\n    {\n      "name": "a.txt"\n    }\n  ]\n}');
+    const plain = await card({ description: 'Saying hi', connector: 'shell', command: 'exec' }, '{not json');
+    await opened(plain);
+    expect(found(plain, 'call-output').text()).toBe('{not json');
+  });
 });

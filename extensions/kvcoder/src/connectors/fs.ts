@@ -2,7 +2,7 @@ import type { Stats } from 'node:fs';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { z, type Ctx } from '@kvman/sdk';
-import { applyEdits } from '../files/edit-text.ts';
+import { applyEdits, type EditedText } from '../files/edit-text.ts';
 import { listEntries } from '../files/list-entries.ts';
 import { readLines } from '../files/read-file.ts';
 import { searchText } from '../files/search-text.ts';
@@ -93,12 +93,23 @@ async function writeTo(ctx: Ctx, input: z.output<typeof payloads.write>) {
   return { path: input.path, created: existing === undefined, bytes: Buffer.byteLength(input.content) };
 }
 
+const shownAround = 3;
+const shownLimit = 80;
+
+// What an edit changed (ADR 0034, 1): the file's lines from 3 before the first changed line to 3 after the last, at most 80.
+function changedLines(edited: EditedText): { fromLine: number; content: string } {
+  const lines = edited.text.replace(/^\uFEFF/, '').match(/[^\n]*\n|[^\n]+$/g) ?? [];
+  const fromLine = Math.max(edited.firstChangedLine - shownAround, 1);
+  const last = Math.min(edited.lastChangedLine + shownAround, fromLine + shownLimit - 1);
+  return { fromLine, content: lines.slice(fromLine - 1, last).join('') };
+}
+
 async function editIn(ctx: Ctx, input: z.output<typeof payloads.edit>) {
   const target = await resolveInWorkspace(ctx.job.workspace.path, input.path);
   const edited = applyEdits(await readText(target, input.path), input.edits);
   ctx.job.signal.throwIfAborted();
   await writeFile(target, edited.text, 'utf8');
-  return { path: input.path, replacements: edited.replacements, firstChangedLine: edited.firstChangedLine };
+  return { path: input.path, replacements: edited.replacements, firstChangedLine: edited.firstChangedLine, ...changedLines(edited) };
 }
 
 const commands = fsCommands;
@@ -119,7 +130,7 @@ export function registerFsConnector(ctx: Ctx): void {
   ctx.registerQuery('kvcoder.fs.text.search', {
     description: commands.search.description,
     input: callInput(payloads.search),
-    output: z.object({ matches: z.array(z.object({ path: z.string(), line: z.number().int(), text: z.string() })), truncated: z.boolean() }),
+    output: z.object({ files: z.array(z.object({ path: z.string(), matches: z.array(z.object({ line: z.number().int(), text: z.string() })) })), truncated: z.boolean() }),
     handle: ({ payload }) => asProblems(() => searchText(ctx.job.workspace.path, payload, ctx.job.signal)),
   });
   ctx.registerCommand('kvcoder.fs.write', {
@@ -133,7 +144,7 @@ export function registerFsConnector(ctx: Ctx): void {
   ctx.registerCommand('kvcoder.fs.edit', {
     description: commands.edit.description,
     input: callInput(payloads.edit),
-    output: z.object({ path: z.string(), replacements: z.number().int(), firstChangedLine: z.number().int() }),
+    output: z.object({ path: z.string(), replacements: z.number().int(), firstChangedLine: z.number().int(), fromLine: z.number().int(), content: z.string() }),
     retries: 0,
     maxInputBytes: 33_554_432,
     handle: ({ payload }) => asProblems(() => editIn(ctx, payload)),

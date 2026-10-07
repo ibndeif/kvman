@@ -24,8 +24,8 @@ describe('fs search (08 §8.5, ADR 0011, 8)', { timeout: 30_000 }, () => {
       write(folder, 'src/logo.bin', Buffer.concat([Buffer.from('registerCommand'), Buffer.from([0xff, 0xfe])]));
     };
     const { results } = await looked(prepare, [fsCall('search', { pattern: 'register(Command|Query)' }), fsCall('search', { pattern: 'register', path: 'src/a.ts' })]);
-    expect(json(results[0])).toEqual({ matches: [{ path: 'src/a.ts', line: 1, text: "ctx.registerCommand('a');" }, { path: 'src/b.ts', line: 2, text: "ctx.registerQuery('b');" }], truncated: false });
-    expect(json(results[1])).toEqual({ matches: [{ path: 'src/a.ts', line: 1, text: "ctx.registerCommand('a');" }, { path: 'src/a.ts', line: 2, text: 'registerNothing();' }], truncated: false });
+    expect(json(results[0])).toEqual({ files: [{ path: 'src/a.ts', matches: [{ line: 1, text: "ctx.registerCommand('a');" }] }, { path: 'src/b.ts', matches: [{ line: 2, text: "ctx.registerQuery('b');" }] }], truncated: false });
+    expect(json(results[1])).toEqual({ files: [{ path: 'src/a.ts', matches: [{ line: 1, text: "ctx.registerCommand('a');" }, { line: 2, text: 'registerNothing();' }] }], truncated: false });
   });
 
   it('QA18-E19 search stops at 200 matches, cuts long lines, and refuses a bad pattern or path', async () => {
@@ -41,14 +41,14 @@ describe('fs search (08 §8.5, ADR 0011, 8)', { timeout: 30_000 }, () => {
       fsCall('search', { pattern: 'x', path: '..' }),
       fsCall('search', { pattern: 'nothing-has-this' }),
     ]);
-    const many = json(results[0]) as { matches: unknown[]; truncated: boolean };
-    expect(many.matches).toHaveLength(200);
+    const many = json(results[0]) as { files: { matches: unknown[] }[]; truncated: boolean };
+    expect(many.files[0]?.matches).toHaveLength(200);
     expect(many.truncated).toBe(true);
-    const wide = json(results[1]) as { matches: { text: string }[] };
-    expect(wide.matches[0]?.text).toBe(`needle${'w'.repeat(494)}`);
+    const wide = json(results[1]) as { files: { matches: { text: string }[] }[] };
+    expect(wide.files[0]?.matches[0]?.text).toBe(`needle${'w'.repeat(494)}`);
     expect(results[2]).toMatch(/^error VALIDATION_FAILED: The pattern isn't a regular expression: /);
     expect(results[3]).toBe("error NOT_FOUND: missing doesn't exist.");
     expect(results[4]).toBe('error VALIDATION_FAILED: .. is outside the workspace folder.');
-    expect(json(results[5])).toEqual({ matches: [], truncated: false });
+    expect(json(results[5])).toEqual({ files: [], truncated: false });
   });
 });

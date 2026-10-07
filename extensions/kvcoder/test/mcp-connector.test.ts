@@ -35,7 +35,7 @@ describe('the mcp connector over a command server (08 §8.5, ADR 0020, 3 and 4)'
     expect(results).toEqual(['hi', kernel.homeFolder]);
     const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });
     const card = messages.find((message) => message.kind === 'toolResult')?.content['details'];
-    expect(card).toMatchObject({ connector: 'mcp', command: 'call', output: 'hi' });
+    expect(card).toMatchObject({ connector: 'mcp', command: 'call' });
   });
 
   it('QA29-E4 an unknown server fails kvcoder/MCP_SERVER_NOT_FOUND, naming the servers', async () => {

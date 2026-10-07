@@ -37,7 +37,7 @@ ctx.registerHandler('kernel.started', {
 - `commands`: each command's `name`, the public `command` it runs, and optional `examples` (`{ description, input }`). `help` shows the registered descriptions, JSON Schemas, and examples, so give every input field a `.describe()`.
 - `asks: true` on a command makes the person approve every call of it first (see **A command that asks** below). The field takes only `true`; leave it out for a command that runs at once.
 - Each `command` must be a public command or query of the registering extension, or registration fails `VALIDATION_FAILED`. The command runs through `ctx.exec` with the payload as its input, so validation, cancel, and timeouts are the kernel's, and it runs to its end inside the agent's step.
-- The result the agent reads is the output as indented JSON, or `error <code>: <message>`. A payload that doesn't fit returns each problem and then the payload's signature, such as `{ text, done? }`, so the agent can correct it in one try; a payload that isn't a plain object returns its JSON Schema on one line instead.
+- The result the agent reads is the output as JSON on one line, or `error <code>: <message>`. A payload that doesn't fit returns each problem and then the payload's signature, such as `{ text, done? }`, so the agent can correct it in one try; a payload that isn't a plain object returns its JSON Schema on one line instead.
 - `binary`: a program on the system, with `{ check, install?, help? }`. `check` is a line whose exit code 0 means the program is usable; the connector is listed, and can be called, only while its check passes.
 
 ## A command that asks

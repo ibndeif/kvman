@@ -15,9 +15,9 @@ describe("kvbuilder's connectors through the run tool (09 §9.1, ADR 0011)", { t
     expect(listed).toEqual({ exitCode: 0, output: '[]' });
     const guide = await runConnector(kernel, { connector: 'docs', command: 'get', payload: { topic: 'sdk' } });
     expect(guide.exitCode).toBe(0);
-    expect(guide.output).toContain('"topic": "sdk"');
+    expect(guide.output).toContain('"topic":"sdk"');
     const settings = await runConnector(kernel, { connector: 'kvman', command: 'settings-list' });
-    expect(settings.output).toContain('"key": "kernel.language"');
+    expect(settings.output).toContain('"key":"kernel.language"');
     for (const connector of ['kvman', 'ext', 'preset', 'preview', 'docs']) {
       const help = await runConnector(kernel, { connector, command: 'help' });
       expect(help.output, connector).toMatch(new RegExp(`^${connector}: [\\s\\S]*\\n  help +\\S`));

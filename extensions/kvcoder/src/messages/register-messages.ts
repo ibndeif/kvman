@@ -52,16 +52,16 @@ export function registerMessages(ctx: Ctx): void {
   });
   ctx.registerQuery('kvcoder.message.list', {
     description: "Lists a session's newest messages in order, the count of older ones, and the messages waiting for the step.",
-    input: z.object({ sessionId: z.string(), limit: z.number().int().positive().max(1000) }),
+    input: z.object({ sessionId: z.string(), limit: z.number().int().positive().max(1000), afterSeq: z.number().int().exactOptional() }),
     output: z.object({ messages: z.array(messageSchema), omitted: z.number().int() }),
     public: true,
     maxOutputBytes: listOutputBytes,
-    handle: async ({ sessionId, limit }) => {
+    handle: async ({ sessionId, limit, afterSeq }) => {
       const session = await findSession(ctx, sessionId);
       const store = records(ctx.store);
       const queued = (await store.queued.find({ sessionId }, { limit: 1000 })).map(queuedView);
       const stored = await store.messages.count({ sessionId });
-      const newest = (await newestMessages(ctx, sessionId, limit, session.nextSeq)).map(messageView);
+      const newest = (await newestMessages(ctx, sessionId, limit, session.nextSeq)).filter((message) => afterSeq === undefined || message.seq > afterSeq).map(messageView);
       const fitting = newestThatFit(newest, listOutputBytes - jsonBytes({ messages: queued, omitted: stored }));
       return { messages: [...fitting, ...queued], omitted: stored - fitting.length };
     },

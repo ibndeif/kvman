@@ -94,7 +94,7 @@ describe('the artifact connector (08 §8.5, ADR 0009, 173 to 176)', { timeout: 3
     await turn(world, 'once more', runs(command('artifact', 'get', { id: 'plan' })), says('three'));
     const { messages } = await world.kernel.exec('kvcoder.message.list', { sessionId: world.sessionId, limit: 20 });
     const tools = messages.filter((message) => message.kind === 'toolResult');
-    expect(tools[0]?.content).toMatchObject({ details: { artifact: { id: 'plan', title: 'The plan', format: 'markdown', version: 1 } }, content: [{ type: 'text', text: expect.stringContaining('"created": true') as unknown }] });
+    expect(tools[0]?.content).toMatchObject({ details: { artifact: { id: 'plan', title: 'The plan', format: 'markdown', version: 1 } }, content: [{ type: 'text', text: expect.stringContaining('"created":true') as unknown }] });
     expect(tools[1]?.content).toMatchObject({ details: { artifact: { id: 'plan', title: 'The plan', format: 'markdown', version: 2 } } });
     expect(tools[2]?.content).not.toHaveProperty('details.artifact');
   });

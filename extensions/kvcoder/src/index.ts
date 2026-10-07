@@ -23,6 +23,7 @@ import { clearSessionPoints, registerSessionPoints } from './registry/session-po
 import { registerSettings } from './register-settings.ts';
 import { registerForkExport } from './sessions/register-fork-export.ts';
 import { registerLifecycle } from './sessions/register-lifecycle.ts';
+import { registerContext } from './sessions/register-context.ts';
 import { registerSessions } from './sessions/register-sessions.ts';
 import { registerInterruptions } from './turns/register-interruptions.ts';
 import { registerTurns } from './turns/register-turns.ts';
@@ -36,6 +37,7 @@ export type {} from './api.ts';
 export default (ctx: Ctx): void => {
   registerSettings(ctx);
   registerSessions(ctx);
+  registerContext(ctx);
   registerForkExport(ctx);
   registerLifecycle(ctx);
   registerMessages(ctx);

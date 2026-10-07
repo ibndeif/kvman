@@ -54,8 +54,8 @@ describe('the walkthrough (09, 13 M2.5)', () => {
     await approveUntilDone(kvman, session.id);
     const [created, tested, listed, planted, checked, restored, previewed, called] = toolResults(fake);
     expect(JSON.parse(created ?? '')).toEqual({ folder: 'notes', name: 'notes', namespace: 'notes', web: false });
-    expect(tested).toMatch(/"passed": true/);
-    expect(listed).toContain('"folder": "notes"');
+    expect(tested).toMatch(/"passed":true/);
+    expect(listed).toContain('"folder":"notes"');
     expect(planted).toMatch(/\[exit code 0\]$/);
     expect(checked).toMatch(/doesn't load: .*notes\.greeting\.get.*description/s);
     expect(restored).toMatch(/\[exit code 0\]$/);

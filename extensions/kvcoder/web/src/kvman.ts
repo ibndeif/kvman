@@ -100,3 +100,11 @@ export function totals(t: Translate, usage: { input: number; output: number; cos
   const time = seconds < 60 ? t('kvcoder.ui.seconds', { count: seconds }) : t('kvcoder.ui.minutes', { count: Math.round(seconds / 60) });
   return t('kvcoder.ui.totals', { time, tokens, cost });
 }
+
+/** How full the model's window is and where a summary happens (ADR 0034, 9), or nothing when the window isn't known. */
+export function contextLine(t: Translate, context: { tokens: number; window: number | null; compactAt: number } | null): string | undefined {
+  if (context === null || context.window === null) return undefined;
+  const language = pageLanguage();
+  const window = new Intl.NumberFormat(language, { notation: 'compact', maximumFractionDigits: 1 }).format(context.window);
+  return t('kvcoder.ui.context', { percent: Math.round((context.tokens / context.window) * 100), window, at: Math.round(context.compactAt * 100) });
+}

@@ -20,8 +20,6 @@ const minimumShare = 0.1;
 const instruction =
   'Summarize the conversation above for the agent that continues it: the goal, the decisions, the files and commands that matter, what is done, and what is left. Keep names, paths, and numbers exact. Reply with the summary only, and call no tool.';
 
-const sizeOf = (messages: readonly Stored<MessageDoc>[]): number => messages.reduce((total, message) => total + JSON.stringify(message.content).length, 0) / 4;
-
 const sentTokens = (messages: readonly Stored<MessageDoc>[]): number => messages.reduce((total, message) => total + sentCharacters(message), 0) / 4;
 
 // The whole prompt of a model call, as its provider counted it; 0 when the provider reported none.
@@ -29,7 +27,7 @@ const reportedPrompt = (message: Stored<MessageDoc>): number => (message.usage =
 
 // The prompt's size in tokens (ADR 0033, 4 and 5): the provider's count at the chat's last call, with what was added
 // since. A call from before the latest summary held the messages the summary replaced, so it doesn't count.
-function promptTokens(prompt: string, history: History): number {
+export function promptTokens(prompt: string, history: History): number {
   const summarizedAt = history.summary?.seq ?? -1;
   const index = history.messages.findLastIndex((message) => message.seq > summarizedAt && reportedPrompt(message) > 0);
   const counted = history.messages[index];
@@ -52,7 +50,7 @@ export async function compact(ctx: Ctx, session: Stored<SessionDoc>, options: Co
   if (!options.force && (info === undefined || promptTokens(options.prompt, history) <= info.contextWindow * options.compactAt)) return false;
   const older = history.messages.slice(0, Math.max(history.messages.length - options.keep, 0));
   const last = older.at(-1);
-  if (last === undefined || (info !== undefined && sizeOf(older) < info.contextWindow * minimumShare)) return false;
+  if (last === undefined || (info !== undefined && sentTokens(older) < info.contextWindow * minimumShare)) return false;
   ctx.job.progress({ type: 'compaction', state: 'started' });
   try {
     const messages = [...(await modelMessages(ctx, { summary: history.summary, messages: older })), { role: 'user' as const, content: instruction, timestamp: Date.now() }];

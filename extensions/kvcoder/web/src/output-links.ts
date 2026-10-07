@@ -19,3 +19,14 @@ export function outputParts(output: string): OutputPart[] {
   if (last < output.length) parts.push({ kind: 'text', text: output.slice(last) });
   return parts;
 }
+
+/** An output as its card shows it: JSON on one line is indented by 2 spaces (ADR 0034, 4); anything else is as it is. */
+export function shownOutput(output: string): string {
+  if (!/^[[{]/.test(output) || output.includes('\n')) return output;
+  try {
+    return JSON.stringify(JSON.parse(output), null, 2);
+  } catch (error) {
+    if (error instanceof SyntaxError) return output;
+    throw error;
+  }
+}

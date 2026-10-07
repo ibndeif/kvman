@@ -22,7 +22,7 @@ describe('runConnector (08 §8.4, ADR 0009, 96; ADR 0011, 18)', { timeout: 30_00
 
   it('M2.4-E33 a call returns its output as JSON, or an error line with exit 1', async () => {
     const { kernel } = await kvcoder.start();
-    expect(await runConnector(kernel, { connector: 'todo', command: 'add', payload: { text: 'a' } })).toEqual({ exitCode: 0, output: expect.stringMatching(/^\{\n {2}"id": ".+",\n {2}"text": "a"\n\}$/) as unknown });
+    expect(await runConnector(kernel, { connector: 'todo', command: 'add', payload: { text: 'a' } })).toEqual({ exitCode: 0, output: expect.stringMatching(/^\{"id":".+","text":"a"\}$/) as unknown });
     expect(await kernel.exec('todo.item.list', {})).toEqual([{ text: 'a' }]);
     expect(await runConnector(kernel, { connector: 'todo', command: 'nope' })).toEqual({ exitCode: 1, output: 'error NOT_FOUND: todo has no command nope. Its commands are: add, wait, fail, list, help.' });
     expect(await runConnector(kernel, { connector: 'nope', command: 'add' })).toEqual({ exitCode: 1, output: expect.stringMatching(/^error VALIDATION_FAILED: There is no connector nope\. The connectors are: shell, .*todo\.$/) as unknown });
@@ -41,7 +41,7 @@ describe('runConnector (08 §8.4, ADR 0009, 96; ADR 0011, 18)', { timeout: 30_00
 
   it('QA18-H18 runConnector runs a commands connector and every help, and never a built-in command', async () => {
     const { kernel } = await kvcoder.start();
-    expect(await runConnector(kernel, { connector: 'todo', command: 'add', payload: { text: 'milk' } })).toMatchObject({ exitCode: 0, output: expect.stringContaining('"text": "milk"') as unknown });
+    expect(await runConnector(kernel, { connector: 'todo', command: 'add', payload: { text: 'milk' } })).toMatchObject({ exitCode: 0, output: expect.stringContaining('"text":"milk"') as unknown });
     expect((await runConnector(kernel, { connector: 'todo', command: 'help' })).exitCode).toBe(0);
     expect(await runConnector(kernel, { connector: 'fs', command: 'help' })).toMatchObject({ exitCode: 0, output: expect.stringMatching(/^fs: /) as unknown });
     expect(await runConnector(kernel, { connector: 'fs', command: 'write', payload: { path: 'a.txt', content: 'x' } })).toEqual({ exitCode: 1, output: 'fs runs only inside a turn' });

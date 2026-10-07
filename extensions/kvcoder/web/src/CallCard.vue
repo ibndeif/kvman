@@ -4,7 +4,7 @@ import { computed, ref } from 'vue';
 import { shortLine } from './call-view.ts';
 import { durationText } from './durations.ts';
 import { useKvman } from './kvman.ts';
-import { outputParts } from './output-links.ts';
+import { outputParts, shownOutput } from './output-links.ts';
 
 // The call card (plan 08 §8.7, ADR 0011, 13; ADR 0009, 195, 206, 207): closed, the call's description, then
 // `connector · command` and its time, all from the same edge; a failed call has a danger border and says "Failed".
@@ -13,7 +13,7 @@ import { outputParts } from './output-links.ts';
 const props = defineProps<{ description?: string | undefined; label?: string | undefined; line?: string | undefined; payload?: string | undefined; failed?: boolean | undefined; durationMs?: number | undefined; writtenMs?: number | undefined; output?: string | undefined; running?: boolean | undefined; background?: boolean | undefined }>();
 const kvman = useKvman();
 const open = ref(false);
-const parts = computed(() => outputParts(props.output ?? ''));
+const parts = computed(() => outputParts(shownOutput(props.output ?? '')));
 const time = computed(() => (props.durationMs === undefined ? '' : durationText(kvman.t, (props.writtenMs ?? 0) + props.durationMs)));
 const timeParts = computed(() => {
   if (props.durationMs === undefined) return '';

@@ -3,7 +3,7 @@ import type { TestKernel } from '@kvman/testkit';
 import type { FakeOpenAI } from '@kvman/testkit/fake-openai';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { padded } from './support/long-messages.ts';
-import { requestMessages, says } from './support/model-script.ts';
+import { requestMessages, runs, says, shell } from './support/model-script.ts';
 import { newSession } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
@@ -58,6 +58,19 @@ describe("a summary's minimum, and what a summary by hand answers (08 §8.1, ADR
     fake.reply({ status: 500, body: { error: { message: 'down', type: 'server_error' } } });
     expect(await kernel.exec('kvcoder.session.compact', { sessionId })).toEqual({ summarized: false });
     expect((await stored(kernel, sessionId, 'notice')).map((message) => message.content)).toEqual([{ code: 'SUMMARY_FAILED', params: { code: 'kvai/PROVIDER_ERROR' } }]);
+    expect(await stored(kernel, sessionId, 'summary')).toEqual([]);
+  });
+
+  it("QA46-E8 older messages that pass the minimum only by a stored copy of their output aren't summarized", async () => {
+    const { kernel, fake } = await kvcoder.start();
+    const sessionId = await newSession(kernel);
+    // A shell line's result is stored with its output twice: 29,000 characters sent, 58,000 stored, and the minimum is 51,200.
+    fake.reply(runs(shell(`node -e "process.stdout.write('x'.repeat(29000))"`)), says('answer 1'));
+    await kernel.exec('kvcoder.message.send', { sessionId, text: 'message 1' });
+    await kernel.clock.advance(0);
+    await history(kernel, fake, sessionId, (index) => `message ${index + 1}`);
+    expect(JSON.stringify((await stored(kernel, sessionId, 'toolResult'))[0]?.content).length).toBeGreaterThan(51_200);
+    expect(await kernel.exec('kvcoder.session.compact', { sessionId })).toEqual({ summarized: false });
     expect(await stored(kernel, sessionId, 'summary')).toEqual([]);
   });
 });

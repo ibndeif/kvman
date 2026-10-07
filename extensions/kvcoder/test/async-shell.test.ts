@@ -61,8 +61,8 @@ describe('background shell calls (08 §8.3, ADR 0009, 149 to 151)', { timeout: 6
     posixShell();
     const { kernel, fake, sessionId, jobId } = await started('sleep 30');
     const [cancel = '', again = '', get = ''] = [...(await say(kernel, fake, sessionId, command('background', 'stop', { id: jobId }))), ...(await say(kernel, fake, sessionId, command('background', 'stop', { id: jobId }))), ...(await say(kernel, fake, sessionId, command('background', 'output', { id: jobId })))];
-    expect(cancel).toBe('{\n  "stopped": true\n}');
-    expect(again).toBe('{\n  "stopped": false\n}');
+    expect(cancel).toBe('{"stopped":true}');
+    expect(again).toBe('{"stopped":false}');
     expect(jobSchema.parse(JSON.parse(get)).status).toBe('cancelled');
     expect(await running(kernel, jobId)).toBe(false);
   });

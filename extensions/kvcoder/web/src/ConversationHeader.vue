@@ -2,7 +2,8 @@
 import { Ellipsis, PanelRight } from '@lucide/vue';
 import { computed, ref, useTemplateRef } from 'vue';
 import type { Session } from '../../src/index.ts';
-import { titleText, totals, useKvman } from './kvman.ts';
+import { contextLine, titleText, totals, useKvman } from './kvman.ts';
+import type { ContextSize } from './use-conversation.ts';
 import JobsChip from './JobsChip.vue';
 import { useDismiss } from './use-dismiss.ts';
 import { useNow } from './use-now.ts';
@@ -13,7 +14,7 @@ import type { WaitingAction } from './use-session-actions.ts';
 // It spans the conversation and the artifact panel (ADR 0018, 8).
 // The menu and its delete confirmation close on a press outside them and on Escape. The conversation runs what the
 // menu picks, and while one of its actions is `working` the four that wait are disabled (ADR 0019, 2 and 3).
-const props = withDefaults(defineProps<{ session: Session; tab: 'chat' | 'prompt'; turns: number; runningSince?: string | undefined; artifacts?: number; artifactsOpen?: boolean; working?: boolean }>(), { runningSince: undefined, artifacts: 0, artifactsOpen: false, working: false });
+const props = withDefaults(defineProps<{ session: Session; tab: 'chat' | 'prompt'; turns: number; context?: ContextSize | null; runningSince?: string | undefined; artifacts?: number; artifactsOpen?: boolean; working?: boolean }>(), { context: null, runningSince: undefined, artifacts: 0, artifactsOpen: false, working: false });
 const emit = defineEmits<{ tab: [tab: 'chat' | 'prompt']; action: [name: WaitingAction | 'delete', argument: string]; toggleArtifacts: [] }>();
 const kvman = useKvman();
 const menu = ref(false);
@@ -24,6 +25,7 @@ const more = useTemplateRef<HTMLElement>('more');
 const now = useNow();
 const runningMs = computed(() => (props.runningSince === undefined ? 0 : Math.max(0, now.value - Date.parse(props.runningSince))));
 const summary = computed(() => `${kvman.t('kvcoder.ui.turns', { count: props.turns })} · ${totals(kvman.t, props.session.usage, props.session.durationMs + runningMs.value)}`);
+const filled = computed(() => contextLine(kvman.t, props.context));
 const artifactsLabel = computed(() => kvman.t('kvcoder.ui.artifacts.toggle', { count: props.artifacts }));
 
 function closeMenus(): void {
@@ -51,6 +53,7 @@ function rename(): void {
       <form v-if="renaming !== null" @submit.prevent="rename"><input v-model="renaming" class="kvc-field" :aria-label="kvman.t('kvcoder.ui.rename')" data-test="rename-input" @blur="rename" /></form>
       <strong v-else data-test="session-title">{{ titleText(kvman.t, props.session.title) }}</strong>
       <span class="kvc-muted" data-test="session-totals">{{ summary }}</span>
+      <span v-if="filled !== undefined" class="kvc-muted" data-test="session-context">{{ filled }}</span>
     </div>
     <JobsChip :session-id="props.session.id" :stamp="props.session.updatedAt" />
     <button v-if="props.artifacts > 0" type="button" class="kvc-button" :aria-pressed="props.artifactsOpen" :aria-label="artifactsLabel" :title="artifactsLabel" data-test="artifacts-toggle" @click="emit('toggleArtifacts')"><PanelRight :size="16" aria-hidden="true" />{{ props.artifacts }}</button>

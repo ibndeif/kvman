@@ -19,9 +19,9 @@ export function errorOutput(problem: Pick<Problem, 'code' | 'message'>): CallRes
   return { output: `error ${problem.code}: ${problem.message}`, exitCode: 1 };
 }
 
-/** A connector command's JSON output, indented by 2 spaces. */
+/** A connector command's JSON output, with no indentation (ADR 0034, 4). */
 export function jsonOutput(value: unknown): CallResult {
-  return { output: JSON.stringify(value ?? null, null, 2), exitCode: 0 };
+  return { output: JSON.stringify(value ?? null), exitCode: 0 };
 }
 
 export const noConnectorMessage = (connector: string, names: readonly string[]): string => `There is no connector ${connector}. The connectors are: ${names.join(', ')}.`;

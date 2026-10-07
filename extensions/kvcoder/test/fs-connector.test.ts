@@ -47,7 +47,7 @@ describe('the fs connector (08 §8.5, ADR 0009, 157 to 160)', { timeout: 30_000 
 
   it('QA4-H3 edit changes only the named text', async () => {
     const { results, folder } = await runWith((home) => writeFileSync(path.join(home, 'list.txt'), 'one\ntwo\nthree\nfour\nfive\n'), [fsCall('edit', { path: 'list.txt', edits: [{ oldText: 'three', newText: '3' }] })]);
-    expect(json(results[0])).toEqual({ path: 'list.txt', replacements: 1, firstChangedLine: 3 });
+    expect(json(results[0])).toEqual({ path: 'list.txt', replacements: 1, firstChangedLine: 3, fromLine: 1, content: 'one\ntwo\n3\nfour\nfive\n' });
     expect(read(folder, 'list.txt')).toBe('one\ntwo\n3\nfour\nfive\n');
   });
 

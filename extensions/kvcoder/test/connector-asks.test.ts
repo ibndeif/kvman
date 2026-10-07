@@ -50,7 +50,7 @@ describe('a registered command that asks the person first (08 §8.3 and §8.4, A
     expect(await items(world.kernel)).toEqual([]);
     await answer(world.kernel, sessionId, true);
     expect(await items(world.kernel)).toEqual([{ text: 'milk' }]);
-    expect(toolResults(world.fake)[0]).toContain('"text": "milk"');
+    expect(toolResults(world.fake)[0]).toContain('"text":"milk"');
     expect((await turnState(world.kernel, sessionId)).turn).toMatchObject({ outcome: 'done' });
   });
 

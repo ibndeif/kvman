@@ -43,8 +43,8 @@ describe("an artifact's format (08 §8.5, ADR 0009, 215 and 216)", { timeout: 30
 
   it('QA12-H3 a url artifact is stored trimmed and listed as url', async () => {
     const { kernel, sessionId, results, get } = await written(write({"id":"app","title":"App","format":"url","content":"http://localhost:8080 "}));
-    expect(results[0]).toContain('"created": true');
-    expect(results[0]).toContain('"bytes": 21');
+    expect(results[0]).toContain('"created":true');
+    expect(results[0]).toContain('"bytes":21');
     expect(await get('app')).toMatchObject({ format: 'url', content: 'http://localhost:8080', version: 1 });
     expect(await kernel.exec('kvcoder.artifact.list', { sessionId })).toEqual([expect.objectContaining({ id: 'app', format: 'url', size: 21 })]);
   });
@@ -64,7 +64,7 @@ describe("an artifact's format (08 §8.5, ADR 0009, 215 and 216)", { timeout: 30
       edit({"id":"u1","edits":[{"oldText":"localhost:8080","newText":"localhost:9090"}]}),
     );
     expect(results[1]).toMatch(/^error VALIDATION_FAILED: A url artifact holds one/);
-    expect(results[2]).toContain('"replacements": 1');
+    expect(results[2]).toContain('"replacements":1');
     expect(await get('u1')).toMatchObject({ content: 'http://localhost:9090', version: 2 });
   });
 

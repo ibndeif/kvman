@@ -111,8 +111,8 @@ describe("a program worker's run as a job of its chat (08 §8.5 and §8.6, ADR 0
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'stop it' });
     await gone(pid);
     await vi.waitFor(async () => expect((await turnState(kernel, sessionId)).session.status).toBe('idle'), wait);
-    expect(toolResults(fake, -2).at(-1)).toBe('{\n  "stopped": true\n}');
-    expect(toolResults(fake, -1).at(-1)).toBe('{\n  "stopped": false\n}');
+    expect(toolResults(fake, -2).at(-1)).toBe('{"stopped":true}');
+    expect(toolResults(fake, -1).at(-1)).toBe('{"stopped":false}');
     const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });
     expect(messages.filter((message) => JSON.stringify(message.content).includes('pie was stopped'))).toHaveLength(1);
   });

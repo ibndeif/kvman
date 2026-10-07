@@ -10,11 +10,17 @@ import { applyEvent, idleLive, type Live, type LiveCall } from './live-step.ts';
 
 export type Child = { session: Session; turn: Turn | undefined; live: Live };
 
+/** How full the model's window is (`kvcoder.context.get`). */
+export type ContextSize = { tokens: number; window: number | null; compactAt: number };
+
 export type Conversation = {
   session: ShallowRef<Session | null>;
   messages: ShallowRef<Message[]>;
   omitted: ShallowRef<number>;
   turns: ShallowRef<Turn[]>;
+  context: ShallowRef<ContextSize | null>;
+  /** What the last load of the messages failed with, if it did (ADR 0034, 10). */
+  loadFailure: ShallowRef<unknown>;
   live: Live;
   streaming: ShallowRef<boolean>;
   children: Map<string, Child>;
@@ -23,12 +29,17 @@ export type Conversation = {
 };
 
 const pollMs = 5_000;
+const pageSize = 200;
 
 export function useConversation(kvman: Kvman, sessionId: () => string | undefined, failed: (error: unknown) => void): Conversation {
   const session = shallowRef<Session | null>(null);
   const messages = shallowRef<Message[]>([]);
   const omitted = shallowRef(0);
   const turns = shallowRef<Turn[]>([]);
+  const context = shallowRef<ContextSize | null>(null);
+  const loadFailure = shallowRef<unknown>(undefined);
+  // The chat whose whole list is on the page; after that only what is new is asked for (ADR 0034, 8).
+  let listed: string | undefined;
   const streaming = shallowRef(false);
   const live = reactive<Live>(idleLive());
   const children = shallowReactive(new Map<string, Child>());
@@ -44,20 +55,51 @@ export function useConversation(kvman: Kvman, sessionId: () => string | undefine
     }
   }
 
+  const stored = (list: readonly Message[]): Message[] => list.filter((message) => message.queued !== true);
+
+  async function loadAll(id: string, key: string): Promise<void> {
+    const list = await kvman.exec('kvcoder.message.list', { sessionId: id, limit: pageSize });
+    messages.value = list.messages;
+    omitted.value = list.omitted;
+    listed = key;
+  }
+
+  // Adds the messages stored since the page's last one. When they don't start at the next `seq`, more arrived than one
+  // answer holds, so the whole list is loaded again.
+  async function loadNew(id: string, key: string, afterSeq: number): Promise<void> {
+    const list = await kvman.exec('kvcoder.message.list', { sessionId: id, limit: pageSize, afterSeq });
+    const fresh = stored(list.messages);
+    if (fresh[0] !== undefined && fresh[0].seq !== afterSeq + 1) return loadAll(id, key);
+    const shown = stored(messages.value);
+    const last = shown.at(-1)?.seq ?? afterSeq;
+    messages.value = [...shown, ...fresh.filter((message) => (message.seq ?? last) > last), ...list.messages.filter((message) => message.queued === true)];
+  }
+
+  async function loadMessages(id: string): Promise<void> {
+    const key = `${kvman.workspace.value.id}:${id}`;
+    const last = listed === key ? stored(messages.value).at(-1)?.seq : undefined;
+    try {
+      await (last === undefined ? loadAll(id, key) : loadNew(id, key, last));
+      loadFailure.value = undefined;
+    } catch (error) {
+      loadFailure.value = error;
+    }
+  }
+
   async function reload(): Promise<void> {
     const id = sessionId();
     if (id === undefined) return;
-    const [found, list, recent] = await Promise.all([
+    const [found, recent, size] = await Promise.all([
       kvman.exec('kvcoder.session.get', { sessionId: id }),
-      kvman.exec('kvcoder.message.list', { sessionId: id, limit: 200 }),
       kvman.exec('kvcoder.turn.list', { sessionId: id, limit: 50 }),
+      kvman.exec('kvcoder.context.get', { sessionId: id }),
     ]);
     // The status items count sessions by status, so they rerun when this one's changes (ADR 0009, 138).
     if (session.value !== null && session.value.status !== found.status) kvman.refresh();
     session.value = found;
-    messages.value = list.messages;
-    omitted.value = list.omitted;
     turns.value = recent;
+    context.value = size;
+    await loadMessages(id);
     await loadChildren(found.status === 'waiting' ? recent[0] : undefined);
   }
 
@@ -129,5 +171,5 @@ export function useConversation(kvman: Kvman, sessionId: () => string | undefine
     clearInterval(timer);
   });
   watch([sessionId, () => kvman.workspace.value.id], () => refresh().catch(failed), { immediate: true });
-  return { session, messages, omitted, turns, live, streaming, children, refresh, stream };
+  return { session, messages, omitted, turns, context, loadFailure, live, streaming, children, refresh, stream };
 }

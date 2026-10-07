@@ -38,7 +38,7 @@ describe('a turn (08 §8.1–8.3)', { timeout: 30_000 }, () => {
     const { jobId } = await kernel.exec('kvcoder.question.answer', { questionId, answer: { text: 'Ada' } });
     expect(jobId).toEqual(expect.any(String));
     await kernel.clock.advance(0);
-    expect(toolResults(fake)).toEqual(['{\n  "text": "a"\n}', 'hi\n[exit code 0]', '{\n  "text": "Ada"\n}']);
+    expect(toolResults(fake)).toEqual(['{"text":"a"}', 'hi\n[exit code 0]', '{"text":"Ada"}']);
     const done = await turnState(kernel, sessionId);
     expect(done.session).toMatchObject({ status: 'idle' });
     expect(done.turn).toMatchObject({ outcome: 'done', steps: 2, pending: [] });

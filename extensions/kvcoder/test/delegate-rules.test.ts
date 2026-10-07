@@ -23,7 +23,7 @@ describe("the rules of a worker's subagent (08 §8.5, ADR 0009, 102; ADR 0021)",
     const child = toolResults(fake, 2);
     expect(child[0]).toBe("error VALIDATION_FAILED: delegate isn't available in this subagent.");
     expect(child[1]).toBe("error VALIDATION_FAILED: shell isn't available in this subagent.");
-    expect(child[2]).toMatch(/^\{\n {2}"id": ".+",\n {2}"text": "c"\n\}$/);
+    expect(child[2]).toMatch(/^\{"id":".+","text":"c"\}$/);
     expect(child[3]).toMatch(/^ask: Put a question to the person/);
     const prompt = systemPrompt(fake, 1);
     expect(prompt).toContain('- todo: Keep a todo list.');
@@ -47,7 +47,7 @@ describe("the rules of a worker's subagent (08 §8.5, ADR 0009, 102; ADR 0021)",
     fake.reply(runs(command('delegate', 'run', { worker: 'full', task: 'Full' })), runs(fsCall('write', { path: 'b.txt', content: 'x' })), says('full done'), says('parent done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'again' });
     await kernel.clock.advance(0);
-    expect(toolResults(fake, 6)[0]).toMatch(/^\{\n {2}"path": "b.txt",\n {2}"created": true/);
+    expect(toolResults(fake, 6)[0]).toMatch(/^\{"path":"b.txt","created":true/);
     expect(existsSync(path.join(kernel.homeFolder, 'b.txt'))).toBe(true);
   });
 

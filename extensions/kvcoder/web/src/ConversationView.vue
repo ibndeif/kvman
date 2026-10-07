@@ -8,7 +8,7 @@ import MessageComposer from './MessageComposer.vue';
 import ChatStart from './ChatStart.vue';
 import CommandProgress from './CommandProgress.vue';
 import ConversationHeader from './ConversationHeader.vue';
-import { toastProblem, totals, useKvman } from './kvman.ts';
+import { problemKey, problemOf, toastProblem, totals, useKvman } from './kvman.ts';
 import ActivityLine from './ActivityLine.vue';
 import { callViews } from './message-parts.ts';
 import MessageItem from './MessageItem.vue';
@@ -91,6 +91,12 @@ const recoverable = computed(() => {
 // chat, so it leaves the prompt, and a summary says how it ended (ADR 0019, 1, 4, and 5).
 const slashCommands = useSlashCommands(kvman);
 const actions = useSessionActions(kvman, () => sessionId.value ?? '', () => conversation.refresh());
+
+// Why the messages couldn't be loaded, in the person's language (ADR 0034, 10).
+const loadError = computed(() => {
+  const problem = problemOf(conversation.loadFailure.value);
+  return problem === undefined ? kvman.t('kvcoder.ui.failed') : kvman.t(problemKey(problem.code), problem.params);
+});
 const list = useTemplateRef<HTMLElement>('list');
 const follow = useFollowLatest(list, () => [messages.value, live.text, live.thinking, live.calls.length, live.summarizing, running.value, pending.value, children.size, answers.hidden.value, actions.working.value], () => sessionId.value);
 
@@ -142,12 +148,19 @@ const key = (message: Message): string => message.id;
 
 <template>
   <div class="kvc-workspace">
-    <ConversationHeader v-if="session && sessionId !== undefined" :session="session" :tab="tab" :turns="turns.length" :running-since="runningSince" :artifacts="artifacts.list.value.length" :artifacts-open="artifacts.open.value" :working="actions.working.value !== undefined" @tab="tab = $event" @action="command" @toggle-artifacts="artifacts.toggle()" />
+    <ConversationHeader v-if="session && sessionId !== undefined" :session="session" :tab="tab" :turns="turns.length" :context="conversation.context.value" :running-since="runningSince" :artifacts="artifacts.list.value.length" :artifacts-open="artifacts.open.value" :working="actions.working.value !== undefined" @tab="tab = $event" @action="command" @toggle-artifacts="artifacts.toggle()" />
     <div class="kvc-stage">
     <section class="kvc-conversation" data-test="conversation">
       <ChatStart v-if="props.sessionId === undefined" :registered="slashCommands" />
       <template v-else-if="session && sessionId !== undefined">
-        <div class="kvc-scrollport">
+        <div v-if="conversation.loadFailure.value !== undefined" class="kvc-start" role="alert" data-test="load-failure">
+          <p class="kvc-start-note">{{ kvman.t('kvcoder.ui.loadFailed', { error: loadError }) }}</p>
+          <div class="kvc-actions" style="justify-content: center">
+            <button type="button" class="kvc-button kvc-primary" data-test="load-again" @click="conversation.refresh()">{{ kvman.t('kvcoder.ui.tryAgain') }}</button>
+            <button type="button" class="kvc-button" data-test="load-export" @click="actions.exportFile()">{{ kvman.t('kvcoder.ui.export') }}</button>
+          </div>
+        </div>
+        <div v-else class="kvc-scrollport">
           <div ref="list" class="kvc-scroll" @scroll="follow.onScroll">
             <PromptTab v-if="tab === 'prompt'" :session-id="session.id" @back="tab = 'chat'" />
             <div v-else class="kvc-column">

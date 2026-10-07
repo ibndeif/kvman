@@ -64,7 +64,7 @@ export function resultCard(message: Message, calls: ReadonlyMap<string, CallView
   const exitCode = typeof details?.['exitCode'] === 'number' ? details['exitCode'] : exit === null ? undefined : Number(exit[1]);
   return {
     ...(details === undefined ? call : detailsView(details, call)),
-    output: typeof details?.['output'] === 'string' ? details['output'] : text.replace(/\n?\[exit code \d+\]$/, ''),
+    output: typeof details?.['output'] === 'string' ? details['output'] : details === undefined ? text.replace(/\n?\[exit code \d+\]$/, '') : text,
     failed: message.content['isError'] === true || (exitCode !== undefined && exitCode !== 0),
     ...(typeof details?.['durationMs'] === 'number' ? { durationMs: details['durationMs'] } : {}),
   };

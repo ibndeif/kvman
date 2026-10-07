@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import ConversationView from '../../web/src/ConversationView.vue';
+import { resultCard } from '../../web/src/message-parts.ts';
 import { createFakeKvman } from './support/fake-kvman.ts';
 import { answer, message, mounted, serve, session, turn, user } from './support/fixtures.ts';
 
@@ -54,5 +55,13 @@ describe('the conversation shows its messages (08 §8.7)', () => {
     expect(wrapper.find('[data-test="session-title"]').text()).toBe('Notes page');
     expect(wrapper.find('[data-test="note"]').text()).toContain('محادثة جديدة');
     wrapper.unmount();
+  });
+
+  it('QA46-E4 a result shows its stored output, else its text, and only an old result loses its exit-code line', () => {
+    const result = (text: string, details?: Record<string, string | number>) =>
+      resultCard(message('toolResult', { role: 'toolResult', toolCallId: 'c1', toolName: 'run', content: [{ type: 'text', text }], isError: false, ...(details === undefined ? {} : { details }) }), new Map()).output;
+    expect(result('hi\n[exit code 0]', { connector: 'shell', command: 'exec', output: 'hi', exitCode: 0 })).toBe('hi');
+    expect(result('the tool said\n[exit code 3]', { connector: 'mcp', command: 'call' })).toBe('the tool said\n[exit code 3]');
+    expect(result('old output\n[exit code 3]')).toBe('old output');
   });
 });

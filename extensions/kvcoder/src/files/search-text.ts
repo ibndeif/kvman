@@ -11,9 +11,12 @@ import { resolveInWorkspace } from './workspace-path.ts';
 const matchesLimit = 200;
 const lineLimit = 500;
 
-export type Match = { path: string; line: number; text: string };
+export type Match = { line: number; text: string };
 
-export type SearchResult = { matches: Match[]; truncated: boolean };
+/** The matches of one file; files are in path order (ADR 0034, 5). */
+export type FileMatches = { path: string; matches: Match[] };
+
+export type SearchResult = { files: FileMatches[]; truncated: boolean };
 
 const skipped = (name: string): boolean => name === 'node_modules' || name.startsWith('.');
 
@@ -47,16 +50,22 @@ export async function searchText(workspace: string, input: { pattern: string; pa
   });
   const base = await realpath(workspace);
   const files = found.isDirectory() ? filesUnder(target, signal) : [target];
-  const matches: Match[] = [];
+  const grouped: FileMatches[] = [];
+  let count = 0;
   for await (const file of files) {
     const text = decodeText(await readFile(file));
     if (text === undefined) continue;
-    const shown = path.relative(base, file).split(path.sep).join('/');
+    const matches: Match[] = [];
+    let full = false;
     for (const [index, line] of text.split(/\r?\n/).entries()) {
       if (!pattern.test(line)) continue;
-      if (matches.length === matchesLimit) return { matches, truncated: true };
-      matches.push({ path: shown, line: index + 1, text: line.slice(0, lineLimit) });
+      full = count === matchesLimit;
+      if (full) break;
+      count += 1;
+      matches.push({ line: index + 1, text: line.slice(0, lineLimit) });
     }
+    if (matches.length > 0) grouped.push({ path: path.relative(base, file).split(path.sep).join('/'), matches });
+    if (full) return { files: grouped, truncated: true };
   }
-  return { matches, truncated: false };
+  return { files: grouped, truncated: false };
 }

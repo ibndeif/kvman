@@ -32,7 +32,7 @@ describe("a built-in connector's invalid payload says what the command takes (08
   it('QA11-E6 a valid call gets no signature', async () => {
     const written = await resultOf(command('artifact', 'write', { id: 'plan', title: 'Plan', content: '# Plan' }));
     expect(written).not.toContain('The payload of');
-    expect(written).toContain('"created": true');
+    expect(written).toContain('"created":true');
     const file = await resultOf(fsCall('write', { path: 'a.txt', content: 'x' }));
     expect(file).not.toContain('The payload of');
   });

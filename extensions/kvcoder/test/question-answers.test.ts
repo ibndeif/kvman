@@ -32,11 +32,11 @@ describe('answers (ADR 0009, 102)', { timeout: 30_000 }, () => {
     const many = await asked(world, choice(true, true));
     await answer(many.questionId, { selected: ['a', 'b'], other: 'c too' });
     await world.kernel.clock.advance(0);
-    expect(toolResults(world.fake)).toEqual(['{\n  "selected": [\n    "a",\n    "b"\n  ],\n  "other": "c too"\n}']);
+    expect(toolResults(world.fake)).toEqual(['{"selected":["a","b"],"other":"c too"}']);
     const skipped = await asked(world, command('ask', 'text', { prompt: 'Name?' }));
     await answer(skipped.questionId, { dismissed: true });
     await world.kernel.clock.advance(0);
-    expect(toolResults(world.fake)).toEqual(['{\n  "dismissed": true\n}']);
+    expect(toolResults(world.fake)).toEqual(['{"dismissed":true}']);
   });
 
   it('M2.4-E10 an extension answering a question fails NOT_PUBLIC', async () => {

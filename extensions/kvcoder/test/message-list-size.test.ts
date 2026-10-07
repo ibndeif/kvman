@@ -24,4 +24,17 @@ describe('a long chat lists its messages (08 §8.1, ADR 0033, 1)', { timeout: 60
     expect(listed.messages.filter((message) => message.kind === 'user')).toHaveLength(22);
     expect(listed.messages.map((message) => message.seq)).toEqual(listed.messages.map((_, index) => index));
   });
+
+  it('QA46-H7 with afterSeq only the newer messages are returned', async () => {
+    const { kernel, fake } = await kvcoder.start();
+    const sessionId = await newSession(kernel);
+    for (const index of [1, 2]) {
+      fake.reply(says(`answer ${index}`));
+      await kernel.exec('kvcoder.message.send', { sessionId, text: `message ${index}` });
+      await kernel.clock.advance(0);
+    }
+    const second = await kernel.exec('kvcoder.message.list', { sessionId, limit: 200, afterSeq: 1 });
+    expect(second.messages.map((message) => message.seq)).toEqual([2, 3]);
+    expect(await kernel.exec('kvcoder.message.list', { sessionId, limit: 200, afterSeq: 3 })).toMatchObject({ messages: [] });
+  });
 });

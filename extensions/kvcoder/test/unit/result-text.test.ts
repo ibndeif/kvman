@@ -12,11 +12,11 @@ describe('call results (ADR 0009, 93)', () => {
     expect(resultLines(cut, 0)).toBe(`${cut}\n[exit code 0]`);
   });
 
-  it('M2.4-E28 results end with the exit code, and connector output is indented JSON or an error line', () => {
+  it('M2.4-E28 results end with the exit code, and connector output is JSON with no indentation or an error line', () => {
     expect(resultLines('hi', 0)).toBe('hi\n[exit code 0]');
     expect(resultLines('', 3)).toBe('[exit code 3]');
     expect(resultLines('late', 124, ['[timed out after 1 s; the process tree was killed]'])).toBe('late\n[timed out after 1 s; the process tree was killed]\n[exit code 124]');
-    expect(jsonOutput({ a: [1] })).toEqual({ output: '{\n  "a": [\n    1\n  ]\n}', exitCode: 0 });
+    expect(jsonOutput({ a: [1] })).toEqual({ output: '{"a":[1]}', exitCode: 0 });
     expect(errorOutput({ code: 'NOT_FOUND', message: 'No.' })).toEqual({ output: 'error NOT_FOUND: No.', exitCode: 1 });
   });
 });

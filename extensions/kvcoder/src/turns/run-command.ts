@@ -14,6 +14,7 @@ import { callInfos } from '../registry/loaded.ts';
 import type { ConnectorRow } from '../registry/register-connectors.ts';
 import { truncate } from '../result-text.ts';
 import type { HeldResult, SessionDoc } from '../schemas/records.ts';
+import { alreadyRead, unchangedText } from './read-again.ts';
 
 // Running one connector command for the model (plan 08 §8.3, ADR 0011, 10 and 11): every command, kvcoder's own or a
 // registered one, is a kernel command or query run with `ctx.exec`. The result is what the model reads, and the
@@ -81,6 +82,8 @@ export function textResult(call: RunCall, text: string, durationMs = 0): CallDon
   return { text, isError: false, details: { ...words(call), output: text, durationMs } };
 }
 
+const fileRead = 'kvcoder.fs.file.get';
+
 /** Runs a connector command through `ctx.exec`, after the calls before it on the same file or artifact, and gives what the model and the call card get. */
 export function runTarget(ctx: Ctx, session: Stored<SessionDoc>, call: RunCall, target: CommandTarget): Promise<CallDone> {
   const key = orderKey(ctx, session, call, target);
@@ -110,7 +113,8 @@ async function runJob(ctx: Ctx, sessionId: string, call: RunCall, target: Comman
     return { text: output, isError: called.isError, details: { ...words(call), output, durationMs: Date.now() - started } };
   }
   const output = jsonOutput(done.value).output;
-  const text = builtin?.bounded === true ? output : truncate(output);
+  const whole = builtin?.bounded === true ? output : truncate(output);
+  const text = target.registration === fileRead && (await alreadyRead(ctx, sessionId, whole)) ? unchangedText(String(call.payload['path'])) : whole;
   const artifactId = artifactChanges.has(target.registration) ? call.payload['id'] : undefined;
   const artifact = typeof artifactId === 'string' ? await artifactCard(ctx, sessionId, artifactId) : undefined;
   return { text, isError: false, details: { ...words(call), output: text, durationMs: Date.now() - started, ...(artifact === undefined ? {} : { artifact }) } };

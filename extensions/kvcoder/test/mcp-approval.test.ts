@@ -34,7 +34,7 @@ describe('an mcp call asks as a shell call does (08 §8.3 and §8.5, ADR 0020, 7
     await answer(kernel, sessionId, true);
     const results = toolResults(fake);
     expect(results.slice(0, 2)).toEqual(['safe', 'risky']);
-    expect(results[2]).toContain('"name": "echo"');
+    expect(results[2]).toContain('"name":"echo"');
   });
 
   it('QA29-H7 under ask every call waits, a denied one runs nothing, and tools still runs at once', async () => {

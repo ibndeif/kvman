@@ -31,10 +31,10 @@ describe('the run tool (08 §8.2 and §8.3, ADR 0011)', { timeout: 30_000 }, () 
     expect(tools[0]?.parameters.properties['connector']?.enum).toEqual(['shell', 'fs', 'artifact', 'background', 'ask', 'delegate', 'todo']);
   });
 
-  it('QA18-H2 a commands connector runs with the payload as its input and returns indented JSON', async () => {
+  it('QA18-H2 a commands connector runs with the payload as its input and returns JSON with no indentation', async () => {
     const { results, kernel } = await call({ connector: 'todo', command: 'add', payload: { text: 'milk' } });
     const added = z.object({ id: z.string(), text: z.string() }).parse(JSON.parse(results[0] ?? ''));
-    expect(results[0]).toBe(JSON.stringify(added, null, 2));
+    expect(results[0]).toBe(JSON.stringify(added));
     expect(results[0]).not.toContain('[exit code');
     expect(await kernel.exec('todo.item.list', {})).toEqual([{ text: 'milk' }]);
   });
@@ -46,7 +46,7 @@ describe('the run tool (08 §8.2 and §8.3, ADR 0011)', { timeout: 30_000 }, () 
     const questionId = z.object({ questionId: z.string() }).parse(waiting?.pending[0]).questionId;
     await kernel.exec('kvcoder.question.answer', { questionId, answer: { confirmed: true } });
     await kernel.clock.advance(0);
-    expect(toolResults(fake)).toEqual([JSON.stringify({ confirmed: true }, null, 2)]);
+    expect(toolResults(fake)).toEqual([JSON.stringify({ confirmed: true })]);
   });
 
   it('QA18-E1 another tool is refused, and the turn goes on', async () => {

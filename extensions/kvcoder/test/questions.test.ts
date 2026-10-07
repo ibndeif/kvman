@@ -54,7 +54,7 @@ describe('questions and approvals (08 §8.1, §8.5)', { timeout: 30_000 }, () =>
     const { jobId } = await kernel.exec('kvcoder.question.answer', { questionId: String(text?.questionId), answer: { text: 'Ada' } });
     expect(await kernel.waitForJob(String(jobId))).toMatchObject({ name: 'kvcoder.turn.step', status: 'succeeded' });
     await kernel.clock.advance(0);
-    expect(toolResults(fake)).toEqual(['{\n  "selected": [\n    "a"\n  ]\n}', '{\n  "text": "Ada"\n}']);
+    expect(toolResults(fake)).toEqual(['{"selected":["a"]}', '{"text":"Ada"}']);
   });
 
   it('M2.4-E22 answering one of several returns null, and the last answer returns the next step', async () => {

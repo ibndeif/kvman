@@ -36,8 +36,8 @@ describe('the background connector (08 §8.5, ADR 0011, 6)', { timeout: 60_000 }
     const [output = ''] = await say(kernel, fake, sessionId, command('background', 'output', { id }));
     expect(rowSchema.parse(JSON.parse(output))).toMatchObject({ id, status: 'running', output: 'up' });
     const [stop = '', again = ''] = [...(await say(kernel, fake, sessionId, command('background', 'stop', { id }))), ...(await say(kernel, fake, sessionId, command('background', 'stop', { id })))];
-    expect(stop).toBe('{\n  "stopped": true\n}');
-    expect(again).toBe('{\n  "stopped": false\n}');
+    expect(stop).toBe('{"stopped":true}');
+    expect(again).toBe('{"stopped":false}');
     const processes = z.array(z.object({ name: z.string() })).parse(await kernel.exec('kernel.processes.list', {}));
     expect(processes.map((row) => row.name)).not.toContain(`job-${id}`);
   });

@@ -8,7 +8,7 @@ const refused = (original: string, edits: { oldText: string; newText: string }[]
 describe('applyEdits (08 §8.5, ADR 0009, 159)', () => {
   it('QA4-H3 changes only the named text and reports the line of the first change', () => {
     const edited = applyEdits('one\ntwo\nthree\nfour\nfive\n', [{ oldText: 'three', newText: '3' }]);
-    expect(edited).toEqual({ text: 'one\ntwo\n3\nfour\nfive\n', replacements: 1, firstChangedLine: 3 });
+    expect(edited).toEqual({ text: 'one\ntwo\n3\nfour\nfive\n', replacements: 1, firstChangedLine: 3, lastChangedLine: 3 });
   });
 
   it('QA4-H4 matches every edit against the original file, whatever order they come in', () => {
@@ -16,7 +16,7 @@ describe('applyEdits (08 §8.5, ADR 0009, 159)', () => {
       { oldText: 'c', newText: 'b' },
       { oldText: 'a', newText: 'c' },
     ]);
-    expect(edited).toEqual({ text: 'c b b', replacements: 2, firstChangedLine: 1 });
+    expect(edited).toEqual({ text: 'c b b', replacements: 2, firstChangedLine: 1, lastChangedLine: 1 });
   });
 
   it('QA4-H5 a CRLF file keeps its CRLF endings and its BOM, and a LF oldText matches', () => {

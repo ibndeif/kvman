@@ -5,8 +5,8 @@ import { invalid } from '../problems.ts';
 
 export type TextEdit = { oldText: string; newText: string };
 
-/** The edited file's text, how many replacements were made, and the line of the first one. */
-export type EditedText = { text: string; replacements: number; firstChangedLine: number };
+/** The edited file's text, how many replacements were made, and the first and last changed lines, counted in the edited text. */
+export type EditedText = { text: string; replacements: number; firstChangedLine: number; lastChangedLine: number };
 
 type Match = { index: number; length: number; edit: number; newText: string };
 
@@ -51,5 +51,9 @@ export function applyEdits(original: string, edits: readonly TextEdit[]): Edited
   if (edited === content) throw invalid('The edits change nothing in the file.');
   const first = matches[0]?.index ?? 0;
   const lines = content.slice(0, first).split('\n').length;
-  return { text: (hasMark ? byteOrderMark : '') + (crlf ? edited.replaceAll('\n', '\r\n') : edited), replacements: matches.length, firstChangedLine: lines };
+  // The last change's last character in the edited text; a removal has none, so its own place counts.
+  const last = matches.at(-1);
+  const lastStart = matches.slice(0, -1).reduce((shift, match) => shift + match.newText.length - match.length, last?.index ?? 0);
+  const lastLine = edited.slice(0, lastStart + Math.max((last?.newText.length ?? 0) - 1, 0)).split('\n').length;
+  return { text: (hasMark ? byteOrderMark : '') + (crlf ? edited.replaceAll('\n', '\r\n') : edited), replacements: matches.length, firstChangedLine: lines, lastChangedLine: lastLine };
 }

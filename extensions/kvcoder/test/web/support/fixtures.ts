@@ -28,7 +28,7 @@ export function turn(fields: Partial<Turn> = {}): Turn {
   return { id: 't1', sessionId: 's1', startedAt: '2026-10-01T09:00:00.000Z', durationMs: 12_000, steps: 1, usage, pending: [], ...fields };
 }
 
-export type World = { found: Session; messages: Message[]; omitted: number; turns: Turn[]; jobs?: Job[]; artifacts?: ArtifactSummary[]; artifactContents?: Record<string, ArtifactContent> };
+export type World = { found: Session; messages: Message[]; omitted: number; turns: Turn[]; context?: { tokens: number; window: number | null; compactAt: number }; jobs?: Job[]; artifacts?: ArtifactSummary[]; artifactContents?: Record<string, ArtifactContent> };
 
 export function job(fields: Partial<Job> = {}): Job {
   return { id: 'j1', kind: 'process', title: 'Start the dev server', call: 'python3 -m http.server 8000', status: 'running', startedAt: '2026-10-01T09:00:00.000Z', links: [], ...fields };
@@ -53,6 +53,7 @@ export function serve(fake: FakeKvman, world: World): void {
   fake.handle('kvcoder.session.get', (input) => (input['sessionId'] === world.found.id ? world.found : session({ id: String(input['sessionId']), parentId: 's1', title: 'Helper task', status: 'running' })));
   fake.handle('kvcoder.message.list', () => ({ messages: world.messages, omitted: world.omitted }));
   fake.handle('kvcoder.turn.list', () => world.turns);
+  fake.handle('kvcoder.context.get', () => world.context ?? { tokens: 0, window: null, compactAt: 0.8 });
   fake.handle('kvcoder.job.list', () => world.jobs ?? []);
   fake.handle('kvcoder.artifact.list', () => world.artifacts ?? []);
   fake.handle('kvcoder.artifact.get', (input) => {

@@ -29,7 +29,7 @@ describe('restarts (08 §8.1, 12 §12.2)', { timeout: 30_000 }, () => {
     const questionId = String(after.turn?.pending[0]?.questionId);
     await kernel.exec('kvcoder.question.answer', { questionId, answer: { confirmed: true } });
     await kernel.clock.advance(0);
-    expect(toolResults(fake)).toEqual(['{\n  "confirmed": true\n}']);
+    expect(toolResults(fake)).toEqual(['{"confirmed":true}']);
     expect((await turnState(kernel, sessionId)).turn).toMatchObject({ outcome: 'done' });
   });
 

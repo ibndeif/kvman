@@ -132,6 +132,6 @@ describe('/build-kvman: the person starts building kvman in a chat (09 §9.4, AD
     fake.reply(runs('kvman', 'settings-list'), says('done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'Look again' });
     await kernel.clock.advance(0);
-    expect(toolResults(fake).at(-1)).toContain('"key": "kernel.language"');
+    expect(toolResults(fake).at(-1)).toContain('"key":"kernel.language"');
   });
 });

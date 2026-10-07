@@ -54,7 +54,7 @@ describe('risky calls ask, the others run (08 §8.3, ADR 0009, 161)', { timeout:
     expect(readFileSync(home(kernel, 'plain.txt'), 'utf8')).toBe('plain');
     expect((await turnState(kernel, sessionId)).turn?.pending).toHaveLength(1);
     await answer(kernel, sessionId, 0, false);
-    expect(toolResults(fake)).toEqual([expect.stringContaining('"created": true') as unknown, 'denied by the user']);
+    expect(toolResults(fake)).toEqual([expect.stringContaining('"created":true') as unknown, 'denied by the user']);
     expect(existsSync(home(kernel, 'risky.txt'))).toBe(false);
   });
 
@@ -63,7 +63,7 @@ describe('risky calls ask, the others run (08 §8.3, ADR 0009, 161)', { timeout:
     expect(existsSync(home(kernel, 'risky.txt'))).toBe(false);
     await answer(kernel, sessionId, 0, true);
     expect(readFileSync(home(kernel, 'risky.txt'), 'utf8')).toBe('risky');
-    expect(toolResults(fake)[0]).toBe('{\n  "path": "risky.txt",\n  "created": true,\n  "bytes": 5\n}');
+    expect(toolResults(fake)[0]).toBe('{"path":"risky.txt","created":true,"bytes":5}');
   });
 
   it('QA4-E14 fs help never asks, even under ask', async () => {
