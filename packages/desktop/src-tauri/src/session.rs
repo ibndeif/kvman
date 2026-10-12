@@ -4,8 +4,10 @@
 use std::path::{Path, PathBuf};
 
 use crate::lines::{read_line, trust_answer, Line, Problem};
+use crate::messages::update_failed_notice;
 use crate::messages::{failed_notice, stopped_notice, trust_dialog, Language, Notice, TrustDialog};
 use crate::navigation::{browsable, navigation, Verdict};
+use crate::updates::RELEASE_PAGE;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Happening {
@@ -21,6 +23,11 @@ pub enum Happening {
     PageStarted(String),
     WindowClosed,
     KvmanEnded,
+    /// The update is downloaded and its signature holds (§14.7).
+    UpdateDownloaded,
+    UpdateInstallFailed,
+    /// A `.deb` install's "Download".
+    UpdateDownloadAsked,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -34,6 +41,8 @@ pub enum Action {
     OpenInBrowser(String),
     /// Hide the window, close kvman's input, wait, and end its process tree if it is still alive (§14.6).
     StopKvman,
+    /// Install the downloaded update and start the app again.
+    InstallUpdate,
     Quit,
 }
 
@@ -55,6 +64,8 @@ pub struct Session {
     restarting: bool,
     declined_at_launch: bool,
     closing: bool,
+    /// The update is ready, and the app is on its way to installing it.
+    updating: bool,
     /// A dialog that ends the session is open, or was: nothing more is shown.
     ending: bool,
 }
@@ -82,6 +93,7 @@ impl Session {
             restarting: false,
             declined_at_launch: false,
             closing: false,
+            updating: false,
             ending: false,
         }
     }
@@ -123,6 +135,9 @@ impl Session {
             Happening::NoticeClosed => vec![Action::Quit],
             Happening::WindowClosed => self.window_closed(),
             Happening::KvmanEnded => self.kvman_ended(),
+            Happening::UpdateDownloaded => self.update_downloaded(),
+            Happening::UpdateInstallFailed => self.end_with(update_failed_notice(self.language)),
+            Happening::UpdateDownloadAsked => vec![Action::OpenInBrowser(RELEASE_PAGE.to_owned())],
         }
     }
 
@@ -214,8 +229,25 @@ impl Session {
         }
     }
 
+    /// kvman is stopped only now, with the update in hand; a kvman the app doesn't own is left alone (§14.7).
+    fn update_downloaded(&mut self) -> Vec<Action> {
+        if self.closing || self.ending {
+            return Vec::new();
+        }
+        self.closing = true;
+        self.updating = true;
+        if self.owned && self.alive {
+            vec![Action::StopKvman]
+        } else {
+            vec![Action::InstallUpdate]
+        }
+    }
+
     fn kvman_ended(&mut self) -> Vec<Action> {
         self.alive = false;
+        if self.updating && !self.ending {
+            return vec![Action::InstallUpdate];
+        }
         if self.closing || (self.declined_at_launch && !self.ending) {
             self.ending = true;
             return vec![Action::Quit];

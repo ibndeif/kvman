@@ -2,9 +2,21 @@
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
-    "types": ["node"],
-    "customConditions": ["@kvman/source"]
+    "types": [
+      "node"
+    ],
+    "customConditions": [
+      "@kvman/source"
+    ]
   },
-  "include": ["test", "bench", "eslint", "vitest.config.ts"],
-  "exclude": ["test/fixtures"]
+  "include": [
+    "test",
+    "bench",
+    "eslint",
+    "release",
+    "vitest.config.ts"
+  ],
+  "exclude": [
+    "test/fixtures"
+  ]
 }

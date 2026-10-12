@@ -17,5 +17,10 @@
   "desktop.failed.hint.VALIDATION_FAILED": "الإعداد المسبق، أو أحد إعداداته، غير صالح.",
   "desktop.failed.hint.other": "التفاصيل في {file}.",
   "desktop.stopped.title": "توقف kvman على نحو غير متوقع",
-  "desktop.stopped.details": "التفاصيل في {file}."
+  "desktop.stopped.details": "التفاصيل في {file}.",
+  "desktop.update.available": "يتوفر الإصدار {version} من kvman.",
+  "desktop.update.install": "ثبّت وأعد التشغيل",
+  "desktop.update.download": "تنزيل",
+  "desktop.update.failed": "تعذّر تثبيت التحديث.",
+  "desktop.update.failedDetails": "افتح kvman من جديد للمتابعة بالإصدار الذي لديك."
 }

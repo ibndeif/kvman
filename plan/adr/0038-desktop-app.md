@@ -69,6 +69,11 @@ Decisions 1 to 18 were asked with alternatives, the screens with mockups and the
 49. **The versions pinned at M3.2** (decision 35): `tauri` 2.12.1, `tauri-build` 2.7.1, `tauri-plugin-dialog` 2.8.1, `tauri-plugin-single-instance` 2.5.2, `tauri-plugin-opener` 2.7.0, `serde` 1.0.229, `serde_json` 1.0.151, `reqwest` 0.13.5 (without TLS, since it only calls 127.0.0.1), and `@tauri-apps/cli` 2.12.1. `tauri-plugin-updater` is pinned at M3.3. Tauri 3 exists only as an alpha, so 2.12.1 is the latest stable.
 50. **Only a web address goes to the system's browser** (found by the security review of M3.2). A page chooses the address of a new window, and the system opens an address with whatever program handles its scheme, so `file:`, `javascript:`, and an app's own scheme are never handed over: only `http:` and `https:` are. Any other address is dropped, and a window that began to load one is sent back to kvman.
 
+### Asked while building M3.3
+
+51. **There is no trial build** (asked; chosen over a second workflow, started by hand, that builds the installers and publishes nothing). The macOS and Windows installers are built for the first time by the first version tag. `release.yml` stays the only workflow, tag-only (ADR 0026, 8 and 10).
+52. **The installers go to a draft release** (asked; chosen over a release that is public at once). The tag's run attaches the installers, their signatures, and `latest.json` to a draft GitHub Release of that tag; the product owner tries them and publishes it. An installed app sees an update only then, since it reads the latest published release. npm still publishes at once on the tag. So a broken first macOS or Windows installer (decision 51) reaches nobody.
+
 ## Plan changes
 
 - `14-desktop.md` is new: the `--pipe` flag, what the app holds, starting, the home screen, the window, updates, installers, and text and security.

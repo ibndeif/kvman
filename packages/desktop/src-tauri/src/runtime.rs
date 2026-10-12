@@ -1,5 +1,5 @@
-//! Where the Node and the kvman that the app runs are. In this phase of the build it is the repository's own kvman and
-//! the Node on the `PATH`; the installers bring their own (plan 14 §14.3).
+//! Where the Node and the kvman that the app runs are (plan 14 §14.3): the ones an installed app brings in its
+//! resources, or, for an app run from the repository, the repository's own kvman and the Node on the `PATH`.
 
 use std::path::{Path, PathBuf};
 
@@ -25,11 +25,30 @@ pub fn repository_entry(manifest_folder: &Path) -> PathBuf {
     manifest_folder.join("..").join("..").join("cli").join("dist").join("main.js")
 }
 
-pub fn repository_runtime(path: &str) -> Option<Runtime> {
-    let node = node_on_path(path, Platform::current(), &|candidate| candidate.is_file())?;
-    Some(Runtime {
+/// The runtime inside an installed app's resources, as `release/desktop` lays it out.
+pub fn bundled_runtime(resources: &Path, platform: Platform) -> Runtime {
+    let runtime = resources.join("runtime");
+    let node = if platform == Platform::Windows {
+        runtime.join("node").join("node.exe")
+    } else {
+        runtime.join("node").join("bin").join("node")
+    };
+    Runtime {
         node,
-        entry: repository_entry(Path::new(env!("CARGO_MANIFEST_DIR"))),
+        entry: runtime.join("kvman").join("dist").join("main.js"),
+    }
+}
+
+/// The bundled runtime when the app has one, else the repository's.
+pub fn choose_runtime(resources: Option<&Path>, path: &str, platform: Platform, exists: &dyn Fn(&Path) -> bool) -> Option<Runtime> {
+    let bundled = resources
+        .map(|folder| bundled_runtime(folder, platform))
+        .filter(|runtime| exists(&runtime.node) && exists(&runtime.entry));
+    bundled.or_else(|| {
+        Some(Runtime {
+            node: node_on_path(path, platform, exists)?,
+            entry: repository_entry(Path::new(env!("CARGO_MANIFEST_DIR"))),
+        })
     })
 }
 

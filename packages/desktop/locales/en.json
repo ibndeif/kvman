@@ -17,5 +17,10 @@
   "desktop.failed.hint.VALIDATION_FAILED": "The preset, or one of its settings, is not valid.",
   "desktop.failed.hint.other": "Details are in {file}.",
   "desktop.stopped.title": "kvman stopped unexpectedly",
-  "desktop.stopped.details": "Details are in {file}."
+  "desktop.stopped.details": "Details are in {file}.",
+  "desktop.update.available": "kvman {version} is available.",
+  "desktop.update.install": "Install and restart",
+  "desktop.update.download": "Download",
+  "desktop.update.failed": "The update could not be installed.",
+  "desktop.update.failedDetails": "Open kvman again to go on with the version you have."
 }

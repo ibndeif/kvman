@@ -12,3 +12,4 @@ pub mod messages;
 pub mod navigation;
 pub mod runtime;
 pub mod session;
+pub mod updates;

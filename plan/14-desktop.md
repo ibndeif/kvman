@@ -131,7 +131,7 @@ The shell's calls to kvman carry the Host `127.0.0.1:<port>` and no `Origin`, so
 | Linux x64 | `.deb` and AppImage |
 
 - **Not code-signed in this phase.** macOS opens the app only after the person allows it in System Settings, and Windows shows a SmartScreen warning; the install guide shows both. The macOS app has an ad-hoc signature, which Apple silicon needs to run anything.
-- **The release.** The version tag that publishes to npm (ADR 0026, 8) also builds each installer on a runner of its own system. Each runner first runs what it built with no window: the bundled Node starts the bundled `kvman --pipe --yes` on a new home, the step reads the `running` line, calls `kernel.health.get`, closes the input, and expects exit 0. Then the installers, their signatures, and `latest.json` are attached to the GitHub Release of that tag.
+- **The release.** The version tag that publishes to npm (ADR 0026, 8) also builds each installer on a runner of its own system. Each runner first runs what it built with no window: the bundled Node starts the bundled `kvman --pipe --yes` on a new home, the step reads the `running` line, calls `kernel.health.get`, closes the input, and expects exit 0. Then the installers, their signatures, and `latest.json` are attached to a draft GitHub Release of that tag, which the product owner tries and publishes; installed apps see the update only then (ADR 0038, 52). There is no other build of the installers (ADR 0038, 51).
 - **Removing the app** is the system's own way, and it leaves the home folder. `kvman uninstall` (§1.2) is for the npm install.
 
 ## 14.9 Text and security

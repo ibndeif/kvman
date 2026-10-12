@@ -235,3 +235,57 @@ fn m3_2_e21_the_stop_the_app_asked_for_shows_no_dialog() {
     assert_eq!(session.handle(Happening::WindowClosed), [Action::StopKvman]);
     assert_eq!(session.handle(Happening::KvmanEnded), [Action::Quit]);
 }
+
+/// A session on the home screen of a kvman it owns.
+fn at_home() -> Session {
+    let mut session = session();
+    line(&mut session, RUNNING);
+    session
+}
+
+#[test]
+fn m3_3_h5_kvman_is_stopped_only_once_the_update_is_downloaded_and_then_it_is_installed() {
+    let mut session = at_home();
+    assert_eq!(session.handle(Happening::UpdateDownloaded), [Action::StopKvman]);
+    assert_eq!(session.handle(Happening::KvmanEnded), [Action::InstallUpdate]);
+    assert_eq!(session.handle(Happening::WindowClosed), []);
+}
+
+#[test]
+fn m3_3_h6_a_deb_installs_download_opens_the_release_page() {
+    let mut session = at_home();
+    assert_eq!(
+        session.handle(Happening::UpdateDownloadAsked),
+        [Action::OpenInBrowser("https://github.com/ibndeif/kvman/releases/latest".into())]
+    );
+    assert_eq!(session.handle(Happening::Chosen("w1".into())), [Action::Load("http://127.0.0.1:3737/?workspace=w1".into())]);
+}
+
+#[test]
+fn m3_3_e6_an_update_while_the_app_has_joined_a_kvman_stops_nothing() {
+    let mut session = session();
+    line(&mut session, r#"{"kind":"joined","url":"http://127.0.0.1:4100/?workspace=home","port":4100}"#);
+    session.handle(Happening::KvmanEnded);
+    assert_eq!(session.handle(Happening::UpdateDownloaded), [Action::InstallUpdate]);
+}
+
+#[test]
+fn m3_3_e7_an_update_that_cannot_be_installed_after_kvman_stopped_says_so_and_quits() {
+    let mut session = at_home();
+    session.handle(Happening::UpdateDownloaded);
+    session.handle(Happening::KvmanEnded);
+    let shown = session.handle(Happening::UpdateInstallFailed);
+    let [Action::ShowNotice(notice)] = shown.as_slice() else { panic!("{shown:?}") };
+    assert_eq!(notice.title, "The update could not be installed.");
+    assert_eq!(notice.button, english("desktop.quit"));
+    assert_eq!(session.handle(Happening::NoticeClosed), [Action::Quit]);
+}
+
+#[test]
+fn m3_3_e8_a_workspace_chosen_after_the_download_is_not_entered() {
+    let mut session = at_home();
+    session.handle(Happening::UpdateDownloaded);
+    assert_eq!(session.handle(Happening::Chosen("w1".into())), []);
+    assert_eq!(line(&mut session, RUNNING), []);
+    assert_eq!(session.handle(Happening::UpdateDownloaded), []);
+}

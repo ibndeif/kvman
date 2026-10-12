@@ -14,8 +14,9 @@ use tauri_plugin_opener::OpenerExt;
 use crate::commands;
 use crate::downloads::destination;
 use crate::kvman_process::{spawn, start_command, KvmanProcess, Platform};
-use crate::runtime::{kvman_home, repository_runtime};
+use crate::runtime::{choose_runtime, kvman_home};
 use crate::session::{Action, Happening, Session};
+use crate::updates::DownloadedUpdate;
 
 const WINDOW: &str = "main";
 /// The stop sequence's own budget is 10 seconds (plan 02 §2.14).
@@ -24,6 +25,7 @@ const STOP_WAIT: Duration = Duration::from_secs(15);
 pub struct Shell {
     pub session: Mutex<Session>,
     pub user_folder: PathBuf,
+    pub downloaded_update: Mutex<Option<DownloadedUpdate>>,
     process: Mutex<Option<Arc<KvmanProcess>>>,
     home_shown: (Mutex<bool>, Condvar),
 }
@@ -107,8 +109,24 @@ fn perform(app: &AppHandle, shell: &Shell, action: Action) {
             let _opened = app.opener().open_url(url, None::<&str>);
         }
         Action::StopKvman => stop_kvman(app, shell, window),
+        Action::InstallUpdate => install_update(app, shell),
         Action::Quit => app.exit(0),
     }
+}
+
+fn install_update(app: &AppHandle, shell: &Shell) {
+    let downloaded = shell.downloaded_update.lock().ok().and_then(|mut update| update.take());
+    let handle = app.clone();
+    drop(thread::spawn(move || {
+        if downloaded.is_some_and(|update| update.install().is_ok()) {
+            handle.restart();
+        } else {
+            if let Some(window) = handle.get_webview_window(WINDOW) {
+                let _shown = window.show();
+            }
+            dispatch(&handle, Happening::UpdateInstallFailed);
+        }
+    }));
 }
 
 fn stop_kvman(app: &AppHandle, shell: &Shell, window: Option<tauri::WebviewWindow>) {
@@ -130,7 +148,11 @@ fn stop_kvman(app: &AppHandle, shell: &Shell, window: Option<tauri::WebviewWindo
 
 fn start_kvman(app: &AppHandle, shell: &Shell) {
     let path = std::env::var("PATH").ok();
-    let started = repository_runtime(path.as_deref().unwrap_or_default()).and_then(|runtime| {
+    let resources = app.path().resource_dir().ok();
+    let started = choose_runtime(resources.as_deref(), path.as_deref().unwrap_or_default(), Platform::current(), &|candidate| {
+        candidate.is_file()
+    })
+    .and_then(|runtime| {
         let start = start_command(&runtime.node, &runtime.entry, &shell.user_folder, path.as_deref(), Platform::current());
         let (lines, end) = (app.clone(), app.clone());
         spawn(&start, move |line| dispatch(&lines, Happening::Line(line)), move || dispatch(&end, Happening::KvmanEnded)).ok()
@@ -193,6 +215,7 @@ pub fn run() -> tauri::Result<()> {
             app.manage(Shell {
                 session: Mutex::new(Session::new(&home)),
                 user_folder,
+                downloaded_update: Mutex::new(None),
                 process: Mutex::new(None),
                 home_shown: (Mutex::new(false), Condvar::new()),
             });

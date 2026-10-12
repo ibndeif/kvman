@@ -112,3 +112,12 @@ pub fn stopped_notice(language: Language, log_file: &str) -> Notice {
         button: text(language, "desktop.quit"),
     }
 }
+
+/// An update that failed after kvman was stopped for it (plan 14 §14.7).
+pub fn update_failed_notice(language: Language) -> Notice {
+    Notice {
+        title: text(language, "desktop.update.failed"),
+        body: text(language, "desktop.update.failedDetails"),
+        button: text(language, "desktop.quit"),
+    }
+}
