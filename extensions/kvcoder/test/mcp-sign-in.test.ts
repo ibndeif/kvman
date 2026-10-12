@@ -53,7 +53,7 @@ describe('signing in to an MCP server (08 §8.5, ADR 0020, 8, 11, and 16)', { ti
     expect(url.searchParams.get('state')).toMatch(/^[0-9a-f-]{36}$/);
     expect(url.searchParams.get('code_challenge')).toMatch(/^[\w-]{43}$/);
     expect(fixture.requests).toContain('POST /register');
-    expect(await secretNames(kernel)).toEqual(['mcp.remote.oauth.client', 'mcp.remote.oauth.verifier']);
+    expect(await secretNames(kernel)).toEqual(['mcp.remote.oauth.client', `mcp.remote.oauth.verifier.${String(url.searchParams.get('state'))}`]);
   });
 
   it('QA30-H2 and QA30-H3 finish stores the tokens, the server is ready, and a call carries the access token', async () => {

@@ -3,7 +3,7 @@ import { jsonSchema } from './json.ts';
 import { packageNameSchema } from './manifest.ts';
 import { extensionSourceSchema, installSourceSchema, presetSchema, presetStateSchema } from './preset.ts';
 import { problemSchema } from './problem.ts';
-import { fileSchema, isoTimeSchema, jobSchema, jobStatusSchema, workspaceSchema } from './rows.ts';
+import { closedWorkspaceSchema, fileSchema, isoTimeSchema, jobSchema, jobStatusSchema, workspaceSchema } from './rows.ts';
 
 const emptySchema = z.strictObject({});
 const scopeSchema = z.enum(['global', 'workspace']);
@@ -87,6 +87,7 @@ export const healthSchema = z.strictObject({
 export const kernelCommandSchemas = {
   'kernel.workspace.open': { input: z.strictObject({ path: z.string().min(1) }), output: workspaceSchema },
   'kernel.workspace.close': { input: z.strictObject({ workspaceId: z.string().min(1) }), output: emptySchema },
+  'kernel.workspace.delete': { input: z.strictObject({ workspaceId: z.string().min(1) }), output: emptySchema },
   'kernel.folder.create': { input: z.strictObject({ path: z.string().min(1), name: z.string() }), output: z.strictObject({ path: z.string() }) },
   'kernel.settings.set': { input: z.strictObject({ key: settingKeySchema, value: jsonSchema, scope: scopeSchema }), output: emptySchema },
   'kernel.settings.reset': { input: z.strictObject({ key: settingKeySchema, scope: scopeSchema }), output: emptySchema },
@@ -113,6 +114,7 @@ export const kernelCommandSchemas = {
 /** The input and output schemas of the kernel's own queries (plan 02 §2.12). */
 export const kernelQuerySchemas = {
   'kernel.workspace.list': { input: emptySchema, output: z.array(workspaceSchema) },
+  'kernel.workspace.closed.list': { input: emptySchema, output: z.array(closedWorkspaceSchema) },
   'kernel.folder.list': { input: z.strictObject({ path: z.string().min(1).exactOptional(), hidden: z.boolean().exactOptional() }), output: folderListSchema },
   'kernel.settings.list': { input: emptySchema, output: z.array(settingInfoSchema) },
   'kernel.secrets.list': { input: emptySchema, output: z.array(z.strictObject({ extension: z.string(), name: z.string() })) },

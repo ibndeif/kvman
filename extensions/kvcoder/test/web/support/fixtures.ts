@@ -28,7 +28,7 @@ export function turn(fields: Partial<Turn> = {}): Turn {
   return { id: 't1', sessionId: 's1', startedAt: '2026-10-01T09:00:00.000Z', durationMs: 12_000, steps: 1, usage, pending: [], ...fields };
 }
 
-export type World = { found: Session; messages: Message[]; omitted: number; turns: Turn[]; context?: { tokens: number; window: number | null; compactAt: number }; jobs?: Job[]; artifacts?: ArtifactSummary[]; artifactContents?: Record<string, ArtifactContent> };
+export type World = { found: Session; messages: Message[]; omitted: number; turns: Turn[]; context?: { tokens: number; window: number | null; compactAt: number; estimated?: boolean }; jobs?: Job[]; artifacts?: ArtifactSummary[]; artifactContents?: Record<string, ArtifactContent> };
 
 export function job(fields: Partial<Job> = {}): Job {
   return { id: 'j1', kind: 'process', title: 'Start the dev server', call: 'python3 -m http.server 8000', status: 'running', startedAt: '2026-10-01T09:00:00.000Z', links: [], ...fields };

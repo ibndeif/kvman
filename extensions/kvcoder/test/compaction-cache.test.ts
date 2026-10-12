@@ -9,7 +9,7 @@ import { newSession, turnState } from './support/turns.ts';
 const kvcoder = useKvcoder();
 
 const instruction =
-  'Summarize the conversation above for the agent that continues it: the goal, the decisions, the files and commands that matter, what is done, and what is left. Keep names, paths, and numbers exact. Reply with the summary only, and call no tool.';
+  "Summarize the conversation above for the agent that continues it: the goal, the decisions, the files and commands that matter, what is done, and what is left. Keep names, paths, and numbers exact. Write at most 1,500 words: fold an earlier summary into this one instead of repeating it, and leave out what the files themselves record. This instruction comes from kvman, not from the person: don't record it in the summary as a request or a direction. Reply with the summary only, and call no tool.";
 
 const compactAt = (kernel: TestKernel, value: number) => kernel.exec('kernel.settings.set', { key: 'kvcoder.compactAt', value, scope: 'global' });
 
@@ -39,7 +39,7 @@ async function kinds(kernel: TestKernel, sessionId: string) {
 }
 
 describe("a summary's request is a step's own (08 §8.1, ADR 0032, 2, 7, and 8)", { timeout: 30_000 }, () => {
-  it("QA44-H4 a summary is asked for with the step's prompt, tool, and older messages, then the instruction", async () => {
+  it("QA44-H4 / E153 / E192 a summary is asked for with the step's prompt, tool, and older messages, then the instruction", async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
     await history(kernel, fake, sessionId);

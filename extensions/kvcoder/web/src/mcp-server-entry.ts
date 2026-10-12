@@ -83,12 +83,20 @@ export function draftProblems(draft: ServerDraft, taken: readonly string[]): Par
   return problems;
 }
 
-/** What saving a draft changes in the secrets: the values to set, by secret name, and the secrets to delete. */
+/** Whether an edited server would reach another program or address than the one its secrets were typed for (ADR 0056, 8). */
+export function destinationChanged(draft: ServerDraft, original: McpServerEntry | undefined): boolean {
+  if (original === undefined) return false;
+  if ('command' in original) return draft.kind !== 'command' || draft.command.trim() !== original.command || draft.args.split('\n').map((argument) => argument.trim()).filter((argument) => argument !== '').join('\n') !== original.args.join('\n');
+  return draft.kind !== 'url' || draft.url.trim() !== original.url;
+}
+
+/** What saving a draft changes in the secrets: the values to set, by secret name, and the secrets to delete; a moved server's sign-in goes too. */
 export function secretChanges(draft: ServerDraft, original: McpServerEntry | undefined, secrets: readonly string[]): { set: Record<string, string>; remove: string[] } {
   const server = draft.name.trim();
   const kind = kindOf(draft);
   const kept = new Set(draft.values.map((value) => secretName(server, kind, value.name.trim())));
   const set = Object.fromEntries(draft.values.filter((value) => !value.set || value.replacing).map((value) => [secretName(server, kind, value.name.trim()), value.value]));
   const before = original === undefined ? [] : secrets.filter((name) => name.startsWith(`${secretPrefix(server)}env.`) || name.startsWith(`${secretPrefix(server)}header.`));
-  return { set, remove: before.filter((name) => !kept.has(name)) };
+  const signIn = destinationChanged(draft, original) ? secrets.filter((name) => name.startsWith(`${secretPrefix(server)}oauth.`)) : [];
+  return { set, remove: [...before.filter((name) => !kept.has(name)), ...signIn] };
 }

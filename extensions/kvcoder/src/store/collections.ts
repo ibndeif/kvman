@@ -1,5 +1,5 @@
 import type { Store, Transaction } from '@kvman/sdk';
-import { artifactDocSchema, backgroundDocSchema, messageDocSchema, processDocSchema, questionDocSchema, queuedDocSchema, runDocSchema, sessionDocSchema, turnDocSchema } from '../schemas/records.ts';
+import { answerReceiptDocSchema, artifactDocSchema, backgroundDocSchema, fileBackupDocSchema, filePartDocSchema, fileViewDocSchema, messageDocSchema, processDocSchema, questionDocSchema, queuedDocSchema, runDocSchema, sendReceiptDocSchema, sessionDocSchema, stepIntentDocSchema, turnDocSchema } from '../schemas/records.ts';
 import { signInDocSchema } from '../mcp/sign-in-record.ts';
 import { connectorDocSchema, handlerDocSchema, handlerJobDocSchema, sectionDocSchema, slashDocSchema } from '../schemas/registry.ts';
 
@@ -11,10 +11,16 @@ import { connectorDocSchema, handlerDocSchema, handlerJobDocSchema, sectionDocSc
 export function records(store: Store) {
   return {
     sessions: store.collection('sessions', sessionDocSchema),
+    stepIntents: store.collection('step-intents', stepIntentDocSchema),
     messages: store.collection('messages', messageDocSchema),
     queued: store.collection('queued', queuedDocSchema),
     turns: store.collection('turns', turnDocSchema),
     questions: store.collection('questions', questionDocSchema),
+    answerReceipts: store.collection('answer-receipts', answerReceiptDocSchema),
+    sendReceipts: store.collection('send-receipts', sendReceiptDocSchema),
+    fileViews: store.collection('file-views', fileViewDocSchema),
+    fileBackups: store.collection('file-backups', fileBackupDocSchema),
+    fileParts: store.collection('file-parts', filePartDocSchema),
     artifacts: store.collection('artifacts', artifactDocSchema),
     background: store.collection('background', backgroundDocSchema),
     runs: store.collection('runs', runDocSchema),
@@ -33,10 +39,16 @@ export function records(store: Store) {
 export function txRecords(tx: Transaction) {
   return {
     sessions: tx.collection('sessions', sessionDocSchema),
+    stepIntents: tx.collection('step-intents', stepIntentDocSchema),
     messages: tx.collection('messages', messageDocSchema),
     queued: tx.collection('queued', queuedDocSchema),
     turns: tx.collection('turns', turnDocSchema),
     questions: tx.collection('questions', questionDocSchema),
+    answerReceipts: tx.collection('answer-receipts', answerReceiptDocSchema),
+    sendReceipts: tx.collection('send-receipts', sendReceiptDocSchema),
+    fileViews: tx.collection('file-views', fileViewDocSchema),
+    fileBackups: tx.collection('file-backups', fileBackupDocSchema),
+    fileParts: tx.collection('file-parts', filePartDocSchema),
     artifacts: tx.collection('artifacts', artifactDocSchema),
     background: tx.collection('background', backgroundDocSchema),
     runs: tx.collection('runs', runDocSchema),

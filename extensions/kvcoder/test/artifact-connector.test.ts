@@ -127,7 +127,7 @@ describe('the artifact connector (08 §8.5, ADR 0009, 173 to 176)', { timeout: 3
     expect(first).toHaveLength(20);
     for (const result of first) expect(result).not.toMatch(/^error/);
     const second = await turn(world, 'again', runs(command('artifact', 'write', { id: 'doc-20', title: 'Extra', content: 'x' }), command('artifact', 'write', { id: 'doc-0', title: 'New', content: 'y' })), says('two'));
-    expect(second[0]).toMatch(/^error TOO_LARGE: .*/s);
+    expect(second[0]).toBe('error TOO_LARGE: This chat already has 20 artifacts. Update one that exists (artifact list names them), or delete one.');
     expect(json(second[1] ?? '')).toEqual({ id: 'doc-0', version: 2, created: false, bytes: 1 });
   });
 

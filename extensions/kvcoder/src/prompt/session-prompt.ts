@@ -5,19 +5,14 @@ import { shellFor } from '../calls/shell-program.ts';
 import { builtinConnectors } from '../connector-call.ts';
 import { delegateIndexDescription } from '../connectors/delegate.ts';
 import { mcpIndexDescription } from '../connectors/mcp.ts';
-import { availableWorkers } from '../delegate/workers.ts';
-import { mcpServers } from '../mcp/servers.ts';
-import { activeConnectors, type ConnectorRow } from '../registry/register-connectors.ts';
-import { disabledConnectors } from '../register-settings.ts';
+import { projectRules } from './project-rules.ts';
+import type { ConnectorRow } from '../registry/register-connectors.ts';
+import { readOnlyAllows } from '../turns/read-only.ts';
 import { sectionsFor } from '../registry/register-sections.ts';
-import { records } from '../store/collections.ts';
+import { invalid } from '../problems.ts';
 import type { SessionDoc } from '../schemas/records.ts';
 import { buildPrompt, type BuiltPrompt } from './build-prompt.ts';
-
-// A session's prompt and the connectors its agent may use: a subagent gets its worker's among its parent's, never
-// `delegate`, always `ask` (plan 08 §8.5); binary connectors count once their check passed (plan 08 §8.4), `mcp` while
-// the workspace has a server, and `delegate` while a worker is available, each entry naming them (ADR 0020, 10 and 12;
-// ADR 0021, 1 and 18).
+import { sessionGrants } from './session-grants.ts';
 
 /** A connector the session's agent can call: its entry in the prompt's index and in the `run` tool's enum. */
 export type ListedConnector = { name: string; description: string; commands: string[]; signatures?: readonly string[] };
@@ -29,55 +24,37 @@ export type SessionTools = {
   connectors: ConnectorRow[];
   /** The connectors the session may call, in the prompt's order. */
   listed: ListedConnector[];
-  /** The names that are turned off, or are optIn connectors this chat never enabled (ADR 0014, 7; ADR 0027, 10). */
+  /** Disabled names, including optIn connectors this chat never enabled. */
   disabled: ReadonlySet<string>;
 };
 
-// The connector names a session may use: none that is turned off (ADR 0014, 7), none that is an optIn connector the
-// chat never enabled, and for a subagent only its worker's (ADR 0021, 24).
-function allowedNames(session: SessionDoc, connectors: readonly ConnectorRow[], disabled: ReadonlySet<string>): Set<string> {
-  const names = [...builtinConnectors, ...connectors.map((connector) => connector.name)].filter((name) => !disabled.has(name));
-  if (session.parentId === null) return new Set(names);
-  return new Set(names.filter((name) => name === 'ask' || (name !== 'delegate' && (session.connectors === null || session.connectors.includes(name)))));
-}
-
-// The chat (a subagent's top-level session) a session's optIn connectors are taken from, walking `parentId` up (ADR 0027, 10).
-async function topLevelSession(ctx: Ctx, session: Stored<SessionDoc>): Promise<Stored<SessionDoc>> {
-  let current = session;
-  while (current.parentId !== null) {
-    const parent = await records(ctx.store).sessions.get(current.parentId);
-    if (parent === undefined) return current;
-    current = parent;
-  }
-  return current;
-}
-
+/** Prompt-time listing shares the execution predicate but never serves as later execution authority (ADR0044). */
 export async function sessionTools(ctx: Ctx, session: Stored<SessionDoc>): Promise<SessionTools> {
+  const rules = projectRules(ctx.job.workspace.path);
   const shell = await shellFor(ctx);
-  const connectors = await activeConnectors(ctx);
-  const topLevel = await topLevelSession(ctx, session);
-  const notEnabled = new Set(connectors.filter((connector) => connector.optIn && !topLevel.optedIn.includes(connector.name)).map((connector) => connector.name));
-  const disabled = new Set([...(await disabledConnectors(ctx)), ...notEnabled]);
-  const allowed = allowedNames(session, connectors, disabled);
-  const passed = new Set((session.checks ?? []).filter((check) => check.passed).map((check) => check.name));
-  const servers = await mcpServers(ctx);
-  const workers = await availableWorkers(ctx, session.checks);
+  const grants = await sessionGrants(ctx, session.id);
+  if (grants === undefined) throw invalid('The session ancestry is no longer available.');
+  const { connectors, disabled, names, workers, servers } = grants;
   const descriptions = { ...builtinDescriptions(shell.kind), delegate: delegateIndexDescription(workers), mcp: mcpIndexDescription(servers) };
-  const present: Partial<Record<string, boolean>> = { mcp: servers.length > 0, delegate: workers.length > 0 };
+  const current = grants.session;
+  // A read-only worker's helper is shown only what it may run (ADR 0056, 4).
+  const readOnly = current.worker?.readOnly === true;
+  const builtins = builtinConnectors.filter(name => names.includes(name)).map(name => {
+    const shown = Object.entries(commandsOf(name)).map(([command, entry], index) => ({ command, signature: builtinSignatures[name][index] ?? '', allowed: !readOnly || readOnlyAllows(command, entry) })).filter(row => row.allowed);
+    return { name, description: descriptions[name], commands: shown.map(row => row.command), signatures: shown.map(row => row.signature) };
+  });
   const listed = [
-    ...builtinConnectors.filter((name) => allowed.has(name) && present[name] !== false).map((name) => ({ name, description: descriptions[name], commands: Object.keys(commandsOf(name)), signatures: builtinSignatures[name] })),
-    ...connectors
-      .filter((connector) => allowed.has(connector.name) && (connector.kind === 'commands' || passed.has(connector.name)))
-      .map((connector) => ({ name: connector.name, description: connector.description, commands: connector.commands?.map((command) => command.name) ?? ['exec'] })),
+    ...builtins.filter(connector => connector.commands.length > 0),
+    ...(readOnly ? [] : connectors.filter(connector => names.includes(connector.name)).map(connector => ({ name: connector.name, description: connector.description, commands: connector.commands?.map(command => command.name) ?? ['exec'] }))),
   ];
   const built = buildPrompt({
-    role: session.parentId === null ? 'lead' : 'worker',
+    role: current.parentId === null ? 'lead' : 'worker',
     workspacePath: ctx.job.workspace.path,
     platform: process.platform,
     shell: shell.kind,
     language: z.string().parse(await ctx.settings.get('kernel.language')),
-    sections: await sectionsFor(ctx, session.id),
-    ...(session.worker === null ? {} : { worker: session.worker }),
+    sections: [...(await sectionsFor(ctx, current.id)), ...(await rules)],
+    ...(current.worker === null ? {} : { worker: current.worker }),
     connectors: listed,
   });
   for (const section of built.left) ctx.log.warn('A section was left out of a prompt past 64 KB of sections.', { owner: section.owner, id: section.id });

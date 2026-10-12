@@ -1,12 +1,14 @@
 import { z, type Ctx } from '@kvman/sdk';
 import type { ProcessDoc } from '../schemas/records.ts';
+import { allDocs } from '../store/all-docs.ts';
 import { records } from '../store/collections.ts';
 import { markEnd, ownerName, processId, processName } from './process-records.ts';
 import { reportEnd } from './process-report.ts';
 
 // How kvcoder learns that a background process ended without its own doing (ADR 0009, 150): `kernel.process.exited` for
 // an exit by itself, `kernel.stopping` as kvman stops, and `kernel.started` for a kvman that died. The last two run in
-// Home, so they only record the end; the chat is told at its next message (`reportInterrupted`).
+// Home, so they only record the end; the chat is told at its next message (`reportInterrupted`). A deleted
+// workspace's records are removed.
 
 const runningProcessesSchema = z.array(z.object({ extension: z.string(), name: z.string() }));
 
@@ -38,6 +40,14 @@ export function registerProcessHandlers(ctx: Ctx): void {
       if (extension !== ownerName || id === undefined) return;
       const ended = await markEnd(ctx, id, { end: 'exited', exitCode, signal, reported: true });
       if (ended !== undefined && exitIsReported(ended)) await reportEnd(ctx, ended);
+    },
+  });
+  // The records live in the global store, so a deleted workspace's go here (ADR 0061, 4).
+  ctx.registerHandler('kernel.workspace.deleted', {
+    description: 'Forgets the background processes of the chats of a deleted workspace.',
+    handle: async ({ workspaceId }) => {
+      const store = records(ctx.store);
+      for (const doc of await allDocs((options) => store.processes.find({ workspaceId }, options))) await store.processes.delete(doc.id);
     },
   });
   ctx.registerHandler('kernel.stopping', {

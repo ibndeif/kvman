@@ -14,6 +14,6 @@ Every scenario is in `extensions/kvcoder/test/`.
 
 ## Edge cases
 
-- **QA49-E1 A run needs its title.** *Then* a `delegate run` with no `title`, and one whose title has 61 characters, fail `VALIDATION_FAILED` naming `title`, with the payload `{ worker, title, task, background? }`, and no child session is made. `delegate-runs.test.ts`
+- **QA49-E1 A run needs its title.** *Then* a `delegate run` with no `title`, and one whose title has 201 characters (ADR 0051, 4 raised the limit from 60 and shortens what is shown), fail `VALIDATION_FAILED` naming `title`, with the payload `{ worker, title, task, background? }`, and no child session is made. `delegate-runs.test.ts`
 - **QA49-E2 A helper whose run isn't in the list keeps the call's words.** *Then* its card reads `A helper finished:` with the call's description. `web/background-time.test.ts`
 - **QA49-E3 A card with no known task shows no task line.** *Then* a subagent's card whose call isn't among the messages shows its title and worker only. `web/conversation-stream.test.ts`

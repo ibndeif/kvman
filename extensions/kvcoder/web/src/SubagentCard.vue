@@ -26,7 +26,7 @@ const status = computed(() => kvman.t(`kvcoder.ui.status.${props.child.session.s
     </div>
     <div v-if="props.child.live.text !== '' || (props.child.turn?.pending.length ?? 0) > 0" class="kvc-card-body">
       <p v-if="props.child.live.text !== ''" class="kvc-muted" style="margin: 0; white-space: pre-wrap">{{ props.child.live.text }}</p>
-      <PendingCards :pending="props.child.turn?.pending ?? []" :hidden="props.hidden" @answer="(answer) => emit('answer', answer)" @decide="(decision) => emit('decide', decision)" />
+      <PendingCards :owner="props.child.turn === undefined ? undefined : { sessionId: props.child.session.id, turnId: props.child.turn.id }" :pending="props.child.turn?.pending ?? []" :hidden="props.hidden" @answer="(answer) => emit('answer', answer)" @decide="(decision) => emit('decide', decision)" />
     </div>
   </section>
 </template>

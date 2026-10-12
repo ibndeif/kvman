@@ -1,3 +1,4 @@
+import { runResult, runStatusText } from './call-results.ts';
 import type { CallView } from './call-view.ts';
 import { diffCounts, diffLines, textLines } from './edit-diff.ts';
 import { fields, type Translate } from './kvman.ts';
@@ -101,7 +102,10 @@ function mcpSummary(t: Translate, command: string, payload: Record<string, unkno
 
 function backgroundSummary(t: Translate, command: string, payload: Record<string, unknown>, result: unknown): CallSummary | undefined {
   if (command === 'list') return summary(t('kvcoder.ui.call.backgroundRuns'), undefined, countText(t, 'kvcoder.ui.call.runCount', result));
-  if (command === 'output') return summary(t('kvcoder.ui.call.output'), text(payload['id']));
+  if (command === 'output') {
+    const run = runResult(result);
+    return summary(t('kvcoder.ui.call.output'), text(payload['id']), run === undefined ? undefined : runStatusText(t, run.status));
+  }
   if (command === 'stop') return summary(t('kvcoder.ui.call.stop'), text(payload['id']));
   return undefined;
 }

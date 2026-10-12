@@ -1,33 +1,46 @@
-import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { candidateGateOrder, packageEmissions } from '../../release/candidate/candidate-plan.ts';
 import { repositoryRoot } from './repository.ts';
 
-// Each package and the entry its build must emit: the libraries' `index`, and the CLI's bin, `main`.
-const packages = {
-  sdk: { name: '@kvman/sdk', entry: 'index' },
-  kernel: { name: '@kvman/kernel', entry: 'index' },
-  cli: { name: 'kvman', entry: 'main' },
-  testkit: { name: '@kvman/testkit', entry: 'index' },
-};
+// Vitest keeps lightweight structural coverage only (KVC34, ADR 0047). The
+// repository-wide subprocess gates run explicitly with
+// `node release/candidate/local-candidate-main.ts`, never nested here.
 
-function runScript(script: string): { status: number | null; output: string } {
-  const result = spawnSync('pnpm', ['run', script], { cwd: repositoryRoot, encoding: 'utf8' });
-  return { status: result.status, output: `${result.stdout}${result.stderr}` };
-}
+describe('candidate gates (KVC34, ADR 0047)', () => {
+  it('keeps the documented gate order with test and bench once each', () => {
+    expect(candidateGateOrder).toEqual(['typecheck', 'lint', 'test', 'build', 'emissions', 'bench:check']);
+  });
 
-describe('gates (plan 13 M1.1)', () => {
-  it('M1.1-H1 typecheck, lint, and build pass, and every package builds', () => {
-    for (const script of ['typecheck', 'lint', 'build']) {
-      const { status, output } = runScript(script);
-      expect(status, `pnpm ${script}\n${output}`).toBe(0);
+  it('verifies the original four package names and emitted entries', () => {
+    expect(packageEmissions).toEqual([
+      { folder: 'sdk', name: '@kvman/sdk', entry: 'index' },
+      { folder: 'kernel', name: '@kvman/kernel', entry: 'index' },
+      { folder: 'cli', name: 'kvman', entry: 'main' },
+      { folder: 'testkit', name: '@kvman/testkit', entry: 'index' },
+    ]);
+  });
+
+  it('keeps the explicit runner beside the plan and outside release/desktop', () => {
+    const main = path.join(repositoryRoot, 'release', 'candidate', 'local-candidate-main.ts');
+    const runner = path.join(repositoryRoot, 'release', 'candidate', 'run-candidate.ts');
+    const plan = path.join(repositoryRoot, 'release', 'candidate', 'candidate-plan.ts');
+    for (const file of [main, runner, plan]) expect(existsSync(file), file).toBe(true);
+    const text = readFileSync(main, 'utf8');
+    for (const gate of ['typecheck', 'lint', 'test', 'build', 'bench:check', 'emissions']) {
+      expect(text, gate).toContain(gate);
     }
-    for (const [folder, { name, entry }] of Object.entries(packages)) {
-      const root = path.join(repositoryRoot, 'packages', folder);
-      expect(readFileSync(path.join(root, 'package.json'), 'utf8')).toContain(`"name": "${name}"`);
-      expect(existsSync(path.join(root, `dist/${entry}.js`)), `${folder}/dist/${entry}.js`).toBe(true);
-      expect(existsSync(path.join(root, `dist/${entry}.d.ts`)), `${folder}/dist/${entry}.d.ts`).toBe(true);
-    }
-  }, 180_000);
+    expect(text).toContain('process.platform');
+    expect(text).toContain('process.arch');
+    expect(text).toContain('spawnSync');
+  });
+
+  it('holds no nested repository-wide gates', () => {
+    const text = readFileSync(path.join(repositoryRoot, 'test', 'tooling', 'gates.test.ts'), 'utf8');
+    const childProcessModule = `${'node:child'}_${'process'}`;
+    const previousTimeout = `${'180'}_${'000'}`;
+    expect(text).not.toContain(childProcessModule);
+    expect(text).not.toContain(previousTimeout);
+  });
 });

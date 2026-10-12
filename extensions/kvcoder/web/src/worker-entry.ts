@@ -11,7 +11,8 @@ export const claudeEffort = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
 export const permissionModes = ['acceptEdits', 'auto', 'bypassPermissions', 'dontAsk', 'plan'] as const;
 export const workerKinds = ['subagent', 'opencode', 'pi', 'claude'] as const;
 
-export type SubagentEntry = Common & { kind: 'subagent'; connectors: string[] | null; model: string | null; thinking: Thinking | null };
+// `readOnly` is absent from an entry saved before it existed, which reads as not read-only (ADR 0056, 1).
+export type SubagentEntry = Common & { kind: 'subagent'; readOnly?: boolean; connectors: string[] | null; model: string | null; thinking: Thinking | null };
 export type OpencodeEntry = Program & { kind: 'opencode'; model: string | null; agent: string | null; autoApprove: boolean };
 export type PiEntry = Program & { kind: 'pi'; model: string | null; thinking: (typeof piThinking)[number] | null; tools: string[] | null };
 export type ClaudeEntry = Program & { kind: 'claude'; model: string | null; effort: (typeof claudeEffort)[number] | null; permissionMode: (typeof permissionModes)[number] };
@@ -40,6 +41,7 @@ export const workerEntries = (value: unknown): WorkerEntry[] => (Array.isArray(v
 // connector, and an empty text or choice for the chat's own or the program's default.
 export type WorkerDraft = Common & {
   kind: WorkerKind;
+  readOnly: boolean;
   all: boolean;
   connectors: string[];
   model: string | null;
@@ -55,13 +57,13 @@ export type WorkerDraft = Common & {
   permissionMode: (typeof permissionModes)[number];
 };
 
-const blank: WorkerDraft = { name: '', description: '', enabled: true, instructions: '', kind: 'subagent', all: true, connectors: [], model: null, thinking: '', approval: 'ask', minutes: '30', programModel: '', agent: '', autoApprove: true, piThinking: '', tools: '', effort: '', permissionMode: 'acceptEdits' };
+const blank: WorkerDraft = { name: '', description: '', enabled: true, instructions: '', kind: 'subagent', readOnly: false, all: true, connectors: [], model: null, thinking: '', approval: 'ask', minutes: '30', programModel: '', agent: '', autoApprove: true, piThinking: '', tools: '', effort: '', permissionMode: 'acceptEdits' };
 
 /** The form's draft of a worker, or an empty one for a new worker. */
 export function draftOf(entry: WorkerEntry | undefined): WorkerDraft {
   if (entry === undefined) return { ...blank };
   const common = { ...blank, name: entry.name, description: entry.description, enabled: entry.enabled, instructions: entry.instructions };
-  if (entry.kind === 'subagent') return { ...common, kind: 'subagent', all: entry.connectors === null, connectors: [...(entry.connectors ?? [])], model: entry.model, thinking: entry.thinking ?? '' };
+  if (entry.kind === 'subagent') return { ...common, kind: 'subagent', readOnly: entry.readOnly === true, all: entry.connectors === null, connectors: [...(entry.connectors ?? [])], model: entry.model, thinking: entry.thinking ?? '' };
   const program = { ...common, approval: entry.approval, minutes: String(entry.timeoutMs / 60_000), programModel: entry.model ?? '' };
   if (entry.kind === 'opencode') return { ...program, kind: 'opencode', agent: entry.agent ?? '', autoApprove: entry.autoApprove };
   if (entry.kind === 'pi') return { ...program, kind: 'pi', piThinking: entry.thinking ?? '', tools: (entry.tools ?? []).join('\n') };
@@ -75,7 +77,7 @@ export function entryOf(draft: WorkerDraft, offered: readonly string[]): WorkerE
   const common = { name: draft.name.trim(), description: draft.description.trim(), enabled: draft.enabled, instructions: draft.instructions };
   if (draft.kind === 'subagent') {
     const connectors = draft.all ? null : [...offered.filter((name) => draft.connectors.includes(name)), ...draft.connectors.filter((name) => !offered.includes(name))];
-    return { ...common, kind: 'subagent', connectors, model: draft.model, thinking: orNull(draft.thinking) };
+    return { ...common, kind: 'subagent', readOnly: draft.readOnly, connectors, model: draft.model, thinking: orNull(draft.thinking) };
   }
   const program = { ...common, approval: draft.approval, timeoutMs: Number(draft.minutes) * 60_000, model: orNull(draft.programModel.trim()) };
   if (draft.kind === 'opencode') return { ...program, kind: 'opencode', agent: orNull(draft.agent.trim()), autoApprove: draft.autoApprove };

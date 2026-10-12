@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { wait } from './support/wait.ts';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { command, runs, says, toolResults } from './support/model-script.ts';
+import { answered, command, runs, says, toolResults } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
@@ -29,7 +29,7 @@ describe('restarts (08 §8.1, 12 §12.2)', { timeout: 30_000 }, () => {
     const questionId = String(after.turn?.pending[0]?.questionId);
     await kernel.exec('kvcoder.question.answer', { questionId, answer: { confirmed: true } });
     await kernel.clock.advance(0);
-    expect(toolResults(fake)).toEqual(['{"confirmed":true}']);
+    expect(toolResults(fake)).toEqual([answered('{"confirmed":true}')]);
     expect((await turnState(kernel, sessionId)).turn).toMatchObject({ outcome: 'done' });
   });
 

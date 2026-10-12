@@ -205,6 +205,12 @@ export function createDispatcher(options: DispatcherOptions) {
       if (status === 'queued') record(job, { problem: kernelProblem('CANCELLED', 'The job was cancelled.').problem });
       else if (status === 'running') pool?.abort(jobId, 'cancel');
     },
+    // Cancels the workspace's running attempts and waits for them to end (ADR 0061, 3).
+    async cancelRunningIn(workspaceId: string): Promise<void> {
+      const running = rows.running().filter((job) => job.workspaceId === workspaceId);
+      for (const job of running) pool?.abort(job.id, 'cancel');
+      await Promise.all(running.map((job) => attempts.get(job.id)));
+    },
     waitForJob(id: string): Promise<Job> {
       const job = rows.get(id);
       if (job === undefined) return Promise.reject(kernelProblem('NOT_FOUND', `There is no job ${id}.`, { jobId: id }));

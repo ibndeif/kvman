@@ -1,6 +1,7 @@
 import { ProblemError, type Ctx, type Stored } from '@kvman/sdk';
 import type { ProcessDoc } from '../schemas/records.ts';
 import { appendBackground, backgroundText } from '../turns/background.ts';
+import { plainText } from '../result-text.ts';
 import { records } from '../store/collections.ts';
 import { processName } from './process-records.ts';
 import { lastLines } from './process-text.ts';
@@ -13,7 +14,7 @@ const reportLines = 20;
 /** A process's last lines of output; none when it left no log. */
 export async function outputTail(ctx: Ctx, id: string, lines: number): Promise<string> {
   try {
-    return lastLines(await ctx.processes.log(processName(id), { tail: lines }), lines);
+    return plainText(lastLines(await ctx.processes.log(processName(id), { tail: lines }), lines));
   } catch (error) {
     if (error instanceof ProblemError && error.problem.code === 'NOT_FOUND') return '';
     throw error;

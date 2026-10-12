@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { command, requestMessages, runs, says, shell, textOf, toolResults, unstamped } from './support/model-script.ts';
+import { answered, command, requestMessages, runs, says, shell, textOf, toolResults, unstamped } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
@@ -54,7 +54,7 @@ describe('questions and approvals (08 §8.1, §8.5)', { timeout: 30_000 }, () =>
     const { jobId } = await kernel.exec('kvcoder.question.answer', { questionId: String(text?.questionId), answer: { text: 'Ada' } });
     expect(await kernel.waitForJob(String(jobId))).toMatchObject({ name: 'kvcoder.turn.step', status: 'succeeded' });
     await kernel.clock.advance(0);
-    expect(toolResults(fake)).toEqual(['{"selected":["a"]}', '{"text":"Ada"}']);
+    expect(toolResults(fake)).toEqual([answered('{"selected":["a"]}'), answered('{"text":"Ada"}')]);
   });
 
   it('M2.4-E22 answering one of several returns null, and the last answer returns the next step', async () => {
@@ -70,5 +70,22 @@ describe('questions and approvals (08 §8.1, §8.5)', { timeout: 30_000 }, () =>
     expect(await kernel.waitForJob(String(jobId))).toMatchObject({ name: 'kvcoder.turn.step', status: 'succeeded' });
     await kernel.clock.advance(0);
     expect(toolResults(fake)).toEqual(['one\n[exit code 0]', 'two\n[exit code 0]']);
+  });
+  it("M2.4-E182 the request after an answer carries it as the asking call's own result, last, with the note that it was answered", async () => {
+    const { kernel, fake } = await kvcoder.start();
+    const sessionId = await newSession(kernel);
+    fake.reply(runs(command('ask', 'text', { prompt: 'Name?' })), says('Hello Ada'));
+    await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
+    await kernel.clock.advance(0);
+    const questionId = String((await turnState(kernel, sessionId)).turn?.pending[0]?.questionId);
+    await kernel.exec('kvcoder.question.answer', { questionId, answer: { text: 'Ada' } });
+    await kernel.clock.advance(0);
+    const sent = requestMessages(fake);
+    const asking = sent.findLast((message) => message.role === 'assistant');
+    const result = sent.at(-1);
+    expect(fake.requests()).toHaveLength(2);
+    expect(result?.role).toBe('tool');
+    expect(JSON.stringify(asking?.tool_calls)).toContain(String(result?.tool_call_id));
+    expect(textOf(result)).toBe('{"text":"Ada"}\nThe person answered this question. Go on with the task; do not ask it again.');
   });
 });

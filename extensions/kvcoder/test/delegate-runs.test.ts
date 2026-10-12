@@ -69,10 +69,10 @@ describe('delegate runs (08 §8.5, ADR 0021)', { timeout: 30_000 }, () => {
     expect((await kernel.exec('kvcoder.job.list', { sessionId })).map((job) => [job.id, job.kind, job.title, job.call])).toEqual([[childId, 'subagent', 'Node.js expert', 'Finding the leak']]);
   });
 
-  it('QA49-E1 a run needs its title: none, or one of 61 characters, fails VALIDATION_FAILED and makes no helper', async () => {
+  it('QA49-E1 / E155 a run needs its title: none, or one of 201 characters, fails VALIDATION_FAILED and makes no helper', async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', { worker: 'general', task: 'Task A' }), command('delegate', 'run', { worker: 'general', title: 't'.repeat(61), task: 'Task B' })), says('done'));
+    fake.reply(runs(command('delegate', 'run', { worker: 'general', task: 'Task A' }), command('delegate', 'run', { worker: 'general', title: 't'.repeat(201), task: 'Task B' })), says('done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     const refused = toolResults(fake);

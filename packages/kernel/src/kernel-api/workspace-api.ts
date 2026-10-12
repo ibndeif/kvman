@@ -1,5 +1,5 @@
 import { kernelCommandSchemas, kernelQuerySchemas, workspaceSchema } from '@kvman/sdk';
-import { listWorkspaces } from '../workspaces/workspaces.ts';
+import { listClosedWorkspaces, listWorkspaces } from '../workspaces/workspaces.ts';
 import type { KernelApiServices } from './kernel-api-services.ts';
 import type { KernelRegistrations } from './kernel-registrations.ts';
 
@@ -13,5 +13,10 @@ export function registerWorkspaceApi(api: KernelRegistrations, services: KernelA
     await services.request({ kind: 'close-workspace', workspaceId: input.workspaceId });
     return {};
   });
+  api.command('kernel.workspace.delete', kernelCommandSchemas['kernel.workspace.delete'], "Erases a closed workspace's data for good; its folder isn't touched.", async (input) => {
+    await services.request({ kind: 'delete-workspace', workspaceId: input.workspaceId });
+    return {};
+  });
+  api.query('kernel.workspace.closed.list', kernelQuerySchemas['kernel.workspace.closed.list'], 'Lists the closed workspaces, and whether the folder of each is missing.', () => listClosedWorkspaces(services.connection));
   api.query('kernel.workspace.list', kernelQuerySchemas['kernel.workspace.list'], 'Lists the open workspaces.', () => listWorkspaces(services.connection, services.homeFolder));
 }

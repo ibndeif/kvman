@@ -1,24 +1,38 @@
 import { z, type Ctx } from '@kvman/sdk';
-import { isDelegateRun, startApprovedRun } from '../delegate/approved-run.ts';
-import { checkedAnswer } from '../connectors/ask.ts';
-import { runCallSchema, type HeldResult } from '../schemas/records.ts';
+import { startApprovedRun } from '../delegate/approved-run.ts';
 import { findSession, ownSession, userOnly } from '../sessions/session-lookup.ts';
 import { turnSchema, turnView } from '../sessions/session-view.ts';
 import { records, txRecords } from '../store/collections.ts';
-import { cancelTurn } from './cancel-turn.ts';
-import { heldText, resolvePending } from './resolve.ts';
+import { cancelTurn } from './end-turn.ts';
+import { applyAnswer } from './apply-answer.ts';
+import { receiptJob } from './receipt-job.ts';
+import { recoverWorkspace } from './recover-workspace.ts';
+import { retryTurn } from './retry-turn.ts';
+import { dispatchStep } from './start-turn.ts';
 
-// Turns (plan 08 §8.6): cancel, list, and the person's answer to a question or approval.
+// Turns (plan 08 §8.6): retry, cancel, list, and the person's answer to a question or approval.
 
 export function registerTurns(ctx: Ctx): void {
-  ctx.registerCommand('kvcoder.turn.cancel', {
-    description: "Cancels a session's turn: its step, its subagents' turns, and its questions.",
+  ctx.registerCommand('kvcoder.turn.retry', {
+    description: "Runs a stopped turn again on the session's history, without adding a message.",
     input: z.object({ sessionId: z.string() }),
     output: z.object({}),
     public: true,
+    retries: 0,
     handle: async ({ sessionId }) => {
+      userOnly(ctx, 'kvcoder.turn.retry');
+      await retryTurn(ctx, await ownSession(ctx, sessionId));
+      return {};
+    },
+  });
+  ctx.registerCommand('kvcoder.turn.cancel', {
+    description: "Cancels a session's turn: its step, its subagents' turns, and its questions. With turnId, only when that turn is still the current one.",
+    input: z.object({ sessionId: z.string(), turnId: z.string().exactOptional() }),
+    output: z.object({}),
+    public: true,
+    handle: async ({ sessionId, turnId }) => {
       await ownSession(ctx, sessionId);
-      await cancelTurn(ctx, sessionId, true);
+      await cancelTurn(ctx, sessionId, true, turnId);
       return {};
     },
   });
@@ -40,25 +54,24 @@ export function registerTurns(ctx: Ctx): void {
     retries: 0,
     handle: async ({ questionId, answer }) => {
       userOnly(ctx, 'kvcoder.question.answer');
-      const question = await records(ctx.store).questions.get(questionId);
-      if (question === undefined) throw ctx.problem('kvcoder/QUESTION_NOT_FOUND', { questionId });
-      const checked = checkedAnswer(question, answer);
-      const taken = await ctx.store.transaction((tx) => {
-        const { questions } = txRecords(tx);
-        if (questions.get(questionId) === undefined) return false;
-        questions.delete(questionId);
-        return true;
-      });
-      if (!taken) throw ctx.problem('kvcoder/QUESTION_NOT_FOUND', { questionId });
-      const approvedCall = checked.kind !== 'result' && checked.approved ? runCallSchema.parse(question.question) : undefined;
-      if (approvedCall !== undefined && isDelegateRun(approvedCall)) return { jobId: await startApprovedRun(ctx, { sessionId: question.sessionId, toolCallId: question.toolCallId, call: approvedCall }) };
-      const held: HeldResult =
-        checked.kind === 'result'
-          ? heldText(question.toolCallId, checked.text, false)
-          : checked.approved
-            ? { toolCallId: question.toolCallId, text: '', details: null, isError: false, run: runCallSchema.parse(question.question) }
-            : heldText(question.toolCallId, 'denied by the user', true);
-      return { jobId: await resolvePending(ctx, question.sessionId, question.toolCallId, held, false) };
+      let result = await ctx.store.transaction(tx => applyAnswer(ctx, txRecords(tx), questionId, answer));
+      if (result.kind === 'delegate') {
+        // Legacy positive launch has no receipt: recover first, then retain exact approval identity through preparation.
+        await recoverWorkspace(ctx);
+        const expected = result.question;
+        result = await ctx.store.transaction(tx => {
+          const store = txRecords(tx), current = applyAnswer(ctx, store, questionId, answer, expected);
+          return current;
+        });
+        if (result.kind === 'delegate') {
+          ctx.job.signal.throwIfAborted();
+          return { jobId: await startApprovedRun(ctx, { question: result.question, call: result.call }) };
+        }
+      }
+      if (result.kind === 'acknowledged') return { jobId: await receiptJob(ctx, result.receipt) };
+      // Only a newly committed application authorizes recovery; racing receipt acknowledgments never enter it.
+      await recoverWorkspace(ctx, result.receipt.sessionId);
+      return { jobId: result.identity === null ? null : await dispatchStep(ctx, result.identity, false) };
     },
   });
 }

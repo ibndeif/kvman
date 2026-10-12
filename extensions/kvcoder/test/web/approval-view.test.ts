@@ -29,4 +29,20 @@ describe('the approval card shows what the person allows (08 §8.7, ADR 0036, 12
     const decided = (cards.emitted('decide') ?? []).map(([decision]) => decision as { approvals: { questionId: string }[]; confirmed: boolean });
     expect(decided.map((decision) => [decision.approvals.map((item) => item.questionId), decision.confirmed])).toEqual([[['a1'], true], [['a2'], false]]);
   });
+
+  it('M2.4-E210 Deny and Allow are a row of their own under the call, and the card keeps its last row', async () => {
+    const longLine = `pnpm exec vitest run ${'extensions/kvcoder/test/step-intent-recovery.test.ts '.repeat(8)}`.trim();
+    const pending = [approval('a1', { description: 'Verifying recovery.', connector: 'shell', command: 'exec', payload: { line: longLine, risky: false } }), approval('a2', { description: 'Writing the notes.', connector: 'fs', command: 'write', payload: { path: 'notes.md', content: 'Milk\n', risky: true } })];
+    const cards = await mounted(PendingCards, createFakeKvman(), { pending });
+    for (const id of ['a1', 'a2']) {
+      const parts = cards.find(`[data-test="approval-${id}"]`).element.children;
+      const actions = parts[parts.length - 1];
+      expect(actions?.getAttribute('data-test'), id).toBe('decision-actions');
+      expect([...(actions?.children ?? [])].map((button) => button.getAttribute('data-test')), id).toEqual(['deny', 'allow']);
+      expect(actions?.querySelector('[data-test="call-subject"]'), id).toBeNull();
+    }
+    expect(cards.find('[data-test="approval-a1"] [data-test="call-subject"]').text()).toBe(`$ ${longLine}`);
+    const last = cards.find('[data-test="approvals-card"]').element.lastElementChild;
+    expect([...(last?.children ?? [])].map((button) => button.getAttribute('data-test'))).toEqual(['deny-all', 'allow-all']);
+  });
 });

@@ -1,9 +1,11 @@
 import { readFile, stat } from 'node:fs/promises';
 import { invalid, notFound } from '../problems.ts';
+import { fingerprintOf } from './file-change.ts';
 import { resolveInWorkspace } from './workspace-path.ts';
 
 // `fs read` (plan 08 §8.5, ADR 0011, 8): whole lines of a text file inside the workspace folder, at most 2000 of them
-// and 30 KB, with the file's line count so the agent can go on from `fromLine`.
+// and 30 KB, with the file's line count, and where to read on when something was left out, also inside one very long
+// line (ADR 0055, 1).
 
 /** The most lines one read returns, and the default. */
 export const readLinesLimit = 2000;
@@ -24,33 +26,54 @@ export function decodeText(bytes: Uint8Array): string | undefined {
   }
 }
 
-// The start of a line that alone passes the limit, cut where a character ends.
-function cutLine(line: string): string {
-  return new TextDecoder('utf-8').decode(Buffer.from(line, 'utf8').subarray(0, contentLimit)).replace(/�+$/, '');
+export type FileRead = { path: string; fromLine: number; totalLines: number; content: string; truncated: boolean; next?: { fromLine: number; fromColumn?: number } };
+
+/** What the chat last saw of a file, by its real path, when it has read it. */
+export type SeenFile = (real: string) => Promise<string | undefined>;
+
+// The whole characters of `text` that fit the limit, counted from its start.
+function fitting(characters: readonly string[]): number {
+  let bytes = 0;
+  let count = 0;
+  for (const character of characters) {
+    bytes += Buffer.byteLength(character);
+    if (bytes > contentLimit) break;
+    count += 1;
+  }
+  return count;
 }
 
-export type FileRead = { path: string; fromLine: number; totalLines: number; content: string };
-
-export async function readLines(workspace: string, input: { path: string; fromLine?: number | undefined; lines?: number | undefined }): Promise<FileRead> {
+export async function readLines(workspace: string, input: { path: string; fromLine?: number | undefined; fromColumn?: number | undefined; lines?: number | undefined }, seen?: SeenFile): Promise<FileRead> {
   const target = await resolveInWorkspace(workspace, input.path);
   const found = await stat(target).catch((error: unknown) => {
     if (isMissing(error)) throw notFound(`${input.path} doesn't exist.`, { path: input.path });
     throw error;
   });
   if (found.isDirectory()) throw invalid(`${input.path} is a folder; list it with fs list.`, { path: input.path });
-  const decoded = decodeText(await readFile(target));
+  const bytes = await readFile(target);
+  const decoded = decodeText(bytes);
   if (decoded === undefined) throw invalid(`${input.path} isn't valid UTF-8 text, so it isn't read.`, { path: input.path });
+  // Reading on inside a line joins two reads, so both must be of the same content (ADR 0055, 1).
+  const view = input.fromColumn === undefined ? undefined : await seen?.(target);
+  if (view !== undefined && view !== fingerprintOf(bytes)) throw invalid(`${input.path} changed since you started reading it. Read it again from its start.`, { path: input.path });
   const all = decoded.match(/[^\n]*\n|[^\n]+$/g) ?? [];
   const fromLine = input.fromLine ?? 1;
+  const fromColumn = input.fromColumn ?? 1;
   const wanted = all.slice(fromLine - 1, fromLine - 1 + (input.lines ?? readLinesLimit));
+  const first = [...(wanted[0] ?? '')].slice(fromColumn - 1);
+  const lines = wanted.length === 0 ? [] : [first.join(''), ...wanted.slice(1)];
   const kept: string[] = [];
-  let bytes = 0;
-  for (const line of wanted) {
-    bytes += Buffer.byteLength(line);
-    if (bytes > contentLimit) break;
+  let size = 0;
+  for (const line of lines) {
+    size += Buffer.byteLength(line);
+    if (size > contentLimit) break;
     kept.push(line);
   }
-  const [first] = wanted;
-  const content = kept.length === 0 && first !== undefined ? cutLine(first) : kept.join('');
-  return { path: input.path, fromLine, totalLines: all.length, content };
+  const base = { path: input.path, fromLine, totalLines: all.length };
+  if (kept.length === 0 && lines.length > 0) {
+    const taken = fitting(first);
+    return { ...base, content: first.slice(0, taken).join(''), truncated: true, next: { fromLine, fromColumn: fromColumn + taken } };
+  }
+  const nextLine = fromLine + kept.length;
+  return nextLine > all.length ? { ...base, content: kept.join(''), truncated: false } : { ...base, content: kept.join(''), truncated: true, next: { fromLine: nextLine } };
 }

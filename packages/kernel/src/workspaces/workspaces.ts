@@ -1,6 +1,6 @@
 import { realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
-import type { Workspace } from '@kvman/sdk';
+import type { ClosedWorkspace, Workspace } from '@kvman/sdk';
 import type { IdGenerator } from '../ids.ts';
 import { kernelProblem } from '../problems.ts';
 import type { Connection } from '../storage/database.ts';
@@ -40,6 +40,13 @@ export function listWorkspaces(connection: Connection, homeFolder: string): Work
   return [homeWorkspace(homeFolder), ...others];
 }
 
+const isFolder = (folder: string): boolean => statSync(folder, { throwIfNoEntry: false })?.isDirectory() === true;
+
+// The closed workspaces in the order they were first opened; `missing` when the path is not a folder now (ADR 0061, 2).
+export function listClosedWorkspaces(connection: Connection): ClosedWorkspace[] {
+  return connection.prepare<[], Workspace>('SELECT id, name, path FROM workspaces WHERE open = 0 ORDER BY id').all().map((row) => ({ ...row, missing: !isFolder(row.path) }));
+}
+
 function realFolder(folder: string): string {
   if (!path.isAbsolute(folder)) throw kernelProblem('VALIDATION_FAILED', 'A workspace path must be absolute.', { path: folder });
   let isFolder: boolean;
@@ -56,8 +63,24 @@ function realFolder(folder: string): string {
 export type Workspaces = ReturnType<typeof createWorkspaces>;
 
 export function createWorkspaces(connection: Connection, homeFolder: string, ids: IdGenerator) {
+  // An open workspace whose folder is gone is closed at start; its data stays (ADR 0061, 1).
+  const close = connection.prepare<[string]>('UPDATE workspaces SET open = 0 WHERE id = ?');
+  for (const row of connection.prepare<[], Row>('SELECT * FROM workspaces WHERE open = 1').all()) if (!isFolder(row.path)) close.run(row.id);
   const closed = new Set(connection.prepare<[], { id: string }>('SELECT id FROM workspaces WHERE open = 0').all().map((row) => row.id));
   return {
+    // The closed workspace with this id, for a delete: Home and an open one fail VALIDATION_FAILED, an unknown one NOT_FOUND.
+    closedOne(id: string): Workspace {
+      if (id === homeWorkspaceId) throw kernelProblem('VALIDATION_FAILED', "Home can't be deleted.", { workspaceId: id });
+      const row = connection.prepare<[string], Row>('SELECT * FROM workspaces WHERE id = ?').get(id);
+      if (row === undefined) throw kernelProblem('NOT_FOUND', `There is no workspace ${id}.`, { workspaceId: id });
+      if (row.open === 1) throw kernelProblem('VALIDATION_FAILED', 'An open workspace is closed before it is deleted.', { workspaceId: id });
+      return { id: row.id, name: row.name, path: row.path };
+    },
+    // Forgets a workspace whose rows the caller's transaction deletes.
+    forget(id: string): void {
+      connection.prepare('DELETE FROM workspaces WHERE id = ?').run(id);
+      closed.delete(id);
+    },
     closed: (): readonly string[] => [...closed],
     // Opens a folder: Home for Home's own folder, the existing workspace for an open path, the remembered one for a
     // closed path, or a new one; `firstOpened` runs in the same transaction as a new workspace's row.

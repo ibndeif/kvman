@@ -16,8 +16,8 @@ const common = {
   instructions: z.string().refine((text) => Buffer.byteLength(text, 'utf8') <= instructionsLimit, 'Instructions hold at most 16 KB.'),
 };
 
-/** A worker that runs a subagent: a child session with its own connectors, model, and thinking. */
-export const subagentWorkerSchema = z.strictObject({ ...common, kind: z.literal('subagent'), connectors: z.array(z.string()).nullable(), model: z.string().min(1).nullable(), thinking: thinkingSchema.nullable() });
+/** A worker that runs a subagent: a child session with its own connectors, model, and thinking; `readOnly` refuses its helper every call that could change something (ADR 0056, 1). */
+export const subagentWorkerSchema = z.strictObject({ ...common, kind: z.literal('subagent'), readOnly: z.boolean().default(false), connectors: z.array(z.string()).nullable(), model: z.string().min(1).nullable(), thinking: thinkingSchema.nullable() });
 
 // A worker that runs a program on this computer (ADR 0021, 12, 13, and 31): whether a run asks first, how long it may
 // take, and the flags that matter, each `null` to leave its flag out.
@@ -57,9 +57,9 @@ export const isProgram = (worker: Worker): worker is ProgramWorker => worker.kin
 /** The name a program worker's check has among a session's checks (ADR 0021, 37). */
 export const workerCheckName = (name: string): string => `worker:${name}`;
 
-const shipped = (name: string, description: string, instructions: string): SubagentWorker => ({ name, description, enabled: true, kind: 'subagent', instructions, connectors: null, model: null, thinking: null });
+const shipped = (name: string, description: string, instructions: string, readOnly = false): SubagentWorker => ({ name, description, enabled: true, kind: 'subagent', readOnly, instructions, connectors: null, model: null, thinking: null });
 
-/** The workers kvcoder ships with: they differ by their instructions only (ADR 0021, 5). */
+/** The workers kvcoder ships with: they differ by their instructions, and the architect and the reviewer are read-only (ADR 0021, 5; ADR 0056, 1). */
 export const shippedWorkers: SubagentWorker[] = [
   shipped('general', 'Any separate, self-contained task', ''),
   shipped(
@@ -71,6 +71,7 @@ export const shippedWorkers: SubagentWorker[] = [
     'architect',
     'Studies the code and proposes a design',
     "You are a software architect. Read the code the task touches before you propose anything. Return a design: the parts, their responsibilities, the shapes that pass between them, the trade-offs you weighed, and the risks. Prefer the simplest design that fits the project's conventions. Don't edit the project's files.",
+    true,
   ),
   shipped(
     'tester',
@@ -81,6 +82,7 @@ export const shippedWorkers: SubagentWorker[] = [
     'reviewer',
     'Reviews changes with a fresh look',
     "You are a code reviewer. Read the changes the task names, and the code around them. Report defects by severity, each with its file and line, what is wrong, and what you expect instead: correctness first, then security, then the project's conventions. Say so when you find nothing. Don't edit the project's files.",
+    true,
   ),
 ];
 

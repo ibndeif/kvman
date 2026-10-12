@@ -1,4 +1,4 @@
-import { kernelQuerySchemas, z, type Json, type PresetState, type Problem, type Workspace } from '@kvman/sdk';
+import { kernelQuerySchemas, z, type Json, type PresetState, type ClosedWorkspace, type Problem, type Workspace } from '@kvman/sdk';
 import ar from '../../../locales/ar.json';
 import en from '../../../locales/en.json';
 import { createFakeJobs, type FakeJob, type FakeJobs } from './fake-jobs.ts';
@@ -48,6 +48,7 @@ export type FakeApi = {
   calls: Call[];
   handlers: Map<string, Handler>;
   workspaces: Workspace[];
+  closedWorkspaces: ClosedWorkspace[];
   extensions: ExtensionInfo[];
   // The stored preset; while it is `undefined`, it is the loaded extensions' own bundled preset.
   preset: PresetState | undefined;
@@ -87,6 +88,7 @@ export function createFakeApi(options: { home?: string; extensions?: ExtensionIn
     calls: [],
     handlers: new Map(),
     workspaces: [{ id: 'home', name: 'ahmed', path: '/home/ahmed' }],
+    closedWorkspaces: [],
     extensions: options.extensions ?? [],
     preset: undefined,
     settings: [...baseSettings(options.home ?? 'kvwebui.extensions'), ...(options.settings ?? [])],
@@ -174,6 +176,12 @@ function installKernelHandlers(api: FakeApi): void {
     return { file, restartRequired: true };
   });
   api.handlers.set('kernel.workspace.list', () => api.workspaces);
+  api.handlers.set('kernel.workspace.closed.list', () => api.closedWorkspaces);
+  api.handlers.set('kernel.workspace.delete', (input) => {
+    const id = record(input)['workspaceId'];
+    api.closedWorkspaces = api.closedWorkspaces.filter((workspace) => workspace.id !== id);
+    return {};
+  });
   api.handlers.set('kernel.settings.list', (_input, workspaceId) => api.settings.map((spec) => resolved(api, spec, workspaceId)));
   api.handlers.set('kernel.settings.set', (input, workspaceId) => {
     const { key, value, scope } = settingSetSchema.parse(input);

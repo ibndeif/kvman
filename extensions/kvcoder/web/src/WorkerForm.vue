@@ -77,8 +77,12 @@ function submit(): void {
       <span v-if="problems.instructions !== undefined" class="kvc-form-error" role="alert" data-test="worker-instructions-error">{{ kvman.t(problems.instructions) }}</span>
       <span v-else class="kvc-muted">{{ text('instructionsHint') }}</span>
     </label>
-    <WorkerProgramFields v-if="draft.kind !== 'subagent'" v-model:draft="draft" :minutes-problem="problems.minutes" :approval-problem="problems.approval" />
+    <WorkerProgramFields v-if="draft.kind !== 'subagent'" :draft="draft" :minutes-problem="problems.minutes" :approval-problem="problems.approval" />
     <template v-else>
+    <label class="kvc-form-field">
+      <span class="kvc-form-radio"><input v-model="draft.readOnly" type="checkbox" data-test="worker-read-only" />{{ text('readOnly') }}</span>
+      <span class="kvc-muted">{{ text('readOnlyHint') }}</span>
+    </label>
     <fieldset class="kvc-form-choice">
       <legend class="kvc-form-label">{{ text('connectors') }}</legend>
       <label class="kvc-form-radio">

@@ -12,7 +12,7 @@ function catalog(language: string): Record<string, string> {
   return catalogSchema.parse(JSON.parse(readFileSync(path.join(kvaiFolder, 'locales', `${language}.json`), 'utf8')));
 }
 
-const codes = ['SIGNIN_EXPIRED', 'SIGNIN_UNSUPPORTED', 'SIGNIN_FAILED', 'SIGNIN_NOT_WAITING', 'KEY_MISSING', 'NO_MODEL', 'MODEL_UNKNOWN', 'RATE_LIMITED', 'CONTEXT_TOO_LONG', 'PROVIDER_ERROR', 'PROVIDER_UNKNOWN', 'BUILT_IN', 'KEY_UNSUPPORTED'];
+const codes = ['SIGNIN_EXPIRED', 'SIGNIN_UNSUPPORTED', 'SIGNIN_FAILED', 'SIGNIN_NOT_WAITING', 'KEY_MISSING', 'NO_MODEL', 'MODEL_UNKNOWN', 'RATE_LIMITED', 'USAGE_LIMIT', 'REFUSED', 'CONTEXT_TOO_LONG', 'PROVIDER_ERROR', 'PROVIDER_UNKNOWN', 'BUILT_IN', 'KEY_UNSUPPORTED'];
 
 // The top-level fields of a JSON Schema object, or of each object in its `anyOf`.
 const schemaSchema = z.object({

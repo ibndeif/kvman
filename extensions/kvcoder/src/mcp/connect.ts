@@ -26,8 +26,8 @@ async function open(ctx: Ctx, server: McpServer, secrets: Record<string, string>
   // The client's class declares `sessionId` as `string | undefined`, which its own `Transport` doesn't take under
   // `exactOptionalPropertyTypes`; it is the transport the client is written for.
   // A server the person signed in to is called with its tokens, which are refreshed when they have expired.
-  const redirectUrl = await registeredRedirect(ctx, server.name);
-  const signedIn = redirectUrl === undefined ? {} : { authProvider: oauthProvider(ctx, server.name, { redirectUrl, step: 'call' }) };
+  const redirectUrl = await registeredRedirect(ctx, server.name, server.url);
+  const signedIn = redirectUrl === undefined ? {} : { authProvider: oauthProvider(ctx, server.name, server.url, { redirectUrl, step: 'call' }) };
   const transport: Transport = new StreamableHTTPClientTransport(new URL(server.url), { requestInit: { headers: secrets }, ...signedIn }) as Transport;
   return { transport };
 }

@@ -12,7 +12,7 @@ const reads = (fake: ReturnType<typeof createFakeKvman>) => fake.calls.filter((c
 const problem = (code: string) => Object.assign(new Error(code), { problem: { code, message: code } });
 
 describe('an answer is felt at once (08 §8.5, ADR 0009, 141)', () => {
-  it('QA3-H2 the card is gone before the answer returns, and the next step shows as soon as it does', async () => {
+  it('QA3-H2 / E132 the card stays busy until ACK, and the next step shows as soon as it does', async () => {
     const fake = createFakeKvman();
     const world = waiting([confirm]);
     serve(fake, world);
@@ -21,8 +21,9 @@ describe('an answer is felt at once (08 §8.5, ADR 0009, 141)', () => {
     const wrapper = await mounted(ConversationView, fake, { sessionId: 's1' });
     await wrapper.find('[data-test="answer-yes"]').trigger('click');
     await flushPromises();
-    expect(wrapper.find('[data-test="question-card"]').exists()).toBe(false);
-    expect(wrapper.text()).not.toContain('Go on?');
+    expect(wrapper.find('[data-test="question-card"]').attributes('aria-busy')).toBe('true');
+    expect(wrapper.find('[data-test="answer-yes"]').attributes('disabled')).toBeDefined();
+    expect(wrapper.text()).toContain('Go on?');
 
     const before = reads(fake);
     world.found = session({ status: 'running', stepJobId: 'j2' });

@@ -5,7 +5,7 @@ import { z } from '@kvman/sdk';
 import { openGate } from './support/gates.ts';
 import { wait } from './support/wait.ts';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { command, runs, says, shell, toolResults } from './support/model-script.ts';
+import { answered, command, runs, says, shell, toolResults } from './support/model-script.ts';
 import { kvcoderChunks, newSession, sendStreamed, turnState } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
@@ -13,12 +13,12 @@ const kvcoder = useKvcoder();
 const pendingSchema = z.array(z.object({ questionId: z.string() }));
 
 describe('a turn (08 §8.1–8.3)', { timeout: 30_000 }, () => {
-  it('M2.4-H1 a shell call and a connector command run in parallel, a question suspends the turn, and the answer continues it', async () => {
+  it("M2.4-H1 a shell call and a connector command run in the model's order, a question suspends the turn, and the answer continues it", async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
     const marker = path.join(kernel.homeFolder, 'shell-ran');
     const gate = openGate('h1');
-    fake.reply(runs(command('todo', 'wait', {"gate":"h1","text":"a"}), shell(`touch shell-ran && echo hi`), command('ask', 'text', {"prompt":"Name?"})), says('done'));
+    fake.reply(runs(shell(`touch shell-ran && echo hi`), command('todo', 'wait', {"gate":"h1","text":"a"}), command('ask', 'text', {"prompt":"Name?"})), says('done'));
 
     const sent = sendStreamed(kernel, sessionId, 'go');
     await gate.waiting;
@@ -38,7 +38,7 @@ describe('a turn (08 §8.1–8.3)', { timeout: 30_000 }, () => {
     const { jobId } = await kernel.exec('kvcoder.question.answer', { questionId, answer: { text: 'Ada' } });
     expect(jobId).toEqual(expect.any(String));
     await kernel.clock.advance(0);
-    expect(toolResults(fake)).toEqual(['{"text":"a"}', 'hi\n[exit code 0]', '{"text":"Ada"}']);
+    expect(toolResults(fake)).toEqual(['hi\n[exit code 0]', '{"text":"a"}', answered('{"text":"Ada"}')]);
     const done = await turnState(kernel, sessionId);
     expect(done.session).toMatchObject({ status: 'idle' });
     expect(done.turn).toMatchObject({ outcome: 'done', steps: 2, pending: [] });

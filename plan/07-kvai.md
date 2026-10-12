@@ -36,9 +36,11 @@ kvai.complete {
   | `kvai/KEY_MISSING` | A built-in provider has neither an API key nor a sign-in (ADR 0009, 53 and 228). |
   | `kvai/NO_MODEL` | No `model` was given and `kvai.defaultModel` is `null`. |
   | `kvai/MODEL_UNKNOWN` | No such model. |
+  | `kvai/USAGE_LIMIT` | The account reached its usage or quota limit (`{ model }`); never retried (ADR 0050). |
+  | `kvai/REFUSED` | The provider declined the request for its content (`{ model }`); never retried (ADR 0050). |
   | `kvai/RATE_LIMITED` | The provider rate-limited the call. |
   | `kvai/CONTEXT_TOO_LONG` | The context doesn't fit the model. |
-  | `kvai/PROVIDER_ERROR` | Any other provider failure, including a failed delegate call (its code in `params.cause`). `params.transient` says whether a second try may fix it: an HTTP 408, 409, 425, or 5xx, overloaded or unavailable, a timeout, a dropped or refused connection, or a DNS failure; `kvai/RATE_LIMITED` is always transient (ADR 0009, 154 and 203). |
+  | `kvai/PROVIDER_ERROR` | Any other provider failure, including a failed delegate call (its code in `params.cause`). `params.transient` says whether a second try may fix it: an HTTP 408, 409, 425, or 5xx, overloaded or unavailable, a timeout, a dropped or refused connection, a stream that ended early (ADR 0050), or a DNS failure; `kvai/RATE_LIMITED` is always transient (ADR 0009, 154 and 203). |
   | `kvai/PROVIDER_UNKNOWN` | `kvai.model.add` or a provider command names no known provider (ADR 0009, 55). |
   | `kvai/SIGNIN_EXPIRED` | A provider connected by sign-in refused to refresh it (`params.provider`); not transient: the person signs in again (ADR 0009, 235). |
   | `kvai/SIGNIN_UNSUPPORTED` | `kvai.provider.signin.start` names a provider with no sign-in (ADR 0009, 230). |

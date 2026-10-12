@@ -9,6 +9,7 @@ describe('the conversation streams a step (08 §8.7, ADR 0009, 99)', () => {
     const fake = createFakeKvman();
     const world = { found: session({ status: 'running', stepJobId: 'j1' }), messages: [user('go')], omitted: 0, turns: [turn()] };
     serve(fake, world);
+    fake.handle('kvcoder.session.get', input => input['sessionId'] === 'child' ? session({ id: 'child', parentId: 's1', title: 'Helper task', status: 'running', stepJobId: 'cj1' }) : world.found);
     const wrapper = await mounted(ConversationView, fake, { sessionId: 's1' });
 
     fake.emit('j1', progress('@kvman/kvai', { type: 'thinking', delta: 'Let me see' }));

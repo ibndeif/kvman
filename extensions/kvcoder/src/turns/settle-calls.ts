@@ -1,14 +1,15 @@
 import type { Ctx, Stored } from '@kvman/sdk';
-import { startChild } from '../connectors/delegate.ts';
-import { dropRun, launchRun } from '../delegate/runs.ts';
+import { dropRun } from '../delegate/runs.ts';
+import { startPending } from '../delegate/start-pending.ts';
 import { firePoint } from '../registry/session-points.ts';
 import type { HeldResult, JsonValue, Pending, SessionDoc, TurnDoc } from '../schemas/records.ts';
 import { now } from '../sessions/session-lookup.ts';
 import { records, txRecords, type TxRecords } from '../store/collections.ts';
-import { endTurn } from './end-turn.ts';
 import { appendMessage, appendQueued } from './history.ts';
 import type { CallOutcome, ToolCall } from './run-calls.ts';
-import { queueStep } from './start-turn.ts';
+import type { StepLease } from './step-claim.ts';
+import { liveStep, settleStep } from './step-intents.ts';
+import { advanceStep, dispatchNext } from './step-next.ts';
 
 // After a reply's calls (plan 08 §8.2): with nothing pending, the results are appended in the model's call order and
 // the next step is queued; otherwise the session waits, holding the results so far, its questions recorded in the same
@@ -34,22 +35,7 @@ export function appendResults(store: TxRecords, session: Stored<SessionDoc>, tur
   }
 }
 
-/** The running turn inside a transaction, if `turnId` still is it. */
-export function liveTurn(store: TxRecords, sessionId: string, turnId: string): { session: Stored<SessionDoc>; turn: Stored<TurnDoc> } | undefined {
-  const session = store.sessions.get(sessionId);
-  const turn = store.turns.get(turnId);
-  if (session?.turnId !== turnId || turn === undefined || turn.outcome !== null) return undefined;
-  return { session, turn };
-}
-
-/** Queues the next step, or ends the turn at `kvcoder.maxSteps` (ADR 0009, 102). */
-export async function continueTurn(ctx: Ctx, sessionId: string, turnId: string, maxSteps: number | null): Promise<void> {
-  const turn = await records(ctx.store).turns.get(turnId);
-  if (turn !== undefined && maxSteps !== null && turn.steps >= maxSteps) await endTurn(ctx, sessionId, turnId, 'maxSteps', 'step', { code: 'MAX_STEPS', params: { steps: maxSteps } });
-  else await queueStep(ctx, sessionId, turnId, true);
-}
-
-function pendingOf(store: TxRecords, sessionId: string, rootSessionId: string, turnId: string, toolCallId: string, outcome: Exclude<CallOutcome, { kind: 'result' }>): Pending {
+function pendingOf(store: TxRecords, sessionId: string, rootSessionId: string, turnId: string, toolCallId: string, outcome: Exclude<CallOutcome, { kind: 'result' | 'deferred' }>): Pending {
   if (outcome.kind === 'subagent') return { toolCallId, kind: 'subagent', questionId: null, question: null, childSessionId: outcome.childSessionId, runId: null };
   if (outcome.kind === 'worker') return { toolCallId, kind: 'worker', questionId: null, question: null, childSessionId: null, runId: outcome.runId };
   const question = store.questions.insert({ sessionId, rootSessionId, turnId, toolCallId, kind: outcome.questionKind, question: outcome.question });
@@ -57,28 +43,32 @@ function pendingOf(store: TxRecords, sessionId: string, rootSessionId: string, t
   return { toolCallId, kind: outcome.questionKind === 'approval' ? 'approval' : 'question', questionId: question.id, question: shown, childSessionId: null, runId: null };
 }
 
-export async function settleCalls(ctx: Ctx, sessionId: string, turnId: string, calls: readonly ToolCall[], outcomes: readonly CallOutcome[], maxSteps: number | null): Promise<void> {
+export async function settleCalls(ctx: Ctx, lease: StepLease, calls: readonly ToolCall[], outcomes: readonly CallOutcome[], maxSteps: number | null): Promise<void> {
+  const { sessionId, turnId } = lease;
   const order: Calls = calls.map((call) => ({ toolCallId: call.id, toolName: call.name }));
   const held = outcomes.flatMap((outcome) => (outcome.kind === 'result' ? [outcome.held] : []));
   if (held.length === outcomes.length) {
-    const live = await ctx.store.transaction((tx) => {
+    const next = await ctx.store.transaction((tx) => {
       const store = txRecords(tx);
-      const found = liveTurn(store, sessionId, turnId);
-      if (found === undefined) return false;
+      const found = liveStep(store, lease, lease.jobId);
+      if (found === undefined) return undefined;
       appendResults(store, found.session, turnId, order, held);
       appendQueued(store, found.session, turnId);
-      return true;
+      return advanceStep(store, lease, maxSteps);
     });
-    if (live) await continueTurn(ctx, sessionId, turnId, maxSteps);
+    await dispatchNext(ctx, next);
     return;
   }
   const rootSessionId = (await rootOf(ctx, sessionId)) ?? sessionId;
   const pending = await ctx.store.transaction((tx) => {
     const store = txRecords(tx);
-    if (liveTurn(store, sessionId, turnId) === undefined) return undefined;
-    const items = outcomes.flatMap((outcome, index) => (outcome.kind === 'result' ? [] : [pendingOf(store, sessionId, rootSessionId, turnId, calls[index]?.id ?? '', outcome)]));
-    store.turns.update(turnId, { calls: order, pending: items, results: held });
-    store.sessions.update(sessionId, { status: 'waiting', stepJobId: null, updatedAt: now() });
+    if (liveStep(store, lease, lease.jobId) === undefined) return undefined;
+    const items = outcomes.flatMap((outcome, index) => (outcome.kind === 'result' || outcome.kind === 'deferred' ? [] : [pendingOf(store, sessionId, rootSessionId, turnId, calls[index]?.id ?? '', outcome)]));
+    // Effects held back behind an approval wait with the turn, and run in the model's order when it resumes (ADR 0046).
+    const deferredCalls = outcomes.flatMap((outcome, index) => (outcome.kind === 'deferred' ? [{ toolCallId: calls[index]?.id ?? '', call: outcome.call }] : []));
+    store.turns.update(turnId, { calls: order, pending: items, results: held, deferredCalls });
+    settleStep(store, lease, lease.jobId);
+    store.sessions.update(sessionId, { status: 'waiting', stepJobId: null, stepIntentId: null, updatedAt: now() });
     return items;
   });
   if (pending === undefined) {
@@ -86,9 +76,13 @@ export async function settleCalls(ctx: Ctx, sessionId: string, turnId: string, c
     return;
   }
   for (const item of pending) {
+    const current = await ctx.store.transaction(tx => {
+      const store = txRecords(tx);
+      return store.sessions.get(sessionId)?.turnId === turnId && store.turns.get(turnId)?.pending.some(saved => saved.toolCallId === item.toolCallId);
+    });
+    if (!current) continue;
     if (item.questionId !== null) ctx.job.progress({ type: 'component', component: 'kvcoder.question', props: { questionId: item.questionId, sessionId, pending: item } });
-    if (item.childSessionId !== null) await startChild(ctx, item.childSessionId);
-    if (item.runId !== null) await launchRun(ctx, item.runId);
+    if (item.childSessionId !== null || item.runId !== null) await startPending(ctx, { sessionId, turnId, pending: item });
   }
   for (const kind of new Set(pending.map((item) => item.kind))) await firePoint(ctx, 'kvcoder.session.waiting', { sessionId, kind });
 }

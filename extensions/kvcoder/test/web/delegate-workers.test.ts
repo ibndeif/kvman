@@ -54,7 +54,7 @@ describe("the delegate connector's workers in its dialog (08 §8.7, ADR 0021, 6,
     expect(row(view, 'reviewer').find('[data-test="worker-switch"]').attributes('aria-checked')).toBe('false');
   });
 
-  it('QA31-H14 adding a worker writes the list with the new entry last, and says so', async () => {
+  it('QA31-H14 / E173 adding a worker, read-only ticked, writes the list with the new entry last, and says so', async () => {
     const fake = world();
     const view = await mounted(DelegateWorkers, fake);
     await flushPromises();
@@ -62,6 +62,8 @@ describe("the delegate connector's workers in its dialog (08 §8.7, ADR 0021, 6,
     await flushPromises();
     expect(part(view, 'worker-form-title').text()).toBe('Add a worker');
     await fill(view, { name: 'writer', description: 'Writes the docs', instructions: 'You write docs.', thinking: 'low' });
+    expect((part(view, 'worker-read-only').element as HTMLInputElement).checked).toBe(false);
+    await part(view, 'worker-read-only').setValue(true);
     await part(view, 'worker-connectors-some').setValue(true);
     expect(view.findAll('[data-test^="worker-connector-"]').map((box) => box.attributes('data-test'))).toEqual(['shell', 'fs', 'artifact', 'background', 'ask', 'mcp', 'todo'].map((name) => `worker-connector-${name}`));
     await part(view, 'worker-connector-fs').setValue(true);
@@ -69,7 +71,7 @@ describe("the delegate connector's workers in its dialog (08 §8.7, ADR 0021, 6,
     await part(view, 'worker-model').find('[data-test="model-zed/z1"]').trigger('click');
     await part(view, 'worker-form').trigger('submit');
     await flushPromises();
-    const writer = { name: 'writer', description: 'Writes the docs', enabled: true, kind: 'subagent', instructions: 'You write docs.', connectors: ['fs'], model: 'zed/z1', thinking: 'low' };
+    const writer = { name: 'writer', description: 'Writes the docs', enabled: true, kind: 'subagent', readOnly: true, instructions: 'You write docs.', connectors: ['fs'], model: 'zed/z1', thinking: 'low' };
     expect(written(fake)).toEqual([{ key, value: [general, reviewer, writer], scope: 'global' }]);
     expect(fake.toast.mock.calls).toEqual([['kvcoder.config.workers.saved', { name: 'writer' }, 'success']]);
     expect(view.findAll('[data-test="worker-name"]').map((name) => name.text())).toEqual(['general', 'reviewer', 'writer']);
@@ -95,7 +97,7 @@ describe("the delegate connector's workers in its dialog (08 §8.7, ADR 0021, 6,
     await part(view, 'worker-model').find('[data-test="model-none-entry"]').trigger('click');
     await part(view, 'worker-form').trigger('submit');
     await flushPromises();
-    expect(written(fake)).toEqual([{ key, value: [general, { ...reviewer, connectors: null, model: null, thinking: null }], scope: 'global' }]);
+    expect(written(fake)).toEqual([{ key, value: [general, { ...reviewer, readOnly: false, connectors: null, model: null, thinking: null }], scope: 'global' }]);
   });
 
   it('QA31-H16 Remove asks first; confirmed, it writes the list without the worker', async () => {

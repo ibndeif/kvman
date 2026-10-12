@@ -23,7 +23,7 @@ Input:
 
 Output: `{ message: AssistantMessage, stopReason: 'stop' | 'length' | 'toolUse', usage: { input, output, cacheRead, cacheWrite, cost } }`. The message keeps `role`, `content`, `api`, `provider`, `model`, `responseId?`, `usage`, `stopReason`, and `timestamp`.
 
-While the call runs, kvai reports `{ type: 'text' | 'thinking', delta }` and `{ type: 'toolcall', name, arguments? }` through the job's progress as `{ source: '@kvman/kvai', data }`. Cancelling the job aborts the provider call. Failures are Problems: `kvai/KEY_MISSING`, `kvai/RATE_LIMITED`, `kvai/CONTEXT_TOO_LONG`, `kvai/PROVIDER_ERROR` (with `params.transient`), and the sign-in codes. The harness decides whether to call again.
+While the call runs, kvai reports `{ type: 'text' | 'thinking', delta }` and `{ type: 'toolcall', name, arguments? }` through the job's progress as `{ source: '@kvman/kvai', data }`. Cancelling the job aborts the provider call. Failures are Problems: `kvai/KEY_MISSING`, `kvai/RATE_LIMITED`, `kvai/USAGE_LIMIT` (the account is out of usage or quota), `kvai/REFUSED` (the provider declined the request for its content), `kvai/CONTEXT_TOO_LONG`, `kvai/PROVIDER_ERROR` (with `params.transient`), and the sign-in codes. The harness decides whether to call again.
 
 ## Listing and choosing models
 

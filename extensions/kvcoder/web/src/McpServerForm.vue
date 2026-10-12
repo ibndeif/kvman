@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { Plus, X } from '@lucide/vue';
-import { computed, reactive, ref } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { useKvman } from './kvman.ts';
-import { draftOf, draftProblems, entryOf, kindOf, secretChanges, type DraftField, type McpServerEntry } from './mcp-server-entry.ts';
+import { destinationChanged, draftOf, draftProblems, entryOf, kindOf, secretChanges, type DraftField, type McpServerEntry } from './mcp-server-entry.ts';
 import type { SecretChanges } from './use-mcp-servers.ts';
 
 // The form that adds or edits one MCP server (plan 08 §8.7, ADR 0020, 6 and 15). A variable's or header's value is
@@ -14,6 +14,13 @@ const draft = reactive(draftOf(props.entry, props.secrets));
 const problems = ref<Partial<Record<DraftField, string>>>({});
 const kind = computed(() => kindOf(draft));
 const text = (key: string): string => kvman.t(`kvcoder.config.mcp.form.${key}`);
+
+// A stored value was typed for the server's old command or address: once that changes, it must be typed again, and
+// isn't sent to the new one (ADR 0056, 8).
+const moved = computed(() => destinationChanged(draft, props.entry));
+watch(moved, (changed) => {
+  if (changed) for (const value of draft.values) if (value.set) value.replacing = true;
+});
 
 // A server's name is fixed once it is saved: its secrets are kept under it.
 const editing = props.entry !== undefined;
@@ -75,6 +82,7 @@ function runAs(next: 'command' | 'url'): void {
     <div class="kvc-form-field" data-test="mcp-values">
       <span class="kvc-form-label">{{ text(kind) }}</span>
       <span class="kvc-muted">{{ text('secretsHint') }}</span>
+      <span v-if="moved" class="kvc-muted" role="status" data-test="mcp-moved">{{ text('moved') }}</span>
       <div v-for="(value, index) in draft.values" :key="index" class="kvc-form-value" data-test="mcp-value">
         <input v-model="value.name" type="text" dir="ltr" class="kvc-field kvc-mono" :disabled="value.set" :placeholder="text(`valueName.${kind}`)" :aria-label="text(`valueName.${kind}`)" spellcheck="false" autocomplete="off" data-test="mcp-value-name" />
         <span v-if="value.set && !value.replacing" class="kvc-form-set">

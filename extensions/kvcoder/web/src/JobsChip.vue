@@ -8,6 +8,7 @@ import { useJobs } from './use-jobs.ts';
 // The Running chip (plan 08 §8.7, ADR 0009, 153): `● 2 running` while the chat has background jobs running, opening a
 // list of its jobs. It stays while the list is open, so a job that ends shows how.
 const props = defineProps<{ sessionId: string; stamp: string }>();
+const emit = defineEmits<{ running: [count: number] }>();
 const kvman = useKvman();
 const open = ref(false);
 const trigger = useTemplateRef<HTMLButtonElement>('trigger');
@@ -22,6 +23,8 @@ function outside(event: Event): void {
   if (event.target instanceof Node && !trigger.value?.parentElement?.contains(event.target)) open.value = false;
 }
 
+// The conversation says whether Stop leaves background jobs running (ADR 0049, 4).
+watch(() => running.value.length, (count) => emit('running', count), { immediate: true });
 onMounted(load);
 watch(() => [props.sessionId, props.stamp], load);
 watch(open, (isOpen) => (isOpen ? document.addEventListener('pointerdown', outside) : document.removeEventListener('pointerdown', outside)));
@@ -34,7 +37,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', outside));
       <span class="kvc-dot" aria-hidden="true" />{{ kvman.t('kvcoder.ui.jobs.running', { count: running.length }) }}<ChevronDown :size="16" aria-hidden="true" />
     </button>
     <div v-if="open" class="kvc-popover kvc-jobs-panel" role="dialog" :aria-label="kvman.t('kvcoder.ui.jobs.title')" data-test="jobs-popover" @keydown.esc.stop="close">
-      <JobItem v-for="job in jobs" :key="job.id" :job="job" :now="now" :logs="logs[job.id]" :stopping="stopping.has(job.id)" @stop="stop(job.id)" @logs="toggleLogs(job.id)" />
+      <JobItem v-for="job in jobs" :key="job.id" :session-id="props.sessionId" :job="job" :now="now" :logs="logs[job.id]" :stopping="stopping.has(job.id)" @stop="stop(job.id)" @logs="toggleLogs(job.id)" />
     </div>
   </div>
 </template>

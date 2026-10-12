@@ -23,7 +23,7 @@ function webKeys(): string[] {
 }
 
 const codes = ['NAME_TAKEN', 'QUESTION_NOT_FOUND', 'SESSION_NOT_FOUND', 'SESSION_BUSY', 'JOB_NOT_FOUND', 'MCP_SERVER_NOT_FOUND', 'MCP_CONNECT_FAILED', 'MCP_SIGN_IN_NEEDED', 'MCP_SIGN_IN_FAILED', 'WORKER_NOT_FOUND', 'SUMMARY_EMPTY'];
-const notices = ['CANCELLED', 'INTERRUPTED', 'STEP_FAILED', 'MAX_STEPS', 'SUMMARY_FAILED', 'REPLY_LOST'];
+const notices = ['CANCELLED', 'INTERRUPTED', 'STEP_FAILED', 'MAX_STEPS', 'SUMMARY_FAILED', 'REPLY_LOST', 'REPLY_INCOMPLETE'];
 const dynamic = [
   ...['idle', 'running', 'waiting'].map((status) => `kvcoder.ui.status.${status}`),
   ...['off', 'minimal', 'low', 'medium', 'high'].map((level) => `kvcoder.ui.thinkingLevels.${level}`),
@@ -68,10 +68,15 @@ describe("kvcoder's catalogs (02 §2.11)", { timeout: 30_000 }, () => {
     expect(needed.filter((key) => en[key] === undefined)).toEqual([]);
   });
 
+  it('E81 interruption copy explicitly warns about unknown effects, no replay and a fresh request in both languages', () => {
+    expect(catalog('en')['kvcoder.notices.INTERRUPTED']).toBe('This turn was interrupted. Its effects may be unknown; the old step will not be replayed automatically. Send a new message to continue.');
+    expect(catalog('ar')['kvcoder.notices.INTERRUPTED']).toBe('انقطعت هذه الجولة. قد تكون آثارها غير معروفة؛ لن تُعاد الخطوة القديمة تلقائيًا. أرسل رسالة جديدة للمتابعة.');
+  });
+
   it('QA10-E9 en and ar have the recovery texts, and the job list keeps its exit-code text', () => {
     for (const language of ['en', 'ar'] as const) {
       const texts = catalog(language);
-      for (const key of ['kvcoder.ui.retry', 'kvcoder.ui.chooseAnotherModel', 'kvcoder.ui.continueText', 'kvcoder.ui.exitCode']) expect(texts[key], `${language} ${key}`).toBeTypeOf('string');
+      for (const key of ['kvcoder.ui.retry', 'kvcoder.ui.chooseAnotherModel', 'kvcoder.ui.exitCode']) expect(texts[key], `${language} ${key}`).toBeTypeOf('string');
     }
   });
 
@@ -97,7 +102,7 @@ describe("kvcoder's catalogs (02 §2.11)", { timeout: 30_000 }, () => {
     const en = catalog('en');
     const ar = catalog('ar');
     const added = Object.keys(en).filter((key) => key.startsWith('kvcoder.config.workers.') || key.startsWith('kvcoder.delegate.'));
-    expect(added).toHaveLength(64);
+    expect(added).toHaveLength(67);
     for (const key of [...added, 'kvcoder.config.connector.delegate', 'kvcoder.errors.WORKER_NOT_FOUND']) {
       expect(ar[key], key).toBeTruthy();
       expect(placeholders(ar[key] ?? ''), key).toEqual(placeholders(en[key] ?? ''));

@@ -77,13 +77,13 @@ describe("the rules of a worker's child and of the workers setting (08 §8.5, AD
     expect(toolResults(fake, 3)).toEqual(['child done']);
   });
 
-  it("QA31-E10 a worker's unknown model fails its child, and the call returns subagent ended failed", async () => {
+  it("QA31-E10 / E151 a worker's unknown model fails its child, and the call returns subagent ended failed with the code", async () => {
     const { kernel, fake } = await kvcoder.start({ settings: workers(worker('lost', { model: 'fake/none' })) });
     const sessionId = await newSession(kernel);
     fake.reply(runs(delegate('lost')), says('parent done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
-    expect(toolResults(fake)).toEqual(['subagent ended failed\n']);
+    expect(toolResults(fake)).toEqual(['subagent ended failed: kvai/MODEL_UNKNOWN']);
     expect(shippedWorkers.every((entry) => entry.model === null)).toBe(true);
   });
 });

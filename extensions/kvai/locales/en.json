@@ -16,6 +16,8 @@
   "kvai.errors.NO_MODEL": "No model was given, and no default model is set.",
   "kvai.errors.MODEL_UNKNOWN": "There's no model {model}.",
   "kvai.errors.RATE_LIMITED": "The provider of {model} is limiting calls. Try again later.",
+  "kvai.errors.USAGE_LIMIT": "The account used for {model} has reached its usage limit. Try again after it resets, or choose another model.",
+  "kvai.errors.REFUSED": "The provider of {model} declined this request. Rephrase it, or choose another model.",
   "kvai.errors.CONTEXT_TOO_LONG": "The conversation is too long for {model}.",
   "kvai.errors.PROVIDER_ERROR": "The call to {model} failed.",
   "kvai.errors.PROVIDER_UNKNOWN": "There's no provider {provider}.",

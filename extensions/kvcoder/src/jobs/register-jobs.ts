@@ -14,6 +14,7 @@ const rowSchema = z.object({
   startedAt: z.string(),
   endedAt: z.string().exactOptional(),
   exitCode: z.number().int().exactOptional(),
+  staging: z.object({ state: z.enum(['changed', 'restored']), paths: z.number().int(), headMoved: z.boolean() }).exactOptional(),
   links: z.array(z.string()),
 });
 

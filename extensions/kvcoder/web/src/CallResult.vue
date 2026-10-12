@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { File, Folder } from '@lucide/vue';
 import { computed, ref } from 'vue';
-import { editResult, listResult, readResult, searchResult } from './call-results.ts';
+import { editResult, listResult, readResult, runResult, searchResult } from './call-results.ts';
 import { sizeText } from './call-summary.ts';
 import { callKind, type CallView } from './call-view.ts';
 import { fieldValue } from './field-rows.ts';
@@ -10,10 +10,11 @@ import FoldButton from './FoldButton.vue';
 import FoldedLines from './FoldedLines.vue';
 import FoldedOutput from './FoldedOutput.vue';
 import { useKvman } from './kvman.ts';
+import RunOutput from './RunOutput.vue';
 import { folded, numberedLines } from './shown-lines.ts';
 
 // What a call returned, by its kind (ADR 0036, 3): an edit's count, a read's numbered lines, a list's rows, a search's
-// matches under each file, a helper's answer in Markdown. Any other result that is JSON shows as fields, and the rest as text.
+// matches under each file, a helper's answer in Markdown, a background run's row and output (ADR 0062, 2). Any other result that is JSON shows as fields, and the rest as text.
 const props = defineProps<{ view: CallView; output: string; result?: unknown }>();
 const kvman = useKvman();
 const kind = computed(() => callKind(props.view));
@@ -21,6 +22,7 @@ const edited = computed(() => (kind.value === 'edit' ? editResult(props.result) 
 const read = computed(() => (kind.value === 'read' ? readResult(props.result) : undefined));
 const entries = computed(() => (kind.value === 'list' ? listResult(props.result) : undefined));
 const files = computed(() => (kind.value === 'search' ? searchResult(props.result) : undefined));
+const run = computed(() => (kind.value === 'run-output' ? runResult(props.result) : undefined));
 const allEntries = ref(false);
 const shownEntries = computed(() => folded(entries.value ?? [], allEntries.value));
 const answer = computed(() => ({ type: 'markdown' as const, text: 'kvcoder.markdown', params: { text: props.output } }));
@@ -45,6 +47,7 @@ const asFields = computed(() => kind.value !== 'line' && typeof props.result ===
     </div>
   </template>
   <template v-else-if="kind === 'write' && asFields" />
+  <RunOutput v-else-if="run !== undefined" :run="run" />
   <div v-else-if="kind === 'delegate' && props.output !== ''" class="kvc-block" :aria-label="kvman.t('kvcoder.ui.call.answer')" data-test="call-answer"><component :is="kvman.View" :view="answer" /></div>
   <div v-else-if="asFields" class="kvc-block" :aria-label="kvman.t('kvcoder.ui.output')" data-test="call-result-fields"><FieldsView :value="fieldValue(props.result)" /></div>
   <FoldedOutput v-else-if="props.output !== ''" :output="props.output" />

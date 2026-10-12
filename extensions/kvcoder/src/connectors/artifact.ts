@@ -15,7 +15,7 @@ import { edits } from './payload-fields.ts';
 
 /** What the prompt's index says the connector is for. */
 export const artifactDescription =
-  'Show the person something to read or see: a plan, a report, a design, an HTML page, or the localhost address of an app you are running (format url). Use it for anything longer than a few lines instead of pasting it into a reply, and when you write a plan, keep it in the artifact `plan`. The panel runs the page of an HTML artifact in a sandbox where localStorage, sessionStorage, cookies, and indexedDB throw, so a page you show that way must work without them, keeping its state in memory or wrapping each use in try/catch; a url artifact is a normal page on its own address and can use them.';
+  'Show the person something to read or see: a plan, a report, a design, an HTML page, or the localhost address of an app you are running (format url). Use it for anything longer than a few lines instead of pasting it into a reply, and when you write a plan, keep it in the artifact `plan`. The panel runs the page of an HTML artifact in a sandbox where localStorage, sessionStorage, cookies, and indexedDB throw, so a page you show that way must work without them, keeping its state in memory or wrapping each use in try/catch. A form can\'t be submitted there either: make a button act on its click and a field on the Enter key, in JavaScript, and never rely on a form\'s submit. You can\'t press the page\'s buttons yourself, so say that its interaction is unchecked unless you tested it another way. A url artifact is a normal page on its own address and has none of these limits.';
 
 const idMessage = 'An artifact id is lowercase kebab case, such as plan or login-design, up to 50 characters.';
 
@@ -58,7 +58,7 @@ function writeArtifact(ctx: Ctx, chatId: string, input: WriteInput) {
     const existing = artifacts.find({ sessionId: chatId, artifactId: input.id }, { limit: 1 })[0];
     const stamp = now();
     if (existing === undefined) {
-      if (artifacts.count({ sessionId: chatId }) >= artifactCountLimit) throw tooLarge(`The chat holds at most ${artifactCountLimit} artifacts.`, artifactCountLimit);
+      if (artifacts.count({ sessionId: chatId }) >= artifactCountLimit) throw tooLarge(`This chat already has ${artifactCountLimit} artifacts. Update one that exists (artifact list names them), or delete one.`, artifactCountLimit);
       artifacts.insert({ sessionId: chatId, artifactId: input.id, title: input.title, format, content, version: 1, createdAt: stamp, updatedAt: stamp });
       return { id: input.id, version: 1, created: true, bytes: Buffer.byteLength(content) };
     }

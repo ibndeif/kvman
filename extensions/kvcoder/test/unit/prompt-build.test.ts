@@ -54,7 +54,7 @@ describe('the prompt builder (08 §8.2)', () => {
         'Brief the worker with the goal, the facts it needs, its limits, and what to return.',
         'You are the one who decides: connectors and workers are how you act, and the result is yours.',
         'in an artifact, not in a reply.',
-        'The calls of one reply run at the same time, so put independent calls (reads, searches, separate files, separate workers) in one reply, and calls that depend on each other in separate replies.',
+        'In one reply, reads and searches run at the same time, and calls that change something (shell lines, writes, edits) run one after another in the order you give them. So put independent calls (reads, searches, separate files, separate workers) in one reply, and a call that needs another call\'s result in a later reply.',
         'To put a question to the person (a choice, a yes or no, a free answer), call `ask`.',
         'Keep replies short: say what you did and what is left.',
       ]) expect(prompt, phrase).toContain(phrase);

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ArrowDown } from '@lucide/vue';
-import { computed, ref, useTemplateRef } from 'vue';
+import { computed, nextTick, ref, useTemplateRef, watch } from 'vue';
 import type { Json } from '@kvman/sdk';
 import type { Message } from '../../src/index.ts';
 import ArtifactPanel from './ArtifactPanel.vue';
@@ -10,6 +10,7 @@ import CommandProgress from './CommandProgress.vue';
 import ConversationHeader from './ConversationHeader.vue';
 import { problemKey, problemOf, toastProblem, tokensUsed, totals, useKvman } from './kvman.ts';
 import ActivityLine from './ActivityLine.vue';
+import { messageDraft, sendDraft, type Outgoing } from './message-drafts.ts';
 import { callViews } from './message-parts.ts';
 import MessageItem from './MessageItem.vue';
 import PendingCards from './PendingCards.vue';
@@ -36,13 +37,15 @@ const kvman = useKvman();
 // After a workspace switch the page's chat isn't this workspace's: nothing is read for it until the page has moved.
 const sessionId = useWorkspaceSession(kvman, () => props.sessionId, (error) => toastProblem(kvman, error));
 const tab = ref<'chat' | 'prompt'>('chat');
-const conversation = useConversation(kvman, () => sessionId.value, (error) => toastProblem(kvman, error));
+// Whether the person has scrolled up from the latest: the window then drops nothing (ADR 0059).
+const reading = ref(false);
+const conversation = useConversation(kvman, () => sessionId.value, (error) => toastProblem(kvman, error), () => reading.value);
 const { session, messages, omitted, turns, live, children } = conversation;
 const artifacts = useArtifacts(kvman, () => sessionId.value, () => session.value?.updatedAt, (error) => toastProblem(kvman, error));
 const panelShown = computed(() => artifacts.open.value && artifacts.shown.value !== undefined);
 const calls = computed(() => callViews(messages.value));
 const finishedRuns = useFinishedRuns(kvman, () => sessionId.value, messages, (error) => toastProblem(kvman, error));
-const recoverableNotices = new Set(['STEP_FAILED', 'REPLY_LOST', 'INTERRUPTED']);
+const recoverableNotices = new Set(['STEP_FAILED', 'REPLY_LOST', 'REPLY_INCOMPLETE', 'INTERRUPTED']);
 const running = computed(() => session.value?.status === 'running');
 // When the running turn started, for the header's time (ADR 0018, 9).
 const runningSince = computed(() => (running.value && turns.value[0]?.outcome === undefined ? turns.value[0]?.startedAt : undefined));
@@ -60,10 +63,15 @@ const turnTotals = computed(() => {
   return shown;
 });
 
-async function send(message: { text: string; fileIds: string[] }): Promise<void> {
-  if (sessionId.value === undefined) return;
+// The draft stays until the send is confirmed; a failure shows above the send box (ADR 0048, 6).
+async function send(message: Outgoing): Promise<void> {
+  const id = sessionId.value;
+  if (id === undefined) return;
+  const confirmed = await sendDraft(messageDraft(kvman.workspace.value.id, id), message, async (sendId) => {
+    await kvman.exec('kvcoder.message.send', { sessionId: id, text: message.text, ...(message.fileIds.length > 0 ? { fileIds: message.fileIds } : {}), sendId });
+  });
+  if (!confirmed || sessionId.value !== id) return;
   try {
-    await kvman.exec('kvcoder.message.send', { sessionId: sessionId.value, text: message.text, ...(message.fileIds.length > 0 ? { fileIds: message.fileIds } : {}) });
     follow.resume();
     await conversation.refresh();
   } catch (error) {
@@ -71,18 +79,37 @@ async function send(message: { text: string; fileIds: string[] }): Promise<void>
   }
 }
 
+// Stop cancels the displayed turn, so a late press never ends a newer one; its reply belongs to the chat it was
+// pressed in (ADR 0049, 1 and 3).
+const stoppable = computed(() => session.value?.status === 'running' || session.value?.status === 'waiting');
+const stopping = ref<string>();
+const stopFailed = ref<{ sessionId: string; error: unknown }>();
 async function stop(): Promise<void> {
-  if (sessionId.value === undefined) return;
+  const id = sessionId.value;
+  const turnId = turns.value[0]?.id;
+  if (id === undefined || stopping.value === id) return;
+  stopping.value = id;
+  stopFailed.value = undefined;
   try {
-    await kvman.exec('kvcoder.turn.cancel', { sessionId: sessionId.value });
-    await conversation.refresh();
+    await kvman.exec('kvcoder.turn.cancel', { sessionId: id, ...(turnId === undefined ? {} : { turnId }) });
+    if (sessionId.value === id) await conversation.refresh();
   } catch (error) {
-    toastProblem(kvman, error);
+    if (sessionId.value === id) stopFailed.value = { sessionId: id, error };
+  } finally {
+    if (stopping.value === id) stopping.value = undefined;
   }
 }
+// What the turn waits for, and what Stop does to it (ADR 0049, 4).
+const backgroundRunning = ref(0);
+const waitingHint = computed(() => [
+  ...(waitingOnYou.value.some((item) => item.kind !== 'subagent' && item.kind !== 'worker') ? [kvman.t('kvcoder.ui.messageDismisses')] : []),
+  kvman.t('kvcoder.ui.stopEnds'),
+  ...(backgroundRunning.value > 0 ? [kvman.t('kvcoder.ui.stopKeepsBackground')] : []),
+].join(' '));
 
-// An answered question or approval leaves the conversation at once (ADR 0009, 141, 142).
-const answers = useAnswers(kvman, (ran) => conversation.refresh(ran));
+// Questions remain visible until acceptance; requests and drafts bind to the displayed scope.
+const questionOwner = () => session.value === null || turns.value[0] === undefined ? undefined : { sessionId: session.value.id, turnId: turns.value[0].id };
+const answers = useAnswers(kvman, (ran) => conversation.refresh(ran), questionOwner);
 // What each waiting helper was asked, by its session: the task of the call that started it (ADR 0037, 2).
 const tasks = computed(() => new Map(pending.value.flatMap((item) => {
   const task = calls.value.get(item.toolCallId)?.fields?.['task'];
@@ -106,6 +133,30 @@ const loadError = computed(() => {
 });
 const list = useTemplateRef<HTMLElement>('list');
 const follow = useFollowLatest(list, () => [messages.value, live.text, live.thinking, live.calls.length, live.summarizing, running.value, pending.value, children.size, answers.hidden.value, actions.working.value], () => sessionId.value);
+
+watch(follow.away, (away) => (reading.value = away));
+
+// The earlier page goes above what the person is reading, which stays where it is.
+async function showEarlier(): Promise<void> {
+  const element = list.value;
+  const fromEnd = element === null ? 0 : element.scrollHeight - element.scrollTop;
+  try {
+    await conversation.showEarlier();
+    await nextTick();
+    if (element !== null) element.scrollTop = element.scrollHeight - fromEnd;
+  } catch (error) {
+    toastProblem(kvman, error);
+  }
+}
+
+async function jumpToLatest(): Promise<void> {
+  try {
+    await conversation.showLatest();
+  } catch (error) {
+    toastProblem(kvman, error);
+  }
+  follow.resume();
+}
 
 async function exportEarlier(): Promise<void> {
   if (sessionId.value === undefined) return;
@@ -155,7 +206,7 @@ const key = (message: Message): string => message.id;
 
 <template>
   <div class="kvc-workspace">
-    <ConversationHeader v-if="session && sessionId !== undefined" :session="session" :tab="tab" :turns="turns.length" :context="conversation.context.value" :running-since="runningSince" :artifacts="artifacts.list.value.length" :artifacts-open="artifacts.open.value" :working="actions.working.value !== undefined" @tab="tab = $event" @action="command" @toggle-artifacts="artifacts.toggle()" />
+    <ConversationHeader v-if="session && sessionId !== undefined" :session="session" :tab="tab" :turns="turns.length" :context="conversation.context.value" :running-since="runningSince" :artifacts="artifacts.list.value.length" :artifacts-open="artifacts.open.value" :working="actions.working.value !== undefined" @tab="tab = $event" @action="command" @toggle-artifacts="artifacts.toggle()" @background-running="(count) => (backgroundRunning = count)" />
     <div class="kvc-stage">
     <section class="kvc-conversation" data-test="conversation">
       <ChatStart v-if="props.sessionId === undefined" :registered="slashCommands" />
@@ -171,7 +222,10 @@ const key = (message: Message): string => message.id;
           <div ref="list" class="kvc-scroll" @scroll="follow.onScroll">
             <PromptTab v-if="tab === 'prompt'" :session-id="session.id" @back="tab = 'chat'" />
             <div v-else class="kvc-column">
-              <button v-if="omitted > 0" type="button" class="kvc-button" style="align-self: center" data-test="earlier" @click="exportEarlier">{{ kvman.t('kvcoder.ui.earlierMessages', { count: omitted }) }}</button>
+              <div v-if="omitted > 0" class="kvc-actions" style="justify-content: center">
+                <button type="button" class="kvc-button" data-test="show-earlier" @click="showEarlier">{{ kvman.t('kvcoder.ui.showEarlier', { count: Math.min(omitted, 200) }) }}</button>
+                <button type="button" class="kvc-button" data-test="earlier" @click="exportEarlier">{{ kvman.t('kvcoder.ui.earlierMessages', { count: omitted }) }}</button>
+              </div>
               <template v-for="message in messages" :key="key(message)">
                 <MessageItem :message="message" :calls="calls" :finished-runs="finishedRuns" @open-artifact="artifacts.openArtifact($event)" />
                 <span v-if="turnTotals.has(message.id)" class="kvc-muted" :title="turnTotals.get(message.id)?.tokens" data-test="turn-totals">{{ turnTotals.get(message.id)?.text }}</span>
@@ -182,17 +236,17 @@ const key = (message: Message): string => message.id;
                 <details v-if="live.thinking !== ''" :open="live.text === '' && live.calls.length === 0" data-test="live-thinking"><summary class="kvc-muted">{{ kvman.t('kvcoder.ui.thinkingNow') }}</summary><p class="kvc-muted" style="white-space: pre-wrap">{{ live.thinking }}</p></details>
                 <component :is="kvman.View" v-if="live.text !== ''" :view="{ type: 'markdown', text: 'kvcoder.markdown', params: { text: live.text } }" />
               </div>
-              <ActivityLine v-if="running" :live="live" />
+              <ActivityLine v-if="running" :live="live" :turn="turns[0]" />
               <CommandProgress v-if="actions.working.value" :working="actions.working.value" />
               <SubagentCard v-for="[id, child] in children" :key="id" :child="child" :task="tasks.get(id)" :hidden="answers.hidden.value" @answer="answers.answer" @decide="answers.decide" />
               <WorkerCard v-for="run in runs" :key="run" :session-id="session.id" :run-id="run" />
-              <PendingCards :pending="pending" :hidden="answers.hidden.value" @answer="answers.answer" @decide="answers.decide" />
-              <p v-if="waitingOnYou.some((item) => item.kind !== 'subagent' && item.kind !== 'worker')" class="kvc-muted" style="text-align: center; margin: 0">{{ kvman.t('kvcoder.ui.messageDismisses') }}</p>
+              <PendingCards :owner="questionOwner()" :pending="pending" :hidden="answers.hidden.value" @answer="answers.answer" @decide="answers.decide" />
+              <p v-if="pending.length > 0" class="kvc-muted" style="text-align: center; margin: 0" data-test="waiting-hint">{{ waitingHint }}</p>
             </div>
           </div>
-          <button v-if="follow.away.value" type="button" class="kvc-button kvc-jump" data-test="jump-to-latest" @click="follow.resume"><ArrowDown :size="16" aria-hidden="true" />{{ kvman.t('kvcoder.ui.jumpToLatest') }}</button>
+          <button v-if="follow.away.value" type="button" class="kvc-button kvc-jump" data-test="jump-to-latest" @click="jumpToLatest"><ArrowDown :size="16" aria-hidden="true" />{{ kvman.t('kvcoder.ui.jumpToLatest') }}</button>
         </div>
-        <MessageComposer :running="running" :placeholder="kvman.t('kvcoder.ui.placeholder')" :blocked="actions.working.value !== undefined" commands="run" :registered="slashCommands" @send="send" @stop="stop" @command="command" @registered="registered">
+        <MessageComposer :session-id="session.id" :stoppable="stoppable" :stopping="stopping === session.id" :stop-error="stopFailed?.sessionId === session.id ? stopFailed.error : undefined" :placeholder="kvman.t('kvcoder.ui.placeholder')" :blocked="actions.working.value !== undefined" commands="run" :registered="slashCommands" @send="send" @stop="stop" @command="command" @registered="registered">
           <template #controls><SessionModel :session="session" @changed="conversation.refresh()" /></template>
         </MessageComposer>
       </template>

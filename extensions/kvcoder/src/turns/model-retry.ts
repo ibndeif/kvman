@@ -1,6 +1,8 @@
 import { ProblemError, type Ctx, type InputOf, type OutputOf } from '@kvman/sdk';
 import type {} from '@kvman/kvai';
 import { delay } from '../delay.ts';
+import { invalid } from '../problems.ts';
+import { currentStep, type StepLease } from './step-claim.ts';
 
 // A step's model call, tried again when it fails for a temporary reason (plan 08 §8.2, ADR 0009, 154, 155, and 203):
 // four tries in all, after 1 s, 4 s, and then 15 s. Any other failure, and a stop, end it at once.
@@ -9,8 +11,9 @@ const waitsMs = [1_000, 4_000, 15_000] as const;
 
 const transient = (error: ProblemError): boolean => error.problem.code === 'kvai/RATE_LIMITED' || (error.problem.code === 'kvai/PROVIDER_ERROR' && error.problem.params?.['transient'] === true);
 
-export async function completeWithRetries(ctx: Ctx, input: InputOf<'kvai.complete'>): Promise<OutputOf<'kvai.complete'>> {
+export async function completeWithRetries(ctx: Ctx, input: InputOf<'kvai.complete'>, lease: StepLease): Promise<OutputOf<'kvai.complete'>> {
   for (let attempt = 1; ; attempt += 1) {
+    if (await currentStep(ctx, lease) === undefined) throw invalid('The originating step is no longer current.');
     try {
       return await ctx.exec('kvai.complete', input);
     } catch (error) {

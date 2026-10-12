@@ -14,6 +14,7 @@ export type NewMessage = {
   fileNames?: readonly string[] | null;
   model?: string | null;
   usage?: Usage | null;
+  basis?: string | null;
   durationMs?: number | null;
 };
 
@@ -37,6 +38,7 @@ export function appendMessage(tx: TxRecords, session: Stored<SessionDoc>, messag
     fileNames: message.fileNames === undefined || message.fileNames === null ? null : [...message.fileNames],
     model: message.model ?? null,
     usage: message.usage ?? null,
+    basis: message.basis ?? null,
     durationMs: message.durationMs ?? null,
     createdAt: now(),
   });
@@ -49,12 +51,17 @@ export function userContent(text: string): Record<string, JsonValue> {
 
 /** Moves the session's queued messages into its history, in the order they came; returns how many moved. */
 export function appendQueued(tx: TxRecords, session: Stored<SessionDoc>, turnId: string | null): number {
-  const queued = tx.queued.find({ sessionId: session.id }, { limit: 1000 });
-  for (const message of queued) {
-    tx.queued.delete(message.id);
-    appendMessage(tx, session, { kind: 'user', content: userContent(message.text), turnId, source: message.source, fileIds: message.fileIds, fileNames: message.fileNames });
+  let appended = 0;
+  for (;;) {
+    // Deleted rows make the next bounded page advance inside this same transaction.
+    const queued = tx.queued.find({ sessionId: session.id }, { limit: 1000 });
+    for (const message of queued) {
+      tx.queued.delete(message.id);
+      appendMessage(tx, session, { kind: 'user', content: userContent(message.text), turnId, source: message.source, fileIds: message.fileIds, fileNames: message.fileNames });
+    }
+    appended += queued.length;
+    if (queued.length < 1000) return appended;
   }
-  return queued.length;
 }
 
 /** A notice (plan 08 §8.1): kvcoder's own display-only message, shown as `kvcoder.notices.<code>`. */

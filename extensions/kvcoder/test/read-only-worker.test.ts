@@ -1,0 +1,61 @@
+import { existsSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import { describe, expect, it } from 'vitest';
+import { shippedWorkers, workersSchema } from '../src/delegate/workers.ts';
+import { useKvcoder } from './support/kvcoder-kernel.ts';
+import { command, fsCall, runs, says, shell, systemPrompt, toolResults } from './support/model-script.ts';
+import { newSession } from './support/turns.ts';
+import { worker, workers } from './support/workers.ts';
+
+const kvcoder = useKvcoder();
+const delegate = (name: string) => command('delegate', 'run', { worker: name, title: 'Helper', task: 'Look' });
+const refusal = /^error VALIDATION_FAILED: This helper is read-only: .* could change something, so it isn't run\. Report what you found instead\./;
+
+describe('a read-only worker (KVC-33, ADR 0056)', { timeout: 30_000 }, () => {
+  it('M2.4-E170 the shipped architect and reviewer are read-only, and an entry without the field is not', () => {
+    expect(shippedWorkers.filter((entry) => entry.readOnly).map((entry) => entry.name)).toEqual(['architect', 'reviewer']);
+    const [old, strict] = workersSchema.parse([worker('old'), worker('strict', { readOnly: true })]);
+    expect(old).toMatchObject({ readOnly: false });
+    expect(strict).toMatchObject({ readOnly: true });
+  });
+
+  it.each(['auto', 'ask'] as const)('M2.4-E171 a read-only helper is refused every call that could change something, and asked nothing (approval %s)', async (approval) => {
+    const { kernel, fake } = await kvcoder.start({ settings: { ...workers(worker('strict', { readOnly: true })), 'kvcoder.shell.approval': approval } });
+    writeFileSync(path.join(kernel.homeFolder, 'a.txt'), 'old\n');
+    const sessionId = await newSession(kernel);
+    fake.reply(
+      runs(delegate('strict')),
+      runs(fsCall('read', { path: 'a.txt' }), fsCall('search', { pattern: 'old' }), command('fs', 'help')),
+      runs(fsCall('write', { path: 'new.txt', content: 'x' }), fsCall('edit', { path: 'a.txt', edits: [{ oldText: 'old', newText: 'new' }] }), shell('touch ran.txt'), command('todo', 'add', { text: 'a' }), command('fs', 'part', { path: 'p.txt', part: 1, content: 'x' })),
+      runs(command('artifact', 'write', { id: 'report', title: 'Report', content: '# Found' })),
+      says('report ready'),
+      says('parent done'),
+    );
+    await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
+    await kernel.clock.advance(0);
+    const child = toolResults(fake, 4);
+    expect(child.slice(0, 3).every((result) => !result.startsWith('error'))).toBe(true);
+    for (const result of child.slice(3, 8)) expect(result).toMatch(refusal);
+    expect(child[8]).toContain('"created":true');
+    expect(['new.txt', 'ran.txt'].map((file) => existsSync(path.join(kernel.homeFolder, file)))).toEqual([false, false]);
+    expect(await kernel.exec('todo.item.list', {})).toEqual([]);
+    expect(toolResults(fake).at(-1)).toBe('report ready');
+  });
+
+  it("M2.4-E172 a read-only helper's prompt lists only what it may run, and keeps that when the worker is edited", async () => {
+    const { kernel, fake } = await kvcoder.start({ settings: workers(worker('strict', { readOnly: true }), worker('free')) });
+    const sessionId = await newSession(kernel);
+    fake.reply(runs(delegate('strict'), delegate('free')), says('one'), says('two'), says('done'));
+    await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
+    await kernel.clock.advance(0);
+    const prompts = [systemPrompt(fake, 1), systemPrompt(fake, 2)];
+    const strict = prompts.find((prompt) => prompt.includes('You are read-only here'));
+    const free = prompts.find((prompt) => !prompt.includes('You are read-only here'));
+    expect(strict).toContain('- fs: ');
+    expect(strict).toMatch(/\n {2}read +\{ path, fromLine\?, fromColumn\?, lines\? \}\n {2}list +\{ path\? \}\n {2}search +\{ pattern, path\?, literal\?, glob\? \}\n {2}help +\{ command\? \}/);
+    expect(strict).not.toContain('- shell: ');
+    expect(strict).not.toContain('- todo: ');
+    expect(free).toContain('- shell: ');
+    expect(free).toContain('  write ');
+  });
+});

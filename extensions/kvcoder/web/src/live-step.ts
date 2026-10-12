@@ -58,7 +58,10 @@ export function applyEvent(live: Live, event: StreamEvent): StepSignal {
   }
   if (event.source !== '@kvman/kvcoder') return { kind: 'none' };
   if (data['type'] === 'compaction') live.summarizing = data['state'] === 'started';
-  if (data['type'] === 'retry' && typeof data['attempt'] === 'number' && typeof data['of'] === 'number') live.retry = { attempt: data['attempt'], of: data['of'] };
+  if (data['type'] === 'retry' && typeof data['attempt'] === 'number' && typeof data['of'] === 'number') {
+    // The failed attempt's partial text, thinking, and unfinished calls aren't the reply: the next attempt starts clean.
+    Object.assign(live, { text: '', thinking: '', calls: live.calls.filter((call) => call.carried === true), retry: { attempt: data['attempt'], of: data['of'] } });
+  }
   if (data['type'] === 'follow' && typeof data['jobId'] === 'string') return { kind: 'follow', jobId: data['jobId'] };
   if (data['type'] === 'subagent' && typeof data['sessionId'] === 'string' && typeof data['jobId'] === 'string') return { kind: 'subagent', sessionId: data['sessionId'], jobId: data['jobId'] };
   if (data['type'] === 'component') return { kind: 'question' };

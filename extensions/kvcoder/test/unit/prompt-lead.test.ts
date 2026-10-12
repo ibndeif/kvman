@@ -35,7 +35,7 @@ describe("the lead's prompt (08 §8.2, ADR 0022, 2 to 4)", () => {
     const delegate = lineOf(prompt, '5. ');
     expect(delegate).toContain('Several `delegate run` calls in one reply run in parallel.');
     expect(delegate).toContain('Read what a worker returns and check it before you rely on it: its work is your responsibility.');
-    expect(prompt).toContain('\nThe calls of one reply run at the same time, so put independent calls (reads, searches, separate files, separate workers) in one reply, and calls that depend on each other in separate replies.\n');
+    expect(prompt).toContain('\nIn one reply, reads and searches run at the same time, and calls that change something (shell lines, writes, edits) run one after another in the order you give them. So put independent calls (reads, searches, separate files, separate workers) in one reply, and a call that needs another call\'s result in a later reply.\n');
   });
 
   it('QA33-H5 the work is done when it is ready for production', () => {

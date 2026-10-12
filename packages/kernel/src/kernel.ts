@@ -151,7 +151,7 @@ export async function startKernel(options: KernelOptions): Promise<Kernel> {
         setup: { home: options.home, homeFolder: options.homeFolder, database, presetSettings, logLevel: options.logLevel, terminalLog: options.terminalLog },
         logger,
         events: {
-          request: (request) => answerWorker({ dispatcher, schedules, secrets, clock, workspaces, processes, preset, health, requestRestart }, request),
+          request: (request) => answerWorker({ connection, home: options.home, dispatcher, schedules, secrets, clock, workspaces, processes, preset, health, requestRestart }, request),
           progress: (rootId, chunk) => hub.publish(rootId, chunk),
           syncEnded: (end) => dispatcher.deliverSyncEnd(end),
           slotFreed: () => dispatcher.slotFreed(),

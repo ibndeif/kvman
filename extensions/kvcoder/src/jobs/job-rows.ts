@@ -1,10 +1,10 @@
 import type { Ctx, Json, Stored } from '@kvman/sdk';
 import { stopRun } from '../delegate/runs.ts';
 import type { BackgroundDoc, RunDoc } from '../schemas/records.ts';
+import { allDocs } from '../store/all-docs.ts';
 import { records } from '../store/collections.ts';
-import { cancelTurn } from '../turns/cancel-turn.ts';
 import { appendBackground, backgroundText } from '../turns/background.ts';
-import { childResult } from '../turns/end-turn.ts';
+import { cancelTurn, childResult } from '../turns/end-turn.ts';
 import { processStatus, sessionProcess } from './process-records.ts';
 import { outputTail } from './process-report.ts';
 import { stopProcess } from './process-run.ts';
@@ -13,7 +13,7 @@ import { localLinks } from './process-text.ts';
 // A session's background runs (ADR 0009, 88, 150, and 152; ADR 0011, 6): the processes and subagents it started with
 // `background: true`, as the `background` connector and `kvcoder.job.*` show them.
 
-export type JobRow = { id: string; kind: 'process' | 'subagent' | 'worker'; title: string; call: string; status: string; startedAt: string; endedAt?: string; exitCode?: number };
+export type JobRow = { id: string; kind: 'process' | 'subagent' | 'worker'; title: string; call: string; status: string; startedAt: string; endedAt?: string; exitCode?: number; staging?: { state: 'changed' | 'restored'; paths: number; headMoved: boolean } };
 export type JobDetail = { row: JobRow; detail: Record<string, Json> };
 
 const outputLines = 100;
@@ -37,7 +37,7 @@ async function processRow(ctx: Ctx, id: string, sessionId: string): Promise<JobD
 
 // A program worker's run (ADR 0021, 33): its output is what the call returned, once it has ended.
 function runRow(run: Stored<RunDoc>): JobDetail {
-  const row: JobRow = { id: run.id, kind: 'worker', title: run.worker, call: run.call, status: run.status, startedAt: run.startedAt, ...(run.endedAt === null ? {} : { endedAt: run.endedAt }), ...(run.exitCode === null ? {} : { exitCode: run.exitCode }) };
+  const row: JobRow = { id: run.id, kind: 'worker', title: run.worker, call: run.call, status: run.status, startedAt: run.startedAt, ...(run.endedAt === null ? {} : { endedAt: run.endedAt }), ...(run.exitCode === null ? {} : { exitCode: run.exitCode }), ...(run.staging === null ? {} : { staging: { state: run.staging.restored ? 'restored' as const : 'changed' as const, paths: run.staging.paths, headMoved: run.staging.headMoved } }) };
   return { row, detail: run.output === null ? {} : { output: run.output } };
 }
 
@@ -51,13 +51,19 @@ export async function jobDetail(ctx: Ctx, sessionId: string, id: string): Promis
   return entry === undefined || entry.kind !== 'subagent' ? undefined : subagentRow(ctx, entry);
 }
 
-/** The session's newest 50 jobs, newest first. */
+const rowsShown = 50;
+
+/** The session's jobs, newest first: every one still running, however old, and its newest ended ones to 50 rows in all (ADR 0057, 2). */
 export async function jobRows(ctx: Ctx, sessionId: string): Promise<JobRow[]> {
   const store = records(ctx.store);
-  const [entries, processes, runs] = await Promise.all([store.background.find({ sessionId }, { limit: 50, order: 'desc' }), store.processes.find({ sessionId }, { limit: 50, order: 'desc' }), store.runs.find({ sessionId }, { limit: 50, order: 'desc' })]);
-  const newest = [...entries.map((entry) => ({ id: entry.ref, startedAt: entry.startedAt })), ...[...processes, ...runs].map((doc) => ({ id: doc.id, startedAt: doc.startedAt }))].sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, 50);
-  const found = await Promise.all(newest.map((job) => jobDetail(ctx, sessionId, job.id)));
-  return found.flatMap((job) => (job === undefined ? [] : [job.row]));
+  const [entries, processes, runs] = await Promise.all([allDocs((options) => store.background.find({ sessionId }, options)), allDocs((options) => store.processes.find({ sessionId }, options)), allDocs((options) => store.runs.find({ sessionId }, options))]);
+  const jobs = [...entries.map((entry) => ({ id: entry.ref, startedAt: entry.startedAt, ended: false })), ...processes.map((doc) => ({ id: doc.id, startedAt: doc.startedAt, ended: doc.end !== undefined })), ...runs.map((doc) => ({ id: doc.id, startedAt: doc.startedAt, ended: doc.status !== 'running' }))].sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+  // A subagent's state is its session's, so its row is read before it is known to have ended.
+  const open = (await Promise.all(jobs.filter((job) => !job.ended).map((job) => jobDetail(ctx, sessionId, job.id)))).flatMap((job) => (job === undefined ? [] : [job.row]));
+  const running = open.filter((row) => row.status === 'running');
+  const ended = [...open.filter((row) => row.status !== 'running'), ...(await Promise.all(jobs.filter((job) => job.ended).slice(0, rowsShown).map((job) => jobDetail(ctx, sessionId, job.id)))).flatMap((job) => (job === undefined ? [] : [job.row]))];
+  const kept = ended.sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, Math.max(rowsShown - running.length, 0));
+  return [...running, ...kept].sort((a, b) => b.startedAt.localeCompare(a.startedAt));
 }
 
 /** What the person's list adds to a row: the localhost links in a process's output. */

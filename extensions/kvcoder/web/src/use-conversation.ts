@@ -1,175 +1,166 @@
 import { onUnmounted, reactive, shallowReactive, shallowRef, watch, type ShallowRef } from 'vue';
 import type { Kvman } from '@kvman/sdk/web';
 import type { Message, Session, Turn } from '../../src/index.ts';
-import { applyEvent, idleLive, type Live, type LiveCall } from './live-step.ts';
-
-// A conversation's data (plan 08 §8.7): the session, its newest messages and turns, the running step streamed through
-// `kvman.stream` (following each step's follow chunk), and the subagents it waits on. After a reload, the session's
-// `stepJobId` reattaches to the running step. While nothing streams, the session is read again every few seconds, so a
-// turn started elsewhere (a background result) shows up.
+import { idleLive, type Live, type LiveCall } from './live-step.ts';
+import { conversationStreams } from './conversation-streams.ts';
+import { reconcileQuestionDrafts } from './question-drafts.ts';
 
 export type Child = { session: Session; turn: Turn | undefined; live: Live };
-
 /** How full the model's window is (`kvcoder.context.get`). */
-export type ContextSize = { tokens: number; window: number | null; compactAt: number };
-
+export type ContextSize = { tokens: number; window: number | null; compactAt: number; estimated?: boolean };
 export type Conversation = {
   session: ShallowRef<Session | null>;
   messages: ShallowRef<Message[]>;
   omitted: ShallowRef<number>;
   turns: ShallowRef<Turn[]>;
   context: ShallowRef<ContextSize | null>;
-  /** What the last load of the messages failed with, if it did (ADR 0034, 10). */
   loadFailure: ShallowRef<unknown>;
   live: Live;
   streaming: ShallowRef<boolean>;
   children: Map<string, Child>;
+  /** Loads the page of messages before the first one shown, above it. */
+  showEarlier(): Promise<void>;
+  /** Returns to the newest window, after earlier pages were loaded. */
+  showLatest(): Promise<void>;
   refresh(ran?: readonly LiveCall[]): Promise<void>;
   stream(jobId: string, ran?: readonly LiveCall[]): Promise<void>;
 };
 
+type Scope = { workspaceId: string; sessionId: string };
 const pollMs = 5_000;
 const pageSize = 200;
 
-export function useConversation(kvman: Kvman, sessionId: () => string | undefined, failed: (error: unknown) => void): Conversation {
+// The page holds a window of messages (ADR 0059): at the latest, the oldest shown are dropped as new ones arrive;
+// while the person reads earlier ones (`reading`), or after they loaded an earlier page, nothing is dropped.
+export function useConversation(kvman: Kvman, sessionId: () => string | undefined, failed: (error: unknown) => void, reading: () => boolean = () => false): Conversation {
   const session = shallowRef<Session | null>(null);
   const messages = shallowRef<Message[]>([]);
   const omitted = shallowRef(0);
   const turns = shallowRef<Turn[]>([]);
   const context = shallowRef<ContextSize | null>(null);
   const loadFailure = shallowRef<unknown>(undefined);
-  // The chat whose whole list is on the page; after that only what is new is asked for (ADR 0034, 8).
-  let listed: string | undefined;
   const streaming = shallowRef(false);
   const live = reactive<Live>(idleLive());
   const children = shallowReactive(new Map<string, Child>());
-  const following = new Set<string>();
+  let scope: Scope | undefined;
+  let latest: object | undefined;
+  let listed: string | undefined;
   let closed = false;
+  let extended = false;
+  const current = (expected: Scope): boolean => !closed && scope === expected && sessionId() === expected.sessionId && kvman.workspace.value.id === expected.workspaceId;
+  const streams = conversationStreams(kvman, live, streaming, () => refresh(), failed);
+  const stored = (list: readonly Message[]): Message[] => list.filter(message => message.queued !== true);
 
-  async function loadChildren(turn: Turn | undefined): Promise<void> {
-    const ids = (turn?.pending ?? []).flatMap((item) => (item.childSessionId === null ? [] : [item.childSessionId]));
-    for (const id of [...children.keys()]) if (!ids.includes(id)) children.delete(id);
-    for (const id of ids) {
-      const [child, [childTurn]] = await Promise.all([kvman.exec('kvcoder.session.get', { sessionId: id }), kvman.exec('kvcoder.turn.list', { sessionId: id, limit: 1 })]);
-      children.set(id, { session: child, turn: childTurn, live: children.get(id)?.live ?? reactive(idleLive()) });
-    }
-  }
-
-  const stored = (list: readonly Message[]): Message[] => list.filter((message) => message.queued !== true);
-
-  async function loadAll(id: string, key: string): Promise<void> {
+  async function loadAll(id: string, key: string, owns: () => boolean): Promise<void> {
+    if (!owns()) return;
     const list = await kvman.exec('kvcoder.message.list', { sessionId: id, limit: pageSize });
-    messages.value = list.messages;
-    omitted.value = list.omitted;
-    listed = key;
+    if (!owns()) return;
+    messages.value = list.messages; omitted.value = list.omitted; listed = key; extended = false;
   }
 
-  // Adds the messages stored since the page's last one. When they don't start at the next `seq`, more arrived than one
-  // answer holds, so the whole list is loaded again.
-  async function loadNew(id: string, key: string, afterSeq: number): Promise<void> {
+  async function loadNew(id: string, key: string, afterSeq: number, owns: () => boolean): Promise<void> {
     const list = await kvman.exec('kvcoder.message.list', { sessionId: id, limit: pageSize, afterSeq });
+    if (!owns()) return;
     const fresh = stored(list.messages);
-    if (fresh[0] !== undefined && fresh[0].seq !== afterSeq + 1) return loadAll(id, key);
+    if (fresh[0] !== undefined && fresh[0].seq !== afterSeq + 1) return loadAll(id, key, owns);
     const shown = stored(messages.value);
     const last = shown.at(-1)?.seq ?? afterSeq;
-    messages.value = [...shown, ...fresh.filter((message) => (message.seq ?? last) > last), ...list.messages.filter((message) => message.queued === true)];
+    const all = [...shown, ...fresh.filter(message => (message.seq ?? last) > last)];
+    const dropped = extended || reading() ? 0 : Math.max(all.length - pageSize, 0);
+    messages.value = [...all.slice(dropped), ...list.messages.filter(message => message.queued === true)];
+    omitted.value += dropped;
   }
 
-  async function loadMessages(id: string): Promise<void> {
-    const key = `${kvman.workspace.value.id}:${id}`;
+  async function showEarlier(): Promise<void> {
+    const expected = scope;
+    const first = stored(messages.value)[0]?.seq;
+    if (expected === undefined || first === undefined) return;
+    const list = await kvman.exec('kvcoder.message.list', { sessionId: expected.sessionId, limit: pageSize, beforeSeq: first });
+    if (!current(expected) || stored(messages.value)[0]?.seq !== first) return;
+    messages.value = [...list.messages, ...messages.value]; omitted.value = list.omitted; extended = true;
+  }
+
+  async function showLatest(): Promise<void> {
+    const expected = scope;
+    if (expected === undefined || !extended) return;
+    await loadAll(expected.sessionId, `${expected.workspaceId}:${expected.sessionId}`, () => current(expected));
+  }
+
+  async function loadMessages(expected: Scope, owns: () => boolean): Promise<void> {
+    const key = `${expected.workspaceId}:${expected.sessionId}`;
     const last = listed === key ? stored(messages.value).at(-1)?.seq : undefined;
     try {
-      await (last === undefined ? loadAll(id, key) : loadNew(id, key, last));
-      loadFailure.value = undefined;
-    } catch (error) {
-      loadFailure.value = error;
-    }
+      await (last === undefined ? loadAll(expected.sessionId, key, owns) : loadNew(expected.sessionId, key, last, owns));
+      if (owns()) loadFailure.value = undefined;
+    } catch (error) { if (owns()) loadFailure.value = error; }
   }
 
-  async function reload(): Promise<void> {
-    const id = sessionId();
-    if (id === undefined) return;
-    const [found, recent, size] = await Promise.all([
-      kvman.exec('kvcoder.session.get', { sessionId: id }),
-      kvman.exec('kvcoder.turn.list', { sessionId: id, limit: 50 }),
-      kvman.exec('kvcoder.context.get', { sessionId: id }),
-    ]);
-    // The status items count sessions by status, so they rerun when this one's changes (ADR 0009, 138).
-    if (session.value !== null && session.value.status !== found.status) kvman.refresh();
-    session.value = found;
-    turns.value = recent;
-    context.value = size;
-    await loadMessages(id);
-    await loadChildren(found.status === 'waiting' ? recent[0] : undefined);
-  }
-
-  // Streams a chain of steps into `target`, following each step's follow chunk; `after` runs when each step ends. `ran` are
-  // the calls the person just approved: the first step runs them before it calls the model (ADR 0009, 142).
-  async function streamChain(jobId: string, target: Live, after: () => Promise<string | undefined>, ran: readonly LiveCall[] = []): Promise<void> {
-    let current: string | undefined = jobId;
-    let carried = ran;
-    while (current !== undefined && !closed && !following.has(current)) {
-      following.add(current);
-      Object.assign(target, idleLive());
-      target.calls = carried.map((call) => ({ ...call, complete: true, carried: true }));
-      carried = [];
-      kvman.follow(current).catch(failed);
-      let next: string | undefined;
-      for await (const event of kvman.stream(current)) {
-        const signal = applyEvent(target, event);
-        if (signal.kind === 'follow') next = signal.jobId;
-        if (signal.kind === 'subagent') streamChild(signal.sessionId, signal.jobId).catch(failed);
-        if (signal.kind === 'question') reload().catch(failed);
+  async function loadChildren(expected: Scope, active: Turn | undefined, owns: () => boolean): Promise<void> {
+    const ids = active?.sessionId === expected.sessionId && active.outcome === undefined && active.endedAt === undefined
+      ? [...new Set(active.pending.flatMap(item => item.childSessionId === null ? [] : [item.childSessionId]))] : [];
+    for (const id of children.keys()) if (!ids.includes(id)) children.delete(id);
+    streams.retain(new Set([live, ...[...children.values()].map(child => child.live)]));
+    for (const id of ids) {
+      if (!owns()) return;
+      const [found, [recent]] = await Promise.all([
+        kvman.exec('kvcoder.session.get', { sessionId: id }),
+        kvman.exec('kvcoder.turn.list', { sessionId: id, limit: 1 }),
+      ]);
+      if (!owns()) return;
+      if (found.id !== id || found.parentId !== expected.sessionId) {
+        children.delete(id);
+        streams.retain(new Set([live, ...[...children.values()].map(child => child.live)]));
+        continue;
       }
-      following.delete(current);
-      const fallback = await after();
-      current = next ?? (fallback !== current ? fallback : undefined);
+      const child = { session: found, turn: recent?.sessionId === id ? recent : undefined, live: children.get(id)?.live ?? reactive(idleLive()) };
+      reconcileQuestionDrafts(expected.workspaceId, id, child.turn === undefined ? [] : [child.turn]);
+      children.set(id, child);
+      streams.update(child.live, found.status === 'running' ? found.stepJobId : undefined, () => current(expected));
     }
-    Object.assign(target, idleLive());
   }
 
-  async function stream(jobId: string, ran: readonly LiveCall[] = []): Promise<void> {
-    streaming.value = true;
+  async function reload(ran: readonly LiveCall[] = [], hinted?: string): Promise<void> {
+    const expected = scope;
+    if (expected === undefined || !current(expected)) return;
+    const request = {}; latest = request;
+    const owns = (): boolean => current(expected) && latest === request;
     try {
-      await streamChain(
-        jobId,
-        live,
-        async () => {
-          await reload();
-          return session.value?.status === 'running' ? session.value.stepJobId : undefined;
-        },
-        ran,
-      );
-    } finally {
-      streaming.value = following.size > 0;
-    }
+      const [found, recent, size] = await Promise.all([
+        kvman.exec('kvcoder.session.get', { sessionId: expected.sessionId }),
+        kvman.exec('kvcoder.turn.list', { sessionId: expected.sessionId, limit: 50 }),
+        kvman.exec('kvcoder.context.get', { sessionId: expected.sessionId }),
+      ]);
+      if (!owns() || found.id !== expected.sessionId) return;
+      if (session.value !== null && session.value.status !== found.status) kvman.refresh();
+      if (!owns()) return;
+      session.value = found; turns.value = recent; context.value = size;
+      reconcileQuestionDrafts(expected.workspaceId, found.id, recent);
+      const jobId = found.status === 'running' ? found.stepJobId : undefined;
+      // A caller/hint cannot authorize a job. Carried approval labels belong only to its matching current job.
+      streams.update(live, jobId, () => current(expected), hinted === undefined || hinted === jobId ? ran : []);
+      // Revoke removed children immediately on authoritative state, even if message loading is slow.
+      const active = found.status === 'waiting' ? recent[0] : undefined;
+      const childLoad = loadChildren(expected, active, owns);
+      await Promise.all([loadMessages(expected, owns), childLoad]);
+    } catch (error) { if (owns()) throw error; }
   }
 
-  async function streamChild(childId: string, jobId: string): Promise<void> {
-    await reload();
-    const child = children.get(childId);
-    if (child === undefined) return;
-    await streamChain(jobId, child.live, async () => {
-      const found = await kvman.exec('kvcoder.session.get', { sessionId: childId });
-      return found.status === 'running' ? found.stepJobId : undefined;
-    });
-    await refresh();
-  }
-
-  async function refresh(ran: readonly LiveCall[] = []): Promise<void> {
-    await reload();
-    const current = session.value;
-    if (current?.status === 'running' && current.stepJobId !== undefined) stream(current.stepJobId, ran).catch(failed);
-    for (const [id, child] of children) if (child.session.status === 'running' && child.session.stepJobId !== undefined) streamChild(id, child.session.stepJobId).catch(failed);
-  }
+  async function refresh(ran: readonly LiveCall[] = []): Promise<void> { await reload(ran); }
+  async function stream(jobId: string, ran: readonly LiveCall[] = []): Promise<void> { await reload(ran, jobId); }
 
   const timer = setInterval(() => {
-    if (following.size === 0 && sessionId() !== undefined) refresh().catch(failed);
+    const expected = scope;
+    if (expected !== undefined && !streams.busy()) refresh().catch(error => { if (current(expected)) failed(error); });
   }, pollMs);
-  onUnmounted(() => {
-    closed = true;
-    clearInterval(timer);
-  });
-  watch([sessionId, () => kvman.workspace.value.id], () => refresh().catch(failed), { immediate: true });
-  return { session, messages, omitted, turns, context, loadFailure, live, streaming, children, refresh, stream };
+  onUnmounted(() => { closed = true; scope = undefined; latest = undefined; streams.clear(); clearInterval(timer); });
+  watch([sessionId, () => kvman.workspace.value.id], () => {
+    const id = sessionId();
+    scope = id === undefined ? undefined : { workspaceId: kvman.workspace.value.id, sessionId: id };
+    latest = undefined; listed = undefined; streams.clear();
+    session.value = null; messages.value = []; omitted.value = 0; turns.value = []; context.value = null; loadFailure.value = undefined;
+    children.clear(); Object.assign(live, idleLive());
+    const expected = scope;
+    if (expected !== undefined) refresh().catch(error => { if (current(expected)) failed(error); });
+  }, { immediate: true, flush: 'sync' });
+  return { session, messages, omitted, turns, context, loadFailure, live, streaming, children, showEarlier, showLatest, refresh, stream };
 }

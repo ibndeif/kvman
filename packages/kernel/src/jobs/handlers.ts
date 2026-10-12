@@ -13,6 +13,7 @@ const pointInputSchemas: { [Point in HandlerPoint]: z.ZodType<HandlerPoints[Poin
   'kernel.job.cancelled': jobPointSchema.extend({ reason: z.string() }),
   'kernel.process.exited': z.object({ extension: z.string(), workspaceId: z.string(), name: z.string(), exitCode: z.number().nullable(), signal: z.string().nullable() }),
   'kernel.workspace.opened': z.object({ workspaceId: z.string() }),
+  'kernel.workspace.deleted': z.object({ workspaceId: z.string() }),
   'kernel.started': emptySchema,
   'kernel.stopping': emptySchema,
 };

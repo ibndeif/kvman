@@ -4,7 +4,7 @@ import { findSession, ownSession, userOnly } from '../sessions/session-lookup.ts
 import { messageSchema, messageView, queuedView } from '../sessions/session-view.ts';
 import { records, txRecords } from '../store/collections.ts';
 import { appendMessage } from '../turns/history.ts';
-import { newestMessages } from '../turns/message-blocks.ts';
+import { messagesBefore, messagesFrom, newestMessages } from '../turns/message-blocks.ts';
 import { jsonBytes, listOutputBytes, newestThatFit } from './fitting-messages.ts';
 import { receiveMessage } from './receive-message.ts';
 
@@ -14,14 +14,14 @@ const sendSchema = z.object({ sessionId: z.string(), text: z.string().min(1), fi
 
 export function registerMessages(ctx: Ctx): void {
   ctx.registerCommand('kvcoder.message.send', {
-    description: "Sends the person's message: it starts a turn, steers the running one, or answers a waiting one.",
-    input: sendSchema,
+    description: "Sends the person's message: it starts a turn, steers the running one, or answers a waiting one. A repeat with the same sendId is acknowledged and adds nothing.",
+    input: sendSchema.extend({ sendId: z.string().min(1).max(100).exactOptional() }),
     output: z.object({}),
     public: true,
     retries: 0,
-    handle: async ({ sessionId, text, fileIds }) => {
+    handle: async ({ sessionId, text, fileIds, sendId }) => {
       userOnly(ctx, 'kvcoder.message.send');
-      await receiveMessage(ctx, await ownSession(ctx, sessionId), { text, fileIds: fileIds ?? [], source: { kind: 'user' }, mayStart: true });
+      await receiveMessage(ctx, await ownSession(ctx, sessionId), { text, fileIds: fileIds ?? [], source: { kind: 'user' }, mayStart: true, sendId }, true);
       return {};
     },
   });
@@ -51,14 +51,19 @@ export function registerMessages(ctx: Ctx): void {
     },
   });
   ctx.registerQuery('kvcoder.message.list', {
-    description: "Lists a session's newest messages in order, the count of older ones, and the messages waiting for the step.",
-    input: z.object({ sessionId: z.string(), limit: z.number().int().positive().max(1000), afterSeq: z.number().int().exactOptional() }),
+    description: "Lists a session's newest messages in order, the count of older ones, and the messages waiting for the step; with beforeSeq, the newest of those before it.",
+    input: z.object({ sessionId: z.string(), limit: z.number().int().positive().max(1000), afterSeq: z.number().int().exactOptional(), beforeSeq: z.number().int().nonnegative().exactOptional() }),
     output: z.object({ messages: z.array(messageSchema), omitted: z.number().int() }),
     public: true,
     maxOutputBytes: listOutputBytes,
-    handle: async ({ sessionId, limit, afterSeq }) => {
+    handle: async ({ sessionId, limit, afterSeq, beforeSeq }) => {
       const session = await findSession(ctx, sessionId);
       const store = records(ctx.store);
+      // An earlier page (ADR 0059): the newest messages before `beforeSeq`, and how many are older still.
+      if (beforeSeq !== undefined) {
+        const earlier = newestThatFit((await messagesBefore(ctx, sessionId, limit, beforeSeq)).map(messageView), listOutputBytes);
+        return { messages: earlier, omitted: await store.messages.count({ sessionId }) - (await messagesFrom(ctx, sessionId, earlier[0]?.seq ?? beforeSeq, session.nextSeq)).length };
+      }
       const queued = (await store.queued.find({ sessionId }, { limit: 1000 })).map(queuedView);
       const stored = await store.messages.count({ sessionId });
       const newest = (await newestMessages(ctx, sessionId, limit, session.nextSeq)).filter((message) => afterSeq === undefined || message.seq > afterSeq).map(messageView);

@@ -17,7 +17,7 @@ type ConnectorRow = { name: string; description: string; owner: string; kind: 'c
 type SlashCommand = { name: string; description: string; command: string; message?: string };
 type Point = 'kvcoder.session.created' | 'kvcoder.session.deleted' | 'kvcoder.session.forked' | 'kvcoder.turn.started' | 'kvcoder.turn.ended' | 'kvcoder.session.waiting';
 type Place = { global?: boolean; sessionId?: string };
-type JobRow = { id: string; kind: 'process' | 'subagent' | 'worker'; title: string; call: string; status: string; startedAt: string; endedAt?: string; exitCode?: number; links: string[] };
+type JobRow = { id: string; kind: 'process' | 'subagent' | 'worker'; title: string; call: string; status: string; startedAt: string; endedAt?: string; exitCode?: number; staging?: { state: 'changed' | 'restored'; paths: number; headMoved: boolean }; links: string[] };
 type Send = { sessionId: string; text: string; fileIds?: string[] };
 type McpServer = { name: string; description: string; command: string; args: string[]; env: string[] } | { name: string; description: string; url: string; headers: string[] };
 type McpCheck = { status: 'ready'; tools: number } | { status: 'signInNeeded' } | { status: 'failed'; problem: { code: string; message: string; params?: Record<string, Json> } };
@@ -35,11 +35,13 @@ declare module '@kvman/sdk' {
     'kvcoder.mcp.sign-in.finish': { input: { state: string; code: string }; output: { name: string } };
     'kvcoder.session.export': { input: SessionId; output: { fileId: string } };
     'kvcoder.session.fork': { input: { sessionId: string; throughSeq?: number }; output: Session };
-    'kvcoder.message.send': { input: Send; output: Empty };
+    'kvcoder.message.send': { input: Send & { sendId?: string }; output: Empty };
     'kvcoder.message.inject': { input: Send; output: Empty };
     'kvcoder.note.add': { input: { sessionId: string; key: string; params?: Record<string, Json> }; output: Empty };
-    'kvcoder.turn.cancel': { input: SessionId; output: Empty };
+    'kvcoder.turn.retry': { input: SessionId; output: Empty };
+    'kvcoder.turn.cancel': { input: SessionId & { turnId?: string }; output: Empty };
     'kvcoder.job.cancel': { input: { sessionId: string; id: string }; output: Empty };
+    'kvcoder.delegate.staging.restore': { input: { sessionId: string; runId: string }; output: Empty };
     'kvcoder.question.answer': { input: { questionId: string; answer: Json }; output: { jobId: string | null } };
     'kvcoder.connector.register': { input: Connector | { connectors: Connector[] }; output: Empty };
     'kvcoder.connector.unregister': { input: { name: string }; output: Empty };
@@ -55,8 +57,8 @@ declare module '@kvman/sdk' {
     'kvcoder.session.list': { input: { limit: number }; output: Session[] };
     'kvcoder.session.get': { input: SessionId; output: Session };
     'kvcoder.session.count': { input: { status?: Status }; output: { count: number } };
-    'kvcoder.context.get': { input: { sessionId: string }; output: { tokens: number; window: number | null; compactAt: number } };
-    'kvcoder.message.list': { input: { sessionId: string; limit: number; afterSeq?: number }; output: { messages: Message[]; omitted: number } };
+    'kvcoder.context.get': { input: { sessionId: string }; output: { tokens: number; window: number | null; compactAt: number; estimated: boolean } };
+    'kvcoder.message.list': { input: { sessionId: string; limit: number; afterSeq?: number; beforeSeq?: number }; output: { messages: Message[]; omitted: number } };
     'kvcoder.job.list': { input: SessionId; output: JobRow[] };
     'kvcoder.job.get': { input: { sessionId: string; id: string }; output: JobRow & { output?: Json; problem?: Json } };
     'kvcoder.turn.list': { input: { sessionId: string; limit: number }; output: Turn[] };

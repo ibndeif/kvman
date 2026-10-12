@@ -6,14 +6,20 @@ import { mounted, serve, session, turn, user } from './support/fixtures.ts';
 const world = { found: session(), messages: [user('go')], omitted: 0, turns: [turn()] };
 
 describe('the header says how full the context is (08 §8.7, ADR 0034, 9)', () => {
-  it('QA46-H10 and QA47-H6 the header has the time, the cost, and how full the memory is, with the tokens in tooltips, in the page language', async () => {
+  it('QA46-H10, QA47-H6, and E186 the header has the time, the cost, and how full the memory is, with the tokens in tooltips, in the page language', async () => {
     const fake = createFakeKvman();
     serve(fake, { ...world, context: { tokens: 116_285, window: 272_000, compactAt: 0.8 } });
     const english = await mounted(ConversationView, fake, { sessionId: 's1' });
     const memory = english.find('[data-test="session-context"]');
     expect(english.find('.kvc-header-stats').text()).toBe('48 s · $0.02 · Memory 43% full');
     expect(memory.attributes('title')).toBe('The model now holds 116.3K of its 272K tokens. Older messages are summarized at 80%.');
-    expect(english.find('[data-test="session-totals"]').attributes('title')).toBe('Turns: 1 · 1.5K tokens used');
+    expect(english.find('[data-test="session-totals"]').attributes('title')).toBe('Turns: 1 · 1.5K tokens used · Cost is an estimate from the model catalog');
+    const parts = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
+    const spent = createFakeKvman();
+    serve(spent, { ...world, found: { ...world.found, usageBy: { summary: { ...parts, cost: 0.01 }, title: { ...parts, cost: 0 }, helpers: { ...parts, cost: 0.5 } } }, context: { tokens: 116_285, window: 272_000, compactAt: 0.8, estimated: true } });
+    const estimated = await mounted(ConversationView, spent, { sessionId: 's1' });
+    expect(estimated.find('[data-test="session-context"]').text()).toBe('Memory about 43% full');
+    expect(estimated.find('[data-test="session-totals"]').attributes('title')).toBe('Turns: 1 · 1.5K tokens used · Of it: summaries $0.01, title $0.00, helpers $0.50 · Cost is an estimate from the model catalog');
     fake.language.value = 'ar';
     const arabic = await mounted(ConversationView, fake, { sessionId: 's1' });
     expect(arabic.find('[data-test="session-context"]').text()).toBe('الذاكرة ممتلئة 43%');

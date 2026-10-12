@@ -61,6 +61,7 @@ export type HandlerPoints = {
   'kernel.job.cancelled': JobPointInput & { reason: string };
   'kernel.process.exited': { extension: string; workspaceId: string; name: string; exitCode: number | null; signal: string | null };
   'kernel.workspace.opened': { workspaceId: string };
+  'kernel.workspace.deleted': { workspaceId: string };
   'kernel.started': Record<string, never>;
   'kernel.stopping': Record<string, never>;
 };

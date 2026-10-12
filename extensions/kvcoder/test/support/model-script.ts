@@ -1,3 +1,4 @@
+import { answeredNote, skippedNote } from '../../src/connectors/ask.ts';
 import { z } from '@kvman/sdk';
 import type { FakeOpenAI, FakeReply } from '@kvman/testkit/fake-openai';
 
@@ -82,4 +83,9 @@ export function systemPrompt(fake: FakeOpenAI, index = -1): string {
 export function requestTools(fake: FakeOpenAI, index = -1): unknown[] {
   const request = fake.requests().at(index);
   return request === undefined ? [] : (bodySchema.parse(request.body).tools ?? []);
+}
+
+/** An `ask` call's result as the model reads it: the answer's JSON, then kvcoder's note that it was answered or skipped. */
+export function answered(json: string): string {
+  return `${json}\n${json === '{"dismissed":true}' ? skippedNote : answeredNote}`;
 }

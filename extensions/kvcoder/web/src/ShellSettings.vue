@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import ApprovalNote from './ApprovalNote.vue';
 import { useKvman } from './kvman.ts';
 import SettingFrame from './SettingFrame.vue';
 import { useSetting } from './use-setting.ts';
@@ -40,5 +41,6 @@ async function savePath(): Promise<void> {
     <SettingFrame v-slot="{ disabled }" setting-key="kvcoder.shell.path" name="shell-path" :setting="path" :saved="saved === 'path'">
       <input v-model="typed" type="text" dir="ltr" class="kvc-field kvc-mono" :disabled="disabled" :placeholder="kvman.t('kvcoder.config.shell.pathFound')" :aria-label="kvman.t('kvcoder.shell.path.title')" spellcheck="false" autocomplete="off" data-test="shell-path-control" @keydown.enter="savePath" @blur="savePath" />
     </SettingFrame>
+    <ApprovalNote :refresh-key="approval.value.value" />
   </div>
 </template>

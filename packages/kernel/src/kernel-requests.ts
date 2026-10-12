@@ -6,12 +6,16 @@ import type { PresetStore } from './preset-edit/preset-store.ts';
 import type { ProcessService } from './processes/process-service.ts';
 import type { ScheduleRows } from './schedules/schedule-rows.ts';
 import type { SecretsFile } from './secrets/secrets-file.ts';
+import type { Connection } from './storage/database.ts';
 import type { RegistrySummary, WorkerRequest } from './workers/protocol.ts';
+import { deleteWorkspace } from './workspaces/delete-workspace.ts';
 import type { Workspaces } from './workspaces/workspaces.ts';
 
 // What the main thread does for a worker (ADR 0009, 19), and the checks it makes for calls from outside a worker.
 
 export type KernelRequestServices = {
+  connection: Connection;
+  home: string;
   dispatcher: Dispatcher;
   schedules: ScheduleRows;
   secrets: SecretsFile;
@@ -50,6 +54,9 @@ export async function answerWorker(services: KernelRequestServices, request: Wor
       );
     case 'close-workspace':
       services.workspaces.close(request.workspaceId);
+      return null;
+    case 'delete-workspace':
+      await deleteWorkspace(services, request.workspaceId);
       return null;
     case 'preset-get':
       return services.preset.get();

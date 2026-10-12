@@ -23,6 +23,13 @@ export async function newestMessages(ctx: Ctx, sessionId: string, limit: number,
   return found.slice(Math.max(found.length - limit, 0));
 }
 
+/** The newest `limit` messages whose `seq` is below `beforeSeq`, in order (ADR 0059, 2). */
+export async function messagesBefore(ctx: Ctx, sessionId: string, limit: number, beforeSeq: number): Promise<Stored<MessageDoc>[]> {
+  const found: Stored<MessageDoc>[] = [];
+  for (let index = blockOf(Math.max(beforeSeq - 1, 0)); index >= 0 && found.length < limit; index -= 1) found.unshift(...(await block(ctx, sessionId, index)).filter((message) => message.seq < beforeSeq));
+  return found.slice(Math.max(found.length - limit, 0));
+}
+
 /** The latest summary, if the session has one. */
 export async function latestSummary(ctx: Ctx, sessionId: string): Promise<Stored<MessageDoc> | undefined> {
   return (await records(ctx.store).messages.find({ sessionId, kind: 'summary' }, { limit: 1, order: 'desc' }))[0];

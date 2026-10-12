@@ -1,74 +1,63 @@
-import type { Ctx, Stored } from '@kvman/sdk';
-import { truncate } from '../result-text.ts';
-import type { JsonValue } from '../connector-call.ts';
+import type { Ctx } from '@kvman/sdk';
+import { dropRun } from '../delegate/runs.ts';
 import { firePoint } from '../registry/session-points.ts';
-import type { Outcome, SessionDoc } from '../schemas/records.ts';
-import { now } from '../sessions/session-lookup.ts';
+import type { Outcome } from '../schemas/records.ts';
 import { records, txRecords } from '../store/collections.ts';
-import { appendBackground, backgroundText } from './background.ts';
-import { appendNotice, appendQueued } from './history.ts';
-import { textOf } from './model-context.ts';
-import { heldText, resolvePending } from './resolve.ts';
+import { cancelStepJob } from './cancel-step-job.ts';
+import { childResultInTx } from './child-result.ts';
+import { endTurnState, type EndAuthority, type EndedBy, type EndedTurn, type Notice } from './end-turn-state.ts';
+export type { EndedBy, Notice } from './end-turn-state.ts';
+import { beginTurn, dispatchStep } from './start-turn.ts';
 
 // Ending a turn (plan 08 §8.1): the turn records its outcome and time, the session goes idle, and the `turn.ended`
-// point fires. A subagent's end reaches its parent: its answer resolves the parent's pending call, or arrives as a
-// background message. From kvcoder's job-point handlers nothing is queued, so an interrupted child ends its parent's
-// turn too (ADR 0009, 95).
+// point fires. A subagent's end reaches its parent in the transaction that ends it (ADR 0052, 2): its answer resolves
+// the parent's pending call, or arrives as a background message, and an interrupted child ends its parent's turn too
+// (ADR 0009, 95). What that started, and what the ended turn still waited on, is handled here after the commit.
 
-export type EndedBy = 'step' | 'handler' | 'cancel';
-
-export type Notice = { code: string; params?: Record<string, JsonValue> };
-
-export async function endTurn(ctx: Ctx, sessionId: string, turnId: string, outcome: Outcome, by: EndedBy, notice?: Notice): Promise<boolean> {
-  const ended = await ctx.store.transaction((tx) => {
-    const store = txRecords(tx);
-    const session = store.sessions.get(sessionId);
-    const turn = store.turns.get(turnId);
-    if (session?.turnId !== turnId || turn === undefined || turn.outcome !== null) return undefined;
-    const endedAt = now();
-    const durationMs = Math.max(Date.parse(endedAt) - Date.parse(turn.startedAt), 0);
-    store.turns.update(turnId, { endedAt, durationMs, outcome, calls: [], pending: [], results: [] });
-    for (const question of store.questions.find({ sessionId }, { limit: 1000 })) store.questions.delete(question.id);
-    appendQueued(store, session, null);
-    if (notice !== undefined) appendNotice(store, session, notice.code, notice.params ?? {}, turnId);
-    const updated = store.sessions.update(sessionId, { status: 'idle', turnId: null, stepJobId: null, endedTurns: session.endedTurns + 1, durationMs: session.durationMs + durationMs, updatedAt: endedAt });
-    return { session: updated, usage: turn.usage, durationMs };
-  });
+export async function endTurn(ctx: Ctx, sessionId: string, turnId: string, outcome: Outcome, by: EndedBy, notice?: Notice, authority?: EndAuthority): Promise<boolean> {
+  const ended = await ctx.store.transaction(tx => endTurnState(txRecords(tx), sessionId, turnId, outcome, by, notice, authority));
   if (ended === undefined) return false;
-  await firePoint(ctx, 'kvcoder.turn.ended', { sessionId, turnId, outcome, usage: ended.usage, durationMs: ended.durationMs });
-  if (ended.session.parentId === null && ended.session.autoTitle && ended.session.endedTurns === 1) await ctx.execAsync('kvcoder.session.title', { sessionId });
-  if (ended.session.parentId !== null && by !== 'cancel') await childEnded(ctx, ended.session, outcome, by, notice);
+  await notifyEnded(ctx, ended);
   return true;
 }
 
-async function lastAnswer(ctx: Ctx, sessionId: string): Promise<string> {
-  const [answer] = await records(ctx.store).messages.find({ sessionId, kind: 'assistant' }, { limit: 1, order: 'desc' });
-  return answer === undefined ? '' : textOf(answer.content['content']);
-}
-
-/** What a finished subagent returns (ADR 0009, 102). */
-export async function childResult(ctx: Ctx, childId: string, outcome: Outcome): Promise<{ text: string; isError: boolean }> {
-  const answer = await lastAnswer(ctx, childId);
-  return outcome === 'done' ? { text: truncate(answer), isError: false } : { text: truncate(`subagent ended ${outcome}\n${answer}`), isError: true };
-}
-
-async function childEnded(ctx: Ctx, child: Stored<SessionDoc>, outcome: Outcome, by: EndedBy, notice: Notice | undefined): Promise<void> {
-  const store = records(ctx.store);
-  const parent = child.parentId === null ? undefined : await store.sessions.get(child.parentId);
-  if (parent === undefined) return;
-  const turn = parent.turnId === null ? undefined : await store.turns.get(parent.turnId);
-  const waiting = turn?.pending.find((item) => item.childSessionId === child.id);
-  if (waiting !== undefined && turn !== undefined) {
-    if (by === 'handler') {
-      await endTurn(ctx, parent.id, turn.id, outcome === 'interrupted' ? 'interrupted' : 'failed', 'handler', notice);
-      return;
-    }
-    const result = await childResult(ctx, child.id, outcome);
-    await resolvePending(ctx, parent.id, waiting.toolCallId, heldText(waiting.toolCallId, result.text, result.isError), false);
-    return;
+// The helpers and worker runs a turn still waited on when it ended go with it (ADR 0052, 4).
+async function stopDependents(ctx: Ctx, ended: EndedTurn): Promise<void> {
+  for (const child of ended.children) await cancelTurn(ctx, child, false);
+  for (const runId of ended.runs) {
+    const run = await records(ctx.store).runs.get(runId);
+    if (run !== undefined) await dropRun(ctx, run);
   }
-  const [entry] = await store.background.find({ sessionId: parent.id, ref: child.id }, { limit: 1 });
-  if (entry === undefined) return;
-  const result = await childResult(ctx, child.id, outcome);
-  await appendBackground(ctx, parent.id, { kind: 'subagent', sessionId: child.id }, backgroundText(entry.call, child.id, result.text), by === 'step');
+}
+
+/** Effects for an already committed end; never used to decide whether a turn may end. */
+export async function notifyEnded(ctx: Ctx, ended: EndedTurn): Promise<void> {
+  const { turnId, outcome, session, delivery } = ended;
+  await firePoint(ctx, 'kvcoder.turn.ended', { sessionId: session.id, turnId, outcome, usage: ended.usage, durationMs: ended.durationMs });
+  if (session.parentId === null && session.autoTitle && session.endedTurns === 1) await ctx.execAsync('kvcoder.session.title', { sessionId: session.id });
+  await stopDependents(ctx, ended);
+  if (delivery === undefined) return;
+  if ('step' in delivery) await dispatchStep(ctx, delivery.step, false);
+  else if ('turn' in delivery) await beginTurn(ctx, delivery.turn.sessionId, delivery.turn.turnId, true);
+  else await notifyEnded(ctx, delivery.ended);
+}
+
+// Invalidate/end and capture the current owned jobs in one transaction. A late publisher loses and cancels its
+// candidate; background policy remains unchanged. External cancellation and notifications are never in SQLite.
+// With `only`, the turn is cancelled when it is still the session's current one, and left alone otherwise (ADR 0049, 1).
+export async function cancelTurn(ctx: Ctx, sessionId: string, notice: boolean, only?: string): Promise<boolean> {
+  const ended = await ctx.store.transaction(tx => {
+    const store = txRecords(tx);
+    const session = store.sessions.get(sessionId);
+    return session?.turnId === null || session === undefined || (only !== undefined && session.turnId !== only) ? undefined : endTurnState(store, sessionId, session.turnId, 'cancelled', 'cancel', notice ? { code: 'CANCELLED' } : undefined);
+  });
+  if (ended === undefined) return false;
+  await cancelStepJob(ctx, ended);
+  await notifyEnded(ctx, ended);
+  return true;
+}
+
+/** What a finished subagent returns, for the job list. */
+export async function childResult(ctx: Ctx, childId: string, outcome: Outcome): Promise<{ text: string; isError: boolean }> {
+  return ctx.store.transaction(tx => childResultInTx(txRecords(tx), childId, outcome));
 }

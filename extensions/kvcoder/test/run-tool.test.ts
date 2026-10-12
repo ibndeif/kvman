@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { z } from '@kvman/sdk';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { rawCall, requestTools, runs, says, toolResults, type RunCallSpec } from './support/model-script.ts';
+import { answered, rawCall, requestTools, runs, says, toolResults, type RunCallSpec } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 import type { FakeReply } from '@kvman/testkit/fake-openai';
 
@@ -39,14 +39,14 @@ describe('the run tool (08 §8.2 and §8.3, ADR 0011)', { timeout: 30_000 }, () 
     expect(await kernel.exec('todo.item.list', {})).toEqual([{ text: 'milk' }]);
   });
 
-  it('QA18-H15 ask waits on the person, and the answer is the result as JSON', async () => {
+  it('QA18-H15 ask waits on the person, and the answer is the result as JSON, with the note that it was answered', async () => {
     const { kernel, fake, sessionId } = await call({ connector: 'ask', command: 'confirm', payload: { prompt: 'Go on?' } });
     const { session, turn: waiting } = await turnState(kernel, sessionId);
     expect(session.status).toBe('waiting');
     const questionId = z.object({ questionId: z.string() }).parse(waiting?.pending[0]).questionId;
     await kernel.exec('kvcoder.question.answer', { questionId, answer: { confirmed: true } });
     await kernel.clock.advance(0);
-    expect(toolResults(fake)).toEqual([JSON.stringify({ confirmed: true })]);
+    expect(toolResults(fake)).toEqual([answered(JSON.stringify({ confirmed: true }))]);
   });
 
   it('QA18-E1 another tool is refused, and the turn goes on', async () => {

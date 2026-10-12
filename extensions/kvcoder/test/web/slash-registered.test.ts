@@ -54,9 +54,9 @@ describe('slash commands that extensions registered, in the send box (08 §8.7, 
     await run(view, '/todo');
     expect(ran(fake)).toEqual([
       { name: 'todo.list.start', input: { sessionId: 's1', argument: 'milk' } },
-      { name: 'kvcoder.message.send', input: { sessionId: 's1', text: 'milk' } },
+      { name: 'kvcoder.message.send', input: { sessionId: 's1', text: 'milk', sendId: expect.any(String) } },
       { name: 'todo.list.start', input: { sessionId: 's1', argument: '' } },
-      { name: 'kvcoder.message.send', input: { sessionId: 's1', text: 'Send' } },
+      { name: 'kvcoder.message.send', input: { sessionId: 's1', text: 'Send', sendId: expect.any(String) } },
       { name: 'todo.list.start', input: { sessionId: 's1', argument: '' } },
     ]);
     expect((box(view).element as HTMLTextAreaElement).value).toBe('');

@@ -1,5 +1,5 @@
 import { z, type Stored } from '@kvman/sdk';
-import { checkSchema, outcomeSchema, pendingSchema, sourceSchema, statusSchema, thinkingSchema, titleSchema, usageSchema, messageKindSchema, type MessageDoc, type QueuedDoc, type SessionDoc, type TurnDoc } from '../schemas/records.ts';
+import { checkSchema, outcomeSchema, pendingSchema, sourceSchema, statusSchema, thinkingSchema, titleSchema, usageBySchema, usageSchema, messageKindSchema, type MessageDoc, type QueuedDoc, type SessionDoc, type TurnDoc } from '../schemas/records.ts';
 
 // The public shapes of sessions, messages, and turns (plan 08 §8.1), from kvcoder's records.
 
@@ -13,6 +13,7 @@ export const sessionSchema = z.object({
   thinking: thinkingSchema,
   stepJobId: z.string().exactOptional(),
   usage: usageSchema,
+  usageBy: usageBySchema.exactOptional(),
   durationMs: z.number(),
   checks: z.array(checkSchema).exactOptional(),
   createdAt: z.string(),
@@ -65,6 +66,8 @@ export function sessionView(doc: Stored<SessionDoc>): Session {
     thinking: doc.thinking,
     ...(doc.stepJobId === null ? {} : { stepJobId: doc.stepJobId }),
     usage: doc.usage,
+    // Only a session that spent something apart from its own replies says how (ADR 0058, 1).
+    ...(Object.values(doc.usageBy).every((part) => part.input + part.output + part.cacheRead + part.cacheWrite === 0) ? {} : { usageBy: doc.usageBy }),
     durationMs: doc.durationMs,
     ...(doc.checks === null ? {} : { checks: doc.checks }),
     createdAt: doc.createdAt,

@@ -1,23 +1,26 @@
-import type { Stats } from 'node:fs';
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { mkdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { z, type Ctx } from '@kvman/sdk';
 import { applyEdits, type EditedText } from '../files/edit-text.ts';
+import { changeFile, undoChange } from '../files/file-change.ts';
+import { assembleParts, partsLimit, savePart } from '../files/file-parts.ts';
 import { listEntries } from '../files/list-entries.ts';
 import { readLines } from '../files/read-file.ts';
 import { searchText } from '../files/search-text.ts';
 import { resolveInWorkspace } from '../files/workspace-path.ts';
 import { invalid, notFound } from '../problems.ts';
+import { records } from '../store/collections.ts';
 import { callInput, type ConnectorCommand } from './connector-command.ts';
 import { edits, risky } from './payload-fields.ts';
 
 // The `fs` connector (plan 08 §8.5, ADR 0009, 157 to 160; ADR 0011, 8): `read`, `list`, and `search` look inside the
 // workspace folder; `write` creates or replaces a file and `edit` replaces text in one, after the approval the shell's
-// calls get. The step runs the changes to one file one after another.
+// calls get. A change is checked against what the chat last saw of the file, replaces it whole, and can be undone
+// (ADR 0053).
 
 /** What the prompt's index says the connector is for. */
 export const fsDescription =
-  'Read, list, search, create, and change files in the workspace folder. Use it instead of cat, ls, grep, or shell redirection: read a file before you edit it, write for a new file or a full rewrite, one file per call, and edit for exact text replacements in an existing file.';
+  'Read, list, search, create, and change files in the workspace folder. Use it instead of cat, ls, grep, or shell redirection: read a file before you change it (a change to a file this chat has not read, or that changed since, fails), write for a new file or a full rewrite (a long file in pieces with part, then assemble), one file per call, and edit for exact text replacements in an existing file.';
 
 const filePath = (what: string) => z.string().min(1).describe(`${what}, relative to the workspace folder, or absolute inside it.`);
 
@@ -25,15 +28,21 @@ const payloads = {
   read: z.strictObject({
     path: filePath('The file to read'),
     fromLine: z.number().int().min(1).describe('The first line to return, counting from 1. The default is 1.').exactOptional(),
+    fromColumn: z.number().int().min(1).describe('The character of fromLine to start at, from 1: pass it only as a result gave it in next.').exactOptional(),
     lines: z.number().int().min(1).max(2000).describe('How many lines to return: 2000 by default, which is also the most.').exactOptional(),
   }),
   list: z.strictObject({ path: z.string().describe('The folder to list, relative to the workspace folder, or absolute inside it; the workspace folder when left out or empty.').exactOptional() }),
   search: z.strictObject({
-    pattern: z.string().min(1).describe('A JavaScript regular expression, matched against each line, case-sensitive.'),
+    pattern: z.string().min(1).describe('A JavaScript regular expression, matched against each line, case-sensitive; plain text with literal.'),
     path: z.string().describe('The file or folder to search, relative to the workspace folder, or absolute inside it; the workspace folder when left out or empty.').exactOptional(),
+    literal: z.boolean().describe('true to match pattern as plain text, not as a regular expression.').exactOptional(),
+    glob: z.string().min(1).describe('Which files to search, such as *.ts or src/**/*.vue.').exactOptional(),
   }),
   write: z.strictObject({ path: filePath('The file to create or replace'), content: z.string().describe('The whole content of the file.'), risky }),
   edit: z.strictObject({ path: filePath('The existing text file to change'), edits, risky }),
+  undo: z.strictObject({ path: filePath('The file whose latest change by this chat to take back'), risky }),
+  part: z.strictObject({ path: filePath('The long file being written'), part: z.number().int().min(1).max(partsLimit).describe('The number of this piece, from 1; a number sent again replaces its piece.'), content: z.string().describe('The text of this piece, at most 64 KB.') }),
+  assemble: z.strictObject({ path: filePath('The file to write from its saved parts'), risky }),
 };
 
 export const fsCommands = {
@@ -42,11 +51,13 @@ export const fsCommands = {
   search: { registration: 'kvcoder.fs.text.search', description: 'Finds the lines that match a regular expression, in a file or under a folder.', payload: payloads.search, asks: false, bounded: true },
   write: { registration: 'kvcoder.fs.write', description: 'Creates a file and its parent folders, or replaces the file.', payload: payloads.write, asks: true },
   edit: { registration: 'kvcoder.fs.edit', description: 'Replaces exact pieces of text in an existing file; if one replacement fails, nothing is written.', payload: payloads.edit, asks: true },
+  undo: { registration: 'kvcoder.fs.undo', description: "Takes back this chat's latest change to a file, when the file hasn't changed since.", payload: payloads.undo, asks: true },
+  part: { registration: 'kvcoder.fs.part', description: 'Saves one numbered piece of a long file, without writing the file yet.', payload: payloads.part, asks: false },
+  assemble: { registration: 'kvcoder.fs.assemble', description: 'Writes a file from its saved parts, in order, and drops them; names the missing numbers when one is absent.', payload: payloads.assemble, asks: true },
 } satisfies Record<string, ConnectorCommand>;
 
 const strictText = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
 
-const missing = (error: unknown): boolean => error instanceof Error && 'code' in error && error.code === 'ENOENT';
 
 // The file system's own refusals (a folder in the way, no permission) are the model's to read and fix.
 const refusedByFileSystem = (error: unknown): error is Error & { code: string } => error instanceof Error && 'code' in error && typeof error.code === 'string' && /^E[A-Z]+$/.test(error.code);
@@ -60,22 +71,7 @@ async function asProblems<Result>(run: () => Promise<Result>): Promise<Result> {
   }
 }
 
-async function statOrUndefined(target: string): Promise<Stats | undefined> {
-  try {
-    return await stat(target);
-  } catch (error) {
-    if (missing(error)) return undefined;
-    throw error;
-  }
-}
-
-async function readText(target: string, requested: string): Promise<string> {
-  let bytes: Buffer;
-  try {
-    bytes = await readFile(target);
-  } catch (error) {
-    throw missing(error) ? notFound(`${requested} doesn't exist.`, { path: requested }) : error;
-  }
+function textOf(bytes: Buffer, requested: string): string {
   try {
     return strictText.decode(bytes);
   } catch {
@@ -83,14 +79,20 @@ async function readText(target: string, requested: string): Promise<string> {
   }
 }
 
-async function writeTo(ctx: Ctx, input: z.output<typeof payloads.write>) {
-  const target = await resolveInWorkspace(ctx.job.workspace.path, input.path);
-  const existing = await statOrUndefined(target);
-  if (existing?.isDirectory() === true) throw invalid(`${input.path} is a folder.`, { path: input.path });
-  await mkdir(path.dirname(target), { recursive: true });
+async function changed(ctx: Ctx, sessionId: string, requested: string) {
+  return { sessionId, shown: requested, real: await resolveInWorkspace(ctx.job.workspace.path, requested) };
+}
+
+async function writeTo(ctx: Ctx, sessionId: string, input: z.output<typeof payloads.write>) {
+  const file = await changed(ctx, sessionId, input.path);
+  // A path below a file is refused as the file system says it, before any folder is made.
+  await stat(file.real).catch((error: unknown) => {
+    if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error;
+  });
+  await mkdir(path.dirname(file.real), { recursive: true });
   ctx.job.signal.throwIfAborted();
-  await writeFile(target, input.content, 'utf8');
-  return { path: input.path, created: existing === undefined, bytes: Buffer.byteLength(input.content) };
+  const content = Buffer.from(input.content, 'utf8');
+  return changeFile(ctx, file, () => ({ content, value: { path: input.path, bytes: content.length } }));
 }
 
 const shownAround = 3;
@@ -104,12 +106,14 @@ function changedLines(edited: EditedText): { fromLine: number; content: string }
   return { fromLine, content: lines.slice(fromLine - 1, last).join('') };
 }
 
-async function editIn(ctx: Ctx, input: z.output<typeof payloads.edit>) {
-  const target = await resolveInWorkspace(ctx.job.workspace.path, input.path);
-  const edited = applyEdits(await readText(target, input.path), input.edits);
+async function editIn(ctx: Ctx, sessionId: string, input: z.output<typeof payloads.edit>) {
+  const file = await changed(ctx, sessionId, input.path);
   ctx.job.signal.throwIfAborted();
-  await writeFile(target, edited.text, 'utf8');
-  return { path: input.path, replacements: edited.replacements, firstChangedLine: edited.firstChangedLine, ...changedLines(edited) };
+  return changeFile(ctx, file, (previous) => {
+    if (previous === undefined) throw notFound(`${input.path} doesn't exist.`, { path: input.path });
+    const edited = applyEdits(textOf(previous, input.path), input.edits);
+    return { content: Buffer.from(edited.text, 'utf8'), value: { path: input.path, replacements: edited.replacements, firstChangedLine: edited.firstChangedLine, ...changedLines(edited) } };
+  });
 }
 
 const commands = fsCommands;
@@ -118,8 +122,8 @@ export function registerFsConnector(ctx: Ctx): void {
   ctx.registerQuery('kvcoder.fs.file.get', {
     description: commands.read.description,
     input: callInput(payloads.read),
-    output: z.object({ path: z.string(), fromLine: z.number().int(), totalLines: z.number().int(), content: z.string() }),
-    handle: ({ payload }) => asProblems(() => readLines(ctx.job.workspace.path, payload)),
+    output: z.object({ path: z.string(), fromLine: z.number().int(), totalLines: z.number().int(), content: z.string(), truncated: z.boolean(), next: z.object({ fromLine: z.number().int(), fromColumn: z.number().int().exactOptional() }).exactOptional() }),
+    handle: ({ sessionId, payload }) => asProblems(() => readLines(ctx.job.workspace.path, payload, async (real) => (await records(ctx.store).fileViews.find({ sessionId, path: real }, { limit: 1 }))[0]?.fingerprint)),
   });
   ctx.registerQuery('kvcoder.fs.entry.list', {
     description: commands.list.description,
@@ -130,7 +134,7 @@ export function registerFsConnector(ctx: Ctx): void {
   ctx.registerQuery('kvcoder.fs.text.search', {
     description: commands.search.description,
     input: callInput(payloads.search),
-    output: z.object({ files: z.array(z.object({ path: z.string(), matches: z.array(z.object({ line: z.number().int(), text: z.string() })) })), truncated: z.boolean() }),
+    output: z.object({ files: z.array(z.object({ path: z.string(), matches: z.array(z.object({ line: z.number().int(), text: z.string() })) })), truncated: z.boolean(), reason: z.enum(['matches', 'time']).exactOptional() }),
     handle: ({ payload }) => asProblems(() => searchText(ctx.job.workspace.path, payload, ctx.job.signal)),
   });
   ctx.registerCommand('kvcoder.fs.write', {
@@ -139,7 +143,7 @@ export function registerFsConnector(ctx: Ctx): void {
     output: z.object({ path: z.string(), created: z.boolean(), bytes: z.number().int() }),
     retries: 0,
     maxInputBytes: 33_554_432,
-    handle: ({ payload }) => asProblems(() => writeTo(ctx, payload)),
+    handle: ({ sessionId, payload }) => asProblems(() => writeTo(ctx, sessionId, payload)),
   });
   ctx.registerCommand('kvcoder.fs.edit', {
     description: commands.edit.description,
@@ -147,6 +151,31 @@ export function registerFsConnector(ctx: Ctx): void {
     output: z.object({ path: z.string(), replacements: z.number().int(), firstChangedLine: z.number().int(), fromLine: z.number().int(), content: z.string() }),
     retries: 0,
     maxInputBytes: 33_554_432,
-    handle: ({ payload }) => asProblems(() => editIn(ctx, payload)),
+    handle: ({ sessionId, payload }) => asProblems(() => editIn(ctx, sessionId, payload)),
+  });
+  ctx.registerCommand('kvcoder.fs.part', {
+    description: commands.part.description,
+    input: callInput(payloads.part),
+    output: z.object({ path: z.string(), part: z.number().int(), parts: z.array(z.number().int()), bytes: z.number().int() }),
+    retries: 0,
+    handle: async ({ sessionId, payload }) => asProblems(async () => savePart(ctx, await changed(ctx, sessionId, payload.path), payload.part, payload.content)),
+  });
+  ctx.registerCommand('kvcoder.fs.assemble', {
+    description: commands.assemble.description,
+    input: callInput(payloads.assemble),
+    output: z.object({ path: z.string(), created: z.boolean(), bytes: z.number().int(), parts: z.number().int() }),
+    retries: 0,
+    handle: async ({ sessionId, payload }) => asProblems(async () => {
+      const file = await changed(ctx, sessionId, payload.path);
+      await mkdir(path.dirname(file.real), { recursive: true });
+      return assembleParts(ctx, file);
+    }),
+  });
+  ctx.registerCommand('kvcoder.fs.undo', {
+    description: commands.undo.description,
+    input: callInput(payloads.undo),
+    output: z.object({ path: z.string(), removed: z.boolean(), bytes: z.number().int() }),
+    retries: 0,
+    handle: async ({ sessionId, payload }) => asProblems(async () => undoChange(ctx, await changed(ctx, sessionId, payload.path))),
   });
 }

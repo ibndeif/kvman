@@ -38,7 +38,7 @@ describe('pasting files into the send box (08 §8.7, ADR 0017, 13; ADR 0018, 6)'
     await view.find('[data-test="composer-text"]').setValue('look');
     await view.find('[data-test="send"]').trigger('click');
     await flushPromises();
-    expect(fake.calls).toContainEqual({ name: 'kvcoder.message.send', input: { sessionId: 's1', text: 'look', fileIds: ['f1'] } });
+    expect(fake.calls).toContainEqual({ name: 'kvcoder.message.send', input: { sessionId: 's1', text: 'look', fileIds: ['f1'], sendId: expect.any(String) } });
     view.unmount();
   });
 
@@ -57,7 +57,7 @@ describe('pasting files into the send box (08 §8.7, ADR 0017, 13; ADR 0018, 6)'
     await view.find('[data-test="composer-text"]').setValue('read these');
     await view.find('[data-test="send"]').trigger('click');
     await flushPromises();
-    expect(fake.calls).toContainEqual({ name: 'kvcoder.message.send', input: { sessionId: 's1', text: 'read these', fileIds: ['f1', 'f1'] } });
+    expect(fake.calls).toContainEqual({ name: 'kvcoder.message.send', input: { sessionId: 's1', text: 'read these', fileIds: ['f1', 'f1'], sendId: expect.any(String) } });
     expect(await paste(view, [])).toBe(false);
     view.unmount();
   });

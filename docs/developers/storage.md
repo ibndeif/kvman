@@ -28,7 +28,9 @@ await notes.update(note.id, { pinned: true });                                 /
 await notes.delete(note.id);
 ```
 
-- `find(filter, { limit, order? })`: equality filters on top-level fields (`string`, `number`, `boolean`, or `null` values), a **required** `limit` (at most 1000, else `VALIDATION_FAILED`), and `order` of `'asc'` (default, oldest first) or `'desc'`.
+- `find(filter, { limit, order?, after? })`: equality filters on top-level fields (`string`, `number`, `boolean`, or `null` values), a **required** `limit` (at most 1000, else `VALIDATION_FAILED`), and `order` of `'asc'` (default, oldest first) or `'desc'`.
+- Optional `after` is a non-empty string ID position, exclusive in the direction of `order`. Read the first page without it, then use the last document's ID for the next page with the same filter/order. Its document may have been deleted; an empty next page means no further matching row at that read. Results remain arrays; transaction collections support the same option synchronously. The limit stays a positive integer≤1000. Invalid options fail `VALIDATION_FAILED`. An older kernel without this option rejects it; new SDK types alone do not add runtime support.
+- Separate pages are not a snapshot: unread deletions disappear, matching new IDs beyond the position may appear, and changed rows behind the cursor are not revisited. Define and recheck the consistency your operation needs. A `null` filter matches explicit JSON null, not missing fields or schema defaults.
 - `update` and `delete` of a missing id fail `NOT_FOUND`.
 - A document or a kv value is JSON of at most 16 MiB (`TOO_LARGE`).
 

@@ -1,5 +1,6 @@
 import { ProblemError, type Ctx, type Stored } from '@kvman/sdk';
 import { delay } from '../delay.ts';
+import { plainEnvironment } from '../result-text.ts';
 import type { ShellCommand } from '../calls/shell-command.ts';
 import { now } from '../sessions/session-lookup.ts';
 import { records, txRecords } from '../store/collections.ts';
@@ -31,7 +32,7 @@ export async function startProcess(ctx: Ctx, sessionId: string, shell: ShellComm
   const store = records(ctx.store);
   const doc = await store.processes.insert({ workspaceId: ctx.job.workspace.id, sessionId, title: labelled.title, call: labelled.line, startedAt: now(), reported: false, starting: true });
   try {
-    await ctx.processes.start(processName(doc.id), { command: shell.program, args: shell.args(labelled.line) });
+    await ctx.processes.start(processName(doc.id), { command: shell.program, args: shell.args(labelled.line), env: plainEnvironment(process.env) });
   } catch (error) {
     await store.processes.delete(doc.id);
     throw error;

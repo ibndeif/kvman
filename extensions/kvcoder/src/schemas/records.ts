@@ -37,16 +37,25 @@ export const sourceSchema = z.union([
 /** A message's kind. */
 export const messageKindSchema = z.enum(['user', 'assistant', 'toolResult', 'notice', 'note', 'summary']);
 
+const noTokens = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0 };
+
+/** The parts of a session's usage that weren't its own replies (ADR 0058, 1). */
+export const usageBySchema = z.object({ summary: usageSchema, title: usageSchema, helpers: usageSchema });
+
 export const sessionDocSchema = z.object({
   title: titleSchema,
   autoTitle: z.boolean(),
+  deleting: z.boolean().default(false),
   status: statusSchema,
   parentId: z.string().nullable(),
   // The worker a child session runs for, with the instructions it started with (ADR 0021, 29).
-  worker: z.object({ name: z.string(), instructions: z.string() }).nullable().default(null),
+  worker: z.object({ name: z.string(), instructions: z.string(), readOnly: z.boolean().default(false) }).nullable().default(null),
   model: z.string().nullable(),
   thinking: thinkingSchema,
+  usageBy: usageBySchema.default({ summary: noTokens, title: noTokens, helpers: noTokens }),
   stepJobId: z.string().nullable(),
+  stepGeneration: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).default(0),
+  stepIntentId: z.string().nullable().default(null),
   turnId: z.string().nullable(),
   endedTurns: z.number().int().nonnegative(),
   nextSeq: z.number().int().nonnegative(),
@@ -58,6 +67,19 @@ export const sessionDocSchema = z.object({
   optedIn: z.array(z.string()).default([]),
   createdAt: z.string(),
   updatedAt: z.string(),
+});
+
+/** A step's durable scheduling/claim record in its workspace (ADR0041). */
+export const stepIntentDocSchema = z.object({
+  sessionId: z.string(),
+  turnId: z.string(),
+  generation: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+  phase: z.enum(['prepared', 'claimed', 'settled', 'invalidated', 'needs-review']),
+  jobId: z.string().nullable(),
+  legacyJobId: z.string().nullable(),
+  reason: z.string().nullable(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
 });
 
 export const messageDocSchema = z.object({
@@ -72,6 +94,8 @@ export const messageDocSchema = z.object({
   fileNames: z.array(z.string()).nullable(),
   model: z.string().nullable(),
   usage: usageSchema.nullable(),
+  // What a reply's provider count was measured with: the prompt and tools of its call (ADR 0058, 2); none on older messages.
+  basis: z.string().nullable().default(null),
   durationMs: z.number().nonnegative().nullable(),
   createdAt: z.string(),
 });
@@ -114,11 +138,14 @@ export const turnDocSchema = z.object({
   durationMs: z.number().nonnegative(),
   steps: z.number().int().nonnegative(),
   lost: z.number().int().nonnegative().default(0),
+  // The replies of the turn that were empty or cut at the length limit (ADR 0054, 1).
+  incomplete: z.number().int().nonnegative().default(0),
   usage: usageSchema,
   outcome: outcomeSchema.nullable(),
   calls: z.array(z.object({ toolCallId: z.string(), toolName: z.string() })),
   pending: z.array(pendingSchema),
   results: z.array(heldResultSchema),
+  deferredCalls: z.array(z.object({ toolCallId: z.string(), call: runCallSchema })).default([]),
 });
 
 export const questionDocSchema = z.object({
@@ -130,12 +157,49 @@ export const questionDocSchema = z.object({
   question: z.record(z.string(), z.json()),
 });
 
+/** A committed answer's internal retry identity, not a reusable approval (ADR0042). */
+export const answerReceiptDocSchema = z.object({
+  questionId: z.string(),
+  sessionId: z.string(),
+  turnId: z.string(),
+  toolCallId: z.string(),
+  questionKind: questionDocSchema.shape.kind,
+  answerFingerprint: z.string().regex(/^[0-9a-f]{64}$/i),
+  createdAt: z.iso.datetime(),
+});
+
+// What a chat last saw of a file, and a file's content before one of the chat's changes (ADR 0053, 2 and 4).
+export const fileViewDocSchema = z.object({ sessionId: z.string(), path: z.string(), fingerprint: z.string().regex(/^[0-9a-f]{64}$/), updatedAt: z.iso.datetime() });
+export const fileBackupDocSchema = z.object({ sessionId: z.string(), path: z.string(), previous: z.string().nullable(), written: z.string().regex(/^[0-9a-f]{64}$/), createdAt: z.iso.datetime() });
+
+// One numbered piece of a long file a chat is writing, held until `fs assemble` (ADR 0054, 2).
+export const filePartDocSchema = z.object({ sessionId: z.string(), path: z.string(), part: z.number().int().min(1), content: z.string(), updatedAt: z.iso.datetime() });
+
+// A send the page named with `sendId` and the session accepted (ADR 0048): it proves acceptance, and holds no text.
+export const sendReceiptDocSchema = z.object({
+  sendId: z.string(),
+  sessionId: z.string(),
+  messageFingerprint: z.string().regex(/^[0-9a-f]{64}$/i),
+  createdAt: z.iso.datetime(),
+});
+
 // A subagent a session started with `background: true` (ADR 0009, 88), by its child session id. `connector` is the kind
 // of a job started with the old `--async`; such a stored row still parses and is never listed (ADR 0011, 6).
 export const backgroundDocSchema = z.object({ sessionId: z.string(), ref: z.string(), kind: z.enum(['connector', 'subagent']), call: z.string(), startedAt: z.string() });
 
 /** How a program worker's run stands. */
 export const runStatusSchema = z.enum(['running', 'succeeded', 'failed', 'cancelled', 'interrupted']);
+
+// What a run changed in the folder's Git staging area (ADR 0060, 4): the staged tree before it, the tree and the
+// commit `HEAD` named after it, and how many staged paths differ.
+export const runStagingSchema = z.object({
+  tree: z.string(),
+  after: z.string(),
+  head: z.string().nullable(),
+  headMoved: z.boolean(),
+  paths: z.number().int().nonnegative(),
+  restored: z.boolean(),
+});
 
 // A run of a program worker (ADR 0021, 33): the command line it started with, the job that runs it, and what it
 // returned. `toolCallId` is the call a turn waits on, and `null` for a background run.
@@ -154,6 +218,7 @@ export const runDocSchema = z.object({
   endedAt: z.string().nullable(),
   exitCode: z.number().int().nullable(),
   output: z.string().nullable(),
+  staging: runStagingSchema.nullable().default(null),
 });
 
 // A background process a session started with `background: true` (ADR 0009, 150). It lives in the global store, since the
@@ -187,6 +252,7 @@ export const artifactDocSchema = z.object({
 });
 
 export type SessionDoc = z.output<typeof sessionDocSchema>;
+export type StepIntentDoc = z.output<typeof stepIntentDocSchema>;
 export type MessageDoc = z.output<typeof messageDocSchema>;
 export type QueuedDoc = z.output<typeof queuedDocSchema>;
 export type TurnDoc = z.output<typeof turnDocSchema>;
@@ -194,10 +260,13 @@ export type Pending = z.output<typeof pendingSchema>;
 export type HeldResult = z.output<typeof heldResultSchema>;
 export type RunCallDoc = z.output<typeof runCallSchema>;
 export type QuestionDoc = z.output<typeof questionDocSchema>;
+export type AnswerReceiptDoc = z.output<typeof answerReceiptDocSchema>;
+export type SendReceiptDoc = z.output<typeof sendReceiptDocSchema>;
 export type BackgroundDoc = z.output<typeof backgroundDocSchema>;
 export type ArtifactDoc = z.output<typeof artifactDocSchema>;
 export type ProcessDoc = z.output<typeof processDocSchema>;
 export type RunDoc = z.output<typeof runDocSchema>;
+export type RunStaging = z.output<typeof runStagingSchema>;
 export type Usage = z.output<typeof usageSchema>;
 export type Outcome = z.output<typeof outcomeSchema>;
 export type Source = z.output<typeof sourceSchema>;

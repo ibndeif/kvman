@@ -2,42 +2,51 @@ import type { Ctx, Stored } from '@kvman/sdk';
 import { firePoint } from '../registry/session-points.ts';
 import type { SessionDoc } from '../schemas/records.ts';
 import { now } from '../sessions/session-lookup.ts';
-import { records, txRecords, type TxRecords } from '../store/collections.ts';
+import { txRecords, type TxRecords } from '../store/collections.ts';
 import { noUsage } from './history.ts';
+import { preparedStep, prepareStep, publishStep, type StepIdentity } from './step-intents.ts';
 
-// Starting a turn and chaining its steps (plan 08 §8.1): each step is an async job; the session records the running
-// step's job id, and the step that queues the next one sends `{ type: 'follow', jobId }` so the UI streams on.
-
-/** Opens a turn on an idle session inside a transaction, and marks the session running. */
+/** Opens a turn and prepares its first intent in the same transaction (ADR0041). */
 export function openTurn(tx: TxRecords, session: Stored<SessionDoc>): string {
-  const turn = tx.turns.insert({ sessionId: session.id, startedAt: now(), endedAt: null, durationMs: 0, steps: 0, lost: 0, usage: noUsage(), outcome: null, calls: [], pending: [], results: [] });
+  const turn = tx.turns.insert({ sessionId: session.id, startedAt: now(), endedAt: null, durationMs: 0, steps: 0, lost: 0, incomplete: 0, usage: noUsage(), outcome: null, calls: [], pending: [], results: [], deferredCalls: [] });
   tx.sessions.update(session.id, { status: 'running', turnId: turn.id, stepJobId: null, updatedAt: now() });
+  prepareStep(tx, session.id, turn.id);
   return turn.id;
 }
 
-/** Queues the turn's next step and records it as the session's step; `follow` sends the follow chunk. */
-export async function queueStep(ctx: Ctx, sessionId: string, turnId: string, follow: boolean): Promise<string> {
-  const jobId = await ctx.execAsync('kvcoder.turn.step', { sessionId, turnId });
-  if (follow) ctx.job.progress({ type: 'follow', jobId });
-  await ctx.store.transaction((tx) => {
-    const { sessions } = txRecords(tx);
-    const session = sessions.get(sessionId);
-    if (session?.turnId === turnId && session.status === 'running') sessions.update(sessionId, { stepJobId: jobId });
+/** Enqueues outside SQLite, then publishes only this exact identity; a losing candidate is cancelled. */
+export async function dispatchStep(ctx: Ctx, identity: StepIdentity, follow: boolean): Promise<string | null> {
+  ctx.job.signal.throwIfAborted();
+  const current = await ctx.store.transaction(tx => {
+    const found = preparedStep(txRecords(tx), identity.sessionId, identity.turnId);
+    return found?.intentId === identity.intentId && found.generation === identity.generation;
   });
+  if (!current) return null;
+  const jobId = await ctx.execAsync('kvcoder.turn.step', identity);
+  const publication = await ctx.store.transaction(tx => {
+    const store = txRecords(tx);
+    if (publishStep(store, identity, jobId)) return 'current';
+    const intent = store.stepIntents.get(identity.intentId);
+    // A canonical job can settle before its publisher returns. Its post-commit work is not a losing candidate.
+    return intent?.sessionId === identity.sessionId && intent.turnId === identity.turnId && intent.generation === identity.generation && intent.phase === 'settled' && intent.jobId === jobId ? 'settled' : 'lost';
+  });
+  if (publication !== 'current') {
+    if (publication === 'lost') await ctx.cancel(jobId);
+    return null;
+  }
+  // A follow chunk is only a hint. Publication must win before it is emitted (ADR0041).
+  if (follow) ctx.job.progress({ type: 'follow', jobId });
   return jobId;
 }
 
-/** Starts a turn that `openTurn` opened: the `turn.started` point, then the first step. */
-export async function beginTurn(ctx: Ctx, sessionId: string, turnId: string, follow: boolean): Promise<string> {
-  await firePoint(ctx, 'kvcoder.turn.started', { sessionId, turnId });
-  return queueStep(ctx, sessionId, turnId, follow);
+/** Dispatches an already prepared transition; it never prepares a successor after the fact. */
+export async function queueStep(ctx: Ctx, sessionId: string, turnId: string, follow: boolean): Promise<string | null> {
+  const identity = await ctx.store.transaction(tx => preparedStep(txRecords(tx), sessionId, turnId));
+  return identity === undefined ? null : dispatchStep(ctx, identity, follow);
 }
 
-/** The session's turn, when it is still the running one. */
-export async function currentTurn(ctx: Ctx, sessionId: string, turnId: string) {
-  const store = records(ctx.store);
-  const session = await store.sessions.get(sessionId);
-  if (session?.turnId !== turnId) return undefined;
-  const turn = await store.turns.get(turnId);
-  return turn === undefined || turn.outcome !== null ? undefined : { session, turn };
+/** Starts a committed turn: its point then its prepared first step, rechecked after the point. */
+export async function beginTurn(ctx: Ctx, sessionId: string, turnId: string, follow: boolean): Promise<string | null> {
+  await firePoint(ctx, 'kvcoder.turn.started', { sessionId, turnId });
+  return queueStep(ctx, sessionId, turnId, follow);
 }

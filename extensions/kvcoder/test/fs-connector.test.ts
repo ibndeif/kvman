@@ -17,15 +17,15 @@ async function run(commands: readonly RunCallSpec[]): Promise<{ results: string[
   return { results: toolResults(fake), folder: kernel.homeFolder };
 }
 
-// Runs the commands in a workspace that `prepare` filled first.
-async function runWith(prepare: (folder: string) => void, commands: readonly RunCallSpec[]): Promise<{ results: string[]; folder: string }> {
+// Runs the commands in a workspace that `prepare` filled first, after the chat read the files in `seen` (ADR 0053, 2).
+async function runWith(prepare: (folder: string) => void, commands: readonly RunCallSpec[], seen: readonly string[] = []): Promise<{ results: string[]; folder: string }> {
   const { kernel, fake } = await kvcoder.start();
   prepare(kernel.homeFolder);
   const sessionId = await newSession(kernel);
-  fake.reply(runs(...commands), says('ok'));
+  fake.reply(...(seen.length === 0 ? [] : [runs(...seen.map((file) => fsCall('read', { path: file })))]), runs(...commands), says('ok'));
   await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
   await kernel.clock.advance(0);
-  return { results: toolResults(fake), folder: kernel.homeFolder };
+  return { results: toolResults(fake).slice(seen.length), folder: kernel.homeFolder };
 }
 
 const json = (text: string | undefined): unknown => JSON.parse(String(text));
@@ -40,25 +40,25 @@ describe('the fs connector (08 §8.5, ADR 0009, 157 to 160)', { timeout: 30_000 
   });
 
   it('QA4-H2 write replaces a file and counts the bytes of non-ASCII text', async () => {
-    const { results, folder } = await runWith((home) => writeFileSync(path.join(home, 'a.txt'), 'old content that is longer'), [fsCall('write', { path: 'a.txt', content: 'جديد' })]);
+    const { results, folder } = await runWith((home) => writeFileSync(path.join(home, 'a.txt'), 'old content that is longer'), [fsCall('write', { path: 'a.txt', content: 'جديد' })], ['a.txt']);
     expect(json(results[0])).toEqual({ path: 'a.txt', created: false, bytes: 8 });
     expect(read(folder, 'a.txt')).toBe('جديد');
   });
 
   it('QA4-H3 edit changes only the named text', async () => {
-    const { results, folder } = await runWith((home) => writeFileSync(path.join(home, 'list.txt'), 'one\ntwo\nthree\nfour\nfive\n'), [fsCall('edit', { path: 'list.txt', edits: [{ oldText: 'three', newText: '3' }] })]);
+    const { results, folder } = await runWith((home) => writeFileSync(path.join(home, 'list.txt'), 'one\ntwo\nthree\nfour\nfive\n'), [fsCall('edit', { path: 'list.txt', edits: [{ oldText: 'three', newText: '3' }] })], ['list.txt']);
     expect(json(results[0])).toEqual({ path: 'list.txt', replacements: 1, firstChangedLine: 3, fromLine: 1, content: 'one\ntwo\n3\nfour\nfive\n' });
     expect(read(folder, 'list.txt')).toBe('one\ntwo\n3\nfour\nfive\n');
   });
 
   it('QA4-H5 a CRLF file with a BOM stays CRLF with its BOM after an edit', async () => {
-    const { folder } = await runWith((home) => writeFileSync(path.join(home, 'win.txt'), '﻿one\r\ntwo\r\n'), [fsCall('edit', { path: 'win.txt', edits: [{ oldText: 'one\ntwo', newText: 'one\n2' }] })]);
+    const { folder } = await runWith((home) => writeFileSync(path.join(home, 'win.txt'), '﻿one\r\ntwo\r\n'), [fsCall('edit', { path: 'win.txt', edits: [{ oldText: 'one\ntwo', newText: 'one\n2' }] })], ['win.txt']);
     expect(read(folder, 'win.txt')).toBe('﻿one\r\n2\r\n');
   });
 
   it('QA4-H7 fs help lists its commands', async () => {
     const { results } = await run([command('fs', 'help')]);
-    expect(results[0]).toMatch(/^fs: Read, list, search, create, and change files in the workspace folder\..*\n\nCommands:\n {2}read {4}.*\n {2}list {4}.*\n {2}search {2}.*\n {2}write {3}.*\n {2}edit {4}.*\n {2}help {4}/);
+    expect(results[0]).toMatch(/^fs: Read, list, search, create, and change files in the workspace folder\..*\n\nCommands:\n {2}read +.*\n {2}list +.*\n {2}search +.*\n {2}write +.*\n {2}edit +.*\n {2}undo +.*\n {2}part +.*\n {2}assemble +.*\n {2}help +/);
   });
 
   it('QA4-H12 two edits of one file in one reply both land', async () => {
@@ -66,7 +66,7 @@ describe('the fs connector (08 §8.5, ADR 0009, 157 to 160)', { timeout: 30_000 
       fsCall('edit', { path: 'two.txt', edits: [{ oldText: 'one', newText: '1' }] }),
       fsCall('edit', { path: './two.txt', edits: [{ oldText: 'three', newText: '3' }] }),
       fsCall('edit', { path: 'two.txt', edits: [{ oldText: 'two', newText: '2' }] }),
-    ]);
+    ], ['two.txt']);
     expect(results.map((result) => result.startsWith('error'))).toEqual([false, false, false]);
     expect(read(folder, 'two.txt')).toBe('1\n2\n3\n');
   });
@@ -111,7 +111,7 @@ describe('the fs connector (08 §8.5, ADR 0009, 157 to 160)', { timeout: 30_000 
       fsCall('edit', { path: 'a.txt', edits: [] }),
       fsCall('write', { path: 'a.txt', content: 'x', mode: 'append' }),
     ]);
-    expect(results[0]).toBe('error NOT_FOUND: fs has no command nope. Its commands are: read { path, fromLine?, lines? }, list { path? }, search { pattern, path? }, write { path, content, risky }, edit { path, edits: [{ oldText, newText }], risky }, help.');
+    expect(results[0]).toBe('error NOT_FOUND: fs has no command nope. Its commands are: read { path, fromLine?, fromColumn?, lines? }, list { path? }, search { pattern, path?, literal?, glob? }, write { path, content, risky }, edit { path, edits: [{ oldText, newText }], risky }, undo { path, risky }, part { path, part, content }, assemble { path, risky }, help.');
     expect(results[1]).toMatch(/^error VALIDATION_FAILED: path: .*The payload of fs write is\n\{ path, content, risky \}$/s);
     expect(results[2]).toMatch(/^error VALIDATION_FAILED: edits: /);
     expect(results[3]).toMatch(/^error VALIDATION_FAILED: payload: .*mode/);

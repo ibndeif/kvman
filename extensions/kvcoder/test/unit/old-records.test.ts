@@ -17,6 +17,6 @@ describe('records stored before the run tool (08 §8.3, ADR 0011, 12)', () => {
   it('QA39-E19 a session stored before optIn connectors reads as none enabled', () => {
     const usage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0 };
     const stored = { title: 'Old', autoTitle: false, status: 'idle', parentId: null, worker: null, model: 'fake/m1', thinking: 'off', stepJobId: null, turnId: null, endedTurns: 0, nextSeq: 0, usage, durationMs: 0, checks: null, connectors: null, createdAt: '2026-10-01T00:00:00.000Z', updatedAt: '2026-10-01T00:00:00.000Z' };
-    expect(sessionDocSchema.parse(stored)).toEqual({ ...stored, optedIn: [] });
+    expect(sessionDocSchema.parse(stored)).toEqual({ ...stored, optedIn: [], stepGeneration: 0, stepIntentId: null, deleting: false, usageBy: { summary: usage, title: usage, helpers: usage } });
   });
 });

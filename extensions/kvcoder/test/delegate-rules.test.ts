@@ -57,7 +57,7 @@ describe("the rules of a worker's subagent (08 §8.5, ADR 0009, 102; ADR 0021)",
     fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Loop' })), runs(shell('echo 1')), { chunks: [{ text: 'still going' }, { toolCall: { id: 'x', name: 'run', arguments: { description: 'Again.', connector: 'shell', command: 'exec', payload: { line: 'echo 2', risky: false } } } }] }, says('parent done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
-    expect(toolResults(fake, 3)).toEqual(['subagent ended maxSteps\nstill going']);
+    expect(toolResults(fake, 3)).toEqual(['subagent ended maxSteps\n\nIts last message before it stopped (unfinished, not a result):\nstill going']);
   });
 
   it('M2.4-E2 every command that names a subagent session fails VALIDATION_FAILED, and reads work', async () => {
@@ -95,5 +95,20 @@ describe("the rules of a worker's subagent (08 §8.5, ADR 0009, 102; ADR 0021)",
     expect(toolResults(fake, 2)).toEqual(["error VALIDATION_FAILED: artifact isn't available in this subagent."]);
     expect(systemPrompt(fake, 1)).not.toContain('- artifact: ');
     expect(await kernel.exec('kvcoder.artifact.list', { sessionId })).toEqual([]);
+  });
+  it('M2.4-E155 a title over 60 characters is shortened, and one over 200 fails', async () => {
+    const { kernel, fake } = await kvcoder.start();
+    const sessionId = await newSession(kernel);
+    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'x'.repeat(61), task: 'Go' })), runs(command('ask', 'text', { prompt: 'Name?' })));
+    await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
+    await kernel.clock.advance(0);
+    const [turn] = await kernel.exec('kvcoder.turn.list', { sessionId, limit: 1 });
+    const child = await kernel.exec('kvcoder.session.get', { sessionId: String(turn?.pending[0]?.childSessionId) });
+    expect(child.title).toBe(`${'x'.repeat(59)}…`);
+    await kernel.exec('kvcoder.turn.cancel', { sessionId });
+    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'y'.repeat(201), task: 'Go' })), says('parent done'));
+    await kernel.exec('kvcoder.message.send', { sessionId, text: 'again' });
+    await kernel.clock.advance(0);
+    expect(toolResults(fake).at(-1)).toMatch(/^error VALIDATION_FAILED: title/);
   });
 });

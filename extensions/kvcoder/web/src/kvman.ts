@@ -41,6 +41,12 @@ export function problemOf(error: unknown): ShownProblem | undefined {
   return { code: problem.code, params: stringValues('params' in problem ? problem.params : undefined) };
 }
 
+/** A failure's translated text: its Problem's, or that something went wrong. */
+export function problemText(t: Translate, error: unknown): string {
+  const problem = problemOf(error);
+  return problem === undefined ? t('kvcoder.ui.failed') : t(problemKey(problem.code), problem.params);
+}
+
 /** The fields of a JSON object as strings (what a translation takes), or none for anything else. */
 export function stringValues(params: unknown): Record<string, string> {
   return Object.fromEntries(Object.entries(fields(params)).map(([key, value]) => [key, typeof value === 'string' ? value : JSON.stringify(value)]));
@@ -106,9 +112,16 @@ export function tokensUsed(t: Translate, usage: { input: number; output: number 
   return t('kvcoder.ui.tokensUsed', { tokens: compact(usage.input + usage.output) });
 }
 
+/** What a chat's cost is made of besides its own replies, and that it is an estimate (ADR 0058, 1). */
+export function costParts(t: Translate, usageBy: Record<'summary' | 'title' | 'helpers', { cost: number }> | undefined): string {
+  const parts = usageBy === undefined ? [] : [t('kvcoder.ui.costParts', { summary: formatCost(usageBy.summary.cost), title: formatCost(usageBy.title.cost), helpers: formatCost(usageBy.helpers.cost) })];
+  return [...parts, t('kvcoder.ui.costEstimate')].join(' · ');
+}
+
 /** How full the model's memory is now (ADR 0034, 9; ADR 0035, 5), short for the header and in full for its tooltip; nothing when the window isn't known. */
-export function contextLine(t: Translate, context: { tokens: number; window: number | null; compactAt: number } | null): { short: string; full: string } | undefined {
+export function contextLine(t: Translate, context: { tokens: number; window: number | null; compactAt: number; estimated?: boolean } | null): { short: string; full: string } | undefined {
   if (context === null || context.window === null) return undefined;
   const percent = Math.round((context.tokens / context.window) * 100);
-  return { short: t('kvcoder.ui.memory', { percent }), full: t('kvcoder.ui.memoryDetail', { tokens: compact(context.tokens), window: compact(context.window), at: Math.round(context.compactAt * 100) }) };
+  // A size that isn't the provider's own count for this model and prompt says "about" (ADR 0058, 2).
+  return { short: t(context.estimated === true ? 'kvcoder.ui.memoryAbout' : 'kvcoder.ui.memory', { percent }), full: t('kvcoder.ui.memoryDetail', { tokens: compact(context.tokens), window: compact(context.window), at: Math.round(context.compactAt * 100) }) };
 }

@@ -5,6 +5,7 @@ import { firePoint } from '../registry/session-points.ts';
 import { settingSchemas } from '../register-settings.ts';
 import type { SessionDoc, Title } from '../schemas/records.ts';
 import { records } from '../store/collections.ts';
+import { cancelTurn } from '../turns/end-turn.ts';
 import { noUsage } from '../turns/history.ts';
 import { now } from './session-lookup.ts';
 
@@ -17,16 +18,20 @@ export async function newSession(ctx: Ctx, title: Title | undefined): Promise<St
   const session = await records(ctx.store).sessions.insert({
     title: title ?? '',
     autoTitle: title === undefined,
+    deleting: false,
     status: 'idle',
     parentId: null,
     worker: null,
     model,
     thinking: settingSchemas.thinking.parse(await ctx.settings.get('kvcoder.thinking')),
     stepJobId: null,
+    stepGeneration: 0,
+    stepIntentId: null,
     turnId: null,
     endedTurns: 0,
     nextSeq: 0,
     usage: noUsage(),
+    usageBy: { summary: noUsage(), title: noUsage(), helpers: noUsage() },
     durationMs: 0,
     checks: null,
     connectors: null,
@@ -39,13 +44,21 @@ export async function newSession(ctx: Ctx, title: Title | undefined): Promise<St
   return session;
 }
 
-/** Deletes a session's records, and its subagent sessions' (plan 08 §8.1). */
+/**
+ * Deletes a session and its subagent sessions (plan 08 §8.1; ADR 0052, 3): each is marked `deleting`, which refuses new
+ * steps under it, its turn is cancelled and its processes and runs stopped, and only then are its records deleted.
+ * A delete that was cut short is finished by deleting again.
+ */
 export async function deleteSessionTree(ctx: Ctx, sessionId: string): Promise<void> {
   const store = records(ctx.store);
+  await store.sessions.update(sessionId, { deleting: true });
+  await cancelTurn(ctx, sessionId, false);
   await dropProcesses(ctx, sessionId);
   await dropRuns(ctx, sessionId);
-  for (const child of await store.sessions.find({ parentId: sessionId }, { limit: 1000 })) await deleteSessionTree(ctx, child.id);
-  for (const collection of [store.messages, store.queued, store.turns, store.questions, store.background, store.sections, store.artifacts]) {
+  for (let children = await store.sessions.find({ parentId: sessionId }, { limit: 1000 }); children.length > 0; children = await store.sessions.find({ parentId: sessionId }, { limit: 1000 })) {
+    for (const child of children) await deleteSessionTree(ctx, child.id);
+  }
+  for (const collection of [store.messages, store.queued, store.sendReceipts, store.answerReceipts, store.stepIntents, store.fileViews, store.fileBackups, store.fileParts, store.turns, store.questions, store.background, store.sections, store.artifacts]) {
     for (let found = await collection.find({ sessionId }, { limit: 1000 }); found.length > 0; found = await collection.find({ sessionId }, { limit: 1000 })) {
       for (const document of found) await collection.delete(document.id);
     }

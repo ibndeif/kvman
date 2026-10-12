@@ -10,6 +10,7 @@ const filterSchema = z.record(z.string().min(1), z.union([z.string(), z.number()
 const findOptionsSchema = z.strictObject({
   limit: z.number().int().positive().max(findLimitMaximum),
   order: z.enum(['asc', 'desc']).optional(),
+  after: z.string().min(1).optional(),
 });
 
 export type SqlFilter = { sql: string; values: (string | number)[] };
@@ -34,10 +35,10 @@ export function filterSql(filter: unknown): SqlFilter {
   return { sql: conditions.map((part) => `(${part.sql})`).join(' AND '), values: conditions.flatMap((part) => part.values) };
 }
 
-export function findOptions(options: unknown): { limit: number; order: 'asc' | 'desc' } {
+export function findOptions(options: unknown): { limit: number; order: 'asc' | 'desc'; after?: string } {
   const parsed = findOptionsSchema.safeParse(options);
   if (!parsed.success) {
-    throw kernelProblem('VALIDATION_FAILED', `find needs a whole-number limit of at most ${findLimitMaximum}.`, { limit: findLimitMaximum });
+    throw kernelProblem('VALIDATION_FAILED', `find needs a whole-number limit of at most ${findLimitMaximum}, an optional asc/desc order, and a non-empty after ID when supplied.`, { limit: findLimitMaximum });
   }
-  return { limit: parsed.data.limit, order: parsed.data.order ?? 'asc' };
+  return { limit: parsed.data.limit, order: parsed.data.order ?? 'asc', ...(parsed.data.after === undefined ? {} : { after: parsed.data.after }) };
 }

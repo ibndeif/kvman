@@ -69,10 +69,13 @@ export function registerMcpConnector(ctx: Ctx): void {
     handle: async ({ payload }) => {
       const found = await mcpServer(ctx, payload.server);
       const { withServer } = await import('../mcp/connect.ts');
-      return withServer(ctx, found, callTimeout(payload.timeoutMs), async (connection) => {
+      const result = await withServer(ctx, found, callTimeout(payload.timeoutMs), async (connection) => {
         toolNamed(found.name, await listTools(connection), payload.tool);
         return resultText(await connection.client.callTool({ name: payload.tool, arguments: payload.arguments ?? {} }, undefined, connection.request));
       });
+      // Read after the call, which may have refreshed the tokens: no secret kvman holds for the server leaves in a result (ADR 0056, 9).
+      const { knownSecrets, withoutSecrets } = await import('../mcp/secrets.ts');
+      return { ...result, text: withoutSecrets(result.text, await knownSecrets(ctx, found)) };
     },
   });
 }

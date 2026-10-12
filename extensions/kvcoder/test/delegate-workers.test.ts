@@ -54,7 +54,8 @@ describe('the delegate connector and its workers (08 §8.5, ADR 0021)', { timeou
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     expect(reviewer?.instructions).toMatch(/^You are a code reviewer\./);
-    expect(systemPrompt(fake, 1)).toContain(`## Guide\nRead the guide.\n\n## Worker: reviewer\n${reviewer?.instructions ?? ''}\n\n## Connectors\n`);
+    expect(systemPrompt(fake, 1)).toContain(`## Guide\nRead the guide.\n\n## Worker: reviewer\n${reviewer?.instructions ?? ''}\n\nYou are read-only here: `);
+    expect(systemPrompt(fake, 1)).toMatch(/so don't make one; say what should change and why\.\n\n## Connectors\n/);
     expect(fake.requests()[1]?.body).toMatchObject({ messages: [expect.anything(), { role: 'user', content: 'Review src/a.ts' }] });
     expect(toolResults(fake, 2)).toEqual(['two defects']);
     expect(systemPrompt(fake, 0)).not.toContain('## Worker:');

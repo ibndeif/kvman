@@ -4,7 +4,6 @@ import { firePoint } from '../registry/session-points.ts';
 import { readSettings } from '../register-settings.ts';
 import { statusSchema, thinkingSchema } from '../schemas/records.ts';
 import { records } from '../store/collections.ts';
-import { cancelTurn } from '../turns/cancel-turn.ts';
 import { compact } from '../turns/compaction.ts';
 import { deleteSessionTree, newSession } from './new-session.ts';
 import { findSession, now, ownSession } from './session-lookup.ts';
@@ -72,7 +71,6 @@ export function registerSessions(ctx: Ctx): void {
     public: true,
     handle: async ({ sessionId }) => {
       await ownSession(ctx, sessionId);
-      await cancelTurn(ctx, sessionId, false);
       await deleteSessionTree(ctx, sessionId);
       await firePoint(ctx, 'kvcoder.session.deleted', { sessionId });
       return {};

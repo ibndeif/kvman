@@ -14,7 +14,7 @@ export type PromptInput = {
   language: string;
   sections: readonly Section[];
   /** The worker a subagent runs for: its instructions follow the sections (ADR 0021, 8). */
-  worker?: { name: string; instructions: string };
+  worker?: { name: string; instructions: string; readOnly?: boolean };
   connectors: readonly { name: string; description: string; commands: readonly string[]; signatures?: readonly string[] }[];
 };
 
@@ -72,10 +72,14 @@ function keptSections(sections: readonly Section[]): { kept: Section[]; left: Se
   return { kept, left };
 }
 
+/** What a read-only worker's helper is told (ADR 0056, 4). */
+const readOnlyNote = 'You are read-only here: you read, search, and ask, and you write your findings as an artifact or in your answer. A call that could change something is refused, so don\'t make one; say what should change and why.';
+
 export function buildPrompt(input: PromptInput): BuiltPrompt {
   const { kept, left } = keptSections(input.sections);
   const parts = [basePrompt(input), ...kept.map((section) => `## ${section.title}\n${section.content}`)];
   if (input.worker !== undefined && input.worker.instructions !== '') parts.push(`## Worker: ${input.worker.name}\n${input.worker.instructions}`);
+  if (input.worker?.readOnly === true) parts.push(readOnlyNote);
   if (input.connectors.length > 0) parts.push(['## Connectors', ...input.connectors.map(connectorLine)].join('\n'));
   return { prompt: parts.join('\n\n'), included: new Set(kept), left };
 }

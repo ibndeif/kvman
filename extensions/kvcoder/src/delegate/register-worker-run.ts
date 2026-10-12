@@ -1,9 +1,14 @@
 import { z, type Ctx } from '@kvman/sdk';
-import { records } from '../store/collections.ts';
-import { endTurn } from '../turns/end-turn.ts';
+import { records, txRecords } from '../store/collections.ts';
+import { notifyEnded } from '../turns/end-turn.ts';
+import { endTurnState } from '../turns/end-turn-state.ts';
 import { checkCommand, runResult } from './programs.ts';
 import { programFound, runProgram } from './run-program.ts';
 import { finishRun } from './runs.ts';
+import { stagingMark } from './git-staging.ts';
+import { registerStagingRestore, stagingChange, stagingLines } from './staging-guard.ts';
+import { programPermission } from './program-permission.ts';
+import { runAuthorityInTx } from './permission.ts';
 import { isProgram, listedWorker, listedWorkers, workerCheckName } from './workers.ts';
 
 // The job that runs a program worker, and the check of its program (plan 08 §8.5, ADR 0021, 11, 35, and 37). The job
@@ -26,10 +31,14 @@ export async function runLost(ctx: Ctx, jobId: string, code: string): Promise<vo
     await finishRun(ctx, run.id, { status, exitCode: null, text, isError: true }, false);
     return;
   }
-  await store.runs.update(run.id, { status, endedAt: new Date().toISOString(), output: text });
-  const session = await store.sessions.get(run.sessionId);
-  if (session === undefined || session.turnId === null) return;
-  await endTurn(ctx, session.id, session.turnId, status, 'handler', { code: interrupted ? 'INTERRUPTED' : 'STEP_FAILED', params: { code } });
+  const ended = await ctx.store.transaction(tx => {
+    const current = txRecords(tx), saved = current.runs.get(run.id);
+    if (saved?.status !== 'running' || saved.jobId !== jobId || saved.sessionId !== run.sessionId || saved.toolCallId !== run.toolCallId) return undefined;
+    const authority = runAuthorityInTx(current, saved);
+    current.runs.update(saved.id, { status, endedAt: new Date().toISOString(), output: text });
+    return authority === undefined ? undefined : endTurnState(current, authority.sessionId, authority.turnId, status, 'handler', { code: interrupted ? 'INTERRUPTED' : 'STEP_FAILED', params: { code } });
+  });
+  if (ended !== undefined) await notifyEnded(ctx, ended);
 }
 
 /** The checks of the workspace's program workers, as a session keeps them (ADR 0021, 37). */
@@ -39,19 +48,25 @@ export async function workerChecks(ctx: Ctx): Promise<{ name: string; passed: bo
 }
 
 export function registerWorkerRun(ctx: Ctx): void {
+  registerStagingRestore(ctx);
   ctx.registerCommand('kvcoder.delegate.worker.run', {
     description: "Runs a program worker's program on its task, and gives the chat its answer.",
     input: z.strictObject({ runId: z.string() }),
     output: z.object({}),
     ...runOptions,
     handle: async ({ runId }) => {
-      const run = await records(ctx.store).runs.get(runId);
-      if (run === undefined || run.status !== 'running') return {};
-      const end = await runProgram({ command: run.command, args: run.args }, ctx.job.workspace.path, run.timeoutMs, ctx.job.signal);
+      const run = await programPermission(ctx, runId);
+      if (run === undefined) return {};
+      ctx.job.signal.throwIfAborted();
+      const folder = ctx.job.workspace.path;
+      const before = await stagingMark(folder, ctx.job.signal);
+      const end = await runProgram({ command: run.command, args: run.args }, folder, run.timeoutMs, ctx.job.signal);
       // A cancelled or interrupted job leaves the run to whoever stopped it, or to `kernel.job.failed`.
       ctx.job.signal.throwIfAborted();
       const result = runResult({ name: run.worker, kind: run.kind, timeoutMs: run.timeoutMs }, end);
-      await finishRun(ctx, runId, { status: result.isError ? 'failed' : 'succeeded', exitCode: end.timedOut ? null : end.exitCode, ...result }, true);
+      const staging = await stagingChange(folder, before, ctx.job.signal);
+      const text = staging === undefined || before === undefined ? result.text : `${result.text}\n\n${stagingLines(staging, before)}`;
+      await finishRun(ctx, runId, { status: result.isError ? 'failed' : 'succeeded', exitCode: end.timedOut ? null : end.exitCode, text, isError: result.isError, ...(staging === undefined ? {} : { staging }) }, true);
       return {};
     },
   });

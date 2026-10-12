@@ -1,9 +1,9 @@
 import { z, type Ctx } from '@kvman/sdk';
 import { builtinConnectors } from '../connector-call.ts';
 import { invalid } from '../problems.ts';
-import { disabledConnectors, readSettings } from '../register-settings.ts';
+import { disabledConnectors, settingSchemas } from '../register-settings.ts';
 import { connectorRegisterSchema, connectorSchema, exampleSchema, type ConnectorDoc } from '../schemas/registry.ts';
-import { records, txRecords } from '../store/collections.ts';
+import { records, txRecords, type TxRecords } from '../store/collections.ts';
 import { ownSession } from '../sessions/session-lookup.ts';
 import { callerExtension, loadedOwners, ownsPublicCall, registrations } from './loaded.ts';
 
@@ -35,21 +35,32 @@ function rowOf(doc: ConnectorDoc): ConnectorRow {
   };
 }
 
+export type ConnectorPreparation = { loaded: ReadonlySet<string>; binaries: ConnectorRow[] };
+
+/** Kernel/settings preparation only; registry rows must be reread after these awaits (ADR0044). */
+export async function prepareConnectors(ctx: Ctx): Promise<ConnectorPreparation> {
+  const stored = await records(ctx.store).connectors.find({}, { limit: 1000 });
+  const loaded = await loadedOwners(ctx, stored.map(doc => doc.owner));
+  const configured = settingSchemas.connectors.parse(await ctx.settings.get('kvcoder.connectors'));
+  const binaries = configured.map(entry => ({ name: entry.name, description: entry.description, owner: 'kvcoder.connectors', kind: 'binary' as const, binary: entry.binary, optIn: false }));
+  return { loaded, binaries };
+}
+
+/** Fresh rows in the caller's final transaction, never the rows preceding metadata awaits. */
+export function connectorsInTx(store: TxRecords, prepared: ConnectorPreparation): ConnectorRow[] {
+  const registered = store.connectors.find({}, { limit: 1000 }).filter(doc => prepared.loaded.has(doc.owner)).map(rowOf);
+  const names = new Set([...builtinConnectors, ...registered.map(connector => connector.name)]);
+  return [...registered, ...prepared.binaries.filter(connector => !names.has(connector.name))];
+}
+
 /** Every connector the agent may use: registered ones whose owner is loaded, then the setting's binary connectors. */
 export async function activeConnectors(ctx: Ctx): Promise<ConnectorRow[]> {
-  const stored = await records(ctx.store).connectors.find({}, { limit: 1000 });
-  const loaded = await loadedOwners(ctx, stored.map((doc) => doc.owner));
-  const registered = stored.filter((doc) => loaded.has(doc.owner)).map(rowOf);
-  const names = new Set(registered.map((connector) => connector.name));
-  const fromSetting: ConnectorRow[] = [];
-  for (const entry of (await readSettings(ctx)).connectors) {
-    if (names.has(entry.name) || builtinConnectors.some((name) => name === entry.name)) {
-      ctx.log.warn('A binary connector from kvcoder.connectors has a registered name and is ignored.', { name: entry.name });
-      continue;
-    }
-    fromSetting.push({ name: entry.name, description: entry.description, owner: 'kvcoder.connectors', kind: 'binary', binary: entry.binary, optIn: false });
+  const prepared = await prepareConnectors(ctx);
+  const connectors = await ctx.store.transaction(tx => connectorsInTx(txRecords(tx), prepared));
+  for (const entry of prepared.binaries) {
+    if (!connectors.some(connector => connector.name === entry.name && connector.owner === entry.owner)) ctx.log.warn('A binary connector from kvcoder.connectors has a registered name and is ignored.', { name: entry.name });
   }
-  return [...registered, ...fromSetting];
+  return connectors;
 }
 
 type Connector = z.output<typeof connectorSchema>;

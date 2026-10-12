@@ -32,6 +32,20 @@ describe('kvai.complete failures (07 §7.1)', () => {
     expect(fake.requests()).toHaveLength(2);
   });
 
+  it('M2.4-E147 a usage limit and a content refusal have their own codes, without the provider text', async () => {
+    const { kernel, fake } = await kvai.start();
+    const limits = [[403, 'The ChatGPT user has reached their Subscription Sharing usage limit. Ask the user to try again after their usage limit resets or use an API key instead.'], [429, 'You exceeded your current quota, please check your plan and billing details.'], [429, 'insufficient_quota']] as const;
+    for (const [status, message] of limits) {
+      fake.reply({ status, body: { error: { message, type: 'invalid_request_error' } } });
+      const error: unknown = await kernel.exec('kvai.complete', { model: 'fake/m1', messages: hi }).catch((caught: unknown) => caught);
+      expect(error).toMatchObject(failsWith('kvai/USAGE_LIMIT', { model: 'fake/m1' }));
+    }
+    for (const message of ['This content was flagged for possible cybersecurity risk. If this seems wrong, try rephrasing your request.', 'Your request was rejected as a result of our content policy.']) {
+      fake.reply({ status: 400, body: { error: { message, type: 'invalid_request_error' } } });
+      await expect(kernel.exec('kvai.complete', { model: 'fake/m1', messages: hi })).rejects.toMatchObject(failsWith('kvai/REFUSED', { model: 'fake/m1' }));
+    }
+  });
+
   it('M2.1-E10 a key in the environment is never read', async () => {
     process.env['ANTHROPIC_API_KEY'] = 'sk-from-the-environment';
     const { kernel } = await kvai.start();

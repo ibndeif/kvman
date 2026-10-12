@@ -6,10 +6,11 @@ import { problemOf } from '../../api/client.ts';
 import { homeWorkspaceId, showProblem, useKvwebui } from '../../state/kvwebui.ts';
 import { closeWorkspace, switchWorkspace } from '../../state/workspaces.ts';
 import DropdownMenu from '../shared/DropdownMenu.vue';
+import ClosedWorkspaces from './ClosedWorkspaces.vue';
 import OpenFolderDialog from './OpenFolderDialog.vue';
 
 // The workspace picker (plan 06 §6.2, ADR 0009, 74): each open workspace with its folder, a close button on each but
-// Home, and "Open a folder…".
+// Home, "Open a folder…", and the closed workspaces (ADR 0061, 5).
 const state = useKvwebui();
 const { t } = useI18n();
 const opening = ref(false);
@@ -66,6 +67,7 @@ const attempt = async (action: () => Promise<void>): Promise<void> => {
       <button type="button" role="menuitem" class="flex min-h-11 items-center gap-2.5 rounded-lg px-2.5 font-medium text-primary" data-test="open-folder" @click="opening = true; close()">
         <Plus class="size-4.5" aria-hidden="true" />{{ t('kvwebui.workspace.openFolder') }}
       </button>
+      <ClosedWorkspaces />
     </template>
   </DropdownMenu>
   <OpenFolderDialog v-if="opening" @close="opening = false" />

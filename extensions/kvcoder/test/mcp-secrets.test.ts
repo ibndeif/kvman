@@ -28,7 +28,7 @@ async function turn(kernel: TestKernel, fake: Awaited<ReturnType<typeof kvcoder.
 const readEnv = (server: string) => command('mcp', 'call', { server, tool: 'env', arguments: { name: 'TOKEN' }, risky: false });
 
 describe("an MCP server's secrets (08 §8.5, ADR 0020, 6)", { timeout: 60_000 }, () => {
-  it('QA29-H5 a secret reaches the command and the HTTP server, and is in no setting, job row, or log', async () => {
+  it('QA29-H5 / E176 a secret reaches the command and the HTTP server, and is in no result, setting, job row, or log', async () => {
     const fixture = await startHttpFixture();
     servers.push(fixture);
     const { kernel, fake } = await kvcoder.start();
@@ -36,7 +36,8 @@ describe("an MCP server's secrets (08 §8.5, ADR 0020, 6)", { timeout: 60_000 },
     await secret(kernel, 'mcp.demo.env.TOKEN');
     await secret(kernel, 'mcp.remote.header.Authorization');
     const results = await turn(kernel, fake, [readEnv('demo'), command('mcp', 'call', { server: 'remote', tool: 'echo', arguments: { text: 'x' }, risky: false })]);
-    expect(results).toEqual([token, 'x']);
+    // The command read the secret from its environment and returned it: it reached the command, and the result hides it (ADR 0056, 9).
+    expect(results).toEqual(['***', 'x']);
     expect(fixture.headers.every((headers) => headers.authorization === token)).toBe(true);
     expect(fixture.headers.length).toBeGreaterThan(0);
 

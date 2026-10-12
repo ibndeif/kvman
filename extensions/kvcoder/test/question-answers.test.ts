@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Json } from '@kvman/sdk';
 import { useKvcoder, type World } from './support/kvcoder-kernel.ts';
-import { command, runs, says, toolResults, type RunCallSpec } from './support/model-script.ts';
+import { answered, command, runs, says, toolResults, type RunCallSpec } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
@@ -25,18 +25,18 @@ describe('answers (ADR 0009, 102)', { timeout: 30_000 }, () => {
     for (const wrong of [{ text: 'x' }, { selected: ['c'] }, { selected: ['a', 'b'] }, { selected: [], other: 'mine' }]) {
       await expect(answer(single.questionId, wrong), JSON.stringify(wrong)).rejects.toMatchObject({ problem: { code: 'VALIDATION_FAILED' } });
     }
-    await answer(single.questionId, { selected: ['b'] });
-    await expect(answer(single.questionId, { selected: ['b'] })).rejects.toMatchObject({ problem: { code: 'kvcoder/QUESTION_NOT_FOUND' } });
+    const applied = await answer(single.questionId, { selected: ['b'] });
+    await expect(answer(single.questionId, { selected: ['b'] })).resolves.toEqual(applied);
     await expect(answer('nope', { text: 'x' })).rejects.toMatchObject({ problem: { code: 'kvcoder/QUESTION_NOT_FOUND' } });
     await world.kernel.clock.advance(0);
     const many = await asked(world, choice(true, true));
     await answer(many.questionId, { selected: ['a', 'b'], other: 'c too' });
     await world.kernel.clock.advance(0);
-    expect(toolResults(world.fake)).toEqual(['{"selected":["a","b"],"other":"c too"}']);
+    expect(toolResults(world.fake)).toEqual([answered('{"selected":["a","b"],"other":"c too"}')]);
     const skipped = await asked(world, command('ask', 'text', { prompt: 'Name?' }));
     await answer(skipped.questionId, { dismissed: true });
     await world.kernel.clock.advance(0);
-    expect(toolResults(world.fake)).toEqual(['{"dismissed":true}']);
+    expect(toolResults(world.fake)).toEqual([answered('{"dismissed":true}')]);
   });
 
   it('M2.4-E10 an extension answering a question fails NOT_PUBLIC', async () => {

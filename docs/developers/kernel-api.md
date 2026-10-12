@@ -10,7 +10,9 @@ All of them are **public**. There is no sandbox in this phase, so extensions can
 |---|---|---|
 | `kernel.workspace.open` | command | `{ path }` → `Workspace`. `path` is an absolute path to an existing folder (`VALIDATION_FAILED` otherwise), resolved with `realpath`; the existing workspace if open, the remembered one if it was open before. |
 | `kernel.workspace.close` | command | `{ workspaceId }` → `{}`. Pauses it. Home can't be closed (`VALIDATION_FAILED`). |
+| `kernel.workspace.delete` | command | `{ workspaceId }` → `{}`. Erases a closed workspace for good: its running async jobs are cancelled and its processes stopped, then its stored data, settings, files, jobs, and schedules are deleted and `kernel.workspace.deleted` is delivered in Home. Home and an open workspace fail `VALIDATION_FAILED`, an unknown id `NOT_FOUND`. The folder on disk isn't touched. |
 | `kernel.workspace.list` | query | `{}` → the open `Workspace[]`, Home first, then in the order first opened. |
+| `kernel.workspace.closed.list` | query | `{}` → `[{ id, name, path, missing }]`: the closed workspaces in the order first opened; `missing` when the path is not a folder now. A workspace whose folder is gone is closed at start. |
 | `kernel.folder.list` | query | `{ path?, hidden? }` → `{ path, parent, folders: [{ name, path }], truncated }`: sub-folders of a folder on this machine, for choosing a workspace. |
 | `kernel.folder.create` | command | `{ path, name }` → `{ path }`: makes the folder `name` inside the existing folder `path`. `name` is one folder name; an empty or blank name, one with a separator, `.`, `..`, a name that exists, or a folder that can't be written fails `VALIDATION_FAILED`. |
 

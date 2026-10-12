@@ -27,7 +27,7 @@ describe("the conversation's actions (08 §8.7, ADR 0009, 104)", () => {
     await wrapper.find('[data-test="composer-text"]').setValue('look at this');
     await wrapper.find('[data-test="send"]').trigger('click');
     await flushPromises();
-    expect(fake.calls).toContainEqual({ name: 'kvcoder.message.send', input: { sessionId: 's1', text: 'look at this', fileIds: ['f1'] } });
+    expect(fake.calls).toContainEqual({ name: 'kvcoder.message.send', input: { sessionId: 's1', text: 'look at this', fileIds: ['f1'], sendId: expect.any(String) } });
 
     await wrapper.find('[data-test="stop"]').trigger('click');
     await flushPromises();
@@ -79,10 +79,11 @@ describe("the conversation's actions (08 §8.7, ADR 0009, 104)", () => {
     fake.handle('kvcoder.message.send', ok);
     const wrapper = await mounted(ConversationView, fake);
     expect(wrapper.find('h1').text()).toBe('What should we build in notes-app?');
+    expect(fake.calls.map(call => call.name)).toEqual(['kernel.settings.list', 'kernel.settings.list', 'kvai.provider.list', 'kvai.model.list', 'kvcoder.slash.list']);
     await wrapper.find('[data-test="composer-text"]').setValue('Make a notes page');
     await wrapper.find('[data-test="composer-text"]').trigger('keydown', { key: 'Enter' });
     await flushPromises();
-    expect(fake.calls.slice(4)).toEqual([{ name: 'kvcoder.session.create', input: {} }, { name: 'kvcoder.message.send', input: { sessionId: 's9', text: 'Make a notes page' } }]);
+    expect(fake.calls.slice(5)).toEqual([{ name: 'kvcoder.session.create', input: {} }, { name: 'kvcoder.message.send', input: { sessionId: 's9', text: 'Make a notes page', sendId: expect.any(String) } }]);
     expect(fake.navigate).toHaveBeenCalledWith('kvcoder.session', { sessionId: 's9' });
     wrapper.unmount();
   });

@@ -86,6 +86,7 @@ ctx.registerHandler('kernel.job.failed', {
 | `kernel.job.cancelled` | any job ends `cancelled` | `{ jobId, rootId, name, caller, workspaceId, reason }` |
 | `kernel.process.exited` | a long-lived process exits by itself | `{ extension, workspaceId, name, exitCode, signal }` |
 | `kernel.workspace.opened` | a path becomes a workspace for the first time | `{ workspaceId }` |
+| `kernel.workspace.deleted` | a closed workspace is deleted; its handlers run in Home, to clear what an extension keeps outside the workspace's own data | `{ workspaceId }` |
 | `kernel.started` | once per start, after every extension loads and before HTTP starts (and after a hot reload, for the reloaded extension and its dependents) | `{}` |
 | `kernel.stopping` | at the start of shutdown | `{}` |
 

@@ -51,7 +51,7 @@ const shellRun = builtinCommands.shell.exec.registration;
 const mcpCall = builtinCommands.mcp.call.registration;
 const artifactChanges = new Set([builtinCommands.artifact.write.registration, builtinCommands.artifact.edit.registration]);
 const artifactCalls = new Set([...artifactChanges, builtinCommands.artifact.get.registration]);
-const fileChanges = new Set([builtinCommands.fs.write.registration, builtinCommands.fs.edit.registration]);
+const fileChanges = new Set([builtinCommands.fs.write.registration, builtinCommands.fs.edit.registration, builtinCommands.fs.undo.registration, builtinCommands.fs.assemble.registration]);
 
 // What a call must wait its turn on (plan 08 §8.5, ADR 0009, 160): the calls of a reply start together, and two edits
 // that each read the original would lose the first one's write. The key is taken as the calls start, in the model's order.
@@ -84,20 +84,27 @@ export function textResult(call: RunCall, text: string, durationMs = 0): CallDon
 
 const fileRead = 'kvcoder.fs.file.get';
 
-/** Runs a connector command through `ctx.exec`, after the calls before it on the same file or artifact, and gives what the model and the call card get. */
-export function runTarget(ctx: Ctx, session: Stored<SessionDoc>, call: RunCall, target: CommandTarget): Promise<CallDone> {
-  const key = orderKey(ctx, session, call, target);
-  return key === undefined ? runJob(ctx, session.id, call, target) : inOrder(key, () => runJob(ctx, session.id, call, target));
+/** Reserve in the caller's model-order map BEFORE independently awaited permission preparation (ADR0044). */
+export function orderedCall<Result>(ctx: Ctx, session: Stored<SessionDoc>, call: RunCall, run: () => Promise<Result>): Promise<Result> {
+  // Only fixed builtin commands order work; registrations cannot shadow them. This is not an authority decision.
+  const builtin = targetOf([], call);
+  const key = builtin === undefined ? undefined : orderKey(ctx, session, call, builtin);
+  return key === undefined ? run() : inOrder(key, run);
 }
 
-async function runJob(ctx: Ctx, sessionId: string, call: RunCall, target: CommandTarget): Promise<CallDone> {
+/** Called inside its already reserved ordered callback; the guard is still directly before inline dispatch. */
+export function runTarget(ctx: Ctx, session: Stored<SessionDoc>, call: RunCall, target: CommandTarget, guard: () => Promise<void>): Promise<CallDone> {
+  return runJob(ctx, session.id, call, target, guard);
+}
+
+async function runJob(ctx: Ctx, sessionId: string, call: RunCall, target: CommandTarget, guard: () => Promise<void>): Promise<CallDone> {
   const started = Date.now();
   const builtin = target.builtin;
   const done = await runCommand({
     connector: call.connector,
     command: call.command,
     payloadPath: builtin === undefined ? '' : 'payload',
-    exec: () => ctx.exec(target.registration, jobInput(sessionId, call, target)),
+    exec: async () => { await guard(); ctx.job.signal.throwIfAborted(); return ctx.exec(target.registration, jobInput(sessionId, call, target)); },
     payloadSchema: async () => (builtin === undefined ? (await callInfos(ctx)).find((info) => info.name === target.registration)?.input : payloadJsonSchema(builtin.payload)),
     cancelled: () => ctx.job.signal.aborted,
   });
@@ -123,7 +130,7 @@ async function runJob(ctx: Ctx, sessionId: string, call: RunCall, target: Comman
 const helpSchema = z.object({ text: z.string() });
 
 /** A connector's `help`, or one command's with `{ command }` (plan 08 §8.3). It never asks. */
-export async function runHelp(ctx: Ctx, call: RunCall): Promise<CallDone> {
+export async function runHelp(ctx: Ctx, call: RunCall, guard: () => Promise<void>): Promise<CallDone> {
   const { command, ...rest } = call.payload;
   if (Object.keys(rest).length > 0 || (command !== undefined && typeof command !== 'string')) return failedCall(call, errorOutput({ code: 'VALIDATION_FAILED', message: 'help takes { "command"? }.' }).output);
   const started = Date.now();
@@ -131,7 +138,7 @@ export async function runHelp(ctx: Ctx, call: RunCall): Promise<CallDone> {
     connector: call.connector,
     command: call.command,
     payloadPath: '',
-    exec: () => ctx.exec('kvcoder.connector.help.get', { connector: call.connector, ...(command === undefined ? {} : { command }) }),
+    exec: async () => { await guard(); ctx.job.signal.throwIfAborted(); return ctx.exec('kvcoder.connector.help.get', { connector: call.connector, ...(command === undefined ? {} : { command }) }); },
     payloadSchema: () => Promise.resolve(undefined),
     cancelled: () => ctx.job.signal.aborted,
   });

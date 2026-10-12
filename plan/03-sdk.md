@@ -78,9 +78,11 @@ export default (ctx: Ctx) => {
 
 Every call returns a Promise, except the calls on a transaction's `tx`.
 
+**Collection continuation** (ADR0040, §2.5). `find` keeps its array result and required positive integer limit≤1000. Optional `after` is a non-empty ID position, exclusive in the direction of `order`; omitted order is ascending. A deleted cursor remains usable. Filters, count and all ownership scopes are unchanged. Separate pages do not promise a snapshot; invalid options fail `VALIDATION_FAILED`. No workspace override or cross-workspace job call is added.
+
 | API | Calls |
 |---|---|
-| `ctx.store`, `ctx.store.global` | `kv.get/set/delete(key)` (`get` → the value or `undefined`); `collection(name, schema)` (ADR 0009, 4) with `insert(doc)` → doc with `id`, `get(id)` → the document or `undefined`, `find(filter, { limit, order?: 'asc' \| 'desc' })`, `count(filter)`, `update(id, patch)` → the document (shallow merge: top-level fields in `patch` replace the document's, and `null` is stored as `null`), `delete(id)`; `transaction((tx) => …)` (§2.5) |
+| `ctx.store`, `ctx.store.global` | `kv.get/set/delete(key)` (`get` → the value or `undefined`); `collection(name, schema)` (ADR 0009, 4) with `insert(doc)` → doc with `id`, `get(id)` → the document or `undefined`, `find(filter, { limit, order?: 'asc' \| 'desc', after?: string })`, `count(filter)`, `update(id, patch)` → the document (shallow merge: top-level fields in `patch` replace the document's, and `null` is stored as `null`), `delete(id)`; `transaction((tx) => …)` (§2.5) |
 | `ctx.files` | `write(name, data, type)` (`data`: `Uint8Array` or string) → File, `get(id)`, `read(id)` → Buffer, `path(id)`, `unlink(id)` |
 | `ctx.settings` | `get(key)` (typed through the augmentable `Settings` map, like `Commands`; `unknown` for an undeclared key), `set(key, value, { scope: 'global' \| 'workspace' })` (own keys only) |
 | `ctx.secrets` | `get(name)` → the string or `undefined`, `set(name, value)`, `delete(name)` |

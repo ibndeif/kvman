@@ -7,8 +7,12 @@ export type Stored<Document> = Document & { id: string };
 /** Equality on top-level fields; every field given must match. */
 export type Filter<Document> = { [Field in keyof Document]?: Extract<Document[Field], JsonPrimitive> };
 
-/** How `find` pages: a required `limit` (at most 1000), and `order` by id (`asc`, oldest first, by default). */
-export type FindOptions = { limit: number; order?: 'asc' | 'desc' };
+/**
+ * How `find` pages: a positive whole-number `limit` (at most 1000), ordered by id (`asc` by default).
+ * Optional `after` is a non-empty, exclusive ID position: greater IDs ascending, lesser IDs descending.
+ * The position need not identify an existing document; separate pages do not share a snapshot.
+ */
+export type FindOptions = { limit: number; order?: 'asc' | 'desc'; after?: string };
 
 /** A key-value map of JSON values. */
 export type Kv = {

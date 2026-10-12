@@ -130,7 +130,7 @@ describe("the send box's slash commands (08 §8.7, ADR 0017, 6 and 11)", () => {
     await box(start).setValue('Build it');
     await key(start, 'Enter');
     await flushPromises();
-    expect(ran(fake)).toEqual([{ name: 'kvcoder.message.send', input: { sessionId: 's5', text: 'Build it' } }]);
+    expect(ran(fake)).toEqual([{ name: 'kvcoder.message.send', input: { sessionId: 's5', text: 'Build it', sendId: expect.any(String) } }]);
     start.unmount();
   });
 

@@ -35,6 +35,23 @@ export function lostHint(tokens: number): string {
   return `Your last reply was lost on the way: the provider produced about ${String(about)} tokens, but no tool call or text reached me. Send it again now, calling the tool directly. If it was a large file, send the content in smaller pieces: one file per reply, under about 150 lines each, with \`fs write\`.`;
 }
 
+/** A reply with no call that is empty, or that the provider cut at its length limit (ADR 0054, 1). */
+export type Incomplete = 'empty' | 'length';
+
+/** The automatic retries of an incomplete reply in one turn. */
+export const incompleteRetries = 1;
+
+export function incompleteReply(blocks: readonly ReplyBlock[], stopReason: string): Incomplete | undefined {
+  if (stopReason === 'length') return 'length';
+  return blocks.some((block) => block.type === 'text' && (block.text ?? '').trim() !== '') ? undefined : 'empty';
+}
+
+/** What the model is told about its incomplete reply. */
+export function incompleteHint(reason: Incomplete): string {
+  const what = reason === 'empty' ? 'empty: no text and no tool call reached me' : 'cut off at the length limit before it finished';
+  return `Your last reply was ${what}. Go on from where it stopped, in smaller pieces: one tool call per reply, and for a long file save it in parts with fs part and then write it with fs assemble.`;
+}
+
 type CallBlock = { type: string; id?: string; name?: string };
 
 /** A reply's blocks with a call that has a name but no id given one, and a call with no name dropped and counted (ADR 0009, 192). */

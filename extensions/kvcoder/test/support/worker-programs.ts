@@ -7,11 +7,12 @@ import type { Json } from '@kvman/sdk';
 // Fixture programs for program workers (plan 08 §8.5, ADR 0021): scripts named `opencode`, `pi`, and `claude` on the
 // test's PATH, which is set before the kernel starts so its workers have it. A fixture records its arguments and folder,
 // then does what the last line of its last argument says: `say:<text>`, `fail:<code>:<text>`, `silent`, or `wait:<file>`
-// (print "released" once the file exists). `opencode` prints JSON events, as the real one does.
+// (print "released" once the file exists), `stage:<file>` (write the file and `git add` it), or `commit:<file>` (that, then commit). `opencode` prints JSON events, as the real one does.
 
 export type ProgramKind = 'opencode' | 'pi' | 'claude';
 
 const script = `#!/usr/bin/env node
+import { execFileSync } from 'node:child_process';
 import { appendFileSync, existsSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 const name = path.basename(process.argv[1]);
@@ -22,6 +23,12 @@ appendFileSync(path.join(folder, name + '.calls'), JSON.stringify({ args, cwd: p
 const say = (text) => console.log(name === 'opencode' ? JSON.stringify({ type: 'text', part: { text } }) : text);
 const [verb, ...rest] = (args.at(-1) ?? '').split('\\n').at(-1).split(':');
 if (verb === 'say') say(rest.join(':'));
+if (verb === 'stage' || verb === 'commit') {
+  writeFileSync(rest[0], 'from the program\\n');
+  execFileSync('git', ['add', rest[0]]);
+  if (verb === 'commit') execFileSync('git', ['-c', 'user.name=Program', '-c', 'user.email=program@example.test', 'commit', '--no-gpg-sign', '-q', '-m', 'program']);
+  say(verb === 'stage' ? 'staged' : 'committed');
+}
 if (verb === 'fail') {
   say('partial');
   if (name === 'opencode') console.log(JSON.stringify({ type: 'error', error: { message: rest.slice(1).join(':') } }));

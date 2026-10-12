@@ -90,7 +90,7 @@ For long-lived child processes (a server, a watcher): `ctx.processes.start(name,
 
 ## Handlers
 
-`ctx.registerHandler(point, { description, handle, retries?, timeoutMs? })` registers a handler for one of the kernel's points: `kernel.job.failed`, `kernel.job.succeeded`, `kernel.job.cancelled`, `kernel.process.exited`, `kernel.workspace.opened`, `kernel.started`, and `kernel.stopping`. Each handler runs as an ordinary async job whose caller is the kernel. See [jobs.md](jobs.md).
+`ctx.registerHandler(point, { description, handle, retries?, timeoutMs? })` registers a handler for one of the kernel's points: `kernel.job.failed`, `kernel.job.succeeded`, `kernel.job.cancelled`, `kernel.process.exited`, `kernel.workspace.opened`, `kernel.workspace.deleted`, `kernel.started`, and `kernel.stopping`. Each handler runs as an ordinary async job whose caller is the kernel. See [jobs.md](jobs.md).
 
 ## Logging
 

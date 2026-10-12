@@ -18,6 +18,12 @@ export const workspaceSchema = z.strictObject({
 /** A workspace: a folder on disk; Home's id is `home`. */
 export type Workspace = z.infer<typeof workspaceSchema>;
 
+/** Accepts a closed workspace; `missing` says that its path is not a folder now (plan 02 §2.6). */
+export const closedWorkspaceSchema = workspaceSchema.extend({ missing: z.boolean() });
+
+/** A closed workspace, whose data waits until it is opened again or deleted. */
+export type ClosedWorkspace = z.infer<typeof closedWorkspaceSchema>;
+
 /** Accepts who started a job. */
 export const callerSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('user') }),

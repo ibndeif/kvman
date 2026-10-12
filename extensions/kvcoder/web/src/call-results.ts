@@ -1,11 +1,12 @@
-import { fields } from './kvman.ts';
+import { fields, type Translate } from './kvman.ts';
 
-// What kvcoder's own `fs` commands return (plan 08 §8.5), read from a result's parsed output. A result that isn't the
+// What kvcoder's own `fs` commands and `background output` return (plan 08 §8.5), read from a result's parsed output. A result that isn't the
 // shape its command returns gives nothing, and the card then shows it as any other output (ADR 0036, 9).
 
 export type EditResult = { replacements: number; firstChangedLine: number };
 export type ReadResult = { fromLine: number; content: string };
 export type Entry = { name: string; kind: 'file' | 'folder'; bytes: number };
+export type RunResult = { call: string; status: string; answer: boolean; ranMs?: number; exitCode?: number; output?: unknown; problem?: unknown };
 export type FileMatches = { path: string; matches: { line: number; text: string }[] };
 
 export function editResult(result: unknown): EditResult | undefined {
@@ -36,6 +37,29 @@ function matchesOf(value: unknown): FileMatches[] {
     return typeof line === 'number' && typeof text === 'string' ? [{ line, text }] : [];
   });
   return [{ path, matches: found }];
+}
+
+const runStatuses = ['running', 'succeeded', 'failed', 'cancelled', 'interrupted'] as const;
+
+/** A run's status in the words of the Running list; a status this page doesn't know stays as it is. */
+export function runStatusText(t: Translate, status: string): string {
+  return runStatuses.some((known) => known === status) ? t(`kvcoder.ui.jobs.status.${status}`) : status;
+}
+
+/** What `background output` returned (ADR 0062, 2); `undefined` for a result that isn't a run's row. */
+export function runResult(result: unknown): RunResult | undefined {
+  const { kind, call, status, startedAt, endedAt, exitCode, output, problem } = fields(result);
+  if (typeof call !== 'string' || typeof status !== 'string') return undefined;
+  const ranMs = typeof startedAt === 'string' && typeof endedAt === 'string' ? Date.parse(endedAt) - Date.parse(startedAt) : Number.NaN;
+  return {
+    call,
+    status,
+    answer: kind === 'subagent',
+    ...(Number.isFinite(ranMs) && ranMs >= 0 ? { ranMs } : {}),
+    ...(typeof exitCode === 'number' && exitCode !== 0 ? { exitCode } : {}),
+    ...(output === undefined ? {} : { output }),
+    ...(problem === undefined ? {} : { problem }),
+  };
 }
 
 export function searchResult(result: unknown): FileMatches[] | undefined {

@@ -13,8 +13,8 @@ const file = (name: string, content: string | Buffer) => (folder: string) => wri
 describe('fs read (08 §8.5, ADR 0011, 8)', { timeout: 30_000 }, () => {
   it('QA18-H12 read returns the whole file with its line count, or a range of lines, and never asks', async () => {
     const { kernel, sessionId, results } = await looked(file('five.txt', 'one\ntwo\nthree\nfour\nfive\n'), [fsCall('read', { path: 'five.txt' }), fsCall('read', { path: 'five.txt', fromLine: 2, lines: 2 })], { 'kvcoder.shell.approval': 'ask' });
-    expect(json(results[0])).toEqual({ path: 'five.txt', fromLine: 1, totalLines: 5, content: 'one\ntwo\nthree\nfour\nfive\n' });
-    expect(json(results[1])).toEqual({ path: 'five.txt', fromLine: 2, totalLines: 5, content: 'two\nthree\n' });
+    expect(json(results[0])).toEqual({ path: 'five.txt', fromLine: 1, totalLines: 5, content: 'one\ntwo\nthree\nfour\nfive\n', truncated: false });
+    expect(json(results[1])).toEqual({ path: 'five.txt', fromLine: 2, totalLines: 5, content: 'two\nthree\n', truncated: true, next: { fromLine: 4 } });
     expect((await turnState(kernel, sessionId)).turn).toMatchObject({ outcome: 'done', pending: [] });
   });
 
@@ -46,14 +46,14 @@ describe('fs read (08 §8.5, ADR 0011, 8)', { timeout: 30_000 }, () => {
     expect(long.content.split('\n')).toHaveLength(2001);
     expect(long.content.endsWith('line 2000\n')).toBe(true);
     expect(results[1]).toMatch(/^error VALIDATION_FAILED: lines: /);
-    expect(json(results[2])).toEqual({ path: 'wide.txt', fromLine: 1, totalLines: 3, content: `${'w'.repeat(20_000)}\n` });
-    expect(json(results[3])).toEqual({ path: 'long.txt', fromLine: 3001, totalLines: 3000, content: '' });
+    expect(json(results[2])).toEqual({ path: 'wide.txt', fromLine: 1, totalLines: 3, content: `${'w'.repeat(20_000)}\n`, truncated: true, next: { fromLine: 2 } });
+    expect(json(results[3])).toEqual({ path: 'long.txt', fromLine: 3001, totalLines: 3000, content: '', truncated: false });
     expect(results[4]).toBe("error NOT_FOUND: missing.txt doesn't exist.");
     expect(results[5]).toMatch(/^error VALIDATION_FAILED: folder is a folder/);
     expect(results[6]).toBe("error VALIDATION_FAILED: bytes.bin isn't valid UTF-8 text, so it isn't read.");
     expect(results[7]).toBe('error VALIDATION_FAILED: ../outside.txt is outside the workspace folder.');
     expect(results[8]).toBe('error VALIDATION_FAILED: out/hostname is outside the workspace folder.');
-    expect(json(results[9])).toEqual({ path: 'huge-line.txt', fromLine: 1, totalLines: 1, content: 'h'.repeat(30 * 1024) });
+    expect(json(results[9])).toEqual({ path: 'huge-line.txt', fromLine: 1, totalLines: 1, content: 'h'.repeat(30 * 1024), truncated: true, next: { fromLine: 1, fromColumn: 30 * 1024 + 1 } });
     expect(json(results[10])).toMatchObject({ content: 'with a mark\n' });
   });
 });

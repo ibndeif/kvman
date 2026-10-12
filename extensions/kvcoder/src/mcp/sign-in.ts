@@ -28,6 +28,12 @@ const failed = (error: unknown): ProblemError => {
   return new ProblemError({ code: 'kvcoder/MCP_SIGN_IN_FAILED', message: `The sign-in failed: ${reason}`, params: { reason } });
 };
 
+// A started sign-in that can no longer finish: its record and its verifier go together.
+async function forget(ctx: Ctx, started: { id: string; server: string; state: string }): Promise<void> {
+  await records(ctx.store).signIns.delete(started.id);
+  await ctx.secrets.delete(oauthSecrets(started.server).verifier(started.state));
+}
+
 /** Starts a sign-in and gives the address the person opens. */
 export async function startSignIn(ctx: Ctx, name: string, redirectUrl: string): Promise<{ url: string }> {
   if (!isSignInPage(redirectUrl)) throw invalid(`The redirect address must be http://127.0.0.1:<port>${redirectPath}, or the same on localhost.`);
@@ -38,7 +44,7 @@ export async function startSignIn(ctx: Ctx, name: string, redirectUrl: string): 
   const state = randomUUID();
   let opened: URL | undefined;
   try {
-    await auth(oauthProvider(ctx, name, { redirectUrl, step: 'start', state, open: (authorizationUrl) => void (opened = authorizationUrl) }), { serverUrl: server.url });
+    await auth(oauthProvider(ctx, name, server.url, { redirectUrl, step: 'start', state, open: (authorizationUrl) => void (opened = authorizationUrl) }), { serverUrl: server.url });
   } catch (error) {
     if (error instanceof ProblemError || ctx.job.signal.aborted) throw error;
     throw failed(error);
@@ -51,18 +57,20 @@ export async function startSignIn(ctx: Ctx, name: string, redirectUrl: string): 
 /** Finishes a started sign-in with the code the server sent back, and stores the tokens. */
 export async function finishSignIn(ctx: Ctx, state: string, code: string): Promise<{ name: string }> {
   const { signIns } = records(ctx.store);
-  for (const old of await signIns.find({}, { limit: 1000 })) if (old.at < jobTime(ctx) - signInLifeMs) await signIns.delete(old.id);
+  for (const old of await signIns.find({}, { limit: 1000 })) if (old.at < jobTime(ctx) - signInLifeMs) await forget(ctx, old);
   const [started] = await signIns.find({ state }, { limit: 1 });
   if (started === undefined) throw failed(new Error('it was not started here, was already finished, or took more than 10 minutes'));
   await signIns.delete(started.id);
   try {
-    const result = await auth(oauthProvider(ctx, started.server, { redirectUrl: started.redirectUrl, step: 'finish' }), { serverUrl: started.url, authorizationCode: code });
+    const result = await auth(oauthProvider(ctx, started.server, started.url, { redirectUrl: started.redirectUrl, step: 'finish', state }), { serverUrl: started.url, authorizationCode: code });
     if (result !== 'AUTHORIZED') throw new Error('the server did not accept the code');
+    // A sign-in of this server started earlier and finished later would replace these tokens (ADR 0056, 7).
+    for (const other of await signIns.find({ server: started.server }, { limit: 1000 })) await forget(ctx, other);
   } catch (error) {
     if (error instanceof ProblemError || ctx.job.signal.aborted) throw error;
     throw failed(error);
   } finally {
-    await ctx.secrets.delete(oauthSecrets(started.server).verifier);
+    await ctx.secrets.delete(oauthSecrets(started.server).verifier(state));
   }
   return { name: started.server };
 }

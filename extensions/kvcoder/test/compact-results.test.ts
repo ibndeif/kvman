@@ -34,7 +34,7 @@ describe('what a command returns, and what is stored of it (08 §8.3 and §8.5, 
     const [read, line] = messages.filter((message) => message.kind === 'toolResult').map((message) => message.content['details']);
     expect(read).toMatchObject({ connector: 'fs', command: 'read' });
     expect(read).not.toHaveProperty('output');
-    expect(results[0]).toBe('{"path":"b.txt","fromLine":1,"totalLines":1,"content":"find me\\n"}');
+    expect(results[0]).toBe('{"path":"b.txt","fromLine":1,"totalLines":1,"content":"find me\\n","truncated":false}');
     expect(line).toMatchObject({ connector: 'shell', command: 'exec', output: 'hi\n', exitCode: 0 });
     expect(results[1]).toBe('hi\n[exit code 0]');
   });

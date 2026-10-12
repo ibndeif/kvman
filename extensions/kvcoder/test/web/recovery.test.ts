@@ -40,9 +40,9 @@ async function pickModel(wrapper: Awaited<ReturnType<typeof mounted>>, modelId: 
 
 describe("a failed turn's recovery (08 §8.7, ADR 0009, 204, 205)", () => {
   it('QA10-H4 a failed turn shows Retry and Choose another model', async () => {
-    for (const code of ['STEP_FAILED', 'REPLY_LOST', 'INTERRUPTED']) {
+    for (const code of ['STEP_FAILED', 'REPLY_LOST', 'REPLY_INCOMPLETE', 'INTERRUPTED']) {
       const fake = recoverableFake(failedWorld(code));
-      fake.handle('kvcoder.message.send', () => ({}));
+      fake.handle('kvcoder.turn.retry', () => ({}));
       const wrapper = await mounted(ConversationView, fake, { sessionId: 's1' });
       expect(wrapper.find('[data-test="recovery"]').exists()).toBe(true);
       expect(wrapper.find('[data-test="retry"]').text()).toBe('Retry');
@@ -51,40 +51,40 @@ describe("a failed turn's recovery (08 §8.7, ADR 0009, 204, 205)", () => {
     }
   });
 
-  it('QA10-H5 Retry sends "Continue", and the conversation reads again', async () => {
+  it('QA10-H5 / E150 Retry runs the turn again with no message, and the conversation reads again', async () => {
     const world = failedWorld('STEP_FAILED');
     const fake = recoverableFake(world);
-    fake.handle('kvcoder.message.send', () => ({}));
+    fake.handle('kvcoder.turn.retry', () => ({}));
     const wrapper = await mounted(ConversationView, fake, { sessionId: 's1' });
     const reads = (): number => fake.calls.filter((call) => call.name === 'kvcoder.message.list').length;
     const before = reads();
     await wrapper.find('[data-test="retry"]').trigger('click');
     await flushPromises();
-    expect(fake.calls).toContainEqual({ name: 'kvcoder.message.send', input: { sessionId: 's1', text: 'Continue' } });
+    expect(fake.calls).toContainEqual({ name: 'kvcoder.turn.retry', input: { sessionId: 's1' } });
     expect(reads()).toBeGreaterThan(before);
     wrapper.unmount();
 
     const arabic = recoverableFake(failedWorld('STEP_FAILED'));
     arabic.language.value = 'ar';
-    arabic.handle('kvcoder.message.send', () => ({}));
+    arabic.handle('kvcoder.turn.retry', () => ({}));
     const translated = await mounted(ConversationView, arabic, { sessionId: 's1' });
     await translated.find('[data-test="retry"]').trigger('click');
     await flushPromises();
-    expect(arabic.calls).toContainEqual({ name: 'kvcoder.message.send', input: { sessionId: 's1', text: 'تابع' } });
+    expect(arabic.calls).toContainEqual({ name: 'kvcoder.turn.retry', input: { sessionId: 's1' } });
     translated.unmount();
   });
 
-  it('QA10-H6 choosing a model sets it on the chat, remembers it, and sends Continue', async () => {
+  it('QA10-H6 choosing a model sets it on the chat, remembers it, and retries', async () => {
     const fake = recoverableFake(failedWorld('REPLY_LOST'));
     fake.handle('kvcoder.session.configure', () => ({}));
     fake.handle('kernel.settings.set', () => ({}));
-    fake.handle('kvcoder.message.send', () => ({}));
+    fake.handle('kvcoder.turn.retry', () => ({}));
     const wrapper = await mounted(ConversationView, fake, { sessionId: 's1' });
     await pickModel(wrapper, 'zed/z1');
-    expect(fake.calls.filter((call) => ['kvcoder.session.configure', 'kernel.settings.set', 'kvcoder.message.send'].includes(call.name))).toEqual([
+    expect(fake.calls.filter((call) => ['kvcoder.session.configure', 'kernel.settings.set', 'kvcoder.turn.retry'].includes(call.name))).toEqual([
       { name: 'kvcoder.session.configure', input: { sessionId: 's1', model: 'zed/z1' } },
       { name: 'kernel.settings.set', input: { key: 'kvai.defaultModel', value: 'zed/z1', scope: 'global' } },
-      { name: 'kvcoder.message.send', input: { sessionId: 's1', text: 'Continue' } },
+      { name: 'kvcoder.turn.retry', input: { sessionId: 's1' } },
     ]);
     wrapper.unmount();
   });
@@ -102,7 +102,7 @@ describe("a failed turn's recovery (08 §8.7, ADR 0009, 204, 205)", () => {
     ];
     for (const world of cases) {
       const fake = recoverableFake(world);
-      fake.handle('kvcoder.message.send', () => ({}));
+      fake.handle('kvcoder.turn.retry', () => ({}));
       const wrapper = await mounted(ConversationView, fake, { sessionId: 's1' });
       expect(wrapper.find('[data-test="recovery"]').exists()).toBe(false);
       wrapper.unmount();
@@ -112,7 +112,7 @@ describe("a failed turn's recovery (08 §8.7, ADR 0009, 204, 205)", () => {
   it('QA10-E3 the actions leave when the turn starts', async () => {
     const world = failedWorld('STEP_FAILED');
     const fake = recoverableFake(world);
-    fake.handle('kvcoder.message.send', () => {
+    fake.handle('kvcoder.turn.retry', () => {
       world.found = session({ status: 'running', stepJobId: 'j1' });
       return {};
     });
@@ -120,35 +120,35 @@ describe("a failed turn's recovery (08 §8.7, ADR 0009, 204, 205)", () => {
     expect(wrapper.find('[data-test="recovery"]').exists()).toBe(true);
     await wrapper.find('[data-test="retry"]').trigger('click');
     await flushPromises();
-    expect(fake.calls).toContainEqual({ name: 'kvcoder.message.send', input: { sessionId: 's1', text: 'Continue' } });
+    expect(fake.calls).toContainEqual({ name: 'kvcoder.turn.retry', input: { sessionId: 's1' } });
     expect(wrapper.find('[data-test="recovery"]').exists()).toBe(false);
     fake.end('j1');
     await flushPromises();
     wrapper.unmount();
   });
 
-  it('QA10-E4 a failing configure stops the recovery with a toast, while a failing default write still sends Continue', async () => {
+  it('QA10-E4 a failing configure stops the recovery with a toast, while a failing default write still retries', async () => {
     const stuck = recoverableFake(failedWorld('STEP_FAILED'));
     stuck.handle('kvcoder.session.configure', () => Promise.reject(problem('kvcoder/SESSION_BUSY')));
     stuck.handle('kernel.settings.set', () => ({}));
-    stuck.handle('kvcoder.message.send', () => ({}));
+    stuck.handle('kvcoder.turn.retry', () => ({}));
     const blocked = await mounted(ConversationView, stuck, { sessionId: 's1' });
     await pickModel(blocked, 'zed/z1');
     expect(stuck.toast).toHaveBeenCalledWith('kvcoder.errors.SESSION_BUSY', {}, 'error');
     expect(stuck.calls.map((call) => call.name)).not.toContain('kernel.settings.set');
-    expect(stuck.calls.map((call) => call.name)).not.toContain('kvcoder.message.send');
+    expect(stuck.calls.map((call) => call.name)).not.toContain('kvcoder.turn.retry');
     expect(blocked.find('[data-test="recovery"]').exists()).toBe(true);
     blocked.unmount();
 
     const kept = recoverableFake(failedWorld('STEP_FAILED'));
     kept.handle('kvcoder.session.configure', () => ({}));
     kept.handle('kernel.settings.set', () => Promise.reject(problem('VALIDATION_FAILED')));
-    kept.handle('kvcoder.message.send', () => ({}));
+    kept.handle('kvcoder.turn.retry', () => ({}));
     const wrapper = await mounted(ConversationView, kept, { sessionId: 's1' });
     await pickModel(wrapper, 'zed/z1');
     expect(kept.toast).toHaveBeenCalledWith('kernel.errors.VALIDATION_FAILED', {}, 'error');
     expect(kept.calls).toContainEqual({ name: 'kvcoder.session.configure', input: { sessionId: 's1', model: 'zed/z1' } });
-    expect(kept.calls).toContainEqual({ name: 'kvcoder.message.send', input: { sessionId: 's1', text: 'Continue' } });
+    expect(kept.calls).toContainEqual({ name: 'kvcoder.turn.retry', input: { sessionId: 's1' } });
     expect(wrapper.find('[data-test="recovery"]').exists()).toBe(true);
     wrapper.unmount();
   });

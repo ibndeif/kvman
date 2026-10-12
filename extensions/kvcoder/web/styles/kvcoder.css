@@ -78,6 +78,8 @@ a.kvc-button { text-decoration: none; color: inherit; }
 .kvc-primary { background: var(--kv-color-primary); border-color: var(--kv-color-primary); color: var(--kv-color-on-primary); }
 .kvc-ghost { border-color: transparent; background: transparent; }
 .kvc-actions { display: flex; gap: var(--kv-space-sm); justify-content: flex-end; flex-wrap: wrap; }
+/* The column breaks a word anywhere, so an action's label is kept whole (ADR 0062, 1). */
+.kvc-actions > .kvc-button { flex: 0 0 auto; white-space: nowrap; }
 .kvc-composer { padding-block: 12px 18px; padding-inline: var(--kv-space-lg); }
 .kvc-box { box-sizing: border-box; max-inline-size: 760px; margin-inline: auto; border: 1px solid var(--kv-color-border); border-radius: 16px; background: var(--kv-color-surface); padding: 10px 12px; display: flex; flex-direction: column; gap: var(--kv-space-sm); }
 .kvc-field { box-sizing: border-box; inline-size: 100%; border: 1px solid var(--kv-color-border); border-radius: 10px; background: var(--kv-color-surface); color: inherit; font: inherit; padding-block: 8px; padding-inline: 12px; }
@@ -229,5 +231,22 @@ a.kvc-button { text-decoration: none; color: inherit; }
 .kvc-field-table th { color: var(--kv-color-muted); font-weight: 500; font-family: var(--kv-font-mono); font-size: 12px; }
 .kvc-field-items { display: flex; flex-direction: column; gap: 2px; }
 .kvc-approval { border-block-start: 1px solid var(--kv-color-border); }
+.kvc-approval > .kvc-actions { padding-block-start: 0; }
+.kvc-run-row { display: flex; align-items: baseline; gap: 10px; }
+.kvc-run-row > .kvc-run-call { flex: 1 1 auto; min-inline-size: 0; }
+.kvc-run-row > .kvc-chip, .kvc-run-row > .kvc-muted { flex: 0 0 auto; white-space: nowrap; }
 :dir(rtl) .kvc-flip { transform: scaleX(-1); }
 .kvc-slash-row[aria-disabled='true'] { opacity: 0.55; cursor: default; }
+/* Keyboard focus is always visible, also where a field drops its own outline for its box's (KVC-26). */
+.kvc-button:focus-visible, .kvc-text-button:focus-visible, .kvc-link-button:focus-visible, .kvc-session:focus-visible, .kvc-switch:focus-visible, .kvc-chip-remove:focus-visible { outline: 2px solid var(--kv-color-primary); outline-offset: 2px; }
+.kvc-box:focus-within, .kvc-search:focus-within { outline: 2px solid var(--kv-color-primary); outline-offset: 1px; }
+.kvc-chip-remove { min-block-size: 20px; padding: 0; }
+/* Under a finger every control has a touch area of at least 44 px; with a mouse nothing changes (KVC-26). */
+@media (pointer: coarse) {
+  .kvc-button { min-block-size: 44px; }
+  .kvc-button.kvc-icon-button { inline-size: 44px; }
+  .kvc-text-button, .kvc-link-button { display: inline-flex; align-items: center; min-block-size: 44px; }
+  .kvc-chip-remove { min-block-size: 44px; min-inline-size: 44px; }
+  .kvc-switch { position: relative; }
+  .kvc-switch::after { content: ''; position: absolute; inset-block: -10px; inset-inline: -2px; }
+}

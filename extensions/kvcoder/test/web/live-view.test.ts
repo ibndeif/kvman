@@ -93,6 +93,25 @@ describe('the live view of a running step (08 §8.7, ADR 0009, 142, 143)', () =>
     wrapper.unmount();
   });
 
+  it("M2.4-E181 a retry drops the failed attempt's partial text, thinking, and call, so the new reply stands alone", async () => {
+    const fake = createFakeKvman();
+    serve(fake, running());
+    const wrapper = await mounted(ConversationView, fake, { sessionId: 's1' });
+    fake.emit('j1', kvai({ type: 'thinking', delta: 'First thoughts' }));
+    fake.emit('j1', kvai({ type: 'text', delta: 'A reply that broke off' }));
+    fake.emit('j1', kvai({ type: 'toolcall', name: 'run' }));
+    await flushPromises();
+    expect(wrapper.find('[data-test="live-answer"]').text()).toContain('A reply that broke off');
+    fake.emit('j1', progress('@kvman/kvcoder', { type: 'retry', attempt: 2, of: 4 } as never));
+    await flushPromises();
+    expect(wrapper.find('[data-test="live-answer"]').exists()).toBe(false);
+    expect(activity(wrapper).attributes('data-phase')).toBe('retrying');
+    fake.emit('j1', kvai({ type: 'text', delta: 'The whole reply.' }));
+    await flushPromises();
+    expect(wrapper.find('[data-test="live-answer"]').text()).toBe('The whole reply.');
+    wrapper.unmount();
+  });
+
   it('QA3-H23 a retry chunk shows "Retrying… (2 of 3)" until the model answers again', async () => {
     const fake = createFakeKvman();
     serve(fake, running());
@@ -121,5 +140,23 @@ describe('the live view of a running step (08 §8.7, ADR 0009, 142, 143)', () =>
     expect(activity(wrapper).find('[data-test="activity-title"]').text()).toBe(description);
     expect(activity(wrapper).find('[data-test="activity-label"]').exists()).toBe(false);
     wrapper.unmount();
+  });
+  it("M2.4-E193 the running line shows the turn's steps and estimated cost so far; steps alone while nothing is priced; nothing before the first step", async () => {
+    const fake = createFakeKvman();
+    const world = running();
+    world.turns = [turn({ steps: 18, usage: { input: 9000, output: 400, cacheRead: 0, cacheWrite: 0, cost: 0.84 } })];
+    serve(fake, world);
+    const wrapper = await mounted(ConversationView, fake, { sessionId: 's1' });
+    expect(activity(wrapper).find('[data-test="activity-turn"]').text()).toMatch(/^Turn: 18 steps · about .?\$0\.84.?$/u);
+    wrapper.unmount();
+
+    for (const [steps, text] of [[4, 'Turn: 4 steps'], [0, undefined]] as const) {
+      const free = createFakeKvman();
+      serve(free, { ...running(), turns: [turn({ steps, usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0 } })] });
+      const shown = await mounted(ConversationView, free, { sessionId: 's1' });
+      const line = activity(shown).find('[data-test="activity-turn"]');
+      expect(line.exists() ? line.text() : undefined).toBe(text);
+      shown.unmount();
+    }
   });
 });

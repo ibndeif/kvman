@@ -8,8 +8,8 @@ import type { Decision } from './use-answers.ts';
 
 // One reply's approvals share a card (ADR 0009, 104): Allow or Deny each call, or Allow all. Each shows the call as its
 // own card would (ADR 0036, 12): its description, what it would do and to what, and its payload by its kind, so the
-// person sees the change they allow; a line is whole in its closed line. A background call says so (ADR 149). The
-// card only says what was decided (ADR 141).
+// person sees the change they allow; a line is whole in its closed line. A background call says so (ADR 149). Deny and
+// Allow are a row under the call, so a long line never squeezes them (ADR 0062, 1). The card only says what was decided (ADR 141).
 export type Approval = { questionId: string; view: CallView };
 const props = defineProps<{ approvals: Approval[] }>();
 const emit = defineEmits<{ decide: [decision: Decision] }>();
@@ -28,10 +28,12 @@ const decide = (approvals: readonly Approval[], confirmed: boolean): void => emi
           <span v-else-if="item.view.line" dir="ltr" style="align-self: flex-start" data-test="call-subject"><span class="kvc-mono" :class="{ 'kvc-muted': item.view.description }">{{ item.view.line }}</span></span>
           <span v-if="item.view.background" class="kvc-chip" style="align-self: flex-start" data-test="call-background">{{ kvman.t('kvcoder.ui.jobs.inBackground') }}</span>
         </span>
+      </div>
+      <CallRequest v-if="callKind(item.view) !== 'line'" :view="item.view" />
+      <div class="kvc-card-row kvc-actions" data-test="decision-actions">
         <button type="button" class="kvc-button" data-test="deny" @click="decide([item], false)">{{ kvman.t('kvcoder.ui.deny') }}</button>
         <button type="button" class="kvc-button kvc-primary" data-test="allow" @click="decide([item], true)">{{ kvman.t('kvcoder.ui.allow') }}</button>
       </div>
-      <CallRequest v-if="callKind(item.view) !== 'line'" :view="item.view" />
     </div>
     <div v-if="props.approvals.length > 1" class="kvc-card-row kvc-actions" style="border-block-start: 1px solid var(--kv-color-border)">
       <button type="button" class="kvc-button" data-test="deny-all" @click="decide(props.approvals, false)">{{ kvman.t('kvcoder.ui.denyAll') }}</button>

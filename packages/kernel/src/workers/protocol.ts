@@ -38,6 +38,7 @@ const workerRequestSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('cancel-job'), jobId: z.string() }),
   z.object({ kind: z.literal('open-workspace'), path: z.string() }),
   z.object({ kind: z.literal('close-workspace'), workspaceId: z.string() }),
+  z.object({ kind: z.literal('delete-workspace'), workspaceId: z.string() }),
   z.object({ kind: z.literal('preset-get') }),
   z.object({ kind: z.literal('preset-install'), source: installSourceSchema }),
   z.object({ kind: z.literal('preset-uninstall'), name: z.string() }),

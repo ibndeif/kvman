@@ -48,11 +48,13 @@ export function collectionOf<Document extends JsonObject>(
       return row === undefined ? undefined : read(row);
     },
     find(filter, options) {
-      const { limit, order } = findOptions(options);
+      const { limit, order, after } = findOptions(options);
       const condition = filterSql(filter);
       const direction = order === 'asc' ? 'ASC' : 'DESC';
-      const sql = `SELECT id, data FROM store_documents WHERE ${where} AND ${condition.sql} ORDER BY id ${direction} LIMIT ?`;
-      return connection.prepare<unknown[], Row>(sql).all(...owner, ...condition.values, limit).map(read);
+      const cursor = after === undefined ? '' : ` AND id ${order === 'asc' ? '>' : '<'} ?`;
+      const cursorValues = after === undefined ? [] : [after];
+      const sql = `SELECT id, data FROM store_documents WHERE ${where} AND ${condition.sql}${cursor} ORDER BY id ${direction} LIMIT ?`;
+      return connection.prepare<unknown[], Row>(sql).all(...owner, ...condition.values, ...cursorValues, limit).map(read);
     },
     count(filter) {
       const condition = filterSql(filter);

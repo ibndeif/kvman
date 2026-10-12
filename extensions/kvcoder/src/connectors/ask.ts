@@ -72,20 +72,33 @@ function checkChoice(question: Record<string, JsonValue>, answer: { selected: st
   if (!parsed.multiple && count !== 1) throw invalid('Choose exactly one option.');
 }
 
-/** An answer checked against its question: the call's result, or an approval's decision. */
-export function checkedAnswer(question: QuestionDoc, answer: unknown): { kind: 'result'; text: string } | { kind: 'approval'; approved: boolean } {
+/** The validated retry value; choice membership still needs the original question on first application. */
+export type NormalizedAnswer = boolean | z.output<typeof dismissedSchema> | z.output<(typeof answerSchemas)[Exclude<QuestionKind, 'approval'>]>;
+
+export function normalizeAnswer(kind: QuestionKind, answer: unknown): NormalizedAnswer {
   const dismissed = dismissedSchema.safeParse(answer);
-  if (question.kind === 'approval') {
-    if (dismissed.success) return { kind: 'approval', approved: false };
+  if (kind === 'approval') {
+    if (dismissed.success) return false;
     const parsed = answerSchemas.approval.safeParse(answer);
     if (!parsed.success) throw invalid('An approval is answered { confirmed } or { dismissed: true }.');
-    return { kind: 'approval', approved: parsed.data.confirmed };
+    return parsed.data.confirmed;
   }
-  if (dismissed.success) return { kind: 'result', text: jsonOutput({ dismissed: true }).output };
-  const parsed = answerSchemas[question.kind].safeParse(answer);
-  if (!parsed.success) throw invalid(`The answer doesn't fit a ${question.kind} question.`);
-  if ('selected' in parsed.data) checkChoice(question.question, parsed.data);
-  return { kind: 'result', text: jsonOutput(parsed.data).output };
+  if (dismissed.success) return dismissed.data;
+  const parsed = answerSchemas[kind].safeParse(answer);
+  if (!parsed.success) throw invalid(`The answer doesn't fit a ${kind} question.`);
+  return parsed.data;
+}
+
+/** An answer checked against its question: the call's result, or an approval's decision. */
+// What follows an answer's JSON in the result the model reads (ADR 0058, 4): the first line stays the answer itself.
+export const answeredNote = 'The person answered this question. Go on with the task; do not ask it again.';
+export const skippedNote = 'The person skipped this question. Go on without an answer; do not ask it again.';
+
+export function checkedAnswer(question: QuestionDoc, answer: unknown): { kind: 'result'; text: string } | { kind: 'approval'; approved: boolean } {
+  const normalized = normalizeAnswer(question.kind, answer);
+  if (typeof normalized === 'boolean') return { kind: 'approval', approved: normalized };
+  if ('selected' in normalized) checkChoice(question.question, normalized);
+  return { kind: 'result', text: `${jsonOutput(normalized).output}\n${'dismissed' in normalized ? skippedNote : answeredNote}` };
 }
 
 /** What a question, or an approval, dismissed by a message returns to the model (plan 08 §8.1). */

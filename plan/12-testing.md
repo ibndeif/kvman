@@ -18,6 +18,8 @@ Tests are deterministic. They use fake clocks where time matters and no network:
 
 **Platforms.** There is no CI in this phase; the gates run locally on the developer's OS. Tests that depend on the OS (shells, process trees, file modes) cover each OS's branch and run the one that matches. Playwright and the benchmarks run on Linux. The one run on all three systems is the release's: each runner starts the bundle it built, with no window, before it publishes an installer (§14.8). No test drives the real window in this phase (ADR 0038, 36).
 
+**Local candidate (ADR0047).** Run `node release/candidate/local-candidate-main.ts` explicitly on Node24. It runs typecheck, lint, test, build, the original four-package name/JavaScript/declaration checks, then bench:check, serially and once each. Vitest retains lightweight runner coverage and does not launch repository-wide gates inside itself. Failures stop later gates; output certifies only the actual host's local pipeline, not CI, publishing, other platforms, Rust, or installers.
+
 ## 12.2 Crash invariants
 
 Tests run kvman as a child process and SIGKILL it at moments they observe through the API: after an async job is queued, while one runs, while a turn is suspended, and during a secrets write. They then restart it and check that:

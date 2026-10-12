@@ -38,29 +38,45 @@ export async function programFound(line: CommandLine, cwd: string, signal: Abort
 }
 
 export function runProgram(line: CommandLine, cwd: string, timeoutMs: number, signal: AbortSignal): Promise<ProgramEnd> {
-  return new Promise((resolve) => {
-    const child = spawn(line.command, line.args, programSpawn(process.platform, cwd, process.env));
+  return new Promise((resolve, reject) => {
+    signal.throwIfAborted();
+    const command = line.command;
+    const args = line.args;
+    const options = programSpawn(process.platform, cwd, process.env);
+    signal.throwIfAborted();
+    const child = spawn(command, args, options);
     const stdout = tail();
     const stderr = tail();
     let timedOut = false;
+    let settled = false;
+    let stopRequested = false;
     child.stdout?.on('data', stdout.add);
     child.stderr?.on('data', stderr.add);
+    const abort = (): void => {
+      if (settled || stopRequested) return;
+      stopRequested = true;
+      killTree(child.pid);
+    };
     const timer = setTimeout(() => {
       timedOut = true;
-      killTree(child.pid);
+      abort();
     }, timeoutMs);
-    const abort = (): void => killTree(child.pid);
-    signal.addEventListener('abort', abort, { once: true });
-    let settled = false;
     // A program that can't start reports an error and may then close as well.
     const settle = (end: Pick<ProgramEnd, 'exitCode' | 'startError'>): void => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
       signal.removeEventListener('abort', abort);
-      resolve({ stdout: stdout.text(), stderr: stderr.text(), timedOut, ...end });
+      if (signal.aborted) reject(signal.reason);
+      else resolve({ stdout: stdout.text(), stderr: stderr.text(), timedOut, ...end });
     };
-    child.once('error', (error) => settle({ exitCode: null, startError: error.message }));
+    child.once('error', (error) => {
+      // An error with a pid does not confirm a cancelled child's shutdown; wait for close.
+      if (signal.aborted && child.pid !== undefined) return;
+      settle({ exitCode: null, startError: error.message });
+    });
     child.once('close', (code) => settle({ exitCode: code, startError: null }));
+    signal.addEventListener('abort', abort, { once: true });
+    if (signal.aborted) abort();
   });
 }

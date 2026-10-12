@@ -31,18 +31,18 @@ async function answerAll(kernel: TestKernel, sessionId: string, confirmed: boole
 describe('approval of the calls that can ask (08 §8.3, ADR 0011, 7)', { timeout: 30_000 }, () => {
   it('QA18-H11 risky false runs at once; risky true asks, holds the call, and runs it once allowed', async () => {
     const seed = (folder: string): void => looked.write(folder, 'seed.txt', 'old');
-    const safe = await looked(seed, asking({ risky: false }), settings('auto'));
+    const safe = await looked(seed, asking({ risky: false }), settings('auto'), ['seed.txt']);
     expect((await turnState(safe.kernel, safe.sessionId)).turn).toMatchObject({ outcome: 'done' });
     expect(made.map((file) => exists(safe.kernel, file))).toEqual([true, true, true]);
     for (const risky of [{ risky: true }]) {
-      const waiting = await looked(seed, asking(risky), settings('auto'));
+      const waiting = await looked(seed, asking(risky), settings('auto'), ['seed.txt']);
       const { turn } = await turnState(waiting.kernel, waiting.sessionId);
       expect(turn?.pending.map((item) => item.kind)).toEqual(['approval', 'approval', 'approval', 'approval']);
       expect(turn?.pending[2]?.question).toEqual({ description: 'A test call.', connector: 'fs', command: 'write', payload: { path: 'write.txt', content: 'x', ...risky } });
       expect(made.map((file) => exists(waiting.kernel, file))).toEqual([false, false, false]);
       await answerAll(waiting.kernel, waiting.sessionId, true);
       expect(made.map((file) => exists(waiting.kernel, file))).toEqual([true, true, true]);
-      const results = toolResults(waiting.fake);
+      const results = toolResults(waiting.fake).slice(1);
       expect(results.slice(0, 2)).toEqual(['[exit code 0]', '[exit code 0]']);
       expect(results[2]).toContain('"created":true');
       expect(results[3]).toContain('"replacements":1');

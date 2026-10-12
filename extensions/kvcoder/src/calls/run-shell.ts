@@ -1,11 +1,12 @@
 import { spawn } from 'node:child_process';
-import { cutOutput, outputKept, outputLimit } from '../result-text.ts';
+import { cutOutput, outputKept, outputLimit, plainEnvironment, plainText } from '../result-text.ts';
 import { treeKill, type ShellCommand } from './shell-command.ts';
 
 // One real shell call (plan 08 §8.3): in the workspace folder, with an empty stdin, stdout and stderr combined, and
 // its process tree killed on timeout or cancel. It is a short-lived process of the step's job (plan 02 §2.6). Only the
 // first and last 15 KB are kept once the output passes 30 KB. The call ends when the shell exits, and what it left
-// running in its group is killed (ADR 0009, 148).
+// running in its group is killed (ADR 0009, 148). Tools are asked for plain output, and terminal codes are removed
+// from what is kept (ADR 0051, 1).
 
 export type ShellRun = { output: string; exitCode: number; timedOut: boolean; leftoverStopped: boolean; durationMs: number };
 
@@ -51,36 +52,53 @@ function outputCollector(): { add(chunk: Buffer): void; text(): string } {
       tail = Buffer.concat([tail, chunk]);
       if (tail.length > outputKept) tail = tail.subarray(tail.length - outputKept);
     },
-    text: () => (total <= outputLimit ? all.toString('utf8') : cutOutput(all.subarray(0, outputKept), total - 2 * outputKept, tail)),
+    text: () => plainText(total <= outputLimit ? all.toString('utf8') : cutOutput(all.subarray(0, outputKept), total - 2 * outputKept, tail)),
   };
 }
 
 export function runShell(shell: ShellCommand, line: string, cwd: string, timeoutMs: number, signal: AbortSignal): Promise<ShellRun> {
   const started = Date.now();
   return new Promise((resolve, reject) => {
-    const child = spawn(shell.program, shell.args(line), { cwd, stdio: ['ignore', 'pipe', 'pipe'], detached: process.platform !== 'win32', windowsHide: true });
+    signal.throwIfAborted();
+    const program = shell.program;
+    const args = shell.args(line);
+    const options = { cwd, env: { ...process.env, ...plainEnvironment(process.env) }, stdio: ['ignore', 'pipe', 'pipe'] satisfies ['ignore', 'pipe', 'pipe'], detached: process.platform !== 'win32', windowsHide: true };
+    signal.throwIfAborted();
+    const child = spawn(program, args, options);
     const output = outputCollector();
     let timedOut = false;
+    let settled = false;
+    let stopRequested = false;
     let leftoverStopped = false;
     let drain: NodeJS.Timeout | undefined;
     child.stdout.on('data', output.add);
     child.stderr.on('data', output.add);
+    const abort = (): void => {
+      if (settled || stopRequested) return;
+      stopRequested = true;
+      killTree(child.pid);
+    };
     const timer = setTimeout(() => {
       timedOut = true;
-      killTree(child.pid);
+      abort();
     }, timeoutMs);
-    const abort = (): void => killTree(child.pid);
-    signal.addEventListener('abort', abort, { once: true });
-    const settle = (): void => {
+    const settle = (): boolean => {
+      if (settled) return false;
+      settled = true;
       clearTimeout(timer);
       clearTimeout(drain);
       signal.removeEventListener('abort', abort);
+      return true;
     };
     child.once('error', (error) => {
-      settle();
-      reject(error);
+      // An error with a pid does not confirm a cancelled child's shutdown; wait for close.
+      if (signal.aborted && child.pid !== undefined) return;
+      if (!settle()) return;
+      reject(signal.aborted ? signal.reason : error);
     });
     child.once('exit', () => {
+      if (settled) return;
+      stopRequested = true;
       leftoverStopped = !timedOut && !signal.aborted && stopLeftover(child.pid);
       drain = setTimeout(() => {
         child.stdout.destroy();
@@ -88,8 +106,11 @@ export function runShell(shell: ShellCommand, line: string, cwd: string, timeout
       }, drainMs);
     });
     child.once('close', (code, killedBy) => {
-      settle();
+      if (!settle()) return;
+      if (signal.aborted) { reject(signal.reason); return; }
       resolve({ output: output.text(), exitCode: timedOut ? 124 : (code ?? (killedBy === null ? 1 : 137)), timedOut, leftoverStopped, durationMs: Date.now() - started });
     });
+    signal.addEventListener('abort', abort, { once: true });
+    if (signal.aborted) abort();
   });
 }

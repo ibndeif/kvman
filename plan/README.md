@@ -28,7 +28,7 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `adr/0008-plan-review.md` | The full review before M1.1: running locally, platforms, and the fixes it made |
 | `adr/0009-implementation.md` | Questions answered while building, milestone by milestone |
 | `adr/0011-run-tool.md` | kvcoder's one `run` tool over connectors: the shell as a connector, help, background work, function tools |
-| `adr/0010-kvbuilder.md` | kvdev becomes kvbuilder: extension development for any harness, managing kvman, the `dev` preset removed |
+| `adr/0010-kvcustomizer.md` | kvdev becomes kvbuilder: extension development for any harness, managing kvman, the `dev` preset removed |
 | `adr/0012-chat-review.md` | What a real chat showed: payload signatures in the prompt and in errors, one question per `ask` call, `sessionId` for the provider's cache, honest background starts |
 | `adr/0018-attachments-and-conversation-fixes.md` | Any file as an attachment (saved under `attachments/` in the workspace), the greyed slash list on the Chat page, the header above the artifact panel, and its running time |
 | `adr/0019-command-progress-and-summary-minimum.md` | A running chat action's line in the chat (slash command or menu), the blocked send box meanwhile, how a summary by hand ends, and a summary's minimum of 10% of the model's window |
@@ -56,5 +56,9 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `adr/0015-configuration-review.md` | The configuration pages after their first use: a model is chosen from a searchable dropdown everywhere, the Interface page has one section, and programs are rows of the one connectors list |
 | `adr/0014-extension-configuration.md` | Each extension's configuration on its own page: `configuration` in `ui.get`, the `setting` view, `kvman.scope`, secrets per extension, and turning kvcoder's connectors off |
 | `adr/0013-ui-review.md` | The UI review: an answered question's card, the Settings page (one scope switch, saving as you change, named choices, details), and the Arabic glossary |
+| `adr/0039-kvcoder-process-cancellation.md` | KVC-08: cancellation before spawn, registration races, shutdown settlement, and cleanup in the existing short-lived runners |
+| `adr/0040-kvcoder-recovery-foundations.md` | KVC-02/03: recovery within later workspace commands, no cross-workspace job API, and exclusive collection find continuation |
+| `adr/0041-kvcoder-step-intents.md` | KVC-02/03: durable step intent records, session-lifetime generations, canonical claims, conservative legacy binding and stale-follow rejection |
+| `adr/0042-kvcoder-answer-receipts.md` | KVC-01/20: atomic answer application and receipts, identical retry acknowledgment, different-answer conflicts and unchanged public API |
 
 The plan is complete. Implementation starts with M1.1.

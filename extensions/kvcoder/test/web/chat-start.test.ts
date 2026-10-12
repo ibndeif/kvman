@@ -71,12 +71,13 @@ describe("the Chat page's new chat (08 §8.7, ADR 0009, 194)", () => {
     await send(wrapper, 'Build it');
     expect(fake.calls).toEqual([
       { name: 'kernel.settings.list', input: {} },
+      { name: 'kernel.settings.list', input: {} },
       { name: 'kvai.provider.list', input: {} },
       { name: 'kvai.model.list', input: {} },
       { name: 'kernel.settings.set', input: { key: 'kvai.defaultModel', value: 'zed/z1', scope: 'global' } },
       { name: 'kvcoder.session.create', input: {} },
       { name: 'kvcoder.session.configure', input: { sessionId: 's9', model: 'zed/z1', thinking: 'low' } },
-      { name: 'kvcoder.message.send', input: { sessionId: 's9', text: 'Build it' } },
+      { name: 'kvcoder.message.send', input: { sessionId: 's9', text: 'Build it', sendId: expect.any(String) } },
     ]);
     expect(fake.navigate).toHaveBeenCalledWith('kvcoder.session', { sessionId: 's9' });
     wrapper.unmount();
@@ -107,7 +108,7 @@ describe("the Chat page's new chat (08 §8.7, ADR 0009, 194)", () => {
     const fake = startFake({ model: null, defaultModel: 'fake/m1' });
     const wrapper = await mounted(ChatStart, fake);
     await send(wrapper, 'Build it');
-    expect(fake.calls.map((call) => call.name)).toEqual(['kernel.settings.list', 'kvai.provider.list', 'kvai.model.list', 'kvcoder.session.create', 'kvcoder.message.send']);
+    expect(fake.calls.map((call) => call.name)).toEqual(['kernel.settings.list', 'kernel.settings.list', 'kvai.provider.list', 'kvai.model.list', 'kvcoder.session.create', 'kvcoder.message.send']);
     expect(fake.navigate).toHaveBeenCalledWith('kvcoder.session', { sessionId: 's9' });
     wrapper.unmount();
   });
@@ -197,16 +198,22 @@ describe("the Chat page's new chat (08 §8.7, ADR 0009, 194)", () => {
     wrapper.unmount();
   });
 
-  it('QA9-E4 a failed configure toasts and stops the send', async () => {
+  it('QA9-E4 / E140 a failed configure says so above the box, stops the send, and the retry reuses the chat', async () => {
     const fake = startFake({ model: null, defaultModel: 'fake/m1' });
+    fake.workspace.value = { ...fake.workspace.value, id: 'failed-configure' };
     fake.handle('kvcoder.session.configure', () => Promise.reject(Object.assign(new Error('Busy.'), { problem: { code: 'kvcoder/SESSION_BUSY', message: 'Busy.', params: {} } })));
     const wrapper = await mounted(ChatStart, fake);
     await wrapper.find('[data-test="model-picker"]').trigger('click');
     await wrapper.find('[data-test="model-zed/z1"]').trigger('click');
     await send(wrapper, 'Build it');
-    expect(fake.toast).toHaveBeenCalledWith('kvcoder.errors.SESSION_BUSY', {}, 'error');
+    expect(wrapper.find('[data-test="send-error"]').text()).toContain('The chat is working');
+    expect(fake.toast).not.toHaveBeenCalled();
     expect(fake.calls.map((call) => call.name)).not.toContain('kvcoder.message.send');
     expect(fake.navigate).not.toHaveBeenCalled();
+    await wrapper.find('[data-test="composer-text"]').trigger('keydown', { key: 'Enter' });
+    await flushPromises();
+    expect(fake.calls.filter((call) => call.name === 'kvcoder.session.create')).toHaveLength(1);
+    expect(fake.calls.filter((call) => call.name === 'kvcoder.session.configure')).toHaveLength(2);
     wrapper.unmount();
   });
 

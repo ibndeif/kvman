@@ -78,11 +78,15 @@ const dismissedByMessage = 'dismissed by the user';
 
 function answerOf(text: string): Record<string, unknown> | undefined {
   if (text === dismissedByMessage) return { dismissed: true };
-  try {
-    return record(JSON.parse(text));
-  } catch {
-    return undefined;
+  // The answer is the result's first line; a note to the model may follow it (ADR 0058, 4). An older result is the JSON alone.
+  for (const candidate of [text, text.split('\n', 1)[0] ?? '']) {
+    try {
+      return record(JSON.parse(candidate));
+    } catch {
+      continue;
+    }
   }
+  return undefined;
 }
 
 /** An `ask` call's result as the question and the person's answer (ADR 0013, 1), or nothing for any other result. */
@@ -141,4 +145,10 @@ const backgroundCall = /^The background call `([\s\S]*?)` \(job [^)\n]+\) finish
 export function backgroundName(message: Message): string | undefined {
   const name = backgroundCall.exec(textOf(message.content['content']))?.[1]?.trim();
   return name === undefined || name === '' ? undefined : name;
+}
+
+/** The run a tool result says changed what is staged in Git (ADR 0060, 4). */
+export function stagingRunOf(message: Message): string | undefined {
+  const runId = record(record(message.content['details'])?.['staging'])?.['runId'];
+  return typeof runId === 'string' ? runId : undefined;
 }

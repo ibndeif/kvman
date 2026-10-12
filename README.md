@@ -24,6 +24,14 @@ To change kvman itself from a chat (its model, its settings, its extensions, or 
 
 The agent in a chat knows the date and time of each message you send, and a long chat's summary reuses what the model's provider has already cached, so it costs far less ([the coding app](docs/user-guide/coding-app.md)).
 
+Short-lived shell commands and program workers check cancellation before creating a process. If a process was already created, its runner requests its shutdown and waits for it to close before reporting cancellation; it does not report that as an ordinary command failure or timeout. Intentionally backgrounded shell processes keep their existing lifecycle ([ADR 0039](plan/adr/0039-kvcoder-process-cancellation.md)).
+
+A workspace whose folder is gone is closed when kvman starts, and its data is kept. The workspace picker lists the closed workspaces, where one can be reopened or deleted for good (`kernel.workspace.delete`); deleting stops the workspace's running work first and never touches its folder ([kernel API](docs/developers/kernel-api.md)).
+
+In a chat, the running line shows the turn's steps and estimated cost so far. When a program worker's run changes what is staged in Git, the chat says so and offers "Restore staging". An approval's Deny and Allow sit in a row under its call, and a card that read a background run shows that run's description, status, time, and output (ADR 0062).
+
+Extensions can continue collection `find` with an exclusive `after` ID in ascending or descending order, without raising the 1000-document page limit. Pages do not share a cross-call snapshot; updated SDK types alone do not add this support to an older kernel ([storage guide](docs/developers/storage.md)).
+
 ## Documentation
 
 | For | Start at |
@@ -38,8 +46,10 @@ Node 24 and pnpm (the version in `package.json` `packageManager`).
 
 ```
 pnpm install
-pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm bench:check
+node release/candidate/local-candidate-main.ts
 ```
+
+The explicit local candidate runs `typecheck`, `lint`, `test`, and `build` once in that order, verifies the original SDK, kernel, CLI, and testkit package names and JavaScript/declaration entries, then runs `bench:check` once. It stops at the first failure and identifies the host OS/architecture. Vitest does not nest repository-wide gates. Individual scripts remain available below; this local check is not a CI or publish blocker and does not certify other platforms, Rust, or installers.
 
 | Script | Does |
 |---|---|

@@ -1,5 +1,6 @@
 import { z, type Ctx, type Json } from '@kvman/sdk';
 import { firePoint } from '../registry/session-points.ts';
+import { allDocs } from '../store/all-docs.ts';
 import { records, txRecords } from '../store/collections.ts';
 import { messagesFrom } from '../turns/message-blocks.ts';
 import { newSession } from './new-session.ts';
@@ -12,7 +13,7 @@ async function sessionExport(ctx: Ctx, sessionId: string): Promise<Record<string
   const store = records(ctx.store);
   const session = await store.sessions.get(sessionId);
   if (session === undefined) return {};
-  const turns = (await store.turns.find({ sessionId }, { limit: 1000 })).map(turnView);
+  const turns = (await allDocs((options) => store.turns.find({ sessionId }, options))).map(turnView);
   const messages = (await messagesFrom(ctx, sessionId, 0, session.nextSeq)).map(messageView);
   return { session: sessionView(session), turns, messages };
 }
@@ -50,8 +51,9 @@ export function registerForkExport(ctx: Ctx): void {
     public: true,
     handle: async ({ sessionId }) => {
       const session = await ownSession(ctx, sessionId);
-      const children = await records(ctx.store).sessions.find({ parentId: sessionId }, { limit: 1000 });
-      const artifacts = (await records(ctx.store).artifacts.find({ sessionId }, { limit: 1000 }))
+      // Every subagent session and artifact: an export is whole, or it fails (ADR 0057, 3).
+      const children = await allDocs((options) => records(ctx.store).sessions.find({ parentId: sessionId }, options));
+      const artifacts = (await allDocs((options) => records(ctx.store).artifacts.find({ sessionId }, options)))
         .sort((first, second) => first.createdAt.localeCompare(second.createdAt) || first.artifactId.localeCompare(second.artifactId))
         .map((doc) => ({ id: doc.artifactId, title: doc.title, format: doc.format, version: doc.version, content: doc.content, createdAt: doc.createdAt, updatedAt: doc.updatedAt }));
       const data = { ...(await sessionExport(ctx, sessionId)), artifacts, subagents: await Promise.all(children.map((child) => sessionExport(ctx, child.id))) };

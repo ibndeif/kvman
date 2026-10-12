@@ -80,6 +80,27 @@ describe('adding and editing an MCP server (08 §8.7, ADR 0020, 6 and 15)', () =
     expect([...secrets]).toEqual(['mcp.github.env.TOKEN']);
   });
 
+  it('M2.4-E177 a changed address needs the values typed again and drops the sign-in; another change keeps them', async () => {
+    const stored = ['mcp.linear.header.Authorization', 'mcp.linear.oauth.tokens', 'mcp.linear.oauth.client'];
+    const { fake, secrets } = mcpWorld({ global: [linear] }, { secrets: stored, checks: { linear: { status: 'ready', tools: 3 } } });
+    const view = await mounted(McpServers, fake);
+    await field(view, 'server-edit').trigger('click');
+    await field(view, 'description').setValue('Another description.');
+    expect(field(view, 'moved').exists()).toBe(false);
+    expect(view.findAll('[data-test="mcp-value-set"]')).toHaveLength(1);
+    await field(view, 'url').setValue('https://elsewhere.example/mcp');
+    expect(field(view, 'moved').text()).toContain('type its values again');
+    expect(view.findAll('[data-test="mcp-value-set"]')).toHaveLength(0);
+    await save(view);
+    expect(problem(view, 'values').exists()).toBe(true);
+    expect(changes(fake)).toEqual([]);
+    await field(view, 'value-secret').setValue('Bearer new');
+    await save(view);
+    const moved = { ...linear, description: 'Another description.', url: 'https://elsewhere.example/mcp' };
+    expect(changes(fake)).toEqual([listSet([moved]), secretSet('mcp.linear.header.Authorization', 'Bearer new'), ...['mcp.linear.oauth.tokens', 'mcp.linear.oauth.client'].map((name) => ({ name: 'kernel.secrets.delete', input: { extension: '@kvman/kvcoder', name } }))]);
+    expect([...secrets]).toEqual(['mcp.linear.header.Authorization']);
+  });
+
   it('QA29-E22 what the list would refuse shows under its field, and nothing is written', async () => {
     const { fake } = mcpWorld({ global: [github] }, { checks: { github: { status: 'ready', tools: 8 } } });
     const view = await mounted(McpServers, fake);

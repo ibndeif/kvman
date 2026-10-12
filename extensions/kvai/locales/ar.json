@@ -16,6 +16,8 @@
   "kvai.errors.NO_MODEL": "لم يُحدَّد نموذج، ولم يُعيَّن نموذج افتراضي.",
   "kvai.errors.MODEL_UNKNOWN": "لا يوجد نموذج باسم {model}.",
   "kvai.errors.RATE_LIMITED": "مزوّد {model} يقيّد عدد الطلبات حاليًا. حاول لاحقًا.",
+  "kvai.errors.USAGE_LIMIT": "الحساب المستخدم مع {model} بلغ حد الاستخدام. حاول بعد تجدد الحد، أو اختر نموذجًا آخر.",
+  "kvai.errors.REFUSED": "رفض مزوّد {model} هذا الطلب. أعد صياغته، أو اختر نموذجًا آخر.",
   "kvai.errors.CONTEXT_TOO_LONG": "المحادثة أطول مما يستوعبه {model}.",
   "kvai.errors.PROVIDER_ERROR": "فشل الاتصال بالنموذج {model}.",
   "kvai.errors.PROVIDER_UNKNOWN": "لا يوجد مزوّد باسم {provider}.",

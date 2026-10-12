@@ -66,7 +66,8 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
   - `ctx.store.kv` has `get`, `set`, and `delete`.
   - `ctx.store.collection(name, schema)` holds JSON documents with kernel-assigned ids (UUIDv7), with `insert`, `get`, `find`, `count`, `update`, and `delete`. `schema` is the zod schema of a document without its `id`: writes are checked against it, and reads parse through it, so a stored document that no longer fits fails `VALIDATION_FAILED` (ADR 0009, 4).
   - `kv.get(key)` and `collection.get(id)` return `undefined` when nothing is stored there.
-  - `find(filter, { limit, order? })` takes equality filters on top-level fields (`string`, `number`, `boolean`, or `null` values) and a required `limit`, and returns documents by id: `order` is `'asc'` (the default, oldest first) or `'desc'`. `count(filter)` returns the number of matches.
+  - `find(filter, { limit, order?, after? })` takes equality filters on top-level fields (`string`, `number`, `boolean`, or `null` values) and a required positive integer `limit` of at most1000, and returns documents by id: `order` is `'asc'` (the default, oldest first) or `'desc'`. `count(filter)` returns the number of matches.
+  - **Continuation** (ADR0040). Optional `after` is a non-empty string ID position: the next results have IDs strictly greater than it in ascending order, strictly less in descending order. Its document need not still exist. Calls without it, Promise/synchronous transaction returns, filters and ownership scope are unchanged; invalid options fail `VALIDATION_FAILED`. This is not a snapshot across calls: unread deletions disappear and matching new IDs beyond the position can appear; consumers must define their revalidation policy.
   - `update` and `delete` of a missing id fail `NOT_FOUND`.
   - A document or a kv value is JSON of at most 16 MiB (`TOO_LARGE`).
 - **Scope.** `ctx.store` is the current job's workspace; `ctx.store.global` is home-wide. Both hold only the calling extension's data.
@@ -78,7 +79,9 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 - Other folders are opened with `kernel.workspace.open`, and they can be listed and closed (§2.12). At start, kvman opens the folder it's started from (§1.2).
 - `kernel.workspace.open` needs an absolute path to an existing folder (`VALIDATION_FAILED` otherwise). The path is resolved with `realpath`, so a symlink or a trailing slash reopens the same workspace, and Home's own folder answers Home. A workspace's id is a UUIDv7, and its name is its folder's basename (ADR 0009, 22).
 - **Remembered.** Workspaces are kept across restarts until closed. Opening a path that was open before gets the same id, and so the same data.
+- **A folder that is gone.** At start, an open workspace whose path is no longer a folder is closed, before the start folder is opened (ADR 0061, 1).
 - **Closing pauses.** Closing a workspace removes it from the list. Its data stays; its queued jobs and schedules wait until it's opened again; its running jobs finish; and calls naming it fail `NOT_FOUND`.
+- **Deleting.** `kernel.workspace.closed.list` gives the closed workspaces, each with `missing: true` when its path is not a folder now. `kernel.workspace.delete` erases a closed one for good (ADR 0061, 3): it cancels the workspace's running async jobs and waits for them, stops its processes (§2.16), and then in one transaction deletes its row, every extension's stored data and the settings of that workspace, and its file rows, jobs, schedules, and process rows, and queues the `kernel.workspace.deleted` handler jobs (§2.15); the deleted files' contents are removed after it. Home and an open workspace fail `VALIDATION_FAILED`, as does one opened again while its work was being stopped; an unknown id fails `NOT_FOUND`. The folder on disk is never touched.
 - Every job has a workspace. An HTTP call names it with `workspaceId`, defaulting to Home, and nested jobs inherit it.
 - `ctx.job.workspace.path` is the folder. Extensions use `node:fs` and `node:child_process` on it directly for work inside a job. A handler kills its own short-lived processes on cancel: the process group on Linux and macOS, `taskkill /PID <pid> /T /F` on Windows. Long-lived processes use the kernel's process service (§2.16).
 
@@ -206,7 +209,9 @@ All are public. Types are in `@kvman/sdk`.
 |---|---|---|
 | `kernel.workspace.open` | command | `{ path }` → `Workspace`: the existing one if that path is open, the remembered one if it was open before (§2.6) |
 | `kernel.workspace.close` | command | `{ workspaceId }` → `{}`: pauses it (§2.6); Home can't be closed (`VALIDATION_FAILED`) |
+| `kernel.workspace.delete` | command | `{ workspaceId }` → `{}`: erases a closed workspace's data for good (§2.6; ADR 0061, 3) |
 | `kernel.workspace.list` | query | `{}` → the open `Workspace[]`, Home first, then in the order they were first opened |
+| `kernel.workspace.closed.list` | query | `{}` → `[{ id, name, path, missing }]`: the closed workspaces, in the order they were first opened (ADR 0061, 2) |
 | `kernel.folder.list` | query | `{ path?, hidden? }` → `{ path, parent, folders: [{ name, path }], truncated }`: the sub-folders of a folder on this machine, for choosing a workspace folder (ADR 0009, 219) |
 | `kernel.folder.create` | command | `{ path, name }` → `{ path }`: makes the folder `name` inside the existing folder `path` and answers its real path; `name` is one folder name (ADR 0009, 222) |
 | `kernel.settings.set` | command | `{ key, value, scope: 'global' \| 'workspace' }` → `{}` |
@@ -297,13 +302,14 @@ ctx.registerHandler('kernel.job.failed', {
 | `kernel.job.cancelled` | any job ends `cancelled` | `{ jobId, rootId, name, caller, workspaceId, reason }` |
 | `kernel.process.exited` | a process from §2.16 exits by itself | `{ extension, workspaceId, name, exitCode, signal }` |
 | `kernel.workspace.opened` | a path becomes a workspace for the first time (Home: on the first start of a new home); reopening doesn't count | `{ workspaceId }` |
+| `kernel.workspace.deleted` | a closed workspace is deleted (§2.6; ADR 0061, 4) | `{ workspaceId }` |
 | `kernel.started` | once per start, after every extension loads and before HTTP starts; again after a hot reload, for the reloaded extension and its dependents | `{}` |
 | `kernel.stopping` | at the start of shutdown | `{}` |
 
 The three job points share the base `{ jobId, rootId, name, caller, workspaceId }`. Handler inputs never include a job's input or output. An unknown point fails the load with `EXTENSION_INVALID`.
 
 - **Delivery.** Each occurrence queues one async job per registered handler, in the same SQLite transaction that records the job's end (for a sync job, which has no row, the transaction that inserts the handler jobs), so a crash never loses or duplicates a handler call.
-- **Handler jobs.** They are ordinary async jobs, with retries and timeouts. Their caller is `{ kind: 'kernel' }`, and their workspace is the job's (the opened one for `workspace.opened`; Home for `started` and `stopping`).
+- **Handler jobs.** They are ordinary async jobs, with retries and timeouts. Their caller is `{ kind: 'kernel' }`, and their workspace is the job's (the opened one for `workspace.opened`; Home for `workspace.deleted`, `started`, and `stopping`).
 - **Loop safety.** A handler job, its nested sync jobs, and every async job or schedule they create carry a `fromHandler` mark, inherited down the chain. Marked jobs never trigger handlers, so no chain can loop.
 - **Started.** kvman runs the `kernel.started` handlers before it starts HTTP, in dependency order, with a 10 s budget. A handler that fails is logged, and kvman still starts. Handlers still running when the budget ends keep running after HTTP starts. A `path:` hot reload runs the handlers of the reloaded extension and of every extension that depends on it again, in dependency order.
 - **Stopping.** `kernel.stopping` handlers run at the start of shutdown, before running jobs are aborted, within the 10 s budget. Unfinished ones are dropped, not resumed.

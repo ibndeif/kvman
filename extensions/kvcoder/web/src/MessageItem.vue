@@ -3,10 +3,11 @@ import { BellRing, Info, NotebookText, ScrollText } from '@lucide/vue';
 import { computed } from 'vue';
 import type { Message } from '../../src/index.ts';
 import { failureReason, fields, isolateValue, problemKey, stringValues, useKvman } from './kvman.ts';
-import { answeredQuestion, artifactOf, backgroundName, backgroundRef, isBackground, isKvcoderHint, resultCard, shownUserText, textOf, thinkingOf } from './message-parts.ts';
+import { answeredQuestion, artifactOf, backgroundName, backgroundRef, isBackground, isKvcoderHint, resultCard, shownUserText, stagingRunOf, textOf, thinkingOf } from './message-parts.ts';
 import AnsweredCard from './AnsweredCard.vue';
 import ArtifactCard from './ArtifactCard.vue';
 import CallCard from './CallCard.vue';
+import StagingNote from './StagingNote.vue';
 import type { CallView } from './call-view.ts';
 import { durationText } from './durations.ts';
 import type { FinishedRun } from './use-finished-runs.ts';
@@ -20,6 +21,8 @@ const text = computed(() => textOf(props.message.content['content']));
 const thinking = computed(() => thinkingOf(props.message));
 const card = computed(() => resultCard(props.message, props.calls));
 const artifact = computed(() => artifactOf(props.message));
+// A program worker's run that changed what is staged in Git names itself in its result's details (ADR 0060, 4).
+const stagingRunId = computed(() => stagingRunOf(props.message));
 // A finished background job's card says which one it was (ADR 0035, 7).
 const finished = computed(() => {
   const key = props.message.source?.kind === 'subagent' ? 'kvcoder.ui.helperFinished' : 'kvcoder.ui.backgroundFinished';
@@ -77,7 +80,10 @@ const markdown = (body: string) => ({ type: 'markdown' as const, text: 'kvcoder.
   </div>
   <ArtifactCard v-else-if="props.message.kind === 'toolResult' && artifact !== undefined" :id="artifact.id" :title="artifact.title" :format="artifact.format" :version="artifact.version" @open="emit('openArtifact', $event)" />
   <AnsweredCard v-else-if="answered !== undefined" :answered="answered" />
-  <CallCard v-else-if="props.message.kind === 'toolResult'" :view="card" :failed="card.failed" :duration-ms="card.durationMs" :output="card.output" />
+  <template v-else-if="props.message.kind === 'toolResult'">
+    <CallCard :view="card" :failed="card.failed" :duration-ms="card.durationMs" :output="card.output" />
+    <StagingNote v-if="stagingRunId !== undefined" :session-id="props.message.sessionId" :run-id="stagingRunId" />
+  </template>
   <div v-else-if="props.message.kind === 'notice'" class="kvc-notice" data-test="notice">{{ notice }}</div>
   <div v-else-if="props.message.kind === 'note'" class="kvc-card kvc-card-row" role="note" data-test="note"><NotebookText :size="18" aria-hidden="true" />{{ note }}</div>
   <details v-else-if="props.message.kind === 'summary'" class="kvc-card" data-test="summary">

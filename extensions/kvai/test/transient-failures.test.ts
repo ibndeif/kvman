@@ -21,6 +21,11 @@ describe('which provider failures may pass (07 §7.1, ADR 0009, 154)', () => {
     await expect(kernel.exec('kvai.complete', { model: 'fake/m1', messages: hi })).rejects.toMatchObject({ problem: { code: 'kvai/RATE_LIMITED' } });
   });
 
+  it('M2.4-E146 a stream that ended before its final event is transient', () => {
+    expect(isTransient('OpenAI Responses stream ended before a terminal response event')).toBe(true);
+    expect(isTransient('The stream of consciousness is not supported.')).toBe(false);
+  });
+
   it('QA3-H21 timeouts, dropped connections, and DNS failures are transient by their text', () => {
     for (const reason of ['Request timed out.', 'Connection error.', 'fetch failed', 'read ECONNRESET', 'connect ETIMEDOUT 104.18.2.115:443', 'getaddrinfo ENOTFOUND openrouter.ai', 'getaddrinfo EAI_AGAIN openrouter.ai', 'socket hang up', 'The service is overloaded']) expect(isTransient(reason)).toBe(true);
     for (const reason of ['400: {"message":"Bad request"}', '401: Invalid key', 'The model does not support images.', '']) expect(isTransient(reason)).toBe(false);

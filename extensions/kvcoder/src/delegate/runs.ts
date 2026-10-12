@@ -1,9 +1,12 @@
 import type { Ctx, Stored } from '@kvman/sdk';
-import type { HeldResult, RunDoc } from '../schemas/records.ts';
+import type { HeldResult, RunDoc, RunStaging } from '../schemas/records.ts';
 import { now } from '../sessions/session-lookup.ts';
-import { records, txRecords } from '../store/collections.ts';
-import { appendBackground, backgroundText } from '../turns/background.ts';
-import { heldText, resolvePending } from '../turns/resolve.ts';
+import { records, txRecords, type TxRecords } from '../store/collections.ts';
+import { runAuthorityInTx, type CreationGuard } from './permission.ts';
+import { invalid } from '../problems.ts';
+import { appendBackgroundInTx, backgroundText } from '../turns/background.ts';
+import { heldText, resolvePendingInTx } from '../turns/resolve.ts';
+import { beginTurn, dispatchStep } from '../turns/start-turn.ts';
 import { commandLine } from './programs.ts';
 import type { ProgramWorker } from './workers.ts';
 
@@ -11,41 +14,65 @@ import type { ProgramWorker } from './workers.ts';
 // starts with, then run by its own async job; whoever ends it first (the job, a stop, or a lost job) records how, and
 // tells the chat: the turn that waits on it gets its result, and a background run a message.
 
-export type RunEnd = { status: Exclude<RunDoc['status'], 'running'>; exitCode: number | null; text: string; isError: boolean };
+export type RunEnd = { status: Exclude<RunDoc['status'], 'running'>; exitCode: number | null; text: string; isError: boolean; staging?: RunStaging };
 
 /** Records a run of `worker` on `task`; `toolCallId` is the call that waits on it, or `null` for a background run. */
-export async function createRun(ctx: Ctx, sessionId: string, worker: ProgramWorker, call: { description: string; task: string }, toolCallId: string | null): Promise<Stored<RunDoc>> {
+export function recordRun(store: TxRecords, sessionId: string, worker: ProgramWorker, call: { description: string; task: string }, toolCallId: string | null): Stored<RunDoc> {
   const line = commandLine(worker, call.task);
-  return records(ctx.store).runs.insert({ sessionId, toolCallId, worker: worker.name, kind: worker.kind, call: call.description, command: line.command, args: line.args, timeoutMs: worker.timeoutMs, jobId: null, status: 'running', startedAt: now(), endedAt: null, exitCode: null, output: null });
+  return store.runs.insert({ sessionId, toolCallId, worker: worker.name, kind: worker.kind, call: call.description, command: line.command, args: line.args, timeoutMs: worker.timeoutMs, jobId: null, status: 'running', startedAt: now(), endedAt: null, exitCode: null, output: null, staging: null });
+}
+
+export async function createRun(ctx: Ctx, sessionId: string, worker: ProgramWorker, call: { description: string; task: string }, toolCallId: string | null, guard: CreationGuard): Promise<Stored<RunDoc>> {
+  return ctx.store.transaction(tx => {
+    const store = txRecords(tx);
+    guard(store);
+    return recordRun(store, sessionId, worker, call, toolCallId);
+  });
 }
 
 /** Queues the job that runs a recorded run. */
-export async function launchRun(ctx: Ctx, runId: string): Promise<void> {
+export async function launchRun(ctx: Ctx, runId: string, guard: CreationGuard): Promise<void> {
+  await ctx.store.transaction(tx => {
+    const store = txRecords(tx), parent = guard(store), run = store.runs.get(runId);
+    if (run?.status !== 'running' || run.sessionId !== parent.id) throw invalid('The worker run is no longer current.');
+  });
+  ctx.job.signal.throwIfAborted();
   const jobId = await ctx.execAsync('kvcoder.delegate.worker.run', { runId });
   await records(ctx.store).runs.update(runId, { jobId });
 }
 
-// Records how a run ended, once: `undefined` when something else ended it first.
-async function markEnded(ctx: Ctx, runId: string, end: RunEnd): Promise<Stored<RunDoc> | undefined> {
+// Records how a run ended, once: `false` when something else ended it first.
+async function markEnded(ctx: Ctx, runId: string, end: RunEnd): Promise<boolean> {
   return ctx.store.transaction((tx) => {
-    const { runs } = txRecords(tx);
-    const run = runs.get(runId);
-    if (run === undefined || run.status !== 'running') return undefined;
-    return runs.update(runId, { status: end.status, endedAt: now(), exitCode: end.exitCode, output: end.text });
+    const store = txRecords(tx), run = store.runs.get(runId);
+    if (run === undefined || run.status !== 'running') return false;
+    store.runs.update(runId, { status: end.status, endedAt: now(), exitCode: end.exitCode, output: end.text });
+    return true;
   });
 }
 
 function heldRun(run: Stored<RunDoc>, toolCallId: string, end: RunEnd): HeldResult {
   const durationMs = Math.max(Date.now() - Date.parse(run.startedAt), 0);
-  return { toolCallId, text: end.text, isError: end.isError, run: null, details: { description: run.call, connector: 'delegate', command: 'run', output: end.text, durationMs } };
+  return { toolCallId, text: end.text, isError: end.isError, run: null, details: { description: run.call, connector: 'delegate', command: 'run', output: end.text, durationMs, ...(end.staging === undefined ? {} : { staging: { runId: run.id } }) } };
 }
 
-/** Ends a run and gives its result to the call that waits on it, or to the chat as a background message, which may start a turn. */
+/**
+ * Ends a run and, in the same transaction (ADR 0052, 2), gives its result to the call that waits on it, or to the chat
+ * as a background message, which may start a turn.
+ */
 export async function finishRun(ctx: Ctx, runId: string, end: RunEnd, startTurn: boolean): Promise<boolean> {
-  const run = await markEnded(ctx, runId, end);
-  if (run === undefined) return false;
-  if (run.toolCallId !== null) await resolvePending(ctx, run.sessionId, run.toolCallId, heldRun(run, run.toolCallId, end), false);
-  else await appendBackground(ctx, run.sessionId, { kind: 'job', jobId: run.id }, backgroundText(run.call, run.id, end.text), startTurn);
+  const next = await ctx.store.transaction((tx) => {
+    const store = txRecords(tx), found = store.runs.get(runId);
+    if (found === undefined || found.status !== 'running') return undefined;
+    const authority = runAuthorityInTx(store, found);
+    const run = store.runs.update(runId, { status: end.status, endedAt: now(), exitCode: end.exitCode, output: end.text, ...(end.staging === undefined ? {} : { staging: end.staging }) });
+    if (run.toolCallId === null) return { turnId: appendBackgroundInTx(store, run.sessionId, { kind: 'job', jobId: run.id }, backgroundText(run.call, run.id, end.text), startTurn), sessionId: run.sessionId };
+    return { step: authority === undefined ? null : resolvePendingInTx(store, run.sessionId, authority.pending.toolCallId, heldRun(run, run.toolCallId, end)) };
+  });
+  if (next === undefined) return false;
+  if ('step' in next) {
+    if (next.step !== null) await dispatchStep(ctx, next.step, false);
+  } else if (next.turnId !== undefined) await beginTurn(ctx, next.sessionId, next.turnId, true);
   return true;
 }
 
@@ -63,7 +90,7 @@ export async function stopRun(ctx: Ctx, run: Stored<RunDoc>): Promise<boolean> {
 
 /** Stops a run whose turn or chat is going away: nothing is told to anyone. */
 export async function dropRun(ctx: Ctx, run: Stored<RunDoc>): Promise<void> {
-  if ((await markEnded(ctx, run.id, { status: 'cancelled', exitCode: null, text: `${run.worker} was stopped`, isError: true })) !== undefined) await cancelJobOf(ctx, run);
+  if (await markEnded(ctx, run.id, { status: 'cancelled', exitCode: null, text: `${run.worker} was stopped`, isError: true })) await cancelJobOf(ctx, run);
 }
 
 /** Stops every run a session still has going, and forgets all of them (the chat is deleted). */

@@ -1,7 +1,9 @@
 import { ProblemError, z, type Ctx } from '@kvman/sdk';
 import type {} from '@kvman/kvai';
 import { settingSchemas } from '../register-settings.ts';
-import { records } from '../store/collections.ts';
+import { allDocs } from '../store/all-docs.ts';
+import { records, txRecords } from '../store/collections.ts';
+import { addCallUsage } from '../turns/usage.ts';
 import { messagesFrom } from '../turns/message-blocks.ts';
 import { textOf } from '../turns/model-context.ts';
 import { deleteSessionTree } from './new-session.ts';
@@ -19,8 +21,13 @@ async function writeTitle(ctx: Ctx, sessionId: string): Promise<void> {
   try {
     const answer = await ctx.exec('kvai.complete', { ...(session.model === null ? {} : { model: session.model }), sessionId, systemPrompt: titler, messages: [{ role: 'user', content: transcript, timestamp: Date.now() }], maxTokens: 30 });
     const title = textOf(answer.message.content).trim().replace(/^["'“”]+|["'“”.]+$/g, '').slice(0, 100);
-    const fresh = await store.sessions.get(sessionId);
-    if (title !== '' && fresh?.autoTitle === true) await store.sessions.update(sessionId, { title, autoTitle: false });
+    await ctx.store.transaction((tx) => {
+      const current = txRecords(tx);
+      const fresh = current.sessions.get(sessionId);
+      if (fresh === undefined) return;
+      addCallUsage(current, fresh, null, answer.usage, 'title');
+      if (title !== '' && fresh.autoTitle) current.sessions.update(sessionId, { title, autoTitle: false });
+    });
   } catch (error) {
     if (!(error instanceof ProblemError)) throw error;
     ctx.log.info('A session title could not be written; the placeholder stays.', { code: error.problem.code });
@@ -30,7 +37,8 @@ async function writeTitle(ctx: Ctx, sessionId: string): Promise<void> {
 async function prune(ctx: Ctx): Promise<void> {
   const keep = settingSchemas.keep.parse(await ctx.settings.get('kvcoder.sessions.keep'));
   if (keep === 0) return;
-  const sessions = await records(ctx.store).sessions.find({ parentId: null }, { limit: 1000, order: 'desc' });
+  // Every top-level session is looked at, so one run finishes the policy (ADR 0057, 4).
+  const sessions = await allDocs((options) => records(ctx.store).sessions.find({ parentId: null }, options), 'desc');
   for (const session of sessions.slice(keep)) if (session.status === 'idle') await deleteSessionTree(ctx, session.id);
 }
 
