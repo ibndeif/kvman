@@ -5,7 +5,7 @@ Asked: "check and review the part where the agent can contols everything in kvma
 ## Happy path
 
 - **QA34-H1 A command entry takes `asks: true`.** *Given* a connector registered with `{ name: 'add', command: 'todo.add', asks: true }` and `{ name: 'list', command: 'todo.list' }`, *then* `kvcoder.connector.list` answers `asks: true` for `add` and `false` for `list`. `extensions/kvcoder/test/connector-asks.test.ts`
-- **QA34-H2 A call of it asks under `auto`.** *Given* `kvcoder.shell.approval: 'auto'`, *when* the agent calls that command, *then* the session is `waiting` on an approval question holding `{ description, connector, command, payload }` and nothing has run; allowed, it runs at the next step and its result reaches the model. `extensions/kvcoder/test/connector-asks.test.ts`
+- **QA34-H2 A call of it asks under `auto`.** *Given* `kvcoder.approval: 'auto'`, *when* the agent calls that command, *then* the session is `waiting` on an approval question holding `{ description, connector, command, payload }` and nothing has run; allowed, it runs at the next step and its result reaches the model. `extensions/kvcoder/test/connector-asks.test.ts`
 - **QA34-H3 `help` says so.** *Then* `help { command: 'add' }` has the line "The person is asked before this runs.", and `help { command: 'list' }` doesn't. `extensions/kvcoder/test/connector-asks.test.ts`
 - **QA34-H4 kvcustomizer marks its five changes.** *Then* of the `kvman` connector's commands exactly `model-set`, `settings-set`, `settings-reset`, `extensions-install`, and `extensions-uninstall` have `asks: true`, and no command of `ext`, `preset`, `preview`, or `docs` has. `extensions/kvcustomizer/test/registration.test.ts`
 - **QA34-H5 A setting change waits for the person.** *Given* the `coder` extensions, *when* the agent calls `kvman settings-set { key: 'kvwebui.theme', value: 'dark', scope: 'global' }`, *then* the setting is unchanged while the question is pending, and changes when it is allowed. `extensions/kvcustomizer/test/app-asks.test.ts`
@@ -22,7 +22,7 @@ Asked: "check and review the part where the agent can contols everything in kvma
 
 - **QA34-E1 Denied.** *Then* a denied call of a command that asks returns `denied by the user`, and its command never ran. `extensions/kvcoder/test/connector-asks.test.ts`
 - **QA34-E2 `asks` takes only `true`.** *Then* `asks: false`, and `asks` on a binary connector, fail `VALIDATION_FAILED`. `extensions/kvcoder/test/connector-asks.test.ts`
-- **QA34-E3 A command without `asks` runs at once**, with `auto` and with `ask`: `kvcoder.shell.approval` covers kvcoder's own calls only. `extensions/kvcoder/test/connector-asks.test.ts`
+- **QA34-E3 A command without `asks` runs at once**, with `auto` and with `ask`: `kvcoder.approval` covers kvcoder's own calls only. `extensions/kvcoder/test/connector-asks.test.ts`
 - **QA34-E4 In a subagent.** *Then* a subagent's call of a command that asks shows its approval in the root chat, and runs when allowed. `extensions/kvcoder/test/connector-asks.test.ts`
 - **QA34-E5 `help` of the command never asks.** `extensions/kvcoder/test/connector-asks.test.ts`
 - **QA34-E6 The reads never ask.** *Then* `kvman settings-list` and `kvman health-get` return at once. `extensions/kvcustomizer/test/app-asks.test.ts`

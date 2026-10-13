@@ -9,7 +9,7 @@ import { turnState } from './support/turns.ts';
 const looked = useLooked();
 
 const node = { name: 'node', description: 'Node.js.', binary: { check: 'node --version' } };
-const settings = (approval: 'auto' | 'ask') => ({ 'kvcoder.shell.approval': approval, 'kvcoder.connectors': [node] }) as unknown as Record<string, string>;
+const settings = (approval: 'auto' | 'ask') => ({ 'kvcoder.approval': approval, 'kvcoder.connectors': [node] }) as unknown as Record<string, string>;
 const prepare = (): void => undefined;
 
 // The four commands that can ask, each making its own file: `risky` is merged into the payload.

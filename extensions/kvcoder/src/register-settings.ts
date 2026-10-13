@@ -9,7 +9,7 @@ export const settingSchemas = {
   model: z.string().min(1).nullable(),
   thinking: thinkingSchema,
   maxSteps: z.number().int().positive().nullable(),
-  approval: z.enum(['ask', 'auto']),
+  approval: z.enum(['ask', 'auto', 'never']),
   shellPath: z.string().min(1).nullable(),
   compactAt: z.number().gt(0).max(1),
   compactKeep: z.number().int().min(1).max(100),
@@ -25,7 +25,7 @@ export function registerSettings(ctx: Ctx): void {
   ctx.registerSetting('kvcoder.delegate.model', { description: "The model a helper uses when its worker names none; null uses the chat's own.", schema: settingSchemas.model, default: null });
   ctx.registerSetting('kvcoder.thinking', { description: 'How hard the model thinks in a new session.', schema: settingSchemas.thinking, default: 'medium' });
   ctx.registerSetting('kvcoder.maxSteps', { description: 'The most steps a turn takes before it stops; null sets no limit.', schema: settingSchemas.maxSteps, default: null });
-  ctx.registerSetting('kvcoder.shell.approval', { description: 'Whether shell and file calls ask the person first: only the ones the model marks risky (auto), or every one (ask).', schema: settingSchemas.approval, default: 'auto' });
+  ctx.registerSetting('kvcoder.approval', { description: 'When a call asks the person first: only the ones the model marks risky (auto), every one that can ask (ask), or none at all (never).', schema: settingSchemas.approval, default: 'auto' });
   ctx.registerSetting('kvcoder.shell.path', { description: 'The shell program to run; null finds bash, or pwsh then powershell.exe on Windows.', schema: settingSchemas.shellPath, default: null });
   ctx.registerSetting('kvcoder.compactAt', { description: "The share of the model's context window above which older messages are summarized.", schema: settingSchemas.compactAt, default: 0.6 });
   ctx.registerSetting('kvcoder.compactKeep', { description: 'How many of the newest messages stay whole when older messages are summarized.', schema: settingSchemas.compactKeep, default: 10 });
@@ -46,7 +46,7 @@ export async function readSettings(ctx: Ctx) {
   const read = async <Schema extends z.ZodType>(key: string, schema: Schema): Promise<z.output<Schema>> => schema.parse(await ctx.settings.get(key));
   return {
     maxSteps: await read('kvcoder.maxSteps', settingSchemas.maxSteps),
-    approval: await read('kvcoder.shell.approval', settingSchemas.approval),
+    approval: await read('kvcoder.approval', settingSchemas.approval),
     shellPath: await read('kvcoder.shell.path', settingSchemas.shellPath),
     compactAt: await read('kvcoder.compactAt', settingSchemas.compactAt),
     compactKeep: await read('kvcoder.compactKeep', settingSchemas.compactKeep),

@@ -19,7 +19,7 @@ async function send(kernel: TestKernel, sessionId: string): Promise<void> {
 
 describe('a long file is written in parts (KVC-14, ADR 0054)', { timeout: 30_000 }, () => {
   it('M2.4-E164 pieces in any order, one sent twice, assemble into the file once, and are then gone', async () => {
-    const { kernel, fake } = await kvcoder.start({ settings: { 'kvcoder.shell.approval': 'ask' } });
+    const { kernel, fake } = await kvcoder.start({ settings: { 'kvcoder.approval': 'ask' } });
     const sessionId = await newSession(kernel);
     fake.reply(runs(part('big.txt', 2, 'two\n'), part('big.txt', 1, 'draft\n')), runs(part('big.txt', 3, 'three\n'), part('big.txt', 1, 'one\n')), runs(assemble('big.txt')), runs(assemble('big.txt')), says('done'));
     await send(kernel, sessionId);

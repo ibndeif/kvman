@@ -42,7 +42,7 @@ The product owner asked for the main agent to work like an expert (understand fr
 - **QA6-E8 Two edits of one artifact in one reply both land, in order.** (`extensions/kvcoder/test/artifact-connector.test.ts`)
 - **QA6-E9 A write and a get in one reply run in the model's order.** *Then* the get sees the write. (`extensions/kvcoder/test/artifact-connector.test.ts`)
 - **QA6-E10 A subagent without `artifact` can't use it.** *Given* a child started with `connectors: ["jobs"]`, *then* its call returns `artifact isn't available in this subagent`, and its prompt has no `artifact` line. (`extensions/kvcoder/test/subagent-rules.test.ts`)
-- **QA6-E11 `artifact` never asks.** *Given* `kvcoder.shell.approval` is `ask`, *then* a write runs at once. (`extensions/kvcoder/test/artifact-connector.test.ts`)
+- **QA6-E11 `artifact` never asks.** *Given* `kvcoder.approval` is `ask`, *then* a write runs at once. (`extensions/kvcoder/test/artifact-connector.test.ts`)
 - **QA6-E12 An unknown session or id in the queries fails.** *Then* `kvcoder/SESSION_NOT_FOUND`, and `NOT_FOUND` for an unknown id; there is no public command that writes an artifact. (`extensions/kvcoder/test/artifact-api.test.ts`)
 - **QA6-E13 A closed panel stays closed on an update.** *Given* the person closed the panel, *when* the artifact shown gets version 2, *then* it stays closed; a card click or a new id opens it again. (`extensions/kvcoder/test/web/artifact-panel.test.ts`)
 - **QA6-E24 An artifact already there when the chat is opened doesn't open the panel.** *Then* the panel stays closed, the card and the header button open it, and an id that appears later opens it by itself. (`extensions/kvcoder/test/web/artifact-panel.test.ts`)

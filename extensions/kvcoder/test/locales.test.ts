@@ -94,7 +94,7 @@ describe("kvcoder's catalogs (02 §2.11)", { timeout: 30_000 }, () => {
   });
 
   it("QA20-E9 every choice of kvcoder's settings has a name in both languages", () => {
-    const keys = [...['off', 'minimal', 'low', 'medium', 'high'].map((level) => `kvcoder.thinking.options.${level}`), ...['auto', 'ask'].map((mode) => `kvcoder.shell.approval.options.${mode}`)];
+    const keys = [...['off', 'minimal', 'low', 'medium', 'high'].map((level) => `kvcoder.thinking.options.${level}`), ...['auto', 'ask', 'never'].map((mode) => `kvcoder.approval.options.${mode}`), 'kvcoder.ui.approvalNote.never', 'kvcoder.config.approval.never.title', 'kvcoder.config.approval.never.text', 'kvcoder.config.approval.never.confirm'];
     for (const language of ['en', 'ar'] as const) expect(keys.filter((key) => catalog(language)[key] === undefined), language).toEqual([]);
   });
 

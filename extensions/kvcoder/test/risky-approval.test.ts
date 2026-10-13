@@ -29,7 +29,7 @@ const home = (kernel: TestKernel, file: string): string => path.join(kernel.home
 
 describe('risky calls ask, the others run (08 §8.3, ADR 0009, 161)', { timeout: 30_000 }, () => {
   it('QA4-H9 under auto a call with risky false runs at once and one with risky true waits until allowed', async () => {
-    const { kernel, fake, sessionId } = await started({ 'kvcoder.shell.approval': 'auto' }, shell('touch safe.txt'), shell('touch risky.txt', { risky: true }));
+    const { kernel, fake, sessionId } = await started({ 'kvcoder.approval': 'auto' }, shell('touch safe.txt'), shell('touch risky.txt', { risky: true }));
     const { session, turn } = await turnState(kernel, sessionId);
     expect(session.status).toBe('waiting');
     expect(turn?.pending.map((item) => item.kind)).toEqual(['approval']);
@@ -42,7 +42,7 @@ describe('risky calls ask, the others run (08 §8.3, ADR 0009, 161)', { timeout:
   });
 
   it('QA4-H10 under ask every call waits, a fs call included', async () => {
-    const { kernel, sessionId } = await started({ 'kvcoder.shell.approval': 'ask' }, shell('echo safe'), fsCall('write', { path: 'a.txt', content: 'x' }));
+    const { kernel, sessionId } = await started({ 'kvcoder.approval': 'ask' }, shell('echo safe'), fsCall('write', { path: 'a.txt', content: 'x' }));
     const { turn } = await turnState(kernel, sessionId);
     expect(turn?.pending.map((item) => item.kind)).toEqual(['approval', 'approval']);
     expect(turn?.pending[1]?.question).toMatchObject({ connector: 'fs', command: 'write', payload: { path: 'a.txt', content: 'x' } });
@@ -50,7 +50,7 @@ describe('risky calls ask, the others run (08 §8.3, ADR 0009, 161)', { timeout:
   });
 
   it('QA4-H11 under auto a fs call runs at once unless risky, and a denied one writes nothing', async () => {
-    const { kernel, fake, sessionId } = await started({ 'kvcoder.shell.approval': 'auto' }, fsCall('write', { path: 'plain.txt', content: 'plain' }), fsCall('write', { path: 'risky.txt', content: 'risky', risky: true }));
+    const { kernel, fake, sessionId } = await started({ 'kvcoder.approval': 'auto' }, fsCall('write', { path: 'plain.txt', content: 'plain' }), fsCall('write', { path: 'risky.txt', content: 'risky', risky: true }));
     expect(readFileSync(home(kernel, 'plain.txt'), 'utf8')).toBe('plain');
     expect((await turnState(kernel, sessionId)).turn?.pending).toHaveLength(1);
     await answer(kernel, sessionId, 0, false);
@@ -59,7 +59,7 @@ describe('risky calls ask, the others run (08 §8.3, ADR 0009, 161)', { timeout:
   });
 
   it('QA4-H11 an allowed risky fs call writes and returns its JSON', async () => {
-    const { kernel, fake, sessionId } = await started({ 'kvcoder.shell.approval': 'auto' }, fsCall('write', { path: 'risky.txt', content: 'risky', risky: true }));
+    const { kernel, fake, sessionId } = await started({ 'kvcoder.approval': 'auto' }, fsCall('write', { path: 'risky.txt', content: 'risky', risky: true }));
     expect(existsSync(home(kernel, 'risky.txt'))).toBe(false);
     await answer(kernel, sessionId, 0, true);
     expect(readFileSync(home(kernel, 'risky.txt'), 'utf8')).toBe('risky');
@@ -67,20 +67,20 @@ describe('risky calls ask, the others run (08 §8.3, ADR 0009, 161)', { timeout:
   });
 
   it('QA4-E14 fs help never asks, even under ask', async () => {
-    const { kernel, fake, sessionId } = await started({ 'kvcoder.shell.approval': 'ask' }, command('fs', 'help'));
+    const { kernel, fake, sessionId } = await started({ 'kvcoder.approval': 'ask' }, command('fs', 'help'));
     expect((await turnState(kernel, sessionId)).turn?.pending).toEqual([]);
     expect(toolResults(fake)[0]).toMatch(/^fs: Read, list, search/);
   });
 
   it('QA4-E15 the other built-in connectors never ask, even under ask', async () => {
-    const { kernel, fake, sessionId } = await started({ 'kvcoder.shell.approval': 'ask' }, command('background', 'list'), fsCall('list'));
+    const { kernel, fake, sessionId } = await started({ 'kvcoder.approval': 'ask' }, command('background', 'list'), fsCall('list'));
     expect((await turnState(kernel, sessionId)).turn?.pending).toEqual([]);
     expect(toolResults(fake)[0]).toBe('[]');
   });
 
   it('QA4-E16 a risky background call asks too, and starts only when allowed', async () => {
     if (process.platform === 'win32') throw new Error('These calls are bash; Windows runs PowerShell.');
-    const { kernel, sessionId } = await started({ 'kvcoder.shell.approval': 'auto' }, shell('sleep 30', { background: true, risky: true }));
+    const { kernel, sessionId } = await started({ 'kvcoder.approval': 'auto' }, shell('sleep 30', { background: true, risky: true }));
     expect(await kernel.exec('kvcoder.job.list', { sessionId })).toEqual([]);
     expect((await turnState(kernel, sessionId)).turn?.pending[0]?.question).toMatchObject({ payload: { background: true } });
     await answer(kernel, sessionId, 0, true);
@@ -88,7 +88,7 @@ describe('risky calls ask, the others run (08 §8.3, ADR 0009, 161)', { timeout:
   });
 
   it('QA4-E17 a fs call waiting for approval writes nothing when the turn is cancelled', async () => {
-    const { kernel, sessionId } = await started({ 'kvcoder.shell.approval': 'ask' }, fsCall('write', { path: 'never.txt', content: 'x' }));
+    const { kernel, sessionId } = await started({ 'kvcoder.approval': 'ask' }, fsCall('write', { path: 'never.txt', content: 'x' }));
     await kernel.exec('kvcoder.turn.cancel', { sessionId });
     await kernel.clock.advance(0);
     expect(existsSync(home(kernel, 'never.txt'))).toBe(false);
@@ -97,7 +97,7 @@ describe('risky calls ask, the others run (08 §8.3, ADR 0009, 161)', { timeout:
 
   it('QA11-H4 and QA11-E4 under auto a call without risky is refused and asks nobody; risky false runs at once; under ask a marked call waits', async () => {
     const unmarked = command('shell', 'exec', { line: 'touch unmarked.txt' });
-    const { kernel, fake, sessionId } = await started({ 'kvcoder.shell.approval': 'auto' }, unmarked, shell('touch marked.txt'));
+    const { kernel, fake, sessionId } = await started({ 'kvcoder.approval': 'auto' }, unmarked, shell('touch marked.txt'));
     const { session, turn } = await turnState(kernel, sessionId);
     expect(session.status).toBe('idle');
     expect(turn?.pending).toEqual([]);
@@ -105,7 +105,7 @@ describe('risky calls ask, the others run (08 §8.3, ADR 0009, 161)', { timeout:
     expect(existsSync(home(kernel, 'marked.txt'))).toBe(true);
     expect(existsSync(home(kernel, 'unmarked.txt'))).toBe(false);
 
-    const asking = await started({ 'kvcoder.shell.approval': 'ask' }, shell('touch one.txt'), unmarked);
+    const asking = await started({ 'kvcoder.approval': 'ask' }, shell('touch one.txt'), unmarked);
     expect((await turnState(asking.kernel, asking.sessionId)).turn?.pending.map((item) => item.kind)).toEqual(['approval']);
     expect(existsSync(home(asking.kernel, 'unmarked.txt'))).toBe(false);
   });

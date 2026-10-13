@@ -7,7 +7,7 @@ import { newSession, turnState } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
 
-const approvals = { settings: { 'kvcoder.shell.approval': 'ask' } };
+const approvals = { settings: { 'kvcoder.approval': 'ask' } };
 
 describe('questions and approvals (08 §8.1, §8.5)', { timeout: 30_000 }, () => {
   it('M2.4-H3 a message sent while waiting dismisses the question and denies the approval, then runs the next step', async () => {

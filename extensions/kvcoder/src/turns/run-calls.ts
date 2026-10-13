@@ -23,9 +23,10 @@ import { helperAllows, helperRefusal } from './helper-calls.ts';
 import { readOnlyAllows, readOnlyRefusal } from './read-only.ts';
 
 // How one call of a reply runs (plan 08 §8.3): the `run` tool names a connector's command, which runs as a kernel job.
-// `shell exec`, a binary's `exec`, `fs write`, and `fs edit` ask the person first when `kvcoder.shell.approval` is
+// `shell exec`, a binary's `exec`, `fs write`, and `fs edit` ask the person first when `kvcoder.approval` is
 // `ask`, or unless the payload says `risky: false` (ADR 0009, 161; ADR 0011, 7). A registered command with `asks`
-// always asks (ADR 0022, 5). A call either returns its result now, or waits on the person or on a worker's subagent.
+// asks too (ADR 0022, 5), and so does a program worker set to ask (ADR 0021, 12). With `never` no call asks (ADR 0077).
+// A call either returns its result now, or waits on the person or on a worker's subagent.
 
 export type ToolCall = { id: string; name: string; arguments: Record<string, JsonValue> };
 
@@ -37,7 +38,7 @@ export type CallOutcome =
   /** An effect held back behind an earlier call's pending approval, to run in the model's order (ADR 0046). */
   | { kind: 'deferred'; call: RunCall };
 
-export type CallEnv = { ctx: Ctx; session: Stored<SessionDoc>; tools: SessionTools; approval: 'ask' | 'auto'; lease: StepLease };
+export type CallEnv = { ctx: Ctx; session: Stored<SessionDoc>; tools: SessionTools; approval: 'ask' | 'auto' | 'never'; lease: StepLease };
 
 const result = (toolCallId: string, done: CallDone): CallOutcome => ({ kind: 'result', held: { toolCallId, ...done, run: null } });
 
@@ -61,7 +62,7 @@ async function delegateOutcome(env: CallEnv, toolCallId: string, call: RunCall, 
   const worker = await availableWorker(ctx, session.checks, run.worker);
   const guard = await creationGuard(ctx, env.lease, worker);
   if (isProgram(worker)) {
-    if (worker.approval === 'ask') {
+    if (worker.approval === 'ask' && env.approval !== 'never') {
       await ctx.store.transaction(tx => { guard(txRecords(tx)); });
       return { kind: 'question', questionKind: 'approval', question: call };
     }
@@ -161,9 +162,9 @@ async function evaluateCurrentCall(env: CallEnv, toolCall: ToolCall, call: RunCa
   if (target.builtin?.asks === true) {
     const invalid = invalidPayload(call, target);
     if (invalid !== undefined) return result(toolCall.id, failedCall(call, invalid));
-    if (env.approval === 'ask' || call.payload['risky'] !== false) return { kind: 'question', questionKind: 'approval', question: call };
+    if (env.approval === 'ask' || (env.approval === 'auto' && call.payload['risky'] !== false)) return { kind: 'question', questionKind: 'approval', question: call };
   }
-  if (target.asks === true) return { kind: 'question', questionKind: 'approval', question: call };
+  if (target.asks === true && env.approval !== 'never') return { kind: 'question', questionKind: 'approval', question: call };
   if (held && !isHelperRun(call) && (target.builtin === undefined || target.builtin.asks === true)) return { kind: 'deferred', call };
   if (await currentStep(ctx, env.lease) === undefined) return refused(toolCall.id, 'The originating step is no longer current.');
   const done = await runTarget(ctx, session, call, target, dispatchGuard(ctx, env.lease, call, target));

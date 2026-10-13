@@ -20,7 +20,7 @@ describe('a read-only worker (KVC-33, ADR 0056)', { timeout: 30_000 }, () => {
   });
 
   it.each(['auto', 'ask'] as const)('M2.4-E171 a read-only helper is refused every call that could change something, and asked nothing (approval %s)', async (approval) => {
-    const { kernel, fake } = await kvcoder.start({ settings: { ...workers(worker('strict', { readOnly: true })), 'kvcoder.shell.approval': approval } });
+    const { kernel, fake } = await kvcoder.start({ settings: { ...workers(worker('strict', { readOnly: true })), 'kvcoder.approval': approval } });
     writeFileSync(path.join(kernel.homeFolder, 'a.txt'), 'old\n');
     const sessionId = await newSession(kernel);
     fake.reply(

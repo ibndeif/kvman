@@ -2,12 +2,12 @@ import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import ApprovalNote from '../../web/src/ApprovalNote.vue';
 import ChatStart from '../../web/src/ChatStart.vue';
-import ShellSettings from '../../web/src/ShellSettings.vue';
+import ApprovalSetting from '../../web/src/ApprovalSetting.vue';
 import { createFakeKvman, type FakeKvman } from './support/fake-kvman.ts';
 import { mounted } from './support/fixtures.ts';
 import { serveSettings } from './support/settings-world.ts';
 
-const key = 'kvcoder.shell.approval';
+const key = 'kvcoder.approval';
 
 function approvalFake(value: unknown, fail = false): FakeKvman {
   const fake = createFakeKvman();
@@ -84,8 +84,8 @@ describe('the effective approval note (KVC-22)', () => {
     chat.unmount();
 
     const shellFake = createFakeKvman();
-    serveSettings(shellFake, { [key]: { default: 'ask' }, 'kvcoder.shell.path': { default: null } });
-    const shell = await mounted(ShellSettings, shellFake);
+    serveSettings(shellFake, { [key]: { default: 'ask' } });
+    const shell = await mounted(ApprovalSetting, shellFake);
     expect(shell.find('[data-test="approval-note"]').exists()).toBe(true);
     expect(shell.find('[data-test="approval-mode"]').text()).toBe(shellFake.kvman.t('kvcoder.ui.approvalNote.ask'));
     shell.unmount();

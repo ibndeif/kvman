@@ -55,7 +55,7 @@ Changes to the **model** and to **settings** apply at once.
 
 ## Approvals
 
-**Every change to kvman asks you first.** Eight commands change the app or save another one: `kvman model-set`, `settings-set`, `settings-reset`, `extensions-install`, `extensions-uninstall`, `preset-set`, `preset-reset`, and `preset-save`. Each call shows a card with what the agent says it is doing, the command, and the exact values, with **Allow** and **Deny**. Nothing changes until you allow it, and a denied call tells the agent "denied by the user". This doesn't depend on your approval setting: `kvcoder.shell.approval` covers shell lines, file changes, and MCP tools, and these eight ask even when it is `auto`.
+**Every change to kvman asks you first.** Eight commands change the app or save another one: `kvman model-set`, `settings-set`, `settings-reset`, `extensions-install`, `extensions-uninstall`, `preset-set`, `preset-reset`, and `preset-save`. Each call shows a card with what the agent says it is doing, the command, and the exact values, with **Allow** and **Deny**. Nothing changes until you allow it, and a denied call tells the agent "denied by the user". These eight ask even when `kvcoder.approval` is `auto`, which otherwise asks only about risky shell lines, file changes, and MCP tools. The one exception is `never`: with it nothing asks, these eight included, so the agent can then change the app unasked.
 
 Everything else on this page runs without asking, because it only reads (the lists, `preset-get`, `query-get`, `docs`), works inside your workspace folder (`ext`, `preset`), or works in the preview's temporary home (`preview`).
 

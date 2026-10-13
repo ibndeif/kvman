@@ -8,7 +8,7 @@ Found in the running app: `glm-5.3-flash` often sends a call without `title`; th
 - **QA7-H2 A blank title is treated as missing.** *Given* `"title": "  "`, *then* it is derived the same way. (`extensions/kvcoder/test/unit/shell-args.test.ts`)
 - **QA7-H3 A short description is the whole title, a long one is cut.** *Given* a description of 60 characters or fewer, *then* it is the title as it is (trimmed); *given* a longer one, *then* the title is its first 60 characters followed by `…`. (`extensions/kvcoder/test/unit/shell-args.test.ts`)
 - **QA7-H4 The model's own title is kept.** (`extensions/kvcoder/test/unit/shell-args.test.ts`)
-- **QA7-H5 The derived title is what the person sees.** *Given* `kvcoder.shell.approval` is `ask`, *then* the approval's `title` is the derived one. (`extensions/kvcoder/test/shell-title.test.ts`)
+- **QA7-H5 The derived title is what the person sees.** *Given* `kvcoder.approval` is `ask`, *then* the approval's `title` is the derived one. (`extensions/kvcoder/test/shell-title.test.ts`)
 - **QA7-H6 Every argument error says what the field must be.** *Given* a missing or wrong `description`, `command`, `risky`, `mode`, or `timeoutMs`, *then* the message holds `<field>: ` and what that field must be (the texts of ADR 0009, 186), and ends by asking for the call again with every argument it needs. (`extensions/kvcoder/test/unit/shell-args.test.ts`, `extensions/kvcoder/test/shell-title.test.ts`)
 
 ## Edge cases

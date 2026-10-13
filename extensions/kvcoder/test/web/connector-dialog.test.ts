@@ -14,7 +14,7 @@ afterEach(() => {
 function world(): FakeKvman {
   const fake = createFakeKvman();
   fake.handle('kvcoder.connector.list', () => []);
-  serveSettings(fake, { 'kvcoder.connectors.disabled': { default: [] }, 'kvcoder.shell.approval': { default: 'auto' }, 'kvcoder.shell.path': { default: null } });
+  serveSettings(fake, { 'kvcoder.connectors.disabled': { default: [] }, 'kvcoder.shell.path': { default: null } });
   return fake;
 }
 
@@ -38,7 +38,7 @@ describe("a connector's dialog (08 §8.7, ADR 0020, 2)", () => {
     expect([dialog(list).attributes('role'), dialog(list).attributes('aria-modal'), dialog(list).attributes('aria-label')]).toEqual(['dialog', 'true', 'Configure shell']);
     expect(list.find('[data-test="connector-dialog-title"]').text()).toBe('shell');
     expect(list.find('[data-test="connector-dialog-scope"]').text()).toBe('Changes apply to all workspaces');
-    expect(['shell-approval', 'shell-path'].map((row) => list.find(`[data-test="${row}-title"]`).text())).toEqual(['Shell approval', 'Shell program']);
+    expect(list.findAll('[data-test="shell-settings"] .kvc-setting-title').map((title) => title.text())).toEqual(['Shell program']);
     fake.scope.value = 'workspace';
     await flushPromises();
     expect(list.find('[data-test="connector-dialog-scope"]').text()).toBe('Changes apply to notes-app only');
@@ -69,8 +69,5 @@ describe("a connector's dialog (08 §8.7, ADR 0020, 2)", () => {
     expect(document.activeElement).toBe(close);
     await dialog(list).trigger('keydown', { key: 'Tab', shiftKey: true });
     expect(document.activeElement).toBe(last);
-    (list.find('[data-test="shell-approval-control"]').element as HTMLElement).focus();
-    await dialog(list).trigger('keydown', { key: 'Tab' });
-    expect(document.activeElement).toBe(list.find('[data-test="shell-approval-control"]').element);
   });
 });

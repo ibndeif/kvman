@@ -45,7 +45,7 @@ ctx.registerHandler('kernel.started', {
 Mark a command with `asks: true` when it changes something the person didn't make in this chat: their settings, their data, what is installed.
 
 - Every call of it becomes an approval card in the chat, showing the call's `description`, the connector and command, and the payload. The turn waits for the answer.
-- It asks whatever `kvcoder.shell.approval` says. That setting covers kvcoder's own `shell`, `fs`, and `mcp` calls, which carry `risky`; a registered command has no `risky`, so the flag on its entry decides.
+- It asks with `kvcoder.approval` on `auto` and on `ask`, and runs at once on `never`, where nothing asks. Otherwise that setting covers kvcoder's own `shell`, `fs`, and `mcp` calls, which carry `risky`; a registered command has no `risky`, so the flag on its entry decides.
 - **Allow** runs the command at the start of the next step, and its result goes to the agent as usual. **Deny** returns `denied by the user`, and the command never runs.
 - The payload isn't checked before the person is asked; the kernel validates it when the command runs.
 - `help { "command": "clear" }` adds the line "The person is asked before this runs.", so the agent knows. `help` itself never asks.
@@ -92,7 +92,7 @@ Register a connector with `optIn: true`, the only value the field takes, when it
 
 kvcoder's own connectors are `shell` (one line in the real shell), `fs` (read, list, search, write, and edit files in the workspace folder), `artifact` (a document shown beside the chat), `background` (follow up on what was started with `background: true`), `ask` (a question that suspends the turn), `delegate` (`delegate run { worker, task, background? }` hands a task to a worker, which runs it in a helper session; the workers are the setting `kvcoder.delegate.workers`, and it is a connector of a session only while a worker is turned on), and `mcp` (the tools of the MCP servers the person added; it is a connector of a session only while the workspace has a server). Their names are taken: registering one fails `kvcoder/NAME_TAKEN`.
 
-`shell exec`, a binary's `exec`, `fs write`, `fs edit`, and `mcp call` ask the person first when the payload says `risky: true`, or always when `kvcoder.shell.approval` is `ask`. A registered command asks only when its entry has `asks: true`, and then always. `risky` is required: a call that leaves it out fails `VALIDATION_FAILED` and asks nobody. Only `shell exec`, a binary's `exec`, and `delegate run` take `background: true`; every other command runs to its end.
+`shell exec`, a binary's `exec`, `fs write`, `fs edit`, and `mcp call` ask the person first when the payload says `risky: true`, or always when `kvcoder.approval` is `ask`, and never when it is `never`. A registered command asks only when its entry has `asks: true`, and then always, except on `never`. `risky` is required: a call that leaves it out fails `VALIDATION_FAILED` and asks nobody. Only `shell exec`, a binary's `exec`, and `delegate run` take `background: true`; every other command runs to its end.
 
 ## Ownership
 

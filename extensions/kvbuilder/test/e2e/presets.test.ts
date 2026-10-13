@@ -55,11 +55,11 @@ describe('the bundled presets (11)', () => {
       ['@kvman/kvcoder', 'bundled'],
       ['@kvman/kvbuilder', 'bundled'],
     ]);
-    expect(await presetSettings(kvman.call, ['kvwebui.title', 'kvwebui.home', 'kvai.defaultModel', 'kvcoder.shell.approval'])).toEqual({
+    expect(await presetSettings(kvman.call, ['kvwebui.title', 'kvwebui.home', 'kvai.defaultModel', 'kvcoder.approval'])).toEqual({
       'kvwebui.title': expect.objectContaining({ value: 'kvcoder.app.title', source: 'preset' }),
       'kvwebui.home': expect.objectContaining({ value: 'kvcoder.chat', source: 'preset' }),
       'kvai.defaultModel': expect.objectContaining({ value: 'anthropic/claude-sonnet-5-5', source: 'preset' }),
-      'kvcoder.shell.approval': expect.objectContaining({ value: 'auto', source: 'default' }),
+      'kvcoder.approval': expect.objectContaining({ value: 'auto', source: 'default' }),
     });
     const connectors = z.array(z.object({ name: z.string(), owner: z.string() })).parse(await kvman.call('queries', 'kvcoder.connector.list', {}));
     expect(connectors.filter((connector) => connector.owner === '@kvman/kvbuilder').map((connector) => connector.name).sort()).toEqual(['docs', 'ext', 'kvman', 'preset', 'preview']);

@@ -4,7 +4,7 @@ Found by using the app: a model that kept sending `bash` calls without `title` a
 
 ## Happy path
 
-- **QA11-H1 A call with only a command runs.** *Given* `kvcoder.shell.approval` `auto` and a call `{ command: 'echo hi', risky: false }`, *then* it runs and returns `hi`, and the result's `details` hold the command and no `title` or `description`. (`extensions/kvcoder/test/shell-title.test.ts`)
+- **QA11-H1 A call with only a command runs.** *Given* `kvcoder.approval` `auto` and a call `{ command: 'echo hi', risky: false }`, *then* it runs and returns `hi`, and the result's `details` hold the command and no `title` or `description`. (`extensions/kvcoder/test/shell-title.test.ts`)
 - **QA11-H2 The tool lists only `command` as required.** *Then* the tool the model gets has `required: ['command']`, its properties in the order title, description, command, risky, mode, timeoutMs, and the descriptions of `title` and `description` begin with "Optional." (`extensions/kvcoder/test/shell-title.test.ts`)
 - **QA11-H3 A blank title or description is missing.** *Given* `title: '  '` and `description: ''`, *then* the arguments parse, with neither set; with `title: '  '` and a description, the title is derived from the description (ADR 186). (`extensions/kvcoder/test/unit/shell-args.test.ts`)
 - **QA11-H4 A call without `risky` asks the person.** *Given* `auto` and a call `{ command: 'echo hi' }`, *then* the turn suspends on an approval whose command is `echo hi`, nothing runs until it is allowed, and after Allow it runs; `risky: false` still runs at once. (`extensions/kvcoder/test/risky-approval.test.ts`)

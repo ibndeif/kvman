@@ -31,16 +31,17 @@ describe("kvcoder's UI contributions (08 §8.7, ADR 0009, 104)", { timeout: 30_0
     const answer = z.object({ configuration: z.object({ children: z.array(z.object({ title: z.string(), children: z.array(z.record(z.string(), z.json())) })) }) }).parse(await kernel.exec('kvcoder.ui.get', {}));
     const cards = answer.configuration.children.map((card) => [card.title, card.children.map((child) => child['key'] ?? child['component'] ?? child['text'])]);
     expect(cards).toEqual([
-      ['kvcoder.config.agent', ['kvcoder.model', 'kvcoder.model', 'kvcoder.thinking', 'kvcoder.maxSteps', 'kvcoder.compactAt', 'kvcoder.compactKeep']],
+      ['kvcoder.config.agent', ['kvcoder.model', 'kvcoder.model', 'kvcoder.approval', 'kvcoder.thinking', 'kvcoder.maxSteps', 'kvcoder.compactAt', 'kvcoder.compactKeep']],
       ['kvcoder.config.chats', ['kvcoder.sessions.keep']],
       ['kvcoder.config.connectors', ['kvcoder.config.connectors.intro', 'kvcoder.connectors']],
     ]);
     expect(answer.configuration.children[0]?.children[0]).toEqual({ type: 'custom', component: 'kvcoder.model', props: {} });
     expect(answer.configuration.children[0]?.children[1]).toEqual({ type: 'custom', component: 'kvcoder.model', props: { setting: 'kvcoder.delegate.model' } });
+    expect(answer.configuration.children[0]?.children[2]).toEqual({ type: 'custom', component: 'kvcoder.approval', props: {} });
     const own = new Set((await kernel.exec('kernel.extensions.list', {})).find((extension) => extension.name === '@kvman/kvcoder')?.settings.map((setting) => setting.key));
     expect(own.has('kvcoder.connectors.disabled')).toBe(true);
     const keys = answer.configuration.children.flatMap((card) => card.children.flatMap((child) => (child['type'] === 'setting' ? [String(child['key'])] : [])));
     expect(keys.filter((key) => !own.has(key))).toEqual([]);
-    expect(keys.filter((key) => key === 'kvcoder.model' || key === 'kvcoder.connectors' || key.startsWith('kvcoder.shell.'))).toEqual([]);
+    expect(keys.filter((key) => key === 'kvcoder.model' || key === 'kvcoder.approval' || key === 'kvcoder.connectors' || key.startsWith('kvcoder.shell.'))).toEqual([]);
   });
 });

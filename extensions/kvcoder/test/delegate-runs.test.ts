@@ -86,7 +86,7 @@ describe('delegate runs (08 §8.5, ADR 0021)', { timeout: 30_000 }, () => {
   });
 
   it("M2.4-E46 a child's approval shows in the root: the parent waits on the child, and the answer continues the child", async () => {
-    const { kernel, fake } = await kvcoder.start({ settings: { 'kvcoder.shell.approval': 'ask' } });
+    const { kernel, fake } = await kvcoder.start({ settings: { 'kvcoder.approval': 'ask' } });
     const sessionId = await newSession(kernel);
     fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Check' })), runs(shell('echo child')), says('child done'), says('parent done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });

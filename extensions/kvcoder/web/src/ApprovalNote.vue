@@ -2,11 +2,11 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useKvman } from './kvman.ts';
 
-// The effective approval copy (KVC-22): the loaded `kvcoder.shell.approval`, never inferred from its default.
+// The effective approval copy (KVC-22; ADR 0077, 5): the loaded `kvcoder.approval`, never inferred from its default.
 // Reloads on the supported scope/workspace refs; loading and failure render honestly.
 const kvman = useKvman();
 const props = defineProps<{ withLink?: boolean; refreshKey?: unknown }>();
-const mode = ref<'ask' | 'auto' | undefined>(undefined);
+const mode = ref<'ask' | 'auto' | 'never' | undefined>(undefined);
 const failed = ref(false);
 const checking = ref(true);
 let epoch = 0;
@@ -22,8 +22,8 @@ async function load(): Promise<void> {
   try {
     const settings = await kvman.exec('kernel.settings.list', {});
     if (!current()) return;
-    const value = settings.find((setting) => setting.key === 'kvcoder.shell.approval')?.value;
-    if (value !== 'ask' && value !== 'auto') throw new Error('Approval mode is not loaded.');
+    const value = settings.find((setting) => setting.key === 'kvcoder.approval')?.value;
+    if (value !== 'ask' && value !== 'auto' && value !== 'never') throw new Error('Approval mode is not loaded.');
     mode.value = value;
   } catch {
     if (!current()) return;
@@ -47,8 +47,7 @@ onBeforeUnmount(() => { disposed = true; epoch += 1; });
       <button type="button" class="kvc-text-button" data-test="approval-retry" @click="void load()">{{ kvman.t('kvcoder.ui.tryAgain') }}</button>
     </template>
     <template v-else>
-      <p v-if="mode === 'ask'" data-test="approval-mode">{{ kvman.t('kvcoder.ui.approvalNote.ask') }}</p>
-      <p v-else data-test="approval-mode">{{ kvman.t('kvcoder.ui.approvalNote.auto') }}</p>
+      <p data-test="approval-mode" :data-mode="mode">{{ kvman.t(`kvcoder.ui.approvalNote.${mode}`) }}</p>
       <p data-test="approval-limits">{{ kvman.t('kvcoder.ui.approvalNote.limits') }}</p>
       <button v-if="props.withLink" type="button" class="kvc-link-button" data-test="approval-config" @click="kvman.navigate('kvwebui.extension', { namespace: 'kvcoder' })">{{ kvman.t('kvcoder.ui.approvalNote.openConfig') }}</button>
     </template>

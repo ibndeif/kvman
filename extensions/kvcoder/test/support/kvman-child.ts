@@ -36,7 +36,7 @@ export async function kvmanWorld(): Promise<KvmanWorld> {
   const root = mkdtempSync(path.join(tmpdir(), 'kvcoder-e2e-'));
   const [home, user, project] = ['home', 'user', 'project'].map((name) => path.join(root, name));
   for (const folder of [user ?? '', project ?? '']) mkdirSync(folder, { recursive: true });
-  const preset = { name: 'kvcoder-test', extensions: { '@kvman/kvai': 'bundled', '@kvman/kvwebui': 'bundled', '@kvman/kvcoder': 'bundled' }, settings: { 'kvwebui.home': 'kvcoder.chat', 'kvai.defaultModel': 'fake/m1', 'kvcoder.shell.approval': 'auto' } };
+  const preset = { name: 'kvcoder-test', extensions: { '@kvman/kvai': 'bundled', '@kvman/kvwebui': 'bundled', '@kvman/kvcoder': 'bundled' }, settings: { 'kvwebui.home': 'kvcoder.chat', 'kvai.defaultModel': 'fake/m1', 'kvcoder.approval': 'auto' } };
   const presetFile = path.join(root, 'kvcoder-test.json');
   writeFileSync(presetFile, JSON.stringify(preset));
   const fake = await startFakeOpenAI();

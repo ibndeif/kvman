@@ -48,7 +48,7 @@ export function useKvcoder(): { start(options?: StartOptions): Promise<World> } 
       const fake = await startFakeOpenAI();
       closers.push(() => fake.close());
       const extensions = [path.join(extensionsFolder, 'kvai'), path.join(extensionsFolder, 'kvwebui'), kvcoderFolder, ...(options.extensions ?? [todo]).map((extension) => writeExtension(root, extension))];
-      const settings = { 'kvwebui.home': 'kvcoder.chat', 'kvai.defaultModel': 'fake/m1', 'kvcoder.shell.approval': 'auto', ...options.settings };
+      const settings = { 'kvwebui.home': 'kvcoder.chat', 'kvai.defaultModel': 'fake/m1', 'kvcoder.approval': 'auto', ...options.settings };
       const kernel = await createTestKernel({ extensions, settings });
       closers.push(() => kernel.close());
       await kernel.exec('kvai.provider.add', { id: 'fake', title: 'Fake', api: 'openai-completions', baseUrl: fake.baseUrl });

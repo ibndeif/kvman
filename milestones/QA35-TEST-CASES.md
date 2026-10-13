@@ -20,7 +20,7 @@ It changes QA17-E21, QA34-H12, and M2.5-E35, whose subject was the section: they
 
 ## Edge cases
 
-- **QA35-E1 `init` never asks, and writes nothing.** *Then* it runs at once under `kvcoder.shell.approval: 'ask'`, and the settings and the preset are unchanged after it. `extensions/kvcustomizer/test/init.test.ts`
+- **QA35-E1 `init` never asks, and writes nothing.** *Then* it runs at once under `kvcoder.approval: 'ask'`, and the settings and the preset are unchanged after it. `extensions/kvcustomizer/test/init.test.ts`
 - **QA35-E2 `init` is not a page.** *Then* `kvcustomizer.docs.get { topic: 'init' }` and `{ topic: 'section' }` fail `NOT_FOUND`, and `docs list` doesn't show `init`. `extensions/kvcustomizer/test/docs-own.test.ts`
 - **QA35-E3 It isn't a gate.** *Then* `kvman settings-list` answers without `init` having run. `extensions/kvcustomizer/test/init.test.ts`
 - **QA35-E4 Removing the old section twice, or with none, is harmless.** *Then* two starts in a row, the first with no stored `guide`, both succeed. `extensions/kvcustomizer/test/init-section-removed.test.ts`

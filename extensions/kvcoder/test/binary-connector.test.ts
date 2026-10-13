@@ -18,7 +18,7 @@ describe('a binary connector (08 §8.4, ADR 0011, 5)', { timeout: 30_000 }, () =
   });
 
   it("QA18-H7 help describes exec and prints the program's own help, by --help or the registered line, and never asks", async () => {
-    const plain = await looked(nothing, [command('node', 'help'), command('node', 'help', { command: 'exec' }), command('node', 'help', { command: '-p' })], { ...node(), 'kvcoder.shell.approval': 'ask' });
+    const plain = await looked(nothing, [command('node', 'help'), command('node', 'help', { command: 'exec' }), command('node', 'help', { command: '-p' })], { ...node(), 'kvcoder.approval': 'ask' });
     expect(plain.results[0]).toMatch(/^node: Node\.js\.\n\nCommands:\n {2}exec {2}Runs the program with the given arguments.*\n {2}help {2}.*\n\n.*\n\nnode --help:\nUsage: node /);
     expect(plain.results[1]).toMatch(/^node exec: [\s\S]*Payload \(JSON Schema\):[\s\S]*"args"[\s\S]*Result: the combined output, then \[exit code N\]\.$/);
     expect(plain.results[2]).toMatch(/^node -p --help:\n/);

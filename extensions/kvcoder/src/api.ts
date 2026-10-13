@@ -76,7 +76,7 @@ declare module '@kvman/sdk' {
     'kvcoder.delegate.model': string | null;
     'kvcoder.thinking': Thinking;
     'kvcoder.maxSteps': number | null;
-    'kvcoder.shell.approval': 'ask' | 'auto';
+    'kvcoder.approval': 'ask' | 'auto' | 'never';
     'kvcoder.shell.path': string | null;
     'kvcoder.compactAt': number;
     'kvcoder.compactKeep': number;

@@ -183,7 +183,7 @@ describe('the artifact connector (08 §8.5, ADR 0009, 173 to 176)', { timeout: 3
   });
 
   it('QA6-E11 artifact never asks', async () => {
-    const world = await started({ 'kvcoder.shell.approval': 'ask' });
+    const world = await started({ 'kvcoder.approval': 'ask' });
     const results = await turn(world, 'go', runs(command('artifact', 'write', { id: 'plan', title: 'Plan', content: 'x' })), says('ok'));
     expect((await turnState(world.kernel, world.sessionId)).turn?.pending).toEqual([]);
     expect(json(results[0] ?? '')).toMatchObject({ id: 'plan', created: true });

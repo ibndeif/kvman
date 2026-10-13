@@ -42,7 +42,7 @@ describe('a registered command that asks the person first (08 §8.3 and §8.4, A
   });
 
   it('QA34-H2 a call of it asks under auto, holds the call, and runs it once allowed', async () => {
-    const world = await started({ 'kvcoder.shell.approval': 'auto' });
+    const world = await started({ 'kvcoder.approval': 'auto' });
     const sessionId = await sent(world, runs(command('guarded', 'add', { text: 'milk' })), says('done'));
     const waiting = await turnState(world.kernel, sessionId);
     expect(waiting.session.status).toBe('waiting');
@@ -82,7 +82,7 @@ describe('a registered command that asks the person first (08 §8.3 and §8.4, A
 
   it('QA34-E3 a command without asks runs at once, with auto and with ask', async () => {
     for (const approval of ['auto', 'ask']) {
-      const world = await started({ 'kvcoder.shell.approval': approval });
+      const world = await started({ 'kvcoder.approval': approval });
       const sessionId = await sent(world, runs(command('guarded', 'list'), command('todo', 'add', { text: approval })), says('done'));
       expect((await turnState(world.kernel, sessionId)).turn, approval).toMatchObject({ outcome: 'done', pending: [] });
       expect(await items(world.kernel), approval).toEqual([{ text: approval }]);

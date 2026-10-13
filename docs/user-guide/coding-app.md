@@ -94,17 +94,20 @@ What to know:
 - The agent sees your servers' names and descriptions, and asks a server for its tools when it needs them.
 - A command server is started for each call and stopped when the call ends, so it keeps nothing between calls. It runs in a temporary folder of its own, which kvman deletes, so its logs and snapshots don't land in your project; it reads your project's folder from the variable `KVMAN_WORKSPACE`. To use a server that keeps state, such as a browser, across several tools, the agent calls them in one `mcp run`.
 - The agent never signs in for you: when a sign-in has run out and can't be renewed, the call fails and tells the agent you must sign in again.
-- A tool call asks you first when the agent marks it risky, or always when approval is set to ask (below), exactly like a shell line.
+- A tool call asks you first when the agent marks it risky, always when approval is set to ask, and never when it is set to never (below), exactly like a shell line.
 - Only run servers you trust: a command server is a program on your machine, and a tool's result goes into the conversation, so it is sent to the model.
 
 ## Approval
 
-Five kinds of call can change things outside the agent's own work: a shell line, a program such as `git`, writing a file, editing a file, and calling an MCP server's tool. The `kvcoder.shell.approval` setting controls when kvman asks you first:
+Five kinds of call can change things outside the agent's own work: a shell line, a program such as `git`, writing a file, editing a file, and calling an MCP server's tool. The `kvcoder.approval` setting controls when kvman asks you first:
 
 - **auto** (the default) — kvman asks unless the agent marks the call as not risky. A call is risky when it could lose something that isn't the agent's own work, or reaches outside the workspace.
 - **ask** — every such call asks.
+- **never** — nothing asks. Every call runs at once, including the two kinds below that ask in the other modes. The agent's own questions to you still wait for your answer. Choosing it asks you to confirm first, because the agent then runs commands and changes files with nobody looking, and what it reads (a file, a web page, a tool's answer) can steer it. Approval was never a sandbox; this removes the last stop before a call.
 
-One more kind always asks, whatever this setting says: a connector's command that its extension marked as needing your approval. The `kvman` connector's changes to the app are such commands (see [building-kvman.md](building-kvman.md)).
+You choose the mode on Coder's page (**Extensions → Coder**), in the **Agent** card, for all workspaces or only this one.
+
+Two more kinds ask in both **auto** and **ask**: a connector's command that its extension marked as needing your approval, and a program worker you set to ask before a run. The `kvman` connector's changes to the app are such commands (see [building-kvman.md](building-kvman.md)).
 
 When a call asks, you see a card with its description and the line it would run, or the file it would change, with **Allow**, **Deny**, and **Allow all** / **Deny all** when several are pending. A denied call returns "denied by the user" to the agent. Reading, listing, and searching files never ask.
 
@@ -145,7 +148,7 @@ The paperclip button attaches images (PNG, JPEG, GIF, or WebP) from your compute
 
 ## Useful settings
 
-On Coder's page (open **Extensions**, then **Coder**): the model a new chat starts with (`kvcoder.model`), the model helpers use when their worker names none (`kvcoder.delegate.model`: the chat's own by default), its thinking level (`kvcoder.thinking`), a turn's step limit (`kvcoder.maxSteps`: no limit by default; set a number to cap a turn, or leave it empty for none), when to summarize a long chat (`kvcoder.compactAt`) and how many of its newest messages stay whole when it is (`kvcoder.compactKeep`, 10 by default), and how many chats to keep (`kvcoder.sessions.keep`). The same page lists the agent's **Connectors**, each with a switch that turns it on or off (`kvcoder.connectors.disabled`). The cog beside `shell` opens its own settings: approval (`kvcoder.shell.approval`) and the shell program (`kvcoder.shell.path`); a change is saved as you make it, for all workspaces or only this one, as the page's switch says. See [extensions.md](extensions.md) and [settings-and-secrets.md](settings-and-secrets.md).
+On Coder's page (open **Extensions**, then **Coder**): the model a new chat starts with (`kvcoder.model`), the model helpers use when their worker names none (`kvcoder.delegate.model`: the chat's own by default), when it asks you before a call (`kvcoder.approval`, see Approval above), its thinking level (`kvcoder.thinking`), a turn's step limit (`kvcoder.maxSteps`: no limit by default; set a number to cap a turn, or leave it empty for none), when to summarize a long chat (`kvcoder.compactAt`) and how many of its newest messages stay whole when it is (`kvcoder.compactKeep`, 10 by default), and how many chats to keep (`kvcoder.sessions.keep`). The same page lists the agent's **Connectors**, each with a switch that turns it on or off (`kvcoder.connectors.disabled`). The cog beside `shell` opens its own setting, the shell program (`kvcoder.shell.path`); a change is saved as you make it, for all workspaces or only this one, as the page's switch says. See [extensions.md](extensions.md) and [settings-and-secrets.md](settings-and-secrets.md).
 
 ## Next
 

@@ -10,7 +10,7 @@ const kvcoder = useKvcoder();
 const call = (text: string, more: Record<string, unknown>): RunCallSpec => command('mcp', 'call', { server: 'demo', tool: 'echo', arguments: { text }, ...more });
 
 async function started(approval: 'auto' | 'ask', ...calls: readonly RunCallSpec[]) {
-  const world = await kvcoder.start({ settings: { 'kvcoder.shell.approval': approval, 'kvcoder.mcp.servers': [commandEntry()] } });
+  const world = await kvcoder.start({ settings: { 'kvcoder.approval': approval, 'kvcoder.mcp.servers': [commandEntry()] } });
   const sessionId = await newSession(world.kernel);
   world.fake.reply(runs(...calls), says('ok'));
   await world.kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });

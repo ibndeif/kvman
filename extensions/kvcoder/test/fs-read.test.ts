@@ -12,7 +12,7 @@ const file = (name: string, content: string | Buffer) => (folder: string) => wri
 
 describe('fs read (08 §8.5, ADR 0011, 8)', { timeout: 30_000 }, () => {
   it('QA18-H12 read returns the whole file with its line count, or a range of lines, and never asks', async () => {
-    const { kernel, sessionId, results } = await looked(file('five.txt', 'one\ntwo\nthree\nfour\nfive\n'), [fsCall('read', { path: 'five.txt' }), fsCall('read', { path: 'five.txt', fromLine: 2, lines: 2 })], { 'kvcoder.shell.approval': 'ask' });
+    const { kernel, sessionId, results } = await looked(file('five.txt', 'one\ntwo\nthree\nfour\nfive\n'), [fsCall('read', { path: 'five.txt' }), fsCall('read', { path: 'five.txt', fromLine: 2, lines: 2 })], { 'kvcoder.approval': 'ask' });
     expect(json(results[0])).toEqual({ path: 'five.txt', fromLine: 1, totalLines: 5, content: 'one\ntwo\nthree\nfour\nfive\n', truncated: false });
     expect(json(results[1])).toEqual({ path: 'five.txt', fromLine: 2, totalLines: 5, content: 'two\nthree\n', truncated: true, next: { fromLine: 4 } });
     expect((await turnState(kernel, sessionId)).turn).toMatchObject({ outcome: 'done', pending: [] });

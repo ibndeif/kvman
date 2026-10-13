@@ -1,12 +1,12 @@
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import ApprovalNote from '../../web/src/ApprovalNote.vue';
-import ShellSettings from '../../web/src/ShellSettings.vue';
+import ApprovalSetting from '../../web/src/ApprovalSetting.vue';
 import { createFakeKvman } from './support/fake-kvman.ts';
 import { mounted } from './support/fixtures.ts';
 import { serveSettings } from './support/settings-world.ts';
 
-const key = 'kvcoder.shell.approval';
+const key = 'kvcoder.approval';
 const rows = (value: 'ask' | 'auto') => [{ key, value, source: 'global' }];
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -36,10 +36,10 @@ describe('approval note current effective-setting boundaries', () => {
 
   it('refreshes the shared note after changing the saved approval mode', async () => {
     const fake = createFakeKvman();
-    serveSettings(fake, { [key]: { default: 'auto', global: 'ask' }, 'kvcoder.shell.path': { default: null } });
-    const view = await mounted(ShellSettings, fake);
+    serveSettings(fake, { [key]: { default: 'auto', global: 'ask' } });
+    const view = await mounted(ApprovalSetting, fake);
     expect(view.find('[data-test="approval-mode"]').text()).toBe(fake.kvman.t('kvcoder.ui.approvalNote.ask'));
-    await view.find('[data-test="shell-approval-control"]').setValue('auto');
+    await view.find('[data-test="approval-setting-control"]').setValue('auto');
     await flushPromises();
     expect(view.find('[data-test="approval-mode"]').text()).toBe(fake.kvman.t('kvcoder.ui.approvalNote.auto'));
     view.unmount();
@@ -47,9 +47,9 @@ describe('approval note current effective-setting boundaries', () => {
 
   it('refreshes the shared note when resetting an override to the effective default', async () => {
     const fake = createFakeKvman();
-    serveSettings(fake, { [key]: { default: 'auto', global: 'ask' }, 'kvcoder.shell.path': { default: null } });
-    const view = await mounted(ShellSettings, fake);
-    const reset = view.find('[data-test="shell-approval-reset"]');
+    serveSettings(fake, { [key]: { default: 'auto', global: 'ask' } });
+    const view = await mounted(ApprovalSetting, fake);
+    const reset = view.find('[data-test="approval-setting-reset"]');
     expect(reset.exists()).toBe(true);
     await reset.trigger('click');
     await flushPromises();
