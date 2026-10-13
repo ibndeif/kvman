@@ -34,6 +34,8 @@ The panel beside a chat shows one title; with a map or several artifacts, pressi
 
 The agent chooses how to work on each task: it sizes the task up, answers a question directly, does and checks a small change, asks when the request is unclear, and plans larger work on the execution map. The map is its detailed implementation plan: press a step to read what it changes and how. Before it starts, the agent asks you to agree to the plan, and you can write what to change. An edit to one of the project's files that the task needs no longer asks for approval; a call that is hard to take back, or that reaches outside the workspace folder, still does, and `kvcoder.shell.approval: ask` asks for every call (ADR 0072).
 
+An image you attach is named to the agent as shown in the message, so it no longer looks for it among the project's files. In the desktop app on Linux, pasting a copied image (a screenshot, say) with Ctrl+V attaches it; if the clipboard can't be read, a message says to use the attach button (ADR 0073).
+
 Extensions can continue collection `find` with an exclusive `after` ID in ascending or descending order, without raising the 1000-document page limit. Pages do not share a cross-call snapshot; updated SDK types alone do not add this support to an older kernel ([storage guide](docs/developers/storage.md)).
 
 ## Documentation

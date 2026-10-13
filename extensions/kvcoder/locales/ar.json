@@ -103,6 +103,7 @@
   "kvcoder.ui.activity.preparing": "جارٍ تجهيز أمر…",
   "kvcoder.ui.activity.running": "جارٍ التنفيذ…",
   "kvcoder.ui.uploadFailed": "تعذّر رفع {name}.",
+  "kvcoder.ui.pasteFailed": "تعذّرت قراءة الحافظة. استخدم زر الإرفاق.",
   "kvcoder.ui.removeAttachment": "إزالة المرفق",
   "kvcoder.ui.attach": "إرفاق ملفات",
   "kvcoder.ui.enterSends": "Enter للإرسال · Shift+Enter لسطر جديد",

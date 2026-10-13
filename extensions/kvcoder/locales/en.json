@@ -103,6 +103,7 @@
   "kvcoder.ui.activity.preparing": "Preparing a command…",
   "kvcoder.ui.activity.running": "Running…",
   "kvcoder.ui.uploadFailed": "{name} couldn't be uploaded.",
+  "kvcoder.ui.pasteFailed": "The clipboard couldn't be read. Use the attach button.",
   "kvcoder.ui.removeAttachment": "Remove the attachment",
   "kvcoder.ui.attach": "Attach files",
   "kvcoder.ui.enterSends": "Enter sends · Shift+Enter for a new line",

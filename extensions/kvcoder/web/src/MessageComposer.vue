@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ArrowUp, Paperclip, Square, X } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
+import { clipboardImages } from './clipboard-images.ts';
 import { problemText, useKvman } from './kvman.ts';
 import { messageDraft } from './message-drafts.ts';
 import { matchingCommands, typedCommand, type ListedSlash, type RegisteredSlash, type SlashName } from './slash-commands.ts';
 
 // The send box (plan 08 §8.7; ADR 0017, 3, 6, and 11; ADR 0018, 5 and 6): Enter sends, Shift+Enter starts a new line;
-// files are uploaded to the kernel's files (`POST /api/files`), from the attach button or a paste, and sent as
+// files are uploaded to the kernel's files (`POST /api/files`), from the attach button or a paste (ADR 0073), and sent as
 // `fileIds`; while a step runs, Stop cancels the turn. The `controls` slot holds the chat's model and thinking level.
 // A one-line text that starts with `/` is a slash command, never a message: a list above the box names the matching
 // ones, and with `commands` `run`, Enter runs the highlighted one; with `wait` (no chat yet) kvcoder's own commands are
@@ -62,10 +63,25 @@ async function chosen(event: Event): Promise<void> {
   input.value = '';
 }
 
-// A paste that holds files attaches them and pastes no text; any other paste is the browser's.
+async function attachCopiedImages(): Promise<void> {
+  let images: File[];
+  try {
+    images = await clipboardImages();
+  } catch {
+    kvman.toast('kvcoder.ui.pasteFailed', {}, 'error');
+    return;
+  }
+  await attach(images);
+}
+
+// A paste that holds files attaches them and pastes no text; an empty one reads the clipboard for a copied image
+// (ADR 0073, 3); any other paste is the browser's.
 function pasted(event: ClipboardEvent): void {
   const given = [...(event.clipboardData?.files ?? [])];
-  if (given.length === 0) return;
+  if (given.length === 0) {
+    if (event.clipboardData?.types.length === 0) void attachCopiedImages();
+    return;
+  }
   event.preventDefault();
   void attach(given);
 }

@@ -82,7 +82,7 @@ describe("the date on a person's message (08 §8.2, ADR 0032, 1, 5, and 6)", { t
     const [stored] = await personMessages(kernel, sessionId);
     const user = requestMessages(fake).find((message) => message.role === 'user');
     expect(user?.content).toEqual([
-      { type: 'text', text: `${stampOf(stored?.createdAt ?? '')}\nlook` },
+      { type: 'text', text: `${stampOf(stored?.createdAt ?? '')}\nlook\n\nAttached images, shown in this message and not saved as files in the workspace:\n- shot.png` },
       { type: 'image_url', image_url: { url: `data:image/png;base64,${png}` } },
     ]);
   });

@@ -43,6 +43,8 @@ async function imageBlock(ctx: Ctx, fileId: string, name: string): Promise<Json>
   }
 }
 
+const isImage = (block: Json | undefined): boolean => typeof block === 'object' && block !== null && !Array.isArray(block) && block['type'] === 'image';
+
 // What was running in the background when the person wrote, as their message stored it (ADR 0068, 4).
 function runningNote(running: Json | undefined): string {
   const runs = Array.isArray(running) ? running.filter((run) => typeof run === 'string') : [];
@@ -56,10 +58,17 @@ function sentText(message: Stored<MessageDoc>): string {
   return `${messageStamp(message.createdAt, -new Date(message.createdAt).getTimezoneOffset())}\n${text}${runningNote(message.content['running'])}`;
 }
 
+// The images a message shows, named in its text (ADR 0073, 1 and 2): they are in no folder the model could look in.
+function imagesNote(names: readonly string[]): string {
+  return names.length === 0 ? '' : `\n\nAttached images, shown in this message and not saved as files in the workspace:\n${names.map((name) => `- ${name}`).join('\n')}`;
+}
+
 async function userMessage(ctx: Ctx, message: Stored<MessageDoc>): Promise<Json> {
   if (message.fileIds === null || message.fileIds.length === 0) return { ...message.content, content: sentText(message) };
-  const images = await Promise.all(message.fileIds.map((fileId, index) => imageBlock(ctx, fileId, message.fileNames?.[index] ?? fileId)));
-  return { ...message.content, content: [{ type: 'text', text: sentText(message) }, ...images] };
+  const names = message.fileIds.map((fileId, index) => message.fileNames?.[index] ?? fileId);
+  const images = await Promise.all(message.fileIds.map((fileId, index) => imageBlock(ctx, fileId, names[index] ?? fileId)));
+  const shown = names.filter((_name, index) => isImage(images[index]));
+  return { ...message.content, content: [{ type: 'text', text: `${sentText(message)}${imagesNote(shown)}` }, ...images] };
 }
 
 const summaryLead = 'A summary of the earlier conversation:';

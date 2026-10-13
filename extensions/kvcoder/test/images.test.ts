@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { z } from '@kvman/sdk';
 import type { TestKernel } from '@kvman/testkit';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { requestMessages, says } from './support/model-script.ts';
+import { requestMessages, says, textOf } from './support/model-script.ts';
 import { newSession } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
@@ -10,6 +10,8 @@ const kvcoder = useKvcoder();
 const png = Buffer.from('89504e470d0a1a0a0000000d49484452', 'hex').toString('base64');
 
 const upload = async (kernel: TestKernel, name: string, type: string): Promise<string> => z.object({ id: z.string() }).parse(await kernel.exec('todo.file.write', { name, base64: png, type }, { as: '@test/todo' })).id;
+
+const note = 'Attached images, shown in this message and not saved as files in the workspace:';
 
 const imageParts = (content: unknown): unknown[] => (Array.isArray(content) ? content.filter((part: unknown) => typeof part === 'object' && part !== null && 'type' in part && part.type === 'image_url') : []);
 
@@ -43,5 +45,41 @@ describe('image attachments (08 §8.1, ADR 0009, 103)', { timeout: 30_000 }, () 
     await kernel.clock.advance(0);
     const first = requestMessages(fake).find((message) => message.role === 'user');
     expect(JSON.stringify(first?.content)).toContain('[image gone.png was deleted]');
+  });
+
+  it('M2.4-E265 the model is told which images a message shows, and the stored text stays the person\'s own', async () => {
+    const { kernel, fake } = await kvcoder.start();
+    const fileId = await upload(kernel, 'shot.png', 'image/png');
+    const sessionId = await newSession(kernel);
+    fake.reply(says('I see it'));
+    await kernel.exec('kvcoder.message.send', { sessionId, text: 'look', fileIds: [fileId] });
+    await kernel.clock.advance(0);
+    const user = requestMessages(fake).find((message) => message.role === 'user');
+    expect(textOf(user).endsWith(`look\n\n${note}\n- shot.png`)).toBe(true);
+    expect(imageParts(user?.content)).toHaveLength(1);
+    const listed = z.object({ messages: z.array(z.looseObject({ kind: z.string(), content: z.unknown() })) }).parse(await kernel.exec('kvcoder.message.list', { sessionId, limit: 10 }));
+    expect(JSON.stringify(listed.messages.find((message) => message.kind === 'user')?.content)).not.toContain('Attached images');
+  });
+
+  it('M2.4-E266 the note names only the images that are left, and a message with none left has no note', async () => {
+    const { kernel, fake } = await kvcoder.start();
+    const sessionId = await newSession(kernel);
+    const kept = await upload(kernel, 'kept.png', 'image/png');
+    const gone = await upload(kernel, 'gone.png', 'image/png');
+    const only = await upload(kernel, 'only.png', 'image/png');
+    fake.reply(says('first'), says('second'), says('third'));
+    await kernel.exec('kvcoder.message.send', { sessionId, text: 'two', fileIds: [kept, gone] });
+    await kernel.clock.advance(0);
+    await kernel.exec('kvcoder.message.send', { sessionId, text: 'one', fileIds: [only] });
+    await kernel.clock.advance(0);
+    await kernel.exec('todo.file.unlink', { id: gone }, { as: '@test/todo' });
+    await kernel.exec('todo.file.unlink', { id: only }, { as: '@test/todo' });
+    await kernel.exec('kvcoder.message.send', { sessionId, text: 'again' });
+    await kernel.clock.advance(0);
+    const users = requestMessages(fake).filter((message) => message.role === 'user').map((message) => textOf(message));
+    expect(users[0]).toContain(`two\n\n${note}\n- kept.png\n[image gone.png was deleted]`);
+    expect(users[0]).not.toContain('- gone.png');
+    expect(users[1]).toContain('one\n[image only.png was deleted]');
+    expect(users[1]).not.toContain(note);
   });
 });
