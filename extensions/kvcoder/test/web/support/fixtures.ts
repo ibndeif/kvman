@@ -37,7 +37,7 @@ export function job(fields: Partial<Job> = {}): Job {
 
 /** A step of an execution map, to do and waiting on nothing unless `fields` says otherwise. */
 export function mapStep(id: string, fields: Partial<MapStep> = {}): MapStep {
-  return { id, title: `Do ${id}`, after: [], uses: null, check: `check ${id}`, status: 'todo', evidence: null, note: null, ...fields };
+  return { id, title: `Do ${id}`, description: null, after: [], uses: null, check: `check ${id}`, status: 'todo', evidence: null, note: null, ...fields };
 }
 
 export function executionMap(steps: MapStep[], fields: Partial<ExecutionMapView> = {}): ExecutionMapView {

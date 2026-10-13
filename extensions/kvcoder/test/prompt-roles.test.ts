@@ -16,7 +16,7 @@ describe('the prompt of a chat and of its subagent (08 §8.2 and §8.5, ADR 0022
 
     const lead = systemPrompt(fake, 0);
     expect(lead).toContain('the lead engineer on this work');
-    expect(lead).toContain('8. Finish.');
+    expect(lead).toContain('\nFinish. The work is done when it is ready for production');
     expect(lead).not.toContain('that the lead agent gave you');
     expect(lead).toBe((await kernel.exec('kvcoder.prompt.get', { sessionId })).prompt);
 

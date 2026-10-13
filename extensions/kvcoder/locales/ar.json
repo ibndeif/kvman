@@ -281,6 +281,7 @@
   "kvcoder.ui.map.status.failed": "فشلت",
   "kvcoder.ui.map.status.skipped": "تم تخطيها",
   "kvcoder.ui.map.step": "الخطوة",
+  "kvcoder.ui.map.description": "الوصف",
   "kvcoder.ui.map.after": "بعد",
   "kvcoder.ui.map.uses": "تستخدم",
   "kvcoder.ui.map.check": "التحقق",

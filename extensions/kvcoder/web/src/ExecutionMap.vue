@@ -8,7 +8,7 @@ import { layoutMap, mapCounts, nodeHeight, type ExecutionMapView, type MapStatus
 
 // The execution map as the person watches it (plan 08 §8.7, ADR 0064): the goal and how far the work is, then a row
 // per stage with the steps that can run together side by side, an arrow to each step from the ones it waits on, and
-// the findings noted for later. A press on a step shows how it is checked, its evidence, and its note.
+// the findings noted for later. A press on a step shows its description, how it is checked, its evidence, and its note.
 const props = defineProps<{ map: ExecutionMapView }>();
 const kvman = useKvman();
 // The diagram fits the panel's width, which changes with the window (the panel is 40% of the chat, 32 rem at most).
@@ -64,6 +64,7 @@ const titleOf = (id: string): string => props.map.steps.find((step) => step.id =
     </div>
     <dl v-if="detail !== undefined" class="kvc-fields kvc-map-detail" data-test="map-detail">
       <div class="kvc-field-row"><dt class="kvc-muted">{{ kvman.t('kvcoder.ui.map.step') }}</dt><dd dir="auto">{{ detail.title }} · {{ statusText(detail.status) }}</dd></div>
+      <div v-if="detail.description !== null" class="kvc-field-row" data-test="map-description"><dt class="kvc-muted">{{ kvman.t('kvcoder.ui.map.description') }}</dt><dd dir="auto"><LinkedText :text="detail.description" /></dd></div>
       <div v-if="detail.after.length > 0" class="kvc-field-row"><dt class="kvc-muted">{{ kvman.t('kvcoder.ui.map.after') }}</dt><dd dir="auto">{{ detail.after.map(titleOf).join(' · ') }}</dd></div>
       <div v-if="detail.uses !== null" class="kvc-field-row"><dt class="kvc-muted">{{ kvman.t('kvcoder.ui.map.uses') }}</dt><dd dir="auto">{{ detail.uses }}</dd></div>
       <div class="kvc-field-row"><dt class="kvc-muted">{{ kvman.t('kvcoder.ui.map.check') }}</dt><dd dir="auto"><LinkedText :text="detail.check" /></dd></div>

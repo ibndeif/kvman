@@ -281,6 +281,7 @@
   "kvcoder.ui.map.status.failed": "Failed",
   "kvcoder.ui.map.status.skipped": "Skipped",
   "kvcoder.ui.map.step": "Step",
+  "kvcoder.ui.map.description": "About",
   "kvcoder.ui.map.after": "After",
   "kvcoder.ui.map.uses": "Uses",
   "kvcoder.ui.map.check": "Check",

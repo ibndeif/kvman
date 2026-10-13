@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { mapDocSchema } from '../../src/maps/map-schema.ts';
 import { changedSteps, mapProgress, plannedSteps, readySteps, shapeProblem, type PlannedStep } from '../../src/maps/map-rules.ts';
 
-const step = (id: string, after: string[] = []): PlannedStep => ({ id, title: `Do ${id}`, after, check: `check ${id}` });
+const step = (id: string, after: string[] = []): PlannedStep => ({ id, title: `Do ${id}`, description: `How ${id} is done`, after, check: `check ${id}` });
 const diamond = [step('read'), step('store', ['read']), step('page', ['read']), step('test', ['store', 'page'])];
 const fresh = () => plannedSteps(diamond, []);
 const evidence = 'pnpm test passed, 12 of 12';
@@ -32,5 +33,11 @@ describe('the rules of an execution map (ADR 0064, 2, 3, and 5)', () => {
     const again = changedSteps(done, [{ id: 'read', status: 'todo' }]);
     if (typeof again === 'string') throw new Error(again);
     expect(again[0]).toMatchObject({ status: 'todo', evidence: null, note: null });
+  });
+
+  it('M2.4-E260 a map stored before ADR 0072 is read with no description on its steps', () => {
+    const old = { sessionId: 's1', goal: 'Ship it', steps: [{ id: 'read', title: 'Do read', after: [], uses: null, check: 'check read', status: 'todo', evidence: null, note: null }], notes: [], version: 1, createdAt: '2026-10-01T09:00:00.000Z', updatedAt: '2026-10-01T09:00:00.000Z' };
+    expect(mapDocSchema.parse(old).steps.map((step) => step.description)).toEqual([null]);
+    expect(fresh().map((step) => step.description)).toEqual(['How read is done', 'How store is done', 'How page is done', 'How test is done']);
   });
 });

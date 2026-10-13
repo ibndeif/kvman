@@ -21,7 +21,7 @@ export function mcpIndexDescription(servers: readonly McpServer[]): string {
 }
 
 const server = z.string().min(1).describe('The MCP server, by the name the system prompt lists.');
-const risky = z.boolean().describe('true when the tool could change, delete, or send something that isn\'t your own work: creating or closing an issue, sending a message, writing to a database. The person is asked first. false for a tool that only reads.');
+const risky = z.boolean().describe('true when the tool could change, delete, or send something: creating or closing an issue, sending a message, writing to a database. The person is asked first. false for a tool that only reads.');
 
 /** The tools one run calls at most. */
 export const runStepsLimit = 20;

@@ -31,6 +31,6 @@ describe("a worker's prompt (08 §8.2 and §8.5, ADR 0022, 3)", () => {
 
   it('QA33-E1 a worker has no plan step, no delegate step, and none of the lead\'s lines', () => {
     const prompt = promptOf('worker');
-    for (const absent of ['Write the plan as the artifact `plan`', '`ask confirm`', '`delegate`', '6. Finish.', 'Keep replies short', 'the lead engineer on this work', 'Scale the process to the task']) expect(prompt, absent).not.toContain(absent);
+    for (const absent of ['Write the plan as the artifact `plan`', '`ask confirm`', '`delegate`', '6. Finish.', 'Keep replies short', 'the lead engineer on this work', 'Size up the task first', 'Confirm the plan']) expect(prompt, absent).not.toContain(absent);
   });
 });

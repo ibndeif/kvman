@@ -8,13 +8,13 @@ import { findSession, now } from '../sessions/session-lookup.ts';
 import { txRecords, type TxRecords } from '../store/collections.ts';
 import { callInput, type ConnectorCommand } from './connector-command.ts';
 
-// The `execution-map` connector (plan 08 §8.5, ADR 0064): the lead's plan of a task as steps that wait on each other,
+// The `execution-map` connector (plan 08 §8.5, ADR 0064, ADR 0072): the lead's plan of a task as steps that wait on each other,
 // which the person watches as a diagram. Each change returns where the work is and what can start, so the task stays
 // at the end of the context. A child session never has it.
 
 /** What the prompt's index says the connector is for. */
 export const executionMapDescription =
-  'Plan a task of several steps as the execution map, the diagram the person watches, and keep it true as you work. A step names what it comes after, so steps with nothing between them run together. Start a step with status doing, finish it with done and your evidence, and record a problem the task does not need with note instead of looking into it.';
+  'Plan a task of several steps as the execution map: the detailed implementation plan the person reads, agrees to, and watches as a diagram. Keep it true as you work. A step says what it changes and how in its description, which the person opens with a press, and names what it comes after, so steps with nothing between them run together. Start a step with status doing, finish it with done and your evidence, and record a problem the task does not need with note instead of looking into it.';
 
 /** The steps one map holds at most, and its notes. */
 export const stepsLimit = 40;
@@ -35,6 +35,7 @@ const payloads = {
         z.strictObject({
           id: stepId.describe('The name of the step within the map, in lowercase kebab case.'),
           title: z.string().min(1).max(100).describe('What the step does, in a few words the person reads.'),
+          description: z.string().min(1).max(500).describe('What the step changes and how, naming the files or parts and the approach, in words the person reads when they open the step.'),
           after: z.array(stepId).describe('The ids of the steps that must be finished before this one; leave it out for a step that can start at once.').exactOptional(),
           uses: z.union([usedName, z.array(usedName).min(1).max(5)]).describe('The connector or worker the step uses, such as fs or delegate reviewer; several as a list.').exactOptional(),
           check: z.string().min(1).max(300).describe('How you will verify the step: the command you will run or what you will look at.'),

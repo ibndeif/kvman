@@ -11,7 +11,7 @@ afterAll(async () => { await browser.close(); });
 afterEach(async () => { await world?.close(); world = undefined; });
 
 const sessionSchema = z.object({ id: z.string(), status: z.string() });
-const step = (id: string, title: string, after: string[] = []) => ({ id, title, ...(after.length === 0 ? {} : { after }), check: `check ${id}` });
+const step = (id: string, title: string, after: string[] = []) => ({ id, title, description: `How ${id} is done`, ...(after.length === 0 ? {} : { after }), check: `check ${id}` });
 const steps = [step('read', 'Read the settings code'), step('store', 'Settings store', ['read']), step('page', 'Settings page', ['read']), step('test', 'End-to-end test', ['store', 'page'])];
 
 describe('the execution map in Chromium (08 §8.7, ADR 0064)', { timeout: 120_000 }, () => {

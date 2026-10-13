@@ -32,4 +32,14 @@ describe('the execution map as the person sees it (08 §8.7, ADR 0064)', () => {
     await view.find('[data-test="map-step-test"]').trigger('click');
     expect(view.find('[data-test="map-detail"]').exists()).toBe(false);
   });
+
+  it('M2.4-E261 a press on a step shows its description first, and a step without one has no such row', async () => {
+    const map = executionMap([mapStep('read', { description: 'Read src/settings.ts and its test, and list what the page needs.' }), mapStep('page', { after: ['read'] })]);
+    const view = await mounted(ExecutionMap, createFakeKvman(), { map });
+    await view.find('[data-test="map-step-read"]').trigger('click');
+    expect(view.find('[data-test="map-description"]').text()).toBe('AboutRead src/settings.ts and its test, and list what the page needs.');
+    expect(view.findAll('[data-test="map-detail"] dt').map((label) => label.text())).toEqual(['Step', 'About', 'Check']);
+    await view.find('[data-test="map-step-page"]').trigger('click');
+    expect(view.find('[data-test="map-description"]').exists()).toBe(false);
+  });
 });

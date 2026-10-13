@@ -68,7 +68,7 @@ declare module '@kvman/sdk' {
     'kvcoder.section.list': { input: { sessionId?: string }; output: { id: string; title: string; order: number; owner: string; global: boolean; sessionId?: string; size: number }[] };
     'kvcoder.handler.list': { input: Empty; output: { point: Point; command: string; owner: string }[] };
     'kvcoder.artifact.list': { input: SessionId; output: { id: string; title: string; format: 'markdown' | 'html' | 'url'; version: number; size: number; updatedAt: string }[] };
-    'kvcoder.map.get': { input: SessionId; output: { goal: string; steps: { id: string; title: string; after: string[]; uses: string | null; check: string; status: 'todo' | 'doing' | 'done' | 'failed' | 'skipped'; evidence: string | null; note: string | null }[]; notes: { text: string; createdAt: string }[]; version: number; updatedAt: string } | null };
+    'kvcoder.map.get': { input: SessionId; output: { goal: string; steps: { id: string; title: string; description: string | null; after: string[]; uses: string | null; check: string; status: 'todo' | 'doing' | 'done' | 'failed' | 'skipped'; evidence: string | null; note: string | null }[]; notes: { text: string; createdAt: string }[]; version: number; updatedAt: string } | null };
     'kvcoder.artifact.get': { input: { sessionId: string; id: string }; output: { id: string; title: string; format: 'markdown' | 'html' | 'url'; version: number; content: string; createdAt: string; updatedAt: string } };
   }
   interface Settings {

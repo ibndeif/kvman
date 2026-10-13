@@ -32,6 +32,8 @@ In a chat, the running line shows the turn's steps and estimated cost so far. Wh
 
 The panel beside a chat shows one title; with a map or several artifacts, pressing it opens the list of them, and nothing in the header scrolls sideways. An artifact or an execution map that is updated opens the panel on itself, also after you closed it. Drag the panel's edge beside the conversation (or focus it and press Left or Right) to set its width, from 20 rem to 70% of the chat area; a double-click returns to the starting width, and the browser keeps the width for every chat. The thinking level of the send box opens as a list above the box, so every level is in the window (ADR 0071).
 
+The agent chooses how to work on each task: it sizes the task up, answers a question directly, does and checks a small change, asks when the request is unclear, and plans larger work on the execution map. The map is its detailed implementation plan: press a step to read what it changes and how. Before it starts, the agent asks you to agree to the plan, and you can write what to change. An edit to one of the project's files that the task needs no longer asks for approval; a call that is hard to take back, or that reaches outside the workspace folder, still does, and `kvcoder.shell.approval: ask` asks for every call (ADR 0072).
+
 Extensions can continue collection `find` with an exclusive `after` ID in ascending or descending order, without raising the 1000-document page limit. Pages do not share a cross-call snapshot; updated SDK types alone do not add this support to an older kernel ([storage guide](docs/developers/storage.md)).
 
 ## Documentation

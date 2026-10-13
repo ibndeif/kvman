@@ -58,6 +58,6 @@ describe('several tools on one connection (08 §8.5, ADR 0070, 1 and 2)', { time
     const prompt = systemPrompt(fake, 0);
     expect(prompt).toContain('keeps it only inside one run: put the tools that belong together (open the page, fill, click, read) in one run.');
     expect(prompt).toMatch(/\n {2}run +\{ server, steps: \[\{ tool, arguments\? \}\], timeoutMs\?, risky \}\n/);
-    expect(prompt).toContain('A new file, and a change to a file you made in this chat, inside the workspace folder, are your own work: false.');
+    expect(prompt).toContain('creating, editing, or rewriting a file inside the workspace folder that the task needs, whoever made it');
   });
 });

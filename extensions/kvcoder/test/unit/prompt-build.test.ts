@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { risky } from '../../src/connectors/payload-fields.ts';
 import { buildPrompt } from '../../src/prompt/build-prompt.ts';
 import type { Section } from '../../src/registry/register-sections.ts';
 
@@ -42,11 +43,11 @@ describe('the prompt builder (08 §8.2)', () => {
       for (const gone of ['heredoc', '--async', ' -h']) expect(prompt, gone).not.toContain(gone);
       expect(prompt).not.toContain('20 years');
       for (const phrase of [
-        'Scale the process to the task',
+        'No path is fixed: you choose it for each task from what the task is',
         'Never assume or invent names, paths, APIs, or behavior',
         'ask: put each question in its own `ask` call, with all the calls in one reply, and use `ask choice` whenever you offer options, your recommended one first.',
         'plan with `execution-map set`',
-        'call `ask confirm` after you set the map and before you start',
+        'call `ask choice` with other set to true',
         'mark it done with your evidence',
         'Write each file in its own call, with `fs write`.',
         'Hand a part to a worker of the `delegate` connector only when it is separate work that runs beside yours, or a fresh review of a change you finished; its entry lists the workers and what each is for.',
@@ -65,7 +66,7 @@ describe('the prompt builder (08 §8.2)', () => {
       const { prompt } = buildPrompt({ role: 'lead', workspacePath: '/w', language: 'en', platform, shell, sections: [], connectors: [] });
       for (const sentence of [
         'Every connector has the command help. A command listed below with its payload needs no help call; for any other command, or for what a field means, call the connector\'s help with { "command": "<name>" } before the first use.',
-        'Scale the process to the task: a task that changes one file, or that about five calls finish, needs no execution map and no worker, so skip steps 3 and 6, do it, and check it; every other task follows these steps, and is planned on its map once you understand it.',
+        'A small, clear change needs doing and checking, and nothing more.',
         'ask: put each question in its own `ask` call, with all the calls in one reply, and use `ask choice` whenever you offer options, your recommended one first.',
         'Before you say that something runs or works, check it the way the person would: run it, request its address, or run its test; if you couldn\'t, say what is unchecked.',
       ])
@@ -73,19 +74,28 @@ describe('the prompt builder (08 §8.2)', () => {
       for (const gone of [
         'call it before the first time you use a command whose payload you don\'t know',
         'a small, clear change needs no plan',
+        'Scale the process to the task',
+        'about five calls',
         'call `ask` with all the questions in one reply',
       ])
         expect(prompt, gone).not.toContain(gone);
     }
   });
 
-  it('QA19-H15 the prompt says when to set risky, to request a started server, and what a small task skips', () => {
+  it('QA19-H15 and M2.4-E264 the prompt says how to judge risky, to request a started server, and what a small task needs', () => {
     const { prompt } = buildPrompt({ role: 'lead', workspacePath: '/w', language: 'en', platform: 'linux', shell: 'bash', sections: [], connectors: [] });
-    expect(prompt).toContain("`shell exec`, `fs write`, `fs edit`, `mcp call`, and `mcp run` take risky, which you always send: true when the call could lose, damage, change, or send something that isn't your own work or reaches outside the workspace folder, and the person is then asked first; false otherwise, such as for a tool that only reads. A new file, and a change to a file you made in this chat, inside the workspace folder, are your own work: false.");
+    const judged = "`shell exec`, `fs write`, `fs edit`, `mcp call`, and `mcp run` take risky, which you always send and judge for each call from what the call does, not from which command it is. It is false for the ordinary work of the task: creating, editing, or rewriting a file inside the workspace folder that the task needs, whoever made it (`fs undo` takes such a change back), running the project's own build, tests, and tools, and a tool that only reads. It is true, and the person is then asked first, only when the call could do what is hard to take back or reaches past the task: anything outside the workspace folder; deleting files, or overwriting them with a shell line; a file that holds secrets, such as .env or a key; rewriting or discarding git history or uncommitted work (push --force, reset --hard, clean); sudo, or an install outside the project; sending something out (a push, a publish, a deploy, a message, a write to a remote service); and the Commands section of AGENTS.md. When you can't tell whether a call can be taken back, it is true. Each `shell exec` starts in the workspace folder";
+    for (const role of ['lead', 'worker'] as const) {
+      const of = buildPrompt({ role, workspacePath: '/w', language: 'en', platform: 'linux', shell: 'bash', sections: [], connectors: [] }).prompt;
+      expect(of, role).toContain(judged);
+      expect(of, role).not.toContain('your own work');
+    }
+    expect(risky.description).toContain('false for the ordinary work of the task: a file inside the workspace folder that the task needs, whoever made it');
+    expect(risky.description).not.toContain('own work');
     const check = "\nBefore you say that something runs or works, check it the way the person would: run it, request its address, or run its test; if you couldn't, say what is unchecked. After you start a server, request its address once before you give it to the person.\n";
     expect(prompt).toContain(check);
-    expect(prompt.split('\n').find((line) => line.startsWith('4. '))).not.toContain('Before you say');
-    expect(prompt).toContain('needs no execution map and no worker, so skip steps 3 and 6, do it, and check it; every other task follows these steps, and is planned on its map once you understand it.');
+    expect(prompt.split('\n').find((line) => line.startsWith('Execute. '))).not.toContain('Before you say');
+    expect(prompt).toContain('A small, clear change needs doing and checking, and nothing more.');
   });
 
   it('QA9-H18 and QA10-H1 the base prompt ends its working method with the call-or-final-answer rule, and never makes a call that does nothing', () => {

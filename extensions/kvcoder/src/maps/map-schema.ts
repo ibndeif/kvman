@@ -8,6 +8,8 @@ export const mapStatuses = ['todo', 'doing', 'done', 'failed', 'skipped'] as con
 export const mapStepSchema = z.object({
   id: z.string(),
   title: z.string(),
+  // A step stored before ADR 0072 has none.
+  description: z.string().nullable().default(null),
   after: z.array(z.string()),
   uses: z.string().nullable(),
   check: z.string(),

@@ -48,7 +48,7 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
       '  edit  { id, edits: [{ oldText, newText }] }',
       '  get   { id }',
       '  help  { command? }',
-      '  set    { goal, steps: [{ id, title, after?, uses?, check }] }',
+      '  set    { goal, steps: [{ id, title, description, after?, uses?, check }] }',
       '  update { steps: [{ id, status: "todo" | "doing" | "done" | "failed" | "skipped", evidence?, note? }] }',
       '  note   { text }',
       '  get    {}',

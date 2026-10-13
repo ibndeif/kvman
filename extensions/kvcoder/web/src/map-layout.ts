@@ -3,7 +3,7 @@
 // the diagram's inline start, which the page mirrors in a right-to-left language.
 
 export type MapStatus = 'todo' | 'doing' | 'done' | 'failed' | 'skipped';
-export type MapStep = { id: string; title: string; after: string[]; uses: string | null; check: string; status: MapStatus; evidence: string | null; note: string | null };
+export type MapStep = { id: string; title: string; description: string | null; after: string[]; uses: string | null; check: string; status: MapStatus; evidence: string | null; note: string | null };
 export type ExecutionMapView = { goal: string; steps: MapStep[]; notes: { text: string; createdAt: string }[]; version: number; updatedAt: string };
 
 /** A step's width when the diagram isn't told how wide it may be, and the least and most it takes to fit. */
