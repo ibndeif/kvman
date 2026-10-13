@@ -81,3 +81,10 @@ export async function mounted(component: Component, fake: FakeKvman, props: Reco
   await flushPromises();
   return wrapper;
 }
+
+/** Picks `id` from the list of the picker whose button is `test`. */
+export async function choose(wrapper: VueWrapper, test: string, id: string): Promise<void> {
+  await wrapper.find(`[data-test="${test}"]`).trigger('click');
+  await wrapper.find(`[data-test="${test}-${id}"]`).trigger('click');
+  await flushPromises();
+}

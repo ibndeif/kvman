@@ -267,6 +267,8 @@
   "kvcoder.ui.artifacts.title": "Artifacts",
   "kvcoder.ui.artifacts.open": "Open",
   "kvcoder.ui.artifacts.close": "Close",
+  "kvcoder.ui.artifacts.choose": "Shown in the panel",
+  "kvcoder.ui.artifacts.resize": "Resize the panel",
   "kvcoder.ui.artifacts.version": "Version {version}",
   "kvcoder.ui.artifacts.toggle": "Artifacts ({count})",
   "kvcoder.ui.map.title": "Execution map",

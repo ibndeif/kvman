@@ -4,7 +4,7 @@ import ConversationView from '../../web/src/ConversationView.vue';
 import ArtifactPanel from '../../web/src/ArtifactPanel.vue';
 import { artifactPolicy } from '../../web/src/artifact-document.ts';
 import { createFakeKvman } from './support/fake-kvman.ts';
-import { artifactContent, artifactResult, artifactSummary, mounted, serve, session, turn, user, type World } from './support/fixtures.ts';
+import { artifactContent, artifactResult, artifactSummary, choose, mounted, serve, session, turn, user, type World } from './support/fixtures.ts';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -13,6 +13,21 @@ afterEach(() => {
 function chatWorld(): World {
   const found = session({ updatedAt: '2026-10-01T09:00:00.000Z' });
   return { found, messages: [user('Plan it'), artifactResult({})], omitted: 0, turns: [turn()] };
+}
+
+const report = artifactSummary({ id: 'report', title: 'The report', updatedAt: '2026-10-01T09:01:30.000Z' });
+const reportContent = artifactContent({ id: 'report', title: 'The report', content: '# Report', updatedAt: '2026-10-01T09:01:30.000Z' });
+
+// The plan as its `version` written at `updatedAt`, beside the report.
+function planVersion(version: number, updatedAt: string): Partial<World> {
+  return { artifacts: [artifactSummary({ version, updatedAt }), report], artifactContents: { plan: artifactContent({ version, content: `# Plan v${version}`, updatedAt }), report: reportContent } };
+}
+
+// The chat as its next read finds it.
+async function later(world: World, change: Partial<World>, stamp = change.artifacts?.[0]?.updatedAt ?? world.found.updatedAt): Promise<void> {
+  Object.assign(world, change, { found: session({ ...world.found, updatedAt: stamp }) });
+  await vi.advanceTimersByTimeAsync(5_000);
+  await flushPromises();
 }
 
 describe('the artifact panel beside the conversation (08 §8.7, ADR 0009, 177 and 182)', () => {
@@ -55,42 +70,61 @@ describe('the artifact panel beside the conversation (08 §8.7, ADR 0009, 177 an
     wrapper.unmount();
   });
 
-  it('QA6-H16 clicking a card opens the panel on that artifact, QA6-H17 titles switch it, QA6-H18 it follows updates, and QA6-E13 a closed panel stays closed on an update', async () => {
+  it('QA6-H16 clicking a card opens the panel on that artifact, QA6-H17 its title in the list switches it, and QA6-H18 it follows updates', async () => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] });
     const fake = createFakeKvman();
     const world = chatWorld();
-    world.artifacts = [artifactSummary({}), artifactSummary({ id: 'report', title: 'The report', updatedAt: '2026-10-01T09:01:30.000Z' })];
-    world.artifactContents = { plan: artifactContent({}), report: artifactContent({ id: 'report', title: 'The report', content: '# Report', updatedAt: '2026-10-01T09:01:30.000Z' }) };
+    world.artifacts = [artifactSummary({}), report];
+    world.artifactContents = { plan: artifactContent({}), report: reportContent };
     serve(fake, world);
     const wrapper = await mounted(ConversationView, fake, { sessionId: 's1' });
     await wrapper.find('[data-test="artifact-open"]').trigger('click');
     await flushPromises();
-    expect(wrapper.find('[data-test="artifact-panel"]').exists()).toBe(true);
-    expect(wrapper.find('[data-test="artifact-tab-report"]').exists()).toBe(true);
-    await wrapper.find('[data-test="artifact-tab-report"]').trigger('click');
-    await flushPromises();
+    expect(wrapper.find('[data-test="artifact-picker"]').text()).toBe('The plan');
+    await choose(wrapper, 'artifact-picker', 'artifact:report');
     expect(wrapper.find('[data-test="artifact-body"]').text()).toContain('# Report');
-    await wrapper.find('[data-test="artifact-tab-plan"]').trigger('click');
-    await flushPromises();
-    const report = artifactContent({ id: 'report', title: 'The report', content: '# Report', updatedAt: '2026-10-01T09:01:30.000Z' });
-    world.artifacts = [artifactSummary({ version: 2, updatedAt: '2026-10-01T09:03:00.000Z' }), artifactSummary({ id: 'report', title: 'The report', updatedAt: '2026-10-01T09:01:30.000Z' })];
-    world.artifactContents = { plan: artifactContent({ version: 2, content: '# Plan v2', updatedAt: '2026-10-01T09:03:00.000Z' }), report };
-    world.found = session({ updatedAt: '2026-10-01T09:03:00.000Z' });
-    await vi.advanceTimersByTimeAsync(5_000);
-    await flushPromises();
+    await choose(wrapper, 'artifact-picker', 'artifact:plan');
+    await later(world, planVersion(2, '2026-10-01T09:03:00.000Z'));
     expect(wrapper.find('[data-test="artifact-version"]').text()).toBe('Version 2');
     expect(wrapper.find('[data-test="artifact-body"]').text()).toContain('# Plan v2');
-    await wrapper.find('[data-test="artifact-close"]').trigger('click');
-    await flushPromises();
-    world.artifacts = [artifactSummary({ version: 3, updatedAt: '2026-10-01T09:04:00.000Z' }), artifactSummary({ id: 'report', title: 'The report', updatedAt: '2026-10-01T09:01:30.000Z' })];
-    world.artifactContents = { plan: artifactContent({ version: 3, content: '# Plan v3', updatedAt: '2026-10-01T09:04:00.000Z' }), report };
-    world.found = session({ updatedAt: '2026-10-01T09:04:00.000Z' });
-    await vi.advanceTimersByTimeAsync(5_000);
-    await flushPromises();
-    expect(wrapper.find('[data-test="artifact-panel"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('QA50-H3 an updated artifact opens a closed panel on itself, and takes the panel from another artifact', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] });
+    const fake = createFakeKvman();
+    const world = chatWorld();
+    world.artifacts = [artifactSummary({}), report];
+    world.artifactContents = { plan: artifactContent({}), report: reportContent };
+    serve(fake, world);
+    const wrapper = await mounted(ConversationView, fake, { sessionId: 's1' });
     await wrapper.find('[data-test="artifact-open"]').trigger('click');
     await flushPromises();
-    expect(wrapper.find('[data-test="artifact-panel"]').exists()).toBe(true);
+    await wrapper.find('[data-test="artifact-close"]').trigger('click');
+    expect(wrapper.find('[data-test="artifact-panel"]').exists()).toBe(false);
+    await later(world, planVersion(2, '2026-10-01T09:03:00.000Z'));
+    expect(wrapper.find('[data-test="artifact-picker"]').text()).toBe('The plan');
+    expect(wrapper.find('[data-test="artifact-body"]').text()).toContain('# Plan v2');
+    await choose(wrapper, 'artifact-picker', 'artifact:report');
+    expect(wrapper.find('[data-test="artifact-body"]').text()).toContain('# Report');
+    await later(world, planVersion(3, '2026-10-01T09:04:00.000Z'));
+    expect(wrapper.find('[data-test="artifact-picker"]').text()).toBe('The plan');
+    expect(wrapper.find('[data-test="artifact-body"]').text()).toContain('# Plan v3');
+    wrapper.unmount();
+  });
+
+  it('QA50-E3 a later read with nothing changed keeps the panel closed', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] });
+    const fake = createFakeKvman();
+    const world = chatWorld();
+    world.artifacts = [artifactSummary({}), report];
+    world.artifactContents = { plan: artifactContent({}), report: reportContent };
+    serve(fake, world);
+    const wrapper = await mounted(ConversationView, fake, { sessionId: 's1' });
+    expect(wrapper.find('[data-test="artifact-panel"]').exists()).toBe(false);
+    await later(world, {}, '2026-10-01T09:05:00.000Z');
+    expect(fake.calls.filter((call) => call.name === 'kvcoder.artifact.list').length).toBeGreaterThan(1);
+    expect(wrapper.find('[data-test="artifact-panel"]').exists()).toBe(false);
     wrapper.unmount();
   });
 

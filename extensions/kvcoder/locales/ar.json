@@ -267,6 +267,8 @@
   "kvcoder.ui.artifacts.title": "المخرجات",
   "kvcoder.ui.artifacts.open": "فتح",
   "kvcoder.ui.artifacts.close": "إغلاق",
+  "kvcoder.ui.artifacts.choose": "المعروض في اللوحة",
+  "kvcoder.ui.artifacts.resize": "تغيير عرض اللوحة",
   "kvcoder.ui.artifacts.version": "الإصدار {version}",
   "kvcoder.ui.artifacts.toggle": "المخرجات ({count})",
   "kvcoder.ui.map.title": "خريطة التنفيذ",

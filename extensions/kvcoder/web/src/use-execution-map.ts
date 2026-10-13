@@ -5,15 +5,18 @@ import type { useArtifacts } from './use-artifacts.ts';
 
 // One open chat's execution map (plan 08 §8.7, ADR 0064): the map, and whether the panel shows it in place of an
 // artifact. It is read whenever the chat changes. The first read marks what is there without opening; a map that
-// appears later opens the panel on it, and an artifact that then appears takes the panel back.
+// appears or changes later opens the panel on it, and so does an artifact: of the two, the one updated later is shown,
+// whichever read answers first (ADR 0071, 2).
 
-type Artifacts = Pick<ReturnType<typeof useArtifacts>, 'shown' | 'open' | 'openArtifact' | 'toggle' | 'close'>;
+type Artifacts = Pick<ReturnType<typeof useArtifacts>, 'open' | 'surfaced' | 'openArtifact' | 'toggle' | 'close'>;
 
 export function useExecutionMap(kvman: Kvman, sessionId: () => string | undefined, stamp: () => string | undefined, artifacts: Artifacts, failed: (error: unknown) => void) {
   const map = ref<ExecutionMapView | null>(null);
   const shown = ref(false);
   let current: string | undefined = undefined;
-  let known: boolean | undefined = undefined;
+  // The map's version at the last read (`null` with no map), and when the change that opened the panel was made.
+  let readVersion: number | null | undefined = undefined;
+  let changedAt: string | undefined = undefined;
   let loading = 0;
   let stopped = false;
 
@@ -21,7 +24,8 @@ export function useExecutionMap(kvman: Kvman, sessionId: () => string | undefine
     const session = sessionId();
     if (session !== current) {
       current = session;
-      known = undefined;
+      readVersion = undefined;
+      changedAt = undefined;
       map.value = null;
       shown.value = false;
     }
@@ -32,8 +36,12 @@ export function useExecutionMap(kvman: Kvman, sessionId: () => string | undefine
       if (stopped || ticket !== loading || sessionId() !== session) return;
       map.value = found;
       if (found === null) shown.value = false;
-      else if (known === false) shown.value = true;
-      known = found !== null;
+      else if (readVersion !== undefined && readVersion !== found.version) {
+        changedAt = found.updatedAt;
+        const artifact = artifacts.surfaced.value;
+        shown.value = artifact === undefined || artifact.updatedAt < found.updatedAt;
+      }
+      readVersion = found === null ? null : found.version;
     } catch (error) {
       if (!stopped && ticket === loading) failed(error);
     }
@@ -61,9 +69,9 @@ export function useExecutionMap(kvman: Kvman, sessionId: () => string | undefine
 
   onMounted(load);
   watch([sessionId, stamp], load);
-  // An artifact that appears, or is opened from its card, is what the person is shown.
-  watch([artifacts.shown, artifacts.open], ([, open]) => {
-    if (open) shown.value = false;
+  // An artifact that showed itself takes the panel, unless the map changed after it.
+  watch(artifacts.surfaced, (artifact) => {
+    if (artifact !== undefined && (changedAt === undefined || changedAt <= artifact.updatedAt)) shown.value = false;
   });
   onBeforeUnmount(() => {
     stopped = true;

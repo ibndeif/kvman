@@ -64,6 +64,16 @@ describe("the artifact panel's views and Copy (08 §8.7, ADR 0009, 214 and 216)"
     wrapper.unmount();
   });
 
+  it('QA50-E4 an update of the shown artifact keeps Source, with the new text', async () => {
+    const wrapper = await panel({ id: 'plan', content: '# Plan' });
+    await wrapper.find('[data-test="artifact-view-source"]').trigger('click');
+    await wrapper.setProps({ list: [artifactSummary({ version: 2 })], content: artifactContent({ version: 2, content: '# Plan v2' }) });
+    expect(wrapper.find('[data-test="artifact-view-source"]').attributes('aria-pressed')).toBe('true');
+    expect(wrapper.find('[data-test="artifact-source"]').text()).toBe('# Plan v2');
+    expect(wrapper.find('[data-test="artifact-version"]').text()).toBe('Version 2');
+    wrapper.unmount();
+  });
+
   it('QA12-H5 Copy puts the stored text on the clipboard and says it was copied', async () => {
     stubClipboard();
     written.mockResolvedValue(undefined);

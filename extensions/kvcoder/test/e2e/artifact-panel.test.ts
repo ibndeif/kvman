@@ -29,6 +29,13 @@ const rectOf = (page: Page, selector: string) => page.locator(selector).first().
 
 const scrollsSideways = (page: Page): Promise<boolean> => page.evaluate('document.documentElement.scrollWidth > window.innerWidth');
 
+// Whether the panel's header, or any part of it, scrolls sideways; a string, since it runs in Chromium.
+const headScrollsExpression = `(() => {
+  const head = document.querySelector('.kvc-artifact-head');
+  const scrolling = (part) => ['auto', 'scroll'].includes(getComputedStyle(part).overflowX);
+  return head.scrollWidth > head.clientWidth || [...head.querySelectorAll('*')].some(scrolling);
+})()`;
+
 describe('the artifact panel in Chromium (08 §8.7, ADR 0009, 177 and 182)', { timeout: 120_000 }, () => {
   it('QA6-H21 the panel sits beside the conversation on a wide window and over it on a narrow one', async () => {
     world = await kvmanWorld();
@@ -60,7 +67,7 @@ describe('the artifact panel in Chromium (08 §8.7, ADR 0009, 177 and 182)', { t
     await page.close();
   });
 
-  it("QA48-H15 the panel's titles stay on one line, the long one is cut, and the shown one is in view", async () => {
+  it('QA50-E2 the header never scrolls sideways: one title on one line, and a list inside the panel with each whole title as tooltip', async () => {
     world = await kvmanWorld();
     const kvman = await world.start();
     const titles = ['دليل القوالب — تصور بصري', 'دليل القوالب — موجز التصميم والمحتوى الكامل لكل صفحات المشروع', 'صفحة دليل إعداد قوالب Word', 'المواصفات الفنية للقوالب', 'خطة التنفيذ والمراجعة'];
@@ -72,25 +79,30 @@ describe('the artifact panel in Chromium (08 §8.7, ADR 0009, 177 and 182)', { t
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
     await page.goto(`${kvman.origin}/kvcoder/session/${sessionId}`);
     await page.locator('[data-test="artifact-open"]').last().click();
-    await page.locator('[data-test="artifact-tab-doc-5"][aria-selected="true"]').waitFor();
-    for (let index = 1; index <= titles.length; index += 1) expect((await rectOf(page, `[data-test="artifact-tab-doc-${index}"]`)).height, `title ${index}`).toBeLessThan(40);
+    const picker = page.locator('[data-test="artifact-picker"]');
+    await picker.waitFor();
+    expect(await picker.textContent()).toBe(titles[4]);
+    expect((await rectOf(page, '[data-test="artifact-picker"]')).height).toBeLessThan(40);
     expect((await rectOf(page, '.kvc-artifact-head')).height).toBeLessThan(96);
-    const row = await rectOf(page, '[role="tablist"]');
-    const shown = await rectOf(page, '[data-test="artifact-tab-doc-5"]');
-    expect(shown.x).toBeGreaterThanOrEqual(row.x - 1);
-    expect(shown.right).toBeLessThanOrEqual(row.right + 1);
-    const long = page.locator('[data-test="artifact-tab-doc-2"]');
-    expect(await long.getAttribute('title')).toBe(titles[1]);
-    expect(await long.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
-    expect((await rectOf(page, '[data-test="artifact-tab-doc-2"]')).width).toBeLessThanOrEqual(14 * 16 + 1);
-    await page.locator('[data-test="artifact-tab-doc-1"]').evaluate((element) => element.scrollIntoView({ inline: 'nearest' }));
-    await page.locator('[data-test="artifact-tab-doc-1"]').click();
-    await page.locator('[data-test="artifact-tab-doc-1"][aria-selected="true"]').waitFor();
+    expect(await page.evaluate(headScrollsExpression)).toBe(false);
+    await picker.click();
+    const panel = await rectOf(page, '[data-test="artifact-panel"]');
+    const list = await rectOf(page, '[data-test="artifact-picker-list"]');
+    expect(list.x).toBeGreaterThanOrEqual(panel.x - 1);
+    expect(list.right).toBeLessThanOrEqual(panel.right + 1);
+    for (let index = 1; index <= titles.length; index += 1) {
+      const option = page.locator(`[data-test="artifact-picker-artifact:doc-${index}"]`);
+      expect((await rectOf(page, `[data-test="artifact-picker-artifact:doc-${index}"]`)).height, `title ${index}`).toBeLessThan(40);
+      expect(await option.getAttribute('title')).toBe(titles[index - 1]);
+    }
+    await page.locator('[data-test="artifact-picker-artifact:doc-1"]').click();
+    await page.locator('[data-test="artifact-picker"]', { hasText: titles[0] ?? '' }).waitFor();
+    expect(await page.locator('[data-test="artifact-picker-list"]').count()).toBe(0);
     expect(await scrollsSideways(page)).toBe(false);
     await page.close();
   });
 
-  it('QA48-E18 a chat with one artifact shows its title, with no row of titles', async () => {
+  it('QA48-E18 a chat with one artifact shows its title, with no list of titles', async () => {
     world = await kvmanWorld();
     const kvman = await world.start();
     world.fake.reply(runs(command('artifact', 'write', { id: 'plan', title: 'The plan', content: '# The plan' })), says('Done.'));
@@ -101,7 +113,7 @@ describe('the artifact panel in Chromium (08 §8.7, ADR 0009, 177 and 182)', { t
     await page.goto(`${kvman.origin}/kvcoder/session/${sessionId}`);
     await page.locator('[data-test="artifact-open"]').first().click();
     expect(await page.locator('[data-test="artifact-title"]').textContent()).toBe('The plan');
-    expect(await page.locator('[role="tablist"]').count()).toBe(0);
+    expect(await page.locator('[data-test="artifact-picker"]').count()).toBe(0);
     await page.close();
   });
 });

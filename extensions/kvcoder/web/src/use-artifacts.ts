@@ -3,18 +3,22 @@ import type { Kvman } from '@kvman/sdk/web';
 
 // One open chat's artifacts (plan 08 §8.7, ADR 0009, 177 and 182): the list, the artifact the panel shows with its
 // content, and whether the panel is open. The first load marks what is there without opening; every later load opens
-// on an id that appears for the first time.
+// on an artifact that is new or was updated, the latest of them, and says so in `surfaced` (ADR 0071, 2).
 
 export type ArtifactSummary = { id: string; title: string; format: 'markdown' | 'html' | 'url'; version: number; size: number; updatedAt: string };
 
 export type ArtifactContent = { id: string; title: string; format: 'markdown' | 'html' | 'url'; version: number; content: string; createdAt: string; updatedAt: string };
+
+// What a read of an artifact is told apart by.
+const mark = (item: ArtifactSummary): string => `${item.version} ${item.updatedAt}`;
 
 export function useArtifacts(kvman: Kvman, sessionId: () => string | undefined, stamp: () => string | undefined, failed: (error: unknown) => void) {
   const list = ref<ArtifactSummary[]>([]);
   const shown = ref<string | undefined>(undefined);
   const content = ref<ArtifactContent | undefined>(undefined);
   const open = ref(false);
-  const seen = new Set<string>();
+  const surfaced = ref<{ id: string; updatedAt: string } | undefined>(undefined);
+  const read = new Map<string, string>();
   let current: string | undefined = undefined;
   let firstDone = false;
   let loading = 0;
@@ -23,7 +27,8 @@ export function useArtifacts(kvman: Kvman, sessionId: () => string | undefined, 
   function reset(next: string | undefined): void {
     current = next;
     firstDone = false;
-    seen.clear();
+    read.clear();
+    surfaced.value = undefined;
     list.value = [];
     shown.value = undefined;
     content.value = undefined;
@@ -63,7 +68,7 @@ export function useArtifacts(kvman: Kvman, sessionId: () => string | undefined, 
     list.value = summaries;
     if (!firstDone) {
       firstDone = true;
-      for (const item of summaries) seen.add(item.id);
+      for (const item of summaries) read.set(item.id, mark(item));
       if (summaries.length === 0) {
         shown.value = undefined;
         content.value = undefined;
@@ -76,13 +81,14 @@ export function useArtifacts(kvman: Kvman, sessionId: () => string | undefined, 
       if (showing !== undefined) await fetchContent(session, showing);
       return;
     }
-    const fresh = summaries.filter((item) => !seen.has(item.id));
-    for (const item of fresh) seen.add(item.id);
-    if (fresh.length > 0) {
-      const newest = [...fresh].sort((left, right) => (left.updatedAt < right.updatedAt ? 1 : left.updatedAt > right.updatedAt ? -1 : 0))[0];
+    const changed = summaries.filter((item) => read.get(item.id) !== mark(item));
+    for (const item of summaries) read.set(item.id, mark(item));
+    if (changed.length > 0) {
+      const newest = [...changed].sort((left, right) => (left.updatedAt < right.updatedAt ? 1 : left.updatedAt > right.updatedAt ? -1 : 0))[0];
       if (newest !== undefined) {
         shown.value = newest.id;
         open.value = true;
+        surfaced.value = { id: newest.id, updatedAt: newest.updatedAt };
         await fetchContent(session, newest.id);
       }
       return;
@@ -145,5 +151,5 @@ export function useArtifacts(kvman: Kvman, sessionId: () => string | undefined, 
     stopped = true;
   });
 
-  return { list, shown, content, open, select, openArtifact, toggle, close };
+  return { list, shown, content, open, surfaced, select, openArtifact, toggle, close };
 }

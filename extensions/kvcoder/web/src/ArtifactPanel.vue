@@ -1,18 +1,23 @@
 <script setup lang="ts">
 import { Code, Copy, ExternalLink, Eye, X } from '@lucide/vue';
-import { computed, nextTick, ref, useTemplateRef, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import ArtifactFrame from './ArtifactFrame.vue';
 import ArtifactUrlFrame from './ArtifactUrlFrame.vue';
+import ChoicePicker from './ChoicePicker.vue';
 import ExecutionMap from './ExecutionMap.vue';
 import type { ExecutionMapView } from './map-layout.ts';
+import { panelWidthKey, storedWidth } from './panel-width.ts';
+import PanelResizer from './PanelResizer.vue';
 import { frameableUrl } from './artifact-url.ts';
 import { toastProblem, useKvman } from './kvman.ts';
 import type { ArtifactContent, ArtifactSummary } from './use-artifacts.ts';
 
-// One artifact beside the conversation (plan 08 §8.7, ADR 0009, 177, 214; ADR 0017, 4): its title (a row of titles with
-// several) over its kind and version, a Preview and Source switch, and icon buttons to open, copy, and close; Markdown goes through the sanitized view, HTML only
-// through the isolated frame, and Source shows the text as stored. A chat's execution map is the first tab, before
-// its artifacts, and has no source, link, or copy (ADR 0064).
+// One artifact beside the conversation (plan 08 §8.7, ADR 0009, 177, 214; ADR 0017, 4): its title over its kind and
+// version, a Preview and Source switch, and icon buttons to open, copy, and close; Markdown goes through the sanitized
+// view, HTML only through the isolated frame, and Source shows the text as stored. With more than one thing to show, the
+// title is a button that opens the list of them (ADR 0071, 1): the chat's execution map first, which has no source,
+// link, or copy (ADR 0064), then its artifacts. The person drags the panel's width, which the browser keeps; one
+// outside the limits is shown at the nearest (ADR 0071, 4).
 const props = defineProps<{ list: ArtifactSummary[]; shown: string | undefined; content: ArtifactContent | undefined; map?: ExecutionMapView | null | undefined; mapShown?: boolean | undefined }>();
 const emit = defineEmits<{ select: [id: string]; selectMap: []; close: [] }>();
 const kvman = useKvman();
@@ -26,14 +31,33 @@ const version = computed(() => current.value?.version ?? summary.value?.version 
 const format = computed(() => current.value?.format ?? summary.value?.format ?? 'markdown');
 const body = computed(() => current.value?.content ?? '');
 const frameLabel = computed(() => kvman.t('kvcoder.ui.artifacts.frameLabel', { title: title.value }));
+const width = ref(storedWidth(localStorage.getItem(panelWidthKey)));
+const widthStyle = computed(() => (width.value === undefined ? undefined : { '--kvc-panel-width': `${width.value}px` }));
+
+function resize(px: number): void {
+  width.value = px;
+  localStorage.setItem(panelWidthKey, String(px));
+}
+
+function resetWidth(): void {
+  width.value = undefined;
+  localStorage.removeItem(panelWidthKey);
+}
+
 const mode = ref<'preview' | 'source'>('preview');
 watch(() => props.shown, () => (mode.value = 'preview'));
-// The shown artifact's title stays in view in a row of titles too long to fit (ADR 0036, 15).
-const titles = useTemplateRef<HTMLElement>('titles');
-watch(() => [props.shown, props.list.length, props.mapShown], async () => {
-  await nextTick();
-  titles.value?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-}, { immediate: true });
+// An artifact's entry carries a prefix, so one whose id is `map` is never taken for the map.
+const artifactPrefix = 'artifact:';
+const choices = computed(() => [
+  ...(props.map ? [{ id: 'map', label: kvman.t('kvcoder.ui.map.title') }] : []),
+  ...props.list.map((item) => ({ id: `${artifactPrefix}${item.id}`, label: item.title })),
+]);
+const chosen = computed(() => (onMap.value ? 'map' : props.shown === undefined ? undefined : `${artifactPrefix}${props.shown}`));
+
+function choose(id: string): void {
+  if (id.startsWith(artifactPrefix)) emit('select', id.slice(artifactPrefix.length));
+  else emit('selectMap');
+}
 
 async function copy(): Promise<void> {
   try {
@@ -48,13 +72,11 @@ const markdownView = computed(() => ({ type: 'markdown' as const, text: 'kvcoder
 </script>
 
 <template>
-  <aside class="kvc-artifact-panel" data-test="artifact-panel" :aria-label="kvman.t('kvcoder.ui.artifacts.title')">
+  <aside class="kvc-artifact-panel" data-test="artifact-panel" :aria-label="kvman.t('kvcoder.ui.artifacts.title')" :data-sized="width !== undefined" :style="widthStyle">
+    <PanelResizer @resize="resize" @reset="resetWidth" />
     <div class="kvc-artifact-head">
       <div class="kvc-artifact-name">
-        <div v-if="tabbed" ref="titles" role="tablist" class="kvc-artifact-tabs">
-          <button v-if="props.map" type="button" role="tab" class="kvc-tab" :aria-selected="onMap" data-test="artifact-tab-map" @click="emit('selectMap')">{{ kvman.t('kvcoder.ui.map.title') }}</button>
-          <button v-for="item in props.list" :key="item.id" type="button" role="tab" class="kvc-tab" :aria-selected="!onMap && item.id === props.shown" :title="item.title" :data-test="`artifact-tab-${item.id}`" @click="emit('select', item.id)">{{ item.title }}</button>
-        </div>
+        <ChoicePicker v-if="tabbed" test="artifact-picker" :label="kvman.t('kvcoder.ui.artifacts.choose')" :current="chosen" :options="choices" @pick="choose" />
         <span v-else class="kvc-artifact-title kvc-oneline" data-test="artifact-title">{{ title }}</span>
         <span v-if="!onMap" class="kvc-muted" data-test="artifact-meta"><span data-test="artifact-format">{{ kvman.t(`kvcoder.ui.artifacts.format.${format}`) }}</span> · <span data-test="artifact-version">{{ kvman.t('kvcoder.ui.artifacts.version', { version: version }) }}</span></span>
       </div>

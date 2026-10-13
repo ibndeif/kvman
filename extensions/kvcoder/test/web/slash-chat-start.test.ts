@@ -4,7 +4,7 @@ import { ProblemError } from '@kvman/sdk';
 import ChatStart from '../../web/src/ChatStart.vue';
 import type { RegisteredSlash } from '../../web/src/slash-commands.ts';
 import { createFakeKvman, type FakeKvman } from './support/fake-kvman.ts';
-import { mounted } from './support/fixtures.ts';
+import { choose, mounted } from './support/fixtures.ts';
 
 type Wrapper = Awaited<ReturnType<typeof mounted>>;
 
@@ -85,7 +85,7 @@ describe('a registered slash command on the Chat page (08 §8.7, ADR 0028)', () 
     const view = await start(picked);
     await view.find('[data-test="model-picker"]').trigger('click');
     await view.find('[data-test="model-zed/z1"]').trigger('click');
-    await view.find('[data-test="thinking-picker"]').setValue('low');
+    await choose(view, 'thinking-picker', 'low');
     await run(view, '/todo');
     expect(ran(picked)).toEqual([
       { name: 'kvcoder.session.create', input: {} },

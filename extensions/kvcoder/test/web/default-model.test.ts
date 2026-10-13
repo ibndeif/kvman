@@ -2,7 +2,7 @@ import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import SessionModel from '../../web/src/SessionModel.vue';
 import { createFakeKvman, type FakeKvman } from './support/fake-kvman.ts';
-import { mounted, session } from './support/fixtures.ts';
+import { choose, mounted, session } from './support/fixtures.ts';
 
 const providers = [
   { id: 'zed', title: 'Zed AI', status: 'ready' },
@@ -40,7 +40,7 @@ describe("picking a model makes it the default (ADR 0009, 205)", () => {
     ]);
     expect(wrapper.emitted('changed')?.length).toBe(1);
 
-    await wrapper.find('[data-test="thinking-picker"]').setValue('low');
+    await choose(wrapper, 'thinking-picker', 'low');
     await flushPromises();
     expect(fake.calls.filter((call) => call.name === 'kvcoder.session.configure')).toEqual([
       { name: 'kvcoder.session.configure', input: { sessionId: 's1', model: 'zed/z1' } },

@@ -2,7 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import ChatStart from '../../web/src/ChatStart.vue';
 import { createFakeKvman, type FakeKvman } from './support/fake-kvman.ts';
-import { mounted } from './support/fixtures.ts';
+import { choose, mounted } from './support/fixtures.ts';
 
 type Settings = { model: string | null; defaultModel: string | null; thinking?: string };
 
@@ -44,17 +44,17 @@ async function send(wrapper: Awaited<ReturnType<typeof mounted>>, text: string):
   await flushPromises();
 }
 
-const thinkingOf = (wrapper: Awaited<ReturnType<typeof mounted>>): string => (wrapper.find('[data-test="thinking-picker"]').element as HTMLSelectElement).value;
+const thinkingOf = (wrapper: Awaited<ReturnType<typeof mounted>>): string => wrapper.find('[data-test="thinking-picker"]').text();
 
 describe("the Chat page's new chat (08 §8.7, ADR 0009, 194)", () => {
   it('QA9-H2 the header shows the model a new chat would use, and the thinking level', async () => {
     const first = await mounted(ChatStart, startFake({ model: null, defaultModel: 'fake/m1' }));
     expect(first.find('[data-test="model-picker"]').text()).toBe('M1');
-    expect(thinkingOf(first)).toBe('medium');
+    expect(thinkingOf(first)).toBe('Medium');
     first.unmount();
 
     const high = await mounted(ChatStart, startFake({ model: null, defaultModel: 'fake/m1', thinking: 'high' }));
-    expect(thinkingOf(high)).toBe('high');
+    expect(thinkingOf(high)).toBe('High');
     high.unmount();
 
     const picked = await mounted(ChatStart, startFake({ model: 'zed/z1', defaultModel: 'fake/m1' }));
@@ -62,12 +62,12 @@ describe("the Chat page's new chat (08 §8.7, ADR 0009, 194)", () => {
     picked.unmount();
   });
 
-  it('QA9-H3 a picked model and thinking level are set before the first message', async () => {
+  it('QA9-H3 a picked model and thinking level are set before the first message, and QA50-H7 the level is picked from its list', async () => {
     const fake = startFake({ model: null, defaultModel: 'fake/m1' });
     const wrapper = await mounted(ChatStart, fake);
     await wrapper.find('[data-test="model-picker"]').trigger('click');
     await wrapper.find('[data-test="model-zed/z1"]').trigger('click');
-    await wrapper.find('[data-test="thinking-picker"]').setValue('low');
+    await choose(wrapper, 'thinking-picker', 'low');
     await send(wrapper, 'Build it');
     expect(fake.calls).toEqual([
       { name: 'kernel.settings.list', input: {} },
@@ -222,14 +222,14 @@ describe("the Chat page's new chat (08 §8.7, ADR 0009, 194)", () => {
     const first = await mounted(ChatStart, fake);
     await first.find('[data-test="model-picker"]').trigger('click');
     await first.find('[data-test="model-zed/z1"]').trigger('click');
-    await first.find('[data-test="thinking-picker"]').setValue('low');
+    await choose(first, 'thinking-picker', 'low');
     await send(first, 'Build it');
     expect(fake.calls.map((call) => call.name)).toContain('kvcoder.session.create');
     first.unmount();
 
     const second = await mounted(ChatStart, fake);
     expect(second.find('[data-test="model-picker"]').text()).toBe('Z1');
-    expect(thinkingOf(second)).toBe('medium');
+    expect(thinkingOf(second)).toBe('Medium');
     second.unmount();
   });
 });

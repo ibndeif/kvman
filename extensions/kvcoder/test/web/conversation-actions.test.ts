@@ -2,7 +2,7 @@ import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import ConversationView from '../../web/src/ConversationView.vue';
 import { createFakeKvman } from './support/fake-kvman.ts';
-import { mounted, serve, session, user } from './support/fixtures.ts';
+import { choose, mounted, serve, session, user } from './support/fixtures.ts';
 
 const ok = () => ({});
 
@@ -35,7 +35,7 @@ describe("the conversation's actions (08 §8.7, ADR 0009, 104)", () => {
 
     await wrapper.find('[data-test="model-picker"]').trigger('click');
     await wrapper.find('[data-test="model-fake/m2"]').trigger('click');
-    await wrapper.find('[data-test="thinking-picker"]').setValue('high');
+    await choose(wrapper, 'thinking-picker', 'high');
     await flushPromises();
     expect(fake.calls.filter((call) => call.name === 'kvcoder.session.configure').map((call) => call.input)).toEqual([{ sessionId: 's1', model: 'fake/m2' }, { sessionId: 's1', thinking: 'high' }]);
 
