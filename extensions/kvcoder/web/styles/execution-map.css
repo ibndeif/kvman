@@ -21,6 +21,7 @@
 .kvc-map-step[data-status='skipped'] { border-style: dashed; color: var(--kv-color-muted); }
 .kvc-map-step[aria-pressed='true'] { box-shadow: 0 0 0 2px color-mix(in srgb, var(--kv-color-primary) 35%, transparent); }
 .kvc-map-step:focus-visible { outline: 2px solid var(--kv-color-primary); outline-offset: 2px; }
-.kvc-map-detail { padding: 10px 12px; border: 1px solid var(--kv-color-border); border-radius: 10px; font-size: 13px; }
+.kvc-map-dialog { max-inline-size: 36rem; font-size: 14px; }
+.kvc-map-dialog .kvc-fields { gap: 8px 16px; }
 .kvc-map-noted > h3 { margin: 0 0 6px; font-size: 13px; font-weight: 600; }
 .kvc-map-noted > ul { margin: 0; padding-inline-start: 18px; font-size: 13px; display: flex; flex-direction: column; gap: 4px; }

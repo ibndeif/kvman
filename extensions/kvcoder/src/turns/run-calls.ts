@@ -8,6 +8,7 @@ import { startBackgroundRun } from '../delegate/start-background.ts';
 import { availableWorker, isProgram } from '../delegate/workers.ts';
 import { creationGuard } from '../delegate/permission.ts';
 import { recordFileView } from '../files/file-change.ts';
+import { lastChange, mapReminder } from '../maps/map-reminder.ts';
 import { invalid } from '../problems.ts';
 import { errorOutput, invalidPayloadOutput, type JsonValue } from '../connector-call.ts';
 import type { SessionTools } from '../prompt/session-prompt.ts';
@@ -124,11 +125,26 @@ export async function evaluateCalls(env: CallEnv, calls: readonly ToolCall[]): P
     return done;
   })();
   const [inOrder, atOnce] = await Promise.all([ordered, Promise.all(free)]);
-  return calls.map((toolCall, index) => {
+  const outcomes = calls.map((toolCall, index) => {
     const outcome = atOnce[index] ?? inOrder.get(toolCall);
     if (outcome === undefined) throw invalid('A call of the reply was not evaluated.');
     return outcome;
   });
+  return reminded(env, calls, outcomes);
+}
+
+// The lead's reply that changed something while its map says no task is being done is told so once (ADR 0074, 6).
+async function reminded(env: CallEnv, calls: readonly ToolCall[], outcomes: CallOutcome[]): Promise<CallOutcome[]> {
+  if (env.session.parentId !== null) return outcomes;
+  const parsed = calls.map((toolCall) => {
+    const args = toolCall.name === 'run' ? parseRunArgs(toolCall.arguments) : undefined;
+    return args?.success === true ? args.data : undefined;
+  });
+  const index = lastChange(parsed, outcomes.map((outcome) => outcome.kind === 'result' && !outcome.held.isError));
+  const outcome = index === undefined ? undefined : outcomes[index];
+  if (index === undefined || outcome?.kind !== 'result') return outcomes;
+  const line = await mapReminder(env.ctx, env.session.id);
+  return line === undefined ? outcomes : outcomes.with(index, { kind: 'result', held: { ...outcome.held, text: `${outcome.held.text}${line}` } });
 }
 
 async function evaluateCurrentCall(env: CallEnv, toolCall: ToolCall, call: RunCall, held: boolean): Promise<CallOutcome> {

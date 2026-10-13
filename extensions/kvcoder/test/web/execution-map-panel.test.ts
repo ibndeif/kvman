@@ -123,7 +123,7 @@ describe('the execution map beside the conversation (08 §8.7, ADR 0064)', () =>
       return mounted(ConversationView, fake, { sessionId: 's1' });
     };
     const left = await shown({ map: executionMap(steps()) });
-    expect(part(left, 'map-remaining').text()).toBe('2 steps of the execution map are not done. Show the map');
+    expect(part(left, 'map-remaining').text()).toBe('2 tasks of the execution map are not done. Show the map');
     await part(left, 'map-show').trigger('click');
     expect(part(left, 'execution-map').exists()).toBe(true);
     const quiet = [

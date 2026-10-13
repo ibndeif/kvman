@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { artifactDescription } from '../../src/connectors/artifact.ts';
-import { executionMapDescription } from '../../src/connectors/execution-map.ts';
+import { payloadJsonSchema } from '../../src/connectors/connector-command.ts';
+import { executionMapCommands, executionMapDescription } from '../../src/connectors/execution-map.ts';
 import { workingMethod } from '../../src/prompt/working-method.ts';
 
 const steps = (text: string): string[] => text.split('\n').filter((line) => /^\d\. /.test(line)).map((line) => line.slice(0, line.indexOf('. ', 3)));
@@ -18,7 +19,7 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
       'A task that turns out larger than it looked gets its map then, and one that turns out simple drops what it does not need.',
       'These are the parts of a path. Use only the ones your path has.',
       'With no map, make the smallest change that does the task, check it, and fix a failure at its cause.',
-      'mark it done with your evidence, which is what you ran and what it showed. A step is not done because you wrote it.',
+      'mark it done with your evidence, which is what you ran and what it showed, before you start the next task: don\'t save the marks for the end. A task is not done because you wrote it.',
       'do not look into it: record it with `execution-map note`, or keep it for your final answer when there is no map, and go on.',
       'only when it is separate work that runs beside yours, or a fresh review of a change you finished',
       'show it in an artifact: the design as an HTML page before you build it when the layout is a real choice, and the running app as a url artifact once it runs',
@@ -41,15 +42,41 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
     for (const phrase of [
       'Plan. Only after you understood the request, looked at what exists, and have your answers, and before you change anything, plan with `execution-map set`: never in your first reply, because a map made before you looked is a guess.',
       'The map is the implementation plan the person reads, so make it detailed, not an outline.',
-      'A step is one concrete change you can name before you start it: the file or the few files that change together, a test, or a command to run, never a phase such as implement or a whole feature.',
-      'Its description says what the step changes and how, naming the files or parts and the approach, in words the person understands without reading the code; its check is the exact command you will run or the thing you will look at.',
+      'A task is one concrete change you can name before you start it: the file or the few files that change together, a test, or a command to run, never a phase such as implement or a whole feature.',
+      'Its description says what the task changes and how, naming the files or parts and the approach, in words the person understands without reading the code; its check is the exact command you will run or the thing you will look at.',
       "end the map with the project's own checks (its build, lint, and tests)",
-      'Confirm the plan. The person agrees to the map before you work on it. Once an `execution-map set` that made the map or changed its steps succeeded, and before you start any step, call `ask choice` with other set to true: ask whether to start, with the option that starts first and an option that changes the plan, so the person can write what to change.',
+      'Confirm the plan. The person agrees to the map before you work on it. Once an `execution-map set` that made the map or changed its tasks succeeded, and before you start any task, call `ask choice` with other set to true: ask whether to start, with the option that starts first and an option that changes the plan, so the person can write what to change.',
       'When they ask for changes, set the map again with them and ask again; start only after they chose to start. A change of status with `execution-map update` needs no confirmation.',
     ]) expect(lead, phrase).toContain(phrase);
     for (const gone of ['`ask confirm`', 'Set it in the same reply as your first call', 'For a large, ambiguous, or risky task']) expect(lead, gone).not.toContain(gone);
     expect(executionMapDescription).toContain('the detailed implementation plan the person reads, agrees to, and watches as a diagram');
-    expect(executionMapDescription).toContain('A step says what it changes and how in its description, which the person opens with a press');
+    expect(executionMapDescription).toContain('A task says what it changes and how in its description, which the person opens with a press');
+  });
+
+  it('M2.4-E276 branches come from real dependencies, and the map is followed and kept live', () => {
+    const lead = workingMethod('lead');
+    for (const phrase of [
+      "Shape the map from what truly depends on what. A task comes after another only when it needs that task's result: its file, its output, or its decision. The order you thought of them in is not a reason.",
+      'Tasks that touch separate files or parts and need nothing from each other are branches: give them the same `after`, or none, so the map shows them side by side and they can run together.',
+      'Where branches meet, add the task that joins them, such as wiring the parts together or the check that needs all of them, after every branch it needs.',
+      'A chain is right only when each task needs the one before it.',
+      'after everything they cover.',
+      'With a map, the map is how you work, and the person follows the work on it, so it must always say where you are.',
+      'Every map call returns the tasks that are ready: take those, and never work on a task the map does not have.',
+      'Mark a task doing before your first call on it, in the same reply as that call, and when several are ready, mark each one you start.',
+      'Do small ready tasks together in one reply, and hand a large separate branch to a worker that runs beside you, as Delegate says.',
+      'As soon as its check passed, mark it done with your evidence',
+      "Mark a task you can't finish failed with a note that says why, and one that turned out unneeded skipped with a note.",
+      'When the plan itself changes (a task is missing, one is no longer needed, or the order was wrong), set the map again before you go on: a task whose id stays keeps how far it got.',
+    ]) expect(lead, phrase).toContain(phrase);
+  });
+
+  it('M2.4-E277 the map connector speaks of tasks, and only the field is named steps', () => {
+    const said = [executionMapDescription, ...Object.values(executionMapCommands).map((command) => command.description), JSON.stringify(payloadJsonSchema(executionMapCommands.set.payload)), JSON.stringify(payloadJsonSchema(executionMapCommands.update.payload))].join('\n');
+    expect(said).toContain('where each node is one task');
+    expect(said).toContain('comes after another only when it needs its result, so separate tasks are branches that run together');
+    expect(said).toContain('The ids of the tasks whose result this one needs');
+    expect(said.replaceAll('"steps"', '').match(/\bsteps?\b/gi)).toBeNull();
   });
 
   it('M2.4-E228 both roles spend context with care and add nothing unasked, and the artifact connector names no plan', () => {

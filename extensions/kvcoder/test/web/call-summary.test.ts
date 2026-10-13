@@ -38,7 +38,7 @@ describe("a closed card's line (08 §8.7, ADR 0036, 2)", () => {
       shown.push(closedLine(card));
       card.unmount();
     }
-    expect(shown).toEqual(['Edit src/app.ts +2 −1', 'Write notes.md Created · 1.2 KB', 'Read src/app.ts Lines 24–98 of 120', 'List src 14 entries', 'Search markStatus 9 matches in 3 files', '$ pnpm test', '$ git status', 'github · list_issues', 'playwright · browser_navigate, browser_snapshot', 'Tools github 12 tools', 'Delegate reviewer · Security reviewer', 'Background runs 2 runs', 'Output j1', 'Stop j1', 'Wait for j1 Done', 'Plan Ship the page 0 of 1 done', 'Map step read, build 1 of 3 done', 'Noted for later The parser takes two-digit years.', 'Read artifact plan']);
+    expect(shown).toEqual(['Edit src/app.ts +2 −1', 'Write notes.md Created · 1.2 KB', 'Read src/app.ts Lines 24–98 of 120', 'List src 14 entries', 'Search markStatus 9 matches in 3 files', '$ pnpm test', '$ git status', 'github · list_issues', 'playwright · browser_navigate, browser_snapshot', 'Tools github 12 tools', 'Delegate reviewer · Security reviewer', 'Background runs 2 runs', 'Output j1', 'Stop j1', 'Wait for j1 Done', 'Plan Ship the page 0 of 1 done', 'Map task read, build 1 of 3 done', 'Noted for later The parser takes two-digit years.', 'Read artifact plan']);
   });
 
   it('QA48-H12 a risky call says so, and another does not', async () => {

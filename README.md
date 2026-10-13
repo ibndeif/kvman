@@ -36,6 +36,8 @@ The agent chooses how to work on each task: it sizes the task up, answers a ques
 
 An image you attach is named to the agent as shown in the message, so it no longer looks for it among the project's files. In the desktop app on Linux, pasting a copied image (a screenshot, say) with Ctrl+V attaches it; if the clipboard can't be read, a message says to use the attach button (ADR 0073).
 
+Each node of the execution map is a task. Press one to open its details in a dialog: what it changes, what it comes after and uses, how it is checked, its evidence, and its note; the dialog follows the task while the agent works. The agent draws a task after another only when it needs that task's result, so separate parts show side by side as branches; it marks a task in progress when it starts it and done as soon as its check passed. If it changes files or runs a shell line while tasks are left and none is marked in progress, kvman reminds it to mark the task or to update the map; nothing is blocked (ADR 0074).
+
 Extensions can continue collection `find` with an exclusive `after` ID in ascending or descending order, without raising the 1000-document page limit. Pages do not share a cross-call snapshot; updated SDK types alone do not add this support to an older kernel ([storage guide](docs/developers/storage.md)).
 
 ## Documentation
