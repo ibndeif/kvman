@@ -29,14 +29,14 @@ function circle(steps: readonly PlannedStep[]): string[] {
 export function shapeProblem(steps: readonly PlannedStep[]): string | undefined {
   const ids = steps.map((step) => step.id);
   const twice = ids.find((id, index) => ids.indexOf(id) !== index);
-  if (twice !== undefined) return `Two tasks have the id ${twice}. Give each task its own id.`;
+  if (twice !== undefined) return `Two steps have the id ${twice}. Give each step its own id.`;
   for (const step of steps) {
     const unknown = (step.after ?? []).find((id) => !ids.includes(id));
-    if ((step.after ?? []).includes(step.id)) return `The task ${step.id} can't come after itself.`;
-    if (unknown !== undefined) return `The task ${step.id} comes after ${unknown}, which is not a task of the map.`;
+    if ((step.after ?? []).includes(step.id)) return `The step ${step.id} can't come after itself.`;
+    if (unknown !== undefined) return `The step ${step.id} comes after ${unknown}, which is not a step of the map.`;
   }
   const stuck = circle(steps);
-  return stuck.length === 0 ? undefined : `These tasks wait on each other in a circle, so none can start: ${stuck.join(', ')}.`;
+  return stuck.length === 0 ? undefined : `These steps wait on each other in a circle, so none can start: ${stuck.join(', ')}.`;
 }
 
 /** The steps of a new map: one whose id the old map had keeps how far it got. */
@@ -67,7 +67,7 @@ export function changedSteps(steps: readonly MapStep[], changes: readonly StepCh
   for (const change of changes) {
     const index = current.findIndex((step) => step.id === change.id);
     const step = current[index];
-    if (step === undefined) return `The map has no task ${change.id}. Its tasks are: ${current.map((candidate) => candidate.id).join(', ')}.`;
+    if (step === undefined) return `The map has no step ${change.id}. Its steps are: ${current.map((candidate) => candidate.id).join(', ')}.`;
     const next = changed(current, step, change);
     if (typeof next === 'string') return next;
     current = current.with(index, next);

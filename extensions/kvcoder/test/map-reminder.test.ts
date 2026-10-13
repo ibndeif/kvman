@@ -9,7 +9,7 @@ const set = (...tasks: ReturnType<typeof task>[]): RunCallSpec => command('execu
 const update = (...steps: Record<string, string>[]): RunCallSpec => command('execution-map', 'update', { steps });
 const done = (id: string) => ({ id, status: 'done', evidence: 'pnpm test passed, 12 of 12' });
 const write = (path: string): RunCallSpec => fsCall('write', { path, content: 'x\n' });
-const reminder = (left: number): string => `\n\n[kvman: the execution map has ${left} unfinished ${left === 1 ? 'task' : 'tasks'} and none is marked doing. Mark the task this work belongs to with execution-map update, or set the map again when the plan changed.]`;
+const reminder = (left: number): string => `\n\n[kvman: the execution map has ${left} unfinished ${left === 1 ? 'step' : 'steps'} and none is marked doing. Mark the step this work belongs to with execution-map update, or set the map again when the plan changed.]`;
 
 // The results the model read for a reply of `calls`, made after the replies `before`.
 async function lastResults(calls: readonly RunCallSpec[], ...before: RunCallSpec[][]) {
@@ -22,7 +22,7 @@ async function lastResults(calls: readonly RunCallSpec[], ...before: RunCallSpec
 }
 
 describe('the reminder that keeps the execution map live (08 §8.5; ADR 0074, 6 and 7)', { timeout: 30_000 }, () => {
-  it('M2.4-E273 a change made while no task is marked doing is told so, in the text the model reads and not on the card', async () => {
+  it('M2.4-E273 and E278 a change made while no step is marked doing is told so, in the text the model reads and not on the card', async () => {
     const { kernel, sessionId, results } = await lastResults([write('a.txt')], [set(task('store'), task('page'))]);
     expect(results).toHaveLength(1);
     expect(results[0]?.endsWith(reminder(2))).toBe(true);
@@ -34,7 +34,7 @@ describe('the reminder that keeps the execution map live (08 §8.5; ADR 0074, 6 
     expect(one.results[0]?.endsWith(reminder(1))).toBe(true);
   });
 
-  it('M2.4-E274 no line with a task doing, a finished map, no map, a reply that tends the map, only reads, or a failed change', async () => {
+  it('M2.4-E274 no line with a step doing, a finished map, no map, a reply that tends the map, only reads, or a failed change', async () => {
     const quiet = async (...replies: Parameters<typeof lastResults>): Promise<void> => {
       const { results } = await lastResults(...replies);
       expect(results.length).toBeGreaterThan(0);

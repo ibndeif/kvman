@@ -28,13 +28,14 @@ describe("the lead's prompt (08 §8.2, ADR 0022, 2 to 4)", () => {
     const prompt = lead();
     expect(lineOf(prompt, 'Understand. ')).toContain('Work out what the person needs, not only what they typed.');
     const plan = lineOf(prompt, 'Plan. ');
-    expect(plan).toContain('has a title, a description, what it comes after, what it uses (a connector from the list below, a worker), and how you will check it.');
-    expect(plan).toContain('give them the same `after`, or none, so the map shows them side by side and they can run together.');
+    expect(plan).toContain('each with a title, a description, what it comes after, what it uses, and how you will check it.');
+    expect(plan).toContain('yourself, with a connector from the list below, for an ordinary change; or a worker of the `delegate` connector whose description fits');
+    expect(plan).toContain('A branch means delegation: steps side by side on the map run at the same time, each done by a worker.');
   });
 
   it('QA33-H4 independent work runs together: steps, calls, and workers, whose answers the lead checks', () => {
     const prompt = lead();
-    expect(lineOf(prompt, 'Execute. ')).toContain('Do small ready tasks together in one reply, and hand a large separate branch to a worker that runs beside you, as Delegate says.');
+    expect(lineOf(prompt, 'Execute. ')).toContain('When several steps are ready together they are branches: mark each doing and start them all in one reply, one `delegate run` each, so they run at the same time.');
     const delegate = lineOf(prompt, 'Delegate. ');
     expect(delegate).toContain('Several `delegate run` calls in one reply run in parallel.');
     expect(delegate).toContain('Read what a worker returns and check it before you rely on it: its work is your responsibility.');

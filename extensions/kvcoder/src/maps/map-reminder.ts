@@ -3,7 +3,7 @@ import type { RunCall } from '../calls/run-tool.ts';
 import { records } from '../store/collections.ts';
 
 // The reminder that keeps a map live (plan 08 §8.5; ADR 0074, 6 and 7): a reply of the chat's own agent that changed
-// something while the map has tasks left and none marked doing is told so, once, and nothing is refused.
+// something while the map has steps left and none marked doing is told so, once, and nothing is refused (ADR 0075, 1).
 
 const changes: ReadonlySet<string> = new Set(['fs write', 'fs edit', 'shell exec']);
 const tends: ReadonlySet<string> = new Set(['execution-map set', 'execution-map update']);
@@ -22,5 +22,5 @@ export async function mapReminder(ctx: Ctx, chatId: string): Promise<string | un
   if (map === undefined || map.steps.some((step) => step.status === 'doing')) return undefined;
   const left = map.steps.filter((step) => step.status === 'todo' || step.status === 'failed').length;
   if (left === 0) return undefined;
-  return `\n\n[kvman: the execution map has ${left} unfinished ${left === 1 ? 'task' : 'tasks'} and none is marked doing. Mark the task this work belongs to with execution-map update, or set the map again when the plan changed.]`;
+  return `\n\n[kvman: the execution map has ${left} unfinished ${left === 1 ? 'step' : 'steps'} and none is marked doing. Mark the step this work belongs to with execution-map update, or set the map again when the plan changed.]`;
 }

@@ -9,10 +9,10 @@ const evidence = 'pnpm test passed, 12 of 12';
 
 describe('the rules of an execution map (ADR 0064, 2, 3, and 5)', () => {
   it('M2.4-E218 a map with a wrong shape is refused by name, and a valid one gives its ready steps', () => {
-    expect(shapeProblem([step('a'), step('a')])).toBe('Two tasks have the id a. Give each task its own id.');
-    expect(shapeProblem([step('a', ['b'])])).toBe('The task a comes after b, which is not a task of the map.');
-    expect(shapeProblem([step('a', ['a'])])).toBe("The task a can't come after itself.");
-    expect(shapeProblem([step('a', ['c']), step('b', ['a']), step('c', ['b']), step('d')])).toBe('These tasks wait on each other in a circle, so none can start: a, b, c.');
+    expect(shapeProblem([step('a'), step('a')])).toBe('Two steps have the id a. Give each step its own id.');
+    expect(shapeProblem([step('a', ['b'])])).toBe('The step a comes after b, which is not a step of the map.');
+    expect(shapeProblem([step('a', ['a'])])).toBe("The step a can't come after itself.");
+    expect(shapeProblem([step('a', ['c']), step('b', ['a']), step('c', ['b']), step('d')])).toBe('These steps wait on each other in a circle, so none can start: a, b, c.');
     expect(shapeProblem(diamond)).toBeUndefined();
     expect(readySteps(fresh()).map((found) => found.id)).toEqual(['read']);
     expect(mapProgress({ goal: 'Ship', steps: fresh(), notes: [] })).toEqual({ goal: 'Ship', progress: '0 of 4 done', doing: [], ready: ['read: Do read'], waiting: ['store: Do store', 'page: Do page', 'test: Do test'], failed: [], notes: 0 });
@@ -24,7 +24,7 @@ describe('the rules of an execution map (ADR 0064, 2, 3, and 5)', () => {
     expect(changedSteps(fresh(), [{ id: 'read', status: 'done' }])).toBe('read needs evidence to be done: say what you ran or checked and what it showed.');
     expect(changedSteps(fresh(), [{ id: 'read', status: 'failed' }])).toBe('read needs a note that says why it failed.');
     expect(changedSteps(fresh(), [{ id: 'read', status: 'skipped' }])).toBe('read needs a note that says why it is skipped.');
-    expect(changedSteps(fresh(), [{ id: 'nope', status: 'doing' }])).toBe('The map has no task nope. Its tasks are: read, store, page, test.');
+    expect(changedSteps(fresh(), [{ id: 'nope', status: 'doing' }])).toBe('The map has no step nope. Its steps are: read, store, page, test.');
     expect(changedSteps(fresh(), [{ id: 'read', status: 'done', evidence }, { id: 'store', status: 'done' }])).toBe('store needs evidence to be done: say what you ran or checked and what it showed.');
     const done = changedSteps(fresh(), [{ id: 'read', status: 'doing' }, { id: 'read', status: 'done', evidence }, { id: 'store', status: 'skipped', note: 'Not needed.' }]);
     if (typeof done === 'string') throw new Error(done);

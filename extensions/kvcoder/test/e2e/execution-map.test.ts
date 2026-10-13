@@ -31,7 +31,7 @@ describe('the execution map in Chromium (08 §8.7, ADR 0064)', { timeout: 120_00
     const toggle = app.locator('[data-test="map-toggle"]');
     await toggle.waitFor();
     expect(await toggle.textContent()).toBe('1/4');
-    expect(await app.locator('[data-test="map-remaining"]').textContent()).toContain('3 tasks of the execution map are not done.');
+    expect(await app.locator('[data-test="map-remaining"]').textContent()).toContain('3 steps of the execution map are not done.');
     expect(await app.locator('[data-test="execution-map"]').count()).toBe(0);
     await toggle.click();
     await app.locator('[data-test="map-step-test"]').waitFor();
@@ -51,7 +51,7 @@ describe('the execution map in Chromium (08 §8.7, ADR 0064)', { timeout: 120_00
     expect(await app.locator('[data-test="map-step-store"]').getAttribute('data-status')).toBe('doing');
     await app.locator('[data-test="map-step-read"]').click();
     expect(await app.locator('[data-test="map-evidence"]').textContent()).toContain('Read src/settings.ts and its test.');
-    // The task's dialog lies over the page, not inside the panel, and Close gives the map back (ADR 0074, 2).
+    // The step's dialog lies over the page, not inside the panel, and Close gives the map back (ADR 0074, 2).
     const dialog = await app.locator('[data-test="map-detail-backdrop"]').boundingBox();
     expect(dialog?.width).toBe(app.viewportSize()?.width);
     await app.locator('[data-test="map-detail-close"]').click();

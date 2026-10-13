@@ -50,7 +50,7 @@ describe('the prompt builder (08 §8.2)', () => {
         'call `ask choice` with other set to true',
         'mark it done with your evidence',
         'Write each file in its own call, with `fs write`.',
-        'Hand a part to a worker of the `delegate` connector only when it is separate work that runs beside yours, or a fresh review of a change you finished; its entry lists the workers and what each is for.',
+        'A step goes to a worker of the `delegate` connector when the worker does it better or faster than you would: a specialist whose skill the step needs, separate work that runs beside yours, or a fresh review of a change you finished; its entry lists the workers and what each is for.',
         'Brief the worker with the goal, the facts it needs, its limits, and what to return.',
         'You are the one who decides: connectors and workers are how you act, and the result is yours.',
         'in an artifact, not in a reply.',

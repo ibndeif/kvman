@@ -5,11 +5,11 @@ import '../styles/execution-map.css';
 import { useKvman } from './kvman.ts';
 import LinkedText from './LinkedText.vue';
 import { layoutMap, mapCounts, nodeHeight, type ExecutionMapView, type MapStatus } from './map-layout.ts';
-import MapTaskDialog from './MapTaskDialog.vue';
+import MapStepDialog from './MapStepDialog.vue';
 
 // The execution map as the person watches it (plan 08 §8.7, ADR 0064): the goal and how far the work is, then a row
 // per stage with the steps that can run together side by side, an arrow to each step from the ones it waits on, and
-// the findings noted for later. A step is a task to the person: a press on one opens its dialog (ADR 0074, 1 and 2).
+// the findings noted for later. A press on a step opens its dialog (ADR 0074, 2).
 const props = defineProps<{ map: ExecutionMapView }>();
 const kvman = useKvman();
 // The diagram fits the panel's width, which changes with the window (the panel is 40% of the chat, 32 rem at most).
@@ -26,7 +26,7 @@ const layout = computed(() => layoutMap(props.map.steps, available.value));
 const counts = computed(() => mapCounts(props.map.steps));
 const picked = ref<string | undefined>(undefined);
 const detail = computed(() => props.map.steps.find((step) => step.id === picked.value));
-// A new map that no longer has the task closes its dialog, and one that has it again later doesn't reopen it.
+// A new map that no longer has the step closes its dialog, and one that has it again later doesn't reopen it.
 watch(detail, (shown) => {
   if (shown === undefined) picked.value = undefined;
 });
@@ -67,7 +67,7 @@ const titleOf = (id: string): string => props.map.steps.find((step) => step.id =
         </button>
       </div>
     </div>
-    <MapTaskDialog v-if="detail !== undefined" :task="detail" :after="detail.after.map(titleOf)" @close="picked = undefined" />
+    <MapStepDialog v-if="detail !== undefined" :step="detail" :after="detail.after.map(titleOf)" @close="picked = undefined" />
     <section v-if="props.map.notes.length > 0" class="kvc-map-noted" data-test="map-noted">
       <h3>{{ kvman.t('kvcoder.ui.map.noted', { count: props.map.notes.length }) }}</h3>
       <ul><li v-for="(note, index) in props.map.notes" :key="index" dir="auto"><LinkedText :text="note.text" /></li></ul>
