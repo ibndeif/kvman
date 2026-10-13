@@ -19,11 +19,16 @@ describe("a closed card's line (08 §8.7, ADR 0036, 2)", () => {
       [call('shell', 'exec', { line: 'pnpm test', risky: false }), 'ok'],
       [call('git', 'exec', { args: 'status', risky: false }), 'clean'],
       [call('mcp', 'call', { server: 'github', tool: 'list_issues', risky: false }), 'none'],
+      [call('mcp', 'run', { server: 'playwright', steps: [{ tool: 'browser_navigate', arguments: { url: 'http://127.0.0.1:8000' } }, { tool: 'browser_snapshot' }], risky: false }), '## 1. browser_navigate\nok'],
       [call('mcp', 'tools', { server: 'github' }), { server: 'github', tools: Array.from({ length: 12 }, (_tool, index) => ({ name: `t${index}`, description: '' })) }],
       [call('delegate', 'run', { worker: 'reviewer', title: 'Security reviewer', task: 'Review the plan.' }), 'Fine.'],
       [call('background', 'list'), [{ id: 'j1', kind: 'process', call: 'npm run dev', status: 'running', startedAt: 'x' }, { id: 'j2', kind: 'process', call: 'npm test', status: 'exited', startedAt: 'x' }]],
       [call('background', 'output', { id: 'j1' }), { id: 'j1', status: 'running', output: 'ready' }],
       [call('background', 'stop', { id: 'j1' }), { stopped: true }],
+      [call('background', 'wait', { id: 'j1' }), { id: 'j1', kind: 'process', call: 'npm test', status: 'succeeded', startedAt: 'x' }],
+      [call('execution-map', 'set', { goal: 'Ship the page', steps: [{ id: 'read', title: 'Read', check: 'c' }] }), { goal: 'Ship the page', progress: '0 of 1 done', doing: [], ready: ['read: Read'], waiting: [], failed: [], notes: 0 }],
+      [call('execution-map', 'update', { steps: [{ id: 'read', status: 'doing' }, { id: 'build', status: 'doing' }] }), { goal: 'Ship the page', progress: '1 of 3 done', doing: [], ready: [], waiting: [], failed: [], notes: 0 }],
+      [call('execution-map', 'note', { text: 'The parser takes two-digit years.' }), { goal: 'Ship the page', progress: '1 of 3 done', doing: [], ready: [], waiting: [], failed: [], notes: 1 }],
       [call('artifact', 'get', { id: 'plan' }), { id: 'plan', title: 'The plan', format: 'markdown', version: 1, content: '# Plan' }],
     ];
     const shown: string[] = [];
@@ -33,7 +38,7 @@ describe("a closed card's line (08 §8.7, ADR 0036, 2)", () => {
       shown.push(closedLine(card));
       card.unmount();
     }
-    expect(shown).toEqual(['Edit src/app.ts +2 −1', 'Write notes.md Created · 1.2 KB', 'Read src/app.ts Lines 24–98 of 120', 'List src 14 entries', 'Search markStatus 9 matches in 3 files', '$ pnpm test', '$ git status', 'github · list_issues', 'Tools github 12 tools', 'Delegate reviewer · Security reviewer', 'Background runs 2 runs', 'Output j1', 'Stop j1', 'Read artifact plan']);
+    expect(shown).toEqual(['Edit src/app.ts +2 −1', 'Write notes.md Created · 1.2 KB', 'Read src/app.ts Lines 24–98 of 120', 'List src 14 entries', 'Search markStatus 9 matches in 3 files', '$ pnpm test', '$ git status', 'github · list_issues', 'playwright · browser_navigate, browser_snapshot', 'Tools github 12 tools', 'Delegate reviewer · Security reviewer', 'Background runs 2 runs', 'Output j1', 'Stop j1', 'Wait for j1 Done', 'Plan Ship the page 0 of 1 done', 'Map step read, build 1 of 3 done', 'Noted for later The parser takes two-digit years.', 'Read artifact plan']);
   });
 
   it('QA48-H12 a risky call says so, and another does not', async () => {

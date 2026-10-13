@@ -1,0 +1,26 @@
+/* The execution map's diagram (plan 08 §8.7, ADR 0064). */
+.kvc-map { display: flex; flex-direction: column; gap: var(--kv-space-md); }
+.kvc-map-goal { margin: 0; font-weight: 600; }
+.kvc-map-progress { display: flex; align-items: center; gap: var(--kv-space-sm); font-size: 13px; }
+.kvc-map-progress > progress { flex: 1 1 auto; block-size: 6px; accent-color: var(--kv-color-success); }
+.kvc-map-scroll { overflow-x: auto; padding-block: 4px; }
+.kvc-map-canvas { position: relative; margin-inline: auto; }
+.kvc-map-edges { position: absolute; inset: 0; overflow: visible; }
+.kvc-map-edges path { fill: none; stroke: var(--kv-color-border); stroke-width: 1.5; }
+.kvc-map-edges path[data-reached='true'] { stroke: var(--kv-color-success); }
+.kvc-map-edges marker path { fill: var(--kv-color-muted); stroke: none; }
+.kvc-map-step { position: absolute; box-sizing: border-box; display: flex; align-items: center; gap: 8px; padding-block: 4px; padding-inline: 8px; border: 1.5px solid var(--kv-color-border); border-radius: 10px; background: var(--kv-color-surface); color: var(--kv-color-text); font: inherit; font-size: 12.5px; text-align: start; cursor: pointer; }
+.kvc-map-step > svg, .kvc-map-step > .kvc-spin { flex: 0 0 auto; }
+.kvc-map-step-title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; overflow-wrap: anywhere; line-height: 1.25; }
+.kvc-map-step[data-status='todo'] { color: var(--kv-color-muted); }
+.kvc-map-step[data-status='doing'] { border-color: var(--kv-color-primary); background: color-mix(in srgb, var(--kv-color-primary) 8%, var(--kv-color-surface)); font-weight: 500; }
+.kvc-map-step[data-status='done'] { border-color: var(--kv-color-success); }
+.kvc-map-step[data-status='done'] > svg { color: var(--kv-color-success); }
+.kvc-map-step[data-status='failed'] { border-color: var(--kv-color-danger); }
+.kvc-map-step[data-status='failed'] > svg { color: var(--kv-color-danger); }
+.kvc-map-step[data-status='skipped'] { border-style: dashed; color: var(--kv-color-muted); }
+.kvc-map-step[aria-pressed='true'] { box-shadow: 0 0 0 2px color-mix(in srgb, var(--kv-color-primary) 35%, transparent); }
+.kvc-map-step:focus-visible { outline: 2px solid var(--kv-color-primary); outline-offset: 2px; }
+.kvc-map-detail { padding: 10px 12px; border: 1px solid var(--kv-color-border); border-radius: 10px; font-size: 13px; }
+.kvc-map-noted > h3 { margin: 0 0 6px; font-size: 13px; font-weight: 600; }
+.kvc-map-noted > ul { margin: 0; padding-inline-start: 18px; font-size: 13px; display: flex; flex-direction: column; gap: 4px; }

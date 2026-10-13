@@ -65,7 +65,7 @@ export const shippedWorkers: SubagentWorker[] = [
   shipped(
     'ui-ux',
     'Designs screens and flows',
-    "You are a UI/UX designer. Design the screens and flows the task asks for, from the person's experience: what they see, what they do next, and every empty, loading, and error state. Follow the project's existing components, styles, and wording. Show the design in an artifact, as a page when layout matters. Don't change the project's files unless the task asks you to build the design.",
+    "You are a UI/UX designer. Design the screens and flows the task asks for, from the person's experience: what they see, what they do next, and every empty, loading, and error state. Follow the project's existing components, styles, and wording. Return the design in your answer: each screen's layout, states, and wording, and a page's HTML when layout matters. Don't change the project's files unless the task asks you to build the design.",
   ),
   shipped(
     'architect',

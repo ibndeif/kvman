@@ -96,18 +96,34 @@ function mcpSummary(t: Translate, command: string, payload: Record<string, unkno
   const tool = text(payload['tool']);
   const subject = [server, tool].filter((part) => part !== undefined).join(' · ');
   if (command === 'call') return summary(undefined, subject === '' ? undefined : subject);
+  if (command === 'run') {
+    const steps: unknown = payload['steps'];
+    const tools = Array.isArray(steps) ? steps.flatMap((step: unknown) => (text(fields(step)['tool']) === undefined ? [] : [String(fields(step)['tool'])])) : [];
+    return summary(undefined, [server, tools.join(', ')].filter((part) => part !== undefined && part !== '').join(' · '));
+  }
   if (command === 'tools') return summary(t('kvcoder.ui.call.tools'), subject === '' ? undefined : subject, countText(t, 'kvcoder.ui.call.toolCount', fields(result)['tools']));
   return undefined;
 }
 
 function backgroundSummary(t: Translate, command: string, payload: Record<string, unknown>, result: unknown): CallSummary | undefined {
   if (command === 'list') return summary(t('kvcoder.ui.call.backgroundRuns'), undefined, countText(t, 'kvcoder.ui.call.runCount', result));
-  if (command === 'output') {
+  if (command === 'output' || command === 'wait') {
     const run = runResult(result);
-    return summary(t('kvcoder.ui.call.output'), text(payload['id']), run === undefined ? undefined : runStatusText(t, run.status));
+    return summary(t(`kvcoder.ui.call.${command}`), text(payload['id']), run === undefined ? undefined : runStatusText(t, run.status));
   }
   if (command === 'stop') return summary(t('kvcoder.ui.call.stop'), text(payload['id']));
   return undefined;
+}
+
+// The execution map's calls (ADR 0064): what was planned or changed, and how far the work is.
+function mapSummary(t: Translate, command: string, payload: Record<string, unknown>, result: unknown): CallSummary | undefined {
+  const progress = text(fields(result)['progress']);
+  const steps: unknown = payload['steps'];
+  const ids = Array.isArray(steps) ? steps.flatMap((step: unknown) => (text(fields(step)['id']) === undefined ? [] : [String(fields(step)['id'])])).join(', ') : undefined;
+  if (command === 'set') return summary(t('kvcoder.ui.call.mapSet'), text(payload['goal']), progress);
+  if (command === 'update') return summary(t('kvcoder.ui.call.mapUpdate'), ids === '' ? undefined : ids, progress);
+  if (command === 'note') return summary(t('kvcoder.ui.call.mapNote'), text(payload['text']));
+  return command === 'get' ? summary(t('kvcoder.ui.call.mapGet'), undefined, progress) : undefined;
 }
 
 /** A call's closed line, or nothing for a call that keeps `connector · command`. `result` is the parsed output of a call that succeeded. */
@@ -119,6 +135,7 @@ export function callSummary(t: Translate, view: CallView, result?: unknown): Cal
   if (connector === 'fs') return fsSummary(t, command, payload, result);
   if (connector === 'mcp') return mcpSummary(t, command, payload, result);
   if (connector === 'background') return backgroundSummary(t, command, payload, result);
+  if (connector === 'execution-map') return mapSummary(t, command, payload, result);
   if (connector === 'delegate' && command === 'run') return summary(t('kvcoder.ui.call.delegate'), [text(payload['worker']), text(payload['title'])].filter((part) => part !== undefined).join(' · '));
   if (connector === 'artifact' && command === 'get') return summary(t('kvcoder.ui.call.readArtifact'), text(payload['id']));
   return undefined;

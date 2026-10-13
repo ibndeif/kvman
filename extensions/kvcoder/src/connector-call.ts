@@ -10,7 +10,7 @@ export type JsonValue = z.output<ReturnType<typeof z.json>>;
 export type CallResult = { output: string; exitCode: number };
 
 /** The connectors kvcoder runs itself, in the order the prompt lists them. */
-export const builtinConnectors = ['shell', 'fs', 'artifact', 'background', 'ask', 'delegate', 'mcp'] as const;
+export const builtinConnectors = ['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'mcp'] as const;
 
 export type BuiltinConnector = (typeof builtinConnectors)[number];
 
@@ -31,7 +31,9 @@ const shownCommandLength = 40;
 /** A connector has no such command: the message names the ones it has, and cuts a long wrong name, which is usually a shell line (ADR 0012, 19). */
 export function noCommandMessage(connector: string, command: string, commands: readonly string[]): string {
   const shown = command.length > shownCommandLength ? `${command.slice(0, shownCommandLength)}…` : command;
-  return `${connector} has no command ${shown}. Its commands are: ${[...commands, 'help'].join(', ')}.`;
+  // A connector whose one command is exec takes a line: a model that put the line where the command goes is told where it goes (ADR 0070, 8).
+  const hint = commands.length === 1 && commands[0]?.split(' ')[0] === 'exec' ? ' The command is exec, and what to run goes in its payload.' : '';
+  return `${connector} has no command ${shown}. Its commands are: ${[...commands, 'help'].join(', ')}.${hint}`;
 }
 
 export type PayloadIssue = { path: string; message: string };

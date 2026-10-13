@@ -44,7 +44,7 @@ describe("a program worker's run as a job of its chat (08 §8.5 and §8.6, ADR 0
     await requests(fake, 3);
     expect(await kernel.exec('kvcoder.job.get', { sessionId, id: String(row?.id) })).toMatchObject({ kind: 'worker', status: 'succeeded', exitCode: 0, endedAt: expect.any(String) as unknown, output: 'released' });
     const [listed, output] = toolResults(fake, 2).slice(-2).map((text) => JSON.parse(text) as unknown);
-    expect(listed).toMatchObject([{ id: row?.id, kind: 'worker', call: 'Asking pi to look.', status: 'succeeded', exitCode: 0 }]);
+    expect(listed).toMatchObject([{ id: row?.id, kind: 'worker', title: 'pie', status: 'succeeded', exitCode: 0 }]);
     expect(output).toMatchObject({ id: row?.id, kind: 'worker', status: 'succeeded', output: 'released' });
   });
 

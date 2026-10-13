@@ -43,7 +43,7 @@ describe("a program worker's check (08 §8.5, ADR 0021, 17 and 37)", { timeout: 
     fake.reply(says('hi'));
     await kernel.exec('kvcoder.message.send', { sessionId: alone, text: 'go' });
     await vi.waitFor(() => expect(fake.requests()).toHaveLength(3), wait);
-    expect(indexed(systemPrompt(fake, 2))).toEqual(['shell', 'fs', 'artifact', 'background', 'ask', 'todo']);
+    expect(indexed(systemPrompt(fake, 2))).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'todo']);
   });
 
   it('QA32-E8 an unknown name fails, and a worker that is turned off is still checked', async () => {

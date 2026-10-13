@@ -1,5 +1,6 @@
 import type { Store, Transaction } from '@kvman/sdk';
 import { answerReceiptDocSchema, artifactDocSchema, backgroundDocSchema, fileBackupDocSchema, filePartDocSchema, fileViewDocSchema, messageDocSchema, processDocSchema, questionDocSchema, queuedDocSchema, runDocSchema, sendReceiptDocSchema, sessionDocSchema, stepIntentDocSchema, turnDocSchema } from '../schemas/records.ts';
+import { mapDocSchema } from '../maps/map-schema.ts';
 import { signInDocSchema } from '../mcp/sign-in-record.ts';
 import { connectorDocSchema, handlerDocSchema, handlerJobDocSchema, sectionDocSchema, slashDocSchema } from '../schemas/registry.ts';
 
@@ -22,6 +23,7 @@ export function records(store: Store) {
     fileBackups: store.collection('file-backups', fileBackupDocSchema),
     fileParts: store.collection('file-parts', filePartDocSchema),
     artifacts: store.collection('artifacts', artifactDocSchema),
+    maps: store.collection('maps', mapDocSchema),
     background: store.collection('background', backgroundDocSchema),
     runs: store.collection('runs', runDocSchema),
     sections: store.collection('sections', sectionDocSchema),
@@ -50,6 +52,7 @@ export function txRecords(tx: Transaction) {
     fileBackups: tx.collection('file-backups', fileBackupDocSchema),
     fileParts: tx.collection('file-parts', filePartDocSchema),
     artifacts: tx.collection('artifacts', artifactDocSchema),
+    maps: tx.collection('maps', mapDocSchema),
     background: tx.collection('background', backgroundDocSchema),
     runs: tx.collection('runs', runDocSchema),
     sections: tx.collection('sections', sectionDocSchema),

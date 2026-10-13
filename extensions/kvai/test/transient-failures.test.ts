@@ -23,6 +23,9 @@ describe('which provider failures may pass (07 §7.1, ADR 0009, 154)', () => {
 
   it('M2.4-E146 a stream that ended before its final event is transient', () => {
     expect(isTransient('OpenAI Responses stream ended before a terminal response event')).toBe(true);
+    // M2.4-E244: a connection dropped while the answer was read.
+    expect(isTransient('terminated')).toBe(true);
+    expect(isTransient('The account was terminated')).toBe(false);
     expect(isTransient('The stream of consciousness is not supported.')).toBe(false);
   });
 

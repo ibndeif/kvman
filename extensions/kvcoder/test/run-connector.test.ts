@@ -17,7 +17,7 @@ describe('runConnector (08 §8.4, ADR 0009, 96; ADR 0011, 18)', { timeout: 30_00
     expect(add.output).toContain('"text": {\n      "type": "string"');
     expect(add.output).toContain('Result (JSON Schema):\n{');
     expect(add.output).toContain('Examples:\n  # Add an item\n  { "connector": "todo", "command": "add", "payload": {"text":"it\'s done"} }');
-    for (const builtin of ['shell', 'fs', 'artifact', 'background', 'ask', 'delegate']) expect((await runConnector(kernel, { connector: builtin, command: 'help' })).output).toMatch(new RegExp(`^${builtin}: `));
+    for (const builtin of ['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate']) expect((await runConnector(kernel, { connector: builtin, command: 'help' })).output).toMatch(new RegExp(`^${builtin}: `));
   });
 
   it('M2.4-E33 a call returns its output as JSON, or an error line with exit 1', async () => {

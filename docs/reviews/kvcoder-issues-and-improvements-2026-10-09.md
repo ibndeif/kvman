@@ -581,3 +581,41 @@ KVC-41/42/45/47/49 evidence: shell calls and background processes get `NO_COLOR=
 - **KVC-51 — Approval buttons cut to one letter a line.** COMPLETE under ADR 0062, 1 (scenarios M2.4-E210 and E211): Deny and Allow are a row under each call, and a button of an actions row keeps its label whole.
 - **KVC-52 — `background output` shown as raw fields.** COMPLETE under ADR 0062, 2 (scenarios M2.4-E212 and E213): the card shows the run's description, status, time, and output. Checked by the related tests and the whole-repo typecheck and lint; not yet seen in the desktop app.
 
+### The harness review of 12 October (owner's seven issues, measured on three real chats)
+
+Plan: `~/.claude/plans/shimmying-noodling-pie.md`. Each item is COMPLETE under its ADR, checked by its related tests and the whole-repo typecheck, lint, and build; the full suite, `bench:check`, and kvcoder's Chromium project were not rerun.
+
+- **KVC-53 — Helpers wrote artifacts and asked the person.** ADR 0063 (E214–E217): a helper has no `ask` and only `artifact get`, and answers the lead under fixed headings.
+- **KVC-54 — Planning in a `plan` artifact.** ADR 0064 (E218–E233, E243): the `execution-map` connector, its diagram in the panel, the header count, and "N steps not done".
+- **KVC-55 — Lost focus, wasted context, weak finish.** ADR 0065 (E227, E228): the lead's eight-step method.
+- **KVC-56 — Summaries that lost what the next run needs.** ADR 0066 (E234–E237): the headings, kvman's `facts`, and 60%.
+- **KVC-57 — Polling background runs.** ADR 0068 (E238–E242): `background wait`, short list rows, `lines`, and the note of what still runs.
+- **KVC-58 — Smaller savings.** ADR 0069 (E244–E247): `terminated` retried, a shorter edit echo, `kvcoder.delegate.model`, and commands kept in `AGENTS.md`.
+- **KVC-59 — Mermaid in Markdown.** ADR 0067 (E248–E251): drawn by kvwebui from code the agent writes; checked in Chromium.
+- **Put off by the owner:** checks that kvman runs itself. When it returns, a `delegate` worker verifies the step; kvman doesn't run it.
+- **Open for the owner:** the `kvcoder.prompt` benchmark's baseline moves with the longer prompt; a session's export doesn't include its map; the diagram reads top to bottom, not left to right as the first sketch showed.
+
+### Live trial of 12 October (GPT-6 Luna, the owner's OpenAI plan, on the owner's real home by their choice)
+
+Task: an Arabic, right-to-left to-do page with a dependency-free Node server and `node:test` tests, in an empty folder.
+
+- **Run 1** (25 steps, 3.4 min, $0.011): the app was built, tested, started, checked, and shown as a `url` artifact, with no helper and no polling. But no execution map was made, `help` was called 4 times for listed commands, and 23 of 25 replies held one call.
+- **Change** (ADR 0065, 11; ADR 0064, 2): the size that needs no map is "one file, or about five calls", the Plan step says "before you change anything", several new files are several `fs write` calls in one reply, and a step's `uses` takes a list.
+- **Run 2** (20 steps, 3.1 min, $0.008): a three-step map, each step marked doing and done with evidence, 3 of 3 done, no `help` call. Still one call a reply in 18 of 20, and the first step was marked done with evidence that said the tests were about to be rerun: evidence is the model's word.
+- Also fixed from Chromium runs: the diagram fits the panel's real width (about 320 px), and a test that assumed one model row.
+
+### The owner's own run in the desktop app (12 October) and what it changed — ADR 0070
+
+"develop a modern todo list application using native html and javascript", GPT-6 Luna through OpenRouter: 22 steps, 3.8 min. The app worked, but:
+
+- **KVC-60 — The agent couldn't test its page.** Each `mcp call` opened and closed the server, so Playwright's browser was blank on the next call. COMPLETE: `mcp run` runs up to 20 tools on one connection (E252–E254).
+- **KVC-61 — The map came before any look**, with phases as steps. COMPLETE (instruction): plan only after understanding, looking, and clarifying, never in the first reply; a step is a deliverable (E256).
+- **KVC-62 — The person approved the agent's own new files** (`risky: true` on every write). COMPLETE (instruction): a new file and a change to its own file are its own work.
+- **KVC-63 — One call per tool to learn its arguments.** COMPLETE: `mcp tools` gives each tool's `takes` (E255). In the rerun the model still asked for six full schemas.
+- **KVC-64 — Files the Playwright server left in the project.** Instruction added to Finish; NOT followed in the rerun: `.playwright-mcp` stayed.
+- **KVC-65 — Pale text and no direction for Arabic tasks.** Instruction added (E256); the page's look was not judged again.
+
+Rerun of the same request after the changes (13 steps, 3.9 min, about $0.016): no approval was asked, and the agent ran the page in a real browser twice with `mcp run` (create, filter, search, complete, reload, delete, mobile width). It built one file, so by the rule it made no map.
+
+**13 October, ADR 0070, 7 and 8.** A command MCP server now runs in a temporary folder of its own, deleted with the connection (KVC-64 COMPLETE in the harness, E258). Fourth live trial, a five-file notes app (31 steps, 4.6 min, about $0.025): the agent looked first, then set a four-step map of deliverables, wrote four files in one reply, marked each step done with real evidence, tried add, edit, search, and delete in a browser with `mcp run` twice, left no stray file, asked for no approval of its own files, and offered the `AGENTS.md` Commands section. Faults it showed, fixed after: a shell line written where the command goes, and `AGENTS.md` asked about twice.
+

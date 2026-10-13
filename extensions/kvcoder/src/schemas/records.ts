@@ -101,7 +101,8 @@ export const messageDocSchema = z.object({
 });
 
 // A message waiting for the running step to append its results (ADR 0009, 102).
-export const queuedDocSchema = z.object({ sessionId: z.string(), source: sourceSchema, text: z.string(), fileIds: z.array(z.string()).nullable(), fileNames: z.array(z.string()).nullable(), createdAt: z.string() });
+// `running` is the chat's background runs when the person sent the message (ADR 0068, 4).
+export const queuedDocSchema = z.object({ sessionId: z.string(), source: sourceSchema, text: z.string(), running: z.array(z.string()).exactOptional(), fileIds: z.array(z.string()).nullable(), fileNames: z.array(z.string()).nullable(), createdAt: z.string() });
 
 /** What a pending call waits on. */
 export const pendingSchema = z.object({

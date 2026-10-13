@@ -38,8 +38,8 @@ describe('the mcp connector in the prompt and the run tool (08 §8.2, ADR 0020, 
     const { fake } = await turn({ 'kvcoder.mcp.servers': [commandEntry(), remote] }, says('ok'));
     const lines = entry(systemPrompt(fake), 'mcp');
     expect(lines[0]).toMatch(/^- mcp: Tools from the MCP servers the person added\. .* Servers: demo \(A demo server\), remote \(Over HTTP\)\.$/);
-    expect(lines.slice(1)).toEqual(['  tools { server, tool? }', '  call  { server, tool, arguments?, timeoutMs?, risky }', '  help  { command? }']);
-    expect(connectorsOf(requestTools(fake)[0])).toEqual(['shell', 'fs', 'artifact', 'background', 'ask', 'delegate', 'mcp', 'todo']);
+    expect(lines.slice(1)).toEqual(['  tools { server, tool? }', '  call  { server, tool, arguments?, timeoutMs?, risky }', '  run   { server, steps: [{ tool, arguments? }], timeoutMs?, risky }', '  help  { command? }']);
+    expect(connectorsOf(requestTools(fake)[0])).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'mcp', 'todo']);
   });
 
   it("QA29-H9 a workspace's own servers replace the global ones", async () => {
@@ -57,8 +57,8 @@ describe('the mcp connector in the prompt and the run tool (08 §8.2, ADR 0020, 
     const prompt = systemPrompt(fake, 0);
     expect(entry(prompt, 'mcp')).toEqual([]);
     expect(prompt).not.toContain('MCP');
-    expect(connectorsOf(requestTools(fake, 0)[0])).toEqual(['shell', 'fs', 'artifact', 'background', 'ask', 'delegate', 'todo']);
-    expect(toolResults(fake)).toEqual(['error VALIDATION_FAILED: There is no connector mcp. The connectors are: shell, fs, artifact, background, ask, delegate, todo.']);
+    expect(connectorsOf(requestTools(fake, 0)[0])).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'todo']);
+    expect(toolResults(fake)).toEqual(['error VALIDATION_FAILED: There is no connector mcp. The connectors are: shell, fs, artifact, execution-map, background, ask, delegate, todo.']);
     expect((await kernel.exec('kvcoder.connector.list', {})).map((connector) => connector.name)).toEqual(['todo']);
   });
 
@@ -71,7 +71,7 @@ describe('the mcp connector in the prompt and the run tool (08 §8.2, ADR 0020, 
   it('QA29-E3 a subagent calls mcp when it was given it, and not otherwise', async () => {
     const helper = runs(command('delegate', 'run', { worker: 'helper', title: 'Helper', task: 'Use the tool' }));
     const given = await turn({ 'kvcoder.mcp.servers': [commandEntry()], ...workers(worker('helper', { connectors: ['mcp'] })) }, helper, runs(echo), says('child done'), says('parent done'));
-    expect(connectorsOf(requestTools(given.fake, 1)[0])).toEqual(['ask', 'mcp']);
+    expect(connectorsOf(requestTools(given.fake, 1)[0])).toEqual(['mcp']);
     expect(toolResults(given.fake, 2)).toEqual(['hi']);
     const withheld = await turn({ 'kvcoder.mcp.servers': [commandEntry()], ...workers(worker('helper', { connectors: ['fs'] })) }, helper, runs(echo), says('child done'), says('parent done'));
     expect(toolResults(withheld.fake, 2)).toEqual(["error VALIDATION_FAILED: mcp isn't available in this subagent."]);

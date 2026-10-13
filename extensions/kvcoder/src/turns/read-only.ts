@@ -1,6 +1,6 @@
 import type { ConnectorCommand } from '../connectors/connector-command.ts';
 
-// What a read-only worker's helper may run (ADR 0056, 3): reads, questions, its report as an artifact, and help.
+// What a read-only worker's helper may run (ADR 0056, 3): reads and help; it reports in its answer (ADR 0063).
 // Anything that could change something is refused, and so is every command kvcoder doesn't know the effect of.
 
 const changing = new Set(['kvcoder.fs.part', 'kvcoder.background.stop', 'kvcoder.delegate.check']);

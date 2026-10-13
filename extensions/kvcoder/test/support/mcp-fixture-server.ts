@@ -16,6 +16,8 @@ const tools = [
   { name: 'sleep', description: 'Answers after a while.', inputSchema: { type: 'object' as const, properties: { ms: { type: 'number' } }, required: ['ms'] } },
   { name: 'spawn', description: 'Starts a child process that keeps running, and returns both pids.', inputSchema: noArguments },
   { name: 'cwd', description: 'Returns the folder the server runs in.', inputSchema: noArguments },
+  { name: 'remember', description: 'Keeps a text in this server process.', inputSchema: { type: 'object' as const, properties: { text: { type: 'string' } }, required: ['text'] } },
+  { name: 'recall', description: 'Returns the text this server process keeps.', inputSchema: noArguments },
 ];
 
 /** The fixture's tool names, in its order. */
@@ -24,6 +26,8 @@ export const fixtureTools = tools.map((tool) => tool.name);
 /** A new fixture server, to connect to a transport. */
 export function fixtureServer(): Server {
   const server = new Server({ name: 'fixture', version: '1.0.0' }, { capabilities: { tools: {} } });
+  // What `remember` keeps: it lives as long as this server does, as a browser's page does.
+  let kept = '(nothing)';
   server.setRequestHandler(ListToolsRequestSchema, () => ({ tools }));
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const input = request.params.arguments ?? {};
@@ -47,6 +51,11 @@ export function fixtureServer(): Server {
       }
       case 'cwd':
         return text(process.cwd());
+      case 'remember':
+        kept = String(input['text']);
+        return text('kept');
+      case 'recall':
+        return text(kept);
       default:
         throw new Error(`Unknown tool ${request.params.name}.`);
     }

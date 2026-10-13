@@ -1,6 +1,7 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import type { Component } from 'vue';
 import type { Message, Session, Turn } from '../../../src/index.ts';
+import type { ExecutionMapView, MapStep } from '../../../web/src/map-layout.ts';
 import type { ArtifactContent, ArtifactSummary } from '../../../web/src/use-artifacts.ts';
 import type { Job } from '../../../web/src/use-jobs.ts';
 import type { FakeKvman } from './fake-kvman.ts';
@@ -28,10 +29,19 @@ export function turn(fields: Partial<Turn> = {}): Turn {
   return { id: 't1', sessionId: 's1', startedAt: '2026-10-01T09:00:00.000Z', durationMs: 12_000, steps: 1, usage, pending: [], ...fields };
 }
 
-export type World = { found: Session; messages: Message[]; omitted: number; turns: Turn[]; context?: { tokens: number; window: number | null; compactAt: number; estimated?: boolean }; jobs?: Job[]; artifacts?: ArtifactSummary[]; artifactContents?: Record<string, ArtifactContent> };
+export type World = { found: Session; messages: Message[]; omitted: number; turns: Turn[]; context?: { tokens: number; window: number | null; compactAt: number; estimated?: boolean }; jobs?: Job[]; artifacts?: ArtifactSummary[]; map?: ExecutionMapView | null; artifactContents?: Record<string, ArtifactContent> };
 
 export function job(fields: Partial<Job> = {}): Job {
   return { id: 'j1', kind: 'process', title: 'Start the dev server', call: 'python3 -m http.server 8000', status: 'running', startedAt: '2026-10-01T09:00:00.000Z', links: [], ...fields };
+}
+
+/** A step of an execution map, to do and waiting on nothing unless `fields` says otherwise. */
+export function mapStep(id: string, fields: Partial<MapStep> = {}): MapStep {
+  return { id, title: `Do ${id}`, after: [], uses: null, check: `check ${id}`, status: 'todo', evidence: null, note: null, ...fields };
+}
+
+export function executionMap(steps: MapStep[], fields: Partial<ExecutionMapView> = {}): ExecutionMapView {
+  return { goal: 'Ship the settings page', steps, notes: [], version: 1, updatedAt: '2026-10-01T09:00:00.000Z', ...fields };
 }
 
 export function artifactSummary(fields: Partial<ArtifactSummary> = {}): ArtifactSummary {
@@ -55,6 +65,7 @@ export function serve(fake: FakeKvman, world: World): void {
   fake.handle('kvcoder.turn.list', () => world.turns);
   fake.handle('kvcoder.context.get', () => world.context ?? { tokens: 0, window: null, compactAt: 0.8 });
   fake.handle('kvcoder.job.list', () => world.jobs ?? []);
+  fake.handle('kvcoder.map.get', () => world.map ?? null);
   fake.handle('kvcoder.artifact.list', () => world.artifacts ?? []);
   fake.handle('kvcoder.artifact.get', (input) => {
     const found = (world.artifactContents ?? {})[String(input['id'])];

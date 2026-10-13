@@ -3,7 +3,7 @@ import type { TestKernel } from '@kvman/testkit';
 import type { FakeOpenAI } from '@kvman/testkit/fake-openai';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { padded, unpadded } from './support/long-messages.ts';
-import { fsCall, requestMessages, runs, says, textOf, unstamped } from './support/model-script.ts';
+import { fsCall, requestMessages, runs, says, textOf, unstamped, withoutFacts } from './support/model-script.ts';
 import { newSession } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
@@ -23,7 +23,7 @@ async function summaries(kernel: TestKernel, sessionId: string) {
   return (await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 })).messages.filter((message) => message.kind === 'summary').map((message) => message.content);
 }
 
-const sent = (fake: FakeOpenAI) => requestMessages(fake).filter((message) => message.role !== 'system' && message.role !== 'developer').map((message) => unpadded(unstamped(textOf(message))));
+const sent = (fake: FakeOpenAI) => requestMessages(fake).filter((message) => message.role !== 'system' && message.role !== 'developer').map((message) => withoutFacts(unpadded(unstamped(textOf(message)))));
 
 describe('the messages a summary keeps whole (08 §8.1, ADR 0020, 1)', { timeout: 30_000 }, () => {
   it('QA27-H1 a step above compactAt keeps kvcoder.compactKeep messages whole', async () => {
@@ -35,7 +35,7 @@ describe('the messages a summary keeps whole (08 §8.1, ADR 0020, 1)', { timeout
     fake.reply(says('SUMMARY'), says('answer 8'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'message 8' });
     await kernel.clock.advance(0);
-    expect(await summaries(kernel, sessionId)).toEqual([{ text: 'SUMMARY', coversThroughSeq: 10 }]);
+    expect(await summaries(kernel, sessionId)).toMatchObject([{ text: 'SUMMARY', coversThroughSeq: 10 }]);
     expect(sent(fake)).toEqual(['A summary of the earlier conversation:\nSUMMARY', 'answer 6', 'message 7', 'answer 7', 'message 8']);
   });
 
@@ -46,7 +46,7 @@ describe('the messages a summary keeps whole (08 §8.1, ADR 0020, 1)', { timeout
     await keep(kernel, 6);
     fake.reply(says('SUMMARY'));
     expect(await kernel.exec('kvcoder.session.compact', { sessionId })).toEqual({ summarized: true });
-    expect(await summaries(kernel, sessionId)).toEqual([{ text: 'SUMMARY', coversThroughSeq: 7 }]);
+    expect(await summaries(kernel, sessionId)).toMatchObject([{ text: 'SUMMARY', coversThroughSeq: 7 }]);
   });
 
   it('QA27-H3 the default is 10, in the global and workspace scopes', async () => {
@@ -57,7 +57,7 @@ describe('the messages a summary keeps whole (08 §8.1, ADR 0020, 1)', { timeout
     await history(kernel, fake, sessionId);
     fake.reply(says('SUMMARY'));
     await kernel.exec('kvcoder.session.compact', { sessionId });
-    expect(await summaries(kernel, sessionId)).toEqual([{ text: 'SUMMARY', coversThroughSeq: 3 }]);
+    expect(await summaries(kernel, sessionId)).toMatchObject([{ text: 'SUMMARY', coversThroughSeq: 3 }]);
   });
 
   it("QA27-H4 a workspace's own value wins over the global one", async () => {
@@ -68,7 +68,7 @@ describe('the messages a summary keeps whole (08 §8.1, ADR 0020, 1)', { timeout
     await keep(kernel, 8, 'workspace');
     fake.reply(says('SUMMARY'));
     await kernel.exec('kvcoder.session.compact', { sessionId });
-    expect(await summaries(kernel, sessionId)).toEqual([{ text: 'SUMMARY', coversThroughSeq: 5 }]);
+    expect(await summaries(kernel, sessionId)).toMatchObject([{ text: 'SUMMARY', coversThroughSeq: 5 }]);
   });
 
   it('QA27-E1 a value out of range fails VALIDATION_FAILED and changes nothing', async () => {
@@ -110,7 +110,7 @@ describe('the messages a summary keeps whole (08 §8.1, ADR 0020, 1)', { timeout
     await keep(kernel, 3);
     fake.reply(says('SUMMARY'));
     expect(await kernel.exec('kvcoder.session.compact', { sessionId })).toEqual({ summarized: true });
-    expect(await summaries(kernel, sessionId)).toEqual([{ text: 'SUMMARY', coversThroughSeq: 14 }]);
+    expect(await summaries(kernel, sessionId)).toMatchObject([{ text: 'SUMMARY', coversThroughSeq: 14 }]);
     fake.reply(says('answer 9'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'message 9' });
     await kernel.clock.advance(0);

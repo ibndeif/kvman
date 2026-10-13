@@ -1,3 +1,6 @@
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { ProblemError, type Ctx } from '@kvman/sdk';
 import { UnauthorizedError } from '@modelcontextprotocol/sdk/client/auth.js';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -12,16 +15,22 @@ import type { McpServer } from './servers.ts';
 
 // One connection to an MCP server (plan 08 §8.5, ADR 0020, 4): connect, do the work, close. Nothing is kept between
 // calls. The connection ends with the job's signal and at the timeout, and a command's process tree is killed then.
+// A command runs in a folder of its own that is deleted with the connection (ADR 0070, 7), so the logs and snapshots a
+// server writes beside itself never land in the person's project; it finds the project in `KVMAN_WORKSPACE`.
+
+/** The variable a command server reads the workspace folder from. */
+export const workspaceVariable = 'KVMAN_WORKSPACE';
 
 /** What the work gets: the connected client, and the options every request of this connection takes. */
 export type Connection = { client: Client; request: RequestOptions };
 
-type Opened = { transport: Transport; command?: CommandTransport };
+type Opened = { transport: Transport; command?: CommandTransport; folder?: string };
 
 async function open(ctx: Ctx, server: McpServer, secrets: Record<string, string>): Promise<Opened> {
   if ('command' in server) {
-    const command = commandTransport({ command: server.command, args: server.args, cwd: ctx.job.workspace.path, env: secrets });
-    return { transport: command, command };
+    const folder = await mkdtemp(path.join(tmpdir(), 'kvman-mcp-'));
+    const command = commandTransport({ command: server.command, args: server.args, cwd: folder, env: { [workspaceVariable]: ctx.job.workspace.path, ...secrets } });
+    return { transport: command, command, folder };
   }
   // The client's class declares `sessionId` as `string | undefined`, which its own `Transport` doesn't take under
   // `exactOptionalPropertyTypes`; it is the transport the client is written for.
@@ -60,5 +69,6 @@ export async function withServer<Result>(ctx: Ctx, server: McpServer, timeoutMs:
     throw failure(server, error, opened, secrets, deadline.aborted ? timeoutMs : undefined);
   } finally {
     await client.close();
+    if (opened.folder !== undefined) await rm(opened.folder, { recursive: true, force: true });
   }
 }

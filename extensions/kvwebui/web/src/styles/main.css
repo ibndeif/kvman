@@ -156,6 +156,14 @@ body {
   color: var(--kvwebui-primary);
   text-decoration: underline;
 }
+/* A Mermaid diagram (ADR 0067): as wide as it needs, scrolling sideways in its block. */
+.kvwebui-markdown .kvwebui-mermaid {
+  overflow-x: auto;
+}
+.kvwebui-markdown .kvwebui-mermaid > svg {
+  max-inline-size: none;
+  block-size: auto;
+}
 .kvwebui-markdown :where(code) {
   font-family: var(--font-mono);
   font-size: 0.9em;

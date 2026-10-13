@@ -14,7 +14,7 @@ function posixShell(): void {
   if (process.platform === 'win32') throw new Error('These lines are bash; Windows runs PowerShell.');
 }
 
-const rowSchema = z.object({ id: z.string(), kind: z.string(), call: z.string(), status: z.string(), output: z.string().optional() });
+const rowSchema = z.object({ id: z.string(), kind: z.string(), call: z.string().optional(), title: z.string().optional(), status: z.string(), output: z.string().optional() });
 
 async function say(kernel: TestKernel, fake: FakeOpenAI, sessionId: string, ...calls: RunCallSpec[]): Promise<string[]> {
   fake.reply(runs(...calls), says('ok'));
@@ -32,7 +32,7 @@ describe('the background connector (08 §8.5, ADR 0011, 6)', { timeout: 60_000 }
     const id = /^started (\S+)\nup\n\[running\]$/.exec(started)?.[1] ?? '';
     expect(id).not.toBe('');
     const [list = ''] = await say(kernel, fake, sessionId, command('background', 'list'));
-    expect(z.array(rowSchema).parse(JSON.parse(list))).toEqual([expect.objectContaining({ id, kind: 'process', call: 'echo up; sleep 30', status: 'running' })]);
+    expect(z.array(rowSchema).parse(JSON.parse(list))).toEqual([expect.objectContaining({ id, kind: 'process', status: 'running' })]);
     const [output = ''] = await say(kernel, fake, sessionId, command('background', 'output', { id }));
     expect(rowSchema.parse(JSON.parse(output))).toMatchObject({ id, status: 'running', output: 'up' });
     const [stop = '', again = ''] = [...(await say(kernel, fake, sessionId, command('background', 'stop', { id }))), ...(await say(kernel, fake, sessionId, command('background', 'stop', { id })))];

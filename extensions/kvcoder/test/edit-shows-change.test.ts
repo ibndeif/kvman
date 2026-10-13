@@ -14,7 +14,7 @@ describe('fs edit shows what it changed (08 §8.5, ADR 0034, 1)', { timeout: 30_
     expect(json(results[0])).toEqual({ path: 'forty.txt', replacements: 1, firstChangedLine: 20, fromLine: 17, content: shown(17, 23, { 20: 'twenty' }) });
   });
 
-  it('QA46-E3 the lines start at the file, stop at 80, and count the last change in the edited file', async () => {
+  it('QA46-E3 the lines start at the file, show the two ends of a long change (ADR 0069, 2), and count the last change in the edited file', async () => {
     const prepare = (folder: string): void => {
       looked.write(folder, 'top.txt', lines(10));
       looked.write(folder, 'far.txt', lines(300));
@@ -26,7 +26,7 @@ describe('fs edit shows what it changed (08 §8.5, ADR 0034, 1)', { timeout: 30_
       fsCall('edit', { path: 'grown.txt', edits: [{ oldText: 'line 5\n', newText: 'a\nb\nc\n' }] }),
     ], {}, ['top.txt', 'far.txt', 'grown.txt']);
     expect(json(results[0])).toMatchObject({ fromLine: 1, content: shown(1, 4, { 1: 'first' }) });
-    expect(json(results[1])).toMatchObject({ firstChangedLine: 10, fromLine: 7, content: shown(7, 86, { 10: 'ten' }) });
+    expect(json(results[1])).toMatchObject({ firstChangedLine: 10, fromLine: 7, content: `${shown(7, 12, { 10: 'ten' })}[… 195 lines not shown …]\n${shown(208, 213, { 210: 'two hundred ten' })}` });
     expect(json(results[2])).toMatchObject({ firstChangedLine: 5, fromLine: 2, content: 'line 2\nline 3\nline 4\na\nb\nc\nline 6\nline 7\nline 8\n' });
   });
 });

@@ -21,12 +21,12 @@ const luna = { id: 'openai/gpt-6-luna', name: 'GPT-6 Luna', ready: true };
 type Values = { global?: Json; workspace?: Json };
 
 // kvman's settings as the kernel keeps them for one key: a value per scope, and the one in effect.
-function world(values: Values = {}, options: { fail?: boolean; defaultModel?: Json } = {}): FakeKvman {
+function world(values: Values = {}, options: { fail?: boolean; defaultModel?: Json; key?: string } = {}): FakeKvman {
   const fake = createFakeKvman();
   fake.handle('kvai.provider.list', () => providers);
   fake.handle('kvai.model.list', () => models);
   fake.handle('kvai.model.default.get', () => options.defaultModel ?? luna);
-  fake.handle('kernel.settings.list', () => [{ key, value: 'workspace' in values ? values.workspace : (values.global ?? null), source: 'workspace' in values ? 'workspace' : 'global' in values ? 'global' : 'default' }]);
+  fake.handle('kernel.settings.list', () => [{ key: options.key ?? key, value: 'workspace' in values ? values.workspace : (values.global ?? null), source: 'workspace' in values ? 'workspace' : 'global' in values ? 'global' : 'default' }]);
   fake.handle('kernel.settings.set', (input) => {
     if (options.fail === true) throw new ProblemError({ code: 'VALIDATION_FAILED', message: 'Not valid.' });
     values[input['scope'] === 'workspace' ? 'workspace' : 'global'] = input['value'] as Json;
@@ -44,6 +44,19 @@ const button = (row: Awaited<ReturnType<typeof mounted>>) => row.find('[data-tes
 const options = (row: Awaited<ReturnType<typeof mounted>>) => row.findAll('[role="option"]').map((option) => option.text());
 
 describe("the model row of kvcoder's configuration (08 §8.7, ADR 0015)", () => {
+  it("M2.4-E246 the row for workers offers the chat's model first and writes kvcoder.delegate.model", async () => {
+    const fake = world({}, { key: 'kvcoder.delegate.model' });
+    const row = await mounted(ModelSetting, fake, { setting: 'kvcoder.delegate.model' });
+    expect(row.find('[data-test="model-setting-title"]').text()).toBe('Model for workers');
+    expect(row.find('[data-test="model-setting-description"]').text()).toBe('The model a helper uses when its worker names none.');
+    expect(button(row).text()).toBe("The chat's model");
+    await button(row).trigger('click');
+    expect(options(row)[0]).toBe("Use the chat's model");
+    await row.find('[data-test="model-zed/z1"]').trigger('click');
+    await expect.poll(() => button(row).text()).toBe('Z1');
+    expect(writes(fake).map((call) => call.input)).toEqual([expect.objectContaining({ key: 'kvcoder.delegate.model', value: 'zed/z1' })]);
+  });
+
   it('QA22-H4 the row shows the default model, lists "Use the default model" first, and picking a model writes the setting', async () => {
     const fake = world();
     const row = await mounted(ModelSetting, fake);

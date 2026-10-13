@@ -3,7 +3,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { shippedWorkers } from '../src/delegate/workers.ts';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { command, fsCall, runs, says, systemPrompt, toolResults } from './support/model-script.ts';
+import { command, fsCall, runs, says, shell, systemPrompt, toolResults } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 import { worker, workers } from './support/workers.ts';
 
@@ -19,7 +19,7 @@ describe("the rules of a worker's child and of the workers setting (08 §8.5, AD
     fake.reply(runs(delegate('deep')), runs(delegate('deep')), says('child done'), says('parent done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
-    expect(indexed(systemPrompt(fake, 1))).toEqual(['fs', 'ask']);
+    expect(indexed(systemPrompt(fake, 1))).toEqual(['fs']);
     expect(toolResults(fake, 2)).toEqual(["error VALIDATION_FAILED: delegate isn't available in this subagent."]);
   });
 
@@ -29,7 +29,7 @@ describe("the rules of a worker's child and of the workers setting (08 §8.5, AD
     fake.reply(runs(delegate('odd')), runs(fsCall('list')), says('child done'), says('parent done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
-    expect(indexed(systemPrompt(fake, 1))).toEqual(['fs', 'ask']);
+    expect(indexed(systemPrompt(fake, 1))).toEqual(['fs']);
     expect(toolResults(fake, 2)[0]).toMatch(/^\{"path":/);
     expect(toolResults(fake, 3)).toEqual(['child done']);
   });
@@ -63,13 +63,13 @@ describe("the rules of a worker's child and of the workers setting (08 §8.5, AD
   it('QA31-E9 a child keeps the instructions it started with', async () => {
     const { kernel, fake } = await kvcoder.start({ settings: workers(worker('careful', { instructions: 'Be careful.' })) });
     const sessionId = await newSession(kernel);
-    fake.reply(runs(delegate('careful')), runs(command('ask', 'text', { prompt: '?' })), says('child done'), says('parent done'));
+    fake.reply(runs(delegate('careful')), runs(shell('true', { risky: true })), says('child done'), says('parent done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     const childId = String((await turnState(kernel, sessionId)).turn?.pending[0]?.childSessionId);
     await kernel.exec('kernel.settings.set', { key: 'kvcoder.delegate.workers', value: [worker('careful', { instructions: 'Be bold.' })], scope: 'global' });
     const questionId = String((await turnState(kernel, childId)).turn?.pending[0]?.questionId);
-    await kernel.exec('kvcoder.question.answer', { questionId, answer: { text: 'yes' } });
+    await kernel.exec('kvcoder.question.answer', { questionId, answer: { confirmed: true } });
     await kernel.clock.advance(0);
     expect(systemPrompt(fake, 1)).toContain('## Worker: careful\nBe careful.');
     expect(systemPrompt(fake, 2)).toContain('## Worker: careful\nBe careful.');

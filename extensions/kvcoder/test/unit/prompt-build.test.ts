@@ -45,16 +45,15 @@ describe('the prompt builder (08 §8.2)', () => {
         'Scale the process to the task',
         'Never assume or invent names, paths, APIs, or behavior',
         'ask: put each question in its own `ask` call, with all the calls in one reply, and use `ask choice` whenever you offer options, your recommended one first.',
-        'Write the plan as the artifact `plan`',
-        '(☐ to do, ☑ done)',
-        'call `ask confirm` on the plan before you start',
-        'tick the step off with `artifact edit`',
+        'plan with `execution-map set`',
+        'call `ask confirm` after you set the map and before you start',
+        'mark it done with your evidence',
         'Write each file in its own call, with `fs write`.',
-        'Hand a separate, self-contained part to a worker of the `delegate` connector when a specialist view or parallel work is worth it; its entry lists the workers and what each is for.',
+        'Hand a part to a worker of the `delegate` connector only when it is separate work that runs beside yours, or a fresh review of a change you finished; its entry lists the workers and what each is for.',
         'Brief the worker with the goal, the facts it needs, its limits, and what to return.',
         'You are the one who decides: connectors and workers are how you act, and the result is yours.',
         'in an artifact, not in a reply.',
-        'In one reply, reads and searches run at the same time, and calls that change something (shell lines, writes, edits) run one after another in the order you give them. So put independent calls (reads, searches, separate files, separate workers) in one reply, and a call that needs another call\'s result in a later reply.',
+        'In one reply, reads and searches run at the same time, and calls that change something (shell lines, writes, edits) run one after another in the order you give them. So put independent calls (reads, searches, separate files, separate workers) in one reply, and a call that needs another call\'s result in a later reply: several new files are several `fs write` calls in one reply, not one reply each.',
         'To put a question to the person (a choice, a yes or no, a free answer), call `ask`.',
         'Keep replies short: say what you did and what is left.',
       ]) expect(prompt, phrase).toContain(phrase);
@@ -66,7 +65,7 @@ describe('the prompt builder (08 §8.2)', () => {
       const { prompt } = buildPrompt({ role: 'lead', workspacePath: '/w', language: 'en', platform, shell, sections: [], connectors: [] });
       for (const sentence of [
         'Every connector has the command help. A command listed below with its payload needs no help call; for any other command, or for what a field means, call the connector\'s help with { "command": "<name>" } before the first use.',
-        'Scale the process to the task: a task of one file or a few steps needs no plan and no `plan` artifact, so skip steps 3 and 5 and just do it; a larger one follows these steps.',
+        'Scale the process to the task: a task that changes one file, or that about five calls finish, needs no execution map and no worker, so skip steps 3 and 6, do it, and check it; every other task follows these steps, and is planned on its map once you understand it.',
         'ask: put each question in its own `ask` call, with all the calls in one reply, and use `ask choice` whenever you offer options, your recommended one first.',
         'Before you say that something runs or works, check it the way the person would: run it, request its address, or run its test; if you couldn\'t, say what is unchecked.',
       ])
@@ -82,11 +81,11 @@ describe('the prompt builder (08 §8.2)', () => {
 
   it('QA19-H15 the prompt says when to set risky, to request a started server, and what a small task skips', () => {
     const { prompt } = buildPrompt({ role: 'lead', workspacePath: '/w', language: 'en', platform: 'linux', shell: 'bash', sections: [], connectors: [] });
-    expect(prompt).toContain("`shell exec`, `fs write`, `fs edit`, and `mcp call` take risky, which you always send: true when the call could lose, damage, change, or send something that isn't your own work or reaches outside the workspace folder, and the person is then asked first; false otherwise, such as for a tool that only reads.");
+    expect(prompt).toContain("`shell exec`, `fs write`, `fs edit`, `mcp call`, and `mcp run` take risky, which you always send: true when the call could lose, damage, change, or send something that isn't your own work or reaches outside the workspace folder, and the person is then asked first; false otherwise, such as for a tool that only reads. A new file, and a change to a file you made in this chat, inside the workspace folder, are your own work: false.");
     const check = "\nBefore you say that something runs or works, check it the way the person would: run it, request its address, or run its test; if you couldn't, say what is unchecked. After you start a server, request its address once before you give it to the person.\n";
     expect(prompt).toContain(check);
     expect(prompt.split('\n').find((line) => line.startsWith('4. '))).not.toContain('Before you say');
-    expect(prompt).toContain('needs no plan and no `plan` artifact, so skip steps 3 and 5 and just do it');
+    expect(prompt).toContain('needs no execution map and no worker, so skip steps 3 and 6, do it, and check it; every other task follows these steps, and is planned on its map once you understand it.');
   });
 
   it('QA9-H18 and QA10-H1 the base prompt ends its working method with the call-or-final-answer rule, and never makes a call that does nothing', () => {

@@ -10,7 +10,7 @@ kvwebui is the web app, and it is an extension like any other. The kernel serves
 - `@lucide/vue` for icons (the successor of the deprecated `lucide-vue-next`, with the same icon names).
 - The IBM Plex Sans, IBM Plex Sans Arabic, and IBM Plex Mono fonts, bundled into the app.
 - Every enabled clickable control (button, link, summary, select, checkbox) shows `cursor: pointer`, which the CSS reset removes from buttons (ADR 0009, 209).
-- `markdown-it` with HTML disabled, its output sanitized with `DOMPurify`. `v-html` appears only in that one component. Each rendered block has `dir="auto"`, so it takes its direction from its own text (ADR 0013, 12).
+- `markdown-it` with HTML disabled, its output sanitized with `DOMPurify`. `v-html` appears only in that one component. Each rendered block has `dir="auto"`, so it takes its direction from its own text (ADR 0013, 12). A fenced `mermaid` block is drawn as a diagram with the `mermaid` package, which is loaded only when a page shows such a block; it runs with `securityLevel: 'strict'` and no HTML labels, its SVG goes through DOMPurify's SVG profile, and a block that isn't a valid diagram stays as its source (ADR 0067).
 
 ## 6.2 The frame
 

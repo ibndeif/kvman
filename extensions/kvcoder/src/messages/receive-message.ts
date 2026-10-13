@@ -5,6 +5,7 @@ import { invalid } from '../problems.ts';
 import type { SessionDoc, Source } from '../schemas/records.ts';
 import { now } from '../sessions/session-lookup.ts';
 import { records, txRecords } from '../store/collections.ts';
+import { runningInBackground } from '../jobs/job-rows.ts';
 import { appendMessage, userContent } from '../turns/history.ts';
 import { modelInfo } from '../turns/model-info.ts';
 import { recoverSession, recoverWorkspace } from '../turns/recover-workspace.ts';
@@ -39,6 +40,8 @@ export async function receiveMessage(ctx: Ctx, session: Stored<SessionDoc>, inco
   const text = withAttachments(incoming.text, await saveAttachments(ctx, others));
   const files = images.length === 0 ? { fileIds: null, fileNames: null } : { fileIds: images.map((file) => file.id), fileNames: images.map((file) => file.name) };
   if (recover) await recoverWorkspace(ctx, session.id);
+  // What still runs is told with the person's message, and stored with it so what is sent never changes (ADR 0068, 4).
+  const running = incoming.source.kind === 'user' ? await runningInBackground(ctx, session.id) : [];
   const next = await ctx.store.transaction((tx) => {
     const store = txRecords(tx);
     const fresh = store.sessions.get(session.id);
@@ -49,10 +52,10 @@ export async function receiveMessage(ctx: Ctx, session: Stored<SessionDoc>, inco
     }
     if (fresh.status === 'idle') {
       if (fresh.autoTitle && fresh.title === '') store.sessions.update(fresh.id, { title: incoming.text.slice(0, 60) });
-      appendMessage(store, fresh, { kind: 'user', content: userContent(text), source: incoming.source, ...files });
+      appendMessage(store, fresh, { kind: 'user', content: userContent(text, running), source: incoming.source, ...files });
       return incoming.mayStart ? { start: openTurn(store, fresh) } : {};
     }
-    store.queued.insert({ sessionId: fresh.id, source: incoming.source, text, ...files, createdAt: now() });
+    store.queued.insert({ sessionId: fresh.id, source: incoming.source, text, ...(running.length === 0 ? {} : { running }), ...files, createdAt: now() });
     const turn = fresh.turnId === null ? undefined : store.turns.get(fresh.turnId);
     if (fresh.status === 'running' || !incoming.mayStart || turn === undefined) return {};
     const dismissed = turn.pending.filter((item) => item.questionId !== null);

@@ -2,6 +2,7 @@ import { z, type Ctx, type Stored } from '@kvman/sdk';
 import { availableWorker, type SubagentWorker, type Worker } from '../delegate/workers.ts';
 import { firePoint } from '../registry/session-points.ts';
 import { invalid } from '../problems.ts';
+import { settingSchemas } from '../register-settings.ts';
 import type { CreationGuard } from '../delegate/permission.ts';
 import type { SessionDoc } from '../schemas/records.ts';
 import { now } from '../sessions/session-lookup.ts';
@@ -58,6 +59,8 @@ export function registerDelegateConnector(ctx: Ctx): void {
 
 /** Creates the worker's child session, named by the run's title (ADR 0037, 2), with the task as its first message. */
 export async function createChild(ctx: Ctx, parent: Stored<SessionDoc>, worker: SubagentWorker, run: { title: string; task: string }, guard: CreationGuard): Promise<string> {
+  // A worker that names no model uses the one set for helpers, and the chat's own when none is (ADR 0069, 3).
+  const helperModel = settingSchemas.model.parse(await ctx.settings.get('kvcoder.delegate.model'));
   const childId = await ctx.store.transaction((tx) => {
     const store = txRecords(tx);
     const canonical = guard(store);
@@ -70,7 +73,7 @@ export async function createChild(ctx: Ctx, parent: Stored<SessionDoc>, worker: 
       status: 'idle',
       parentId: parent.id,
       worker: { name: worker.name, instructions: worker.instructions, readOnly: worker.readOnly },
-      model: worker.model ?? canonical.model,
+      model: worker.model ?? helperModel ?? canonical.model,
       thinking: worker.thinking ?? canonical.thinking,
       stepJobId: null,
       stepGeneration: 0,

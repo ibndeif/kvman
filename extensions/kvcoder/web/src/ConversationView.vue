@@ -23,6 +23,7 @@ import WorkerCard from './WorkerCard.vue';
 import { useAnswers } from './use-answers.ts';
 import { useArtifacts } from './use-artifacts.ts';
 import { useConversation } from './use-conversation.ts';
+import { useExecutionMap } from './use-execution-map.ts';
 import { useFollowLatest } from './use-follow-latest.ts';
 import { useFinishedRuns } from './use-finished-runs.ts';
 import { useSessionActions } from './use-session-actions.ts';
@@ -42,7 +43,10 @@ const reading = ref(false);
 const conversation = useConversation(kvman, () => sessionId.value, (error) => toastProblem(kvman, error), () => reading.value);
 const { session, messages, omitted, turns, live, children } = conversation;
 const artifacts = useArtifacts(kvman, () => sessionId.value, () => session.value?.updatedAt, (error) => toastProblem(kvman, error));
-const panelShown = computed(() => artifacts.open.value && artifacts.shown.value !== undefined);
+const executionMap = useExecutionMap(kvman, () => sessionId.value, () => session.value?.updatedAt, artifacts, (error) => toastProblem(kvman, error));
+const panelShown = computed(() => executionMap.shown.value || (artifacts.open.value && artifacts.shown.value !== undefined));
+// An ending with steps left says so (ADR 0064, 11).
+const stepsLeft = computed(() => (session.value?.status === 'idle' ? executionMap.counts.value?.left ?? 0 : 0));
 const calls = computed(() => callViews(messages.value));
 const finishedRuns = useFinishedRuns(kvman, () => sessionId.value, messages, (error) => toastProblem(kvman, error));
 const recoverableNotices = new Set(['STEP_FAILED', 'REPLY_LOST', 'REPLY_INCOMPLETE', 'INTERRUPTED']);
@@ -206,7 +210,7 @@ const key = (message: Message): string => message.id;
 
 <template>
   <div class="kvc-workspace">
-    <ConversationHeader v-if="session && sessionId !== undefined" :session="session" :tab="tab" :turns="turns.length" :context="conversation.context.value" :running-since="runningSince" :artifacts="artifacts.list.value.length" :artifacts-open="artifacts.open.value" :working="actions.working.value !== undefined" @tab="tab = $event" @action="command" @toggle-artifacts="artifacts.toggle()" @background-running="(count) => (backgroundRunning = count)" />
+    <ConversationHeader v-if="session && sessionId !== undefined" :session="session" :tab="tab" :turns="turns.length" :context="conversation.context.value" :running-since="runningSince" :artifacts="artifacts.list.value.length" :artifacts-open="artifacts.open.value && !executionMap.shown.value" :map="executionMap.counts.value" :map-open="executionMap.shown.value" :working="actions.working.value !== undefined" @tab="tab = $event" @action="command" @toggle-artifacts="executionMap.toggleArtifacts()" @toggle-map="executionMap.toggle()" @background-running="(count) => (backgroundRunning = count)" />
     <div class="kvc-stage">
     <section class="kvc-conversation" data-test="conversation">
       <ChatStart v-if="props.sessionId === undefined" :registered="slashCommands" />
@@ -227,9 +231,10 @@ const key = (message: Message): string => message.id;
                 <button type="button" class="kvc-button" data-test="earlier" @click="exportEarlier">{{ kvman.t('kvcoder.ui.earlierMessages', { count: omitted }) }}</button>
               </div>
               <template v-for="message in messages" :key="key(message)">
-                <MessageItem :message="message" :calls="calls" :finished-runs="finishedRuns" @open-artifact="artifacts.openArtifact($event)" />
+                <MessageItem :message="message" :calls="calls" :finished-runs="finishedRuns" @open-artifact="executionMap.selectArtifact($event)" />
                 <span v-if="turnTotals.has(message.id)" class="kvc-muted" :title="turnTotals.get(message.id)?.tokens" data-test="turn-totals">{{ turnTotals.get(message.id)?.text }}</span>
               </template>
+              <div v-if="stepsLeft > 0" class="kvc-notice" data-test="map-remaining">{{ kvman.t('kvcoder.ui.map.remaining', { count: stepsLeft }) }} <button type="button" class="kvc-link-button" data-test="map-show" @click="executionMap.shown.value = true">{{ kvman.t('kvcoder.ui.map.show') }}</button></div>
               <RecoveryActions v-if="recoverable" :session-id="session.id" @sent="follow.resume(); conversation.refresh()" />
             <div v-if="live.summarizing" class="kvc-notice" data-test="summarizing">{{ kvman.t('kvcoder.ui.summarizing') }}</div>
               <div v-if="running && (live.text !== '' || live.thinking !== '')" class="kvc-answer" data-test="live-answer">
@@ -251,7 +256,7 @@ const key = (message: Message): string => message.id;
         </MessageComposer>
       </template>
     </section>
-    <ArtifactPanel v-if="panelShown" :list="artifacts.list.value" :shown="artifacts.shown.value" :content="artifacts.content.value" @select="artifacts.select($event)" @close="artifacts.close()" />
+    <ArtifactPanel v-if="panelShown" :list="artifacts.list.value" :shown="artifacts.shown.value" :content="artifacts.content.value" :map="executionMap.map.value" :map-shown="executionMap.shown.value" @select="executionMap.selectArtifact($event)" @select-map="executionMap.shown.value = true" @close="executionMap.close()" />
     </div>
   </div>
 </template>

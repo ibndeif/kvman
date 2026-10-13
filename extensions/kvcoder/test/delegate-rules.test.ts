@@ -9,7 +9,7 @@ import { worker, workers } from './support/workers.ts';
 const kvcoder = useKvcoder();
 
 describe("the rules of a worker's subagent (08 §8.5, ADR 0009, 102; ADR 0021)", { timeout: 30_000 }, () => {
-  it("M2.4-E43, QA4-E18, QA5-E7, and QA6-E21 a child's connectors are its worker's among its parent's: never delegate, always ask, and the shell only when it is given", async () => {
+  it("M2.4-E43, QA4-E18, QA5-E7, and QA6-E21 a child's connectors are its worker's among its parent's: never delegate or ask, and the shell only when it is given", async () => {
     const { kernel, fake } = await kvcoder.start({ settings: workers(worker('general'), worker('limited', { connectors: ['todo'] })) });
     const sessionId = await newSession(kernel);
     fake.reply(
@@ -24,16 +24,16 @@ describe("the rules of a worker's subagent (08 §8.5, ADR 0009, 102; ADR 0021)",
     expect(child[0]).toBe("error VALIDATION_FAILED: delegate isn't available in this subagent.");
     expect(child[1]).toBe("error VALIDATION_FAILED: shell isn't available in this subagent.");
     expect(child[2]).toMatch(/^\{"id":".+","text":"c"\}$/);
-    expect(child[3]).toMatch(/^ask: Put a question to the person/);
+    expect(child[3]).toBe("error VALIDATION_FAILED: ask isn't available in this subagent.");
     const prompt = systemPrompt(fake, 1);
     expect(prompt).toContain('- todo: Keep a todo list.');
-    expect(prompt).toContain('- ask: Put a question to the person and wait for the answer.');
+    expect(prompt).not.toContain('- ask: ');
     expect(prompt).not.toContain('- delegate: ');
     expect(prompt).not.toContain('- fs: ');
     expect(prompt).not.toContain('- shell: ');
     expect(prompt).toContain('Connectors are the only way you act.');
-    expect(prompt).toContain("Do the task you were given and return the result; don't re-plan it or widen it");
-    expect(prompt).toContain('## Connectors\n- ask: ');
+    expect(prompt).toContain("Do the task you were given and return the result to the lead agent; don't re-plan it or widen it.");
+    expect(prompt).toContain('## Connectors\n- todo: ');
   });
 
   it("QA4-E13 a child that wasn't given files can't use it, and one that was can", async () => {
@@ -63,7 +63,7 @@ describe("the rules of a worker's subagent (08 §8.5, ADR 0009, 102; ADR 0021)",
   it('M2.4-E2 every command that names a subagent session fails VALIDATION_FAILED, and reads work', async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Wait' })), runs(command('ask', 'text', {"prompt":"?"})));
+    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Wait' })), runs(shell('true', { risky: true })));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     const childId = String((await turnState(kernel, sessionId)).turn?.pending[0]?.childSessionId);
@@ -99,7 +99,7 @@ describe("the rules of a worker's subagent (08 §8.5, ADR 0009, 102; ADR 0021)",
   it('M2.4-E155 a title over 60 characters is shortened, and one over 200 fails', async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'x'.repeat(61), task: 'Go' })), runs(command('ask', 'text', { prompt: 'Name?' })));
+    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'x'.repeat(61), task: 'Go' })), runs(shell('true', { risky: true })));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     const [turn] = await kernel.exec('kvcoder.turn.list', { sessionId, limit: 1 });

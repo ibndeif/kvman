@@ -3,13 +3,13 @@ import type { TestKernel } from '@kvman/testkit';
 import type { FakeOpenAI } from '@kvman/testkit/fake-openai';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { padded, unpadded } from './support/long-messages.ts';
-import { requestMessages, requestTools, runs, says, shell, systemPrompt, textOf, unstamped } from './support/model-script.ts';
+import { summaryInstruction } from '../src/turns/compaction.ts';
+import { requestMessages, requestTools, runs, says, shell, systemPrompt, textOf, unstamped, withoutFacts } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
 
-const instruction =
-  "Summarize the conversation above for the agent that continues it: the goal, the decisions, the files and commands that matter, what is done, and what is left. Keep names, paths, and numbers exact. Write at most 1,500 words: fold an earlier summary into this one instead of repeating it, and leave out what the files themselves record. This instruction comes from kvman, not from the person: don't record it in the summary as a request or a direction. Reply with the summary only, and call no tool.";
+const instruction = summaryInstruction;
 
 const compactAt = (kernel: TestKernel, value: number) => kernel.exec('kernel.settings.set', { key: 'kvcoder.compactAt', value, scope: 'global' });
 
@@ -54,7 +54,7 @@ describe("a summary's request is a step's own (08 §8.1, ADR 0032, 2, 7, and 8)"
     expect(sent(fake, -2, true)).toEqual(['user:message 1', 'assistant:answer 1', 'user:message 2', 'assistant:answer 2', 'user:message 3', `user:${instruction}`]);
     expect(summary[0]).toMatch(/^user:\[[A-Z][a-z]+day \d{4}-\d{2}-\d{2} \d{2}:\d{2} [+-]\d{2}:\d{2}\]\nmessage 1$/);
     expect(summary.slice(0, 5)).toEqual(sent(fake, -3).slice(0, 5));
-    expect((await kinds(kernel, sessionId)).find((message) => message.kind === 'summary')?.content).toEqual({ text: 'SUMMARY', coversThroughSeq: 4 });
+    expect((await kinds(kernel, sessionId)).find((message) => message.kind === 'summary')?.content).toMatchObject({ text: 'SUMMARY', coversThroughSeq: 4 });
   });
 
   it('QA44-E4 a summary answered with a call and no text adds a notice, stores nothing, and the step goes on', async () => {
@@ -86,7 +86,8 @@ describe("a summary's request is a step's own (08 §8.1, ADR 0032, 2, 7, and 8)"
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'message 13' });
     await kernel.clock.advance(0);
     const second = sent(fake, -2);
-    expect(second[0]).toBe('user:A summary of the earlier conversation:\nSUMMARY');
+    expect(withoutFacts(second[0] ?? '')).toBe('user:A summary of the earlier conversation:\nSUMMARY');
+    expect(second[0]).toContain("\n\nWhat kvman recorded when this summary was written:\nThe person's own messages, oldest first:\n- [");
     expect(sent(fake, -2, true).slice(1, 4)).toEqual(['assistant:answer 3', 'user:message 4', 'assistant:answer 4']);
     expect(second.at(-1)).toBe(`user:${instruction}`);
     expect((await kinds(kernel, sessionId)).filter((message) => message.kind === 'summary').at(-1)?.content).toMatchObject({ text: 'SUMMARY 2' });

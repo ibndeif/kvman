@@ -69,6 +69,11 @@ export function unstamped(text: string): string {
   return text.replace(/^\[[A-Z][a-z]+day \d{4}-\d{2}-\d{2} \d{2}:\d{2} [+-]\d{2}:\d{2}\]\n/, '');
 }
 
+/** A sent summary without what kvman added to it (ADR 0066, 2), for a test of the model's text alone. */
+export function withoutFacts(text: string): string {
+  return text.replace(/\n\nWhat kvman recorded when this summary was written:[\s\S]*$/, '');
+}
+
 /** The tool results of a request, in order. */
 export function toolResults(fake: FakeOpenAI, index = -1): string[] {
   return requestMessages(fake, index).filter((message) => message.role === 'tool').map(textOf);

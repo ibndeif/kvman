@@ -45,17 +45,19 @@ Long answers and results are stored as **artifacts**, not dumped into the chat.
 
 The agent of a chat is told to work as a lead engineer who owns the result: it decides, plans, and executes, and it scales the process to the task.
 
-- **A small task** (one file, or a few steps) is just done: no plan, no worker.
-- **A larger task** goes through six steps:
+- **A small task** (one file, or about five calls) is just done and checked: no execution map, no worker.
+- **A larger task** goes through eight steps:
   1. **Understand.** It reads your request, then the files, config, and tests, and the guides where there are any. It is told never to assume or invent a name, a path, an API, or a behavior.
-  2. **Clarify.** When the request is unclear, contradicts the code, or leaves out something that changes the result, it asks you, one question per card, with its recommended option first. It doesn't ask what it can find by looking.
-  3. **Plan.** It writes the plan as the artifact `plan`: the goal, the steps as a checklist, what each step uses (a connector or a worker), which steps can run at the same time, and how each is checked. For a large, ambiguous, or risky task it asks you to confirm the plan before it starts.
-  4. **Execute.** It works through the steps, running independent ones together, checks each with the project's own checks or tests, and ticks it off in the plan.
-  5. **Delegate.** It hands separate, self-contained parts to workers, several at once when they don't depend on each other, and checks what they return.
-  6. **Finish.** It treats the work as done when it is ready for production: it does what you asked, handles the errors and edge cases that will happen, follows the project's conventions, passes its checks and tests, and leaves nothing temporary behind.
+  2. **Clarify.** When the request is unclear, contradicts the code, or leaves out something that changes the result, it asks you, one question per card, with its recommended option first. It doesn't ask what it can find by looking, and it decides an ordinary detail that is easy to change and tells you what it chose.
+  3. **Plan.** Only after it understood the request, looked at what exists, and has your answers, it plans on the **execution map**: the goal, then steps that each say what they come after, what they use, and how they will be checked. Steps with nothing between them run together. For a large, ambiguous, or risky task it asks you to confirm the map before it starts. To change the map, ask the agent.
+  4. **Execute.** It takes the steps that are ready, independent ones together, marks each as it starts, and marks it done only with evidence: what it ran and what that showed.
+  5. **Stay on the task.** A problem it notices that your task doesn't need is not looked into. It goes on the map's "Noted for later" list and is reported at the end.
+  6. **Delegate.** It hands a part to a worker only when it is separate work that runs beside its own, or a fresh review of a finished change, and checks what comes back.
+  7. **Show what you will look at.** When the task includes a screen, a page, or a style, it shows it in an artifact: the design before it is built when the layout is a real choice, and the running app once it runs.
+  8. **Finish.** It treats the work as done when it is ready for production: it does what you asked, handles the errors and edge cases that will happen, follows the project's conventions, passes its checks and tests, and leaves nothing temporary behind. Its last answer says what was done, what was checked, what is unchecked, what still runs, and what it noted for later. When it found how your project is built, tested, or run and your `AGENTS.md` doesn't say it, it offers to add a short Commands section there, and asks you first.
 - **Always.** It decides from evidence (something it read, ran, or was told) and says what it checked and what it didn't. Before it tells you something works, it runs it or requests its address.
 
-These are instructions to a model, not guarantees: read the plan and the call cards, and stop the turn when it goes the wrong way. `/prompt` shows the exact text.
+These are instructions to a model, not guarantees: read the execution map and the call cards, and stop the turn when it goes the wrong way. `/prompt` shows the exact text.
 
 ## Connectors: how the agent acts
 
@@ -64,9 +66,10 @@ Everything the agent does goes through a **connector**: a named set of commands.
 - `shell` — runs one line in a real shell, in the workspace folder: `bash` on Linux and macOS, PowerShell on Windows. Each line starts fresh (a `cd` doesn't carry over).
 - `fs` — reads, lists, and searches files, and writes and edits them, all inside the workspace folder.
 - `artifact` — stores a document you can read (below).
+- `execution-map` — plans a larger task as steps you watch on a diagram beside the chat, and tracks what is done (see "How the agent works").
 - `ask` — asks you a question and waits for your answer (below).
 - `delegate` — hands a self-contained part to a worker, which does it in a helper chat and reports back.
-- `background` — checks on, or stops, something the agent left running (below).
+- `background` — checks on, waits for, or stops something the agent left running (below).
 - `mcp` — uses the tools of the MCP servers you add (below). It is there only while you have at least one server.
 
 Other extensions add connectors (kvbuilder adds `ext`, `preset`, `preview`, `kvman`, and `docs`, in a chat where you typed `/build-kvman` — see [building-kvman.md](building-kvman.md)), and a preset can add a program on your machine, such as `git` or `gh`, as a connector with the `kvcoder.connectors` setting. A program is a connector like any other: it is in the same list on Coder's page, with the same switch.
@@ -89,7 +92,7 @@ Each server in the list says **Ready · N tools**, **Sign-in needed**, or **Coul
 What to know:
 
 - The agent sees your servers' names and descriptions, and asks a server for its tools when it needs them.
-- A command server is started for each call and stopped when the call ends, in the workspace folder, so it keeps nothing between calls.
+- A command server is started for each call and stopped when the call ends, so it keeps nothing between calls. It runs in a temporary folder of its own, which kvman deletes, so its logs and snapshots don't land in your project; it reads your project's folder from the variable `KVMAN_WORKSPACE`. To use a server that keeps state, such as a browser, across several tools, the agent calls them in one `mcp run`.
 - The agent never signs in for you: when a sign-in has run out and can't be renewed, the call fails and tells the agent you must sign in again.
 - A tool call asks you first when the agent marks it risky, or always when approval is set to ask (below), exactly like a shell line.
 - Only run servers you trust: a command server is a program on your machine, and a tool's result goes into the conversation, so it is sent to the model.
@@ -113,7 +116,7 @@ For a dev server or anything else that must keep running, the agent starts the l
 
 ## Artifacts
 
-When the agent has something for you to read — a plan, a report, a design, a page — it stores it as an **artifact**. The artifact panel opens beside the conversation (one artifact at a time, a row of titles when there are several), with **Preview** and **Source** views, its kind and version, and icon buttons to open a page in a new tab, copy, and close. An update to an open artifact doesn't reopen a panel you closed. The artifacts button in the header (an icon with the count) opens and closes the panel.
+When the agent has something for you to read — a report, a design, a page — it stores it as an **artifact**. The artifact panel opens beside the conversation (one artifact at a time, a row of titles when there are several), with **Preview** and **Source** views, its kind and version, and icon buttons to open a page in a new tab, copy, and close. An update to an open artifact doesn't reopen a panel you closed. The artifacts button in the header (an icon with the count) opens and closes the panel.
 
 HTML artifacts run in an isolated frame: their scripts work, but they can't reach the network, kvman, or your browser data. A `url` artifact shows a local dev server page (`localhost` or `127.0.0.1`, never kvman itself).
 
@@ -123,7 +126,7 @@ When the agent needs a decision, it shows a question card: free text, a choice (
 
 ## Workers
 
-The agent can delegate a separate, self-contained part to a worker: another agent that does it in a hidden helper chat. You see its steps stream in its card, which names the worker, and its questions and approvals show up in your chat. A worker gets a shorter set of instructions than the chat's agent: do the one task it was given without re-planning or widening it, check it, and return what it did, the evidence, and what is left. It can't delegate further. A worker the agent left working in the background shows in the **Running** chip too.
+The agent can delegate a separate, self-contained part to a worker: another agent that does it in a hidden helper chat. You see its steps stream in its card, which names the worker, and its approvals show up in your chat. A worker asks you nothing and writes no artifact: its answer, with any question it has, goes to the chat's agent, which is the only one that talks to you. A worker gets a shorter set of instructions than the chat's agent: do the one task it was given without re-planning or widening it, check it, and return what it did, the evidence, and what is left. It can't delegate further. A worker the agent left working in the background shows in the **Running** chip too.
 
 kvman comes with five workers: `general` for any separate task, and the specialists `ui-ux`, `architect`, `tester`, and `reviewer`, each with its own instructions. To manage them, open **Extensions → Coder**, and press the cog on the `delegate` row. There you turn a worker off (the agent then no longer sees it), edit its instructions, choose which connectors it may use, give it its own model or thinking level (or leave them the same as the chat), remove it, or add your own. Reset brings the five back.
 
@@ -142,7 +145,7 @@ The paperclip button attaches images (PNG, JPEG, GIF, or WebP) from your compute
 
 ## Useful settings
 
-On Coder's page (open **Extensions**, then **Coder**): the model a new chat starts with (`kvcoder.model`), its thinking level (`kvcoder.thinking`), a turn's step limit (`kvcoder.maxSteps`: no limit by default; set a number to cap a turn, or leave it empty for none), when to summarize a long chat (`kvcoder.compactAt`) and how many of its newest messages stay whole when it is (`kvcoder.compactKeep`, 10 by default), and how many chats to keep (`kvcoder.sessions.keep`). The same page lists the agent's **Connectors**, each with a switch that turns it on or off (`kvcoder.connectors.disabled`). The cog beside `shell` opens its own settings: approval (`kvcoder.shell.approval`) and the shell program (`kvcoder.shell.path`); a change is saved as you make it, for all workspaces or only this one, as the page's switch says. See [extensions.md](extensions.md) and [settings-and-secrets.md](settings-and-secrets.md).
+On Coder's page (open **Extensions**, then **Coder**): the model a new chat starts with (`kvcoder.model`), the model helpers use when their worker names none (`kvcoder.delegate.model`: the chat's own by default), its thinking level (`kvcoder.thinking`), a turn's step limit (`kvcoder.maxSteps`: no limit by default; set a number to cap a turn, or leave it empty for none), when to summarize a long chat (`kvcoder.compactAt`) and how many of its newest messages stay whole when it is (`kvcoder.compactKeep`, 10 by default), and how many chats to keep (`kvcoder.sessions.keep`). The same page lists the agent's **Connectors**, each with a switch that turns it on or off (`kvcoder.connectors.disabled`). The cog beside `shell` opens its own settings: approval (`kvcoder.shell.approval`) and the shell program (`kvcoder.shell.path`); a change is saved as you make it, for all workspaces or only this one, as the page's switch says. See [extensions.md](extensions.md) and [settings-and-secrets.md](settings-and-secrets.md).
 
 ## Next
 

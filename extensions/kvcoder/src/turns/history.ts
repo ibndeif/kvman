@@ -45,8 +45,9 @@ export function appendMessage(tx: TxRecords, session: Stored<SessionDoc>, messag
 }
 
 /** A user message's content, as pi-ai has it. */
-export function userContent(text: string): Record<string, JsonValue> {
-  return { role: 'user', content: text, timestamp: Date.now() };
+/** A user message's content; `running` names the chat's background runs when the person sent it (ADR 0068, 4). */
+export function userContent(text: string, running: readonly string[] = []): Record<string, JsonValue> {
+  return { role: 'user', content: text, timestamp: Date.now(), ...(running.length === 0 ? {} : { running: [...running] }) };
 }
 
 /** Moves the session's queued messages into its history, in the order they came; returns how many moved. */
@@ -57,7 +58,7 @@ export function appendQueued(tx: TxRecords, session: Stored<SessionDoc>, turnId:
     const queued = tx.queued.find({ sessionId: session.id }, { limit: 1000 });
     for (const message of queued) {
       tx.queued.delete(message.id);
-      appendMessage(tx, session, { kind: 'user', content: userContent(message.text), turnId, source: message.source, fileIds: message.fileIds, fileNames: message.fileNames });
+      appendMessage(tx, session, { kind: 'user', content: userContent(message.text, message.running), turnId, source: message.source, fileIds: message.fileIds, fileNames: message.fileNames });
     }
     appended += queued.length;
     if (queued.length < 1000) return appended;

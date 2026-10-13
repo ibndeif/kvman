@@ -65,7 +65,7 @@ describe("the delegate connector's workers in its dialog (08 §8.7, ADR 0021, 6,
     expect((part(view, 'worker-read-only').element as HTMLInputElement).checked).toBe(false);
     await part(view, 'worker-read-only').setValue(true);
     await part(view, 'worker-connectors-some').setValue(true);
-    expect(view.findAll('[data-test^="worker-connector-"]').map((box) => box.attributes('data-test'))).toEqual(['shell', 'fs', 'artifact', 'background', 'ask', 'mcp', 'todo'].map((name) => `worker-connector-${name}`));
+    expect(view.findAll('[data-test^="worker-connector-"]').map((box) => box.attributes('data-test'))).toEqual(['shell', 'fs', 'artifact', 'background', 'mcp', 'todo'].map((name) => `worker-connector-${name}`));
     await part(view, 'worker-connector-fs').setValue(true);
     await part(view, 'worker-model').find('[data-test="model-picker"]').trigger('click');
     await part(view, 'worker-model').find('[data-test="model-zed/z1"]').trigger('click');

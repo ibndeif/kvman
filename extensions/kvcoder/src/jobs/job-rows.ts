@@ -16,7 +16,8 @@ import { localLinks } from './process-text.ts';
 export type JobRow = { id: string; kind: 'process' | 'subagent' | 'worker'; title: string; call: string; status: string; startedAt: string; endedAt?: string; exitCode?: number; staging?: { state: 'changed' | 'restored'; paths: number; headMoved: boolean } };
 export type JobDetail = { row: JobRow; detail: Record<string, Json> };
 
-const outputLines = 100;
+/** How many of a process's last lines a read returns when it names no number. */
+export const outputLines = 100;
 
 async function subagentRow(ctx: Ctx, entry: Stored<BackgroundDoc>): Promise<JobDetail> {
   const store = records(ctx.store);
@@ -28,11 +29,11 @@ async function subagentRow(ctx: Ctx, entry: Stored<BackgroundDoc>): Promise<JobD
   return { row, detail: outcome === null ? {} : { output: (await childResult(ctx, entry.ref, outcome)).text } };
 }
 
-async function processRow(ctx: Ctx, id: string, sessionId: string): Promise<JobDetail | undefined> {
+async function processRow(ctx: Ctx, id: string, sessionId: string, lines: number): Promise<JobDetail | undefined> {
   const doc = await sessionProcess(ctx, sessionId, id);
   if (doc === undefined) return undefined;
   const row: JobRow = { id: doc.id, kind: 'process', title: doc.title, call: doc.call, status: processStatus(doc), startedAt: doc.startedAt, ...(doc.endedAt === undefined ? {} : { endedAt: doc.endedAt }), ...(typeof doc.exitCode === 'number' ? { exitCode: doc.exitCode } : {}) };
-  return { row, detail: { output: await outputTail(ctx, doc.id, outputLines) } };
+  return { row, detail: { output: await outputTail(ctx, doc.id, lines) } };
 }
 
 // A program worker's run (ADR 0021, 33): its output is what the call returned, once it has ended.
@@ -42,8 +43,8 @@ function runRow(run: Stored<RunDoc>): JobDetail {
 }
 
 /** One job of the session by its id, with its output or problem; `undefined` when the session started no such job. */
-export async function jobDetail(ctx: Ctx, sessionId: string, id: string): Promise<JobDetail | undefined> {
-  const process = await processRow(ctx, id, sessionId);
+export async function jobDetail(ctx: Ctx, sessionId: string, id: string, lines = outputLines): Promise<JobDetail | undefined> {
+  const process = await processRow(ctx, id, sessionId, lines);
   if (process !== undefined) return process;
   const run = await records(ctx.store).runs.get(id);
   if (run !== undefined) return run.sessionId === sessionId ? runRow(run) : undefined;
@@ -64,6 +65,12 @@ export async function jobRows(ctx: Ctx, sessionId: string): Promise<JobRow[]> {
   const ended = [...open.filter((row) => row.status !== 'running'), ...(await Promise.all(jobs.filter((job) => job.ended).slice(0, rowsShown).map((job) => jobDetail(ctx, sessionId, job.id)))).flatMap((job) => (job === undefined ? [] : [job.row]))];
   const kept = ended.sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, Math.max(rowsShown - running.length, 0));
   return [...running, ...kept].sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+}
+
+/** The chat's runs that are still running and that no turn waits on, as the agent is told of them (ADR 0068, 4). */
+export async function runningInBackground(ctx: Ctx, sessionId: string): Promise<string[]> {
+  const waitedOn = new Set((await allDocs((options) => records(ctx.store).runs.find({ sessionId }, options))).filter((run) => run.status === 'running' && run.toolCallId !== null).map((run) => run.id));
+  return (await jobRows(ctx, sessionId)).filter((row) => row.status === 'running' && !waitedOn.has(row.id)).map((row) => `${row.id} (${row.kind}): ${row.title}`);
 }
 
 /** What the person's list adds to a row: the localhost links in a process's output. */

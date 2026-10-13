@@ -2,12 +2,12 @@ import type { Kvman } from '@kvman/sdk/web';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useSetting } from './use-setting.ts';
 
-// The connectors list of kvcoder's configuration (plan 08 §8.7, ADR 0014, 10; ADR 0015, 4 and 5): kvcoder's own seven,
+// The connectors list of kvcoder's configuration (plan 08 §8.7, ADR 0014, 10; ADR 0015, 4 and 5): kvcoder's own eight,
 // then the registered ones and the programs, each on unless `kvcoder.connectors.disabled` names it. A switch writes
 // that setting in the scope the extension's page is set to. A connector with a configuration of its own has a cog.
 
 /** kvcoder's own connectors, in the prompt's order (the server's `builtinConnectors`). */
-export const ownConnectors = ['shell', 'fs', 'artifact', 'background', 'ask', 'delegate', 'mcp'] as const;
+export const ownConnectors = ['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'mcp'] as const;
 
 /** The connectors with a configuration of their own, which their cog opens (ADR 0020, 2). */
 export const configurableConnectors: readonly string[] = ['shell', 'delegate', 'mcp'];

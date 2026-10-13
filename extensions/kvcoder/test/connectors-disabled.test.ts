@@ -24,8 +24,8 @@ describe('connectors that are turned off (08 §8.4, ADR 0014, 7)', { timeout: 30
     fake.reply(runs(fsCall('list'), command('todo', 'list')), says('done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
-    expect(indexed(systemPrompt(fake, 0))).toEqual(['shell', 'artifact', 'background', 'ask', 'delegate']);
-    const expected = (name: string) => `error VALIDATION_FAILED: There is no connector ${name}. The connectors are: shell, artifact, background, ask, delegate.`;
+    expect(indexed(systemPrompt(fake, 0))).toEqual(['shell', 'artifact', 'execution-map', 'background', 'ask', 'delegate']);
+    const expected = (name: string) => `error VALIDATION_FAILED: There is no connector ${name}. The connectors are: shell, artifact, execution-map, background, ask, delegate.`;
     expect(toolResults(fake)).toEqual([expected('fs'), expected('todo')]);
   });
 
@@ -52,13 +52,13 @@ describe('connectors that are turned off (08 §8.4, ADR 0014, 7)', { timeout: 30
     fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Review' })), says('done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
-    expect(indexed(systemPrompt(fake, 0))).toEqual(['shell', 'fs', 'artifact', 'background', 'ask', 'todo']);
-    expect(toolResults(fake)).toEqual(['error VALIDATION_FAILED: There is no connector delegate. The connectors are: shell, fs, artifact, background, ask, todo.']);
+    expect(indexed(systemPrompt(fake, 0))).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'todo']);
+    expect(toolResults(fake)).toEqual(['error VALIDATION_FAILED: There is no connector delegate. The connectors are: shell, fs, artifact, execution-map, background, ask, todo.']);
     const old = await kvcoder.start({ settings: off('subagent') });
     old.fake.reply(says('done'));
     await old.kernel.exec('kvcoder.message.send', { sessionId: await newSession(old.kernel), text: 'go' });
     await old.kernel.clock.advance(0);
-    expect(indexed(systemPrompt(old.fake, 0))).toEqual(['shell', 'fs', 'artifact', 'background', 'ask', 'delegate', 'todo']);
+    expect(indexed(systemPrompt(old.fake, 0))).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'todo']);
   });
 
   it("QA21-E8 a name nothing has is ignored, and a workspace's own list replaces the one for all", async () => {
@@ -70,8 +70,8 @@ describe('connectors that are turned off (08 §8.4, ADR 0014, 7)', { timeout: 30
     await kernel.clock.advance(0);
     await kernel.exec('kvcoder.message.send', { sessionId: await newSession(kernel, other.id), text: 'go' }, { workspaceId: other.id });
     await kernel.clock.advance(0);
-    expect(indexed(systemPrompt(fake, 0))).toEqual(['shell', 'fs', 'artifact', 'background', 'ask', 'delegate', 'todo']);
-    expect(indexed(systemPrompt(fake, 1))).toEqual(['fs', 'artifact', 'background', 'ask', 'delegate', 'todo']);
+    expect(indexed(systemPrompt(fake, 0))).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'todo']);
+    expect(indexed(systemPrompt(fake, 1))).toEqual(['fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'todo']);
   });
 
   it('QA21-E9 the list applies from the next step of a chat', async () => {

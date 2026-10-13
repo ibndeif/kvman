@@ -2,6 +2,8 @@ import type { Ctx } from '@kvman/sdk';
 import { registerArtifacts } from './artifacts/register-artifacts.ts';
 import { registerConnectorHelp } from './calls/connector-help.ts';
 import { registerArtifactConnector } from './connectors/artifact.ts';
+import { registerExecutionMapConnector } from './connectors/execution-map.ts';
+import { registerMaps } from './maps/register-maps.ts';
 import { registerAskConnector } from './connectors/ask.ts';
 import { registerBackgroundConnector } from './connectors/background.ts';
 import { registerBinaryConnector } from './connectors/binary.ts';
@@ -47,6 +49,8 @@ export default (ctx: Ctx): void => {
   registerBinaryConnector(ctx);
   registerFsConnector(ctx);
   registerArtifactConnector(ctx);
+  registerExecutionMapConnector(ctx);
+  registerMaps(ctx);
   registerBackgroundConnector(ctx);
   registerAskConnector(ctx);
   registerDelegateConnector(ctx);

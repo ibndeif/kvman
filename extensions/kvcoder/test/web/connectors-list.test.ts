@@ -34,10 +34,10 @@ const writes = (fake: FakeKvman) => fake.calls.filter((call) => call.name.starts
 describe("the connectors list of kvcoder's configuration (08 §8.7, ADR 0014, 10)", () => {
   it('QA22-H2, QA28-H1, and QA29-H10 the connectors are one list: a name, a description, and a switch each, a cog only on shell, delegate, and mcp, and nothing about where one comes from', async () => {
     const list = await mounted(ConnectorsList, world());
-    expect(list.findAll('.kvc-connector').map((row) => row.find('[data-test="connector-name"]').text())).toEqual(['shell', 'fs', 'artifact', 'background', 'ask', 'delegate', 'mcp', 'todo', 'gh']);
+    expect(list.findAll('.kvc-connector').map((row) => row.find('[data-test="connector-name"]').text())).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'mcp', 'todo', 'gh']);
     const plain = ['connector-name', 'connector-description', 'connector-switch'];
     const withCog = ['connector-name', 'connector-description', 'connector-configure', 'connector-switch'];
-    expect(list.findAll('.kvc-connector').map((row) => row.findAll('[data-test]').map((part) => part.attributes('data-test')))).toEqual([withCog, plain, plain, plain, plain, withCog, withCog, plain, plain]);
+    expect(list.findAll('.kvc-connector').map((row) => row.findAll('[data-test]').map((part) => part.attributes('data-test')))).toEqual([withCog, plain, plain, plain, plain, plain, withCog, withCog, plain, plain]);
     expect(list.find('[data-test="connector-mcp"] [data-test="connector-description"]').text()).toBe('Uses the tools of the MCP servers you add.');
     expect(list.find('[data-test="connector-mcp"] [data-test="connector-configure"]').attributes('aria-label')).toBe('Configure mcp');
     expect(list.find('[data-test="connector-gh"] [data-test="connector-description"]').text()).toBe('GitHub CLI.');
@@ -60,13 +60,14 @@ describe("the connectors list of kvcoder's configuration (08 §8.7, ADR 0014, 10
     expect(list.find('[data-test="workers"]').exists()).toBe(true);
   });
 
-  it('QA21-H11 the list shows the seven own connectors and the added ones, each on, and turning one off writes the setting', async () => {
+  it('QA21-H11 the list shows the eight own connectors and the added ones, each on, and turning one off writes the setting', async () => {
     const fake = world();
     const list = await mounted(ConnectorsList, fake);
     expect(list.findAll('.kvc-connector').map((row) => [row.find('[data-test="connector-name"]').text(), row.find('[data-test="connector-switch"]').attributes('aria-checked')])).toEqual([
       ['shell', 'true'],
       ['fs', 'true'],
       ['artifact', 'true'],
+      ['execution-map', 'true'],
       ['background', 'true'],
       ['ask', 'true'],
       ['delegate', 'true'],

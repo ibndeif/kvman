@@ -36,7 +36,7 @@ describe('a read-only worker (KVC-33, ADR 0056)', { timeout: 30_000 }, () => {
     const child = toolResults(fake, 4);
     expect(child.slice(0, 3).every((result) => !result.startsWith('error'))).toBe(true);
     for (const result of child.slice(3, 8)) expect(result).toMatch(refusal);
-    expect(child[8]).toContain('"created":true');
+    expect(child[8]).toMatch(/^error VALIDATION_FAILED: A helper writes no artifact/);
     expect(['new.txt', 'ran.txt'].map((file) => existsSync(path.join(kernel.homeFolder, file)))).toEqual([false, false]);
     expect(await kernel.exec('todo.item.list', {})).toEqual([]);
     expect(toolResults(fake).at(-1)).toBe('report ready');

@@ -22,13 +22,13 @@ describe("a subagent and its chat's optIn connectors (08 §8.4, ADR 0027, 10)", 
     delegated();
     await kernel.exec('kvcoder.message.send', { sessionId: without, text: 'go' });
     await kernel.clock.advance(0);
-    expect(indexed(systemPrompt(fake, 1))).toEqual(['ask', 'todo']);
+    expect(indexed(systemPrompt(fake, 1))).toEqual(['todo']);
 
     const enabled = await newSession(kernel);
     await kernel.exec('kvcoder.connector.enable', { sessionId: enabled, names: ['notes'] }, { as: '@test/todo' });
     delegated();
     await kernel.exec('kvcoder.message.send', { sessionId: enabled, text: 'go' });
     await kernel.clock.advance(0);
-    expect(indexed(systemPrompt(fake, 4))).toEqual(['ask', 'todo', 'notes']);
+    expect(indexed(systemPrompt(fake, 4))).toEqual(['todo', 'notes']);
   });
 });

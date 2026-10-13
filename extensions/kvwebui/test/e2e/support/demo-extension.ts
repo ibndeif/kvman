@@ -3,14 +3,18 @@ import path from 'node:path';
 
 // The `demo` fixture extension for Chromium: a page with two custom components, plain ES modules that import `vue` (as
 // a component built with `vue` external would): `demo.progress`, with a CSS file, starts `demo.count` with `execAsync`,
-// shows its stream, releases it, and renders Markdown through `View`; `demo.plain` has no CSS file.
+// shows its stream, releases it, and renders Markdown through `View`; `demo.plain` has no CSS file. A second page is
+// Markdown with Mermaid blocks.
 
 const entry = `import { z, type Ctx } from '@kvman/sdk';
 
 export default (ctx: Ctx): void => {
   const custom = (component: string, props: Record<string, string>) => ({ type: 'custom', component, props });
   const ui = {
-    pages: [{ id: 'progress', title: 'demo.page', view: { type: 'stack', direction: 'vertical', children: [custom('demo.progress', { title: 'demo.title' }), custom('demo.plain', {})] } }],
+    pages: [
+      { id: 'progress', title: 'demo.page', view: { type: 'stack', direction: 'vertical', children: [custom('demo.progress', { title: 'demo.title' }), custom('demo.plain', {})] } },
+      { id: 'diagram', title: 'demo.page', view: { type: 'markdown', text: 'demo.diagram' } },
+    ],
     nav: [],
     panels: [],
     status: [],
@@ -73,9 +77,12 @@ const plain = `import { defineComponent, h } from 'vue';
 export default defineComponent({ render: () => h('p', { 'data-test': 'demo-plain' }, 'plain') });
 `;
 
+// A page of Markdown with a Mermaid diagram, a block that is no diagram, and an ordinary code block (ADR 0067).
+const diagram = ['Before.', '', '```mermaid', 'flowchart TD', '  start[Start here] --> finish[All done]', '```', '', '```mermaid', 'this is not a diagram', '```', '', '```js', 'const a = 1;', '```'].join('\n');
+
 const catalogs = {
-  en: { 'demo.page': 'Demo', 'demo.title': 'Counting', 'demo.done': '**done**' },
-  ar: { 'demo.page': 'تجربة', 'demo.title': 'العدّ', 'demo.done': '**تم**' },
+  en: { 'demo.page': 'Demo', 'demo.title': 'Counting', 'demo.done': '**done**', 'demo.diagram': diagram },
+  ar: { 'demo.page': 'تجربة', 'demo.title': 'العدّ', 'demo.done': '**تم**', 'demo.diagram': diagram },
 };
 
 export function writeDemo(root: string): void {

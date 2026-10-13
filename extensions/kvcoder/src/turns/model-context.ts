@@ -43,11 +43,17 @@ async function imageBlock(ctx: Ctx, fileId: string, name: string): Promise<Json>
   }
 }
 
+// What was running in the background when the person wrote, as their message stored it (ADR 0068, 4).
+function runningNote(running: Json | undefined): string {
+  const runs = Array.isArray(running) ? running.filter((run) => typeof run === 'string') : [];
+  return runs.length === 0 ? '' : `\n\n[kvman: still running in the background: ${runs.join('; ')}. Use the background connector to wait for, read, or stop one.]`;
+}
+
 // The person's own message starts with its date (ADR 0032, 5); one from a job, a subagent, or an extension doesn't.
 function sentText(message: Stored<MessageDoc>): string {
   const text = textOf(message.content['content']);
   if (message.source?.kind !== 'user') return text;
-  return `${messageStamp(message.createdAt, -new Date(message.createdAt).getTimezoneOffset())}\n${text}`;
+  return `${messageStamp(message.createdAt, -new Date(message.createdAt).getTimezoneOffset())}\n${text}${runningNote(message.content['running'])}`;
 }
 
 async function userMessage(ctx: Ctx, message: Stored<MessageDoc>): Promise<Json> {
@@ -58,9 +64,16 @@ async function userMessage(ctx: Ctx, message: Stored<MessageDoc>): Promise<Json>
 
 const summaryLead = 'A summary of the earlier conversation:';
 
+/** A stored summary as it is sent: the model's text, then what kvman added when it stored it (ADR 0066, 2). */
+export function summaryText(summary: Pick<MessageDoc, 'content'> | undefined): string {
+  if (summary === undefined) return '';
+  const facts = summary.content['facts'];
+  return typeof facts === 'string' ? `${String(summary.content['text'] ?? '')}\n\n${facts}` : String(summary.content['text'] ?? '');
+}
+
 /** The messages a step sends, checked as kvai takes them. */
 export async function modelMessages(ctx: Ctx, history: History) {
-  const lead: Json[] = history.summary === undefined ? [] : [{ role: 'user', content: `${summaryLead}\n${String(history.summary.content['text'] ?? '')}`, timestamp: Date.parse(history.summary.createdAt) }];
+  const lead: Json[] = history.summary === undefined ? [] : [{ role: 'user', content: `${summaryLead}\n${summaryText(history.summary)}`, timestamp: Date.parse(history.summary.createdAt) }];
   const rest = await Promise.all(history.messages.map((message) => (message.kind === 'user' ? userMessage(ctx, message) : Promise.resolve<Json>(message.content))));
   return messageSchema.array().parse([...lead, ...rest]);
 }

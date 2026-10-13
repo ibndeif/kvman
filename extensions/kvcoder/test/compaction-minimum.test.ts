@@ -28,7 +28,7 @@ describe("a summary's minimum, and what a summary by hand answers (08 §8.1, ADR
     await history(kernel, fake, sessionId, (index) => padded(`message ${index}`));
     fake.reply(says('SUMMARY'));
     expect(await kernel.exec('kvcoder.session.compact', { sessionId })).toEqual({ summarized: true });
-    expect((await stored(kernel, sessionId, 'summary')).map((message) => message.content)).toEqual([{ text: 'SUMMARY', coversThroughSeq: 3 }]);
+    expect((await stored(kernel, sessionId, 'summary')).map((message) => message.content)).toMatchObject([{ text: 'SUMMARY', coversThroughSeq: 3 }]);
     const calls = fake.requests().length;
     expect(await kernel.exec('kvcoder.session.compact', { sessionId })).toEqual({ summarized: false });
     expect(fake.requests()).toHaveLength(calls);

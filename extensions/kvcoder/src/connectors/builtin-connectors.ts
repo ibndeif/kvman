@@ -4,6 +4,7 @@ import { askCommands, askDescription } from './ask.ts';
 import { backgroundCommands, backgroundDescription } from './background.ts';
 import { payloadJsonSchema, type ConnectorCommand } from './connector-command.ts';
 import { delegateCommands, delegateDescription } from './delegate.ts';
+import { executionMapCommands, executionMapDescription } from './execution-map.ts';
 import { fsCommands, fsDescription } from './fs.ts';
 import { mcpCommands, mcpDescription } from './mcp.ts';
 import { shellCommands, shellDescription } from './shell.ts';
@@ -15,6 +16,7 @@ export const builtinCommands = {
   shell: shellCommands,
   fs: fsCommands,
   artifact: artifactCommands,
+  'execution-map': executionMapCommands,
   background: backgroundCommands,
   ask: askCommands,
   delegate: delegateCommands,
@@ -28,7 +30,7 @@ export function commandsOf(connector: BuiltinConnector): Readonly<Record<string,
 
 /** What the prompt's connector index and `help` say each built-in connector is for; `shell` names the shell this run uses. */
 export function builtinDescriptions(shell: 'bash' | 'powershell'): Record<BuiltinConnector, string> {
-  return { shell: shellDescription(shell), fs: fsDescription, artifact: artifactDescription, background: backgroundDescription, ask: askDescription, delegate: delegateDescription, mcp: mcpDescription };
+  return { shell: shellDescription(shell), fs: fsDescription, artifact: artifactDescription, 'execution-map': executionMapDescription, background: backgroundDescription, ask: askDescription, delegate: delegateDescription, mcp: mcpDescription };
 }
 
 // Each built-in payload is an object, so a missing signature is a programming error, not a case the prompt may fall
@@ -46,6 +48,7 @@ export const builtinSignatures: Record<BuiltinConnector, readonly string[]> = {
   shell: signaturesOf('shell'),
   fs: signaturesOf('fs'),
   artifact: signaturesOf('artifact'),
+  'execution-map': signaturesOf('execution-map'),
   background: signaturesOf('background'),
   ask: signaturesOf('ask'),
   delegate: signaturesOf('delegate'),

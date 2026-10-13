@@ -36,7 +36,7 @@ function basePrompt(input: PromptInput): string {
     'Each message from the person starts with the date and time it was sent, in brackets; the newest one is the current time.',
   ].join('\n');
   const tool = 'Your one tool is run: it runs one command of a connector, as { description, connector, command, payload }. description is one sentence for the person, saying what the call does. Below, `fs write` means the connector fs and its command write.';
-  const connectors = `Connectors are the only way you act. When a connector other than shell covers a task, use it instead of a shell line: it checks its input, returns structured results, and is shown to the person. Use shell only for what no other connector does. Every connector has the command help. A command listed below with its payload needs no help call; for any other command, or for what a field means, call the connector's help with { "command": "<name>" } before the first use. \`shell exec\`, \`fs write\`, \`fs edit\`, and \`mcp call\` take risky, which you always send: true when the call could lose, damage, change, or send something that isn't your own work or reaches outside the workspace folder, and the person is then asked first; false otherwise, such as for a tool that only reads. Each \`shell exec\` starts in the workspace folder, so cd doesn't carry over to the next call; the shell is ${shell}.`;
+  const connectors = `Connectors are the only way you act. When a connector other than shell covers a task, use it instead of a shell line: it checks its input, returns structured results, and is shown to the person. Use shell only for what no other connector does. Every connector has the command help. A command listed below with its payload needs no help call; for any other command, or for what a field means, call the connector's help with { "command": "<name>" } before the first use. \`shell exec\`, \`fs write\`, \`fs edit\`, \`mcp call\`, and \`mcp run\` take risky, which you always send: true when the call could lose, damage, change, or send something that isn't your own work or reaches outside the workspace folder, and the person is then asked first; false otherwise, such as for a tool that only reads. A new file, and a change to a file you made in this chat, inside the workspace folder, are your own work: false. Each \`shell exec\` starts in the workspace folder, so cd doesn't carry over to the next call; the shell is ${shell}.`;
   return [identity, tool, connectors, workingMethod(input.role)].join('\n\n');
 }
 
@@ -73,7 +73,7 @@ function keptSections(sections: readonly Section[]): { kept: Section[]; left: Se
 }
 
 /** What a read-only worker's helper is told (ADR 0056, 4). */
-const readOnlyNote = 'You are read-only here: you read, search, and ask, and you write your findings as an artifact or in your answer. A call that could change something is refused, so don\'t make one; say what should change and why.';
+const readOnlyNote = 'You are read-only here: you read and search, and you report your findings in your answer. A call that could change something is refused, so don\'t make one; say what should change and why.';
 
 export function buildPrompt(input: PromptInput): BuiltPrompt {
   const { kept, left } = keptSections(input.sections);

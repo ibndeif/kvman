@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { command, runs, says } from './support/model-script.ts';
+import { command, runs, says, shell } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
@@ -67,7 +67,7 @@ describe('sessions (08 §8.6)', { timeout: 30_000 }, () => {
     await kernel.exec('kvcoder.handler.register', { point: 'kvcoder.session.deleted', command: 'todo.seen' }, { as: '@test/todo' });
     const sessionId = await newSession(kernel);
     await kernel.exec('kvcoder.section.set', { id: 'mine', title: 'Mine', order: 1, content: 'x', sessionId }, { as: '@test/todo' });
-    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 't' })), runs(command('ask', 'text', {"prompt":"?"})));
+    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 't' })), runs(shell('true', { risky: true })));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     const childId = String((await turnState(kernel, sessionId)).turn?.pending[0]?.childSessionId);

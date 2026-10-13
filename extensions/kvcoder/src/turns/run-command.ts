@@ -48,16 +48,18 @@ export function commandNamesOf(connectors: readonly ConnectorRow[], name: string
 }
 
 const shellRun = builtinCommands.shell.exec.registration;
-const mcpCall = builtinCommands.mcp.call.registration;
+const mcpCalls: ReadonlySet<string> = new Set([builtinCommands.mcp.call.registration, builtinCommands.mcp.run.registration]);
 const artifactChanges = new Set([builtinCommands.artifact.write.registration, builtinCommands.artifact.edit.registration]);
 const artifactCalls = new Set([...artifactChanges, builtinCommands.artifact.get.registration]);
+const mapCalls: ReadonlySet<string> = new Set(Object.values(builtinCommands['execution-map']).map((command) => command.registration));
 const fileChanges = new Set([builtinCommands.fs.write.registration, builtinCommands.fs.edit.registration, builtinCommands.fs.undo.registration, builtinCommands.fs.assemble.registration]);
 
 // What a call must wait its turn on (plan 08 §8.5, ADR 0009, 160): the calls of a reply start together, and two edits
-// that each read the original would lose the first one's write. The key is taken as the calls start, in the model's order.
+// that each read the original would lose the first one's write; a map's changes apply in order (ADR 0064, 7). The key is taken as the calls start, in the model's order.
 function orderKey(ctx: Ctx, session: Stored<SessionDoc>, call: RunCall, target: CommandTarget): string | undefined {
   const { path: file, id } = call.payload;
   if (fileChanges.has(target.registration) && typeof file === 'string') return `fs:${lexicalPath(ctx.job.workspace.path, file)}`;
+  if (mapCalls.has(target.registration)) return `map:${chatIdOf(session)}`;
   return artifactCalls.has(target.registration) && typeof id === 'string' ? `artifact:${chatIdOf(session)}:${id}` : undefined;
 }
 
@@ -114,7 +116,7 @@ async function runJob(ctx: Ctx, sessionId: string, call: RunCall, target: Comman
     const details = { ...words(call), output: run.output, durationMs: run.durationMs, ...(run.exitCode === null ? {} : { exitCode: run.exitCode }), ...(run.timedOut ? { timedOut: true } : {}), ...(run.jobId === null ? {} : { background: true, jobId: run.jobId }) };
     return { text: lineRunText(run), isError: lineRunIsError(run), details };
   }
-  if (target.registration === mcpCall) {
+  if (mcpCalls.has(target.registration)) {
     const called = mcpCallSchema.parse(done.value);
     const output = truncate(called.text);
     return { text: output, isError: called.isError, details: { ...words(call), output, durationMs: Date.now() - started } };

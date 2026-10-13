@@ -16,7 +16,7 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
     const prompt = systemPrompt(fake);
     const index = (prompt.split('## Connectors\n')[1] ?? '').split('\n');
     const headers = index.filter((line) => line.startsWith('- '));
-    expect(headers.map((line) => /^- ([\w-]+): /.exec(line)?.[1])).toEqual(['shell', 'fs', 'artifact', 'background', 'ask', 'delegate', 'todo', 'node']);
+    expect(headers.map((line) => /^- ([\w-]+): /.exec(line)?.[1])).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'todo', 'node']);
     expect(headers.at(-2)).toBe('- todo: Keep a todo list. Commands: add, wait, fail, list, help.');
     expect(headers.at(-1)).toBe('- node: Node.js. Commands: exec, help.');
     expect(prompt).toContain('Your one tool is run: it runs one command of a connector, as { description, connector, command, payload }.');
@@ -27,8 +27,8 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
     const prompt = systemPrompt(fake);
     const index = (prompt.split('## Connectors\n')[1] ?? '').split('\n');
     const headers = index.filter((line) => line.startsWith('- '));
-    expect(headers.map((line) => /^- ([\w-]+): /.exec(line)?.[1])).toEqual(['shell', 'fs', 'artifact', 'background', 'ask', 'delegate', 'todo', 'node']);
-    expect(headers.slice(0, 6).every((line) => /^- [\w-]+: \S.*[.!?]$/.test(line) && !line.includes('Commands:'))).toBe(true);
+    expect(headers.map((line) => /^- ([\w-]+): /.exec(line)?.[1])).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'todo', 'node']);
+    expect(headers.slice(0, 7).every((line) => /^- [\w-]+: \S.*[.!?]$/.test(line) && !line.includes('Commands:'))).toBe(true);
     expect(headers.at(-2)).toBe('- todo: Keep a todo list. Commands: add, wait, fail, list, help.');
     expect(headers.at(-1)).toBe('- node: Node.js. Commands: exec, help.');
     const lines = index.filter((line) => line.startsWith('  '));
@@ -48,8 +48,14 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
       '  edit  { id, edits: [{ oldText, newText }] }',
       '  get   { id }',
       '  help  { command? }',
+      '  set    { goal, steps: [{ id, title, after?, uses?, check }] }',
+      '  update { steps: [{ id, status: "todo" | "doing" | "done" | "failed" | "skipped", evidence?, note? }] }',
+      '  note   { text }',
+      '  get    {}',
+      '  help   { command? }',
       '  list   {}',
-      '  output { id }',
+      '  output { id, lines? }',
+      '  wait   { id, timeoutMs? }',
       '  stop   { id }',
       '  help   { command? }',
       '  text    { prompt, placeholder? }',
@@ -64,7 +70,7 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
   it("QA19-H6 the artifact connector's description", async () => {
     const { fake } = await looked(() => undefined, [command('todo', 'list')]);
     const prompt = systemPrompt(fake);
-    expect(prompt).toContain('when you write a plan, keep it in the artifact `plan`');
+    expect(prompt).not.toContain('when you write a plan');
     expect(prompt).not.toContain('keep your plan in the artifact `plan`');
   });
 
@@ -76,7 +82,7 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
     await kernel.clock.advance(0);
     const prompt = systemPrompt(fake, 1);
     const index = (prompt.split('## Connectors\n')[1] ?? '').split('\n');
-    expect(index.filter((line) => line.startsWith('- ')).map((line) => /^- ([\w-]+): /.exec(line)?.[1])).toEqual(['fs', 'ask']);
+    expect(index.filter((line) => line.startsWith('- ')).map((line) => /^- ([\w-]+): /.exec(line)?.[1])).toEqual(['fs']);
     expect(index.filter((line) => line.startsWith('  '))).toEqual([
       '  read     { path, fromLine?, fromColumn?, lines? }',
       '  list     { path? }',
@@ -87,11 +93,7 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
       '  part     { path, part, content }',
       '  assemble { path, risky }',
       '  help     { command? }',
-      '  text    { prompt, placeholder? }',
-      '  choice  { prompt, multiple, options: [{ id, label, description? }], other? }',
-      '  confirm { prompt, danger? }',
-      '  help    { command? }',
     ]);
-    for (const absent of ['- shell: ', '- artifact: ', '- background: ', '- delegate: ', '- todo: ', '- node: ']) expect(prompt).not.toContain(absent);
+    for (const absent of ['- ask: ', '- shell: ', '- artifact: ', '- background: ', '- delegate: ', '- todo: ', '- node: ']) expect(prompt).not.toContain(absent);
   });
 });

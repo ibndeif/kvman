@@ -7,8 +7,11 @@ import { useSetting } from './use-setting.ts';
 
 // `kvcoder.model` in kvcoder's configuration (plan 08 §8.7, ADR 0015, 3, 7, and 9): the chat's model picker, with
 // "Use the default model" first, saving into the scope the extension's page is set to.
+// With `kvcoder.delegate.model` it is the model for workers, whose empty choice is the chat's own model (ADR 0069, 3).
+const props = withDefaults(defineProps<{ setting?: 'kvcoder.model' | 'kvcoder.delegate.model' }>(), { setting: 'kvcoder.model' });
 const kvman = useKvman();
-const setting = useSetting(kvman, 'kvcoder.model');
+const forWorkers = computed(() => props.setting === 'kvcoder.delegate.model');
+const setting = useSetting(kvman, props.setting);
 const providers = ref<ProviderRow[]>([]);
 const models = ref<ModelRow[]>([]);
 const fallback = ref<string | null>(null);
@@ -26,18 +29,21 @@ onMounted(async () => {
 
 const current = computed(() => (typeof setting.value.value === 'string' ? setting.value.value : null));
 const groups = computed(() => modelGroups(providers.value, models.value, current.value));
-const empty = computed(() => (fallback.value === null ? kvman.t('kvcoder.config.model.defaultUnset') : kvman.t('kvcoder.config.model.default', { name: fallback.value })));
+const empty = computed(() => {
+  if (forWorkers.value) return kvman.t('kvcoder.config.model.chatModel');
+  return fallback.value === null ? kvman.t('kvcoder.config.model.defaultUnset') : kvman.t('kvcoder.config.model.default', { name: fallback.value });
+});
 const scoped = (key: string): string => kvman.t(`${key}.${kvman.scope.value}`, { name: kvman.workspace.value.name });
 </script>
 
 <template>
-  <div class="kvc-setting" data-test="model-setting">
+  <div class="kvc-setting" data-test="model-setting" :data-setting="props.setting">
     <span class="kvc-setting-text">
-      <span class="kvc-setting-title" data-test="model-setting-title">{{ kvman.t('kvcoder.model.title') }}</span>
-      <span class="kvc-muted" data-test="model-setting-description">{{ kvman.t('kvcoder.model.description') }}</span>
+      <span class="kvc-setting-title" data-test="model-setting-title">{{ kvman.t(`${props.setting}.title`) }}</span>
+      <span class="kvc-muted" data-test="model-setting-description">{{ kvman.t(`${props.setting}.description`) }}</span>
     </span>
     <span class="kvc-setting-control">
-      <ModelPicker :groups="groups" :current="current" :empty="empty" :none="kvman.t('kvcoder.config.model.useDefault')" :disabled="setting.locked.value || setting.saving.value" @pick="(modelId) => setting.set(modelId)" @none="setting.set(null)" />
+      <ModelPicker :groups="groups" :current="current" :empty="empty" :none="kvman.t(forWorkers ? 'kvcoder.config.model.useChatModel' : 'kvcoder.config.model.useDefault')" :disabled="setting.locked.value || setting.saving.value" @pick="(modelId) => setting.set(modelId)" @none="setting.set(null)" />
       <span v-if="setting.locked.value" class="kvc-muted" data-test="model-own-value">{{ kvman.t('kvcoder.config.model.ownValue', { name: kvman.workspace.value.name }) }}</span>
       <span v-else-if="setting.changed.value" class="kvc-connectors-state">
         <span class="kvc-chip" data-test="model-changed">{{ scoped('kvcoder.config.model.changed') }}</span>

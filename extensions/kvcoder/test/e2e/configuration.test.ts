@@ -34,7 +34,7 @@ describe("kvcoder's configuration in Chromium (06 §6.6, 08 §8.7, ADR 0014)", {
 
     const names = page.locator('[data-test="connectors"] [data-test="connector-name"]');
     await names.first().waitFor();
-    expect(await names.allTextContents()).toEqual(['shell', 'fs', 'artifact', 'background', 'ask', 'delegate', 'mcp']);
+    expect(await names.allTextContents()).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'mcp']);
     const fs = page.locator('[data-test="connector-fs"] [data-test="connector-switch"]');
     expect(await fs.getAttribute('aria-checked')).toBe('true');
     await fs.click();
@@ -138,12 +138,14 @@ describe("kvcoder's configuration in Chromium (06 §6.6, 08 §8.7, ADR 0014)", {
     const kvman = await world.start();
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     await page.goto(`${kvman.origin}/kvwebui/extension/kvcoder`);
-    const coder = page.locator('[data-test="model-setting"] [data-test="model-picker"]');
+    const coder = page.locator('[data-test="model-setting"][data-setting="kvcoder.model"] [data-test="model-picker"]');
     await coder.waitFor();
+    // The model for workers is its own row beside it, and starts on the chat's model (ADR 0069, 3).
+    expect(await page.locator('[data-test="model-setting"][data-setting="kvcoder.delegate.model"] [data-test="model-picker"]').textContent()).toContain("The chat's model");
     await page.locator('[data-test="connectors"] [data-test="connector-name"]').first().waitFor();
     expect(await page.locator('[data-test="setting-kvcoder.model"], [data-test="setting-kvcoder.connectors"], [data-test="connector-origin"]').count()).toBe(0);
     await coder.click();
-    await page.locator('[data-test="model-setting"] [data-test="model-search"]').waitFor();
+    await page.locator('[data-test="model-setting"][data-setting="kvcoder.model"] [data-test="model-search"]').waitFor();
     expect(await page.locator('[data-test="model-none-entry"]').getAttribute('aria-selected')).toBe('true');
     const box = await page.locator('[data-test="model-popover"]').boundingBox();
     expect(box !== null && box.x >= 0 && box.x + box.width <= 1280).toBe(true);

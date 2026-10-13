@@ -22,8 +22,9 @@ const text = (key: string): string => kvman.t(`kvcoder.config.workers.form.${key
 // A worker's name and kind are fixed once it is saved: the agent calls it by that name.
 const editing = props.entry !== undefined;
 
-// A subagent never has `delegate` (ADR 0021, 24), so it isn't offered.
-const offered = computed(() => [...ownConnectors.filter((name) => name !== 'delegate'), ...added.value]);
+// A subagent never has `delegate` (ADR 0021, 24), `ask` (ADR 0063), or `execution-map` (ADR 0064), so they aren't offered.
+const leadOnly: readonly string[] = ['delegate', 'ask', 'execution-map'];
+const offered = computed(() => [...ownConnectors.filter((name) => !leadOnly.includes(name)), ...added.value]);
 const groups = computed(() => modelGroups(providers.value, models.value, draft.model));
 
 onMounted(async () => {

@@ -77,7 +77,7 @@ export function callKind(view: CallView): CallKind {
   if (view.line !== undefined) return 'line';
   if (view.connector === 'fs') return fsKinds.find((kind) => kind === view.command) ?? 'fields';
   if (view.connector === 'mcp' && view.command === 'call') return 'mcp-call';
-  if (view.connector === 'background' && view.command === 'output') return 'run-output';
+  if (view.connector === 'background' && (view.command === 'output' || view.command === 'wait')) return 'run-output';
   return view.connector === 'delegate' && view.command === 'run' ? 'delegate' : 'fields';
 }
 

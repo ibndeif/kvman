@@ -96,14 +96,16 @@ async function writeTo(ctx: Ctx, sessionId: string, input: z.output<typeof paylo
 }
 
 const shownAround = 3;
-const shownLimit = 80;
+const shownEdge = 6;
 
-// What an edit changed (ADR 0034, 1): the file's lines from 3 before the first changed line to 3 after the last, at most 80.
+// What an edit changed (ADR 0034, 1; ADR 0069, 2): the file's lines from 3 before the first changed line to 3 after
+// the last. A longer change shows its two ends: the model wrote the lines between them itself.
 function changedLines(edited: EditedText): { fromLine: number; content: string } {
   const lines = edited.text.replace(/^\uFEFF/, '').match(/[^\n]*\n|[^\n]+$/g) ?? [];
   const fromLine = Math.max(edited.firstChangedLine - shownAround, 1);
-  const last = Math.min(edited.lastChangedLine + shownAround, fromLine + shownLimit - 1);
-  return { fromLine, content: lines.slice(fromLine - 1, last).join('') };
+  const shown = lines.slice(fromLine - 1, edited.lastChangedLine + shownAround);
+  if (shown.length <= 2 * shownEdge + 1) return { fromLine, content: shown.join('') };
+  return { fromLine, content: [...shown.slice(0, shownEdge), `[… ${String(shown.length - 2 * shownEdge)} lines not shown …]\n`, ...shown.slice(-shownEdge)].join('') };
 }
 
 async function editIn(ctx: Ctx, sessionId: string, input: z.output<typeof payloads.edit>) {

@@ -7,6 +7,7 @@ import { delegateIndexDescription } from '../connectors/delegate.ts';
 import { mcpIndexDescription } from '../connectors/mcp.ts';
 import { projectRules } from './project-rules.ts';
 import type { ConnectorRow } from '../registry/register-connectors.ts';
+import { helperAllows } from '../turns/helper-calls.ts';
 import { readOnlyAllows } from '../turns/read-only.ts';
 import { sectionsFor } from '../registry/register-sections.ts';
 import { invalid } from '../problems.ts';
@@ -37,10 +38,11 @@ export async function sessionTools(ctx: Ctx, session: Stored<SessionDoc>): Promi
   const { connectors, disabled, names, workers, servers } = grants;
   const descriptions = { ...builtinDescriptions(shell.kind), delegate: delegateIndexDescription(workers), mcp: mcpIndexDescription(servers) };
   const current = grants.session;
-  // A read-only worker's helper is shown only what it may run (ADR 0056, 4).
+  // A helper is shown only what it may run (ADR 0063, 1), and a read-only worker's helper less (ADR 0056, 4).
   const readOnly = current.worker?.readOnly === true;
+  const helper = current.parentId !== null;
   const builtins = builtinConnectors.filter(name => names.includes(name)).map(name => {
-    const shown = Object.entries(commandsOf(name)).map(([command, entry], index) => ({ command, signature: builtinSignatures[name][index] ?? '', allowed: !readOnly || readOnlyAllows(command, entry) })).filter(row => row.allowed);
+    const shown = Object.entries(commandsOf(name)).map(([command, entry], index) => ({ command, signature: builtinSignatures[name][index] ?? '', allowed: (!helper || helperAllows(entry)) && (!readOnly || readOnlyAllows(command, entry)) })).filter(row => row.allowed);
     return { name, description: descriptions[name], commands: shown.map(row => row.command), signatures: shown.map(row => row.signature) };
   });
   const listed = [

@@ -37,8 +37,9 @@ describe('the prompt (08 §8.2, §8.4)', { timeout: 30_000 }, () => {
     await kernel.exec('kvcoder.message.send', { sessionId: await newSession(kernel), text: 'go' });
     await kernel.clock.advance(0);
     const prompt = systemPrompt(fake, 0);
-    expect(prompt).toContain('5. Delegate. Hand a separate, self-contained part to a worker of the `delegate` connector when a specialist view or parallel work is worth it; its entry lists the workers and what each is for. Several `delegate run` calls in one reply run in parallel. Brief the worker with the goal, the facts it needs, its limits, and what to return.');
-    expect(prompt).toContain('what each step uses (a connector from the list below, a worker)');
+    expect(prompt).toContain('6. Delegate. Hand a part to a worker of the `delegate` connector only when it is separate work that runs beside yours, or a fresh review of a change you finished; its entry lists the workers and what each is for.');
+    expect(prompt).toContain('Several `delegate run` calls in one reply run in parallel. Brief the worker with the goal, the facts it needs, its limits, and what to return.');
+    expect(prompt).toContain('what it uses (a connector from the list below, a worker)');
     expect(prompt).not.toContain('to a subagent');
   });
 
@@ -62,18 +63,19 @@ describe('the prompt (08 §8.2, §8.4)', { timeout: 30_000 }, () => {
     expect(prompt).toContain('Set background to true for a server or any command that keeps running; to show the person an app you started, give its address to artifact write with the format url.\n  exec { line, background?, timeoutMs?, risky }\n  help { command? }');
     expect(prompt).toContain('- fs: Read, list, search, create, and change files in the workspace folder.');
     expect(prompt).toContain('and edit for exact text replacements in an existing file.\n  read     { path, fromLine?, fromColumn?, lines? }\n  list     { path? }\n  search   { pattern, path?, literal?, glob? }\n  write    { path, content, risky }\n  edit     { path, edits: [{ oldText, newText }], risky }\n  undo     { path, risky }\n  part     { path, part, content }\n  assemble { path, risky }\n  help     { command? }');
-    expect(prompt).toContain('- artifact: Show the person something to read or see: a plan, a report, a design, an HTML page, or the localhost address of an app you are running (format url).');
+    expect(prompt).toContain('- artifact: Show the person something to read or see: a report, a design, an HTML page, or the localhost address of an app you are running (format url).');
     expect(prompt).toContain("A form can't be submitted there either: make a button act on its click and a field on the Enter key, in JavaScript");
     expect(prompt).toContain('say that its interaction is unchecked unless you tested it another way.');
     expect(prompt).toContain('A url artifact is a normal page on its own address and has none of these limits.\n  write { id, title, format?: "markdown" | "html" | "url", content }\n  edit  { id, edits: [{ oldText, newText }] }\n  get   { id }\n  help  { command? }');
-    expect(prompt).toContain('- background: Follow up on what you started with background set to true: a server or other long-running shell line, or a background subagent. Use it to see its status or output, or to stop it.\n  list   {}\n  output { id }\n  stop   { id }\n  help   { command? }');
+    expect(prompt).toContain('- background: Follow up on what you started with background set to true: a server or other long-running shell line, or a background subagent. Use it to see its status or output, to wait for it to end, or to stop it.');
+    expect(prompt).toContain('\n  list   {}\n  output { id, lines? }\n  wait   { id, timeoutMs? }\n  stop   { id }\n  help   { command? }');
     expect(prompt).toContain('- ask: Put a question to the person and wait for the answer. Use it when you need a decision, a missing detail, or a go-ahead before a risky step, instead of guessing.\n  text    { prompt, placeholder? }\n  choice  { prompt, multiple, options: [{ id, label, description? }], other? }\n  confirm { prompt, danger? }\n  help    { command? }');
     expect(prompt).toContain('- delegate: Hand a self-contained task to a worker: a helper agent that works on it alone and returns its answer. Use it for a specialist view or to do a separate part in parallel, or with background set to true while you go on. Workers: general (Any separate, self-contained task), ui-ux (Designs screens and flows), architect (Studies the code and proposes a design), tester (Writes and runs tests), reviewer (Reviews changes with a fresh look).\n  run  { worker, title, task, background? }\n  help { command? }');
     expect(prompt).toContain('Connectors are the only way you act.');
-    expect(prompt).toContain('Write the plan as the artifact `plan`');
+    expect(prompt).toContain('plan with `execution-map set`');
     expect(prompt).toContain('Write each file in its own call, with `fs write`.');
     expect(prompt.endsWith('- todo: Keep a todo list. Commands: add, wait, fail, list, help.')).toBe(true);
-    const order = ['## Mine', '## Everywhere', '## Later', '## Connectors', '- shell: ', '- fs: ', '- artifact: ', '- background: ', '- ask: ', '- delegate: ', '- todo: Keep a todo list.'].map((part) => prompt.indexOf(part));
+    const order = ['## Mine', '## Everywhere', '## Later', '## Connectors', '- shell: ', '- fs: ', '- artifact: ', '- execution-map: ', '- background: ', '- ask: ', '- delegate: ', '- todo: Keep a todo list.'].map((part) => prompt.indexOf(part));
     expect(order.every((index) => index > 0)).toBe(true);
     expect([...order].sort((first, second) => first - second)).toEqual(order);
   });

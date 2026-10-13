@@ -24,7 +24,8 @@ const exportSchema = z.object({ session: z.object({ id: z.string() }), turns: z.
 
 describe('fork and export (08 §8.6, ADR 0009, 103)', { timeout: 30_000 }, () => {
   it("M2.4-E7 fork copies the messages through a seq and the summary, not per-session sections, and fires the point", async () => {
-    const { kernel, fake } = await kvcoder.start();
+    // These long messages are summarized only by hand here: no step is to summarize them on its own.
+    const { kernel, fake } = await kvcoder.start({ settings: { 'kvcoder.compactAt': 1 } });
     await kernel.exec('kvcoder.handler.register', { point: 'kvcoder.session.forked', command: 'todo.seen' }, { as: '@test/todo' });
     const sessionId = await newSession(kernel);
     await kernel.exec('kvcoder.section.set', { id: 'mine', title: 'Mine', order: 1, content: 'x', sessionId }, { as: '@test/todo' });

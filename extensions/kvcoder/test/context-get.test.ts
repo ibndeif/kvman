@@ -11,12 +11,12 @@ describe("the size of a chat's context (08 §8.6, ADR 0034, 9)", { timeout: 30_0
     fake.reply({ chunks: [{ text: 'hi' }], usage: { input: 60_000, cacheRead: 45_000, output: 10 } });
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'hello' });
     await kernel.clock.advance(0);
-    expect(await kernel.exec('kvcoder.context.get', { sessionId })).toEqual({ tokens: 105_010, window: 128_000, compactAt: 0.8, estimated: false });
+    expect(await kernel.exec('kvcoder.context.get', { sessionId })).toEqual({ tokens: 105_010, window: 128_000, compactAt: 0.6, estimated: false });
   });
 
   it("QA46-E6 a model that isn't known has no window", async () => {
     const { kernel } = await kvcoder.start({ settings: { 'kvcoder.model': 'gone/x1' } });
     const sessionId = await newSession(kernel);
-    expect(await kernel.exec('kvcoder.context.get', { sessionId })).toMatchObject({ window: null, compactAt: 0.8 });
+    expect(await kernel.exec('kvcoder.context.get', { sessionId })).toMatchObject({ window: null, compactAt: 0.6 });
   });
 });

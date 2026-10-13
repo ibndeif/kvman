@@ -14,32 +14,32 @@ describe("the lead's prompt (08 §8.2, ADR 0022, 2 to 4)", () => {
     }
   });
 
-  it('QA33-H2 the method says who decides, scales to the task, and has six steps in order', () => {
+  it('QA33-H2 the method says who decides, scales to the task, and has eight steps in order', () => {
     const prompt = lead();
-    expect(prompt).toContain('How you work. You are the one who decides: connectors and workers are how you act, and the result is yours. Scale the process to the task: a task of one file or a few steps needs no plan and no `plan` artifact, so skip steps 3 and 5 and just do it; a larger one follows these steps.');
+    expect(prompt).toContain('How you work. You are the one who decides: connectors and workers are how you act, and the result is yours. Scale the process to the task: a task that changes one file, or that about five calls finish, needs no execution map and no worker, so skip steps 3 and 6, do it, and check it; every other task follows these steps, and is planned on its map once you understand it.');
     const steps = prompt.split('\n').filter((line) => /^\d\. /.test(line)).map((line) => line.split('.').slice(0, 2).join('.'));
-    expect(steps).toEqual(['1. Understand', '2. Clarify', '3. Plan', '4. Execute', '5. Delegate', '6. Finish']);
+    expect(steps).toEqual(['1. Understand', '2. Clarify', '3. Plan', '4. Execute', '5. Stay on the task', '6. Delegate', '7. Show what the person will look at', '8. Finish']);
   });
 
   it('QA33-H3 the plan uses only what the agent has and names what runs together, and the request is understood past its words', () => {
     const prompt = lead();
     expect(lineOf(prompt, '1. ')).toContain('Work out what the person needs, not only what they typed.');
     const plan = lineOf(prompt, '3. ');
-    expect(plan).toContain('what each step uses (a connector from the list below, a worker), which steps can run at the same time, and how you will check each one.');
-    expect(plan).toContain('Plan only with the connectors and workers you have.');
+    expect(plan).toContain('each naming what it comes after, what it uses (a connector from the list below, a worker), and how you will check it.');
+    expect(plan).toContain('Steps with nothing between them run together, so plan parallel work that way.');
   });
 
   it('QA33-H4 independent work runs together: steps, calls, and workers, whose answers the lead checks', () => {
     const prompt = lead();
-    expect(lineOf(prompt, '4. ')).toContain('Work through the steps, running the independent ones together.');
-    const delegate = lineOf(prompt, '5. ');
+    expect(lineOf(prompt, '4. ')).toContain('Take the steps the map says are ready, the independent ones together.');
+    const delegate = lineOf(prompt, '6. ');
     expect(delegate).toContain('Several `delegate run` calls in one reply run in parallel.');
     expect(delegate).toContain('Read what a worker returns and check it before you rely on it: its work is your responsibility.');
-    expect(prompt).toContain('\nIn one reply, reads and searches run at the same time, and calls that change something (shell lines, writes, edits) run one after another in the order you give them. So put independent calls (reads, searches, separate files, separate workers) in one reply, and a call that needs another call\'s result in a later reply.\n');
+    expect(prompt).toContain('\nIn one reply, reads and searches run at the same time, and calls that change something (shell lines, writes, edits) run one after another in the order you give them. So put independent calls (reads, searches, separate files, separate workers) in one reply, and a call that needs another call\'s result in a later reply: several new files are several `fs write` calls in one reply, not one reply each.\n');
   });
 
   it('QA33-H5 the work is done when it is ready for production', () => {
-    expect(lineOf(lead(), '6. ')).toBe("6. Finish. The work is done when it is ready for production: it does what was asked, it handles the errors and edge cases that will happen, it follows the project's conventions, its checks and tests pass, and nothing unfinished or temporary is left behind.");
+    expect(lineOf(lead(), '8. ')).toContain("8. Finish. The work is done when it is ready for production: it does what was asked, it handles the errors and edge cases that will happen, it follows the project's conventions, its checks and tests pass, and nothing unfinished or temporary is left behind.");
   });
 
   it('QA33-H6 both roles decide from evidence', () => {

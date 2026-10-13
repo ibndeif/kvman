@@ -1,3 +1,5 @@
+import path from 'node:path';
+import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { fixtureTools } from './support/mcp-fixture-server.ts';
@@ -26,13 +28,17 @@ describe('the mcp connector over a command server (08 §8.5, ADR 0020, 3 and 4)'
   it("QA29-H1 and QA29-H2 tools lists a server's tools, and gives one tool's arguments", async () => {
     const { results } = await run([command('mcp', 'tools', { server: 'demo' }), command('mcp', 'tools', { server: 'demo', tool: 'echo' })]);
     expect(json(results[0])).toMatchObject({ server: 'demo', tools: fixtureTools.map((name) => ({ name })) });
-    expect(json(results[0])).toMatchObject({ tools: expect.arrayContaining([{ name: 'echo', description: 'Returns the text it is given.' }]) });
+    expect(json(results[0])).toMatchObject({ tools: expect.arrayContaining([{ name: 'echo', description: 'Returns the text it is given.', takes: '{ text }' }]) });
     expect(json(results[1])).toEqual({ server: 'demo', name: 'echo', description: 'Returns the text it is given.', arguments: { type: 'object', properties: { text: { type: 'string', description: 'The text to return.' } }, required: ['text'] } });
   });
 
-  it("QA29-H3 call returns the tool's text, runs in the workspace folder, and its card names mcp and call", async () => {
-    const { results, kernel, sessionId } = await run([call('echo', { text: 'hi' }), call('cwd')]);
-    expect(results).toEqual(['hi', kernel.homeFolder]);
+  it("QA29-H3 and M2.4-E258 call returns the tool's text, runs in a folder of its own that is deleted after it, is told the workspace folder, and its card names mcp and call", async () => {
+    const { results, kernel, sessionId } = await run([call('echo', { text: 'hi' }), call('cwd'), call('env', { name: 'KVMAN_WORKSPACE' })]);
+    expect(results[0]).toBe('hi');
+    expect(path.basename(String(results[1]))).toMatch(/^kvman-mcp-/);
+    expect(String(results[1]).startsWith(kernel.homeFolder)).toBe(false);
+    expect(existsSync(String(results[1]))).toBe(false);
+    expect(results[2]).toBe(kernel.homeFolder);
     const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });
     const card = messages.find((message) => message.kind === 'toolResult')?.content['details'];
     expect(card).toMatchObject({ connector: 'mcp', command: 'call' });

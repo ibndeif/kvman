@@ -8,11 +8,14 @@ import type { SessionDoc } from '../schemas/records.ts';
 import { executionRootInTx } from '../sessions/execution-root.ts';
 import { txRecords, type TxRecords } from '../store/collections.ts';
 
+const leadOnly: ReadonlySet<string> = new Set(['ask', 'delegate', 'execution-map']);
+
 /** The existing connector scope predicate, shared by prompt and execution (ADR0044). */
 function allowedNames(session: SessionDoc, connectors: readonly ConnectorRow[], disabled: ReadonlySet<string>): Set<string> {
   const names = [...builtinConnectors, ...connectors.map(connector => connector.name)].filter(name => !disabled.has(name));
   if (session.parentId === null) return new Set(names);
-  return new Set(names.filter(name => name === 'ask' || (name !== 'delegate' && (session.connectors === null || session.connectors.includes(name)))));
+  // A helper hands work to no one, asks the person nothing (ADR 0063, 2), and keeps no map: the lead's is the chat's (ADR 0064, 1).
+  return new Set(names.filter(name => !leadOnly.has(name) && (session.connectors === null || session.connectors.includes(name))));
 }
 
 /** Await external data before the caller's final canonical store validation, not afterwards. */

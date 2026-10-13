@@ -15,7 +15,7 @@ function posixShell(): void {
 }
 
 const processRowsSchema = z.array(z.object({ name: z.string() }));
-const jobSchema = z.object({ id: z.string(), kind: z.string(), call: z.string(), status: z.string(), exitCode: z.number().optional(), output: z.string().optional() });
+const jobSchema = z.object({ id: z.string(), kind: z.string(), title: z.string().optional(), call: z.string().optional(), status: z.string(), exitCode: z.number().optional(), output: z.string().optional() });
 
 async function say(kernel: TestKernel, fake: FakeOpenAI, sessionId: string, ...commands: RunCallSpec[]): Promise<string[]> {
   fake.reply(runs(...commands), says('ok'));
@@ -40,7 +40,7 @@ describe('background shell calls (08 §8.3, ADR 0009, 149 to 151)', { timeout: 6
     expect(result).toBe(`started ${jobId}\nup\n[running]`);
     expect(await running(kernel, jobId)).toBe(true);
     const [list = ''] = await say(kernel, fake, sessionId, command('background', 'list'));
-    expect(z.array(jobSchema).parse(JSON.parse(list))).toEqual([expect.objectContaining({ id: jobId, kind: 'process', call: 'echo up; sleep 30', status: 'running' })]);
+    expect(z.array(jobSchema).parse(JSON.parse(list))).toEqual([expect.objectContaining({ id: jobId, kind: 'process', status: 'running' })]);
   });
 
   it('QA3-H13 background output shows a running process with its output, then its exit', async () => {

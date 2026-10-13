@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { z, type Json } from '@kvman/sdk';
 import type { TestKernel } from '@kvman/testkit';
 import { todo, useKvcoder } from './support/kvcoder-kernel.ts';
-import { command, requestTools, runs, says, systemPrompt, toolResults } from './support/model-script.ts';
+import { command, requestTools, runs, says, shell, systemPrompt, toolResults } from './support/model-script.ts';
 import { optInFixture } from './support/registry-fixtures.ts';
 import { newSession, turnState } from './support/turns.ts';
 
@@ -10,7 +10,7 @@ const kvcoder = useKvcoder();
 
 const owner = '@test/todo';
 const notes = { name: 'notes', description: 'Notes.', optIn: true as const, commands: [{ name: 'add', command: 'todo.item.add' }] };
-const always = ['shell', 'fs', 'artifact', 'background', 'ask', 'delegate', 'todo'];
+const always = ['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'todo'];
 const runToolSchema = z.object({ function: z.object({ parameters: z.object({ properties: z.object({ connector: z.object({ enum: z.array(z.string()) }) }) }) }) });
 const runEnum = (tools: unknown[]): string[] => runToolSchema.parse(tools[0]).function.parameters.properties.connector.enum;
 
@@ -66,7 +66,7 @@ describe('connectors that are off until their owner enables them for a chat (08 
     await registerNotes(kernel);
     await expect(enable(kernel, 'nope', ['notes'])).rejects.toMatchObject(failed('kvcoder/SESSION_NOT_FOUND'));
     const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Wait' })), runs(command('ask', 'text', { prompt: '?' })));
+    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Wait' })), runs(shell('true', { risky: true })));
     await send(kernel, sessionId);
     const childId = String((await turnState(kernel, sessionId)).turn?.pending[0]?.childSessionId);
     await expect(enable(kernel, childId, ['notes'])).rejects.toMatchObject(failed('VALIDATION_FAILED', { sessionId: childId }));

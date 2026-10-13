@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { first } from './support/answer-world.ts';
 import { openGate } from './support/gates.ts';
 import { heldReply } from './support/held-reply.ts';
-import { command, runs, says } from './support/model-script.ts';
+import { command, runs, says, shell } from './support/model-script.ts';
 import { permissionControl, permissionScope, permissionSnapshot, withPermissionWorld } from './support/permission-world.ts';
 import { turnState } from './support/turns.ts';
 import { wait } from './support/wait.ts';
@@ -61,7 +61,7 @@ describe('a helper never outlives what started it (KVC-04 and KVC-05)', { timeou
   it("M2.4-E126 a helper's interrupted step ends its parent's turn, and the other helper is cancelled", async () => {
     await withPermissionWorld(async (kernel, fake, sessionId) => {
       const held = heldReply({ text: 'never arrives' });
-      fake.reply(runs(delegate(), delegate()), runs(command('ask', 'text', { prompt: 'Name?' })), held.reply);
+      fake.reply(runs(delegate(), delegate()), runs(shell('true', { risky: true })), held.reply);
       try {
         await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
         await vi.waitFor(async () => {

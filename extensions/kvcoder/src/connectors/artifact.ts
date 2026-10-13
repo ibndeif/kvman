@@ -15,11 +15,11 @@ import { edits } from './payload-fields.ts';
 
 /** What the prompt's index says the connector is for. */
 export const artifactDescription =
-  'Show the person something to read or see: a plan, a report, a design, an HTML page, or the localhost address of an app you are running (format url). Use it for anything longer than a few lines instead of pasting it into a reply, and when you write a plan, keep it in the artifact `plan`. The panel runs the page of an HTML artifact in a sandbox where localStorage, sessionStorage, cookies, and indexedDB throw, so a page you show that way must work without them, keeping its state in memory or wrapping each use in try/catch. A form can\'t be submitted there either: make a button act on its click and a field on the Enter key, in JavaScript, and never rely on a form\'s submit. You can\'t press the page\'s buttons yourself, so say that its interaction is unchecked unless you tested it another way. A url artifact is a normal page on its own address and has none of these limits.';
+  'Show the person something to read or see: a report, a design, an HTML page, or the localhost address of an app you are running (format url). Use it for anything longer than a few lines instead of pasting it into a reply. For a diagram, write Mermaid code in a fenced mermaid block of a Markdown artifact or reply: kvman draws it. Don\'t write SVG for a diagram. The panel runs the page of an HTML artifact in a sandbox where localStorage, sessionStorage, cookies, and indexedDB throw, so a page you show that way must work without them, keeping its state in memory or wrapping each use in try/catch. A form can\'t be submitted there either: make a button act on its click and a field on the Enter key, in JavaScript, and never rely on a form\'s submit. You can\'t press the page\'s buttons yourself, so say that its interaction is unchecked unless you tested it another way. A url artifact is a normal page on its own address and has none of these limits.';
 
-const idMessage = 'An artifact id is lowercase kebab case, such as plan or login-design, up to 50 characters.';
+const idMessage = 'An artifact id is lowercase kebab case, such as report or login-design, up to 50 characters.';
 
-const artifactId = z.string().max(50, idMessage).regex(kebab, idMessage).describe('The name of the artifact within this chat, in lowercase kebab case, up to 50 characters, such as plan.');
+const artifactId = z.string().max(50, idMessage).regex(kebab, idMessage).describe('The name of the artifact within this chat, in lowercase kebab case, up to 50 characters, such as login-design.');
 
 const payloads = {
   write: z.strictObject({

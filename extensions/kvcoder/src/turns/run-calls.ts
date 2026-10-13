@@ -18,6 +18,7 @@ import { currentStep, type StepLease } from './step-claim.ts';
 import { liveStep } from './step-intents.ts';
 import { failedCall, orderedCall, runHelp, runTarget, targetOf, textResult, type CallDone, type CommandTarget } from './run-command.ts';
 import { callPermission, dispatchGuard } from './call-permission.ts';
+import { helperAllows, helperRefusal } from './helper-calls.ts';
 import { readOnlyAllows, readOnlyRefusal } from './read-only.ts';
 
 // How one call of a reply runs (plan 08 §8.3): the `run` tool names a connector's command, which runs as a kernel job.
@@ -138,6 +139,7 @@ async function evaluateCurrentCall(env: CallEnv, toolCall: ToolCall, call: RunCa
   const session = permitted.grants.session, target = permitted.target;
   if (call.command === 'help') return result(toolCall.id, await runHelp(ctx, call, dispatchGuard(ctx, env.lease, call)));
   if (target === undefined) return refused(toolCall.id, 'The connector command is no longer available.');
+  if (session.parentId !== null && !helperAllows(target.builtin)) return result(toolCall.id, failedCall(call, errorOutput({ code: 'VALIDATION_FAILED', message: helperRefusal }).output));
   // A read-only worker's helper is refused before anyone is asked (ADR 0056, 3).
   if (session.worker?.readOnly === true && !readOnlyAllows(call.command, target.builtin)) return result(toolCall.id, failedCall(call, errorOutput({ code: 'VALIDATION_FAILED', message: readOnlyRefusal(call.connector, call.command) }).output));
   if (target.builtin?.asks === true) {

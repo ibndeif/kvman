@@ -3,7 +3,7 @@ import { z } from '@kvman/sdk';
 import type { TestKernel } from '@kvman/testkit';
 import type { FakeOpenAI, FakeReply } from '@kvman/testkit/fake-openai';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { command, runs, says } from './support/model-script.ts';
+import { command, runs, says, shell } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
@@ -28,11 +28,12 @@ const exportSchema = z.object({ artifacts: z.array(z.object({ id: z.string(), ti
 
 // The public artifact queries, deletion, export, and restarts (08 §8.6, ADR 0009, 175 and 176).
 describe('the artifact queries (08 §8.6, ADR 0009, 175 and 176)', { timeout: 30_000 }, () => {
-  it("QA6-H8 a subagent's artifact belongs to the chat at its root", async () => {
+  it("QA6-H8 a subagent reads the artifacts of the chat at its root", async () => {
     const world = await started();
     world.fake.reply(
+      runs(command('artifact', 'write', { id: 'review', title: 'Review', content: 'looks good' })),
       runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Review' })),
-      runs(command('artifact', 'write', { id: 'review', title: 'Review', content: 'looks good' }), command('ask', 'text', {"prompt":"Done?"})),
+      runs(shell('true', { risky: true })),
       says('child done'),
       says('parent done'),
     );
@@ -42,7 +43,7 @@ describe('the artifact queries (08 §8.6, ADR 0009, 175 and 176)', { timeout: 30
     expect(await list(world, world.sessionId)).toMatchObject([{ id: 'review', title: 'Review', format: 'markdown', version: 1, size: 10 }]);
     expect(await list(world, childId)).toEqual(await list(world, world.sessionId));
     const { turn: child } = await turnState(world.kernel, childId);
-    await world.kernel.exec('kvcoder.question.answer', { questionId: String(child?.pending[0]?.questionId), answer: { text: 'yes' } });
+    await world.kernel.exec('kvcoder.question.answer', { questionId: String(child?.pending[0]?.questionId), answer: { confirmed: true } });
     await world.kernel.clock.advance(0);
     expect((await turnState(world.kernel, world.sessionId)).turn).toMatchObject({ outcome: 'done' });
   });
@@ -66,10 +67,8 @@ describe('the artifact queries (08 §8.6, ADR 0009, 175 and 176)', { timeout: 30
   it("QA6-H11 deleting the chat deletes its artifacts", async () => {
     const world = await started();
     world.fake.reply(
-      runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Help' })),
-      runs(command('artifact', 'write', { id: 'notes', title: 'Notes', content: 'from the helper' })),
-      says('child done'),
-      says('parent done'),
+      runs(command('artifact', 'write', { id: 'notes', title: 'Notes', content: 'the first' })),
+      says('written'),
     );
     await world.kernel.exec('kvcoder.message.send', { sessionId: world.sessionId, text: 'go' });
     await world.kernel.clock.advance(0);
