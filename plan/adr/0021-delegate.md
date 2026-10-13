@@ -55,7 +55,7 @@ It lands in two passes: QA 31 is the connector with subagent workers, and QA 32 
 ## Shapes
 
 - **The call:** `delegate run { worker, task, background? }`. `task` is the worker's whole brief.
-- **The shipped workers**, each `{ enabled: true, kind: 'subagent', connectors: null, model: null, thinking: null }`:
+- **The shipped workers**, each `{ enabled: true, kind: 'subagent', connectors: null, model: null, thinking: null }` *(ADR 0076 replaced the descriptions and instructions of `ui-ux`, `architect`, `tester`, and `reviewer`; the words below are the first ones)*:
 
   | Name | Description | Instructions |
   |---|---|---|

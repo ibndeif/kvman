@@ -8,6 +8,8 @@ import { worker, workers } from './support/workers.ts';
 const kvcoder = useKvcoder();
 
 const reviewer = shippedWorkers.find((entry) => entry.name === 'reviewer');
+const descriptions = ['Any separate, self-contained task', 'Designs the experience and the look of a screen or flow, to usability and accessibility standards', "Designs the structure of a change, on sound engineering practice and the project's own patterns and conventions", 'QA engineer: writes and runs test cases, automated and by hand as a person would, on the critical flows, security, and performance, and reports the issues', 'Reviews code and reports wrong style, needless complexity, and unclean or unclear code'];
+const named = (count: number): string => shippedWorkers.slice(0, count).map((entry, index) => `${entry.name} (${descriptions[index]})`).join(', ');
 const delegate = (name: string, task = 'Do it') => command('delegate', 'run', { worker: name, title: 'Helper', task });
 const indexLine = (prompt: string, connector: string): string => prompt.split('\n').find((line) => line.startsWith(`- ${connector}: `)) ?? '';
 
@@ -36,14 +38,14 @@ describe('the delegate connector and its workers (08 §8.5, ADR 0021)', { timeou
     expect(setting?.value).toEqual(shippedWorkers);
     expect(shippedWorkers.map((entry) => entry.name)).toEqual(['general', 'ui-ux', 'architect', 'tester', 'reviewer']);
     for (const entry of shippedWorkers) expect(entry).toMatchObject({ enabled: true, kind: 'subagent', connectors: null, model: null, thinking: null });
-    expect(shippedWorkers.map((entry) => entry.description)).toEqual(['Any separate, self-contained task', 'Designs screens and flows', 'Studies the code and proposes a design', 'Writes and runs tests', 'Reviews changes with a fresh look']);
+    expect(shippedWorkers.map((entry) => entry.description)).toEqual(descriptions);
     expect(shippedWorkers[0]?.instructions).toBe('');
-    expect(shippedWorkers.slice(1).map((entry) => entry.instructions.split('.')[0])).toEqual(['You are a UI/UX designer', 'You are a software architect', 'You are a test engineer', 'You are a code reviewer']);
+    expect(shippedWorkers.slice(1).map((entry) => entry.instructions.split('.')[0])).toEqual(['You are a senior UI/UX designer', 'You are a senior software architect', 'You are a senior QA engineer', 'You are a senior code reviewer']);
   });
 
   it('QA31-H3 the index names the workers', async () => {
     const { fake } = await turn({}, says('done'));
-    expect(indexLine(systemPrompt(fake, 0), 'delegate').endsWith('Workers: general (Any separate, self-contained task), ui-ux (Designs screens and flows), architect (Studies the code and proposes a design), tester (Writes and runs tests), reviewer (Reviews changes with a fresh look).')).toBe(true);
+    expect(indexLine(systemPrompt(fake, 0), 'delegate').endsWith(`Workers: ${named(5)}.`)).toBe(true);
   });
 
   it("QA31-H4 a run starts a child with the worker's instructions, and its answer is the result", async () => {
@@ -53,7 +55,7 @@ describe('the delegate connector and its workers (08 §8.5, ADR 0021)', { timeou
     fake.reply(runs(delegate('reviewer', 'Review src/a.ts')), says('two defects'), says('parent done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
-    expect(reviewer?.instructions).toMatch(/^You are a code reviewer\./);
+    expect(reviewer?.instructions).toMatch(/^You are a senior code reviewer\./);
     expect(systemPrompt(fake, 1)).toContain(`## Guide\nRead the guide.\n\n## Worker: reviewer\n${reviewer?.instructions ?? ''}\n\nYou are read-only here: `);
     expect(systemPrompt(fake, 1)).toMatch(/so don't make one; say what should change and why\.\n\n## Connectors\n/);
     expect(fake.requests()[1]?.body).toMatchObject({ messages: [expect.anything(), { role: 'user', content: 'Review src/a.ts' }] });
@@ -94,7 +96,7 @@ describe('the delegate connector and its workers (08 §8.5, ADR 0021)', { timeou
   it('QA31-H9 a worker that is turned off is not named, and a run of it fails', async () => {
     const settings = workers(...shippedWorkers.map((entry) => ({ ...entry, enabled: entry.name !== 'reviewer' })));
     const { fake } = await turn(settings, runs(delegate('reviewer')), says('done'));
-    expect(indexLine(systemPrompt(fake, 0), 'delegate')).toContain('Workers: general (Any separate, self-contained task), ui-ux (Designs screens and flows), architect (Studies the code and proposes a design), tester (Writes and runs tests).');
+    expect(indexLine(systemPrompt(fake, 0), 'delegate')).toContain(`Workers: ${named(4)}.`);
     expect(toolResults(fake)).toEqual(['error kvcoder/WORKER_NOT_FOUND: There is no worker reviewer. The workers are: general, ui-ux, architect, tester.']);
   });
 

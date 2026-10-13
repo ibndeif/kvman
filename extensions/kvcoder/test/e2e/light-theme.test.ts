@@ -23,7 +23,7 @@ afterEach(async () => {
 const sessionSchema = z.object({ id: z.string(), status: z.string() });
 
 // The expression is a string: it runs in Chromium, where the DOM is, not in this Node process.
-const colorOf = async (page: Page, selector: string, property: 'backgroundColor' | 'color'): Promise<string> => z.string().parse(await page.evaluate(`getComputedStyle(document.querySelector(${JSON.stringify(selector)})).${property}`));
+const colorOf = async (page: Page, selector: string, property: 'backgroundColor' | 'color' | 'fontWeight'): Promise<string> => z.string().parse(await page.evaluate(`getComputedStyle(document.querySelector(${JSON.stringify(selector)})).${property}`));
 
 describe('the light theme in Chromium (06 §6.4, ADR 0037, 3)', { timeout: 120_000 }, () => {
   it('QA49-H4 the light theme is soft slate, with nothing pure white, and the dark theme is as it was', async () => {
@@ -43,6 +43,27 @@ describe('the light theme in Chromium (06 §6.4, ADR 0037, 3)', { timeout: 120_0
     await page.emulateMedia({ colorScheme: 'dark' });
     await page.waitForFunction("document.documentElement.classList.contains('dark')");
     expect(await colorOf(page, 'body', 'backgroundColor')).toBe('rgb(21, 21, 19)');
+    await page.close();
+  });
+
+  it('M2.4-E283 the open chat stands out from the ground and from the other rows, in both themes', async () => {
+    world = await kvmanWorld();
+    const kvman = await world.start();
+    const open = sessionSchema.parse(await kvman.call('commands', 'kvcoder.session.create', { title: 'Open' })).id;
+    const other = sessionSchema.parse(await kvman.call('commands', 'kvcoder.session.create', { title: 'Other' })).id;
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, colorScheme: 'light' });
+    await page.goto(`${kvman.origin}/kvcoder/session/${open}`);
+    await page.locator(`[data-test="session-${open}"][aria-current="page"]`).waitFor();
+    const transparent = 'rgba(0, 0, 0, 0)';
+    for (const scheme of ['light', 'dark'] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.waitForFunction(`document.documentElement.classList.contains('dark') === ${String(scheme === 'dark')}`);
+      const row = await colorOf(page, `[data-test="session-${open}"]`, 'backgroundColor');
+      expect(row).not.toBe(transparent);
+      expect(row).not.toBe(await colorOf(page, 'body', 'backgroundColor'));
+      expect(await colorOf(page, `[data-test="session-${open}"]`, 'fontWeight')).toBe('600');
+      expect(await colorOf(page, `[data-test="session-${other}"]`, 'backgroundColor')).toBe(transparent);
+    }
     await page.close();
   });
 });

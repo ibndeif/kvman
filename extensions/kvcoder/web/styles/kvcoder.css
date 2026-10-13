@@ -99,7 +99,8 @@ a.kvc-button { text-decoration: none; color: inherit; }
 .kvc-start h1 { margin: 0; text-align: center; font-size: 26px; font-weight: 600; }
 .kvc-sessions { box-sizing: border-box; inline-size: 272px; flex: 0 0 auto; align-self: stretch; max-block-size: 100%; display: flex; flex-direction: column; gap: 2px; padding: 14px 12px; border-inline-end: 1px solid var(--kv-color-border); overflow-y: auto; }
 .kvc-session { display: flex; align-items: center; gap: 10px; min-block-size: 44px; padding-inline: 10px; border-radius: 10px; border: 0; background: transparent; color: inherit; font: inherit; text-align: start; cursor: pointer; }
-.kvc-session[aria-current='page'] { background: var(--kv-color-background); font-weight: 500; }
+/* The list sits on the page's ground, so the open chat's row is tinted with the primary color to stand out from it (ADR 0076, 1). */
+.kvc-session[aria-current='page'] { background: color-mix(in srgb, var(--kv-color-primary) 16%, var(--kv-color-surface)); font-weight: 600; }
 .kvc-session .kvc-muted, .kvc-session .kvc-chip { flex: 0 0 auto; white-space: nowrap; }
 .kvc-session span:first-child { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .kvc-group { font-size: 12px; font-weight: 600; color: var(--kv-color-muted); padding-block: 12px 4px; padding-inline: 10px; }
