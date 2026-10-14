@@ -76,6 +76,7 @@ describe("a call's card says what the call does (08 §8.7, ADR 0011, 13)", () =>
     expect(found(wrapper, 'exit-code').exists()).toBe(false);
     expect(found(wrapper, 'call-card').text()).not.toContain('exit');
     expect(found(wrapper, 'call-time').text()).toBe('200 ms');
+    await opened(wrapper);
     expect(found(wrapper, 'call-output').text()).toBe('FAIL 1');
     wrapper.unmount();
   });

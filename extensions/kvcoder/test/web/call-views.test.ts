@@ -91,20 +91,25 @@ describe("an opened card shows the call by its kind (08 §8.7, ADR 0036, 3 and 5
     expect(part(short, 'show-all').exists()).toBe(false);
   });
 
-  it('QA48-E5 a failed call is open and shows its error before what it asked for', async () => {
+  it('QA48-E5 a failed call starts closed with its reason, and opened keeps its error and request behind Show details', async () => {
     const error = "error NOT_FOUND: missing.txt doesn't exist. Nothing was written.";
     const card = await ranCard(call('fs', 'edit', { path: 'missing.txt', edits: [{ oldText: 'a', newText: 'b' }], risky: false }), error, { failed: true });
-    expect(isOpen(card)).toBe(true);
+    expect(isOpen(card)).toBe(false);
+    expect(part(card, 'call-reason').text()).toBe("missing.txt doesn't exist. Nothing was written.");
+    await pressed(card);
+    expect([part(card, 'call-error').exists(), part(card, 'call-diff').exists()]).toEqual([false, false]);
+    await part(card, 'call-details').trigger('click');
     expect(part(card, 'call-error').text()).toBe(error);
-    expect(closedLine(card)).toBe('Edit missing.txt');
     const html = card.html();
     expect(html.indexOf('data-test="call-error"')).toBeLessThan(html.indexOf('data-test="call-diff"'));
     expect(part(card, 'call-output').exists()).toBe(false);
   });
 
-  it('QA48-E6 a failed line is open and keeps its line and its output', async () => {
+  it('QA48-E6 a failed line starts closed and says the command failed, and opened keeps its line and its output', async () => {
     const card = await ranCard(call('shell', 'exec', { line: 'npm test', risky: false }), 'FAIL 1\n[exit code 1]', { failed: true });
-    expect(isOpen(card)).toBe(true);
+    expect(isOpen(card)).toBe(false);
+    expect(part(card, 'call-reason').text()).toBe('The command failed.');
+    await pressed(card);
     expect([part(card, 'call-payload').text(), part(card, 'call-output').text()]).toEqual(['$ npm test', 'FAIL 1\n[exit code 1]']);
     expect(part(card, 'call-error').exists()).toBe(false);
   });

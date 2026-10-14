@@ -535,5 +535,11 @@
   "kvcoder.ui.slash.prompt": "Show the prompt, or go back to the chat",
   "kvcoder.ui.slash.rename": "Rename this chat",
   "kvcoder.ui.slash.rename.argument": "title",
-  "kvcoder.ui.slash.wait": "Send a first message to use commands"
+  "kvcoder.ui.slash.wait": "Send a first message to use commands",
+  "kvcoder.ui.callNotRun": "Not run",
+  "kvcoder.ui.failure.invalid": "The agent's request wasn't valid, so nothing ran.",
+  "kvcoder.ui.failure.denied": "You denied this call.",
+  "kvcoder.ui.call.showDetails": "Show details",
+  "kvcoder.ui.call.hideDetails": "Hide details",
+  "kvcoder.ui.failure.command": "The command failed."
 }

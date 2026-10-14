@@ -39,9 +39,10 @@ describe('an answered question shows its answer, not its JSON (08 §8.7, ADR 001
     expect(no.find('[data-test="answered-confirmed"]').text()).toBe('No');
   });
 
-  it('QA20-E1 a skipped question, and one a message dismissed, show Skipped under the question', async () => {
-    for (const text of [json({ dismissed: true }), 'dismissed by the user']) {
-      const card = await answered('choice', choice, text);
+  it('QA20-E1 and M2.4-E305 a skipped question, and one a message dismissed (stored as failed or not), show Skipped under the question', async () => {
+    for (const [text, isError] of [[json({ dismissed: true }), false], ['dismissed by the user', false], ['dismissed by the user', true]] as const) {
+      const card = await answered('choice', choice, text, isError);
+      expect(card.find('[data-test="call-card"]').exists()).toBe(false);
       expect(card.find('[data-test="answered-prompt"]').text()).toBe('Which features?');
       expect(card.find('[data-test="answered-skipped"]').text()).toBe('Skipped');
       expect(card.findAll('[data-test^="answered-option-"]')).toEqual([]);

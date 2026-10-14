@@ -535,5 +535,11 @@
   "kvcoder.ui.slash.prompt": "عرض التعليمات، أو العودة إلى المحادثة",
   "kvcoder.ui.slash.rename": "إعادة تسمية هذه المحادثة",
   "kvcoder.ui.slash.rename.argument": "العنوان",
-  "kvcoder.ui.slash.wait": "أرسل رسالة أولى لاستخدام الأوامر"
+  "kvcoder.ui.slash.wait": "أرسل رسالة أولى لاستخدام الأوامر",
+  "kvcoder.ui.callNotRun": "لم يُنفَّذ",
+  "kvcoder.ui.failure.invalid": "لم يكن طلب الوكيل صالحًا، فلم يُنفَّذ شيء.",
+  "kvcoder.ui.failure.denied": "رفضتَ هذا الاستدعاء.",
+  "kvcoder.ui.call.showDetails": "عرض التفاصيل",
+  "kvcoder.ui.call.hideDetails": "إخفاء التفاصيل",
+  "kvcoder.ui.failure.command": "فشل الأمر."
 }

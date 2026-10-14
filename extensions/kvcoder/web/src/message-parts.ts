@@ -91,10 +91,13 @@ function answerOf(text: string): Record<string, unknown> | undefined {
 
 /** An `ask` call's result as the question and the person's answer (ADR 0013, 1), or nothing for any other result. */
 export function answeredQuestion(message: Message, calls: ReadonlyMap<string, CallView>): AnsweredQuestion | undefined {
-  if (message.kind !== 'toolResult' || message.content['isError'] === true) return undefined;
+  if (message.kind !== 'toolResult') return undefined;
   const ask = calls.get(String(message.content['toolCallId']))?.ask;
   if (ask === undefined) return undefined;
-  const answer = answerOf(textOf(message.content['content']));
+  const text = textOf(message.content['content']);
+  // A dismissed question is stored as a failed call, but the person reads it as skipped (ADR 0079, 3).
+  if (message.content['isError'] === true && text !== dismissedByMessage) return undefined;
+  const answer = answerOf(text);
   return answer === undefined ? undefined : { ...ask, answer };
 }
 
