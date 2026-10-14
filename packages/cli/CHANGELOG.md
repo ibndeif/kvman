@@ -1,5 +1,51 @@
 # kvman
 
+## 0.4.0
+
+### Patch Changes
+
+- Updated dependencies [90fb869]
+- Updated dependencies [90fb869]
+- Updated dependencies [90fb869]
+- Updated dependencies [90fb869]
+- Updated dependencies [0616ef9]
+- Updated dependencies [90fb869]
+- Updated dependencies [90fb869]
+- Updated dependencies [90fb869]
+- Updated dependencies [90fb869]
+- Updated dependencies [0616ef9]
+- Updated dependencies [0616ef9]
+- Updated dependencies [f2020ed]
+- Updated dependencies [90fb869]
+- Updated dependencies [90fb869]
+- Updated dependencies [e8c5e34]
+- Updated dependencies [29fa3b1]
+- Updated dependencies [0616ef9]
+- Updated dependencies [90fb869]
+- Updated dependencies [f065303]
+- Updated dependencies [046ccd7]
+- Updated dependencies [0585f20]
+- Updated dependencies [3fc56c4]
+- Updated dependencies [90fb869]
+- Updated dependencies [90fb869]
+- Updated dependencies [90fb869]
+- Updated dependencies [90fb869]
+- Updated dependencies [90fb869]
+- Updated dependencies [0616ef9]
+- Updated dependencies [90fb869]
+- Updated dependencies [90fb869]
+- Updated dependencies [0616ef9]
+- Updated dependencies [90fb869]
+- Updated dependencies [90fb869]
+- Updated dependencies [0616ef9]
+- Updated dependencies [90fb869]
+  - @kvman/sdk@0.1.2
+  - @kvman/kvwebui@0.1.3
+  - @kvman/kvcoder@0.1.7
+  - @kvman/kvai@0.1.2
+  - @kvman/kvbuilder@0.3.1
+  - @kvman/kernel@0.3.4
+
 ## 0.3.3
 
 ### Patch Changes

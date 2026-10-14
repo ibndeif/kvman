@@ -1,5 +1,14 @@
 # @kvman/sdk
 
+## 0.1.2
+
+### Patch Changes
+
+- 90fb869: A workspace whose folder is gone is closed at start. `kernel.workspace.closed.list` lists the closed workspaces, `kernel.workspace.delete` erases one for good after stopping its work, and the new point `kernel.workspace.deleted` tells extensions, in Home. The workspace picker has a "Closed workspaces" section with Reopen, Delete, and "Delete all missing"; kvcoder forgets a deleted workspace's background-process records (ADR 0061).
+- 90fb869: Allow collection `find` to continue from an optional, exclusive `after` ID in either direction, including deleted or nonexistent cursor positions. Keep the required positive integer limit of at most 1000, ownership and filter semantics, Promise-based ordinary calls and synchronous transaction calls.
+  
+  The kernel implementation is part of the coordinated root release; updated SDK types alone do not enable this option on an older kernel. Separate pages do not share a snapshot. No stored format or migration is added.
+
 ## 0.1.1
 
 ### Patch Changes

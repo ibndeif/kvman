@@ -1,5 +1,15 @@
 # @kvman/kvwebui
 
+## 0.1.3
+
+### Patch Changes
+
+- 90fb869: A workspace whose folder is gone is closed at start. `kernel.workspace.closed.list` lists the closed workspaces, `kernel.workspace.delete` erases one for good after stopping its work, and the new point `kernel.workspace.deleted` tells extensions, in Home. The workspace picker has a "Closed workspaces" section with Reopen, Delete, and "Delete all missing"; kvcoder forgets a deleted workspace's background-process records (ADR 0061).
+- 0616ef9: A fenced `mermaid` block in Markdown is drawn as a diagram, wherever kvwebui shows Markdown. The `mermaid` package (12.1.0) is loaded only when a page shows such a block; it runs with `securityLevel: 'strict'` and no HTML labels, its SVG is sanitized, and a block that isn't a valid diagram stays as its source (ADR 0067).
+- Updated dependencies [90fb869]
+- Updated dependencies [90fb869]
+  - @kvman/sdk@0.1.2
+
 ## 0.1.2
 
 ### Patch Changes

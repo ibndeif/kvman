@@ -1,5 +1,14 @@
 # @kvman/kvbuilder
 
+## 0.3.1
+
+### Patch Changes
+
+- Updated dependencies [90fb869]
+- Updated dependencies [90fb869]
+  - @kvman/sdk@0.1.2
+  - @kvman/testkit@0.1.4
+
 ## 0.3.0
 
 ### Minor Changes

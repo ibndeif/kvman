@@ -1,5 +1,13 @@
 # @kvman/kernel
 
+## 0.4.0
+
+### Patch Changes
+
+- Updated dependencies [90fb869]
+- Updated dependencies [90fb869]
+  - @kvman/sdk@0.1.2
+
 ## 0.3.3
 
 ### Patch Changes

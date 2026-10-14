@@ -1,5 +1,15 @@
 # @kvman/kvai
 
+## 0.1.2
+
+### Patch Changes
+
+- 90fb869: Tell a usage limit and a content refusal apart from other provider failures with two new codes, `kvai/USAGE_LIMIT` and `kvai/REFUSED`, each with its own text. A stream that ends before its final event is now `transient`, so a caller's retry applies.
+- 0616ef9: kvai: a provider failure whose whole reason is `terminated`, a connection dropped while the answer was read, is transient, so kvcoder retries it. kvcoder: `fs edit` returns the two ends of a long change around `[… N lines not shown …]` in place of up to 80 lines, and the new setting `kvcoder.delegate.model` is the model a helper uses when its worker names none, shown on Coder's page as "Model for workers". The lead offers to record how a project is built, tested, and run in its `AGENTS.md` (ADR 0069).
+- Updated dependencies [90fb869]
+- Updated dependencies [90fb869]
+  - @kvman/sdk@0.1.2
+
 ## 0.1.1
 
 ### Patch Changes

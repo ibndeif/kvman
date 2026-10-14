@@ -1,6 +1,6 @@
 {
   "name": "@kvman/kvcoder",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "kvcoder: the app-building harness, with one run tool over connectors, sections, and its conversation UI.",
   "license": "MIT",
   "repository": {
@@ -37,7 +37,7 @@
     "typecheck": "tsc -p tsconfig.json && vue-tsc -p tsconfig.web.json"
   },
   "peerDependencies": {
-    "@kvman/sdk": "^0.1.0"
+    "@kvman/sdk": "^0.1.2"
   },
   "dependencies": {
     "@kvman/kvai": "workspace:*",
