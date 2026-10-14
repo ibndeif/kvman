@@ -27,7 +27,7 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
       'Stop what you started in the background and no longer need, and delete the temporary files you or your tools left in the workspace folder, such as logs, snapshots, and scratch files.',
       'text that stands out clearly from its background, and calm colours; every field and every element that shows text the person typed has dir="auto", so Arabic they type reads right to left on any page.',
       "when the mcp connector gives you a browser, try the page's main actions with one `mcp run`.",
-      'what was done, what you checked and what it showed, what is unchecked, what still runs in the background, and what you noted for later.',
+      'Your final answer, in plain words and as short as the facts allow, says what was done, what you checked and what it showed, what is unchecked, what still runs in the background, and what you noted for later.',
       'decide an ordinary detail that is easy to change yourself: say what you chose.',
     ]) expect(lead, phrase).toContain(phrase);
     for (const gone of ['`plan`', '☐', 'artifact edit', 'checklist', 'Scale the process to the task', 'about five calls', 'skip steps']) expect(lead, gone).not.toContain(gone);
@@ -120,5 +120,16 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
     // ADR 0067, 7: a diagram is Mermaid code that kvman draws, never SVG the agent writes.
     expect(artifactDescription).toContain("For a diagram, write Mermaid code in a fenced mermaid block of a Markdown artifact or reply: kvman draws it. Don't write SVG for a diagram.");
     expect(artifactDescription.startsWith('Show the person something to read or see: a report, a design, an HTML page, or the localhost address')).toBe(true);
+  });
+
+  it('M2.4-E301 and E302 the lead talks to the person clearly and briefly, and a worker does not get that rule', () => {
+    const rule = 'Talk to the person clearly and briefly. Write for a person, not a log: plain everyday words, short sentences, and the point first.';
+    const lead = workingMethod('lead');
+    for (const phrase of [
+      rule,
+      'Leave out your inner steps, connector and command names, payloads, ids, and long output unless they ask; name a file or a technical term only when it helps them, and explain the term in a few words.',
+      'Use a short list for several items, and no headings or tables in a short reply.',
+    ]) expect(lead, phrase).toContain(phrase);
+    expect(workingMethod('worker')).not.toContain(rule);
   });
 });
