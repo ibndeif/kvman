@@ -22,7 +22,7 @@ test('notes.note.add stores a note', async () => {
 });
 ```
 
-`extensions` are folders, relative to the working folder; each loads as a `path:` extension. If your extension depends on others (`kvman.dependencies`), list their folders too. `npm test` in a scaffold runs these with `node --test`.
+`extensions` are folders, relative to the working folder; each loads as a `path:` extension. The extensions they declare in `kvman.dependencies`, and theirs, load from the first `node_modules` at or above the folder that declares them, by `main`, as bundled extensions load: install each as an exact devDependency (`npm install --save-dev --save-exact @kvman/kvcoder@<version>`). A folder you list wins over an installed copy, and one that isn't installed fails `EXTENSION_INVALID`. `npm test` in a scaffold runs these with `node --test`.
 
 ## The test kernel
 
@@ -65,8 +65,9 @@ The fake server is an OpenAI-compatible streaming server on 127.0.0.1. Each queu
 
 ## `kvman-check`
 
-`npm run check` loads the extension alone in a test kernel and reports, as readable text or with `--json` as `[{ file?, message, hint }]`:
+`npm run check` loads the extension, with the dependencies installed in its `node_modules`, in a test kernel and reports, as readable text or with `--json` as `[{ file?, message, hint }]`:
 
+- a declared dependency that isn't installed, with the `npm install` line to run;
 - a refused load (one problem at a time, since a load stops at its first error);
 - a public input field with no description;
 - missing locale keys: a key one catalog has and another lacks, every key your `ui.get` uses, `<namespace>.title`, and each setting's `<key>.title`;

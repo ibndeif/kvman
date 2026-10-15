@@ -26,6 +26,8 @@ describe('kvman-new writes the harness files and the guides (09 §9.2, ADR 0010,
     const folder = path.join(parent, 'notes');
     const agents = readFileSync(path.join(folder, 'AGENTS.md'), 'utf8');
     for (const mention of ['docs/', 'kvman-docs', 'npm run check', 'npm test', 'dist/']) expect(agents, mention).toContain(mention);
+    // QA51-H9: the dependency line, and kvman itself never edited (ADR 0080, 1, 2, and 4).
+    for (const mention of ['kvman.dependencies', 'npm install --save-dev --save-exact', 'every `@kvman/*` package', '`~/.kvman`', 'Use only `@kvman/sdk`']) expect(agents, mention).toContain(mention);
     expect(readFileSync(path.join(folder, 'CLAUDE.md'), 'utf8')).toBe('@AGENTS.md\n');
     expect(readdirSync(path.join(folder, 'docs')).sort()).toEqual(['conventions.md', 'i18n.md', 'presets.md', 'sdk.md']);
     for (const guide of ['conventions.md', 'i18n.md', 'presets.md', 'sdk.md']) {

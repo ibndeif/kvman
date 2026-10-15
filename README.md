@@ -44,6 +44,8 @@ Approval has a third mode, **Never ask**: nothing asks you before a call, includ
 
 Extensions can continue collection `find` with an exclusive `after` ID in ascending or descending order, without raising the 1000-document page limit. Pages do not share a cross-call snapshot; updated SDK types alone do not add this support to an older kernel ([storage guide](docs/developers/storage.md)).
 
+With `/build-kvman`, the agent builds on kvman and never edits it: not kvman's packages wherever they are, not its home folder, and not a project's `dist/` or `node_modules/`; an extension it writes uses only the SDK and the public names of the kernel and the installed extensions, and what they don't offer it says plainly. It designs first, from a map of which extension serves which need (a page from kvwebui, a model call from kvai, an agent tool from kvcoder), and with your own words when you use kvman's. `kvman extensions-get { name }` gives one extension's public commands, queries, and settings with their JSON Schemas. A project that depends on another extension installs it as an exact devDependency (`npm install --save-dev --save-exact <name>@<version>`); then `npm run check`, its tests, and `createTestKernel` load it from `node_modules`, `kvman-check` names that line when it is missing, and the preview adds the bundled extensions a project depends on. The `sdk` guide is the complete API reference (ADR 0080).
+
 ## Documentation
 
 | For | Start at |

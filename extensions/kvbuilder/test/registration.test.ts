@@ -8,7 +8,7 @@ const kvbuilder = useKvbuilder();
 const expected = [
   { name: 'docs', commands: ['list', 'get'] },
   { name: 'ext', commands: ['new', 'list', 'check', 'test'] },
-  { name: 'kvman', commands: ['model-list', 'model-set', 'settings-list', 'settings-set', 'settings-reset', 'extensions-list', 'extensions-install', 'extensions-uninstall', 'restart', 'preset-get', 'preset-set', 'preset-reset', 'preset-save', 'workspaces-list', 'jobs-list', 'jobs-get', 'processes-list', 'health-get', 'query-get'] },
+  { name: 'kvman', commands: ['model-list', 'model-set', 'settings-list', 'settings-set', 'settings-reset', 'extensions-list', 'extensions-get', 'extensions-install', 'extensions-uninstall', 'restart', 'preset-get', 'preset-set', 'preset-reset', 'preset-save', 'workspaces-list', 'jobs-list', 'jobs-get', 'processes-list', 'health-get', 'query-get'] },
   { name: 'preset', commands: ['new', 'check'] },
   { name: 'preview', commands: ['start', 'stop', 'status', 'query-get', 'command-run'] },
 ];
@@ -126,7 +126,7 @@ describe("kvbuilder's connectors (09 §9.1, §9.4)", { timeout: 30_000 }, () => 
     expect(extension?.commands.map((command) => command.name).sort()).toEqual(
       ['kvbuilder.build.start', 'kvbuilder.ext.new', 'kvbuilder.ext.check', 'kvbuilder.ext.test', 'kvbuilder.preset.new', 'kvbuilder.preset.check', 'kvbuilder.preview.start', 'kvbuilder.preview.stop', 'kvbuilder.preview.command.run', 'kvbuilder.app.model.set', 'kvbuilder.app.settings.set', 'kvbuilder.app.settings.reset', 'kvbuilder.app.extensions.install', 'kvbuilder.app.extensions.uninstall', 'kvbuilder.app.restart', 'kvbuilder.app.preset.settings.set', 'kvbuilder.app.preset.settings.reset', 'kvbuilder.app.preset.save'].sort(),
     );
-    expect(extension?.queries.map((query) => query.name).sort()).toEqual(['kvbuilder.app.extensions.list', 'kvbuilder.app.model.list', 'kvbuilder.app.preset.get', 'kvbuilder.app.settings.list', 'kvbuilder.docs.get', 'kvbuilder.docs.list', 'kvbuilder.ext.list', 'kvbuilder.guides.get', 'kvbuilder.guides.list', 'kvbuilder.preview.status', 'kvbuilder.preview.query.get', 'kvbuilder.app.workspaces.list', 'kvbuilder.app.jobs.list', 'kvbuilder.app.jobs.get', 'kvbuilder.app.processes.list', 'kvbuilder.app.health.get', 'kvbuilder.app.query.get'].sort());
+    expect(extension?.queries.map((query) => query.name).sort()).toEqual(['kvbuilder.app.extensions.get', 'kvbuilder.app.extensions.list', 'kvbuilder.app.model.list', 'kvbuilder.app.preset.get', 'kvbuilder.app.settings.list', 'kvbuilder.docs.get', 'kvbuilder.docs.list', 'kvbuilder.ext.list', 'kvbuilder.guides.get', 'kvbuilder.guides.list', 'kvbuilder.preview.status', 'kvbuilder.preview.query.get', 'kvbuilder.app.workspaces.list', 'kvbuilder.app.jobs.list', 'kvbuilder.app.jobs.get', 'kvbuilder.app.processes.list', 'kvbuilder.app.health.get', 'kvbuilder.app.query.get'].sort());
     for (const command of extension?.commands ?? []) expect(command.public).toBe(true);
     for (const query of extension?.queries ?? []) expect(query.public).toBe(true);
   });

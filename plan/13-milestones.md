@@ -284,6 +284,8 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
 
 *Changed after this milestone by ADR 0024: `kernel.restart` restarts kvman in the same process, a start that fails because of the preset is undone from a backup, and kvbuilder's `kvman` connector has `restart` (`02` §2.14, `09` §9.1).*
 
+*Changed after this milestone by ADR 0080: the guide of `/build-kvman` never lets the agent edit kvman itself and designs from what exists, the `kvman` connector has `extensions-get`, `createTestKernel` and `kvman-check` load a project's dependencies from its `node_modules`, and the preview adds the bundled ones (`09` §9.1 to §9.4, `10`).*
+
 - **Read:** `09`; `10`; `11`; `12` §12.3.
 - **Build:**
   - `extensions/kvdev`: the `ext`, `preset`, `preview`, and `docs` connectors, the scaffold (with `kvman.source`, and the web template), the preview kvman (running `web:watch`), and its global section.

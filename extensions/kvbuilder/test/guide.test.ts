@@ -94,4 +94,39 @@ describe("the agent's guide for building kvman (09 §9.4, ADR 0023, 4; ADR 0027,
     expect(guide).not.toContain('init');
     expect(guide.startsWith('The person wants something about the app itself.')).toBe(true);
   });
+
+  it('QA51-H1 the guide forbids changing kvman itself, after the rules for a person and before the presets', () => {
+    expect(inOrder(guide, ['After a change to the extensions, finish it', 'kvman itself is never changed.', 'This app, or a different app.'])).toBe(true);
+    const part = guide.slice(guide.indexOf('kvman itself is never changed.'), guide.indexOf('This app, or a different app.'));
+    for (const text of ['`fs` or `shell`', 'every `@kvman/*` package', 'in the global install, in any `node_modules`, or as source checked out in this workspace', '`~/.kvman`', '`KVMAN_HOME`', '`secrets.json`', "a project's `dist/` and `node_modules/`", 'The app changes only through the `kvman` connector.', 'An extension uses only `@kvman/sdk`', 'never imports the kernel', 'there is no workaround: say plainly what can\'t be done']) {
+      expect(part, text).toContain(text);
+    }
+  });
+
+  it('QA51-H2 the guide designs before it builds, from a map of needs to the extensions that serve them', () => {
+    expect(inOrder(guide, ['This app, or a different app.', 'Design first.', 'Build an extension, in this order:'])).toBe(true);
+    const part = guide.slice(guide.indexOf('Design first.'), guide.indexOf('Build an extension, in this order:'));
+    for (const text of ['`<namespace>.ui.get`', '"topic":"views"', '`components`', "`ctx.exec('kvai.complete', …)`", '`models`', '`providers`', '`@kvman/kvcoder` `connectors` and `sections`', 'so your extension depends on `@kvman/kvcoder`', '`ctx.store`', '`ctx.processes`', '`ctx.registerHandler`', '`kvman extensions-get` with `{"name":"@kvman/kvai"}`', 'Put it in the execution map']) {
+      expect(part, text).toContain(text);
+    }
+  });
+
+  it('QA51-H3 the method declares and installs each dependency before writing', () => {
+    const steps = ['`docs get`', '`ext new`', '`npm install --save-dev --save-exact <name>@<version>`', 'Write it with `fs`', '`ext check`', '`ext test`', '`preview start`', '`preview query-get`', '`preview command-run`', '`kvman extensions-install`'];
+    expect(inOrder(guide.slice(guide.indexOf('Build an extension')), steps)).toBe(true);
+    expect(guide).toContain('add `"<name>": "^<version>"` to `kvman.dependencies`');
+    expect(guide).toContain('Read `kvman extensions-get` of each extension you will call.');
+  });
+
+  it("QA51-H4 a developer's own words may be used back", () => {
+    const rule = 'Never ask them about, or say to them, extensions, namespaces, presets, setting keys, or commands.';
+    const developer = 'A person who uses these words first is a developer: then you may use them too';
+    expect(inOrder(guide, [rule, developer])).toBe(true);
+  });
+
+  it('QA51-E1 the guide and a full index fit the sections of a prompt', () => {
+    const size = Buffer.byteLength(guide, 'utf8');
+    expect(size).toBeLessThanOrEqual(16 * 1024);
+    expect(size + 16 * 1024).toBeLessThan(64 * 1024);
+  });
 });

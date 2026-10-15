@@ -2,6 +2,30 @@
 
 The rules every kvman extension follows. `sdk`, `i18n`, and `presets` explain the API behind them.
 
+## Never edit kvman
+
+- kvman is built on, never changed. Never write, delete, or move kvman's packages (the `kvman` program and every `@kvman/*` package: kernel, sdk, cli, testkit, kvai, kvwebui, kvcoder, kvbuilder), wherever they are: installed globally, in any `node_modules`, or checked out as source. Never touch kvman's home folder (`~/.kvman`, or `KVMAN_HOME`): its database, `secrets.json`, presets, logs, and installed extensions. Reading them is fine.
+- Never edit a project's `dist/` (it is built) or `node_modules/` (npm installs it).
+- An extension uses only `@kvman/sdk` and the public commands, queries, and registries of the kernel and of other extensions. It never imports the kernel, never reads or writes kvman's database or another extension's files, and never runs `kvman` itself.
+- When kvman and its extensions don't offer what is needed, there is no workaround: say what is missing.
+
+## Use what exists
+
+Each need has an owner. Build on it, and read its page (`kvman-docs get <extension> <topic>`, or the `docs` connector) first:
+
+| Need | Use | Page |
+|---|---|---|
+| a page, navigation, a form, a table, a panel, a status item | your public query `<namespace>.ui.get`, read by kvwebui | `@kvman/kvwebui` `views` |
+| a screen the views can't show | a Vue component in `web/components/` | `@kvman/kvwebui` `components` |
+| options the person sets | `ctx.registerSetting`, shown by your `configuration` view | `sdk`, `views` |
+| a model call, or an agent of your own | `ctx.exec('kvai.complete', …)` | `@kvman/kvai` `models` |
+| a model source of your own | a delegate provider of kvai | `@kvman/kvai` `providers` |
+| something kvman's agent can do, text in its prompt, a send-box command | a kvcoder connector, section, or slash command | `@kvman/kvcoder` `connectors`, `sections` |
+| data, files, later or repeated work, a long-running program, a reaction to a job or a start, a secret | `ctx.store`, `ctx.files`, `ctx.execAsync` and `ctx.schedule`, `ctx.processes`, `ctx.registerHandler`, `ctx.secrets` | `sdk` |
+| what another installed extension offers | its public commands and queries, through `ctx.exec` | its own pages |
+
+Add an extension only for what none of these gives.
+
 ## Names
 
 - A command or query is `<namespace>.<segment>…`: lowercase, kebab-case segments, written in full everywhere: `ctx.exec('notes.note.add', …)`.
@@ -70,7 +94,8 @@ The rules every kvman extension follows. `sdk`, `i18n`, and `presets` explain th
 
 ## Dependencies between extensions
 
-- Declare them in `kvman.dependencies`.
+- Declare each extension yours calls or registers with in `kvman.dependencies`, with a range: `"@kvman/kvcoder": "^0.1.7"`. kvman loads it first and refuses to start without it.
+- Install each as an exact devDependency (`npm install --save-dev --save-exact <name>@<version>`), so the checks and the tests load it.
 - Import another extension only as a type (`import type`), or a subpath it exports. Never import the kernel.
 
 ## Checks

@@ -22,7 +22,7 @@ What it does, in order:
 
 1. **A fresh home.** `<os temp>/kvman-preview-<name>`, emptied at each start, so a preview never touches real data. If a preview with that name still runs, it fails `PREVIEW_FAILED` (use `--name`).
 2. **A port.** The first free port from 3738 to 3837 on `127.0.0.1`; none free fails `NO_FREE_PORT`.
-3. **A generated preset** in the preview's home: kvai and kvwebui as `bundled`, each folder's package name as `path:<absolute folder>`, and `kvwebui.home` set to `kvwebui.extensions` (or your `--preset`, with your folders added).
+3. **A generated preset** in the preview's home: kvai and kvwebui as `bundled`, each bundled extension your folders declare in `kvman.dependencies` (and those it declares) as `bundled` too, each folder's package name as `path:<absolute folder>`, and `kvwebui.home` set to `kvwebui.extensions` (or your `--preset`, with your folders added; list a dependency that isn't bundled there).
 4. **`web:watch`.** For each project whose `package.json` has a `web:watch` script, it runs `npm run web:build` once (a failure is `PREVIEW_FAILED` with npm's last lines), then keeps `npm run web:watch` running so component edits rebuild.
 5. **The preview kvman**, started with `--home <home> --port <port> --yes --no-open --preset <generated>`.
 6. **Ready.** It polls the preview's `kernel.health.get` every 200 ms for up to 30 s. If the preview exits first, or 30 s pass, everything started is stopped and it fails `PREVIEW_FAILED` with the preview's last output lines. When ready it prints the URL (`Preview running at http://127.0.0.1:3738/`, or `{ "url": … }` with `--json`) and keeps running.

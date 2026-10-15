@@ -20,7 +20,7 @@ The chat shows **Building kvman is on for this chat**, your request is sent as y
 
 ## You don't need to know kvman's words
 
-Ask in your own words: "I want a page for my notes", "make the app look calmer". Once building is on, the agent has a guide for this in its prompt, and asks what it still needs to know about the result, such as where something should appear, and not about extensions or settings. It tells you what it will change in plain words on the card that asks you to allow it, shows you a new extension running before it adds it, and tells you how to undo each change.
+Ask in your own words: "I want a page for my notes", "make the app look calmer". Once building is on, the agent has a guide for this in its prompt, and asks what it still needs to know about the result, such as where something should appear, and not about extensions or settings. It tells you what it will change in plain words on the card that asks you to allow it, shows you a new extension running before it adds it, and tells you how to undo each change. If you use kvman's words yourself (extension, preset, setting), it uses them too, so you can talk about the design exactly.
 
 ## What you can ask for
 
@@ -41,7 +41,7 @@ Ask in your own words: "I want a page for my notes", "make the app look calmer".
 | "How many chats do I have?" | `kvman query-get` (a query of an installed extension) | — |
 | "Build a notes extension" | `ext new`, `ext check`, `ext test`, `preview start`, then `preview query-get` and `preview command-run` to check it | the preview shows it at once |
 | "Write me a preset for a notes app" | `preset new`, `preset check` | when you run it |
-| "How do I build on the notes extension?" | `docs list`, `docs get` | — |
+| "How do I build on the notes extension?" | `docs list`, `docs get`, `kvman extensions-get` | — |
 
 The model only offers models you can actually call: those of a provider you have connected, and those of your own servers. Asking for another one fails with a message, and the default model stays as it was.
 
@@ -63,11 +63,12 @@ What the agent can't do here:
 
 - read, list, or change a secret; an API key is never sent to the model;
 - run an arbitrary command of the app: it reaches a command only through a connector that names it;
-- open or close a workspace.
+- open or close a workspace;
+- change kvman itself: it never edits kvman's own code, wherever it is, or its home folder (`~/.kvman`). It builds on what kvman and its extensions offer, and when something can't be done that way, it says so.
 
 ## Looking things up
 
-When the agent builds on an installed extension, it reads that extension's own pages with `docs list` and `docs get`. Every installed extension that documents itself, such as kvwebui's views and components or kvcoder's connectors and sections, appears there; so does a project you built with `kvman-new`. The agent never has to guess how an extension works.
+When the agent builds on an installed extension, it reads that extension's own pages with `docs list` and `docs get`. Every installed extension that documents itself, such as kvwebui's views and components or kvcoder's connectors and sections, appears there; so does a project you built with `kvman-new`. `kvman extensions-get` gives the exact inputs and outputs of an extension's commands and queries, and its settings, even when it has no pages. The agent never has to guess how an extension works.
 
 ## Previewing
 

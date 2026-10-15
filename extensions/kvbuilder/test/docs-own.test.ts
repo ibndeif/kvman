@@ -41,4 +41,13 @@ describe("kvbuilder's own docs pair (09 §9.5, ADR 0010, 22)", { timeout: 30_000
     expect((await kernel.exec('kvbuilder.docs.list', {})).map((page) => page.topic)).toEqual(['building']);
     await expect(kernel.exec('kvbuilder.docs.get', { topic: 'guide' })).rejects.toEqual(failed('NOT_FOUND'));
   });
+
+  it('QA51-H9 building names the nine commands that change the app, rolledBack, extensions-get, and the never-edit rule', () => {
+    const markdown = readFileSync(path.join(docsFolder, 'building.md'), 'utf8');
+    expect(markdown).toContain('Nine commands change the app: `model-set`, `settings-set`, `settings-reset`, `extensions-install`, `extensions-uninstall`, `preset-set`, `preset-reset`, `preset-save`, and `restart`.');
+    expect(markdown).not.toContain('Six commands');
+    for (const text of ['rolledBack?', '| `extensions-get` | `{ name }` |', '## kvman itself is never changed', '## Designing before building', 'npm install --save-dev --save-exact', 'docs get` for `conventions` and `sdk`']) {
+      expect(markdown, text).toContain(text);
+    }
+  });
 });

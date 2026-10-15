@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { homeWorkspaceId, openSecretsFile, startKernel, type Kernel, type LogLevel, type ProgressChunk } from '@kvman/kernel';
 import { z, type Caller, type CommandInputOf, type InputOf, type Job, type Json, type OutputOf, type Preset } from '@kvman/sdk';
+import { installedDependencies } from './dependencies/installed-dependencies.ts';
 import { createFakeClock, type TestClock } from './fake-clock.ts';
 
 export type { TestClock } from './fake-clock.ts';
@@ -10,7 +11,7 @@ export type { ProgressChunk } from '@kvman/kernel';
 
 /** What a test kernel starts with (plan 10). */
 export type TestKernelOptions = {
-  /** Folders of the extensions to load, relative to the working folder; each loads as a `path:` extension. */
+  /** Folders of the extensions to load, relative to the working folder; each loads as a `path:` extension, and the dependencies they declare load from their `node_modules`. */
   extensions: readonly string[];
   /** The run's preset settings. */
   settings?: Readonly<Record<string, Json>>;
@@ -82,7 +83,10 @@ export async function createTestKernel(options: TestKernelOptions): Promise<Test
   mkdirSync(homeFolder);
   writeSecrets(home, options.secrets);
   const folders = options.extensions.map((folder) => path.resolve(folder));
-  const extensions = Object.fromEntries(folders.map((folder): [string, `path:${string}`] => [packageName(folder), `path:${folder}`]));
+  const named = folders.map((folder): [string, `path:${string}`] => [packageName(folder), `path:${folder}`]);
+  // Declared dependencies that `extensions` doesn't name load from the dependent's `node_modules`, by `main` (ADR 0080, 4).
+  const { installed } = installedDependencies(folders);
+  const extensions = Object.fromEntries([...installed.map((dependency): [string, 'bundled'] => [dependency.name, 'bundled']), ...named]);
   const preset: Preset = { name: 'test', extensions, settings: { 'kernel.workers': 1, ...options.settings } };
   const clock = createFakeClock(Date.now());
   const start = async (): Promise<Kernel> => {
@@ -91,7 +95,7 @@ export async function createTestKernel(options: TestKernelOptions): Promise<Test
       homeFolder,
       preset,
       presetFolder: process.cwd(),
-      bundled: new Map(),
+      bundled: new Map(installed.map((dependency) => [dependency.name, dependency.folder])),
       mode: 'web',
       logLevel: options.logLevel ?? 'debug',
       terminalLog: false,

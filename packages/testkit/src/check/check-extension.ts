@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { ProblemError, z, type Problem } from '@kvman/sdk';
+import { installedDependencies, type MissingDependency } from '../dependencies/installed-dependencies.ts';
 import { createTestKernel, type TestKernel } from '../index.ts';
 import { docsFindings } from './docs-findings.ts';
 import { fieldFindings } from './field-descriptions.ts';
@@ -9,9 +10,10 @@ import { localeFindings, type RequiredKey } from './locale-keys.ts';
 import { scanProjectTimers } from './timer-scan.ts';
 import { uiKeys } from './ui-keys.ts';
 
-// `kvman-check` (plan 09 §9.2, ADR 0009, 116): it loads the project's extension alone in a test kernel and reports a
-// refused load (one problem at a time, since a load stops at its first error), public input fields with no
-// description, missing locale keys, docs-pair warnings, and timer warnings.
+// `kvman-check` (plan 09 §9.2, ADR 0009, 116): it loads the project's extension, with the dependencies installed in
+// its `node_modules` (ADR 0080, 4), in a test kernel and reports a dependency that isn't installed, a refused load
+// (one problem at a time, since a load stops at its first error), public input fields with no description, missing
+// locale keys, docs-pair warnings, and timer warnings.
 
 const manifestSchema = z.object({ name: z.string(), kvman: z.object({}).loose() }).loose();
 
@@ -21,6 +23,14 @@ function notAProject(): CheckedFinding {
 
 function loadFinding(problem: Problem): CheckedFinding {
   return { message: `The extension doesn't load: ${problem.message}`, hint: 'Fix what the kernel names; kvman-check reports the next problem once this one is gone.', warning: false };
+}
+
+function missingFinding(dependency: MissingDependency): CheckedFinding {
+  return {
+    message: `${dependency.dependent} depends on ${dependency.name}, which isn't installed in this project.`,
+    hint: `Run npm install --save-dev --save-exact ${dependency.name}@<version>, with the version your kvman runs, so the check and the tests can load it.`,
+    warning: false,
+  };
 }
 
 function uiFailure(namespace: string, problem: Problem): CheckedFinding {
@@ -59,6 +69,8 @@ export async function checkExtension(folder: string): Promise<CheckedFinding[]> 
   const manifest = manifestSchema.safeParse(JSON.parse(readFileSync(manifestFile, 'utf8')));
   if (!manifest.success) return [notAProject()];
   const timers = scanProjectTimers(folder);
+  const { missing } = installedDependencies([folder]);
+  if (missing.length > 0) return [...missing.map(missingFinding), ...timers];
   let kernel: TestKernel;
   try {
     kernel = await createTestKernel({ extensions: [folder], logLevel: 'warn' });

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { useKvbuilder } from './support/kvbuilder-kernel.ts';
 
 const kvbuilder = useKvbuilder();
+
+type Registration = { name: string; description: string; public: boolean; input: unknown; output: unknown };
 const failed = (code: string) => expect.objectContaining({ problem: expect.objectContaining({ code }) });
 
 describe("the kvman connector's reads and query-get (09 §9.1, ADR 0022, 7, 8, and 13)", { timeout: 60_000 }, () => {
@@ -61,5 +63,30 @@ describe("the kvman connector's reads and query-get (09 §9.1, ADR 0022, 7, 8, a
     const through = await kernel.exec('kvbuilder.app.query.get', { name: 'kvbuilder.guides.get', input: { topic: 'nothing' } }).catch((thrown: unknown) => thrown);
     expect(direct).toEqual(failed('NOT_FOUND'));
     expect(through).toMatchObject({ problem: { code: 'NOT_FOUND', message: (direct as { problem: { message: string } }).problem.message } });
+  });
+
+  it("QA51-H5 extensions-get gives one extension's public commands and queries with their schemas, and its settings with theirs", async () => {
+    const { kernel } = await kvbuilder.start();
+    const listed = (await kernel.exec('kernel.extensions.list', {})).find((extension) => extension.name === '@kvman/kvcoder');
+    const shapes = await kernel.exec('kvbuilder.app.extensions.get', { name: '@kvman/kvcoder' });
+    expect(listed).toBeDefined();
+    expect(shapes).toMatchObject({ name: listed?.name, version: listed?.version, source: listed?.source, namespace: 'kvcoder' });
+    const shown = (entries: readonly Registration[]) => entries.filter((entry) => entry.public).map(({ name, description, input, output }) => ({ name, description, input, output }));
+    expect(shapes.commands).toEqual(shown(listed?.commands ?? []));
+    expect(shapes.queries).toEqual(shown(listed?.queries ?? []));
+    expect(listed?.commands.some((command) => !command.public), 'kvcoder has a private command to leave out').toBe(true);
+    const settings = new Map((await kernel.exec('kernel.settings.list', {})).map((setting) => [setting.key, setting.schema]));
+    expect(shapes.settings).toEqual((listed?.settings ?? []).map((setting) => ({ ...setting, schema: settings.get(setting.key) })));
+    expect(shapes.settings.length).toBeGreaterThan(0);
+    const own = (await kernel.exec('kernel.extensions.list', {})).find((extension) => extension.name === '@kvman/kvbuilder');
+    expect(own?.queries.find((query) => query.name === 'kvbuilder.app.extensions.get')).toMatchObject({ public: true });
+    const connector = (await kernel.exec('kvcoder.connector.list', {})).find((entry) => entry.name === 'kvman');
+    expect(connector).toMatchObject({ commands: expect.arrayContaining([expect.objectContaining({ name: 'extensions-get', command: 'kvbuilder.app.extensions.get', asks: false })]) });
+  });
+
+  it('QA51-E3 extensions-get of an unknown name fails NOT_FOUND, and of a bad name VALIDATION_FAILED', async () => {
+    const { kernel } = await kvbuilder.start();
+    await expect(kernel.exec('kvbuilder.app.extensions.get', { name: '@acme/none' })).rejects.toEqual(failed('NOT_FOUND'));
+    await expect(kernel.exec('kvbuilder.app.extensions.get', { name: 'Not A Name' })).rejects.toEqual(failed('VALIDATION_FAILED'));
   });
 });

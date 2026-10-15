@@ -28,7 +28,7 @@ ctx.registerHandler('kernel.started', {
 });
 ```
 
-- Declare `@kvman/kvcoder` in `kvman.dependencies`, so your `kernel.started` handler runs after kvcoder clears the registry.
+- Declare `@kvman/kvcoder` in `kvman.dependencies`, so your `kernel.started` handler runs after kvcoder clears the registry, and install it as an exact devDependency so `npm run check` and your tests load it.
 - `name` is the `connector` the agent names, and each command's `name` its `command`. Both are lowercase kebab-case **single words**: `model-list`, not `model list`. A command can't be named `help`.
 - `description` is what the agent sees in the prompt's connector index. Say what it is for and when to use it. kvcoder adds the command names after it, so you never list them yourself.
 - Each command's `command` must be a public command or query of **your own** extension, or registration fails `VALIDATION_FAILED`. kvcoder runs it with `ctx.exec`, with the payload as its input, on a worker like any job, and it runs to its end inside the agent's step.

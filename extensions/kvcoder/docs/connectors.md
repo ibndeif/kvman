@@ -29,7 +29,7 @@ ctx.registerHandler('kernel.started', {
 });
 ```
 
-- The registering extension declares `@kvman/kvcoder` in `kvman.dependencies`, so its `kernel.started` handler runs after kvcoder's clear.
+- The registering extension declares `@kvman/kvcoder` in `kvman.dependencies`, so its `kernel.started` handler runs after kvcoder's clear, and installs it as an exact devDependency (`npm install --save-dev --save-exact @kvman/kvcoder@<version>`), so its checks and tests load it.
 - `kvcoder.connector.register` takes exactly one of `commands` or `binary`, plus `name` and `description`.
 - To register several connectors in one call, pass `{ connectors: [ … ] }`, each entry shaped as one connector. All are checked first and stored together: the call registers all of them or none, and a name given twice fails `VALIDATION_FAILED`.
 - `name`: the `connector` the agent names. Names, and each command's `name`, are lowercase kebab-case single words: `model-list`, not `model list`. A command can't be named `help`.

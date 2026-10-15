@@ -28,4 +28,19 @@ describe('the built-in guides (09 §9.2, ADR 0030, 8)', () => {
     expect(guide).toMatchObject({ extension: 'kvman', topic: 'conventions', title: 'Conventions' });
     for (const mention of mentions) expect(guide.markdown, mention).toContain(mention);
   });
+
+  it('QA51-H9 sdk is the whole API reference, and conventions keeps kvman unedited and names who serves each need', () => {
+    const markdown = (topic: string): string => readBuiltInGuide(topic)?.markdown ?? '';
+    const sdk = markdown('sdk');
+    for (const mention of ['"dependencies": { "@kvman/kvcoder"', 'npm install --save-dev --save-exact', 'ctx.files', 'ctx.processes', 'key?', '`ctx.schedule.cancel(id)`', '`ctx.cancel(jobId)`', '`syncOnly`', '`maxInputBytes`', 'progress(data)', 'workspaceId?', 'execAsync', 'waitForJob', 'clock.advance', 'kernel.restart()']) {
+      expect(sdk, mention).toContain(mention);
+    }
+    for (const point of ['kernel.started', 'kernel.stopping', 'kernel.workspace.opened', 'kernel.workspace.deleted', 'kernel.job.failed', 'kernel.job.succeeded', 'kernel.job.cancelled', 'kernel.process.exited']) {
+      expect(sdk, point).toContain(`| \`${point}\` |`);
+    }
+    const conventions = markdown('conventions');
+    for (const mention of ['## Never edit kvman', 'every `@kvman/*` package', '`~/.kvman`', '## Use what exists', '`@kvman/kvwebui` `views`', '`@kvman/kvai` `models`', '`@kvman/kvcoder` `connectors`']) {
+      expect(conventions, mention).toContain(mention);
+    }
+  });
 });

@@ -7,6 +7,7 @@ type Finding = { file?: string; message: string; hint: string };
 type Folder = { folder: string };
 type Guide = { extension: string; topic: string; title: string };
 type Page = { topic: string; title: string; markdown: string };
+type Shape = { name: string; description: string; input: Record<string, unknown>; output: Record<string, unknown> };
 type PreviewCall = { name: string; input?: Record<string, unknown> };
 type PreviewAnswer = { ok: true; output: unknown } | { ok: false; problem: { code: string; message: string; params?: Record<string, unknown> } };
 type PreviewStatus = { running: false } | { running: true; url: string; extensions: string[]; startedAt: string };
@@ -39,6 +40,7 @@ declare module '@kvman/sdk' {
     'kvbuilder.app.model.list': { input: Empty; output: { id: string; name: string; provider: string; isDefault: boolean }[] };
     'kvbuilder.app.settings.list': { input: Empty; output: { key: string; description: string; scopes: ('global' | 'workspace')[]; value: unknown; source: string }[] };
     'kvbuilder.app.extensions.list': { input: Empty; output: { name: string; version: string; source: string; namespace: string; commands: string[]; queries: string[]; settings: string[] }[] };
+    'kvbuilder.app.extensions.get': { input: { name: string }; output: { name: string; version: string; source: string; namespace: string; commands: Shape[]; queries: Shape[]; settings: { key: string; description: string; scopes: ('global' | 'workspace')[]; schema: Record<string, unknown> }[] } };
     'kvbuilder.app.preset.get': { input: Empty; output: { name: string; origin: 'bundled' | 'home' | 'file'; file?: string; extensions: Record<string, string>; settings?: Record<string, unknown> } };
     'kvbuilder.app.workspaces.list': KernelQueries['kernel.workspace.list'];
     'kvbuilder.app.jobs.list': KernelQueries['kernel.jobs.list'];

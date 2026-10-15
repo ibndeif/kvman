@@ -1,9 +1,11 @@
 import path from 'node:path';
 import type { Preset } from '@kvman/sdk';
+import { bundledDependencies } from '../dependencies/installed-dependencies.ts';
 
 // The preview's generated preset (plan 09 §9.3, ADR 0009, 119, 126): the dev extensions as absolute `path:` entries,
-// plus kvai and kvwebui with the Extensions page as home; or a given preset, its `path:` entries made absolute (the
-// generated file lives in the preview's home), with the dev extensions added over entries of the same name.
+// plus kvai, kvwebui, and the bundled extensions they depend on (ADR 0080, 5), with the Extensions page as home; or a
+// given preset, its `path:` entries made absolute (the generated file lives in the preview's home), with the dev
+// extensions added over entries of the same name.
 
 /** An extension folder to preview, by package name. */
 export type PreviewExtension = { name: string; folder: string };
@@ -21,7 +23,8 @@ function absoluteSources(given: GivenPreset): Preset['extensions'] {
 export function previewPreset(extensions: readonly PreviewExtension[], given?: GivenPreset): Preset {
   const dev = Object.fromEntries(extensions.map((extension): [string, `path:${string}`] => [extension.name, `path:${extension.folder}`]));
   if (given === undefined) {
-    return { name: 'preview', extensions: { '@kvman/kvai': 'bundled', '@kvman/kvwebui': 'bundled', ...dev }, settings: { 'kvwebui.home': 'kvwebui.extensions' } };
+    const dependencies = Object.fromEntries(bundledDependencies(extensions.map((extension) => extension.folder)).map((name): [string, 'bundled'] => [name, 'bundled']));
+    return { name: 'preview', extensions: { '@kvman/kvai': 'bundled', '@kvman/kvwebui': 'bundled', ...dependencies, ...dev }, settings: { 'kvwebui.home': 'kvwebui.extensions' } };
   }
   return { ...given.preset, extensions: { ...absoluteSources(given), ...dev } };
 }

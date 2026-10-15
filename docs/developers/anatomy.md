@@ -27,7 +27,7 @@ An extension is an npm package whose `package.json` has `main` and a `kvman` fie
 | `main` | The built entry, which `bundled` and `npm:` extensions load. |
 | `kvman.namespace` | The prefix of every name the extension registers. Required. `kernel` is the kernel's own and can't be used. |
 | `kvman.source` | Optional. For a `path:` extension, kvman loads this file directly, with Node's type stripping (erasable TypeScript only: no enums, namespaces, or parameter properties). With none, it loads `main`. |
-| `kvman.dependencies` | Other extensions this one needs, with version ranges. kvman checks they are present and in range, and loads them first. |
+| `kvman.dependencies` | Other extensions this one needs, with version ranges. kvman checks they are present and in range, and loads them first. Install each as an exact devDependency, so `npm run check` and the tests load it. |
 | `kvman.web` | Optional. A folder kvman serves at `/web/<namespace>/`, for Vue components ([components.md](components.md)). |
 
 An unknown key in the `kvman` field fails the load. `@kvman/sdk` must be a **peer dependency**: at runtime every extension shares the kernel's own copy, and so its `z` (zod). Build schemas with the SDK's `z`, never with your own zod.

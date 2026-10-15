@@ -4,7 +4,7 @@ export const kvmanConnector = {
   name: 'kvman',
   optIn: true as const,
   description:
-    'See and change the app you are running in: its default model, settings, extensions, and preset, and its workspaces, jobs, processes, and health. Use it for any change to kvman itself. The person is asked before each change. query-get runs a public query of any installed extension. preset-set and preset-reset change one value of the app\'s preset, such as its name and home page. preset-save saves a preset file from the workspace so the person can start it later by name. A change to the extensions or the preset is saved to the preset file and applies at the next start of kvman.',
+    'See and change the app you are running in: its default model, settings, extensions, and preset, and its workspaces, jobs, processes, and health. Use it for any change to kvman itself. The person is asked before each change. extensions-get gives one extension\'s public commands, queries, and settings with their schemas, to build on it. query-get runs a public query of any installed extension. preset-set and preset-reset change one value of the app\'s preset, such as its name and home page. preset-save saves a preset file from the workspace so the person can start it later by name. A change to the extensions or the preset is saved to the preset file and applies at the next start of kvman.',
   commands: [
     { name: 'model-list', command: 'kvbuilder.app.model.list' },
     { name: 'model-set', command: 'kvbuilder.app.model.set', asks: true as const, examples: [{ description: 'Use another model', input: { model: 'anthropic/claude-sonnet-5-5' } }] },
@@ -12,6 +12,7 @@ export const kvmanConnector = {
     { name: 'settings-set', command: 'kvbuilder.app.settings.set', asks: true as const, examples: [{ description: 'Set a setting for everyone', input: { key: 'kvwebui.theme', value: 'dark', scope: 'global' } }] },
     { name: 'settings-reset', command: 'kvbuilder.app.settings.reset', asks: true as const, examples: [{ description: 'Go back to the default', input: { key: 'kvwebui.theme', scope: 'global' } }] },
     { name: 'extensions-list', command: 'kvbuilder.app.extensions.list' },
+    { name: 'extensions-get', command: 'kvbuilder.app.extensions.get', examples: [{ description: "Read an installed extension's commands, queries, and settings with their schemas", input: { name: '@kvman/kvai' } }] },
     {
       name: 'extensions-install',
       command: 'kvbuilder.app.extensions.install',

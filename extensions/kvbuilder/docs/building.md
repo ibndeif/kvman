@@ -8,7 +8,7 @@ The agent calls each connector with kvcoder's `run` tool: `run { description, co
 
 | Connector | Commands | Use it to |
 |---|---|---|
-| `kvman` | `model-list`, `model-set`, `settings-list`, `settings-set`, `settings-reset`, `extensions-list`, `extensions-install`, `extensions-uninstall`, `preset-get`, `preset-set`, `preset-reset`, `preset-save`, `workspaces-list`, `jobs-list`, `jobs-get`, `processes-list`, `health-get`, `query-get` | see and change the app you are running in: its default model, settings, extensions, and preset; its workspaces, jobs, processes, and health; and any public query of an installed extension |
+| `kvman` | `model-list`, `model-set`, `settings-list`, `settings-set`, `settings-reset`, `extensions-list`, `extensions-get`, `extensions-install`, `extensions-uninstall`, `restart`, `preset-get`, `preset-set`, `preset-reset`, `preset-save`, `workspaces-list`, `jobs-list`, `jobs-get`, `processes-list`, `health-get`, `query-get` | see and change the app you are running in: its default model, settings, extensions, and preset; its workspaces, jobs, processes, and health; one extension's exact public shapes; and any public query of an installed extension |
 | `ext` | `new`, `list`, `check`, `test` | scaffold an extension project in the workspace, list the projects, type-check one and see what kvman would refuse, run its tests |
 | `preset` | `new`, `check` | write a preset file and check it before running it |
 | `preview` | `start`, `stop`, `status`, `query-get`, `command-run` | run projects in a separate kvman, get its URL, and call their commands and queries there |
@@ -24,6 +24,7 @@ The payload is the command's input as JSON:
 { "description": "Switching the default model", "connector": "kvman", "command": "model-set", "payload": { "model": "anthropic/claude-sonnet-5-5" } }
 { "description": "Adding the notes extension to the app", "connector": "kvman", "command": "extensions-install", "payload": { "source": "npm:@acme/notes@1.2.3" } }
 { "description": "Adding the notes project of this workspace to the app", "connector": "kvman", "command": "extensions-install", "payload": { "source": "path:notes" } }
+{ "description": "Reading what kvai offers", "connector": "kvman", "command": "extensions-get", "payload": { "name": "@kvman/kvai" } }
 { "description": "Finding the jobs that failed", "connector": "kvman", "command": "jobs-list", "payload": { "status": "failed", "limit": 20 } }
 { "description": "Listing the chats", "connector": "kvman", "command": "query-get", "payload": { "name": "kvcoder.session.list", "input": { "limit": 10 } } }
 { "description": "Previewing the notes project", "connector": "preview", "command": "start", "payload": { "extensions": ["notes"] } }
@@ -51,22 +52,49 @@ The guide tells the agent to choose the mechanism and leave the person to choose
 
 - **Which app?** "The app" can mean kvman or the project in the workspace folder; the agent asks once, with a choice, unless the request is clear.
 - **Ask about the result, and only what is missing.** One question per `ask` call, the options written as outcomes, the recommended one first. It never asks what `extensions-list`, `settings-list`, or `preset-get` would answer.
-- **No kvman words.** Extensions, namespaces, presets, setting keys, and commands stay out of what the agent asks and says, and out of a call's `description`, which is the text of the approval card.
+- **No kvman words.** Extensions, namespaces, presets, setting keys, and commands stay out of what the agent asks and says, and out of a call's `description`, which is the text of the approval card. A person who uses those words first is a developer, and the agent may use them too, so the design can be stated exactly.
 - **Look, then use the smallest thing.** A setting, then an extension that is installed, then one the agent builds, and a new preset only for a different app. If kvman can't do it, the agent says so.
 - **Show before changing.** For an extension it built, the agent starts the preview, gives the address, and asks the person to confirm before it adds the extension to the app.
 - **Undo and restart.** The agent says how to undo each change (`settings-reset`, `extensions-uninstall`), what is still unchecked, and, after a change to the extensions, restarts kvman (below).
 
+## kvman itself is never changed
+
+The agent builds on kvman and never edits it, whatever the person asks and whichever workspace it works in:
+
+- It never writes, deletes, or moves kvman's packages (the `kvman` program and every `@kvman/*` package: kernel, sdk, cli, testkit, kvai, kvwebui, kvcoder, kvbuilder), whether installed globally, in any `node_modules`, or checked out as source in the workspace; kvman's home folder (`~/.kvman` or `KVMAN_HOME`: the database, `secrets.json`, presets, logs, installed extensions); or a project's `dist/` and `node_modules/`. Reading them is fine.
+- The running app changes only through the `kvman` connector, and an installed extension's behaviour only through its settings, its public commands, or a new extension built on its public commands and queries. Only a project of the workspace (`ext list`) is the agent's to edit.
+- An extension uses only `@kvman/sdk` and the public commands, queries, and registries of the kernel and of installed extensions. It never imports the kernel or another extension's code (only `import type`, or a subpath, of a dependency it declares), and never reads kvman's database, secrets, or another extension's files.
+- What kvman and its extensions don't offer has no workaround: the agent says plainly what can't be done.
+
+## Designing before building
+
+Every common need already has an owner, so a new extension builds on it:
+
+| Need | Built with | Read |
+|---|---|---|
+| a page, navigation, a form, a table, a panel, a status item | the public query `<namespace>.ui.get` that kvwebui reads | `@kvman/kvwebui` `views` |
+| a screen the views can't show | a Vue component (`ext new` with `"web": true`) | `@kvman/kvwebui` `components` |
+| options the person sets | `ctx.registerSetting`, shown by the `configuration` view | `sdk`, `@kvman/kvwebui` `views` |
+| a model call, or an agent of its own | `ctx.exec('kvai.complete', …)` | `@kvman/kvai` `models` |
+| a model source | a delegate provider of kvai | `@kvman/kvai` `providers` |
+| something the chat's agent can do, text in its prompt, a send-box command | a kvcoder connector, section, or slash command | `@kvman/kvcoder` `connectors`, `sections` |
+| data, files, later or repeated work, a long-running program, a reaction to a job or a start, a secret | `ctx.store`, `ctx.files`, `ctx.execAsync` and `ctx.schedule`, `ctx.processes`, `ctx.registerHandler`, `ctx.secrets` | `sdk` |
+| what another installed extension offers | its public commands and queries, with `ctx.exec` | `kvman extensions-get`, its pages |
+
+The agent then settles the design (the dependencies, and each command, query, setting, page, and connector with its input and output) and puts it in the execution map the person agrees to.
+
 ## Building an extension, step by step
 
-1. **Read.** `docs list`, then `docs get` for `sdk`, and for `i18n` or `presets` when the work touches them; before building on an installed extension, its own pages.
+1. **Read.** `docs list`, then `docs get` for `conventions` and `sdk`, and for `i18n` or `presets` when the work touches them; before building on an installed extension, its own pages and its `kvman extensions-get`.
 2. **Scaffold.** `ext new { name, namespace, folder, web? }` writes the project and runs `npm install`.
-3. **Write.** Edit `src/`, `locales/`, and `test/` with `fs`. Don't edit `dist/`.
-4. **Check.** After every change, `ext check { folder }`, then `ext test { folder }`. `ext check` answers `[{ file?, message, hint }]`: TypeScript's errors first, then what kvman would refuse or show untranslated.
-5. **Run.** `preview start { extensions: [folder] }` answers `{ url }`.
-6. **Check that it works.** Call the project in the preview (below), and open its page at the URL.
-7. **Install**, when the person asks: `kvman extensions-install { source: "path:<folder>" }`, then `kvman restart`.
+3. **Depend.** For each extension the project calls or registers with, add `"<name>": "^<version>"` to `kvman.dependencies`, and install it as an exact devDependency in the project: `npm install --save-dev --save-exact <name>@<version>`, with the version `extensions-list` shows. `kvman-check`, the tests, and `createTestKernel` load it from `node_modules`; `import type {} from '<name>'` types the calls.
+4. **Write.** Edit `src/`, `locales/`, and `test/` with `fs`. Don't edit `dist/` or `node_modules/`.
+5. **Check.** After every change, `ext check { folder }`, then `ext test { folder }`. `ext check` answers `[{ file?, message, hint }]`: TypeScript's errors first, then what kvman would refuse or show untranslated.
+6. **Run.** `preview start { extensions: [folder] }` answers `{ url }`. A bundled extension the project depends on is added to the preview.
+7. **Check that it works.** Call the project in the preview (below), and open its page at the URL.
+8. **Install**, when the person asks: `kvman extensions-install { source: "path:<folder>" }`, then `kvman restart`.
 
-To improve an extension that exists, read its code and its docs page first, find what is wrong with `ext check`, `ext test`, and the preview, change the smallest thing, and run the checks again.
+To improve a project of the workspace, read its code and its docs page first, find what is wrong with `ext check`, `ext test`, and the preview, change the smallest thing, and run the checks again.
 
 ## Seeing the app you run in
 
@@ -77,12 +105,13 @@ These `kvman` commands only read, and never ask the person:
 | `model-list` | none | the models that can be called now: `[{ id, name, provider, isDefault }]` |
 | `settings-list` | none | every setting: `[{ key, description, schema, scopes, value, source }]`, where `source` is `workspace`, `global`, `preset`, or `default` |
 | `extensions-list` | none | the extensions that run: `[{ name, version, source, namespace, commands, queries, settings }]`, the last three as names |
+| `extensions-get` | `{ name }` | one extension by package name: `{ name, version, source, namespace, commands, queries, settings }`, with its public commands and queries as `{ name, description, input, output }` and its settings as `{ key, description, scopes, schema }`, every schema as JSON Schema; `NOT_FOUND` for a name that doesn't run |
 | `preset-get` | none | the preset as stored now: `{ name, origin, file?, extensions, settings }` |
 | `workspaces-list` | none | the open workspaces, Home first |
 | `jobs-list` | `{ status?, limit }` | the async and scheduled jobs of the chat's workspace, newest first, each `{ id, name, input, status, attempts, retries, output?, problem?, createdAt, startedAt?, endedAt? }`; `status` is `queued`, `running`, `succeeded`, `failed`, or `cancelled`, and a failed job holds its `problem` |
 | `jobs-get` | `{ id }` | one job of any workspace |
 | `processes-list` | none | the long-lived processes: `[{ extension, workspaceId, name, pid, startedAt }]` |
-| `health-get` | none | `{ version, preset, mode, workers, uptimeMs, languages }` |
+| `health-get` | none | `{ version, preset, mode, workers, uptimeMs, languages, rolledBack? }`; `rolledBack` is the Problem of a start that failed and was undone |
 | `query-get` | `{ name, input? }` | the output of the public query `name`, run with `input` (`{}` when left out) in the chat's workspace |
 
 `query-get` runs a query of the kernel or of any installed extension, so the agent can use what is installed. It runs queries only:
@@ -96,7 +125,7 @@ There is no `kvman` command that runs an arbitrary command of the app: a command
 
 ## Changing the app you run in
 
-`kvman` is for the running app; `ext` is for a project in the workspace. Six commands change the app: `model-set`, `settings-set`, `settings-reset`, `extensions-install`, `extensions-uninstall`, and `restart`.
+`kvman` is for the running app; `ext` is for a project in the workspace. Nine commands change the app: `model-set`, `settings-set`, `settings-reset`, `extensions-install`, `extensions-uninstall`, `preset-set`, `preset-reset`, `preset-save`, and `restart`.
 
 - **The person is asked before each one runs.** The call becomes an approval card showing its description, the command, and its payload, unless the person set `kvcoder.approval` to `never`, where it runs at once. Allowed, it runs; denied, the call answers `denied by the user` and nothing changed. Make one call for one change, and say in its `description` what changes.
 - **Model and settings change at once.** `model-set` takes the full model id of a model `model-list` shows (a model of a connected provider or of a custom provider); `settings-set` and `settings-reset` take a setting key and a scope, `global` or `workspace`. `settings-set` replaces the whole value, so for a list read it with `settings-list` first.
@@ -131,7 +160,7 @@ The connectors run the tools of `@kvman/testkit`, which you can run by hand in a
 | Tool | Does |
 |---|---|
 | `kvman-new <folder> --name <name> --namespace <namespace> [--web]` | writes a project with its guides, `AGENTS.md`, and a docs page, then runs `npm install` |
-| `kvman-check` | loads the project in a test kernel and reports what kvman would refuse or show untranslated |
+| `kvman-check` | loads the project, with the dependencies installed in its `node_modules`, in a test kernel and reports a dependency that isn't installed, and what kvman would refuse or show untranslated |
 | `kvman-preset new <file> --name <name>` and `kvman-preset check <file>` | writes and checks a preset |
 | `kvman-preview <folder>…` | runs a preview kvman on a temporary home until you stop it |
 | `kvman-docs list` and `kvman-docs get <extension> <topic>` | reads the same guides and pages as the `docs` connector from a running kvman |
@@ -147,7 +176,7 @@ A topic is a lowercase kebab-case word. kvbuilder asks each extension itself, so
 
 ## Previews
 
-`preview start` runs a second kvman on its own temporary home, with the projects you name as `path:` extensions and kvwebui's Extensions page as its home page. Edits to a project's `src/` reload live, with no build. The preview takes the first free port from 3738 to 3837, and `preview stop` ends it and removes its home. A preview also stops when the kvman that started it stops.
+`preview start` runs a second kvman on its own temporary home, with the projects you name as `path:` extensions, kvai, kvwebui, and the bundled extensions the projects depend on, and kvwebui's Extensions page as its home page. With a preset, it runs that preset's extensions and the projects. Edits to a project's `src/` reload live, with no build. The preview takes the first free port from 3738 to 3837, and `preview stop` ends it and removes its home. A preview also stops when the kvman that started it stops.
 
 ### Calling a previewed project
 
