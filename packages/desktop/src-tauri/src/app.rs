@@ -13,8 +13,8 @@ use tauri_plugin_opener::OpenerExt;
 
 use crate::commands;
 use crate::downloads::destination;
-use crate::kvman_process::{spawn, start_command, KvmanProcess, Platform};
-use crate::runtime::{choose_runtime, kvman_home};
+use crate::kvman_process::{spawn, start_command, with_brand, KvmanProcess, Platform};
+use crate::runtime::{brand_home, brand_of, brand_preset, choose_runtime, kvman_home, Brand};
 use crate::session::{Action, Happening, Session};
 use crate::updates::DownloadedUpdate;
 
@@ -25,6 +25,9 @@ const STOP_WAIT: Duration = Duration::from_secs(15);
 pub struct Shell {
     pub session: Mutex<Session>,
     pub user_folder: PathBuf,
+    /// kvman's home folder: the brand's own for a branded app (plan 14 §14.9).
+    home: PathBuf,
+    brand: Option<Brand>,
     pub downloaded_update: Mutex<Option<DownloadedUpdate>>,
     process: Mutex<Option<Arc<KvmanProcess>>>,
     home_shown: (Mutex<bool>, Condvar),
@@ -51,6 +54,11 @@ impl Shell {
     fn process(&self) -> Option<Arc<KvmanProcess>> {
         self.process.lock().ok().and_then(|process| process.clone())
     }
+
+    /// The name on the window and the dialogs: the brand's, or kvman's.
+    fn title(&self) -> &str {
+        self.brand.as_ref().map_or("kvman", |brand| brand.name.as_str())
+    }
 }
 
 pub fn dispatch(app: &AppHandle, happening: Happening) {
@@ -75,7 +83,7 @@ fn perform(app: &AppHandle, shell: &Shell, action: Action) {
             let buttons = MessageDialogButtons::OkCancelCustom(dialog.accept, dialog.decline);
             app.dialog()
                 .message(dialog.body)
-                .title("kvman")
+                .title(shell.title())
                 .kind(MessageDialogKind::Warning)
                 .buttons(buttons)
                 .show(move |accepted| dispatch(&handle, Happening::TrustAnswered(accepted)));
@@ -154,6 +162,10 @@ fn start_kvman(app: &AppHandle, shell: &Shell) {
     })
     .and_then(|runtime| {
         let start = start_command(&runtime.node, &runtime.entry, &shell.user_folder, path.as_deref(), Platform::current());
+        let start = match (&shell.brand, resources.as_deref()) {
+            (Some(_), Some(folder)) => with_brand(start, &shell.home, &brand_preset(folder)),
+            _ => start,
+        };
         let (lines, end) = (app.clone(), app.clone());
         spawn(&start, move |line| dispatch(&lines, Happening::Line(line)), move || dispatch(&end, Happening::KvmanEnded)).ok()
     });
@@ -164,10 +176,10 @@ fn start_kvman(app: &AppHandle, shell: &Shell) {
     }
 }
 
-fn open_window(app: &AppHandle) -> tauri::Result<()> {
+fn open_window(app: &AppHandle, title: &str) -> tauri::Result<()> {
     let (new_windows, pages, downloads) = (app.clone(), app.clone(), app.clone());
     let window = WebviewWindowBuilder::new(app, WINDOW, WebviewUrl::App("index.html".into()))
-        .title("kvman")
+        .title(title)
         .inner_size(1280.0, 800.0)
         .on_new_window(move |url, _features| {
             dispatch(&new_windows, Happening::NewWindow(url.to_string()));
@@ -211,15 +223,24 @@ pub fn run() -> tauri::Result<()> {
         ])
         .setup(|app| {
             let user_folder = std::env::home_dir().ok_or("This user has no home folder.")?;
-            let home = kvman_home(std::env::var("KVMAN_HOME").ok().as_deref(), &user_folder);
+            let resources = app.path().resource_dir().ok();
+            let brand = brand_of(resources.as_deref(), &|file| std::fs::read_to_string(file))?;
+            let home = match &brand {
+                Some(brand) => brand_home(&user_folder, brand),
+                None => kvman_home(std::env::var("KVMAN_HOME").ok().as_deref(), &user_folder),
+            };
+            let session = if brand.is_some() { Session::branded(&home) } else { Session::new(&home) };
+            let title = brand.as_ref().map_or_else(|| "kvman".to_owned(), |brand| brand.name.clone());
             app.manage(Shell {
-                session: Mutex::new(Session::new(&home)),
+                session: Mutex::new(session),
                 user_folder,
+                home,
+                brand,
                 downloaded_update: Mutex::new(None),
                 process: Mutex::new(None),
                 home_shown: (Mutex::new(false), Condvar::new()),
             });
-            open_window(app.handle())?;
+            open_window(app.handle(), &title)?;
             start_kvman(app.handle(), &app.state::<Shell>());
             Ok(())
         })

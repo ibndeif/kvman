@@ -1,4 +1,5 @@
 import { computed, onMounted, ref } from 'vue';
+import { startSettingsOf, type StartSettings } from './start-settings.ts';
 import type { Kvman } from '@kvman/sdk/web';
 import { modelGroups, thinkingLevels, type ModelRow, type ProviderRow, type Thinking } from './model-groups.ts';
 
@@ -26,16 +27,20 @@ export function useChatModel(kvman: Kvman, failed: (error: unknown) => void) {
   const pickedThinking = ref<Thinking | null>(null);
   const loaded = ref(false);
   const loadFailed = ref(false);
+  // The start screen's words and approval line come from the same read (ADR 0082, 6 and 11); unset until it ends.
+  const start = ref<StartSettings>();
 
   onMounted(async () => {
     try {
       const [settings, providerRows, modelRows] = await Promise.all([kvman.exec('kernel.settings.list', {}), kvman.exec('kvai.provider.list', {}), kvman.exec('kvai.model.list', {})]);
       configured.value = modelSetting(settings, 'kvcoder.model') ?? modelSetting(settings, 'kvai.defaultModel');
       configuredThinking.value = thinkingSetting(settings);
+      start.value = startSettingsOf(settings);
       providers.value = providerRows;
       models.value = modelRows;
     } catch (error) {
       loadFailed.value = true;
+      start.value = startSettingsOf([]);
       failed(error);
     } finally {
       loaded.value = true;
@@ -57,6 +62,7 @@ export function useChatModel(kvman: Kvman, failed: (error: unknown) => void) {
   const changes = (): { model?: string; thinking?: Thinking } => ({ ...(picked.value === null ? {} : { model: picked.value }), ...(pickedThinking.value === null ? {} : { thinking: pickedThinking.value }) });
 
   return {
+    start,
     current,
     thinking,
     groups,

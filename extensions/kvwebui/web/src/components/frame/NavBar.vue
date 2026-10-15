@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { iconComponent } from '../../contributions/icons.ts';
 import { pathExtension } from '../../state/extension-text.ts';
+import { stringList } from '../../state/hidden-screens.ts';
 import { builtinPages, orderedNav, pageLocation, routePage } from '../../state/navigation.ts';
 import { rememberNavCollapsed, settingValue, useKvwebui } from '../../state/kvwebui.ts';
 
@@ -13,12 +14,15 @@ const state = useKvwebui();
 const { t } = useI18n();
 const route = useRoute();
 
-const strings = (value: unknown): string[] => (Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []);
-const items = computed(() => orderedNav(state.registry.value.nav, strings(settingValue(state, 'kvwebui.nav.order')), strings(settingValue(state, 'kvwebui.nav.hidden'))));
-const builtins = [
-  { id: 'kvwebui.settings', path: '/kvwebui/settings', title: 'kvwebui.pages.settings', icon: SlidersHorizontal },
-  { id: 'kvwebui.extensions', path: '/kvwebui/extensions', title: 'kvwebui.pages.extensions', icon: Blocks },
-];
+const hidden = computed(() => stringList(settingValue(state, 'kvwebui.nav.hidden')));
+const items = computed(() => orderedNav(state.registry.value.nav, stringList(settingValue(state, 'kvwebui.nav.order')), hidden.value));
+// A hidden built-in page stays reachable by its address (ADR 0082, 12).
+const builtins = computed(() =>
+  [
+    { id: 'kvwebui.settings', path: '/kvwebui/settings', title: 'kvwebui.pages.settings', icon: SlidersHorizontal },
+    { id: 'kvwebui.extensions', path: '/kvwebui/extensions', title: 'kvwebui.pages.extensions', icon: Blocks },
+  ].filter((page) => !hidden.value.includes(page.id)),
+);
 // On a narrow window the rail stays in the page's row and the open nav floats over the page (ADR 0009, 134).
 const overlayOpen = ref(false);
 const collapsed = computed(() => (state.narrow.value ? !overlayOpen.value : state.navCollapsed.value));
@@ -63,7 +67,7 @@ const linkClass = (page: string): string[] => ['flex h-10 items-center gap-2.5 r
         <component :is="iconComponent(item.icon)" class="size-4.5 shrink-0" aria-hidden="true" />
         <span v-if="!collapsed">{{ t(item.title) }}</span>
       </RouterLink>
-      <hr class="mx-1 my-2.5 border-line" />
+      <hr v-if="builtins.length > 0" class="mx-1 my-2.5 border-line" />
       <RouterLink
         v-for="page in builtins"
         :key="page.id"

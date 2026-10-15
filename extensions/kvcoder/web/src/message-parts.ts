@@ -1,3 +1,4 @@
+import type { Json, JsonObject } from '@kvman/sdk';
 import type { Message } from '../../src/index.ts';
 import { callView, type AskKind, type CallView } from './call-view.ts';
 
@@ -124,6 +125,20 @@ export function artifactOf(message: Message): ArtifactRef | undefined {
   if (typeof id !== 'string' || typeof title !== 'string' || typeof version !== 'number') return undefined;
   if (format !== 'markdown' && format !== 'html' && format !== 'url') return undefined;
   return { id, title, format, version };
+}
+
+/** An extension's own card for a successful call (ADR 0082, 13): its component, with the call's payload and output. */
+export type ExtensionCard = { component: string; props: { payload: Json; output: Json } };
+
+/** The card a successful call of a registered command with `card` shows instead of the call card. */
+const jsonObject = (value: Json | undefined): JsonObject | undefined => (typeof value === 'object' && value !== null && !Array.isArray(value) ? value : undefined);
+
+export function extensionCardOf(message: Message): ExtensionCard | undefined {
+  if (message.kind !== 'toolResult' || message.content['isError'] === true) return undefined;
+  const found = jsonObject(jsonObject(message.content['details'])?.['card']);
+  const component = found?.['component'];
+  if (found === undefined || typeof component !== 'string') return undefined;
+  return { component, props: { payload: found['payload'] ?? null, output: found['output'] ?? null } };
 }
 
 // The files a person's message names at its end are stored under an English line for the model (ADR 0018, 4).

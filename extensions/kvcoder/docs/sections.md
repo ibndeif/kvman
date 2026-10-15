@@ -17,6 +17,8 @@ ctx.registerHandler('kernel.started', {
 - `content`: the text, at most 16 KB (16 × 1024 bytes).
 - One of: `global: true`, `sessionId`, or neither. `global: true` reaches every workspace's prompts; `sessionId` reaches that session's prompts only; neither reaches every prompt of the calling job's workspace. `global` and `sessionId` exclude each other.
 
+A section adds to kvcoder's own prompt; it can't replace who the agent is. A product sets that with the preset-only setting `kvcoder.profile` (`identity`, and `method: "general"` for a short general method with no execution map), and a section that sets the agent's role belongs only in that product's own preset.
+
 `kvcoder.section.remove { id }` (with the same `global`/`sessionId` place) removes the caller's own section; a missing one does nothing. `kvcoder.section.list` answers the sections a session's prompt reaches, `[{ id, title, order, owner, global, sessionId?, size }]`.
 
 ## Caps and errors

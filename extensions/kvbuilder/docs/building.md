@@ -153,6 +153,8 @@ None of these calls reads, lists, or changes a secret.
 
 For a separate app, write a workspace file with `preset new { name, file }`, edit its extensions and settings, run `preset check { file }`, and preview it with `preview start { extensions: [folder], preset: file }` (at least one project folder is required). After the person confirms, `kvman preset-save { file, replace? }` saves the preset by its own name in the home. Relative `path:` entries are resolved against the file's folder. It answers `{ file, name }`; the person starts it with `kvman --preset <name>`. Saving does not change the running app.
 
+A product for people who aren't developers is such a preset. `kvcoder.profile` (`{ identity?, method?: "engineering" | "general", startHeading?, placeholder? }`, preset-only) gives kvcoder's agent the product's identity, a short general method with no execution map, and the Chat page's own heading and placeholder as translation keys. `kvcoder.connectors.disabled` turns off the developer connectors it doesn't need; `kvwebui.nav.hidden` (with `kvwebui.settings` and `kvwebui.extensions`), `kvwebui.status.hidden` (with `kvwebui.folder`), and `kvwebui.workspacePicker: false` hide kvman's own screens. To reach them as a desktop app of its own, its extensions are published to npm under a scoped name and named `npm:<version>` in the preset, and the owner runs `pnpm desktop:brand <brand.json>` with `{ name, id, preset, icon }`: the app keeps its own home (`~/.<id>`), opens straight into the app, and doesn't update itself.
+
 ## The tools underneath
 
 The connectors run the tools of `@kvman/testkit`, which you can run by hand in any terminal:
@@ -176,7 +178,7 @@ A topic is a lowercase kebab-case word. kvbuilder asks each extension itself, so
 
 ## Previews
 
-`preview start` runs a second kvman on its own temporary home, with the projects you name as `path:` extensions, kvai, kvwebui, and the bundled extensions the projects depend on, and kvwebui's Extensions page as its home page. With a preset, it runs that preset's extensions and the projects. Edits to a project's `src/` reload live, with no build. The preview takes the first free port from 3738 to 3837, and `preview stop` ends it and removes its home. A preview also stops when the kvman that started it stops.
+`preview start` runs a second kvman on its own temporary home, with no model: to try a chat there, the person adds a key on its Models page, which is removed with the preview's home, with the projects you name as `path:` extensions, kvai, kvwebui, and the bundled extensions the projects depend on, and kvwebui's Extensions page as its home page. With a preset, it runs that preset's extensions and the projects. Edits to a project's `src/` reload live, with no build. The preview takes the first free port from 3738 to 3837, and `preview stop` ends it and removes its home. A preview also stops when the kvman that started it stops.
 
 ### Calling a previewed project
 
@@ -187,4 +189,4 @@ A topic is a lowercase kebab-case word. kvbuilder asks each extension itself, so
 { "ok": false, "problem": { "code": "VALIDATION_FAILED", "message": "…", "params": { } } }
 ```
 
-A failure of the project's own command is therefore an answer to read, not a failed call. The call itself fails only when there is nothing to call: `NOT_FOUND` when no preview is running, and `kvbuilder/PREVIEW_FAILED` when the preview doesn't answer or answers something that isn't kvman's. A query's name on `command-run`, or a command's on `query-get`, comes back as `{ ok: false }` with `NOT_FOUND`. Each call may take up to 2 minutes.
+A failure of the project's own command is therefore an answer to read, not a failed call. The call itself fails only when there is nothing to call: `NOT_FOUND` when no preview is running, and `kvbuilder/PREVIEW_FAILED` when the preview doesn't answer or answers something that isn't kvman's. A query's name on `command-run`, or a command's on `query-get`, comes back as `{ ok: false }` with `NOT_FOUND`, and its message says to use the other call. Each call may take up to 2 minutes.

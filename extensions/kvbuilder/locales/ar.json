@@ -10,6 +10,7 @@
   "kvbuilder.errors.FILE_EXISTS": "هذا الملف موجود بالفعل.",
   "kvbuilder.errors.NOT_A_PROJECT": "هذا المجلد ليس مشروع إضافة (لا يحتوي على package.json فيه حقل kvman).",
   "kvbuilder.errors.NPM_FAILED": "فشل تنفيذ npm.",
+  "kvbuilder.errors.GIT_FAILED": "تعذّر على Git إنشاء مستودع في مجلد المشروع.",
   "kvbuilder.errors.NO_FREE_PORT": "لا يوجد منفذ متاح للمعاينة بين 3738 و3837.",
   "kvbuilder.errors.PREVIEW_FAILED": "لم يبدأ تشغيل kvman الخاص بالمعاينة."
 }

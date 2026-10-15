@@ -6,8 +6,9 @@ export const statusMilliseconds = 30_000;
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { paramNames } from '../../contributions/references.ts';
+import { stringList } from '../../state/hidden-screens.ts';
 import { routePage } from '../../state/navigation.ts';
-import { useKvwebui } from '../../state/kvwebui.ts';
+import { settingValue, useKvwebui } from '../../state/kvwebui.ts';
 import HealthItem from './HealthItem.vue';
 import StatusItem from './StatusItem.vue';
 import WorkspacePath from './WorkspacePath.vue';
@@ -20,7 +21,8 @@ const route = useRoute();
 const tick = ref(0);
 let timer: ReturnType<typeof setInterval> | undefined;
 const params = computed(() => routePage(state.registry.value, route)?.params ?? {});
-const items = computed(() => state.registry.value.status.filter((item) => paramNames(item.input).every((name) => params.value[name] !== undefined)));
+const hidden = computed(() => stringList(settingValue(state, 'kvwebui.status.hidden')));
+const items = computed(() => state.registry.value.status.filter((item) => !hidden.value.includes(item.id) && paramNames(item.input).every((name) => params.value[name] !== undefined)));
 onMounted(() => {
   timer = setInterval(() => {
     tick.value += 1;
@@ -30,8 +32,8 @@ onUnmounted(() => clearInterval(timer));
 </script>
 
 <template>
-  <footer class="flex h-7.5 shrink-0 items-center gap-4 border-t border-line bg-surface px-4 text-xs text-muted" data-test="status-bar">
-    <WorkspacePath />
+  <footer class="flex h-7.5 shrink-0 items-center gap-4 overflow-hidden border-t border-line bg-surface px-4 text-xs whitespace-nowrap text-muted" data-test="status-bar">
+    <WorkspacePath v-if="!hidden.includes('kvwebui.folder')" />
     <StatusItem v-for="item in items" :key="item.id" :item="item" :params="params" :tick="tick" />
     <div class="grow" />
     <HealthItem :tick="tick" />

@@ -16,8 +16,9 @@ export default (ctx: Ctx): void => {
     scopes: [],
   });
   ctx.registerSetting('kvwebui.home', {
-    description: 'The page shown at /, as a full page id without params.',
+    description: 'The page shown at /, as a full page id without params; the Extensions page by default.',
     schema: z.string().regex(pageIdPattern, 'A home page is <namespace>.<page>.'),
+    default: 'kvwebui.extensions',
     scopes: [],
   });
   ctx.registerSetting('kvwebui.nav.order', {
@@ -26,9 +27,21 @@ export default (ctx: Ctx): void => {
     default: [],
   });
   ctx.registerSetting('kvwebui.nav.hidden', {
-    description: "Full nav ids that aren't shown.",
+    description: "Full nav ids that aren't shown, kvwebui.settings and kvwebui.extensions included.",
     schema: z.array(z.string().min(1)),
     default: [],
+  });
+  ctx.registerSetting('kvwebui.status.hidden', {
+    description: 'Status items not shown: full ids of contributed items, and kvwebui.folder for the workspace folder.',
+    schema: z.array(z.string().min(1)),
+    default: [],
+    scopes: [],
+  });
+  ctx.registerSetting('kvwebui.workspacePicker', {
+    description: 'Whether the top bar shows the workspace picker.',
+    schema: z.boolean(),
+    default: true,
+    scopes: [],
   });
   ctx.registerSetting('kvwebui.theme', {
     description: 'Light, dark, or the same as the system.',

@@ -8,7 +8,7 @@
   "kvwebui.nav.order.title": "ترتيب التنقل",
   "kvwebui.nav.order.description": "عناصر التنقل التي تظهر أولًا، بهذا الترتيب، بمعرّفاتها الكاملة.",
   "kvwebui.nav.hidden.title": "عناصر التنقل المخفية",
-  "kvwebui.nav.hidden.description": "عناصر التنقل التي لا تظهر، بمعرّفاتها الكاملة.",
+  "kvwebui.nav.hidden.description": "عناصر التنقل التي لا تظهر، بمعرّفاتها الكاملة، ومنها الإعدادات والإضافات.",
   "kvwebui.theme.title": "المظهر",
   "kvwebui.theme.description": "فاتح، أو داكن، أو مطابق لنظامك.",
   "kvwebui.theme.label": "المظهر: {theme}",
@@ -148,5 +148,10 @@
   "kvwebui.settings.extensionsLink": "إعدادات كل إضافة في صفحتها، ضمن «الإضافات».",
   "kvwebui.extensions.noMatch": "لا توجد إضافة مطابقة.",
   "kvwebui.extension.nothing": "لا يوجد في هذه الإضافة ما يُضبط.",
-  "kvwebui.config.appearance": "المظهر"
+  "kvwebui.config.appearance": "المظهر",
+  "kvwebui.status.hidden.title": "عناصر شريط الحالة المخفية",
+  "kvwebui.status.hidden.description": "عناصر شريط الحالة التي لا تظهر، بمعرّفاتها الكاملة، والمعرّف kvwebui.folder هو مجلد مساحة العمل.",
+  "kvwebui.workspacePicker.title": "منتقي مساحة العمل",
+  "kvwebui.workspacePicker.description": "هل يُظهر الشريط العلوي منتقي مساحة العمل.",
+  "kvwebui.settings.portThisRun": "يستمع هذا التشغيل على المنفذ {port}."
 }

@@ -50,4 +50,9 @@ describe("kvbuilder's own docs pair (09 §9.5, ADR 0010, 22)", { timeout: 30_000
       expect(markdown, text).toContain(text);
     }
   });
+
+  it('QA52-H18 building says how a product for people who are not developers is made and shipped, and the preview hints', () => {
+    const markdown = readFileSync(path.join(docsFolder, 'building.md'), 'utf8');
+    for (const mention of ['`kvcoder.profile`', '`kvwebui.status.hidden`', '`kvwebui.workspacePicker: false`', '`pnpm desktop:brand <brand.json>`', 'adds a key on its Models page', 'its message says to use the other call']) expect(markdown, mention).toContain(mention);
+  });
 });

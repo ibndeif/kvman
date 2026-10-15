@@ -36,19 +36,19 @@ import { useWorkspaceSession } from './use-workspace-session.ts';
 const props = defineProps<{ sessionId?: string | undefined }>();
 const kvman = useKvman();
 // After a workspace switch the page's chat isn't this workspace's: nothing is read for it until the page has moved.
-const sessionId = useWorkspaceSession(kvman, () => props.sessionId, (error) => toastProblem(kvman, error));
+const { id: sessionId, failed: readFailed } = useWorkspaceSession(kvman, () => props.sessionId, (error) => toastProblem(kvman, error));
 const tab = ref<'chat' | 'prompt'>('chat');
 // Whether the person has scrolled up from the latest: the window then drops nothing (ADR 0059).
 const reading = ref(false);
-const conversation = useConversation(kvman, () => sessionId.value, (error) => toastProblem(kvman, error), () => reading.value);
+const conversation = useConversation(kvman, () => sessionId.value, readFailed, () => reading.value);
 const { session, messages, omitted, turns, live, children } = conversation;
-const artifacts = useArtifacts(kvman, () => sessionId.value, () => session.value?.updatedAt, (error) => toastProblem(kvman, error));
-const executionMap = useExecutionMap(kvman, () => sessionId.value, () => session.value?.updatedAt, artifacts, (error) => toastProblem(kvman, error));
+const artifacts = useArtifacts(kvman, () => sessionId.value, () => session.value?.updatedAt, readFailed);
+const executionMap = useExecutionMap(kvman, () => sessionId.value, () => session.value?.updatedAt, artifacts, readFailed);
 const panelShown = computed(() => executionMap.shown.value || (artifacts.open.value && artifacts.shown.value !== undefined));
 // An ending with steps left says so (ADR 0064, 11).
 const stepsLeft = computed(() => (session.value?.status === 'idle' ? executionMap.counts.value?.left ?? 0 : 0));
 const calls = computed(() => callViews(messages.value));
-const finishedRuns = useFinishedRuns(kvman, () => sessionId.value, messages, (error) => toastProblem(kvman, error));
+const finishedRuns = useFinishedRuns(kvman, () => sessionId.value, messages, readFailed);
 const recoverableNotices = new Set(['STEP_FAILED', 'REPLY_LOST', 'REPLY_INCOMPLETE', 'INTERRUPTED']);
 const running = computed(() => session.value?.status === 'running');
 // When the running turn started, for the header's time (ADR 0018, 9).
@@ -129,6 +129,11 @@ const recoverable = computed(() => {
 // chat, so it leaves the prompt, and a summary says how it ended (ADR 0019, 1, 4, and 5).
 const slashCommands = useSlashCommands(kvman);
 const actions = useSessionActions(kvman, () => sessionId.value ?? '', () => conversation.refresh());
+
+// The first load of a chat this workspace doesn't have moves the page too (ADR 0082, 5).
+watch(() => conversation.loadFailure.value, (failure) => {
+  if (problemOf(failure)?.code === 'kvcoder/SESSION_NOT_FOUND') readFailed(failure);
+});
 
 // Why the messages couldn't be loaded, in the person's language (ADR 0034, 10).
 const loadError = computed(() => {

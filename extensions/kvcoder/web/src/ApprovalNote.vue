@@ -5,7 +5,7 @@ import { useKvman } from './kvman.ts';
 // The effective approval copy (KVC-22; ADR 0077, 5): the loaded `kvcoder.approval`, never inferred from its default.
 // Reloads on the supported scope/workspace refs; loading and failure render honestly.
 const kvman = useKvman();
-const props = defineProps<{ withLink?: boolean; refreshKey?: unknown }>();
+const props = defineProps<{ refreshKey?: unknown }>();
 const mode = ref<'ask' | 'auto' | 'never' | undefined>(undefined);
 const failed = ref(false);
 const checking = ref(true);
@@ -49,7 +49,6 @@ onBeforeUnmount(() => { disposed = true; epoch += 1; });
     <template v-else>
       <p data-test="approval-mode" :data-mode="mode">{{ kvman.t(`kvcoder.ui.approvalNote.${mode}`) }}</p>
       <p data-test="approval-limits">{{ kvman.t('kvcoder.ui.approvalNote.limits') }}</p>
-      <button v-if="props.withLink" type="button" class="kvc-link-button" data-test="approval-config" @click="kvman.navigate('kvwebui.extension', { namespace: 'kvcoder' })">{{ kvman.t('kvcoder.ui.approvalNote.openConfig') }}</button>
     </template>
   </div>
 </template>

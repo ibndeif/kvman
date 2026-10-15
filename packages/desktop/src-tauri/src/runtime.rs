@@ -59,3 +59,33 @@ pub fn kvman_home(variable: Option<&str>, user_folder: &Path) -> PathBuf {
         _ => user_folder.join(".kvman"),
     }
 }
+
+/// A branded app's name and id, which the brand build writes into its runtime (plan 14 §14.9, ADR 0082, 14).
+#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Brand {
+    pub name: String,
+    pub id: String,
+}
+
+/// The brand in an installed app's resources: none when it has no brand file, as kvman's own app hasn't, and an error
+/// for one that can't be read or isn't a brand.
+pub fn brand_of(resources: Option<&Path>, read: &dyn Fn(&Path) -> std::io::Result<String>) -> Result<Option<Brand>, String> {
+    let Some(folder) = resources else { return Ok(None) };
+    let file = folder.join("runtime").join("brand").join("brand.json");
+    match read(&file) {
+        Ok(text) => serde_json::from_str(&text).map(Some).map_err(|error| format!("{} isn't a brand: {error}", file.display())),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(error) => Err(format!("{} can't be read: {error}", file.display())),
+    }
+}
+
+/// The preset a branded app starts.
+pub fn brand_preset(resources: &Path) -> PathBuf {
+    resources.join("runtime").join("brand").join("preset.json")
+}
+
+/// A branded app's own home folder, so it never meets a running kvman Coder.
+pub fn brand_home(user_folder: &Path, brand: &Brand) -> PathBuf {
+    user_folder.join(format!(".{}", brand.id))
+}

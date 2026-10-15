@@ -68,6 +68,18 @@ The agent calls a binary connector with two commands. `exec { args?, background?
 
 `kvcoder.connector.unregister { name }` removes one of the caller's own connectors; a missing name does nothing. `kvcoder.connector.list` answers every registered connector and program, each with `enabled`. The setting `kvcoder.connectors.disabled` lists the names that are turned off, kvcoder's own seven included: such a connector is left out of the prompt and can't be called, from the next step.
 
+## A card of its own
+
+A command entry may have `card`: a custom component of your extension, `<namespace>.<component>` with the namespace of the entry's `command` (`VALIDATION_FAILED` otherwise). When the agent's call of it succeeds, the conversation shows your component with the props `{ payload, output }`, the call's payload and the command's output, in place of the generic call card; a failed call keeps the call card, and the agent reads the result as before. Build the component as kvwebui's `components` page says.
+
+## Helpers that only read
+
+A worker set read-only (the shipped `architect` and `reviewer`) runs a registered connector's commands whose target is a public query, and nothing else of it: a command, an entry with `asks`, and a binary's `exec` are refused and left out of its prompt.
+
+## Artifacts from your extension
+
+`kvcoder.artifact.write { sessionId, payload: { id, title, format?, content } }` and `kvcoder.artifact.edit { sessionId, payload: { id, edits } }` are public: your extension can show a chat a document in its artifact panel, with the limits of the `artifact` connector (64 KB, 20 artifacts a chat).
+
 ## A connector that is off until enabled
 
 Register a connector with `optIn: true`, the only value the field takes, when it belongs only in chats that asked for it.

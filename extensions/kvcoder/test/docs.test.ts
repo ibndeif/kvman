@@ -63,4 +63,10 @@ describe('kvcoder.docs (08 §8.8, 09 §9.5)', () => {
       expect(markdown, file).not.toMatch(/\bdev\b[ -]preset|preset[ '`]*dev\b/i);
     }
   });
+
+  it('QA52-H18 connectors explains cards, read-only helpers, and public artifacts; sections points to the profile', () => {
+    const connectors = readFileSync(path.join(docsFolder, 'connectors.md'), 'utf8');
+    for (const mention of ['## A card of its own', '`{ payload, output }`', '## Helpers that only read', '## Artifacts from your extension', '`kvcoder.artifact.write { sessionId, payload: { id, title, format?, content } }`']) expect(connectors, mention).toContain(mention);
+    expect(readFileSync(path.join(docsFolder, 'sections.md'), 'utf8')).toContain('`kvcoder.profile`');
+  });
 });

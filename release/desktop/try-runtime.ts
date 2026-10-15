@@ -17,7 +17,14 @@ export type TryOptions = {
   systemPath: string;
   environment?: Record<string, string>;
   waitMs?: number;
+  /** A preset file to start with, as a branded app does (plan 14 §14.9). */
+  preset?: string;
 };
+
+/** The system's own folders, with no Node, for the `PATH` the run gets before the bundled Node's folder. */
+export function systemPathOf(platform: NodeJS.Platform, systemRoot: string | undefined): string {
+  return platform === 'win32' ? path.join(systemRoot ?? 'C:\\Windows', 'System32') : '/usr/bin:/bin';
+}
 
 export type Tried = { port: number; npmVersion: string };
 
@@ -56,7 +63,8 @@ export async function tryRuntime(options: TryOptions): Promise<Tried> {
   const home = mkdtempSync(path.join(tmpdir(), 'kvman-try-runtime-'));
   const env: NodeJS.ProcessEnv = { ...process.env, ...options.environment, PATH: `${options.systemPath}${path.delimiter}${inside(layout.nodeFolder)}` };
   delete env['KVMAN_HOME'];
-  const kvman = spawn(inside(layout.node), [inside(layout.entry), '--pipe', '--yes', '--no-open', '--port', '0', '--home', home], { cwd: home, env, stdio: ['pipe', 'pipe', 'inherit'] });
+  const preset = options.preset === undefined ? [] : ['--preset', options.preset];
+  const kvman = spawn(inside(layout.node), [inside(layout.entry), '--pipe', '--yes', '--no-open', '--port', '0', '--home', home, ...preset], { cwd: home, env, stdio: ['pipe', 'pipe', 'inherit'] });
   const exited = new Promise<number | null>((resolve) => kvman.once('exit', (code) => resolve(code)));
   try {
     const lines = createInterface({ input: kvman.stdout });

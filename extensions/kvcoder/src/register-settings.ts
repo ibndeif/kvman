@@ -4,6 +4,14 @@ import { mcpServersSchema } from './mcp/servers.ts';
 import { thinkingSchema } from './schemas/records.ts';
 import { binaryConnectorSchema, wordSchema } from './schemas/registry.ts';
 
+/** A preset's agent profile (ADR 0082, 11): who the agent is, how it works, and the Chat page's words, as translation keys. */
+const profileSchema = z.strictObject({
+  identity: z.string().min(1).max(4000).exactOptional(),
+  method: z.enum(['engineering', 'general']).exactOptional(),
+  startHeading: z.string().min(1).exactOptional(),
+  placeholder: z.string().min(1).exactOptional(),
+});
+
 // kvcoder's settings (plan 08 §8.7).
 export const settingSchemas = {
   model: z.string().min(1).nullable(),
@@ -18,6 +26,7 @@ export const settingSchemas = {
   mcpServers: mcpServersSchema,
   workers: workersSchema,
   keep: z.number().int().nonnegative(),
+  profile: profileSchema,
 };
 
 export function registerSettings(ctx: Ctx): void {
@@ -34,11 +43,20 @@ export function registerSettings(ctx: Ctx): void {
   ctx.registerSetting('kvcoder.mcp.servers', { description: "The MCP servers the mcp connector reaches: a command or an address each, with the names of its secret variables or headers.", schema: settingSchemas.mcpServers, default: [] });
   ctx.registerSetting('kvcoder.delegate.workers', { description: 'The workers the delegate connector hands tasks to: each with its instructions, connectors, model, and whether it is turned on.', schema: settingSchemas.workers, default: shippedWorkers });
   ctx.registerSetting('kvcoder.sessions.keep', { description: 'How many top-level sessions to keep per workspace; 0 keeps every session.', schema: settingSchemas.keep, default: 0 });
+  ctx.registerSetting('kvcoder.profile', { description: "A product's agent: who it is, how it works (engineering or general), and the Chat page's heading and placeholder as translation keys.", schema: settingSchemas.profile, default: {}, scopes: [] });
 }
 
-/** The names of the connectors that are turned off in the job's workspace (ADR 0014, 7). */
+/** The preset's agent profile, with the engineering method when it names none. */
+export async function agentProfile(ctx: Ctx): Promise<{ identity?: string; method: 'engineering' | 'general' }> {
+  const profile = settingSchemas.profile.parse(await ctx.settings.get('kvcoder.profile'));
+  return { ...(profile.identity === undefined ? {} : { identity: profile.identity }), method: profile.method ?? 'engineering' };
+}
+
+/** The names of the connectors that are turned off in the job's workspace (ADR 0014, 7); the general method has no execution map (ADR 0082, 11). */
 export async function disabledConnectors(ctx: Ctx): Promise<Set<string>> {
-  return new Set(settingSchemas.disabledConnectors.parse(await ctx.settings.get('kvcoder.connectors.disabled')));
+  const disabled = new Set(settingSchemas.disabledConnectors.parse(await ctx.settings.get('kvcoder.connectors.disabled')));
+  if ((await agentProfile(ctx)).method === 'general') disabled.add('execution-map');
+  return disabled;
 }
 
 /** The settings a step reads, parsed. */

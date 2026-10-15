@@ -2,11 +2,12 @@ import { mkdirSync, readdirSync, statSync, writeFileSync, existsSync } from 'nod
 import path from 'node:path';
 import { BinFailure } from '../bin/bin-failure.ts';
 import { lastLines, runProgram } from '../bin/run-program.ts';
+import { startRepository } from './git-repository.ts';
 import { scaffoldFiles, type ScaffoldInput } from './scaffold-files.ts';
 
 // `kvman-new` (plan 09 §9.2): the folder is the bin's argument as given, resolved against the current working
-// folder. It must be new or empty; the scaffold is written, then `npm install` runs in it. A failed install keeps
-// the files, so it can be run again.
+// folder. It must be new or empty; the scaffold is written, a Git repository is started (ADR 0082, 16), then
+// `npm install` runs in it. A failed install keeps the files, so it can be run again.
 
 export type NewProject = { folder: string; name: string; namespace: string; web: boolean };
 
@@ -22,6 +23,7 @@ export async function newProject(input: ScaffoldInput & { folder: string }): Pro
     mkdirSync(path.dirname(path.join(absolute, file)), { recursive: true });
     writeFileSync(path.join(absolute, file), content);
   }
+  await startRepository(absolute);
   let install;
   try {
     install = await runProgram('npm', ['install'], absolute);

@@ -8,7 +8,7 @@
   "kvwebui.nav.order.title": "Navigation order",
   "kvwebui.nav.order.description": "Nav items shown first, in this order, by their full ids.",
   "kvwebui.nav.hidden.title": "Hidden nav items",
-  "kvwebui.nav.hidden.description": "Nav items that aren't shown, by their full ids.",
+  "kvwebui.nav.hidden.description": "Nav items that aren't shown, by their full ids, Settings and Extensions included.",
   "kvwebui.theme.title": "Theme",
   "kvwebui.theme.description": "Light, dark, or the same as your system.",
   "kvwebui.theme.label": "Theme: {theme}",
@@ -148,5 +148,10 @@
   "kvwebui.settings.extensionsLink": "Each extension's settings are on its page, under Extensions.",
   "kvwebui.extensions.noMatch": "No extension matches.",
   "kvwebui.extension.nothing": "This extension has nothing to configure.",
-  "kvwebui.config.appearance": "Appearance"
+  "kvwebui.config.appearance": "Appearance",
+  "kvwebui.status.hidden.title": "Hidden status items",
+  "kvwebui.status.hidden.description": "Status bar items that aren't shown, by their full ids; kvwebui.folder is the workspace folder.",
+  "kvwebui.workspacePicker.title": "Workspace picker",
+  "kvwebui.workspacePicker.description": "Whether the top bar shows the workspace picker.",
+  "kvwebui.settings.portThisRun": "This run listens on port {port}."
 }

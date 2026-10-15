@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import ApprovalNote from './ApprovalNote.vue';
+import ApprovalLine from './ApprovalLine.vue';
 import { problemOf, toastProblem, useKvman } from './kvman.ts';
 import { messageDraft, sendDraft, type MessageDraft, type Outgoing } from './message-drafts.ts';
 import MessageComposer from './MessageComposer.vue';
 import ModelControls from './ModelControls.vue';
 import { rememberModel } from './remember-model.ts';
+import { workspaceTitle } from './start-settings.ts';
 import type { RegisteredSlash } from './slash-commands.ts';
 import { useChatModel } from './use-chat-model.ts';
 
@@ -56,16 +57,16 @@ async function runRegistered(entry: RegisteredSlash, argument: string): Promise<
 
 <template>
   <div class="kvc-start" data-test="chat-start">
-    <h1>{{ kvman.t('kvcoder.ui.startHeading', { workspace: kvman.workspace.value.name }) }}</h1>
+    <h1 v-if="chat.start.value !== undefined" data-test="start-heading">{{ kvman.t(chat.start.value.startHeading, { workspace: workspaceTitle(kvman) }) }}</h1>
     <p v-if="chat.state.value === 'needsKey' && chat.provider.value" class="kvc-muted kvc-start-note" role="status" data-test="key-needed">
       {{ kvman.t('kvcoder.ui.keyNeeded', { provider: chat.provider.value.title }) }}
       <button type="button" class="kvc-link-button" data-test="add-key" @click="kvman.navigate('kvai.provider', { providerId: chat.provider.value.id })">{{ kvman.t('kvcoder.ui.addKey') }}</button>
     </p>
     <p v-else-if="chat.state.value === 'noModel'" class="kvc-muted kvc-start-note" role="status" data-test="choose-model">{{ kvman.t('kvcoder.ui.chooseModelHint') }}</p>
     <p v-else class="kvc-muted kvc-start-note">{{ kvman.t('kvcoder.ui.startHint') }}</p>
-    <ApprovalNote with-link />
+    <ApprovalLine v-if="chat.start.value !== undefined && !chat.start.value.approvalHidden" :mode="chat.start.value.approval" />
   </div>
-  <MessageComposer :stoppable="false" :placeholder="kvman.t('kvcoder.ui.startPlaceholder')" :blocked="chat.state.value !== 'ready'" commands="wait" :registered="props.registered" @send="send" @registered="runRegistered">
+  <MessageComposer :stoppable="false" :placeholder="kvman.t(chat.start.value?.placeholder ?? 'kvcoder.ui.startPlaceholder')" :blocked="chat.state.value !== 'ready'" commands="wait" :registered="props.registered" @send="send" @registered="runRegistered">
     <template #controls>
       <ModelControls :groups="chat.groups.value" :model="chat.current.value" :thinking="chat.thinking.value" :empty="chat.state.value === 'loading' ? '' : kvman.t('kvcoder.ui.chooseModel')" @model="pickModel" @thinking="chat.pickThinking" />
     </template>

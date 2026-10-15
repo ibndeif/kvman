@@ -4,6 +4,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { SettingInfo } from '../../api/kernel.ts';
 import { valueText } from '../../forms/values.ts';
+import { portThisRun } from '../../state/hidden-screens.ts';
 import { useI18nState } from '../../state/i18n.ts';
 import { useKvwebui } from '../../state/kvwebui.ts';
 import { useSettingSave, type Scope } from '../../state/setting-save.ts';
@@ -27,6 +28,8 @@ const locked = computed(() => props.setting.scopes.length === 0);
 const ownValue = computed(() => target.value === 'global' && props.setting.source === 'workspace');
 const globalOnly = computed(() => props.scope === 'workspace' && !props.setting.scopes.includes('workspace'));
 const presetText = computed(() => t('kvwebui.settings.fromPreset', { preset: state.health.value?.preset ?? '' }));
+// The port this run listens on, which `--port` may have set instead of the setting (ADR 0082, 10).
+const runPort = computed(() => (props.setting.key === 'kernel.port' ? portThisRun(window.location.port, props.setting.value) : undefined));
 const sourceText = computed(() => (props.setting.source === 'preset' ? presetText.value : t(`kvwebui.settings.source.${props.setting.source}`)));
 </script>
 
@@ -35,6 +38,7 @@ const sourceText = computed(() => (props.setting.source === 'preset' ? presetTex
     <div class="flex min-w-60 grow basis-80 flex-col gap-1">
       <span class="font-semibold" data-test="setting-title">{{ title }}</span>
       <span class="text-muted" data-test="setting-description">{{ description }}</span>
+      <span v-if="runPort !== undefined" class="text-muted" data-test="port-this-run">{{ t('kvwebui.settings.portThisRun', { port: runPort }) }}</span>
       <details class="text-[12.5px] text-muted" data-test="setting-details">
         <summary class="w-fit">{{ t('kvwebui.settings.details') }}</summary>
         <span class="flex flex-wrap items-center gap-x-2 pt-1">

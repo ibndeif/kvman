@@ -48,6 +48,11 @@ describe("the bin's output and errors (ADR 0010, 14, 20)", () => {
     expect(binFailureProblem({ code: 'BOGUS', message: 'weird' })).toBeUndefined();
   });
 
+  it('QA52-E3 a failed git init maps to kvbuilder/GIT_FAILED with its message and params', () => {
+    const problem = binFailureProblem({ code: 'GIT_FAILED', message: 'git init failed in /work/notes (exit code 1):\nfatal', params: { folder: '/work/notes', exitCode: 1 } });
+    expect(problem?.problem).toEqual({ code: 'kvbuilder/GIT_FAILED', message: 'git init failed in /work/notes (exit code 1):\nfatal', params: { folder: '/work/notes', exitCode: 1 } });
+  });
+
   it('QA17-E14 exit 0 with a valid last stdout line returns the parsed output', () => {
     const { log } = makeLog();
     expect(binResult(log, 'kvman-new', { exitCode: 0, stdout: 'scaffolding\n{"folder":"notes"}\n\n', stderr: '' }, outputSchema)).toEqual({ folder: 'notes' });

@@ -40,8 +40,20 @@ async function post(address: URL, input: Record<string, unknown>, signal: AbortS
   }
 }
 
+// A name the preview doesn't have as this kind may be the other kind: the answer says which call to use (ADR 0082, 9).
+const otherKind: Record<PreviewRoute, string> = {
+  commands: 'If it is a query, run it with preview query-get.',
+  queries: 'If it is a command, run it with preview command-run.',
+};
+
+/** The preview's answer, with the hint for a `NOT_FOUND` of the name called. */
+export function withKindHint(answer: PreviewAnswer, route: PreviewRoute, name: string): PreviewAnswer {
+  if (answer.ok || answer.problem.code !== 'NOT_FOUND' || answer.problem.params?.['name'] !== name) return answer;
+  return { ok: false, problem: { ...answer.problem, message: `${answer.problem.message} ${otherKind[route]}` } };
+}
+
 /** Runs one public query or command of the running preview, in its Home. */
 export async function callPreview(ctx: Ctx, route: PreviewRoute, name: string, input: Record<string, unknown>): Promise<PreviewAnswer> {
   const address = new URL(`api/${route}/${encodeURIComponent(name)}`, await previewUrl(ctx));
-  return previewAnswer(await post(address, input, ctx.job.signal));
+  return withKindHint(previewAnswer(await post(address, input, ctx.job.signal)), route, name);
 }

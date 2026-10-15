@@ -4,6 +4,9 @@
 /** Who reads the prompt: the agent of a chat, or the subagent of one of its workers. */
 export type Role = 'lead' | 'worker';
 
+/** How the agent works: the engineering method, or the short general one of a product's profile (ADR 0082, 11). */
+export type Method = 'engineering' | 'general';
+
 const evidence = 'Decide from evidence: every decision and every claim rests on something you read, ran, or were told. When you report a result, say what you checked and what you didn\'t.';
 const simplest = "Use the simplest practical way that follows the project's conventions and sound engineering practice, and don't add what wasn't asked: no extra feature, file, option, or document.";
 const together = 'In one reply, reads and searches run at the same time, and calls that change something (shell lines, writes, edits) run one after another in the order you give them. So put independent calls (reads, searches, separate files, separate workers) in one reply, and a call that needs another call\'s result in a later reply: several new files are several `fs write` calls in one reply, not one reply each.';
@@ -40,26 +43,43 @@ const leadMethod = [
   callOrFinalAnswer,
 ].join('\n');
 
-const workerMethod = [
-  "How you work. Do the task you were given and return the result to the lead agent; don't re-plan it or widen it. You don't talk to the person: the lead does. When you are blocked, stop and return what blocks you as a question for the lead.",
-  "1. Understand. Read the task, then the files, config, and tests it touches. Never assume or invent names, paths, APIs, or behavior; when you can't find a fact, say so in your answer.",
-  "2. Do it. Make the smallest change that does the task, check it with the project's own check or tests, and fix a failure at its cause. Write each file in its own call, with `fs write`.",
-  '3. Return. Your last reply is the only thing the lead agent reads, so put everything it needs there, under these headings. Result: what you did or found. Evidence: what you ran or read that shows it, with paths and lines. Files changed: each path and what changed, or none. Unchecked: what you could not verify or left undone. Questions: what the lead must decide or ask the person, or none. Keep it as short as the facts allow.',
+const generalSimplest = "Use the simplest way that does what was asked, and don't add what wasn't asked.";
+
+const generalLeadMethod = [
+  "How you work. Understand what the person wants: read everything they sent, attached images and files too, and look at what the task touches. When something only they can decide is unclear, ask it in one round with `ask`: one question per call, all the calls in one reply, and `ask choice` whenever you offer options, your recommended one first. Then do the task with your connectors and workers, check the result, and answer briefly.",
   evidence,
-  simplest,
+  generalSimplest,
   together,
   context,
+  artifacts,
+  asking,
   checked,
+  short,
   callOrFinalAnswer,
 ].join('\n');
 
-/** The first line of the prompt: who the agent is, and where it works. */
-export function identityLine(role: Role, place: string): string {
+const workerStart = [
+  "How you work. Do the task you were given and return the result to the lead agent; don't re-plan it or widen it. You don't talk to the person: the lead does. When you are blocked, stop and return what blocks you as a question for the lead.",
+  "1. Understand. Read the task, then the files, config, and tests it touches. Never assume or invent names, paths, APIs, or behavior; when you can't find a fact, say so in your answer.",
+];
+const engineeringDoIt = "2. Do it. Make the smallest change that does the task, check it with the project's own check or tests, and fix a failure at its cause. Write each file in its own call, with `fs write`.";
+const generalDoIt = '2. Do it. Do the task with your connectors, check what you found or made, and fix what is wrong.';
+const workerReturn =
+  '3. Return. Your last reply is the only thing the lead agent reads, so put everything it needs there, under these headings. Result: what you did or found. Evidence: what you ran or read that shows it, with paths and lines. Files changed: each path and what changed, or none. Unchecked: what you could not verify or left undone. Questions: what the lead must decide or ask the person, or none. Keep it as short as the facts allow.';
+
+const workerMethodOf = (doIt: string, simplestRule: string): string => [...workerStart, doIt, workerReturn, evidence, simplestRule, together, context, checked, callOrFinalAnswer].join('\n');
+const workerMethod = workerMethodOf(engineeringDoIt, simplest);
+const generalWorkerMethod = workerMethodOf(generalDoIt, generalSimplest);
+
+/** The first line of the prompt: who the agent is, and where it works; a product's profile names who the agent is instead (ADR 0082, 11). */
+export function identityLine(role: Role, place: string, identity?: string): string {
+  if (identity !== undefined) return role === 'lead' ? `${identity} You work ${place}.` : `${identity} You are doing one task that the lead agent gave you, ${place}.`;
   if (role === 'lead') return `You are kvman Coder, the lead engineer on this work: a software engineer with long, deep experience who owns the outcome. You understand the request, decide, plan, and execute it, ${place}.`;
   return `You are kvman Coder, working on one task that the lead agent gave you, ${place}: a software engineer with long, deep experience.`;
 }
 
-/** The "How you work" block of a role. */
-export function workingMethod(role: Role): string {
-  return role === 'lead' ? leadMethod : workerMethod;
+/** The "How you work" block of a role, for the profile's method. */
+export function workingMethod(role: Role, method: Method = 'engineering'): string {
+  if (method === 'engineering') return role === 'lead' ? leadMethod : workerMethod;
+  return role === 'lead' ? generalLeadMethod : generalWorkerMethod;
 }

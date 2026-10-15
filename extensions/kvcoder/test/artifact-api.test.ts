@@ -101,14 +101,29 @@ describe('the artifact queries (08 §8.6, ADR 0009, 175 and 176)', { timeout: 30
     expect(await list(world, world.sessionId)).toHaveLength(1);
   });
 
-  it('QA6-E12 an unknown session or id in the queries fails, and nothing public writes', async () => {
+  it('QA6-E12 an unknown session or id in the queries fails', async () => {
     const world = await started();
     await turn(world, 'go', runs(command('artifact', 'write', { id: 'plan', title: 'Plan', content: 'x' })), says('ok'));
     for (const query of [list(world, 'nope'), world.kernel.exec('kvcoder.artifact.get', { sessionId: 'nope', id: 'plan' })]) {
       await expect(query).rejects.toMatchObject({ problem: { code: 'kvcoder/SESSION_NOT_FOUND', params: { sessionId: 'nope' } } });
     }
     await expect(world.kernel.exec('kvcoder.artifact.get', { sessionId: world.sessionId, id: 'missing' })).rejects.toMatchObject({ problem: { code: 'NOT_FOUND', params: { id: 'missing' } } });
-    const info = (await world.kernel.exec('kernel.extensions.list', {})).find((extension) => extension.name === '@kvman/kvcoder');
-    expect((info?.commands ?? []).filter((registered) => registered.public).map((registered) => registered.name)).not.toContain('kvcoder.artifact.write');
+  });
+
+  it("QA52-H15 another extension writes and edits a chat's artifact through the public commands", async () => {
+    const world = await started();
+    const as = { as: '@test/todo' };
+    expect(await world.kernel.exec('kvcoder.artifact.write', { sessionId: world.sessionId, payload: { id: 'draft', title: 'Draft', content: '# Hi' } }, as)).toMatchObject({ id: 'draft', version: 1, created: true });
+    expect(await world.kernel.exec('kvcoder.artifact.edit', { sessionId: world.sessionId, payload: { id: 'draft', edits: [{ oldText: 'Hi', newText: 'Hello' }] } }, as)).toMatchObject({ id: 'draft', version: 2, replacements: 1 });
+    expect(await list(world, world.sessionId)).toEqual([expect.objectContaining({ id: 'draft', title: 'Draft', version: 2 })]);
+    expect(await world.kernel.exec('kvcoder.artifact.get', { sessionId: world.sessionId, id: 'draft' })).toMatchObject({ content: '# Hello' });
+  });
+
+  it("QA52-E12 an extension's artifact write keeps the limits, and an unknown chat fails", async () => {
+    const world = await started();
+    const as = { as: '@test/todo' };
+    for (let index = 0; index < 20; index += 1) await world.kernel.exec('kvcoder.artifact.write', { sessionId: world.sessionId, payload: { id: `a${String(index)}`, title: 'A', content: 'x' } }, as);
+    await expect(world.kernel.exec('kvcoder.artifact.write', { sessionId: world.sessionId, payload: { id: 'one-more', title: 'A', content: 'x' } }, as)).rejects.toMatchObject({ problem: { code: 'TOO_LARGE' } });
+    await expect(world.kernel.exec('kvcoder.artifact.write', { sessionId: 'nope', payload: { id: 'draft', title: 'A', content: 'x' } }, as)).rejects.toMatchObject({ problem: { code: 'kvcoder/SESSION_NOT_FOUND' } });
   });
 });

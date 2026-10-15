@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -45,5 +45,17 @@ describe('kvman-new --web adds the web template (09 §9.2, ADR 0010, 2)', () => 
     execFileSync('npm', ['run', 'web:build'], { cwd: folder, env: { ...process.env, ...npmEnvironment() }, stdio: 'pipe' });
     expect(existsSync(path.join(folder, 'dist', 'web', 'components', 'hello.js'))).toBe(true);
     expect(existsSync(path.join(folder, 'dist', 'web', 'components', 'hello.css'))).toBe(true);
+  });
+
+  it('QA52-H2 the web scaffold type-checks as written, its ui.get returning its output schema\'s type', async () => {
+    const parent = mkdtempSync(path.join(tmpdir(), 'kvman-new-web-'));
+    roots.push(parent);
+    const run = await runBin('new/new-bin.js', ['cards', '--name', 'cards', '--namespace', 'cards', '--web', '--json'], { cwd: parent, env: npmEnvironment() });
+    expect(run.exitCode).toBe(0);
+    const folder = path.join(parent, 'cards');
+    expect(read(folder, 'src/index.ts')).toContain('handle: (): z.output<typeof uiOutput> => ({');
+    const checked = spawnSync(path.join(folder, 'node_modules', '.bin', 'tsc'), ['--noEmit', '-p', 'tsconfig.json'], { cwd: folder, encoding: 'utf8' });
+    expect(checked.stdout + checked.stderr).toBe('');
+    expect(checked.status).toBe(0);
   });
 });

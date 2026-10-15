@@ -11,6 +11,7 @@ import { helperAllows } from '../turns/helper-calls.ts';
 import { readOnlyAllows } from '../turns/read-only.ts';
 import { sectionsFor } from '../registry/register-sections.ts';
 import { invalid } from '../problems.ts';
+import { agentProfile } from '../register-settings.ts';
 import type { SessionDoc } from '../schemas/records.ts';
 import { buildPrompt, type BuiltPrompt } from './build-prompt.ts';
 import { sessionGrants } from './session-grants.ts';
@@ -45,12 +46,16 @@ export async function sessionTools(ctx: Ctx, session: Stored<SessionDoc>): Promi
     const shown = Object.entries(commandsOf(name)).map(([command, entry], index) => ({ command, signature: builtinSignatures[name][index] ?? '', allowed: (!helper || helperAllows(entry)) && (!readOnly || readOnlyAllows(command, entry)) })).filter(row => row.allowed);
     return { name, description: descriptions[name], commands: shown.map(row => row.command), signatures: shown.map(row => row.signature) };
   });
-  const listed = [
-    ...builtins.filter(connector => connector.commands.length > 0),
-    ...(readOnly ? [] : connectors.filter(connector => names.includes(connector.name)).map(connector => ({ name: connector.name, description: connector.description, commands: connector.commands?.map(command => command.name) ?? ['exec'] }))),
-  ];
+  // A read-only helper sees a registered connector only with its commands that run a query (ADR 0082, 3).
+  const registered = connectors.filter(connector => names.includes(connector.name)).map(connector => ({
+    name: connector.name,
+    description: connector.description,
+    commands: connector.commands?.filter(command => !readOnly || readOnlyAllows(command.name, undefined, command)).map(command => command.name) ?? (readOnly ? [] : ['exec']),
+  }));
+  const listed = [...builtins.filter(connector => connector.commands.length > 0), ...registered.filter(connector => connector.commands.length > 0)];
   const built = buildPrompt({
     role: current.parentId === null ? 'lead' : 'worker',
+    profile: await agentProfile(ctx),
     workspacePath: ctx.job.workspace.path,
     platform: process.platform,
     shell: shell.kind,

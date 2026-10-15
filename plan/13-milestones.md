@@ -286,6 +286,8 @@ Do them strictly in order. Each one follows `CLAUDE.md` §2:
 
 *Changed after this milestone by ADR 0080: the guide of `/build-kvman` never lets the agent edit kvman itself and designs from what exists, the `kvman` connector has `extensions-get`, `createTestKernel` and `kvman-check` load a project's dependencies from its `node_modules`, and the preview adds the bundled ones (`09` §9.1 to §9.4, `10`).*
 
+*Changed after this milestone by ADR 0082: `kvwebui.home` defaults to the Extensions page, the web scaffold type-checks and starts a Git repository, read-only helpers run other extensions' queries, a preset's `kvcoder.profile` gives kvcoder another identity, method, and wording, presets hide developer screens, extensions show their own result cards and write artifacts, the builder's guide covers products for people who aren't developers, and `pnpm desktop:brand` builds a branded desktop app (`06`, `08`, `09`, `10`, `14` §14.9).*
+
 - **Read:** `09`; `10`; `11`; `12` §12.3.
 - **Build:**
   - `extensions/kvdev`: the `ext`, `preset`, `preview`, and `docs` connectors, the scaffold (with `kvman.source`, and the web template), the preview kvman (running `web:watch`), and its global section.
@@ -325,7 +327,7 @@ ADR 0038. M3.2 and M3.3 also pass `pnpm desktop:check` (`cargo fmt --check`, `ca
 
 ### M3.2 The desktop app
 
-- **Read:** `14` §14.1, §14.3–§14.6, §14.9; `02` §2.6, §2.12 (workspaces, `kernel.settings.list`); `04` §4.2; `06` §6.2 (the start URL), §6.4 (the colours); `12` §12.1.
+- **Read:** `14` §14.1, §14.3–§14.6, §14.10; `02` §2.6, §2.12 (workspaces, `kernel.settings.list`); `04` §4.2; `06` §6.2 (the start URL), §6.4 (the colours); `12` §12.1.
 - **Build:** `packages/desktop`, a Tauri app run against the repository's own `kvman`:
   - one app at a time, and the window with its starting state;
   - starting `kvman --pipe --no-open` in the user's home folder, with the Node folder added last to its `PATH`;

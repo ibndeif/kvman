@@ -129,4 +129,26 @@ describe("the agent's guide for building kvman (09 §9.4, ADR 0023, 4; ADR 0027,
     expect(size).toBeLessThanOrEqual(16 * 1024);
     expect(size + 16 * 1024).toBeLessThan(64 * 1024);
   });
+
+  it('QA52-H18 the guide teaches products for people who are not developers, and still fits its section', () => {
+    for (const mention of [
+      "kvcoder's helpers (`kvcoder.delegate.workers`), each with its own model and thinking level",
+      "check it against the person's own words",
+      'ask who will use the product and on which computers',
+      'prefer npm packages with prebuilt binaries',
+      'A product for people who aren\'t developers is a preset of its own',
+      '`kvcoder.profile`',
+      '`kvcoder.connectors.disabled`',
+      '`kvwebui.nav.hidden`',
+      '`kvwebui.status.hidden`',
+      '`"kvwebui.workspacePicker": false`',
+      'never about how it was built',
+      'A schedule runs only while there is work',
+      "A helper you hand a step gets the project's folder in its brief",
+      'under a scoped name',
+      '`pnpm desktop:brand`',
+      'add a key on its Models page',
+    ]) expect(guide, mention).toContain(mention);
+    expect(Buffer.byteLength(guide)).toBeLessThanOrEqual(16 * 1024);
+  });
 });

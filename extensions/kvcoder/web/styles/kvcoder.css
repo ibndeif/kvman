@@ -88,12 +88,13 @@ a.kvc-button { text-decoration: none; color: inherit; }
 .kvc-actions { display: flex; gap: var(--kv-space-sm); justify-content: flex-end; flex-wrap: wrap; }
 /* The column breaks a word anywhere, so an action's label is kept whole (ADR 0062, 1). */
 .kvc-actions > .kvc-button { flex: 0 0 auto; white-space: nowrap; }
-.kvc-composer { padding-block: 12px 18px; padding-inline: var(--kv-space-lg); }
+/* When the chat stacks under the session list, the page's own scroller moves it: the send box stays at its end (§8.7). */
+.kvc-composer { position: sticky; inset-block-end: 0; z-index: 2; background: var(--kv-color-surface); padding-block: 12px 18px; padding-inline: var(--kv-space-lg); }
 .kvc-box { box-sizing: border-box; max-inline-size: 760px; margin-inline: auto; border: 1px solid var(--kv-color-border); border-radius: 16px; background: var(--kv-color-surface); padding: 10px 12px; display: flex; flex-direction: column; gap: var(--kv-space-sm); }
 .kvc-field { box-sizing: border-box; inline-size: 100%; border: 1px solid var(--kv-color-border); border-radius: 10px; background: var(--kv-color-surface); color: inherit; font: inherit; padding-block: 8px; padding-inline: 12px; }
 .kvc-field:disabled { opacity: 0.6; cursor: not-allowed; }
 .kvc-box textarea { border: 0; resize: none; background: transparent; color: inherit; font: inherit; min-block-size: 44px; outline: none; }
-.kvc-start { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; gap: var(--kv-space-lg); padding: var(--kv-space-lg); }
+.kvc-start { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; justify-content: safe center; gap: var(--kv-space-lg); padding: var(--kv-space-lg); }
 .kvc-start-note { text-align: center; margin: 0; }
 .kvc-link-button { border: 0; background: transparent; color: var(--kv-color-primary); font: inherit; text-decoration: underline; text-underline-offset: 2px; padding: 0; cursor: pointer; }
 .kvc-start h1 { margin: 0; text-align: center; font-size: 26px; font-weight: 600; }

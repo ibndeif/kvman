@@ -12,12 +12,16 @@ export const binarySchema = z.object({ check: z.string().min(1), install: z.stri
 
 export const exampleSchema = z.object({ description: z.string().min(1), input: z.json() });
 
-/** A commands connector's command: its name, the registering extension's public command, and examples. `asks: true` makes the person approve each call first (ADR 0022, 5). `help` is every connector's own. */
+/** A full custom component name, `<namespace>.<component>`. */
+export const componentNameSchema = z.string().regex(/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/, 'A card is a custom component, <namespace>.<component>.');
+
+/** A commands connector's command: its name, the registering extension's public command, and examples. `asks: true` makes the person approve each call first (ADR 0022, 5); `card` is the extension's own component that shows a successful call (ADR 0082, 13). `help` is every connector's own. */
 export const connectorCommandSchema = z.object({
   name: wordSchema.refine((name) => name !== 'help', "help is every connector's own command; name this one differently."),
   command: z.string().min(1),
   examples: z.array(exampleSchema).exactOptional(),
   asks: z.literal(true, 'asks takes only true; leave it out for a command that runs at once.').exactOptional(),
+  card: componentNameSchema.exactOptional(),
 });
 
 const commandsConnectorSchema = z.strictObject({ name: wordSchema, description: z.string().min(1), commands: z.array(connectorCommandSchema).min(1), optIn: z.literal(true, 'optIn takes only true; leave it out for a connector every chat has.').exactOptional() });
@@ -37,7 +41,8 @@ export const connectorDocSchema = z.object({
   name: z.string(),
   description: z.string(),
   kind: z.enum(['commands', 'binary']),
-  commands: z.array(z.object({ name: z.string(), command: z.string(), examples: z.array(exampleSchema), asks: z.boolean().default(false) })).nullable(),
+  // `query` and `card` came with ADR 0082 (3 and 13); a command stored before reads as no query and no card.
+  commands: z.array(z.object({ name: z.string(), command: z.string(), examples: z.array(exampleSchema), asks: z.boolean().default(false), query: z.boolean().default(false), card: z.string().nullable().default(null) })).nullable(),
   binary: z.object({ check: z.string(), install: z.string().nullable(), help: z.string().nullable().default(null) }).nullable(),
   optIn: z.boolean().default(false),
 });

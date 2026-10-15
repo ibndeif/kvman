@@ -1,11 +1,16 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { showsWorkspacePicker } from '../../state/hidden-screens.ts';
+import { settingValue, useKvwebui } from '../../state/kvwebui.ts';
 import LanguageMenu from './LanguageMenu.vue';
 import ThemeMenu from './ThemeMenu.vue';
 import WorkspacePicker from './WorkspacePicker.vue';
 
 const props = defineProps<{ title: string }>();
 const { t } = useI18n();
+const state = useKvwebui();
+const picker = computed(() => showsWorkspacePicker(settingValue(state, 'kvwebui.workspacePicker')));
 </script>
 
 <template>
@@ -14,7 +19,7 @@ const { t } = useI18n();
       <span class="grid size-7 place-items-center rounded-lg bg-primary text-xs font-semibold text-on-primary" aria-hidden="true">kv</span>
       <span class="hidden sm:inline" data-test="app-title">{{ t(props.title) }}</span>
     </div>
-    <WorkspacePicker />
+    <WorkspacePicker v-if="picker" />
     <div class="grow" />
     <LanguageMenu />
     <ThemeMenu />

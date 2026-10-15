@@ -5,7 +5,7 @@ import { disabledConnectors, settingSchemas } from '../register-settings.ts';
 import { connectorRegisterSchema, connectorSchema, exampleSchema, type ConnectorDoc } from '../schemas/registry.ts';
 import { records, txRecords, type TxRecords } from '../store/collections.ts';
 import { ownSession } from '../sessions/session-lookup.ts';
-import { callerExtension, loadedOwners, ownsPublicCall, registrations } from './loaded.ts';
+import { callerExtension, loadedOwners, ownsPublicCall, registrations, type Registrations } from './loaded.ts';
 
 // Connectors (plan 08 §8.4): named sets of commands the agent runs with `run`, registered by other extensions, kept in
 // kvcoder's global store for one run, and owned by their registering extension. One registered with `optIn: true` is
@@ -16,7 +16,7 @@ const connectorRowSchema = z.object({
   description: z.string(),
   owner: z.string(),
   kind: z.enum(['commands', 'binary']),
-  commands: z.array(z.object({ name: z.string(), command: z.string(), examples: z.array(exampleSchema), asks: z.boolean() })).exactOptional(),
+  commands: z.array(z.object({ name: z.string(), command: z.string(), examples: z.array(exampleSchema), asks: z.boolean(), query: z.boolean(), card: z.string().exactOptional() })).exactOptional(),
   binary: z.object({ check: z.string(), install: z.string().exactOptional(), help: z.string().exactOptional() }).exactOptional(),
   optIn: z.boolean(),
 });
@@ -30,7 +30,7 @@ function rowOf(doc: ConnectorDoc): ConnectorRow {
     owner: doc.owner,
     kind: doc.kind,
     optIn: doc.optIn,
-    ...(doc.commands === null ? {} : { commands: doc.commands }),
+    ...(doc.commands === null ? {} : { commands: doc.commands.map(({ card, ...command }) => (card === null ? command : { ...command, card })) }),
     ...(doc.binary === null ? {} : { binary: { check: doc.binary.check, ...(doc.binary.install === null ? {} : { install: doc.binary.install }), ...(doc.binary.help === null ? {} : { help: doc.binary.help }) } }),
   };
 }
@@ -65,9 +65,12 @@ export async function activeConnectors(ctx: Ctx): Promise<ConnectorRow[]> {
 
 type Connector = z.output<typeof connectorSchema>;
 
-const docOf = (input: Connector): Omit<ConnectorDoc, 'owner'> =>
+// Whether a command's target is a query is kept, so a read-only worker's helper may run it (ADR 0082, 3).
+const isQuery = (rows: Registrations, name: string): boolean => rows.some((row) => row.name === name && row.kind === 'query');
+
+const docOf = (input: Connector, rows: Registrations): Omit<ConnectorDoc, 'owner'> =>
   'commands' in input
-    ? { name: input.name, description: input.description, kind: 'commands', commands: input.commands.map((command) => ({ name: command.name, command: command.command, examples: command.examples ?? [], asks: command.asks === true })), binary: null, optIn: input.optIn === true }
+    ? { name: input.name, description: input.description, kind: 'commands', commands: input.commands.map((command) => ({ name: command.name, command: command.command, examples: command.examples ?? [], asks: command.asks === true, query: isQuery(rows, command.command), card: command.card ?? null })), binary: null, optIn: input.optIn === true }
     : { name: input.name, description: input.description, kind: 'binary', commands: null, binary: { check: input.binary.check, install: input.binary.install ?? null, help: input.binary.help ?? null }, optIn: input.optIn === true };
 
 // Every connector of a call is checked before any is stored, and they are stored in one transaction, so a call
@@ -79,18 +82,19 @@ async function register(ctx: Ctx, connectors: readonly Connector[]): Promise<voi
   const repeated = connectors.find((connector, index) => connectors.findIndex((other) => other.name === connector.name) !== index);
   if (repeated !== undefined) throw invalid(`The connector ${repeated.name} is given twice.`, { name: repeated.name });
   const commands = connectors.flatMap((connector) => ('commands' in connector ? connector.commands : []));
-  if (commands.length > 0) {
-    const rows = await registrations(ctx);
-    const foreign = commands.find((command) => !ownsPublicCall(rows, owner, command.command));
-    if (foreign !== undefined) throw invalid(`${foreign.command} isn't a public command or query of ${owner}.`, { command: foreign.command });
-  }
+  const rows = commands.length > 0 ? await registrations(ctx) : [];
+  const foreign = commands.find((command) => !ownsPublicCall(rows, owner, command.command));
+  if (foreign !== undefined) throw invalid(`${foreign.command} isn't a public command or query of ${owner}.`, { command: foreign.command });
+  // A card is a component of the same extension as its command (ADR 0082, 13).
+  const strayCard = commands.find((command) => command.card !== undefined && !command.card.startsWith(`${command.command.split('.')[0] ?? ''}.`));
+  if (strayCard !== undefined) throw invalid(`The card ${strayCard.card ?? ''} isn't a component of ${strayCard.command}'s extension.`, { card: strayCard.card ?? '' });
   const taken = await ctx.store.transaction((tx) => {
     const stored = txRecords(tx).connectors;
     const existing = connectors.map((connector) => stored.find({ name: connector.name }, { limit: 1 })[0]);
     const other = existing.find((doc) => doc !== undefined && doc.owner !== owner);
     if (other !== undefined) return { name: other.name, owner: other.owner };
     for (const doc of existing) if (doc !== undefined) stored.delete(doc.id);
-    for (const connector of connectors) stored.insert({ ...docOf(connector), owner });
+    for (const connector of connectors) stored.insert({ ...docOf(connector, rows), owner });
     return undefined;
   });
   if (taken !== undefined) throw ctx.problem('kvcoder/NAME_TAKEN', taken);

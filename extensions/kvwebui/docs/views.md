@@ -65,4 +65,10 @@ ctx.registerQuery('notes.ui.get', {
 });
 ```
 
-A preset names the page shown at `/` with `kvwebui.home`, such as `notes.list`.
+A preset names the page shown at `/` with `kvwebui.home`, such as `notes.list`; without it, `/` is the Extensions page.
+
+For people who aren't developers, a preset can hide kvman's own screens; a hidden page still opens by its address:
+
+- `kvwebui.nav.hidden`: full nav ids not shown, such as `kvai.models`, and the built-in `kvwebui.settings` and `kvwebui.extensions`;
+- `kvwebui.status.hidden`: full ids of status items not shown, such as `kvai.usage`, and `kvwebui.folder` for the workspace folder;
+- `kvwebui.workspacePicker`: `false` hides the top bar's workspace picker.

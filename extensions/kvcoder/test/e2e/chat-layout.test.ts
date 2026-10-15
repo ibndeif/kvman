@@ -71,6 +71,18 @@ describe('the chat page in Chromium (08 §8.7, ADR 0009, 130–137)', { timeout:
     await page.close();
   });
 
+  it('QA52-E8 on a phone the new chat keeps its send box in view, and the page itself does not scroll', async () => {
+    const { kvman } = await chatWithAnswer('Phone');
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    await page.goto(`${kvman.origin}/kvcoder/chat?workspace=home`);
+    await page.locator('[data-test="approval-line"]').waitFor();
+    const composer = await rectOf(page, '[data-test="composer-text"]');
+    expect(composer.bottom).toBeLessThanOrEqual(844);
+    expect(await page.evaluate('document.scrollingElement.scrollHeight <= window.innerHeight')).toBe(true);
+    expect(await scrollsSideways(page)).toBe(false);
+    await page.close();
+  });
+
   it('QA1-E4 a long title leaves the time on one line', async () => {
     const { kvman, sessionId } = await chatWithAnswer('A very long conversation title that has to be cut short in the list');
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });

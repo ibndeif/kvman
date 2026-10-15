@@ -1,6 +1,9 @@
 import { z, type Ctx } from '@kvman/sdk';
 import { getDoc, listDocs } from './docs.ts';
 
+// The output of `ui.get`: its handler returns this type, so a page whose views differ in shape still checks as JSON.
+const uiOutput = z.json();
+
 // The __NAMESPACE__ extension. A kvman that loads this folder as `path:` reloads it on every save, with no build.
 export default (ctx: Ctx): void => {
   ctx.registerQuery('__NAMESPACE__.greeting.get', {
@@ -31,8 +34,8 @@ export default (ctx: Ctx): void => {
     description: 'Gives the pages and navigation of __NAMESPACE__.',
     public: true,
     input: z.object({}),
-    output: z.json(),
-    handle: () => ({
+    output: uiOutput,
+    handle: (): z.output<typeof uiOutput> => ({
       pages: [{ id: 'hello', title: '__NAMESPACE__.pages.hello', view: __PAGE_VIEW__ }],
       nav: [{ id: 'hello', page: 'hello', title: '__NAMESPACE__.pages.hello', icon: 'puzzle', order: 50 }],
       panels: [],

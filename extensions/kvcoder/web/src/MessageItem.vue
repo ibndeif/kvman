@@ -3,7 +3,7 @@ import { BellRing, Info, NotebookText, ScrollText } from '@lucide/vue';
 import { computed } from 'vue';
 import type { Message } from '../../src/index.ts';
 import { failureReason, fields, isolateValue, problemKey, stringValues, useKvman } from './kvman.ts';
-import { answeredQuestion, artifactOf, backgroundName, backgroundRef, isBackground, isKvcoderHint, resultCard, shownUserText, stagingRunOf, textOf, thinkingOf } from './message-parts.ts';
+import { answeredQuestion, artifactOf, backgroundName, backgroundRef, extensionCardOf, isBackground, isKvcoderHint, resultCard, shownUserText, stagingRunOf, textOf, thinkingOf } from './message-parts.ts';
 import AnsweredCard from './AnsweredCard.vue';
 import ArtifactCard from './ArtifactCard.vue';
 import CallCard from './CallCard.vue';
@@ -21,6 +21,7 @@ const text = computed(() => textOf(props.message.content['content']));
 const thinking = computed(() => thinkingOf(props.message));
 const card = computed(() => resultCard(props.message, props.calls));
 const artifact = computed(() => artifactOf(props.message));
+const extensionCard = computed(() => extensionCardOf(props.message));
 // A program worker's run that changed what is staged in Git names itself in its result's details (ADR 0060, 4).
 const stagingRunId = computed(() => stagingRunOf(props.message));
 // A finished background job's card says which one it was (ADR 0035, 7).
@@ -80,6 +81,7 @@ const markdown = (body: string) => ({ type: 'markdown' as const, text: 'kvcoder.
   </div>
   <ArtifactCard v-else-if="props.message.kind === 'toolResult' && artifact !== undefined" :id="artifact.id" :title="artifact.title" :format="artifact.format" :version="artifact.version" @open="emit('openArtifact', $event)" />
   <AnsweredCard v-else-if="answered !== undefined" :answered="answered" />
+  <div v-else-if="extensionCard !== undefined" data-test="extension-card"><component :is="kvman.View" :view="{ type: 'custom', component: extensionCard.component, props: extensionCard.props }" /></div>
   <template v-else-if="props.message.kind === 'toolResult'">
     <CallCard :view="card" :failed="card.failed" :duration-ms="card.durationMs" :output="card.output" />
     <StagingNote v-if="stagingRunId !== undefined" :session-id="props.message.sessionId" :run-id="stagingRunId" />

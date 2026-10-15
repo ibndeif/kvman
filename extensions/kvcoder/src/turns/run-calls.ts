@@ -158,7 +158,7 @@ async function evaluateCurrentCall(env: CallEnv, toolCall: ToolCall, call: RunCa
   if (target === undefined) return refused(toolCall.id, 'The connector command is no longer available.');
   if (session.parentId !== null && !helperAllows(target.builtin)) return result(toolCall.id, failedCall(call, errorOutput({ code: 'VALIDATION_FAILED', message: helperRefusal }).output));
   // A read-only worker's helper is refused before anyone is asked (ADR 0056, 3).
-  if (session.worker?.readOnly === true && !readOnlyAllows(call.command, target.builtin)) return result(toolCall.id, failedCall(call, errorOutput({ code: 'VALIDATION_FAILED', message: readOnlyRefusal(call.connector, call.command) }).output));
+  if (session.worker?.readOnly === true && !readOnlyAllows(call.command, target.builtin, target)) return result(toolCall.id, failedCall(call, errorOutput({ code: 'VALIDATION_FAILED', message: readOnlyRefusal(call.connector, call.command) }).output));
   if (target.builtin?.asks === true) {
     const invalid = invalidPayload(call, target);
     if (invalid !== undefined) return result(toolCall.id, failedCall(call, invalid));

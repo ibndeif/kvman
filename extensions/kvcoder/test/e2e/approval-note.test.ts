@@ -15,6 +15,11 @@ function copy(kind: 'ask' | 'auto' | 'limits'): string {
   if (value === undefined) throw new Error(`Missing approval note copy: ${kind}`);
   return value;
 }
+// The Chat page's one line for the loaded mode (ADR 0082, 6); the full note is in kvcoder's configuration.
+async function line(page: Page, expected: 'ask' | 'auto'): Promise<void> {
+  await page.locator('[data-test="approval-line"]').waitFor();
+  await expect.poll(() => page.locator('[data-test="approval-line"]').getAttribute('data-mode')).toBe(expected);
+}
 async function mode(page: Page, expected: 'ask' | 'auto'): Promise<void> {
   await page.locator('[data-test="approval-mode"]').waitFor();
   await expect.poll(() => page.locator('[data-test="approval-mode"]').textContent()).toBe(copy(expected));
@@ -34,7 +39,7 @@ describe('KVC22 effective approval acceptance in Chromium', { timeout: 120_000 }
     page.on('pageerror', error => errors.push(error.message));
     try {
       await page.goto(`${kvman.origin}/kvcoder/chat?workspace=home`);
-      await mode(page, 'auto');
+      await line(page, 'auto');
       expect(copy('auto')).toContain('model supplies the risky flag');
       expect(copy('auto')).toContain('risky:false may run without approval');
       expect(copy('auto')).toContain('Registered commands marked as needing approval still ask');
@@ -53,7 +58,7 @@ describe('KVC22 effective approval acceptance in Chromium', { timeout: 120_000 }
       await page.locator('[data-test="approval-setting-reset"]').click();
       await mode(page, 'auto');
       await page.goto(`${kvman.origin}/kvcoder/chat?workspace=home`);
-      await mode(page, 'auto');
+      await line(page, 'auto');
       expect(errors).toEqual([]);
     } finally { await page.close(); }
   });
@@ -67,7 +72,7 @@ describe('KVC22 effective approval acceptance in Chromium', { timeout: 120_000 }
     page.on('pageerror', error => errors.push(error.message));
     try {
       await page.goto(`${kvman.origin}/kvcoder/chat?workspace=home`);
-      await mode(page, 'ask');
+      await line(page, 'ask');
       await page.locator('[data-test="approval-config"]').click();
       await page.locator('[data-test="extension-page-kvcoder"]').waitFor();
       await page.locator('[data-test="scope-workspace"]').click();
@@ -84,7 +89,7 @@ describe('KVC22 effective approval acceptance in Chromium', { timeout: 120_000 }
       await page.locator('[data-test="approval-setting-reset"]').click();
       await mode(page, 'ask');
       await page.goto(`${kvman.origin}/kvcoder/chat?workspace=home`);
-      await mode(page, 'ask');
+      await line(page, 'ask');
       expect(errors).toEqual([]);
     } finally { await page.close(); }
   });

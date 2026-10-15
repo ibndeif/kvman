@@ -68,6 +68,8 @@ pub struct Session {
     updating: bool,
     /// A dialog that ends the session is open, or was: nothing more is shown.
     ending: bool,
+    /// A branded app shows no home screen: it opens Home's page at once (plan 14 §14.9).
+    branded: bool,
 }
 
 pub fn workspace_url(port: u16, workspace_id: &str) -> String {
@@ -83,6 +85,15 @@ pub fn workspace_url(port: u16, workspace_id: &str) -> String {
 
 impl Session {
     pub fn new(home: &Path) -> Self {
+        Self::with_branding(home, false)
+    }
+
+    /// The session of a branded app, which goes straight into Home.
+    pub fn branded(home: &Path) -> Self {
+        Self::with_branding(home, true)
+    }
+
+    fn with_branding(home: &Path, branded: bool) -> Self {
         Self {
             home: home.to_path_buf(),
             screen: Screen::Starting,
@@ -95,7 +106,18 @@ impl Session {
             closing: false,
             updating: false,
             ending: false,
+            branded,
         }
+    }
+
+    /// Where a kvman that is up goes first: the home screen, or a branded app's Home page.
+    fn first_screen(&mut self, port: u16) -> Vec<Action> {
+        if self.branded {
+            self.screen = Screen::App;
+            return vec![Action::Load(workspace_url(port, "home"))];
+        }
+        self.screen = Screen::Home;
+        vec![Action::ShowHome]
     }
 
     /// The port of the kvman whose home screen or app is shown.
@@ -154,8 +176,7 @@ impl Session {
             Ok(Line::Joined { port, .. }) => {
                 self.owned = false;
                 self.port = Some(port);
-                self.screen = Screen::Home;
-                vec![Action::ShowHome]
+                self.first_screen(port)
             }
             Ok(Line::Restarting) => {
                 self.restarting = true;
@@ -175,10 +196,7 @@ impl Session {
         self.port = Some(port);
         self.restarting = false;
         match self.screen {
-            Screen::Starting => {
-                self.screen = Screen::Home;
-                vec![Action::ShowHome]
-            }
+            Screen::Starting => self.first_screen(port),
             Screen::App if moved => vec![Action::Load(url.to_owned())],
             Screen::Home | Screen::App => Vec::new(),
         }

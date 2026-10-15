@@ -134,7 +134,29 @@ The shell's calls to kvman carry the Host `127.0.0.1:<port>` and no `Origin`, so
 - **The release.** The version tag that publishes to npm (ADR 0026, 8) also builds each installer on a runner of its own system. Each runner first runs what it built with no window: the bundled Node starts the bundled `kvman --pipe --yes` on a new home, the step reads the `running` line, calls `kernel.health.get`, closes the input, and expects exit 0. Then the installers, their signatures, and `latest.json` are attached to a draft GitHub Release of that tag, which the product owner tries and publishes; installed apps see the update only then (ADR 0038, 52). There is no other build of the installers (ADR 0038, 51).
 - **Removing the app** is the system's own way, and it leaves the home folder. `kvman uninstall` (§1.2) is for the npm install.
 
-## 14.9 Text and security
+## 14.9 Branded apps
+
+A product built on kvman reaches people who aren't developers as a desktop app of its own (ADR 0082, 14).
+
+- **The brand file.** `pnpm desktop:brand <brand.json>` builds the app for the system it runs on from `{ name, id, preset, icon }`:
+  - `name` is the app's name, 1 to 60 characters;
+  - `id` is lowercase kebab case, up to 40 characters;
+  - `preset` is a preset file, relative to the brand file, which must pass the preset schema and use only `bundled` and `npm:` sources;
+  - `icon` is a square PNG of at least 512 px, relative to the brand file.
+
+  A field that fails stops the build with a message that names it.
+- **The build.**
+  1. It prepares the runtime as `desktop:build` does (§14.3).
+  2. It writes `runtime/brand/brand.json` (`{ name, id }`) and `runtime/brand/preset.json`.
+  3. It tries the runtime with that preset (§14.8's check, with `--preset`).
+  4. It runs `tauri build` with a configuration overlay: `productName` is `name`, `identifier` is `com.ibndeif.kvman.<id>`, the icons are made from `icon` with `tauri icon`, and the installers are on.
+- **The app.** An app whose resources hold `runtime/brand/brand.json`:
+  - starts kvman with `--home <user folder>/.<id> --preset <resources>/runtime/brand/preset.json` added to §14.4's command, so it keeps its own chats, keys, and workspaces and never meets a running kvman Coder;
+  - shows no home screen: its `running` or `joined` line loads `http://127.0.0.1:<port>/?workspace=home`;
+  - never checks for updates (§14.7), since a new version is a new installer the owner sends;
+  - titles its window and its dialogs with `name`.
+
+## 14.10 Text and security
 
 - **Text.** The shell's text is a catalog inside the package, with `en` and `ar`, and its styles are logical CSS.
 - **The listener is untouched** (§4.2). The app adds no route, no token, and no header, and kvman still listens only on 127.0.0.1.

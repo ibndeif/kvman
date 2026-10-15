@@ -1,6 +1,6 @@
 import type { Section } from '../registry/register-sections.ts';
 import { sectionsLimit } from '../registry/register-sections.ts';
-import { identityLine, workingMethod, type Role } from './working-method.ts';
+import { identityLine, workingMethod, type Method, type Role } from './working-method.ts';
 
 // The system prompt (plan 08 §8.2): the base prompt, the sections by `order`, a worker's instructions, then the
 // connector index. Sections past 64 KB together are left out, last by `order` first (ADR 0009, 94).
@@ -8,6 +8,8 @@ import { identityLine, workingMethod, type Role } from './working-method.ts';
 export type PromptInput = {
   /** The lead of a chat, or a worker's subagent: each has its own identity and working method (ADR 0022, 3). */
   role: Role;
+  /** A product's profile (ADR 0082, 11): who the agent is, and its method; without one, kvman Coder's engineering method. */
+  profile?: { identity?: string; method: Method };
   workspacePath: string;
   platform: NodeJS.Platform;
   shell: 'bash' | 'powershell';
@@ -31,13 +33,13 @@ function languageName(code: string): string {
 function basePrompt(input: PromptInput): string {
   const shell = input.shell === 'bash' ? 'bash' : 'PowerShell';
   const identity = [
-    identityLine(input.role, `in the folder ${input.workspacePath} on ${systems[input.platform] ?? input.platform}`),
+    identityLine(input.role, `in the folder ${input.workspacePath} on ${systems[input.platform] ?? input.platform}`, input.profile?.identity),
     `Reply in ${languageName(input.language)} unless the person writes in another language.`,
     'Each message from the person starts with the date and time it was sent, in brackets; the newest one is the current time.',
   ].join('\n');
   const tool = 'Your one tool is run: it runs one command of a connector, as { description, connector, command, payload }. description is one sentence for the person, saying what the call does. Below, `fs write` means the connector fs and its command write.';
   const connectors = `Connectors are the only way you act. When a connector other than shell covers a task, use it instead of a shell line: it checks its input, returns structured results, and is shown to the person. Use shell only for what no other connector does. Every connector has the command help. A command listed below with its payload needs no help call; for any other command, or for what a field means, call the connector's help with { "command": "<name>" } before the first use. \`shell exec\`, \`fs write\`, \`fs edit\`, \`mcp call\`, and \`mcp run\` take risky, which you always send and judge for each call from what the call does, not from which command it is. It is false for the ordinary work of the task: creating, editing, or rewriting a file inside the workspace folder that the task needs, whoever made it (\`fs undo\` takes such a change back), running the project's own build, tests, and tools, and a tool that only reads. It is true, and the person is then asked first, only when the call could do what is hard to take back or reaches past the task: anything outside the workspace folder; deleting files, or overwriting them with a shell line; a file that holds secrets, such as .env or a key; rewriting or discarding git history or uncommitted work (push --force, reset --hard, clean); sudo, or an install outside the project; sending something out (a push, a publish, a deploy, a message, a write to a remote service); and the Commands section of AGENTS.md. When you can't tell whether a call can be taken back, it is true. Each \`shell exec\` starts in the workspace folder, so cd doesn't carry over to the next call; the shell is ${shell}.`;
-  return [identity, tool, connectors, workingMethod(input.role)].join('\n\n');
+  return [identity, tool, connectors, workingMethod(input.role, input.profile?.method)].join('\n\n');
 }
 
 // A connector's entry: its owner's description, then its commands, which kvcoder adds (ADR 0009, 164; ADR 0011, 3). A

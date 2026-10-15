@@ -39,7 +39,7 @@ const catalogs = {
   ar: { 'notes.pages.list': 'الملاحظات', 'notes.pages.note': 'ملاحظة', 'notes.open': 'افتح الملاحظة n2', 'notes.showing': 'عرض الملاحظة {id}', 'notes.help': 'مساعدة' },
 };
 
-function writeFixture(root: string, language: string): string {
+function writeFixture(root: string, language: string, settings: Record<string, unknown>): string {
   const notes = path.join(root, 'notes');
   mkdirSync(path.join(notes, 'locales'), { recursive: true });
   const manifest = { name: '@test/notes', version: '0.1.0', type: 'module', main: 'index.js', peerDependencies: { '@kvman/sdk': '^0.1.0' }, kvman: { namespace: 'notes', source: 'index.ts' } };
@@ -47,7 +47,7 @@ function writeFixture(root: string, language: string): string {
   writeFileSync(path.join(notes, 'index.ts'), notesEntry);
   for (const [name, catalog] of Object.entries(catalogs)) writeFileSync(path.join(notes, 'locales', `${name}.json`), JSON.stringify(catalog));
   writeDemo(root);
-  const preset = { name: 'e2e', extensions: { '@kvman/kvwebui': 'bundled', '@test/notes': 'path:./notes', '@test/demo': 'path:./demo' }, settings: { 'kvwebui.home': 'notes.list', 'kernel.language': language } };
+  const preset = { name: 'e2e', extensions: { '@kvman/kvwebui': 'bundled', '@test/notes': 'path:./notes', '@test/demo': 'path:./demo' }, settings: { 'kvwebui.home': 'notes.list', 'kernel.language': language, ...settings } };
   const presetFile = path.join(root, 'e2e.json');
   writeFileSync(presetFile, JSON.stringify(preset));
   return presetFile;
@@ -64,11 +64,12 @@ function waitForUrl(child: ChildProcess, output: () => string): Promise<string> 
   });
 }
 
-export async function startKvman(language: string): Promise<RunningKvman> {
+/** Starts kvman in `language`, with `settings` added to the fixture preset's. */
+export async function startKvman(language: string, settings: Record<string, unknown> = {}): Promise<RunningKvman> {
   const root = mkdtempSync(path.join(tmpdir(), 'kvwebui-e2e-'));
   const [home, user, start] = ['home', 'user', 'project'].map((name) => path.join(root, name));
   for (const folder of [user ?? '', start ?? '']) mkdirSync(folder, { recursive: true });
-  const presetFile = writeFixture(root, language);
+  const presetFile = writeFixture(root, language, settings);
   const env: NodeJS.ProcessEnv = { ...process.env, HOME: user, USERPROFILE: user };
   delete env['KVMAN_HOME'];
   const child = spawn(process.execPath, ['--conditions=@kvman/source', mainFile, '--home', home ?? '', '--port', '0', '--no-open', '--yes', '--preset', presetFile], { cwd: start, env, stdio: 'pipe' });

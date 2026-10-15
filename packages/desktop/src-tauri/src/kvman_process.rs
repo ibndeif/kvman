@@ -53,6 +53,13 @@ pub fn start_command(node: &Path, entry: &Path, user_folder: &Path, current_path
     }
 }
 
+/// A branded app's kvman: its own home and the brand's preset, added to the start command (plan 14 §14.9).
+pub fn with_brand(start: StartCommand, home: &Path, preset: &Path) -> StartCommand {
+    let mut args = start.args;
+    args.extend(["--home".to_owned(), home.display().to_string(), "--preset".to_owned(), preset.display().to_string()]);
+    StartCommand { args, ..start }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KillCommand {
     pub program: &'static str,

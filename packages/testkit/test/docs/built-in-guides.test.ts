@@ -43,4 +43,10 @@ describe('the built-in guides (09 §9.2, ADR 0030, 8)', () => {
       expect(conventions, mention).toContain(mention);
     }
   });
+
+  it('QA52-H18 presets says the home page defaults to Extensions, and names the profile and the hidden screens', () => {
+    const presets = readBuiltInGuide('presets')?.markdown ?? '';
+    for (const mention of ['without it, the Extensions page', '`kvcoder.profile`', '`kvwebui.status.hidden`', '`kvwebui.workspacePicker`']) expect(presets, mention).toContain(mention);
+    expect(presets).not.toContain('`kvwebui.home` is required');
+  });
 });

@@ -78,12 +78,13 @@ describe("the conversation's actions (08 §8.7, ADR 0009, 104)", () => {
     fake.handle('kvcoder.session.create', () => session({ id: 's9', title: '' }));
     fake.handle('kvcoder.message.send', ok);
     const wrapper = await mounted(ConversationView, fake);
-    expect(wrapper.find('h1').text()).toBe('What should we build in notes-app?');
-    expect(fake.calls.map(call => call.name)).toEqual(['kernel.settings.list', 'kernel.settings.list', 'kvai.provider.list', 'kvai.model.list', 'kvcoder.slash.list']);
+    // The tab's workspace is Home, which is called Home, and one settings read serves the whole start (ADR 0082, 6 and 7).
+    expect(wrapper.find('h1').text()).toBe('What should we build in Home?');
+    expect(fake.calls.map(call => call.name)).toEqual(['kernel.settings.list', 'kvai.provider.list', 'kvai.model.list', 'kvcoder.slash.list']);
     await wrapper.find('[data-test="composer-text"]').setValue('Make a notes page');
     await wrapper.find('[data-test="composer-text"]').trigger('keydown', { key: 'Enter' });
     await flushPromises();
-    expect(fake.calls.slice(5)).toEqual([{ name: 'kvcoder.session.create', input: {} }, { name: 'kvcoder.message.send', input: { sessionId: 's9', text: 'Make a notes page', sendId: expect.any(String) } }]);
+    expect(fake.calls.slice(4)).toEqual([{ name: 'kvcoder.session.create', input: {} }, { name: 'kvcoder.message.send', input: { sessionId: 's9', text: 'Make a notes page', sendId: expect.any(String) } }]);
     expect(fake.navigate).toHaveBeenCalledWith('kvcoder.session', { sessionId: 's9' });
     wrapper.unmount();
   });

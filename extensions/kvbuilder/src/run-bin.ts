@@ -86,7 +86,7 @@ export function lastOutputLine(output: string): string | undefined {
   return undefined;
 }
 
-const kvbuilderBinCodes: readonly KvbuilderCode[] = ['FOLDER_NOT_EMPTY', 'FILE_EXISTS', 'NPM_FAILED', 'NO_FREE_PORT', 'PREVIEW_FAILED'];
+const kvbuilderBinCodes: readonly KvbuilderCode[] = ['FOLDER_NOT_EMPTY', 'FILE_EXISTS', 'NPM_FAILED', 'GIT_FAILED', 'NO_FREE_PORT', 'PREVIEW_FAILED'];
 
 /** The Problem for a bin's structured failure, or `undefined` when its code has no mapping here. */
 export function binFailureProblem(failure: BinFailure): ProblemError | undefined {

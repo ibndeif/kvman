@@ -21,7 +21,7 @@ function sources(folder: string): string[] {
 const placeholders = (text: string): string[] => [...text.matchAll(/\{(\w+)\}/g)].map((match) => match[1] ?? '').sort();
 
 // Names under `kvwebui.` that aren't texts: setting keys, page ids, what a tab remembers, and the commands the app calls.
-const notTexts = new Set(['kvwebui.home', 'kvwebui.nav.order', 'kvwebui.nav.hidden', 'kvwebui.theme', 'kvwebui.settings', 'kvwebui.extensions', 'kvwebui.workspace', 'kvwebui.panel', 'kvwebui.nav.collapsed', 'kvwebui.effect.take']);
+const notTexts = new Set(['kvwebui.home', 'kvwebui.nav.order', 'kvwebui.nav.hidden', 'kvwebui.status.hidden', 'kvwebui.workspacePicker', 'kvwebui.folder', 'kvwebui.theme', 'kvwebui.settings', 'kvwebui.extensions', 'kvwebui.workspace', 'kvwebui.panel', 'kvwebui.nav.collapsed', 'kvwebui.effect.take']);
 // The keys the sources build from a template.
 const built = ['global', 'workspace'].flatMap((scope) => [`kvwebui.settings.reset.${scope}`, `kvwebui.settings.scope.${scope}`, `kvwebui.settings.source.${scope}`, `kvwebui.settings.changed.${scope}`]);
 const themes = ['system', 'light', 'dark'].map((theme) => `kvwebui.theme.${theme}`);
@@ -37,7 +37,7 @@ describe("kvwebui's catalogs (02 §2.11)", () => {
     const texts = [...new Set([...named.filter((key) => !notTexts.has(key)), ...built, ...themes, 'kvwebui.settings.source.default', 'kvwebui.errors.OFFLINE'])];
     expect(texts.length).toBeGreaterThan(50);
     expect(texts.filter((key) => en[key] === undefined)).toEqual([]);
-    const settingKeys = ['kvwebui.title', 'kvwebui.home', 'kvwebui.nav.order', 'kvwebui.nav.hidden', 'kvwebui.theme'];
+    const settingKeys = ['kvwebui.title', 'kvwebui.home', 'kvwebui.nav.order', 'kvwebui.nav.hidden', 'kvwebui.status.hidden', 'kvwebui.workspacePicker', 'kvwebui.theme'];
     expect(settingKeys.flatMap((key) => [`${key}.title`, `${key}.description`]).filter((key) => en[key] === undefined)).toEqual([]);
   });
 

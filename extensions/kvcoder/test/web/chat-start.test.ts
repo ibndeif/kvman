@@ -71,7 +71,6 @@ describe("the Chat page's new chat (08 §8.7, ADR 0009, 194)", () => {
     await send(wrapper, 'Build it');
     expect(fake.calls).toEqual([
       { name: 'kernel.settings.list', input: {} },
-      { name: 'kernel.settings.list', input: {} },
       { name: 'kvai.provider.list', input: {} },
       { name: 'kvai.model.list', input: {} },
       { name: 'kernel.settings.set', input: { key: 'kvai.defaultModel', value: 'zed/z1', scope: 'global' } },
@@ -108,7 +107,7 @@ describe("the Chat page's new chat (08 §8.7, ADR 0009, 194)", () => {
     const fake = startFake({ model: null, defaultModel: 'fake/m1' });
     const wrapper = await mounted(ChatStart, fake);
     await send(wrapper, 'Build it');
-    expect(fake.calls.map((call) => call.name)).toEqual(['kernel.settings.list', 'kernel.settings.list', 'kvai.provider.list', 'kvai.model.list', 'kvcoder.session.create', 'kvcoder.message.send']);
+    expect(fake.calls.map((call) => call.name)).toEqual(['kernel.settings.list', 'kvai.provider.list', 'kvai.model.list', 'kvcoder.session.create', 'kvcoder.message.send']);
     expect(fake.navigate).toHaveBeenCalledWith('kvcoder.session', { sessionId: 's9' });
     wrapper.unmount();
   });
@@ -156,7 +155,7 @@ describe("the Chat page's new chat (08 §8.7, ADR 0009, 194)", () => {
     expect(box.find('[data-test="thinking-picker"]').exists()).toBe(true);
     for (const missing of ['start-header', 'chat-menu', 'running', 'session-totals']) expect(wrapper.find(`[data-test="${missing}"]`).exists()).toBe(false);
     expect(wrapper.find('header').exists()).toBe(false);
-    expect(wrapper.find('h1').text()).toBe('What should we build in notes-app?');
+    expect(wrapper.find('h1').text()).toBe('What should we build in Home?');
     expect(wrapper.find('[data-test="composer-text"]').exists()).toBe(true);
     expect(wrapper.find('[data-test="send"]').exists()).toBe(true);
     const html = wrapper.html();

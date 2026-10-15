@@ -36,4 +36,10 @@ describe('kvwebui documents itself (06 §6.9, 09 §9.5, ADR 0010, 15 and 16)', (
       expect(markdown, file).not.toMatch(/\bdev[ -]preset/i);
     }
   });
+
+  it('QA52-H18 components says how to name Home, and views names the lists that hide screens', () => {
+    expect(readFileSync(path.join(docsFolder, 'components.md'), 'utf8')).toContain('show the Home workspace, id `home`, as "Home"');
+    const views = readFileSync(path.join(docsFolder, 'views.md'), 'utf8');
+    for (const mention of ['`kvwebui.nav.hidden`', '`kvwebui.status.hidden`', '`kvwebui.workspacePicker`', 'without it, `/` is the Extensions page']) expect(views, mention).toContain(mention);
+  });
 });

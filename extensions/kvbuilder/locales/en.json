@@ -10,6 +10,7 @@
   "kvbuilder.errors.FILE_EXISTS": "That file already exists.",
   "kvbuilder.errors.NOT_A_PROJECT": "That folder isn't an extension project (no package.json with a kvman field).",
   "kvbuilder.errors.NPM_FAILED": "npm failed.",
+  "kvbuilder.errors.GIT_FAILED": "Git couldn't start a repository in the project folder.",
   "kvbuilder.errors.NO_FREE_PORT": "No port from 3738 to 3837 is free for the preview.",
   "kvbuilder.errors.PREVIEW_FAILED": "The preview kvman didn't start."
 }

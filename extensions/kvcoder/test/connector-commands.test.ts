@@ -29,13 +29,13 @@ const connectorJobs = [
 ];
 
 describe("the built-in connectors' kernel jobs (08 §8.3, ADR 0011, 10)", { timeout: 30_000 }, () => {
-  it('QA18-H17 every built-in connector command is a private kvcoder command or query with described input fields', async () => {
+  it('QA18-H17 every built-in connector command is a kvcoder command or query with described input fields, private but for the artifact writes (ADR 0082, 13)', async () => {
     const { kernel } = await kvcoder.start();
     const kvcoderExtension = extensionsSchema.parse(await kernel.exec('kernel.extensions.list', {})).find((extension) => extension.name === '@kvman/kvcoder');
     const registered = [...(kvcoderExtension?.commands ?? []), ...(kvcoderExtension?.queries ?? [])];
     for (const name of connectorJobs) {
       const found = registered.find((registration) => registration.name === name);
-      expect(found?.public, name).toBe(false);
+      expect(found?.public, name).toBe(name === 'kvcoder.artifact.write' || name === 'kvcoder.artifact.edit');
       expect(Object.keys(found?.input.properties ?? {}), name).not.toEqual([]);
       for (const [field, schema] of Object.entries(found?.input.properties ?? {})) expect(schema.description, `${name} ${field}`).toEqual(expect.any(String));
     }

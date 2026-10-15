@@ -11,7 +11,7 @@ import { edits } from './payload-fields.ts';
 
 // The `artifact` connector (plan 08 §8.5, ADR 0009, 173 to 176): `write` creates or replaces the chat's document,
 // `edit` replaces text in one, `get` reads one. No approval is asked, and the step runs the calls on one artifact one
-// after another.
+// after another. `write` and `edit` are public too, so an extension can show a chat something (ADR 0082, 13).
 
 /** What the prompt's index says the connector is for. */
 export const artifactDescription =
@@ -93,6 +93,7 @@ export function registerArtifactConnector(ctx: Ctx): void {
     description: commands.write.description,
     input: callInput(payloads.write),
     output: z.object({ id: z.string(), version: z.number().int(), created: z.boolean(), bytes: z.number().int() }),
+    public: true,
     retries: 0,
     handle: async ({ sessionId, payload }) => writeArtifact(ctx, await chatOf(ctx, sessionId), payload),
   });
@@ -100,6 +101,7 @@ export function registerArtifactConnector(ctx: Ctx): void {
     description: commands.edit.description,
     input: callInput(payloads.edit),
     output: z.object({ id: z.string(), version: z.number().int(), replacements: z.number().int(), firstChangedLine: z.number().int() }),
+    public: true,
     retries: 0,
     handle: async ({ sessionId, payload }) => editArtifact(ctx, await chatOf(ctx, sessionId), payload),
   });
