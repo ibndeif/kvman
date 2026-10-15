@@ -2,7 +2,7 @@
 // against the monorepo, so a version bump there fails until this follows.
 export const scaffoldVersions = {
   sdk: '0.1.2',
-  testkit: '0.1.5',
+  testkit: '0.1.6',
   typescript: '6.0.3',
   typesNode: '24.19.0',
   vite: '8.3.1',

@@ -1,6 +1,6 @@
 {
   "name": "@kvman/kvbuilder",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "kvbuilder: the kvcoder extension for building kvman, developing extensions and presets and managing the running app.",
   "license": "MIT",
   "repository": {

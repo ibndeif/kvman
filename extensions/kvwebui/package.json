@@ -1,6 +1,6 @@
 {
   "name": "@kvman/kvwebui",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "kvwebui: the kvman web app, built from what the extensions contribute.",
   "license": "MIT",
   "repository": {
