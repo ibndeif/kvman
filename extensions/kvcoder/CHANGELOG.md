@@ -1,5 +1,15 @@
 # @kvman/kvcoder
 
+## 0.1.8
+
+### Patch Changes
+
+- eb3ee85: The `/build-kvman` guide never lets the agent edit kvman itself, keeps extensions to the public APIs, designs from a map of which extension serves which need, and uses a developer's own words. `kvman extensions-get` gives one extension's public commands, queries, and settings with their JSON Schemas. `createTestKernel` and `kvman-check` load a project's declared dependencies from its `node_modules`, `kvman-check` names the npm line for one that isn't installed, and the preview adds the bundled extensions a project depends on. The `sdk` and `conventions` guides are the complete reference (ADR 0080).
+- 3f2361e: A failed call's card starts closed with a short reason; the raw error and request are behind "Show details". The agent's own invalid requests are quiet ("Not run"), and a dismissed question shows as Skipped (ADR 0079).
+- ca9ff4f: The lead agent talks to the person clearly and briefly: plain words, the point first, no inner details unless asked (ADR 0078).
+- f23f0b3: The lead agent finds what the person is after before it plans: what exists, what done looks like, and what was left unsaid. It asks only what looking can't answer, in one round, says back what it understood when it confirms the plan, and leaves running the app the person will try (ADR 0081).
+- @kvman/kvai@0.1.2
+
 ## 0.1.7
 
 ### Patch Changes
