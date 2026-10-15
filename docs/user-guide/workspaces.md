@@ -10,6 +10,15 @@ A **workspace** is a folder on disk that kvman has open. Each workspace has its 
 - Every other folder you open becomes a workspace with its own name (the folder's name) and its own chats and settings.
 - Workspaces are remembered across restarts until you close them. Opening the same folder again gets you the same workspace back.
 - Closing a workspace doesn't delete its data: its queued jobs and schedules wait until it's reopened, its running jobs finish, and calls naming it fail `NOT_FOUND`. Closing a workspace moves its browser tab to Home; a tab whose workspace was closed elsewhere learns it and moves to Home with a toast.
+- A workspace whose folder is gone (moved or deleted) is closed when kvman starts. Its data is kept.
+
+## Closed workspaces
+
+When any workspace is closed, the workspace picker has a **Closed workspaces** section under the open ones, with their count. Each shows its name and folder, and **folder missing** when the folder is gone.
+
+- **Reopen** opens it again, with its chats and settings.
+- **Delete** erases its data for good: its chats, settings, stored data, files, jobs, and schedules. kvman asks first ("Delete this workspace's data? Its folder is not touched."), stops the workspace's running work, then deletes. The folder on disk is never touched.
+- **Delete all missing** does the same for every workspace whose folder is gone.
 
 ## Opening a folder
 

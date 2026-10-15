@@ -18,10 +18,12 @@ kvwebui is the extension that draws the app. Pages, nav items, panels, and statu
 └────────────────────────────────────────────┘
 ```
 
+The frame below is what the `coder` preset shows. A preset for a product can hide parts of it: pages of the sidebar (Settings and Extensions included), status items, and the workspace picker.
+
 ## Top bar
 
 - **Title** — `kvwebui.title`; for the bundled `coder` preset it reads "kvman Coder".
-- **Workspace picker** — the current folder's name. It lists every open workspace (Home first, then the rest in open order) with a close button on each but Home, and **Open a folder…** at the bottom. See [workspaces.md](workspaces.md).
+- **Workspace picker** — the current folder's name, or **Home**. It lists every open workspace (Home first, then the rest in open order) with a close button on each but Home, the closed workspaces, and **Open a folder…** at the bottom. See [workspaces.md](workspaces.md).
 - **Language menu** — every language your extensions ship, each named in itself (English, العربية, …). Choosing one switches the interface and the text direction at once.
 - **Theme menu** — System, Light, or Dark. Your choice is remembered.
 
@@ -35,11 +37,13 @@ kvwebui is the extension that draws the app. Pages, nav items, panels, and statu
 
 Each extension contributes pages. A page's address looks like `/<namespace>/<page>`; the preset chooses which page `/` shows (for `coder`, the Chat page). Tabs keep their workspace; the browser tab title reads `<page> · <workspace> · <app title>`.
 
-If the preset's home page isn't available, `/` shows the built-in **Extensions** page with an error card.
+A preset that names no home page opens on the **Extensions** page. If the preset's home page isn't available, `/` shows the **Extensions** page with an error card.
+
+A fenced `mermaid` block in any Markdown the app shows (an answer, an artifact, a documentation page) is drawn as a diagram, in the app's theme.
 
 ## Panels
 
-One panel can be open at a time, chosen from the strip of panel icons on the page. Panels show on every page, and the choice is remembered per tab. In the Chat page, for example, the artifacts panel may be open.
+One panel can be open at a time, chosen from the strip of panel icons on the page. Panels show on every page, and the choice is remembered per tab. (The artifacts and execution-map panel beside a chat is the chat's own; see [coding-app.md](coding-app.md#the-panel-artifacts-and-the-execution-map).)
 
 ## Status bar
 
@@ -62,4 +66,5 @@ Below 768 px the sidebar collapses to the icon rail, and the artifacts panel in 
 ## Next
 
 - [workspaces.md](workspaces.md)
+- [desktop-app.md](desktop-app.md)
 - [settings-and-secrets.md](settings-and-secrets.md)

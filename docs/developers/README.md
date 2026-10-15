@@ -28,7 +28,7 @@ The agent's connectors run the same tools underneath, so all three ways give the
 
 - The **kernel** runs **extensions**: it keeps jobs, workers, storage, workspaces, settings, and secrets, and serves an HTTP API. It knows no product concept.
 - An **extension** registers commands, queries, settings, and handlers. The chat app (kvcoder), the web app (kvwebui), model access (kvai), and the customizing tools (kvbuilder) are all extensions, and any of them can be removed.
-- A **preset** chooses which extensions run and their starting settings.
+- A **preset** chooses which extensions run and their starting settings. A preset is also how you make a product: the same pieces, with the agent, words, and screens of your product ([products.md](products.md)).
 - `@kvman/sdk` is the whole API an extension sees; `@kvman/testkit` runs a real kernel for tests and holds the tools above.
 
 ## The pages
@@ -50,6 +50,10 @@ The agent's connectors run the same tools underneath, so all three ways give the
 - [agents-and-tools.md](agents-and-tools.md): an agent of your own, with tools that are plain functions
 - [documenting-your-extension.md](documenting-your-extension.md): telling others how to use yours
 - [presets.md](presets.md): which extensions run
+
+**Building a product**
+
+- [products.md](products.md): kvcoder as a product of your own (the agent's identity, hidden developer screens, your own result cards), shipped as a desktop app
 
 **Working**
 

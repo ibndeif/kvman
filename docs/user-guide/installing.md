@@ -143,6 +143,10 @@ Your home folder is kept as-is; settings, secrets, and workspaces carry over. Wh
 
 If kvman can't open a browser, it logs a warning and keeps running — copy the printed URL into a browser yourself.
 
+## The desktop app
+
+kvman also has a desktop app that runs it in a window of its own, with no terminal: see [desktop-app.md](desktop-app.md).
+
 ## Next
 
 - [first-run.md](first-run.md)

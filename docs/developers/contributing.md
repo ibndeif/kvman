@@ -23,7 +23,7 @@ Work is done milestone by milestone (`plan/13-milestones.md`), in order: read it
 pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm bench:check
 ```
 
-All must pass before a commit. There is no CI in this phase: run them locally.
+All must pass before a commit. No CI runs the tests: the release workflow only builds, type-checks, lints, and publishes, so run them locally. `node release/candidate/local-candidate-main.ts` runs them once in order and stops at the first failure. A change to `packages/desktop` also passes `pnpm desktop:check` (`cargo fmt --check`, `cargo clippy` with warnings as errors, and `cargo test`); its Rust has no `unsafe`, and no `unwrap` or `expect` outside tests.
 
 ## Code rules
 

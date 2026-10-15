@@ -36,7 +36,9 @@ ctx.registerHandler('kernel.started', {
 - Add `asks: true` to a command that changes something the person didn't make in this chat (`{ name: 'clear', command: 'notes.note.clear', asks: true }`). Every call of it then becomes an approval card showing its description, command, and payload, with `kvcoder.approval` on `auto` or `ask`; with `never`, the person's choice that nothing asks, it runs at once. **Deny** returns `denied by the user` and your command never runs. The field takes only `true`, and it isn't allowed on a `binary` connector. A command without it runs at once.
 - Every connector has `help`, built from what you registered: `help` with no payload lists your commands with their descriptions, and `help { "command": "add" }` gives that command's payload and result as JSON Schema, with your examples. Give every input field a `.describe()`, since the agent learns the payload from it.
 - A connector with `binary: { check, install?, help? }` instead of `commands` names a program on the system (`gh`). It is listed only while its `check` line exits 0, and the agent calls it with `exec { args }` and `help`. `help` runs `<name> --help`, or the line you give with `{command}` in it (`go help {command}`).
-- `shell`, `fs`, `artifact`, `background`, `ask`, `delegate`, and `mcp` are built in; their names are taken.
+- Add `card: '<namespace>.<component>'` to a command to show its successful calls as your own custom component, with the props `{ payload, output }`, in place of the call card. The namespace must be the one of the entry's `command`. A failed call keeps the call card, and the model reads the result as before ([products.md](products.md#your-results-in-the-conversation)).
+- A command whose target is a public **query** also runs for a read-only worker, and is listed in its prompt; your commands, `asks` entries, and binaries are not. A connector with no query isn't offered to a read-only worker at all.
+- `shell`, `fs`, `artifact`, `execution-map`, `background`, `ask`, `delegate`, and `mcp` are built in; their names are taken.
 - To register several connectors, pass them together: `ctx.exec('kvcoder.connector.register', { connectors: [notesConnector, tagsConnector] })`. They are checked first and stored together, so either all are registered or none is, and it is faster at start than one call each. Keep each connector in its own file, exporting the object you register.
 
 ## What the agent can't do
@@ -73,6 +75,10 @@ Together these let the person, and not the agent, switch a capability on: kvbuil
 
 A **section** is text added to the agent's system prompt. Set one with `kvcoder.section.set { id, title, order, content, global?, sessionId? }`: `global: true` reaches every workspace's prompts, `sessionId` one session's, neither the calling job's workspace. A section is at most 16 KB, and all sections a prompt could reach are at most 64 KB together (`TOO_LARGE`). Sections are stored until removed (`kvcoder.section.remove`). See `kvman-docs get @kvman/kvcoder sections`.
 
+## Artifacts from your extension
+
+`kvcoder.artifact.write` and `kvcoder.artifact.edit` are public. They take `{ sessionId, payload }`, where `payload` is that of the `artifact` connector's `write` (`{ id, title, format?, content }`) or `edit` (`{ id, edits: [{ oldText, newText }] }`). Your extension can write an artifact into any chat of the job's workspace, with the agent's limits, and the chat shows it as it shows the agent's.
+
 ## Events
 
 kvcoder offers fixed points others register handlers for: `kvcoder.session.created`, `.deleted`, `.forked`, `kvcoder.turn.started`, `.ended`, and `kvcoder.session.waiting`. Register with `kvcoder.handler.register { point, command }` (your own public command; one handler per point per extension, cleared at each start). The inputs carry ids and totals, never message contents.
@@ -94,6 +100,6 @@ Prefer pull when the owner is optional, or when contributors shouldn't need the 
 ## Next
 
 - [agents-and-tools.md](agents-and-tools.md)
+- [products.md](products.md)
 - [documenting-your-extension.md](documenting-your-extension.md)
 - [testing.md](testing.md)
-- [sdk.md](sdk.md)

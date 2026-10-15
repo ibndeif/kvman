@@ -36,23 +36,36 @@ More detail: [workspaces.md](workspaces.md).
 
 ### 5. Ask the agent for something
 
-Open the **Chat** page and describe what you want: "List the files in this folder", "Explain what this project does", "Add a hello-world test". The agent shows you each command it wants to run and asks before risky ones.
+Open the **Chat** page and describe what you want: "List the files in this folder", "Explain what this project does", "Add a hello-world test". The agent shows each call it makes as a card, and asks before risky ones. For larger work it shows you its plan, the execution map, and starts when you agree.
 
-More detail: [coding-app.md](coding-app.md).
+More detail: [coding-app.md](coding-app.md) and [the-agent.md](the-agent.md).
 
 ## All pages
 
-- [installing.md](installing.md) — installing kvman, every flag, the home folder, stopping, updating, platforms
+**Getting started**
+
+- [installing.md](installing.md) — installing kvman, every flag, the home folder, stopping, updating, removing, platforms
 - [first-run.md](first-run.md) — what happens the first time you start kvman
 - [web-app.md](web-app.md) — the app in your browser: sidebar, pages, status bar, language, theme
-- [workspaces.md](workspaces.md) — Home, folders, and what a second `kvman` does
+- [desktop-app.md](desktop-app.md) — kvman in its own window
+- [workspaces.md](workspaces.md) — Home, folders, closed workspaces, and what a second `kvman` does
 - [models-and-providers.md](models-and-providers.md) — connecting AI providers, the default model, your own server
-- [coding-app.md](coding-app.md) — chats, steps, the shell, approvals, connectors, artifacts, attachments
+
+**Working with the agent**
+
+- [coding-app.md](coding-app.md) — chats, the send box, call cards, approvals, artifacts, the panel, long chats
+- [the-agent.md](the-agent.md) — its method, the execution map, connectors, approval modes, workers, MCP servers
+
+**Changing kvman**
+
 - [extensions.md](extensions.md) — what runs, installing and removing extensions
 - [presets.md](presets.md) — what a preset is, making your own
 - [settings-and-secrets.md](settings-and-secrets.md) — kvman's own settings, each extension's settings, and where secrets live
-- [building-kvman.md](building-kvman.md) — starting `/build-kvman` and asking the agent to change kvman
+- [building-kvman.md](building-kvman.md) — `/build-kvman`: asking the agent to change kvman or build a product
 - [building-extensions.md](building-extensions.md) — building an extension with the agent's help
+
+**When something is wrong**
+
 - [troubleshooting.md](troubleshooting.md) — error codes in plain words, and the fix
 - [privacy-and-security.md](privacy-and-security.md) — what stays on your machine, what leaves it
 

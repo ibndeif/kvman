@@ -23,7 +23,7 @@ Register a public query named `<namespace>.ui.get` that takes `{}` and returns:
 - A **nav** item points at one of your own pages, one that has no params.
 - A **panel** is a side area opened from a strip of icons; one is open at a time, and it shows on every page.
 - A **status** item is a line in the status bar fed by a query: `text` is a key whose `params` may use `{ "$output": field, "format"?: "compact" | "usd" }` read from the query's output (a dotted path is allowed). Its query reruns after every command the UI runs, when a job the UI started ends, and every 30 seconds.
-- The preset decides the home page: `kvwebui.home` is required, preset-only, and names a page with no params, such as `notes.list`.
+- The preset decides the home page: `kvwebui.home` is preset-only and names a page with no params, such as `notes.list`. Without a value it is the built-in Extensions page, so a project that depends on kvwebui passes `npm run check` without setting it.
 
 kvwebui validates every answer. An extension whose answer is invalid, or whose `ui.get` fails, contributes nothing, and a dismissible error card names it; others are unaffected. An answer is invalid when it names an unknown component or a query that isn't public, a nav item points at a page with params or at a page that isn't yours, an id repeats, an icon isn't a lucide name, a form's command isn't a known public command, a `$param` names a param its page doesn't declare, or a `setting` view is outside `configuration` or names a key that isn't yours.
 
@@ -55,7 +55,7 @@ A view is a JSON tree of built-in components. Every text is a translation key, w
 | `card` | `{ title?, children }` |
 | `heading` | `{ text, params?, level: 1 \| 2 \| 3 }` |
 | `text` | `{ text, params? }` |
-| `markdown` | `{ text, params? }` (translated Markdown) or `{ query, input, field }` (Markdown from data) |
+| `markdown` | `{ text, params? }` (translated Markdown) or `{ query, input, field }` (Markdown from data); a fenced `mermaid` block is drawn as a diagram |
 | `table` | `{ query, input, columns, rowActions?, rowLink?: { page, params? }, empty? }` |
 | `list` | `{ query, input, item: View, empty? }` |
 | `detail` | `{ query, input, fields }` |
@@ -114,11 +114,17 @@ configuration: {
 
 | Setting | Default |
 |---|---|
-| `kvwebui.title` | `kvwebui.title.default`; preset-only |
-| `kvwebui.home` | none: required and preset-only |
+| `kvwebui.title` | `kvwebui.title.default` ("kvman"); preset-only |
+| `kvwebui.home` | `kvwebui.extensions`; preset-only: a full page id without params |
 | `kvwebui.nav.order` | `[]` |
-| `kvwebui.nav.hidden` | `[]` |
+| `kvwebui.nav.hidden` | `[]`: full nav ids left out; may name the built-in `kvwebui.settings` and `kvwebui.extensions`, which stay reachable by their address |
+| `kvwebui.status.hidden` | `[]`; preset-only: full ids of status items not shown, and `kvwebui.folder` for the workspace folder |
+| `kvwebui.workspacePicker` | `true`; preset-only: `false` hides the top bar's workspace picker |
 | `kvwebui.theme` | `system` (`light`, `dark`); global only |
+
+A product's preset uses these to hide kvman's own screens: see [products.md](products.md).
+
+The workspace of id `home` is shown as "Home" (a translated text), never by its folder's name. A component that shows a workspace's name does the same.
 
 ## Next
 

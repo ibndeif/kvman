@@ -13,10 +13,10 @@ const userGuide = path.join(root, 'docs', 'user-guide');
 
 const developerPages = [
   'README', 'getting-started', 'anatomy', 'sdk', 'jobs', 'storage', 'views', 'components', 'localization', 'connectors', 'agents-and-tools', 'documenting-your-extension', 'presets',
-  'testing', 'preview-and-hot-reload', 'kernel-api', 'http-api', 'errors', 'publishing', 'architecture', 'contributing',
+  'products', 'testing', 'preview-and-hot-reload', 'kernel-api', 'http-api', 'errors', 'publishing', 'architecture', 'contributing',
 ];
 const userPages = [
-  'README', 'installing', 'first-run', 'web-app', 'workspaces', 'models-and-providers', 'coding-app', 'extensions', 'presets', 'settings-and-secrets',
+  'README', 'installing', 'first-run', 'web-app', 'desktop-app', 'workspaces', 'models-and-providers', 'coding-app', 'the-agent', 'extensions', 'presets', 'settings-and-secrets',
   'building-kvman', 'building-extensions', 'troubleshooting', 'privacy-and-security',
 ];
 

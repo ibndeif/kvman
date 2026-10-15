@@ -18,7 +18,7 @@ npm i -g kvman @kvman/testkit --no-fund --loglevel=error
 kvman-new ./notes --name @me/notes --namespace notes
 ```
 
-`kvman-new` writes the project into `./notes` and runs `npm install` in it. That install is the only step that needs the network. It prints the next steps. Look at what it wrote:
+`kvman-new` writes the project into `./notes`, starts a Git repository there (when `git` is on your PATH and the folder isn't already inside one; it makes no commit), and runs `npm install`. That install is the only step that needs the network. It prints the next steps. Look at what it wrote:
 
 | File | What it is |
 |---|---|
@@ -30,6 +30,7 @@ kvman-new ./notes --name @me/notes --namespace notes
 | `test/extension.test.ts` | a test that loads the extension in a real kernel |
 | `docs/` | the platform guides: `sdk.md`, `i18n.md`, `presets.md` |
 | `AGENTS.md`, `CLAUDE.md` | instructions any assistant reads first |
+| `.gitignore` | `node_modules/` and `dist/` |
 
 Add `--web` to also get a sample Vue component and its build.
 

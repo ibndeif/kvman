@@ -47,9 +47,14 @@ kvman shows a failure as a plain sentence. Under **Details** (in the app) or in 
 | The agent says there is no connector `kvman`, `ext`, `preset`, `preview`, or `docs` | Type `/build-kvman` in that chat first: the tools for changing kvman are off until you do. |
 | `kvbuilder/NPM_FAILED` while building an extension | Install Node.js with npm and check your network; the files the agent wrote are kept, so ask it to run `npm install` again. |
 | `kvbuilder/FOLDER_NOT_EMPTY` | Ask for a new or empty folder. |
+| `kvbuilder/GIT_FAILED` | A new project couldn't start its Git repository; the message ends with Git's last lines, and the files are kept. |
 | `kvbuilder/NOT_A_PROJECT` | The folder has no `package.json` with a `kvman` field. |
 | `kvbuilder/NO_FREE_PORT` | Ports 3738 to 3837 are all in use; stop something that uses them. |
 | `kvbuilder/PREVIEW_FAILED` | The preview didn't start; the message ends with its last log lines. |
+
+## Settings that moved
+
+- **`kvcoder.shell.approval` is now `kvcoder.approval`**, in the **Agent** card of Coder's page. A value saved under the old key isn't carried over, so you are back on **Ask only for risky calls** until you choose again. A preset of your own that names the old key stops kvman with `VALIDATION_FAILED`: rename the key in the preset.
 
 ## Migrating from kvdev
 

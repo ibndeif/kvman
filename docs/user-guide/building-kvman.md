@@ -45,6 +45,17 @@ Ask in your own words: "I want a page for my notes", "make the app look calmer".
 
 The model only offers models you can actually call: those of a provider you have connected, and those of your own servers. Asking for another one fails with a message, and the default model stays as it was.
 
+## A product for other people
+
+You can ask for an app that other people will use, such as "a research assistant for PhD students". The agent builds it as a separate app: extensions for what the product needs, and a preset of its own that:
+
+- gives the agent the product's identity and a general way of working, with no execution map and no developer words;
+- gives the Chat page the product's own heading and prompt text;
+- turns off the tools its users don't need, such as the shell and the file tools;
+- hides kvman's own screens (Settings, Extensions, the workspace picker, and status items).
+
+To try the product's chat in the preview, add a model key on the **preview's own** Models page. No key is copied from your kvman, and the preview's key is deleted when the preview stops. A finished product can ship as a desktop app of its own ([desktop-app.md](desktop-app.md#apps-built-on-kvman)); the details are in the developer documentation, [products.md](../developers/products.md).
+
 ## What needs a restart
 
 Changes to **extensions** and to the **preset** are saved to your preset file and applied the next time kvman starts, because kvman reads the preset once, at the start. After such a change the agent asks to restart kvman for you (you are asked first, like every change), and the Extensions page shows **Restart kvman to apply** with a **Restart now** button. A restart stops what is running, such as a chat that is still working, a preview, or a server the agent started; the page comes back by itself. A new extension that isn't bundled asks for your trust in the terminal where kvman runs, and kvman waits there for your answer.

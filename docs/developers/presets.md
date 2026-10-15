@@ -21,7 +21,7 @@ A preset is the whole app for one run:
 
 - `name` is a non-empty string. A preset with an unknown key is invalid.
 - `extensions` maps a package name to a source: `bundled` (a core extension that ships with kvman: kvai, kvwebui, kvcoder, kvbuilder), `npm:<exact version>`, or `path:<folder>` (relative to the preset file).
-- `settings` is the preset-level value of any setting. A key with no default must be set here; a preset-only key (`scopes: []`) can only be set here. `kvwebui.home` is required whenever kvwebui loads.
+- `settings` is the preset-level value of any setting. A key with no default must be set here; a preset-only key (`scopes: []`) can only be set here. `kvwebui.home` names the page at `/`; without it, that is the Extensions page.
 
 kvman validates the preset at start, and its settings again once the extensions have loaded. An unknown key, an invalid value, or a missing required key stops kvman with `VALIDATION_FAILED`.
 
@@ -74,8 +74,13 @@ kvman-preset check ./notes-app.json                   # schema, extensions, sett
 
 A preset can name code, so kvman asks before it runs a non-bundled extension version it hasn't accepted, in the terminal at start (`--yes` accepts). See [anatomy.md](anatomy.md).
 
+## A preset as a product
+
+A preset can make kvcoder a product of its own: the agent's identity and method (`kvcoder.profile`), the tools it has (`kvcoder.connectors.disabled`), and the screens people see (`kvwebui.nav.hidden`, `kvwebui.status.hidden`, `kvwebui.workspacePicker`). It can then ship as a desktop app with `pnpm desktop:brand`. See [products.md](products.md).
+
 ## Next
 
+- [products.md](products.md)
 - [kernel-api.md](kernel-api.md)
 - [preview-and-hot-reload.md](preview-and-hot-reload.md)
 - [publishing.md](publishing.md)

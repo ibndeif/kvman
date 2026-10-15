@@ -48,6 +48,7 @@ A pnpm monorepo, Node 24, TypeScript 6.0 strict.
 | `packages/kernel` | Everything the kernel does, including HTTP. Published as `@kvman/kernel`. | `sdk`, its declared dependencies |
 | `packages/cli` | The `kvman` bin; it runs the kernel in the same process. Published as `kvman`, with the bundled presets inside (`packages/cli/presets/`); the bundled extensions are its dependencies. | `kernel`, `sdk` |
 | `packages/testkit` | `createTestKernel` and the bins `kvman-check`, `kvman-new`, `kvman-preset`, `kvman-preview`, `kvman-docs`. Published as `@kvman/testkit`. | `kernel`, `sdk` |
+| `packages/desktop` | The desktop app: a Tauri shell (Rust, and a small TypeScript home screen) that runs `kvman --pipe` and shows it in a window. Not published to npm. | nothing: it runs `kvman` as a program |
 | `extensions/*` | kvai, kvwebui, kvcoder, kvbuilder. Each is published under its own name, such as `@kvman/kvai`. | `sdk`, their own npm dependencies; never `kernel`; another extension only when it is a `kvman.dependencies` entry: `import type`, or a runtime import of a subpath it exports (which may import only `sdk` and holds no state) |
 
 The **import walls** are enforced by ESLint and are never bypassed. They make the kernel replaceable and extensions independent: an extension can't reach into the kernel, so everything it does goes through the SDK and the job calls, which is what makes a preset's extension set free to change. kvbuilder finds the testkit's bins as files of its own dependency and runs them as child processes, so it never imports the testkit either.
@@ -64,6 +65,8 @@ The **import walls** are enforced by ESLint and are never bypassed. They make th
 | `packages/cli/src` | argument parsing, preset lookup, the lock, hand-over |
 | `packages/testkit/src` | the test kernel, the fake clock and OpenAI server, and each bin |
 | `extensions/<name>/src`, `locales`, `docs`, `web` | an extension's code, texts, pages, and Vue app |
+| `packages/desktop/src-tauri/src`, `src` | the desktop shell's Rust, and its home screen |
+| `release/` | the local release candidate, and the desktop runtime and brand builds |
 | `plan/` | the specification: names, shapes, error codes, and limits are exact there |
 
 ## Next

@@ -1,156 +1,84 @@
 # The coding app
 
-This page is for using kvcoder, the chat-and-agent extension that comes with the `coder` preset. You will be able to start chats, follow what the agent does, approve or deny its commands, answer its questions, read its artifacts, and stop or resume work.
+This page is for using kvcoder, the chat-and-agent extension that comes with the `coder` preset. When you finish, you can start chats, send messages and files, read what the agent does, answer its questions and approvals, read its artifacts and its plan, and stop or resume work.
 
-## Chats and sessions
+How the agent decides what to do, and the tools it uses, are on their own page: [the-agent.md](the-agent.md).
 
-- A **chat** (session) is a conversation with the agent, stored in the current workspace. Home has its own chats; each folder you open has its own.
-- The **Chat** page shows the conversation; the left column lists your chats, grouped into Today and Earlier, with a **New chat** button.
-- Until the first answer, a chat's title is the start of your first message. kvman then writes a short title for it. You can rename one from the **More** menu (⋯).
-- The **More** menu also has **Fork into a new chat** (copy the conversation through a point), **Export as JSON**, **Summarize earlier messages now**, and **Delete the chat**.
-- Long chats show **N earlier messages · Export** instead of the full history.
+## Chats
+
+- A **chat** is a conversation with the agent, stored in the current workspace. Home has its own chats, and so does each folder you open.
+- The **Chat** page asks "What should we build in *workspace*?" and shows one line on how the agent asks for approval, such as "The agent asks you before risky actions.", with **Change**, which opens the setting. Write there to start a new chat.
+- The left column lists your chats, grouped into Today and Earlier, with **New chat**. The open chat's row is tinted and its title is heavier. A chat waiting for you shows **Needs you**.
+- Until the first answer, a chat's title is the start of your first message. kvman then writes a short title for it.
+- The **⋯** menu in the header has **Rename**, **Fork into a new chat** (a copy of the conversation up to a point), **Export as JSON**, **Summarize earlier messages now**, and **Delete the chat**.
+- A link to a chat of another workspace says "This chat isn't in this workspace." and opens this workspace's newest chat.
 
 ## Sending and stopping
 
-Type in the box at the bottom and press Enter (Shift+Enter for a new line). While the agent works:
+Type in the box at the bottom and press Enter. Shift+Enter starts a new line. While the agent works:
 
-- You can send another message; it is queued and the agent reads it after its current step.
-- The **Stop** button cancels the turn: the current step, its helpers' turns, and its pending questions. Anything already in the transcript stays; you can send another message to go on.
-- After an answer, the conversation shows the turn's time and cost (hover for its tokens), and the header keeps the chat's totals.
+- You can send another message. It is queued, and the agent reads it after its current step.
+- **Stop** cancels the turn: the current step, its workers' turns, and its pending questions. What is already in the conversation stays, and you can send another message to go on.
 
-The send box also holds:
+The agent knows when you wrote: each message reaches it with the day, date, and time you sent it, in your computer's time zone.
 
-- **The model and the thinking level** of the chat, after the attach button. A change applies from the next step.
-- **Files.** Attach them with the paperclip, or paste them from the clipboard. An image (PNG, JPEG, GIF, or WebP) goes to the model as a picture. Any other file is copied into your workspace folder under `attachments/` when you send, and the message names it, so the agent opens it with its file commands. Nothing there is overwritten: a second `notes.md` becomes `notes-2.md`.
-- **Slash commands.** Type `/` at the start for the chat's own actions: `/compact` (summarize the earlier messages now), `/export`, `/fork`, `/new`, `/prompt` (show the exact prompt of the next step, or go back), and `/rename <title>`. Extensions add their own after these: kvbuilder adds `/build-kvman`, which starts changing kvman itself in this chat ([building-kvman.md](building-kvman.md)). Up and Down choose, Tab completes, Enter runs. A slash command is never sent to the agent. On the Chat page, before a chat exists, only the commands extensions add (such as `/build-kvman`) run, and they start a new chat; the chat's own actions are greyed there. The same actions are in the **⋯** menu of the header.
+## The send box
 
-The agent knows the date and time: each message you send reaches it with the day, date, and time you sent it, in your computer's time zone. What you see in the chat doesn't change.
+- **The model and the thinking level** of the chat sit after the attach button. Each opens a list above the box. A change applies from the next step, and the model you pick becomes the default for new chats too.
+- **Files.** Attach them with the paperclip, or paste them. In the desktop app on Linux, Ctrl+V with a copied image attaches it.
+  - An image (PNG, JPEG, GIF, or WebP) goes to the model as a picture, and the model is told its name and that it isn't a file in your folder. A model that takes no images refuses it.
+  - Any other file is copied into your workspace folder under `attachments/` when you send, and the message names it, so the agent opens it with its file commands. Nothing there is overwritten: a second `notes.md` becomes `notes-2.md`.
+- **Slash commands.** Type `/` at the start of the box: `/compact` (summarize the earlier messages now), `/export`, `/fork`, `/new`, `/prompt` (show the exact prompt of the next step), and `/rename <title>`. Extensions add their own after these, such as `/build-kvman` ([building-kvman.md](building-kvman.md)). Up and Down choose, Tab completes, and Enter runs. A slash command is never sent to the agent. On the Chat page, before a chat exists, only the commands that extensions add run, and they start a new chat.
 
-Beside the chat's title are its time and cost, and **Memory**, which says how full the model's memory is now, for example "44 min · $1.72 · Memory 15% full". Hover either one for the tokens: how many the chat has used, and how many the model holds now out of how many, with the share at which earlier messages are summarized. If a chat can't be loaded, the page says why and offers **Try again** and **Export as JSON**.
+## Reading a turn
 
-Each call the agent makes is a card. Its time is the whole wait: the model writing the call, then the call running (open the card for the two parts). A call that failed says **Failed**; the agent reads the error and usually tries another way.
+A turn is a chain of steps. In each step the model answers, and its answer may hold calls, which run before the next step. The turn ends when the agent answers in text alone.
 
-## What a turn looks like
+- **While it works**, the line at the end of the conversation says what the step is doing, then the turn so far, such as "Turn: 18 steps · about $0.84". A failed model call is retried by itself and shows **Retrying… (2 of 4)**.
+- **Each call is a card.** Closed, it shows what the agent says it is doing, then one line with what was done and the outcome, such as `Edit src/app.ts +12 −3` or `$ npm test`, and the time it took, from the model writing the call to its end. Open it to see the diff, the output, or the fields. A call the agent judged risky has the chip **Risky**.
+- **A failed call** has a red border, **Failed**, and one short reason, such as "The command failed." or "You denied this call.". **Show details** shows the raw error. A request of the agent's that wasn't valid ran nothing: it shows **Not run**, without the red, and the agent usually corrects it in its next step.
+- **After the answer**, the conversation shows the turn's time and cost. Hover for its tokens.
 
-A turn is a chain of steps. Each step calls the model, which streams its answer. The agent:
+The header shows the chat's time, its cost, and **Memory**, how full the model's memory is now: "44 min · $1.72 · Memory 15% full". Hover either for the tokens. If a chat can't be loaded, the page says why and offers **Try again** and **Export as JSON**.
 
-1. Reads your message and the workspace (files, config, tests) — it looks before it assumes.
-2. Explains what it is about to do, then makes a call — several calls in one reply run at the same time.
-3. Shows each call as a card: a sentence saying what it does, then the connector and command it used (`fs · edit`) and how long it took. Open the card to see exactly what ran and what came back.
-4. Continues until it answers in text, which sends no more calls and ends the turn.
+## Approvals and questions
 
-Long answers and results are stored as **artifacts**, not dumped into the chat.
+- **An approval** shows each call the agent wants to run: its description, its line or the file it would change, and **Deny** and **Allow** in a row under it. With several pending, **Deny all** and **Allow all** close the card. A denied call tells the agent "denied by the user". When kvman asks is the setting `kvcoder.approval` ([the-agent.md](the-agent.md#approval)).
+- **A question** is a card with free text, a choice (pick one or several, or write your own), or yes or no. Before larger work, the agent asks you this way to agree to its plan. A question you skip shows **Skipped**.
+- A message you send in the box also dismisses the pending questions and denies the pending calls.
 
-## How the agent works
+## The panel: artifacts and the execution map
 
-The agent of a chat is told to work as a lead engineer who owns the result: it decides, plans, and executes, and it scales the process to the task.
+When the agent has something for you to read (a report, a design, a page), it stores it as an **artifact**. When it plans larger work, it draws an **execution map**. Both show in the panel beside the conversation.
 
-- **A small task** (one file, or about five calls) is just done and checked: no execution map, no worker.
-- **A larger task** goes through eight steps:
-  1. **Understand.** It reads your request, then the files, config, and tests, and the guides where there are any. It is told never to assume or invent a name, a path, an API, or a behavior.
-  2. **Clarify.** When the request is unclear, contradicts the code, or leaves out something that changes the result, it asks you, one question per card, with its recommended option first. It doesn't ask what it can find by looking, and it decides an ordinary detail that is easy to change and tells you what it chose.
-  3. **Plan.** Only after it understood the request, looked at what exists, and has your answers, it plans on the **execution map**: the goal, then steps that each say what they come after, what they use, and how they will be checked. Steps with nothing between them run together. For a large, ambiguous, or risky task it asks you to confirm the map before it starts. To change the map, ask the agent.
-  4. **Execute.** It takes the steps that are ready, independent ones together, marks each as it starts, and marks it done only with evidence: what it ran and what that showed.
-  5. **Stay on the task.** A problem it notices that your task doesn't need is not looked into. It goes on the map's "Noted for later" list and is reported at the end.
-  6. **Delegate.** It hands a part to a worker only when it is separate work that runs beside its own, or a fresh review of a finished change, and checks what comes back.
-  7. **Show what you will look at.** When the task includes a screen, a page, or a style, it shows it in an artifact: the design before it is built when the layout is a real choice, and the running app once it runs.
-  8. **Finish.** It treats the work as done when it is ready for production: it does what you asked, handles the errors and edge cases that will happen, follows the project's conventions, passes its checks and tests, and leaves nothing temporary behind. Its last answer says what was done, what was checked, what is unchecked, what still runs, and what it noted for later. When it found how your project is built, tested, or run and your `AGENTS.md` doesn't say it, it offers to add a short Commands section there, and asks you first.
-- **Always.** It decides from evidence (something it read, ran, or was told) and says what it checked and what it didn't. Before it tells you something works, it runs it or requests its address.
-
-These are instructions to a model, not guarantees: read the execution map and the call cards, and stop the turn when it goes the wrong way. `/prompt` shows the exact text.
-
-## Connectors: how the agent acts
-
-Everything the agent does goes through a **connector**: a named set of commands. It has no other way to touch your files or your machine. Built in:
-
-- `shell` — runs one line in a real shell, in the workspace folder: `bash` on Linux and macOS, PowerShell on Windows. Each line starts fresh (a `cd` doesn't carry over).
-- `fs` — reads, lists, and searches files, and writes and edits them, all inside the workspace folder.
-- `artifact` — stores a document you can read (below).
-- `execution-map` — plans a larger task as steps you watch on a diagram beside the chat, and tracks what is done (see "How the agent works").
-- `ask` — asks you a question and waits for your answer (below).
-- `delegate` — hands a self-contained part to a worker, which does it in a helper chat and reports back.
-- `background` — checks on, waits for, or stops something the agent left running (below).
-- `mcp` — uses the tools of the MCP servers you add (below). It is there only while you have at least one server.
-
-Other extensions add connectors (kvbuilder adds `ext`, `preset`, `preview`, `kvman`, and `docs`, in a chat where you typed `/build-kvman` — see [building-kvman.md](building-kvman.md)), and a preset can add a program on your machine, such as `git` or `gh`, as a connector with the `kvcoder.connectors` setting. A program is a connector like any other: it is in the same list on Coder's page, with the same switch.
-
-## MCP servers
-
-An MCP server gives the agent more tools: your issue tracker, a database, a browser. You add servers yourself; kvman ships with none.
-
-Open **Extensions**, then **Coder**, and press the cog beside `mcp`. **Add a server** asks for:
-
-- **Name** — what the agent calls it, such as `github`. It can't be changed later.
-- **Description** — what the server is for. The agent reads it to decide when to use the server.
-- **Runs as** — **A command on this computer** (a **Command** such as `npx`, with its **Arguments**, one per line) or **A URL** (a server reached over HTTP).
-- **Environment variables** (for a command) or **Headers** (for a URL) — a name and a value each. The values are kept as secrets and are never shown again: a stored one shows **Set**, with **Replace**.
-
-Each server in the list says **Ready · N tools**, **Sign-in needed**, or **Could not connect** with the reason; it is checked when you open the list, after you save it, and with **Check again**. The list is saved for all workspaces or only this one, as the page's switch says; a workspace with its own list uses only that list.
-
-**Signing in.** A server at a URL that needs your account says **Sign-in needed** and has a **Sign in** button. It opens the server's own sign-in in a new tab; when you finish there, the tab comes back to kvman and says **Signed in to \<name\>. You can close this tab.** Back on Coder's page the server turns **Ready**, and **Sign out** forgets the sign-in. If no tab opens, allow pop-ups for kvman and press **Sign in** again. A server that only takes a key needs no sign-in: give the key as a header.
-
-What to know:
-
-- The agent sees your servers' names and descriptions, and asks a server for its tools when it needs them.
-- A command server is started for each call and stopped when the call ends, so it keeps nothing between calls. It runs in a temporary folder of its own, which kvman deletes, so its logs and snapshots don't land in your project; it reads your project's folder from the variable `KVMAN_WORKSPACE`. To use a server that keeps state, such as a browser, across several tools, the agent calls them in one `mcp run`.
-- The agent never signs in for you: when a sign-in has run out and can't be renewed, the call fails and tells the agent you must sign in again.
-- A tool call asks you first when the agent marks it risky, always when approval is set to ask, and never when it is set to never (below), exactly like a shell line.
-- Only run servers you trust: a command server is a program on your machine, and a tool's result goes into the conversation, so it is sent to the model.
-
-## Approval
-
-Five kinds of call can change things outside the agent's own work: a shell line, a program such as `git`, writing a file, editing a file, and calling an MCP server's tool. The `kvcoder.approval` setting controls when kvman asks you first:
-
-- **auto** (the default) — kvman asks unless the agent marks the call as not risky. A call is risky when it could lose something that isn't the agent's own work, or reaches outside the workspace.
-- **ask** — every such call asks.
-- **never** — nothing asks. Every call runs at once, including the two kinds below that ask in the other modes. The agent's own questions to you still wait for your answer. Choosing it asks you to confirm first, because the agent then runs commands and changes files with nobody looking, and what it reads (a file, a web page, a tool's answer) can steer it. Approval was never a sandbox; this removes the last stop before a call.
-
-You choose the mode on Coder's page (**Extensions → Coder**), in the **Agent** card, for all workspaces or only this one.
-
-Two more kinds ask in both **auto** and **ask**: a connector's command that its extension marked as needing your approval, and a program worker you set to ask before a run. The `kvman` connector's changes to the app are such commands (see [building-kvman.md](building-kvman.md)).
-
-When a call asks, you see a card with its description and the line it would run, or the file it would change, with **Allow**, **Deny**, and **Allow all** / **Deny all** when several are pending. A denied call returns "denied by the user" to the agent. Reading, listing, and searching files never ask.
-
-A shell line times out after 120 s by default (the agent may ask for up to 600 s). When a line ends, anything it left running is stopped.
+- **One thing at a time.** The panel's header shows the title of what it shows. With several things (the map counts as one), the title is a button that opens the list of them.
+- **Updates show themselves.** When an artifact or the map is new or changes, the panel opens on it, also after you closed it. The artifacts button in the header (an icon with the count) opens and closes the panel.
+- **Width.** Drag the panel's edge beside the conversation, or focus it and press Left or Right. A double-click returns to the starting width. The width goes from 20 rem to 70% of the chat area, and your browser keeps it for every chat. On a narrow screen the panel opens over the conversation.
+- **An artifact** has **Preview** and **Source**, its kind and version, and buttons to open a page in a new tab, copy, and close. An HTML artifact runs in an isolated frame: its scripts work, but they can't reach the network, kvman, or your browser's data. A `url` artifact shows a page of a local server (`localhost` or `127.0.0.1`).
+- **Diagrams.** A fenced `mermaid` block, in an artifact or an answer, is drawn as a diagram.
+- **The execution map** is the agent's plan as a diagram of steps. Press a step to open its details. See [the-agent.md](the-agent.md#the-execution-map).
 
 ## Background work
 
-For a dev server or anything else that must keep running, the agent starts the line in the background. The chat's header then shows a **Running** chip: open it for each run's time, its local links, its logs, and a **Stop** button. The agent can read a run's output and stop it too. A background run keeps going when you stop a turn, and ends when it exits, when you or the agent stop it, when you delete the chat, or when kvman stops.
+When the agent leaves something running, such as a dev server, the chat's header shows a **Running** chip. Open it for each run's time, its local links, its logs, and **Stop**. A background run keeps going when you stop a turn. It ends when it exits, when you or the agent stop it, when you delete the chat, or when kvman stops.
 
-## Artifacts
+When a worker program's run changes what is staged in Git, its card and its row in **Running** say so, with **Restore staging**, which puts the staging area back as it was before the run. It changes no file and no commit. A run that moved `HEAD` (a commit, a checkout, a reset) can't be restored this way, and its card says so.
 
-When the agent has something for you to read — a report, a design, a page — it stores it as an **artifact**. The artifact panel opens beside the conversation (one artifact at a time, a row of titles when there are several), with **Preview** and **Source** views, its kind and version, and icon buttons to open a page in a new tab, copy, and close. An update to an open artifact doesn't reopen a panel you closed. The artifacts button in the header (an icon with the count) opens and closes the panel.
+## Long chats
 
-HTML artifacts run in an isolated frame: their scripts work, but they can't reach the network, kvman, or your browser data. A `url` artifact shows a local dev server page (`localhost` or `127.0.0.1`, never kvman itself).
+A model can hold only so much. When a chat reaches 60% of the model's memory (`kvcoder.compactAt`), its earlier messages are summarized; the newest 10 stay whole (`kvcoder.compactKeep`). kvman adds what it knows for certain to the summary: your own messages, the execution map, the files the chat changed, what still runs, and the artifacts. So the agent goes on without reading everything again. A long chat shows **N earlier messages · Export** in place of its full history.
 
-## `ask` questions
+## After a stop, a failure, or a restart
 
-When the agent needs a decision, it shows a question card: free text, a choice (pick several, or add your own), or a yes/no confirm. You answer in the card; a later answer fails `kvcoder/QUESTION_NOT_FOUND` if the turn was cancelled meanwhile. Your message in the box also dismisses pending questions and denies pending calls.
-
-## Workers
-
-The agent can delegate a separate, self-contained part to a worker: another agent that does it in a hidden helper chat. You see its steps stream in its card, which names the worker, and its approvals show up in your chat. A worker asks you nothing and writes no artifact: its answer, with any question it has, goes to the chat's agent, which is the only one that talks to you. A worker gets a shorter set of instructions than the chat's agent: do the one task it was given without re-planning or widening it, check it, and return what it did, the evidence, and what is left. It can't delegate further. A worker the agent left working in the background shows in the **Running** chip too.
-
-kvman comes with five workers: `general` for any separate task, and four specialists, each with its own instructions: `ui-ux` designs the experience and the look of a screen or flow, to usability and accessibility standards; `architect` designs the structure of a change inside your project's own patterns; `tester` is a QA engineer that writes and runs test cases, automated and by hand as a person would, on the critical flows, security, and performance, and reports the issues; and `reviewer` reports wrong style, needless complexity, and unclean or unclear code. The architect and the reviewer only read. To manage them, open **Extensions → Coder**, and press the cog on the `delegate` row. There you turn a worker off (the agent then no longer sees it), edit its instructions, choose which connectors it may use, give it its own model or thinking level (or leave them the same as the chat), remove it, or add your own. Reset brings the five back, with the instructions of the version you run: a list you changed keeps its own words when kvman is updated.
-
-A worker can also be a coding program installed on this computer: **opencode**, **pi**, or **Claude Code**. Pick its kind when you add it. Such a worker runs the program in your workspace folder with the task, signs in the way the program itself does, and spends on that program's account, not on the chat's. You choose whether kvman asks you before each run or starts at once, how many minutes a run may take (1 to 120), and the program's own options, such as its model. While it runs, the chat shows a card with the worker, the time, and **Stop**; it is also in the **Running** chip, with its output once it ends. The program edits files and runs commands on its own: kvman's approval cards don't cover what it does inside a run. If the program isn't installed, the worker's row says so and the agent isn't offered it.
-
-## Attachments
-
-The paperclip button attaches images (PNG, JPEG, GIF, or WebP) from your computer. They are sent with your message to a model that accepts image input; a text-only model refuses them.
-
-## Resuming after a stop or restart
-
-- kvman stopped or crashed mid-turn? The chat shows what happened, and you send a message to continue. Suspended chats (waiting on you) survive restarts.
-- While a step runs, the header shows **Working…**, and the activity line tells you what the step is doing; failed model calls retry with **Retrying… (2 of 4)**.
-- A chat waiting on you shows **Needs you** in the list and the status bar shows **Waiting for you: N**.
+- If kvman stopped or crashed in the middle of a turn, the chat shows what happened. Send a message to go on. A chat waiting for you survives a restart.
 - After a failed turn you get **Retry** and **Choose another model** under the notice.
+- The status bar shows **Waiting for you: N** when chats wait for you.
 
 ## Useful settings
 
-On Coder's page (open **Extensions**, then **Coder**): the model a new chat starts with (`kvcoder.model`), the model helpers use when their worker names none (`kvcoder.delegate.model`: the chat's own by default), when it asks you before a call (`kvcoder.approval`, see Approval above), its thinking level (`kvcoder.thinking`), a turn's step limit (`kvcoder.maxSteps`: no limit by default; set a number to cap a turn, or leave it empty for none), when to summarize a long chat (`kvcoder.compactAt`) and how many of its newest messages stay whole when it is (`kvcoder.compactKeep`, 10 by default), and how many chats to keep (`kvcoder.sessions.keep`). The same page lists the agent's **Connectors**, each with a switch that turns it on or off (`kvcoder.connectors.disabled`). The cog beside `shell` opens its own setting, the shell program (`kvcoder.shell.path`); a change is saved as you make it, for all workspaces or only this one, as the page's switch says. See [extensions.md](extensions.md) and [settings-and-secrets.md](settings-and-secrets.md).
+Open **Extensions**, then **Coder**. The **Agent** card holds the model a new chat starts with (`kvcoder.model`), the **Model for workers** (`kvcoder.delegate.model`: the chat's own by default), and **Approval** (`kvcoder.approval`). The page also holds the thinking level (`kvcoder.thinking`), a turn's step limit (`kvcoder.maxSteps`, none by default), when a chat is summarized (`kvcoder.compactAt`) and how many messages stay whole (`kvcoder.compactKeep`), how many chats to keep (`kvcoder.sessions.keep`), and the **Connectors**, each with a switch. Every change is saved as you make it, for all workspaces or only this one, as the switch at the top of the page says. See [extensions.md](extensions.md) and [settings-and-secrets.md](settings-and-secrets.md).
 
 ## Next
 
-- [extensions.md](extensions.md)
+- [the-agent.md](the-agent.md)
 - [building-kvman.md](building-kvman.md)
