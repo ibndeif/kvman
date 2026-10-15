@@ -28,7 +28,7 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
       'text that stands out clearly from its background, and calm colours; every field and every element that shows text the person typed has dir="auto", so Arabic they type reads right to left on any page.',
       "when the mcp connector gives you a browser, try the page's main actions with one `mcp run`.",
       'Your final answer, in plain words and as short as the facts allow, says what was done, what you checked and what it showed, what is unchecked, what still runs in the background, and what you noted for later.',
-      'decide an ordinary detail that is easy to change yourself: say what you chose.',
+      'An ordinary detail that is easy to change: decide it yourself, and say what you chose.',
     ]) expect(lead, phrase).toContain(phrase);
     for (const gone of ['`plan`', '☐', 'artifact edit', 'checklist', 'Scale the process to the task', 'about five calls', 'skip steps']) expect(lead, gone).not.toContain(gone);
     // M2.4-E247: a project's commands are kept in its AGENTS.md (ADR 0069, 4).
@@ -44,7 +44,8 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
       'It is the implementation plan the person reads and agrees to, so make it detailed, not an outline.',
       "A step's description says what it changes and how, naming the files or parts and the approach, in words the person understands without reading the code; its check is the exact command you will run or the thing you will look at.",
       "end the map with the project's own checks (its build, lint, and tests)",
-      'Confirm the plan. The person agrees to the map before you work on it. Once an `execution-map set` that made the map or changed its steps succeeded, and before you start any step, call `ask choice` with other set to true: ask whether to start, with the option that starts first and an option that changes the plan, so the person can write what to change.',
+      'Confirm the plan. The person agrees to the map before you work on it. Once an `execution-map set` that made the map or changed its steps succeeded, and before you start any step, call `ask choice` with other set to true.',
+      'then it asks whether to start, with the option that starts first and an option that changes the plan, so the person can write what to change.',
       'When they ask for changes, set the map again with them and ask again; start only after they chose to start. A change of status with `execution-map update` needs no confirmation.',
     ]) expect(lead, phrase).toContain(phrase);
     for (const gone of ['`ask confirm`', 'Set it in the same reply as your first call', 'For a large, ambiguous, or risky task']) expect(lead, gone).not.toContain(gone);
@@ -93,9 +94,8 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
   it('M2.4-E280 who does a step is chosen by fit and named in uses, and Delegate allows a specialist', () => {
     const lead = workingMethod('lead');
     for (const phrase of [
-      'Choose for each step whoever does it best and fastest, and name it in uses: yourself, with a connector from the list below, for an ordinary change; or a worker of the `delegate` connector whose description fits, when the step needs that skill:',
+      'Choose for each step whoever does it best and fastest, and name it in uses: yourself, with a connector from the list below, for an ordinary or small change; or a worker of the `delegate` connector whose description fits, when the step needs that skill:',
       'a designer for a screen or flow whose design is a real choice, an architect for a structure decision that spans several parts, a tester for tests that are a piece of work of their own, a reviewer for a finished change that is risky or wide.',
-      'A worker starts with none of this conversation, so give it a step only when its skill, or its running beside you, is worth that, and never a small change.',
       'Delegate. A step goes to a worker of the `delegate` connector when the worker does it better or faster than you would: a specialist whose skill the step needs, separate work that runs beside yours, or a fresh review of a change you finished; its entry lists the workers and what each is for.',
       "Don't delegate what a few calls of your own would do, and ask for one review of a piece of work, not several.",
     ]) expect(lead, phrase).toContain(phrase);
@@ -131,5 +131,53 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
       'Use a short list for several items, and no headings or tables in a short reply.',
     ]) expect(lead, phrase).toContain(phrase);
     expect(workingMethod('worker')).not.toContain(rule);
+  });
+
+  it('M2.4-E307 the lead understands the goal behind the request, what exists, and what was left unsaid', () => {
+    const understand = workingMethod('lead').split('\n').find((line) => line.startsWith('Understand. ')) ?? '';
+    for (const phrase of [
+      'Read everything they sent, attached images and files too,',
+      'and what already does part of it, so you build on it and not beside it.',
+      'what done looks like to them, as examples they would check',
+      'what the work changes or must keep working (other callers, stored data, settings, users)',
+      'whether they asked for a goal or for a particular means (a format, a library, a design), and whether that means serves the goal',
+      "what they didn't say that changes the result (who uses it, how much data or load, which platforms and languages, privacy and security, and how good is good enough)",
+      'which of your connectors and workers help, and what is missing.',
+      'through a connector that reaches it rather than from memory',
+    ]) expect(understand, phrase).toContain(phrase);
+    expect(workingMethod('lead')).not.toContain('`docs get`');
+  });
+
+  it('M2.4-E308 the lead sorts what is open into look, decide, and ask, says when a means works against the goal, and asks in one round', () => {
+    const clarify = workingMethod('lead').split('\n').find((line) => line.startsWith('Clarify. ')) ?? '';
+    for (const phrase of [
+      "A fact that looking would answer: look, don't ask.",
+      'A decision only the person can make, or a gap that changes the result, the design, or stored data,',
+      'or would break what exists: ask before any work.',
+      'When the means they asked for works against their goal, or a clearly better way exists, say so and offer both before you build theirs.',
+      'Ask in one round when you can, after you looked and before you plan',
+      'your recommended one first and each option saying what it leads to.',
+    ]) expect(clarify, phrase).toContain(phrase);
+  });
+
+  it('M2.4-E309 the plan question says back what the lead understood, and the map goal is the outcome in the person\'s terms', () => {
+    const lead = workingMethod('lead');
+    expect(lead).toContain('Its question first says in a few lines what you understood: the goal, what done looks like, what stays as it is, and the choices you made for the person; then it asks whether to start');
+    expect(lead).toContain('Give the goal, the outcome the person wants in their own terms, then the steps');
+  });
+
+  it('M2.4-E310 the lead leaves running what the person will try, and still stops what is no longer needed', () => {
+    const finish = workingMethod('lead').split('\n').find((line) => line.startsWith('Finish. ')) ?? '';
+    expect(finish).toContain('Stop what you started in the background and no longer need');
+    expect(finish).toContain('Leave running what the person will try themselves, such as the app or page you built, with its address in a url artifact when it has one.');
+    expect(workingMethod('worker')).not.toContain('Leave running');
+  });
+
+  it('M2.4-E311 the repeated sentences are gone from the lead, and the worker keeps its own method', () => {
+    const lead = workingMethod('lead');
+    for (const gone of ['give it a step only when its skill', 'so delegate only what is worth that', 'Write each file in its own call']) expect(lead, gone).not.toContain(gone);
+    const worker = workingMethod('worker');
+    expect(worker).toContain('Write each file in its own call, with `fs write`.');
+    expect(worker).not.toContain('Read everything they sent');
   });
 });

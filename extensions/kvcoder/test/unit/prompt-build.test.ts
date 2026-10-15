@@ -45,11 +45,12 @@ describe('the prompt builder (08 §8.2)', () => {
       for (const phrase of [
         'No path is fixed: you choose it for each task from what the task is',
         'Never assume or invent names, paths, APIs, or behavior',
-        'ask: put each question in its own `ask` call, with all the calls in one reply, and use `ask choice` whenever you offer options, your recommended one first.',
+        'ask before any work.',
+        'put each question in its own `ask` call, with all the calls in one reply, and use `ask choice` whenever you offer options, your recommended one first and each option saying what it leads to.',
         'plan with `execution-map set`',
         'call `ask choice` with other set to true',
         'mark it done with your evidence',
-        'Write each file in its own call, with `fs write`.',
+        'Leave running what the person will try themselves',
         'A step goes to a worker of the `delegate` connector when the worker does it better or faster than you would: a specialist whose skill the step needs, separate work that runs beside yours, or a fresh review of a change you finished; its entry lists the workers and what each is for.',
         'Brief the worker with the goal, the facts it needs, its limits, and what to return.',
         'You are the one who decides: connectors and workers are how you act, and the result is yours.',
@@ -67,7 +68,8 @@ describe('the prompt builder (08 §8.2)', () => {
       for (const sentence of [
         'Every connector has the command help. A command listed below with its payload needs no help call; for any other command, or for what a field means, call the connector\'s help with { "command": "<name>" } before the first use.',
         'A small, clear change needs doing and checking, and nothing more.',
-        'ask: put each question in its own `ask` call, with all the calls in one reply, and use `ask choice` whenever you offer options, your recommended one first.',
+        'ask before any work.',
+        'put each question in its own `ask` call, with all the calls in one reply, and use `ask choice` whenever you offer options, your recommended one first and each option saying what it leads to.',
         'Before you say that something runs or works, check it the way the person would: run it, request its address, or run its test; if you couldn\'t, say what is unchecked.',
       ])
         expect(prompt, sentence).toContain(sentence);

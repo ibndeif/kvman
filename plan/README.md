@@ -61,5 +61,6 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `adr/0041-kvcoder-step-intents.md` | KVC-02/03: durable step intent records, session-lifetime generations, canonical claims, conservative legacy binding and stale-follow rejection |
 | `adr/0042-kvcoder-answer-receipts.md` | KVC-01/20: atomic answer application and receipts, identical retry acknowledgment, different-answer conflicts and unchanged public API |
 | `adr/0080-the-builder-knows-kvman-builds-on-what-exists-and-never-edits-it.md` | The builder never edits kvman and uses only public APIs, `kvman extensions-get`, a project's dependencies loaded from its `node_modules` and added to the preview, the four guides as the whole reference, and the person's own words |
+| `adr/0081-the-lead-understands-the-goal-before-it-plans.md` | The lead finds the goal, what exists, and what was left unsaid before it plans, sorts open points into look, decide, and ask, says back what it understood when it confirms the plan, and leaves running what the person will try |
 
 The plan is complete. Implementation starts with M1.1.

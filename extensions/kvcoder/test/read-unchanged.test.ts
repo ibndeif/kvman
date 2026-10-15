@@ -12,7 +12,7 @@ const kvcoder = useKvcoder();
 
 const unchanged = 'notes.txt is unchanged since you read these lines earlier in this conversation; that result is above.';
 const whole = (content: string, totalLines: number, fromLine = 1): string => JSON.stringify({ path: 'notes.txt', fromLine, totalLines, content, truncated: false });
-const briefing = 'A worker sees none of this conversation and reads again every file it needs, so delegate only what is worth that, and put the paths, the lines that matter, and what you already found in the brief.';
+const briefing = 'A worker sees none of this conversation and reads again every file it needs, so put the paths, the lines that matter, and what you already found in the brief.';
 
 // A chat in a workspace with `notes.txt`, whose model answers one message with `replies`, a step each.
 async function chat(replies: readonly FakeReply[], text = 'go') {

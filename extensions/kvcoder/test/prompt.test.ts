@@ -73,7 +73,7 @@ describe('the prompt (08 §8.2, §8.4)', { timeout: 30_000 }, () => {
     expect(prompt).toContain('- delegate: Hand a self-contained task to a worker: a helper agent that works on it alone and returns its answer. Use it for a specialist view or to do a separate part in parallel, or with background set to true while you go on. Workers: general (Any separate, self-contained task), ui-ux (Designs the experience and the look of a screen or flow, to usability and accessibility standards), architect (Designs the structure of a change, on sound engineering practice and the project\'s own patterns and conventions), tester (QA engineer: writes and runs test cases, automated and by hand as a person would, on the critical flows, security, and performance, and reports the issues), reviewer (Reviews code and reports wrong style, needless complexity, and unclean or unclear code).\n  run  { worker, title, task, background? }\n  help { command? }');
     expect(prompt).toContain('Connectors are the only way you act.');
     expect(prompt).toContain('plan with `execution-map set`');
-    expect(prompt).toContain('Write each file in its own call, with `fs write`.');
+    expect(prompt).toContain('several new files are several `fs write` calls in one reply');
     expect(prompt.endsWith('- todo: Keep a todo list. Commands: add, wait, fail, list, help.')).toBe(true);
     const order = ['## Mine', '## Everywhere', '## Later', '## Connectors', '- shell: ', '- fs: ', '- artifact: ', '- execution-map: ', '- background: ', '- ask: ', '- delegate: ', '- todo: Keep a todo list.'].map((part) => prompt.indexOf(part));
     expect(order.every((index) => index > 0)).toBe(true);
