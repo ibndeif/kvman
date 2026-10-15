@@ -2,6 +2,7 @@ import { runResult, runStatusText } from './call-results.ts';
 import type { CallView } from './call-view.ts';
 import { diffCounts, diffLines, textLines } from './edit-diff.ts';
 import { fields, type Translate } from './kvman.ts';
+import { mcpSteps } from './mcp-steps.ts';
 
 // A closed card's second line (ADR 0036, 2): what the call did, to what, and the outcome its result gives. A call
 // with no line of its own here keeps `connector · command`.
@@ -97,8 +98,7 @@ function mcpSummary(t: Translate, command: string, payload: Record<string, unkno
   const subject = [server, tool].filter((part) => part !== undefined).join(' · ');
   if (command === 'call') return summary(undefined, subject === '' ? undefined : subject);
   if (command === 'run') {
-    const steps: unknown = payload['steps'];
-    const tools = Array.isArray(steps) ? steps.flatMap((step: unknown) => (text(fields(step)['tool']) === undefined ? [] : [String(fields(step)['tool'])])) : [];
+    const tools = mcpSteps(payload).flatMap((step) => (step.tool === undefined ? [] : [step.tool]));
     return summary(undefined, [server, tools.join(', ')].filter((part) => part !== undefined && part !== '').join(' · '));
   }
   if (command === 'tools') return summary(t('kvcoder.ui.call.tools'), subject === '' ? undefined : subject, countText(t, 'kvcoder.ui.call.toolCount', fields(result)['tools']));

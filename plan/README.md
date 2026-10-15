@@ -64,5 +64,6 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `adr/0081-the-lead-understands-the-goal-before-it-plans.md` | The lead finds the goal, what exists, and what was left unsaid before it plans, sorts open points into look, decide, and ask, says back what it understood when it confirms the plan, and leaves running what the person will try |
 | `adr/0082-products-on-kvcoder-and-the-research-build-review.md` | `kvwebui.home` defaults to Extensions, the scaffold type-checks and starts Git, read-only helpers run queries, `kvcoder.profile` (identity, method, wording), hidden developer screens, extension result cards and artifacts, chat links from another workspace, the builder's product rules, and branded desktop apps |
 | `adr/0083-sign-in-introduces-kvman.md` | pi-ai 1.2.0, every sign-in introduces itself as `kvman`, and OpenRouter's router models stay out of the list by name |
+| `adr/0084-an-mcp-run-shows-its-steps.md` | An `mcp run` call shows its steps numbered, each with its arguments, in its card and its approval |
 
 The plan is complete. Implementation starts with M1.1.

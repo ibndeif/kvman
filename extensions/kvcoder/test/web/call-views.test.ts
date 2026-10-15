@@ -58,6 +58,27 @@ describe("an opened card shows the call by its kind (08 §8.7, ADR 0036, 3 and 5
     expect(text).not.toContain('timeoutMs');
   });
 
+  it("QA48-H18 an mcp run shows its numbered steps with their arguments, then the tools' text", async () => {
+    const steps = [{ tool: 'browser_navigate', arguments: { url: 'http://127.0.0.1:33473/research' } }, { tool: 'browser_wait_for', arguments: { time: 60 } }, { tool: 'browser_console_messages' }];
+    const card = await ranCard(call('mcp', 'run', { server: 'playwright', steps, timeoutMs: 30000, risky: true }), '## 1. browser_navigate\nDone.');
+    await pressed(card);
+    const shown = parts(card, 'call-step').map((step) => [step.find('[data-test="call-step-tool"]').text(), step.findAll('[data-test="field-row"]').map((row) => row.text()), step.find('[data-test="field-empty"]').exists()]);
+    expect(shown).toEqual([['1. browser_navigate', ['urlhttp://127.0.0.1:33473/research'], false], ['2. browser_wait_for', ['time60'], false], ['3. browser_console_messages', [], true]]);
+    expect(part(card, 'call-output').text()).toContain('## 1. browser_navigate');
+    const request = part(card, 'call-steps').text();
+    for (const hidden of ['server', 'steps', 'arguments', 'risky', 'timeoutMs', 'playwright']) expect(request, hidden).not.toContain(hidden);
+  });
+
+  it('QA48-E21 an mcp run step being written shows its number, and steps that are not a list show none', async () => {
+    const writing = await ranCard(call('mcp', 'run', { server: 'playwright', steps: [{ tool: 'browser_navigate', arguments: { url: 'http://127.0.0.1:3000/' } }, { arguments: {} }], risky: false }), 'Done.');
+    await pressed(writing);
+    expect(parts(writing, 'call-step-tool').map((tool) => tool.text())).toEqual(['1. browser_navigate', '2.']);
+    const broken = await ranCard(call('mcp', 'run', { server: 'playwright', steps: 'browser_navigate', risky: false }), 'Done.');
+    await pressed(broken);
+    expect(part(broken, 'call-steps').exists()).toBe(false);
+    expect(part(broken, 'call-payload-fields').exists()).toBe(false);
+  });
+
   it('QA48-H9 a delegate run shows its task as text and the answer in Markdown', async () => {
     const card = await ranCard(call('delegate', 'run', { worker: 'reviewer', title: 'Helper', task: 'Review the plan.\nSay what is missing.' }), '**Nothing** is missing.');
     await pressed(card);

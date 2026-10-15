@@ -237,6 +237,8 @@ a.kvc-button { text-decoration: none; color: inherit; }
 .kvc-block > .kvc-code-lines > .kvc-fold { margin-inline: 0; }
 .kvc-fields { display: grid; grid-template-columns: minmax(6rem, max-content) minmax(0, 1fr); gap: 4px 12px; margin: 0; }
 .kvc-field-row { display: contents; }
+.kvc-steps { display: grid; gap: 6px; padding-inline-start: 0; list-style: none; }
+.kvc-step-arguments { padding-inline-start: 1.5rem; padding-block-start: 2px; }
 .kvc-field-row > dt { font-family: var(--kv-font-mono); font-size: 12px; }
 .kvc-field-row > dd { margin: 0; min-inline-size: 0; overflow-wrap: anywhere; }
 .kvc-field-block > .kvc-code-line, .kvc-field-block > .kvc-fold { padding-inline: 0; margin-inline: 0; }

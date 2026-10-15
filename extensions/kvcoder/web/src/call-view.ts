@@ -68,7 +68,7 @@ export function callView(given: Record<string, unknown>): CallView {
   };
 }
 
-export type CallKind = 'edit' | 'write' | 'read' | 'list' | 'search' | 'line' | 'mcp-call' | 'delegate' | 'run-output' | 'fields';
+export type CallKind = 'edit' | 'write' | 'read' | 'list' | 'search' | 'line' | 'mcp-call' | 'mcp-run' | 'delegate' | 'run-output' | 'fields';
 
 const fsKinds = ['edit', 'write', 'read', 'list', 'search'] as const;
 
@@ -77,6 +77,7 @@ export function callKind(view: CallView): CallKind {
   if (view.line !== undefined) return 'line';
   if (view.connector === 'fs') return fsKinds.find((kind) => kind === view.command) ?? 'fields';
   if (view.connector === 'mcp' && view.command === 'call') return 'mcp-call';
+  if (view.connector === 'mcp' && view.command === 'run') return 'mcp-run';
   if (view.connector === 'background' && (view.command === 'output' || view.command === 'wait')) return 'run-output';
   return view.connector === 'delegate' && view.command === 'run' ? 'delegate' : 'fields';
 }
