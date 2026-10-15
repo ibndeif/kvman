@@ -1,5 +1,11 @@
 # @kvman/kvai
 
+## 0.1.3
+
+### Patch Changes
+
+- 1c1dd1d: A plan sign-in introduces itself as kvman, so OpenAI's consent screen no longer says "Pi". kvai now uses pi-ai 1.2.0, and OpenRouter's router models, whose price varies, stay out of the model list (ADR 0083).
+
 ## 0.1.2
 
 ### Patch Changes
