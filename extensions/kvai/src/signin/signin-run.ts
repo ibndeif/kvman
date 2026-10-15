@@ -12,6 +12,8 @@ import { answerSecretName, clearWaiting, markWaiting, startSignin } from './sign
 const reasonLimit = 1000;
 const answerPollMs = 1000;
 const loopbackHosts = new Set(['127.0.0.1', 'localhost', '::1']);
+/** The name a sign-in introduces itself with, which OpenAI shows on its consent screen (ADR 0083, 2). */
+const agentName = 'kvman';
 
 export type SigninContext = Pick<Ctx, 'secrets' | 'store' | 'job' | 'problem'>;
 
@@ -87,7 +89,7 @@ export async function runSignin(ctx: SigninContext, models: Models, provider: st
     },
   };
   try {
-    await models.login(provider, 'oauth', interaction, { getDeviceId: () => device });
+    await models.login(provider, 'oauth', interaction, { getDeviceId: () => device, agentName });
     await ctx.secrets.delete(keySecretName(provider));
     return {};
   } catch (error) {

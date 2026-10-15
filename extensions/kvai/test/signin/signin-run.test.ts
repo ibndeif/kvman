@@ -166,4 +166,17 @@ describe('plan sign-in runs (07 §7.2, ADR 0009, 230–233)', () => {
     expect(made).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     expect(shared.kv.get('deviceId')).toBe(made);
   });
+
+  it('QA15-E22 a sign-in introduces itself as kvman', async () => {
+    const { ctx } = makeFakeSigninCtx('job-e22', makeSharedSigninMaps());
+    const { clock } = makeFakeClock();
+    const names: string[] = [];
+    const oauth = makeSigninOauth(async (_interaction, options) => {
+      names.push(options?.agentName ?? 'missing');
+      return oauthOf('access-e22', 'refresh-e22');
+    });
+    const { models } = makeSigninModels(provider, oauth, credentialStore(ctx, () => Promise.resolve([provider]), clock));
+    await expect(runSignin(ctx, models, provider, clock)).resolves.toEqual({});
+    expect(names).toEqual(['kvman']);
+  });
 });

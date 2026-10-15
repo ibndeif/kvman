@@ -26,6 +26,6 @@ Eight packages are published under MIT. `kvman` depends on the four extensions, 
 ## After the first release
 
 - **QA38-H8 The documented install is the quiet command.** *Then* the root README, the `kvman` package's README, the user guide's first page and its install page (the install and the update), and the developers' getting-started page give the install with `--no-fund --loglevel=error`; the install page names the three notices and says not to allow the scripts. `packages/cli/test/install-command.test.ts`
-- **QA38-H9 kvai uses pi-ai 1.0.4.** *Then* kvai's `dependencies` pin `@earendil-works/pi-ai` at `1.0.4`, and the built-in list still has `anthropic/claude-sonnet-5-5` (M2.1's own check). `packages/cli/test/install-command.test.ts`
+- **QA38-H9 kvai uses pi-ai 1.2.0.** *Then* kvai's `dependencies` pin `@earendil-works/pi-ai` at `1.2.0` (ADR 0083, 1), and the built-in list still has `anthropic/claude-sonnet-5-5` (M2.1's own check). `packages/cli/test/install-command.test.ts`
 - **QA38-E7 No page gives the install without the flags.** *Then* every `npm i -g kvman` line in the README files and in `docs/` ends with the two flags. `packages/cli/test/install-command.test.ts`
 - **QA38-H10 The kernel and the CLI follow the root version.** *Then* `packages/kernel` and `packages/cli` have the version of the root package.json. `packages/cli/test/published-packages.test.ts`

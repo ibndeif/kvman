@@ -28,9 +28,9 @@ describe('the documented install (ADR 0026)', () => {
     for (const notice of ['looking for funding', 'node-domexception', 'allowScripts', "don't allow them"]) expect(installing).toContain(notice);
   });
 
-  it('QA38-H9 kvai pins pi-ai at 1.0.4', () => {
+  it('QA38-H9 kvai pins pi-ai at 1.2.0', () => {
     const manifest = z.object({ dependencies: z.record(z.string(), z.string()) }).parse(JSON.parse(read('extensions', 'kvai', 'package.json')));
-    expect(manifest.dependencies['@earendil-works/pi-ai']).toBe('1.0.4');
+    expect(manifest.dependencies['@earendil-works/pi-ai']).toBe('1.2.0');
   });
 
   it('QA38-E7 no page gives the install without the flags', () => {

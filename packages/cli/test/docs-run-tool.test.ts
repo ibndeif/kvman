@@ -19,8 +19,8 @@ describe('the documentation describes the run tool (QA18-H24, ADR 0011)', () => 
       expect(markdown, page).toContain('`run`');
       expect(markdown, page).toContain('`help`');
     }
-    for (const page of [path.join('docs', 'developers', 'connectors.md'), path.join('extensions', 'kvcoder', 'docs', 'connectors.md'), path.join('docs', 'user-guide', 'coding-app.md')]) expect(read(page), page).toContain('`background`');
-    expect(read('docs', 'user-guide', 'coding-app.md')).toContain('connector');
+    for (const page of [path.join('docs', 'developers', 'connectors.md'), path.join('extensions', 'kvcoder', 'docs', 'connectors.md'), path.join('docs', 'user-guide', 'the-agent.md')]) expect(read(page), page).toContain('`background`');
+    expect(read('docs', 'user-guide', 'the-agent.md')).toContain('connector');
 
     for (const [where, markdown] of pages.map((page) => [page, read(page)] as const)) {
       expect(markdown, where).not.toMatch(/--async|jobs (get|cancel)|<<'EOF'|heredoc|here-string/);

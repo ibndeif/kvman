@@ -67,9 +67,11 @@ describe('providers and models (07 §7.2)', () => {
     const sonnet = all.find((model) => model.id === 'anthropic/claude-sonnet-5-5');
     expect(Object.keys(sonnet ?? {}).sort()).toEqual(['builtIn', 'contextWindow', 'cost', 'id', 'input', 'isDefault', 'maxTokens', 'name', 'provider', 'reasoning']);
     expect(all.every((model) => Object.values(model.cost).every((rate) => rate >= 0))).toBe(true);
-    const router = 'openrouter/openrouter/auto';
-    expect(all.map((model) => model.id)).not.toContain(router);
-    expect(all.map((model) => model.id)).toContain('openrouter/anthropic/claude-sonnet-5.5');
-    await expect(kernel.exec('kvai.complete', { model: router, messages: [] })).rejects.toMatchObject({ problem: { code: 'kvai/MODEL_UNKNOWN', params: { model: router } } });
+    const ids = all.map((model) => model.id);
+    expect(ids).toContain('openrouter/anthropic/claude-sonnet-5.5');
+    for (const router of ['openrouter/openrouter/auto', 'openrouter/openrouter/auto-beta', 'openrouter/typesafe/jev-router']) {
+      expect(ids).not.toContain(router);
+      await expect(kernel.exec('kvai.complete', { model: router, messages: [] })).rejects.toMatchObject({ problem: { code: 'kvai/MODEL_UNKNOWN', params: { model: router } } });
+    }
   });
 });

@@ -2,7 +2,7 @@
 
 kvai gives every extension LLM calls through providers and models. It exposes nothing else. Agents, tools, context, harnesses, and loops belong to the extensions that need them.
 
-It depends on `@earendil-works/pi-ai` (1.0.4), pinned exactly (ADR 0009, 51; ADR 0026, 11).
+It depends on `@earendil-works/pi-ai` (1.2.0), pinned exactly (ADR 0009, 51; ADR 0083, 1).
 
 ## 7.1 The call: `kvai.complete`
 
@@ -52,7 +52,7 @@ kvai.complete {
 
 ## 7.2 Providers and models
 
-- **Built-ins.** pi-ai's built-in providers and their chat models are always there, all of them (ADR 0009, 52), except models with a negative (varying) price (ADR 0009, 65).
+- **Built-ins.** pi-ai's built-in providers and their chat models are always there, all of them (ADR 0009, 52), except models whose price varies: those with a negative rate, and OpenRouter's `openrouter/auto`, `openrouter/auto-beta`, and `typesafe/jev-router`, which pi-ai prices at 0 (ADR 0009, 65; ADR 0083, 3).
 - **Custom providers and models** are kept in kvai's global store. Custom models belong to custom providers: `kvai.model.add` naming a built-in provider fails `kvai/BUILT_IN` (ADR 0009, 55).
 - A model id is `<provider>/<model>`, split at the first `/` (model ids may contain one). `kvai.model.list` and `kvai.model.remove` use the full id; `kvai.model.add { provider, id }` takes the model's own id (ADR 0009, 54).
 
@@ -66,7 +66,7 @@ kvai.complete {
 
 **Plan sign-ins (OAuth).** A built-in provider that pi-ai has an OAuth flow for (ChatGPT Plus/Pro, Claude Pro/Max, GitHub Copilot, and the others, `signIn: true` in its row) can be connected by signing in with the person's plan instead of a key (ADR 0009, 226–237).
 - **One credential.** A provider is connected by an API key or by a sign-in, never both: saving a key deletes the sign-in, and signing in deletes the key. The sign-in is the secret `<provider>.oauth` (pi-ai's credential as JSON); tokens are never logged, stored elsewhere, returned, or left in a failure's reason.
-- **The flow.** `kvai.provider.signin.start { provider }` is a command the UI starts with `execAsync` (`retries: 0`, `timeoutMs` 300 000). It streams `{ source: '@kvman/kvai', data }` chunks: `{ type: 'auth_url', url }`, `{ type: 'device_code', userCode, verificationUri, expiresInSeconds? }`, `{ type: 'prompt', kind: 'text' | 'select' | 'manual_code', message, placeholder?, options? }` (the job then waits for `kvai.provider.signin.answer`), and `{ type: 'progress' }`. Its browser flows listen on `127.0.0.1` only while the sign-in runs (port 1455 for ChatGPT), and when that fails the person pastes the redirect URL as the answer to a `manual_code` prompt. A `PI_OAUTH_CALLBACK_HOST` other than loopback fails the sign-in.
+- **The flow.** `kvai.provider.signin.start { provider }` is a command the UI starts with `execAsync` (`retries: 0`, `timeoutMs` 300 000). It streams `{ source: '@kvman/kvai', data }` chunks: `{ type: 'auth_url', url }`, `{ type: 'device_code', userCode, verificationUri, expiresInSeconds? }`, `{ type: 'prompt', kind: 'text' | 'select' | 'manual_code', message, placeholder?, options? }` (the job then waits for `kvai.provider.signin.answer`), and `{ type: 'progress' }`. Its browser flows listen on `127.0.0.1` only while the sign-in runs (port 1455 for ChatGPT), and when that fails the person pastes the redirect URL as the answer to a `manual_code` prompt. A `PI_OAUTH_CALLBACK_HOST` other than loopback fails the sign-in. Every sign-in introduces itself as `kvman` (pi-ai's `agentName`), which OpenAI shows on its consent screen (ADR 0083, 2).
 - **Using it.** A call refreshes an expiring token itself, one worker at a time per provider (a lease in the global store). A refresh the provider rejects fails `kvai/SIGNIN_EXPIRED`, and one that fails for a temporary reason fails `kvai/PROVIDER_ERROR` with `transient: true`.
 
 | Name | Kind | Input → output |
