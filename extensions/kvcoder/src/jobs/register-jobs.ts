@@ -1,6 +1,6 @@
 import { z, type Ctx } from '@kvman/sdk';
 import { findSession, userOnly } from '../sessions/session-lookup.ts';
-import { cancelJob, jobDetail, jobRows, linksOf, type JobRow } from './job-rows.ts';
+import { cancelJob, isActive, jobDetail, jobRows, linksOf, type JobRow } from './job-rows.ts';
 
 // The person's view of a session's background jobs (ADR 0009, 152): list, read, and cancel, for the Running chip.
 
@@ -30,13 +30,13 @@ export function registerJobs(ctx: Ctx): void {
       userOnly(ctx, 'kvcoder.job.list');
       await findSession(ctx, sessionId);
       const rows = await Promise.all((await jobRows(ctx, sessionId)).map((row) => withLinks(ctx, sessionId, row)));
-      return [...rows.filter((row) => row.status === 'running'), ...rows.filter((row) => row.status !== 'running')];
+      return [...rows.filter((row) => isActive(row.status)), ...rows.filter((row) => !isActive(row.status))];
     },
   });
   ctx.registerQuery('kvcoder.job.get', {
     description: "One background job of a chat with its output: a process's last 100 lines, a subagent's result, or what a program worker's run returned.",
     input: sessionJobSchema,
-    output: rowSchema.extend({ output: z.json().exactOptional(), problem: z.json().exactOptional() }),
+    output: rowSchema.extend({ output: z.json().exactOptional(), problem: z.json().exactOptional(), progress: z.object({ steps: z.number().int(), lastActivityAt: z.string(), recentCalls: z.array(z.string()) }).exactOptional(), waitingFor: z.array(z.string()).exactOptional() }),
     public: true,
     handle: async ({ sessionId, id }) => {
       userOnly(ctx, 'kvcoder.job.get');

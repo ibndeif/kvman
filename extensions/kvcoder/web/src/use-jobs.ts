@@ -20,7 +20,7 @@ export function useJobs(kvman: Kvman, sessionId: () => string, open: Ref<boolean
   const logs = ref<Record<string, string>>({});
   const stopping = ref<ReadonlySet<string>>(new Set());
   const now = ref(Date.now());
-  const running = computed(() => jobs.value.filter((job) => job.status === 'running'));
+  const running = computed(() => jobs.value.filter((job) => job.status === 'running' || job.status === 'waiting'));
   let ticks = 0;
   let timer: ReturnType<typeof setInterval> | undefined;
 

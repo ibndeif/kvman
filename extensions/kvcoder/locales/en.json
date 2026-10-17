@@ -268,6 +268,7 @@
   "kvcoder.ui.jobs.stop": "Stop",
   "kvcoder.ui.jobs.noOutput": "No output yet.",
   "kvcoder.ui.jobs.status.running": "Running",
+  "kvcoder.ui.jobs.status.waiting": "Waiting for you",
   "kvcoder.ui.jobs.status.succeeded": "Done",
   "kvcoder.ui.jobs.status.failed": "Failed",
   "kvcoder.ui.jobs.status.cancelled": "Stopped",

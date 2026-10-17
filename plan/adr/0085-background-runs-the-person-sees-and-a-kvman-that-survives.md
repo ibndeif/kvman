@@ -45,7 +45,7 @@ What the chat and the home database showed:
    `progress: { steps, lastActivityAt, recentCalls }` (its current or last turn's steps, the time of its newest message,
    and the descriptions of its last five calls, oldest first) and, while waiting, `waitingFor`, the descriptions of the
    calls it waits on. `background wait` ends as soon as the run's status is not `running`. The Running chip counts
-   `running` and `waiting` runs, and a waiting run shows "Waiting for you" (`kvcoder.ui.jobs.waiting`).
+   `running` and `waiting` runs, and a waiting run shows "Waiting for you" (`kvcoder.ui.jobs.status.waiting`).
 3. **The person's message ends a wait.** A `background wait` that is running when a message from the person is queued for
    the chat ends at once with what `output` gives and `note: "The person sent a message."`, so the step ends and the
    message is read.

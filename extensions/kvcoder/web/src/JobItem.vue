@@ -22,7 +22,7 @@ const kvman = useKvman();
     </div>
     <div class="kvc-actions">
       <button type="button" class="kvc-button" :aria-expanded="props.logs !== undefined" :data-test="`job-logs-${props.job.id}`" @click="emit('logs')">{{ kvman.t('kvcoder.ui.jobs.logs') }}</button>
-      <button v-if="props.job.status === 'running'" type="button" class="kvc-button kvc-primary" :disabled="props.stopping" :data-test="`job-stop-${props.job.id}`" @click="emit('stop')">{{ kvman.t('kvcoder.ui.jobs.stop') }}</button>
+      <button v-if="props.job.status === 'running' || props.job.status === 'waiting'" type="button" class="kvc-button kvc-primary" :disabled="props.stopping" :data-test="`job-stop-${props.job.id}`" @click="emit('stop')">{{ kvman.t('kvcoder.ui.jobs.stop') }}</button>
     </div>
     <StagingNote v-if="props.job.staging !== undefined" :session-id="props.sessionId" :run-id="props.job.id" :staging="props.job.staging" />
     <pre v-if="props.logs !== undefined" class="kvc-output" data-test="job-output">{{ props.logs === '' ? kvman.t('kvcoder.ui.jobs.noOutput') : props.logs }}</pre>

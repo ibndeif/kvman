@@ -60,9 +60,9 @@ computer sleeps, and other trouble while using kvcoder.
   shows "A background helper needs your decision." and the helper's card with its title and the approval's Allow and
   Deny; *when* the person allows, *then* `kvcoder.question.answer` is run for the helper's question, with the helper's
   session and turn as the owner. `extensions/kvcoder/test/web/background-decision.test.ts`
-- **QA53-H10 A waiting helper says so and how far it got.** *Given* a background helper waiting on an approval after 3
-  steps, *when* the lead calls `background output` and `background wait`, *then* both give `status: 'waiting'`,
-  `waitingFor: [<the call's description>]`, and `progress: { steps: 3, lastActivityAt: <its newest message's createdAt>,
+- **QA53-H10 A waiting helper says so and how far it got.** *Given* a background helper whose first reply made three calls,
+  two reads and a `shell exec` with `risky: true`, so it waits on an approval after 1 step, *when* the lead calls `background output` and `background wait`, *then* both give `status: 'waiting'`,
+  `waitingFor: [<the call's description>]`, and `progress: { steps: 1, lastActivityAt: <its newest message's createdAt>,
   recentCalls: <the descriptions of its calls, oldest first, at most 5> }`; `wait` returns at once although its
   `timeoutMs` is 600 000; `kvcoder.job.get` gives the same fields; `background list` and `kvcoder.job.list` give the
   status `waiting`. `extensions/kvcoder/test/background-waiting.test.ts`
