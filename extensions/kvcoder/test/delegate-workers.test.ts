@@ -9,7 +9,7 @@ const kvcoder = useKvcoder();
 
 const reviewer = shippedWorkers.find((entry) => entry.name === 'reviewer');
 const descriptions = ['Any separate, self-contained task', 'Designs the experience and the look of a screen or flow, to usability and accessibility standards', "Designs the structure of a change, on sound engineering practice and the project's own patterns and conventions", 'QA engineer: writes and runs test cases, automated and by hand as a person would, on the critical flows, security, and performance, and reports the issues', 'Reviews code and reports wrong style, needless complexity, and unclean or unclear code'];
-const named = (count: number): string => shippedWorkers.slice(0, count).map((entry, index) => `${entry.name} (${descriptions[index]})`).join(', ');
+const named = (count: number): string => shippedWorkers.slice(0, count).map((entry, index) => `${entry.name} (${descriptions[index]}${entry.readOnly ? '; read-only' : ''})`).join(', ');
 const delegate = (name: string, task = 'Do it') => command('delegate', 'run', { worker: name, title: 'Helper', task });
 const indexLine = (prompt: string, connector: string): string => prompt.split('\n').find((line) => line.startsWith(`- ${connector}: `)) ?? '';
 

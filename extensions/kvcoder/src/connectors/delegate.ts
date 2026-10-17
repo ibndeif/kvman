@@ -20,9 +20,12 @@ import { callInput, type ConnectorCommand } from './connector-command.ts';
 export const delegateDescription =
   'Hand a self-contained task to a worker: a helper agent that works on it alone and returns its answer. Use it for a specialist view or to do a separate part in parallel, or with background set to true while you go on.';
 
+// A read-only worker says so, so the lead hands it no change to make (ADR 0085, 9).
+const readOnlyNote = (worker: Worker): string => (worker.kind === 'subagent' && worker.readOnly ? '; read-only' : '');
+
 /** The connector's description with the available workers, as the prompt's index shows it (ADR 0021, 1). */
 export function delegateIndexDescription(workers: readonly Worker[]): string {
-  return `${delegateDescription} Workers: ${workers.map((worker) => `${worker.name} (${worker.description.replace(/[.\s]+$/, '')})`).join(', ')}.`;
+  return `${delegateDescription} Workers: ${workers.map((worker) => `${worker.name} (${worker.description.replace(/[.\s]+$/, '')}${readOnlyNote(worker)})`).join(', ')}.`;
 }
 
 const titleShown = 60;

@@ -37,7 +37,7 @@ The map is the agent's plan for a larger task, drawn in the panel beside the cha
 - **The shape.** The agent's own steps are one line, in the order it does them. Steps side by side are branches: each one is done by a worker at the same time.
 - **A step's details.** Press a step to open a dialog with what it changes and how, what it comes after and uses, its check, its evidence, and its note. The dialog follows the step while the agent works.
 - **Progress.** Each step shows as to do, doing, done, failed, or skipped. If the agent changes files or runs a command while steps are left and none is marked as doing, kvman reminds it to mark one or update the map. Nothing is blocked.
-- **Changing it.** Ask the agent. A changed plan is confirmed with you again.
+- **Changing it.** Ask the agent. A change to what you get (the goal, what done looks like, what stays as it is, stored data, or what could go wrong) is confirmed with you again; a change inside the plan, such as who does a step or the order, is made and told in one line.
 
 ## Connectors: what the agent can use
 
@@ -79,11 +79,11 @@ Reading, listing, and searching files never ask.
 
 ## Background work
 
-For a dev server or anything else that must keep running, the agent starts the line in the background and goes on. It waits for a run with one call when it needs the result. When you write to it while runs are going, it is told what still runs. You see the runs in the **Running** chip ([coding-app.md](coding-app.md#background-work)).
+For a dev server or anything else that must keep running, the agent starts the line in the background and goes on. It waits for a run with one call when it needs the result, and a message from you ends that wait at once, so it answers you without delay. When you write to it while runs are going, it is told what still runs. You see the runs in the **Running** chip ([coding-app.md](coding-app.md#background-work)).
 
 ## Workers
 
-A worker is another agent that does one step in a hidden helper chat. You see its steps stream in its card, and its approvals show up in your chat. A worker asks you nothing and writes no artifact: its answer, with any question it has, goes to the chat's agent, the only one that talks to you. It does the one task it was given, checks it, and returns what it did, the evidence, and what is left.
+A worker is another agent that does one step in a hidden helper chat. You see its steps stream in its card, and its approvals show up in your chat, also for a worker running in the background, under "A background helper needs your decision." While such a worker waits for you, the **Running** chip shows it as "Waiting for you". The agent can send a worker that has finished a follow-up, and it goes on with what it already did. A worker asks you nothing and writes no artifact: its answer, with any question it has, goes to the chat's agent, the only one that talks to you. It does the one task it was given, checks it, and returns what it did, the evidence, and what is left.
 
 kvman comes with five workers:
 
