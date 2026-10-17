@@ -1,4 +1,4 @@
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, watch } from 'node:fs';
 import path from 'node:path';
 import { z, type Caller, type Job, type Json, type Preset, type Problem, type Workspace } from '@kvman/sdk';
 import { systemClock, type CancelTimer, type Clock } from './clock.ts';
@@ -172,7 +172,7 @@ export async function startKernel(options: KernelOptions): Promise<Kernel> {
     );
     const started = run.pool().summary.handlers.filter((handler) => handler.point === 'kernel.started').map((handler) => handler.extension);
     await runStartedHandlers(dispatcher, logger, run.extensions().map((extension) => extension.name), started);
-    watcher = watchExtensions(run.folders(), logger, (changed) => reloadExtensions(run, dispatcher, logger, changed, stopping.signal));
+    watcher = watchExtensions(run.folders(), logger, (changed) => reloadExtensions(run, dispatcher, logger, changed, stopping.signal), { platform: process.platform, watch });
     const activeWatcher = watcher;
     return {
       exec: async (name, input, { caller, workspaceId, jobId }) =>
