@@ -60,7 +60,7 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 
 ## 2.5 Storage
 
-- There is one SQLite database, `kvman.db`, in WAL mode (`synchronous = NORMAL`, ADR 0009, 21) with a busy timeout. The main thread and every worker each open their own better-sqlite3 connection.
+- There is one SQLite database, `kvman.db`, in WAL mode (`synchronous = NORMAL`, ADR 0009, 21) with a busy timeout of 5 s. The main thread and every worker each open their own better-sqlite3 connection. Every transaction that writes begins `IMMEDIATE`, so it waits out the busy timeout: under WAL, a transaction that read first and then writes fails at once when another connection writes (ADR 0085, 6). When the dispatcher's tick, or the recording of a job's end, still fails with `SQLITE_BUSY` (or an extended code of it), the error is logged with its code and tried again after 1 s, an end with the outcome it had; any other error is not caught.
 - The kernel owns every table. Extensions never see SQL and have no migrations.
 - **Store API** (§3.4). Every call returns a Promise.
   - `ctx.store.kv` has `get`, `set`, and `delete`.
@@ -158,7 +158,7 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 Registrations are sealed when the entry returns: a later `register*` call fails `EXTENSION_INVALID` (ADR 0009, 12).
 
 **Hot reload.**
-- A `path:` extension's folder is watched (`node:fs` `watch`, recursive, ignoring `node_modules`). Events are batched until 200 ms pass without one (ADR 0009, 26). On a change, the kernel starts fresh workers, which load every extension with the new code. The old workers take no new jobs and exit when their running jobs end, so running jobs finish on the old code. (ES modules can't be unloaded, so a worker never reloads in place.)
+- A `path:` extension's folder is watched, skipping `node_modules`, `.git`, and every folder whose name starts with `.` (ADR 0085, 8). On Linux, where Node's recursive watch watches every file, the kernel walks the folder and watches it and each folder below it with `node:fs` `watch`, watching a folder that appears and dropping one that goes away; on macOS and Windows it uses the native recursive `watch` and ignores events from the skipped folders. Events are batched until 200 ms pass without one (ADR 0009, 26). On a change, the kernel starts fresh workers, which load every extension with the new code. The old workers take no new jobs and exit when their running jobs end, so running jobs finish on the old code. (ES modules can't be unloaded, so a worker never reloads in place.)
 - A reload that fails keeps the previous code and workers, and logs the error. It fails when the reloaded extension's own manifest breaks a start rule (its namespace, its sdk range, its own dependencies), or when its entry fails to load. Each reload logs `extension reloaded` or `extension reload failed`.
 - After a reload, the `kernel.started` handlers of the reloaded extension and of every extension that depends on it, directly or not, run again in dependency order (§2.15).
 - A reload doesn't touch the extensions that depend on it. If the new version no longer satisfies a dependent's range, or drops a name a dependent calls, the reload still applies, a warning is logged, and those calls fail `NOT_FOUND`. The start-time checks apply again at the next start.
@@ -277,7 +277,7 @@ Going over a limit fails loudly and never cuts anything off.
 4. kvman waits up to 10 s for handlers to return, then stops the workers. Every process from §2.16 is stopped (§2.16), with the kill at the 10 s mark.
 5. Async attempts that didn't finish fail with `INTERRUPTED`: a job with retries left stays queued and runs at the next start; one without ends `failed` (§2.3).
 
-SIGTERM stops the same way, and kvman exits 0. A second Ctrl+C or SIGTERM stops at once, with exit code 130 (ADR 0009, 50). With `--pipe`, an input that closes stops the same way too, and kvman exits 0; one that closes during the start lets the start finish first (§14.2; ADR 0038, 16 and 20).
+SIGTERM stops the same way, and kvman exits 0. A second Ctrl+C or SIGTERM stops at once, with exit code 130 (ADR 0009, 50). With `--pipe`, an input that closes stops the same way too, and kvman exits 0; one that closes during the start lets the start finish first (§14.2; ADR 0038, 16 and 20). An uncaught exception or unhandled rejection after the start is logged as the error "kvman stopped on an unexpected error." with its code and stack; then the lock is released and kvman exits 1 (ADR 0085, 6).
 
 **Restart** (ADR 0024). `kernel.restart` makes kvman run the stop sequence above, then the start sequence again, in the same process: the same arguments, the same lock (its port updated), the same terminal, and no new browser tab. It prints `kvman is restarting…`, then the URL; with `--pipe`, a `restarting` line, then a `running` line (§14.2). Running jobs are aborted, and an attempt that didn't finish fails `INTERRUPTED` (§2.3); processes (§2.16) are stopped; open workspaces are remembered (§2.6) and open again. The preset is read again at step 3.
 

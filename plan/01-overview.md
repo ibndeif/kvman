@@ -48,7 +48,7 @@ The default is `~/.kvman`; `--home <dir>` or `KVMAN_HOME` overrides it.
 | `extensions/<name>@<version>/` | npm-installed extensions (§2.9). |
 | `secrets.json` | Secrets: mode 0600 on Linux and macOS; on Windows, the user profile folder's access rules protect it (§2.8). |
 | `presets/<name>.json` | The person's own presets (§1.2). |
-| `logs/kvman.log` | Pino JSON logs, which never contain payloads, settings values, or secrets. |
+| `logs/kvman.log` | Pino JSON logs, which never contain payloads, settings values, or secrets. An uncaught exception or unhandled rejection of a kvman run is written there as an error, with its code and stack, before kvman exits with 1 (ADR 0085, 6). |
 | `logs/processes/<extension>/<workspaceId>/<name>.log` | Output of long-lived processes (§2.16), 10 MB each. |
 
 ## 1.4 Packages
