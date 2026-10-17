@@ -7,6 +7,11 @@ export type Connection = Database.Database;
 
 export const busyTimeoutMs = 5000;
 
+/** Whether an error is SQLite's "database is locked": `SQLITE_BUSY` or one of its extended codes. */
+export function isBusy(error: unknown): error is InstanceType<typeof Database.SqliteError> {
+  return error instanceof Database.SqliteError && error.code.startsWith('SQLITE_BUSY');
+}
+
 export function openConnection(file: string): Connection {
   const connection = new Database(file);
   try {

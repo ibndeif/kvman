@@ -33,5 +33,5 @@ export async function checkTrust(connection: Connection, clock: Clock, extension
   const insert = connection.prepare('INSERT INTO accepted_extensions (name, version, source, accepted_at) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING');
   connection.transaction(() => {
     for (const version of unaccepted) insert.run(version.name, version.version, version.source, acceptedAt);
-  })();
+  }).immediate();
 }

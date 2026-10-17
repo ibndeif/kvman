@@ -136,7 +136,7 @@ export function createJobRows(connection: Connection, clock: Clock, ids: IdGener
       const start = connection.prepare("UPDATE jobs SET status = 'running', attempts = attempts + 1, started_at = ? WHERE id = ?");
       connection.transaction(() => {
         for (const row of rows) start.run(now, row.id);
-      })();
+      }).immediate();
       return rows.map((row) => claimedOfRow({ ...row, attempts: row.attempts + 1 }));
     },
     succeed: (id: string, output: unknown) => end(id, 'succeeded', output, undefined),

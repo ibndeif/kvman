@@ -3,6 +3,7 @@ import { ProblemError } from '@kvman/sdk';
 import { kvmanHome, type RunArguments } from './arguments.ts';
 import { openBrowser } from './browser.ts';
 import { bundledPresetsFolder } from './bundled.ts';
+import { listenForFatal } from './fatal-errors.ts';
 import { handOver } from './hand-over.ts';
 import { takeLock, type Lock, type TakenLock } from './lock-file.ts';
 import { failedLine } from './pipe/pipe-lines.ts';
@@ -53,6 +54,10 @@ async function serve(args: RunArguments, kernel: Kernel, lock: TakenLock, enviro
     lock.release();
     environment.exitAtOnce(130);
   });
+  const fatal = listenForFatal(process, kernel.web.logger, () => {
+    lock.release();
+    environment.exitAtOnce(1);
+  });
   try {
     const http = await startHttp(kernel, { port: args.port ?? kernel.web.port() }).catch(async (error: unknown) => {
       await kernel.close();
@@ -75,6 +80,7 @@ async function serve(args: RunArguments, kernel: Kernel, lock: TakenLock, enviro
     return stop.isRequested() || pipe?.hasEnded() === true ? 'stopped' : requested;
   } finally {
     stop.dispose();
+    fatal.dispose();
   }
 }
 

@@ -98,7 +98,7 @@ export function createWorkspaces(connection: Connection, homeFolder: string, ids
         connection.prepare('INSERT INTO workspaces (id, name, path, open) VALUES (?, ?, ?, 1)').run(workspace.id, workspace.name, workspace.path);
         firstOpened(workspace.id);
         return workspace;
-      })();
+      }).immediate();
     },
     close(id: string): void {
       if (id === homeWorkspaceId) throw kernelProblem('VALIDATION_FAILED', "Home can't be closed.", { workspaceId: id });
@@ -111,7 +111,7 @@ export function createWorkspaces(connection: Connection, homeFolder: string, ids
       connection.transaction(() => {
         const marked = connection.prepare("INSERT INTO kernel_state (key, value) VALUES ('home-opened', 'true') ON CONFLICT DO NOTHING").run().changes;
         if (marked === 1) firstOpened(homeWorkspaceId);
-      })();
+      }).immediate();
     },
   };
 }

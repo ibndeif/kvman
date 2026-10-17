@@ -3,7 +3,7 @@ import type { CancelTimer, Clock } from '../clock.ts';
 import type { KernelLogger } from '../logging/logger.ts';
 import { kernelProblem } from '../problems.ts';
 import type { ScheduleRows } from '../schedules/schedule-rows.ts';
-import type { Connection } from '../storage/database.ts';
+import { isBusy, type Connection } from '../storage/database.ts';
 import type { SyncEnd } from '../workers/protocol.ts';
 import type { WorkerPool } from '../workers/pool.ts';
 import type { HandlerSummary } from './handlers.ts';
@@ -12,7 +12,10 @@ import { backoffMs, isRetried } from './retry-policy.ts';
 
 // The main thread's loop over async and scheduled jobs (plan 02 §2.1, §2.3, §2.4, §2.15): it queues due schedules,
 // starts due jobs first-in, first-out while the pool has room, records each attempt's end, retries with backoff, and
-// queues the kernel's handler jobs in the transaction that records the end.
+// queues the kernel's handler jobs in the transaction that records the end. Its transactions begin IMMEDIATE, and a
+// database still locked after the busy timeout is tried again 1 s later (ADR 0085, 6).
+
+export const busyRetryMs = 1000;
 
 export type DispatcherMode = 'running' | 'stopping' | 'stopped';
 
@@ -77,8 +80,26 @@ export function createDispatcher(options: DispatcherOptions) {
         rows.fail(job.id, outcome.problem);
         deliverFor('kernel.job.failed', { problem: outcome.problem, attempts: job.attempts });
       }
-    })();
+    }).immediate();
     ended(job.id);
+  };
+
+  const reportBusy = (error: { code: string }): void => {
+    options.logger.error("The job loop couldn't write to the database; it tries again in 1 s.", { code: error.code });
+  };
+
+  // An end that can't be written yet keeps its outcome and is written on a later try.
+  const recordWhenFree = (job: ClaimedJob, outcome: Outcome): Promise<void> => {
+    try {
+      record(job, outcome);
+      return Promise.resolve();
+    } catch (error) {
+      if (!isBusy(error)) throw error;
+      reportBusy(error);
+      return new Promise((resolve, reject) => {
+        clock.setTimer(busyRetryMs, () => recordWhenFree(job, outcome).then(resolve, reject));
+      });
+    }
   };
 
   const dispatch = (active: WorkerPool, job: ClaimedJob): void => {
@@ -94,11 +115,12 @@ export function createDispatcher(options: DispatcherOptions) {
     };
     attempts.set(
       job.id,
-      run().then((outcome) => {
-        record(job, outcome);
-        attempts.delete(job.id);
-        tick();
-      }),
+      run()
+        .then((outcome) => recordWhenFree(job, outcome))
+        .then(() => {
+          attempts.delete(job.id);
+          tick();
+        }),
     );
   };
 
@@ -122,18 +144,30 @@ export function createDispatcher(options: DispatcherOptions) {
     if (due !== undefined && due > clock.now() && mode !== 'stopped') timer = clock.setTimer(due - clock.now(), tick);
   };
 
-  const tick = (): void => {
-    const active = pool;
-    if (active === undefined || mode === 'stopped') return;
+  const startDue = (active: WorkerPool): void => {
     const scheduleDue = schedules.earliestNextRun();
     if (mode === 'running' && scheduleDue !== undefined && scheduleDue <= clock.now()) {
-      connection.transaction(() => schedules.queueDue((job) => rows.insert(job)))();
+      connection.transaction(() => schedules.queueDue((job) => rows.insert(job))).immediate();
     }
     const free = active.freeSlots();
     const claimed = free > 0 ? rows.claimDue(free, mode === 'stopping' ? 'kernel.stopping' : undefined) : [];
     for (const job of claimed) dispatch(active, job);
     const due = rows.earliestRunAt();
     waitingForSlot = claimed.length === free && due !== undefined && due <= clock.now();
+  };
+
+  const tick = (): void => {
+    const active = pool;
+    if (active === undefined || mode === 'stopped') return;
+    try {
+      startDue(active);
+    } catch (error) {
+      if (!isBusy(error)) throw error;
+      reportBusy(error);
+      timer?.();
+      timer = clock.setTimer(busyRetryMs, tick);
+      return;
+    }
     arm();
     checkSettled();
   };
@@ -168,23 +202,23 @@ export function createDispatcher(options: DispatcherOptions) {
       return id;
     },
     deliver(point: string, input: Record<string, unknown>, workspaceId: string): string[] {
-      const ids = connection.transaction(() => deliver(point, input, workspaceId))();
+      const ids = connection.transaction(() => deliver(point, input, workspaceId)).immediate();
       tick();
       return ids;
     },
     deliverTo(point: string, extension: string, input: Record<string, unknown>, workspaceId: string): string[] {
-      const ids = connection.transaction(() => deliver(point, input, workspaceId, extension))();
+      const ids = connection.transaction(() => deliver(point, input, workspaceId, extension)).immediate();
       tick();
       return ids;
     },
     // Runs `work` in one transaction with the handler jobs it delivers, then starts what is due.
     deliverAlong<Result>(work: (deliverIn: Deliver) => Result): Result {
-      const result = connection.transaction(() => work((point, input, workspaceId) => void deliver(point, input, workspaceId)))();
+      const result = connection.transaction(() => work((point, input, workspaceId) => void deliver(point, input, workspaceId))).immediate();
       tick();
       return result;
     },
     deliverSyncEnd(end: SyncEnd): void {
-      connection.transaction(() => deliver(end.point, end.input, end.workspaceId))();
+      connection.transaction(() => deliver(end.point, end.input, end.workspaceId)).immediate();
       tick();
     },
     // Attempts left running by a stop or a crash end INTERRUPTED, and are retried like any failure (plan 02 §2.3).
