@@ -261,6 +261,7 @@
   "kvcoder.artifact.list.description": "Lists the artifacts of a chat, newest change first.",
   "kvcoder.artifact.get.description": "Gives one artifact of a chat with its content.",
   "kvcoder.map.get.description": "Gives a chat's execution map, or null when it has none.",
+  "kvcoder.ui.backgroundDecision": "A background helper needs your decision.",
   "kvcoder.ui.jobs.title": "Background jobs",
   "kvcoder.ui.jobs.running": "{count} running",
   "kvcoder.ui.jobs.minutes": "{minutes} min {seconds} s",

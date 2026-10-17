@@ -4,6 +4,7 @@ import type { Message, Session, Turn } from '../../src/index.ts';
 import { idleLive, type Live, type LiveCall } from './live-step.ts';
 import { conversationStreams } from './conversation-streams.ts';
 import { reconcileQuestionDrafts } from './question-drafts.ts';
+import { loadWaitingHelpers, type WaitingHelper } from './waiting-helpers.ts';
 
 export type Child = { session: Session; turn: Turn | undefined; live: Live };
 /** How full the model's window is (`kvcoder.context.get`). */
@@ -18,6 +19,8 @@ export type Conversation = {
   live: Live;
   streaming: ShallowRef<boolean>;
   children: Map<string, Child>;
+  /** The chat's background helpers that wait on the person (ADR 0085, 1). */
+  helpers: Map<string, WaitingHelper>;
   /** Loads the page of messages before the first one shown, above it. */
   showEarlier(): Promise<void>;
   /** Returns to the newest window, after earlier pages were loaded. */
@@ -42,6 +45,7 @@ export function useConversation(kvman: Kvman, sessionId: () => string | undefine
   const streaming = shallowRef(false);
   const live = reactive<Live>(idleLive());
   const children = shallowReactive(new Map<string, Child>());
+  const helpers = shallowReactive(new Map<string, WaitingHelper>());
   let scope: Scope | undefined;
   let latest: object | undefined;
   let listed: string | undefined;
@@ -119,6 +123,16 @@ export function useConversation(kvman: Kvman, sessionId: () => string | undefine
     }
   }
 
+  async function loadHelpers(expected: Scope, owns: () => boolean): Promise<void> {
+    const found = await loadWaitingHelpers(kvman, expected.sessionId);
+    if (!owns()) return;
+    helpers.clear();
+    for (const [id, helper] of found) {
+      reconcileQuestionDrafts(expected.workspaceId, id, helper.child.turn === undefined ? [] : [helper.child.turn]);
+      helpers.set(id, helper);
+    }
+  }
+
   async function reload(ran: readonly LiveCall[] = [], hinted?: string): Promise<void> {
     const expected = scope;
     if (expected === undefined || !current(expected)) return;
@@ -141,7 +155,7 @@ export function useConversation(kvman: Kvman, sessionId: () => string | undefine
       // Revoke removed children immediately on authoritative state, even if message loading is slow.
       const active = found.status === 'waiting' ? recent[0] : undefined;
       const childLoad = loadChildren(expected, active, owns);
-      await Promise.all([loadMessages(expected, owns), childLoad]);
+      await Promise.all([loadMessages(expected, owns), childLoad, loadHelpers(expected, owns)]);
     } catch (error) { if (owns()) throw error; }
   }
 
@@ -158,9 +172,9 @@ export function useConversation(kvman: Kvman, sessionId: () => string | undefine
     scope = id === undefined ? undefined : { workspaceId: kvman.workspace.value.id, sessionId: id };
     latest = undefined; listed = undefined; streams.clear();
     session.value = null; messages.value = []; omitted.value = 0; turns.value = []; context.value = null; loadFailure.value = undefined;
-    children.clear(); Object.assign(live, idleLive());
+    children.clear(); helpers.clear(); Object.assign(live, idleLive());
     const expected = scope;
     if (expected !== undefined) refresh().catch(error => { if (current(expected)) failed(error); });
   }, { immediate: true, flush: 'sync' });
-  return { session, messages, omitted, turns, context, loadFailure, live, streaming, children, showEarlier, showLatest, refresh, stream };
+  return { session, messages, omitted, turns, context, loadFailure, live, streaming, children, helpers, showEarlier, showLatest, refresh, stream };
 }

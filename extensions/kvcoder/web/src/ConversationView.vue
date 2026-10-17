@@ -41,7 +41,7 @@ const tab = ref<'chat' | 'prompt'>('chat');
 // Whether the person has scrolled up from the latest: the window then drops nothing (ADR 0059).
 const reading = ref(false);
 const conversation = useConversation(kvman, () => sessionId.value, readFailed, () => reading.value);
-const { session, messages, omitted, turns, live, children } = conversation;
+const { session, messages, omitted, turns, live, children, helpers } = conversation;
 const artifacts = useArtifacts(kvman, () => sessionId.value, () => session.value?.updatedAt, readFailed);
 const executionMap = useExecutionMap(kvman, () => sessionId.value, () => session.value?.updatedAt, artifacts, readFailed);
 const panelShown = computed(() => executionMap.shown.value || (artifacts.open.value && artifacts.shown.value !== undefined));
@@ -141,7 +141,7 @@ const loadError = computed(() => {
   return problem === undefined ? kvman.t('kvcoder.ui.failed') : kvman.t(problemKey(problem.code), problem.params);
 });
 const list = useTemplateRef<HTMLElement>('list');
-const follow = useFollowLatest(list, () => [messages.value, live.text, live.thinking, live.calls.length, live.summarizing, running.value, pending.value, children.size, answers.hidden.value, actions.working.value], () => sessionId.value);
+const follow = useFollowLatest(list, () => [messages.value, live.text, live.thinking, live.calls.length, live.summarizing, running.value, pending.value, children.size, helpers.size, answers.hidden.value, actions.working.value], () => sessionId.value);
 
 watch(follow.away, (away) => (reading.value = away));
 
@@ -252,6 +252,10 @@ const key = (message: Message): string => message.id;
               <WorkerCard v-for="run in runs" :key="run" :session-id="session.id" :run-id="run" />
               <PendingCards :owner="questionOwner()" :pending="pending" :hidden="answers.hidden.value" @answer="answers.answer" @decide="answers.decide" />
               <p v-if="pending.length > 0" class="kvc-muted" style="text-align: center; margin: 0" data-test="waiting-hint">{{ waitingHint }}</p>
+              <template v-if="helpers.size > 0">
+                <p class="kvc-notice" data-test="background-decision">{{ kvman.t('kvcoder.ui.backgroundDecision') }}</p>
+                <SubagentCard v-for="[id, helper] in helpers" :key="id" :child="helper.child" :task="helper.call" :hidden="answers.hidden.value" @answer="answers.answer" @decide="answers.decide" />
+              </template>
             </div>
           </div>
           <button v-if="follow.away.value" type="button" class="kvc-button kvc-jump" data-test="jump-to-latest" @click="jumpToLatest"><ArrowDown :size="16" aria-hidden="true" />{{ kvman.t('kvcoder.ui.jumpToLatest') }}</button>

@@ -261,6 +261,7 @@
   "kvcoder.artifact.list.description": "يسرد مخرجات المحادثة، الأحدث تعديلًا أولًا.",
   "kvcoder.artifact.get.description": "يعيد مخرجًا واحدًا من المحادثة مع محتواه.",
   "kvcoder.map.get.description": "يعطي خريطة التنفيذ لمحادثة، أو null إن لم تكن لها خريطة.",
+  "kvcoder.ui.backgroundDecision": "مساعد يعمل في الخلفية ينتظر قرارك.",
   "kvcoder.ui.jobs.title": "المهام الخلفية",
   "kvcoder.ui.jobs.running": "{count} قيد التشغيل",
   "kvcoder.ui.jobs.minutes": "{minutes} د {seconds} ث",
