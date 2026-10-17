@@ -1,6 +1,7 @@
 import { z, type Ctx } from '@kvman/sdk';
 import { delay } from '../delay.ts';
 import { cancelJob, jobDetail, jobRows, type JobRow } from '../jobs/job-rows.ts';
+import { records } from '../store/collections.ts';
 import { callInput, type ConnectorCommand } from './connector-command.ts';
 
 // The `background` connector (plan 08 §8.5, ADR 0011, 6): what this chat started with `background: true`, a process or
@@ -29,7 +30,7 @@ const payloads = {
 export const backgroundCommands = {
   list: { registration: 'kvcoder.background.list', description: "Lists this chat's newest 50 background runs, newest first, each with its id, kind, title, and status.", payload: payloads.list, asks: false },
   output: { registration: 'kvcoder.background.output.get', description: "Gives one background run's status, and its output (a process's last lines, a subagent's answer, or what a program worker's run returned); a subagent's also says how far it got (progress) and, when its status is waiting, the calls it waits on the person for (waitingFor).", payload: payloads.output, asks: false },
-  wait: { registration: 'kvcoder.background.wait', description: 'Waits until a background run ends, a helper starts waiting on the person (status waiting), or the time passes, then gives its status and output as output does.', payload: payloads.wait, asks: false },
+  wait: { registration: 'kvcoder.background.wait', description: 'Waits until a background run ends, a helper starts waiting on the person (status waiting), the person sends a message (note), or the time passes, then gives its status and output as output does.', payload: payloads.wait, asks: false },
   stop: { registration: 'kvcoder.background.stop', description: "Stops a background process or a program worker's run, or cancels a background subagent.", payload: payloads.stop, asks: false },
 } satisfies Record<string, ConnectorCommand>;
 
@@ -37,12 +38,15 @@ const times = { status: z.string(), startedAt: z.string(), endedAt: z.string().e
 const kind = z.enum(['process', 'subagent', 'worker']);
 const rowSchema = z.object({ id: z.string(), kind, call: z.string(), ...times });
 const shortRowSchema = z.object({ id: z.string(), kind, title: z.string(), ...times });
-const detailSchema = rowSchema.extend({ output: z.json().exactOptional(), problem: z.json().exactOptional(), progress: z.object({ steps: z.number().int(), lastActivityAt: z.string(), recentCalls: z.array(z.string()) }).exactOptional(), waitingFor: z.array(z.string()).exactOptional() });
+const detailSchema = rowSchema.extend({ output: z.json().exactOptional(), problem: z.json().exactOptional(), progress: z.object({ steps: z.number().int(), lastActivityAt: z.string(), recentCalls: z.array(z.string()) }).exactOptional(), waitingFor: z.array(z.string()).exactOptional(), note: z.string().exactOptional() });
 
 const ended = (row: JobRow) => ({ ...(row.endedAt === undefined ? {} : { endedAt: row.endedAt }), ...(row.exitCode === undefined ? {} : { exitCode: row.exitCode }) });
 const forAgent = (row: JobRow): z.output<typeof rowSchema> => ({ id: row.id, kind: row.kind, call: row.call, status: row.status, startedAt: row.startedAt, ...ended(row) });
 // A list names each run in a few words (ADR 0068, 2): the whole line or task is in `output`.
 const shortRow = (row: JobRow): z.output<typeof shortRowSchema> => ({ id: row.id, kind: row.kind, title: row.title.length > titleShown ? `${row.title.slice(0, titleShown - 1)}…` : row.title, status: row.status, startedAt: row.startedAt, ...ended(row) });
+
+// A message from the person queued for the chat ends a wait, so the step ends and the message is read (ADR 0085, 3).
+const personWrote = async (ctx: Ctx, sessionId: string): Promise<boolean> => (await records(ctx.store).queued.find({ sessionId }, { limit: 100 })).some((item) => item.source.kind === 'user');
 
 async function startedBy(ctx: Ctx, sessionId: string, runId: string, lines?: number) {
   const found = await jobDetail(ctx, sessionId, runId, lines);
@@ -69,7 +73,7 @@ export function registerBackgroundConnector(ctx: Ctx): void {
     },
   });
   // A run is looked at until it has ended (ADR 0068, 1), as a line in the shell waits on its process: the wait is this job's own.
-  // It ends early when a helper starts waiting on the person (ADR 0085, 2).
+  // It ends early when a helper starts waiting on the person (ADR 0085, 2) or the person sends a message (ADR 0085, 3).
   ctx.registerCommand('kvcoder.background.wait', {
     description: commands.wait.description,
     input: callInput(payloads.wait),
@@ -80,6 +84,7 @@ export function registerBackgroundConnector(ctx: Ctx): void {
       const until = Date.now() + (payload.timeoutMs ?? waitDefaultMs);
       let found = await startedBy(ctx, sessionId, payload.id);
       while (found.row.status === 'running' && Date.now() < until) {
+        if (await personWrote(ctx, sessionId)) return { ...forAgent(found.row), ...found.detail, note: 'The person sent a message.' };
         await delay(Math.min(lookEveryMs, until - Date.now()), ctx.job.signal);
         ctx.job.signal.throwIfAborted();
         found = await startedBy(ctx, sessionId, payload.id);
