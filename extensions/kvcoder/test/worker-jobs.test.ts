@@ -103,7 +103,7 @@ describe("a program worker's run as a job of its chat (08 §8.5 and §8.6, ADR 0
     expect((await turnState(kernel, sessionId)).session.status).toBe('idle');
   });
 
-  it('QA32-E14 the agent stops a background run once: a message says so and no turn starts', async () => {
+  it('QA32-E14 the agent stops a background run once: no message follows and no turn starts (ADR 0085, 5)', async () => {
     const { kernel, fake, sessionId, pid } = await running(true);
     const [row] = await kernel.exec('kvcoder.job.list', { sessionId });
     const stop = command('background', 'stop', { id: String(row?.id) });
@@ -114,6 +114,6 @@ describe("a program worker's run as a job of its chat (08 §8.5 and §8.6, ADR 0
     expect(toolResults(fake, -2).at(-1)).toBe('{"stopped":true}');
     expect(toolResults(fake, -1).at(-1)).toBe('{"stopped":false}');
     const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });
-    expect(messages.filter((message) => JSON.stringify(message.content).includes('pie was stopped'))).toHaveLength(1);
+    expect(messages.filter((message) => JSON.stringify(message.content).includes('pie was stopped'))).toHaveLength(0);
   });
 });

@@ -87,17 +87,17 @@ export async function linksOf(ctx: Ctx, sessionId: string, row: JobRow): Promise
   return doc === undefined ? [] : localLinks(await outputTail(ctx, doc.id, outputLines));
 }
 
-/** Stops a process or a run, or cancels a subagent and tells the session; `false` for a process or a run that had ended already. */
+/** Stops a process or a run, or cancels a subagent; only the person's stop tells the session (ADR 0085, 5). `false` for a process or a run that had ended already. */
 export async function cancelJob(ctx: Ctx, sessionId: string, row: JobRow, by: 'agent' | 'person'): Promise<boolean> {
   if (row.kind === 'worker') {
     const run = await records(ctx.store).runs.get(row.id);
-    return run !== undefined && stopRun(ctx, run);
+    return run !== undefined && stopRun(ctx, run, by);
   }
   if (row.kind === 'process') {
     const doc = await sessionProcess(ctx, sessionId, row.id);
     return doc !== undefined && stopProcess(ctx, doc, by);
   }
-  if (await cancelTurn(ctx, row.id, false)) {
+  if ((await cancelTurn(ctx, row.id, false)) && by === 'person') {
     const result = await childResult(ctx, row.id, 'cancelled');
     await appendBackground(ctx, sessionId, { kind: 'subagent', sessionId: row.id }, backgroundText(row.call, row.id, result.text), false);
   }

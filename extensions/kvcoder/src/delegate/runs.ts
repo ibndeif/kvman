@@ -81,9 +81,13 @@ async function cancelJobOf(ctx: Ctx, run: Stored<RunDoc>): Promise<void> {
   if (jobId !== null) await ctx.cancel(jobId);
 }
 
-/** Stops a run for the agent or the person: its result is that it was stopped (ADR 0021, 34). `false` for one that had ended. */
-export async function stopRun(ctx: Ctx, run: Stored<RunDoc>): Promise<boolean> {
-  const stopped = await finishRun(ctx, run.id, { status: 'cancelled', exitCode: null, text: `${run.worker} was stopped`, isError: true }, false);
+/**
+ * Stops a run for the agent or the person: its result is that it was stopped (ADR 0021, 34). The agent's own stop tells
+ * the chat nothing more, since its result says so (ADR 0085, 5). `false` for one that had ended.
+ */
+export async function stopRun(ctx: Ctx, run: Stored<RunDoc>, by: 'agent' | 'person'): Promise<boolean> {
+  const end = { status: 'cancelled' as const, exitCode: null, text: `${run.worker} was stopped`, isError: true };
+  const stopped = by === 'person' ? await finishRun(ctx, run.id, end, false) : await markEnded(ctx, run.id, end);
   if (stopped) await cancelJobOf(ctx, run);
   return stopped;
 }

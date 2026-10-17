@@ -50,7 +50,8 @@ export async function startProcess(ctx: Ctx, sessionId: string, shell: ShellComm
 
 /** Stops a running process for `by`; `false` when it had ended already. The person's stop is reported to the session. */
 export async function stopProcess(ctx: Ctx, doc: Stored<ProcessDoc>, by: 'agent' | 'person'): Promise<boolean> {
-  const ended = await markEnd(ctx, doc.id, { end: by, reported: by === 'person' });
+  // Reported at once for the person; the agent's stop result already says so, so it is never reported later (ADR 0085, 5).
+  const ended = await markEnd(ctx, doc.id, { end: by, reported: true });
   if (ended === undefined) return false;
   try {
     await ctx.processes.stop(processName(doc.id));

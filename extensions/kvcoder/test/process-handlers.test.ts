@@ -70,7 +70,7 @@ describe('background processes end without kvcoder doing it (08 §8.3, ADR 0009,
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'are you there' });
     await kernel.clock.advance(0);
     const [text = '', ...rest] = await jobMessages(kernel, sessionId);
-    expect(text).toContain(`(job ${jobId}) finished:\nThe process was interrupted because kvman stopped.\nIts last output:\nserving`);
+    expect(text).toBe(`While kvman was stopped, these background calls ended:\n- \`echo serving; sleep 30\` (job ${jobId}): interrupted because kvman stopped.`);
     expect(rest).toEqual([]);
     fake.reply(says('ok'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'and now' });

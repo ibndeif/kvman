@@ -34,12 +34,17 @@ export async function reportEnd(ctx: Ctx, doc: Stored<ProcessDoc>): Promise<void
   await appendBackground(ctx, doc.sessionId, { kind: 'job', jobId: doc.id }, backgroundText(doc.call, doc.id, text), false);
 }
 
-/** Reports the endings no handler could write into this session (kvman stopped or died), once each. */
+/** The message that reports the runs that ended while kvman was stopped: one line per run, with no output (ADR 0085, 5). */
+function interruptedText(docs: readonly Stored<ProcessDoc>[]): string {
+  return ['While kvman was stopped, these background calls ended:', ...docs.map((doc) => `- \`${doc.call}\` (job ${doc.id}): ${outcome(doc).replace(/^was /, '')}`)].join('\n');
+}
+
+/** Reports the endings no handler could write into this session (kvman stopped or died), once, in one message. */
 export async function reportInterrupted(ctx: Ctx, sessionId: string): Promise<void> {
   const store = records(ctx.store);
-  for (const doc of await store.processes.find({ sessionId, reported: false }, { limit: 1000 })) {
-    if (doc.end === undefined) continue;
-    await store.processes.update(doc.id, { reported: true });
-    await reportEnd(ctx, doc);
-  }
+  const ended = (await store.processes.find({ sessionId, reported: false }, { limit: 1000 })).filter((doc) => doc.end !== undefined);
+  if (ended.length === 0) return;
+  for (const doc of ended) await store.processes.update(doc.id, { reported: true });
+  // The message's source names the first run; the text names them all.
+  await appendBackground(ctx, sessionId, { kind: 'job', jobId: ended[0]?.id ?? '' }, interruptedText(ended), false);
 }
