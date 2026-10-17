@@ -4,9 +4,10 @@ import { command, fsCall, runs, says, shell, toolResults, type RunCallSpec } fro
 import { newSession } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
-const task = (id: string, after: string[] = []) => ({ id, title: `Do ${id}`, description: `How ${id} is done`, ...(after.length === 0 ? {} : { after }), check: `check ${id}` });
+const task = (id: string, after: string[] = []) => ({ id, title: `Do ${id}`, ...(after.length === 0 ? {} : { after }), check: `check ${id}` });
 const set = (...tasks: ReturnType<typeof task>[]): RunCallSpec => command('execution-map', 'set', { goal: 'Ship it', steps: tasks });
 const update = (...steps: Record<string, string>[]): RunCallSpec => command('execution-map', 'update', { steps });
+const detail = (id: string): RunCallSpec => command('execution-map', 'detail', { id, details: `How ${id} is done` });
 const done = (id: string) => ({ id, status: 'done', evidence: 'pnpm test passed, 12 of 12' });
 const write = (path: string): RunCallSpec => fsCall('write', { path, content: 'x\n' });
 const reminder = (left: number): string => `\n\n[kvman: the execution map has ${left} unfinished ${left === 1 ? 'step' : 'steps'} and none is marked doing. Mark the step this work belongs to with execution-map update, or set the map again when the plan changed.]`;
@@ -40,10 +41,10 @@ describe('the reminder that keeps the execution map live (08 §8.5; ADR 0074, 6 
       expect(results.length).toBeGreaterThan(0);
       for (const text of results) expect(text).not.toContain('kvman: the execution map');
     };
-    await quiet([write('a.txt')], [set(task('store'), task('page'))], [update({ id: 'store', status: 'doing' })]);
+    await quiet([write('a.txt')], [set(task('store'), task('page')), detail('store')], [update({ id: 'store', status: 'doing' })]);
     await quiet([write('a.txt')], [set(task('store'))], [update(done('store'))]);
     await quiet([write('a.txt')]);
-    await quiet([update({ id: 'store', status: 'doing' }), write('a.txt'), update(done('store'))], [set(task('store'), task('page'))]);
+    await quiet([update({ id: 'store', status: 'doing' }), write('a.txt'), update(done('store'))], [set(task('store'), task('page')), detail('store')]);
     await quiet([fsCall('list', { path: '.' })], [set(task('store'))]);
     const failed = await lastResults([write('../outside.txt')], [set(task('store'))]);
     expect(failed.results[0]).toContain('VALIDATION_FAILED');

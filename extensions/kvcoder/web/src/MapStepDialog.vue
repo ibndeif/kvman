@@ -1,17 +1,18 @@
 <script setup lang="ts">
 import { X } from '@lucide/vue';
-import { onMounted, useTemplateRef } from 'vue';
+import { computed, onMounted, useTemplateRef } from 'vue';
 import { useKvman } from './kvman.ts';
 import LinkedText from './LinkedText.vue';
 import type { ExecutionMapView } from './map-layout.ts';
 
-// One step of the execution map, over the page (plan 08 §8.7; ADR 0074, 2; ADR 0075, 1): its title and status, then what it
-// changes, what it comes after and uses, how it is checked, its evidence, and its note. Escape, a press on the
+// One step of the execution map, over the page (plan 08 §8.7; ADR 0074, 2; ADR 0075, 1; ADR 0086, 4): its title and status, then its
+// details as Markdown, what it comes after and uses, how it is checked, its evidence, and its note. Escape, a press on the
 // backdrop, or Close closes it, and Tab stays inside it. It shows the step as the map has it now.
 const props = defineProps<{ step: ExecutionMapView['steps'][number]; after: readonly string[] }>();
 const emit = defineEmits<{ close: [] }>();
 const kvman = useKvman();
 const dialog = useTemplateRef<HTMLElement>('dialog');
+const details = computed(() => ({ type: 'markdown' as const, text: 'kvcoder.markdown', params: { text: props.step.details ?? '' } }));
 
 const focusable = (): HTMLElement[] => [...(dialog.value?.querySelectorAll<HTMLElement>('button:not(:disabled), a[href]') ?? [])];
 
@@ -39,7 +40,7 @@ onMounted(() => dialog.value?.focus());
         </button>
       </div>
       <dl class="kvc-fields">
-        <div v-if="props.step.description !== null" class="kvc-field-row" data-test="map-description"><dt class="kvc-muted">{{ kvman.t('kvcoder.ui.map.description') }}</dt><dd dir="auto"><LinkedText :text="props.step.description" /></dd></div>
+        <div v-if="props.step.details !== null" class="kvc-field-row kvc-map-details" data-test="map-details"><dt class="kvc-muted">{{ kvman.t('kvcoder.ui.map.details') }}</dt><dd dir="auto"><component :is="kvman.View" :view="details" /></dd></div>
         <div v-if="props.after.length > 0" class="kvc-field-row" data-test="map-after"><dt class="kvc-muted">{{ kvman.t('kvcoder.ui.map.after') }}</dt><dd dir="auto">{{ props.after.join(' · ') }}</dd></div>
         <div v-if="props.step.uses !== null" class="kvc-field-row"><dt class="kvc-muted">{{ kvman.t('kvcoder.ui.map.uses') }}</dt><dd dir="auto">{{ props.step.uses }}</dd></div>
         <div class="kvc-field-row"><dt class="kvc-muted">{{ kvman.t('kvcoder.ui.map.check') }}</dt><dd dir="auto"><LinkedText :text="props.step.check" /></dd></div>

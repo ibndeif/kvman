@@ -27,7 +27,7 @@ describe('what a summary carries (08 §8.1, ADR 0066)', { timeout: 30_000 }, () 
     writeFileSync(path.join(kernel.homeFolder, 'a.txt'), 'old\n');
     const sessionId = await newSession(kernel);
     fake.reply(
-      runs(command('execution-map', 'set', { goal: 'Ship it', steps: [{ id: 'read', title: 'Read the code', description: 'Read every file.', check: 'read it' }, { id: 'build', title: 'Build', description: 'Run the build.', after: ['read'], check: 'run it' }] }), fsCall('read', { path: 'a.txt' })),
+      runs(command('execution-map', 'set', { goal: 'Ship it', steps: [{ id: 'read', title: 'Read the code', check: 'read it' }, { id: 'build', title: 'Build', after: ['read'], check: 'run it' }] }), fsCall('read', { path: 'a.txt' })),
       runs(command('execution-map', 'note', { text: 'The parser takes two-digit years.' }), fsCall('edit', { path: 'a.txt', edits: [{ oldText: 'old', newText: 'new' }], risky: false }), command('artifact', 'write', { id: 'report', title: 'The report', content: '# Report' })),
       says(`first answer ${padding}`),
     );

@@ -1,10 +1,10 @@
 import type { MapDoc, MapStatus, MapStep } from './map-schema.ts';
 
-// The rules of an execution map (ADR 0064, 2, 3, 5, and 6), with no store: what makes a map's shape valid, which steps
+// The rules of an execution map (ADR 0064, 2, 3, 5, and 6; ADR 0086), with no store: what makes a map's shape valid, which steps
 // are ready, what a change of status needs, and what the agent reads back. A refusal is the sentence the model reads.
 
 /** A step as `set` names it. */
-export type PlannedStep = { id: string; title: string; description: string; after?: string[] | undefined; uses?: string | undefined; check: string };
+export type PlannedStep = { id: string; title: string; after?: string[] | undefined; uses?: string | undefined; check: string };
 
 /** One change of `update`. */
 export type StepChange = { id: string; status: MapStatus; evidence?: string | undefined; note?: string | undefined };
@@ -39,11 +39,11 @@ export function shapeProblem(steps: readonly PlannedStep[]): string | undefined 
   return stuck.length === 0 ? undefined : `These steps wait on each other in a circle, so none can start: ${stuck.join(', ')}.`;
 }
 
-/** The steps of a new map: one whose id the old map had keeps how far it got. */
+/** The steps of a new map: one whose id the old map had keeps its details and how far it got. */
 export function plannedSteps(planned: readonly PlannedStep[], old: readonly MapStep[]): MapStep[] {
   return planned.map((step) => {
     const kept = old.find((candidate) => candidate.id === step.id);
-    return { id: step.id, title: step.title, description: step.description, after: step.after ?? [], uses: step.uses ?? null, check: step.check, status: kept?.status ?? 'todo', evidence: kept?.evidence ?? null, note: kept?.note ?? null };
+    return { id: step.id, title: step.title, details: kept?.details ?? null, after: step.after ?? [], uses: step.uses ?? null, check: step.check, status: kept?.status ?? 'todo', evidence: kept?.evidence ?? null, note: kept?.note ?? null };
   });
 }
 
@@ -57,9 +57,12 @@ function changed(steps: readonly MapStep[], step: MapStep, change: StepChange): 
   }
   const before = unfinishedBefore(steps, step);
   if (before.length > 0) return `${step.id} can't be ${change.status} yet: it comes after ${before.join(', ')}, which ${before.length === 1 ? 'is' : 'are'} not finished.`;
-  if (change.status === 'doing') return { ...step, status: 'doing', note };
+  if (change.status === 'doing') return step.details === null ? `${step.id} can't be doing yet: it has no details. Write them with execution-map detail first.` : { ...step, status: 'doing', note };
   return change.evidence === undefined ? `${step.id} needs evidence to be done: say what you ran or checked and what it showed.` : { ...step, status: 'done', evidence: change.evidence, note };
 }
+
+/** The refusal for a step the map doesn't have, naming the ones it has. */
+export const unknownStep = (steps: readonly MapStep[], id: string): string => `The map has no step ${id}. Its steps are: ${steps.map((step) => step.id).join(', ')}.`;
 
 /** The steps after the changes, applied in order, or the first refusal: then nothing changes. */
 export function changedSteps(steps: readonly MapStep[], changes: readonly StepChange[]): MapStep[] | string {
@@ -67,7 +70,7 @@ export function changedSteps(steps: readonly MapStep[], changes: readonly StepCh
   for (const change of changes) {
     const index = current.findIndex((step) => step.id === change.id);
     const step = current[index];
-    if (step === undefined) return `The map has no step ${change.id}. Its steps are: ${current.map((candidate) => candidate.id).join(', ')}.`;
+    if (step === undefined) return unknownStep(current, change.id);
     const next = changed(current, step, change);
     if (typeof next === 'string') return next;
     current = current.with(index, next);
@@ -90,6 +93,7 @@ export function mapProgress(map: Pick<MapDoc, 'goal' | 'steps' | 'notes'>) {
     ready: named(ready),
     waiting: named(map.steps.filter((step) => step.status === 'todo' && !ready.includes(step))),
     failed: named(map.steps.filter((step) => step.status === 'failed')),
+    undetailed: named(map.steps.filter((step) => step.details === null)),
     notes: map.notes.length,
   };
 }

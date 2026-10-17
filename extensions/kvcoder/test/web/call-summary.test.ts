@@ -26,7 +26,7 @@ describe("a closed card's line (08 §8.7, ADR 0036, 2)", () => {
       [call('background', 'output', { id: 'j1' }), { id: 'j1', status: 'running', output: 'ready' }],
       [call('background', 'stop', { id: 'j1' }), { stopped: true }],
       [call('background', 'wait', { id: 'j1' }), { id: 'j1', kind: 'process', call: 'npm test', status: 'succeeded', startedAt: 'x' }],
-      [call('execution-map', 'set', { goal: 'Ship the page', steps: [{ id: 'read', title: 'Read', description: 'd', check: 'c' }] }), { goal: 'Ship the page', progress: '0 of 1 done', doing: [], ready: ['read: Read'], waiting: [], failed: [], notes: 0 }],
+      [call('execution-map', 'set', { goal: 'Ship the page', steps: [{ id: 'read', title: 'Read', check: 'c' }] }), { goal: 'Ship the page', progress: '0 of 1 done', doing: [], ready: ['read: Read'], waiting: [], failed: [], notes: 0 }],
       [call('execution-map', 'update', { steps: [{ id: 'read', status: 'doing' }, { id: 'build', status: 'doing' }] }), { goal: 'Ship the page', progress: '1 of 3 done', doing: [], ready: [], waiting: [], failed: [], notes: 0 }],
       [call('execution-map', 'note', { text: 'The parser takes two-digit years.' }), { goal: 'Ship the page', progress: '1 of 3 done', doing: [], ready: [], waiting: [], failed: [], notes: 1 }],
       [call('artifact', 'get', { id: 'plan' }), { id: 'plan', title: 'The plan', format: 'markdown', version: 1, content: '# Plan' }],
@@ -88,5 +88,14 @@ describe("a closed card's line (08 §8.7, ADR 0036, 2)", () => {
     expect(part(read, 'call-outcome').attributes('dir')).toBeUndefined();
     await pressed(read);
     expect(part(read, 'show-all').text()).toBe('عرض كل الأسطر (40)');
+  });
+
+  it('QA54-H9 a detail call names the step it detailed, in English and Arabic', async () => {
+    const made = call('execution-map', 'detail', { id: 'read', details: '## Read' });
+    const output = { goal: 'Ship the page', progress: '0 of 2 done', doing: [], ready: ['read: Read'], waiting: [], failed: [], undetailed: ['build: Build'], notes: 0 };
+    expect(closedLine(await ranCard(made, output))).toBe('Step details read 0 of 2 done');
+    const fake = createFakeKvman();
+    fake.language.value = 'ar';
+    expect(part(await ranCard(made, output, { fake }), 'call-words').text()).toBe('تفاصيل خطوة');
   });
 });

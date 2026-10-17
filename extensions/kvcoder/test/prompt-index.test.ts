@@ -48,10 +48,11 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
       '  edit  { id, edits: [{ oldText, newText }] }',
       '  get   { id }',
       '  help  { command? }',
-      '  set    { goal, steps: [{ id, title, description, after?, uses?, check }] }',
+      '  set    { goal, steps: [{ id, title, after?, uses?, check }] }',
+      '  detail { id, details }',
       '  update { steps: [{ id, status: "todo" | "doing" | "done" | "failed" | "skipped", evidence?, note? }] }',
       '  note   { text }',
-      '  get    {}',
+      '  get    { id? }',
       '  help   { command? }',
       '  list   {}',
       '  output { id, lines? }',
@@ -71,7 +72,7 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
   it('QA52-H8 the execution map states its limits in the index', async () => {
     const { fake } = await looked(() => undefined, [command('todo', 'list')], settings);
     const entry = (systemPrompt(fake).split('## Connectors\n')[1] ?? '').split('\n').find((line) => line.startsWith('- execution-map: '));
-    expect(entry?.endsWith("Limits: goal up to 300 characters; a step's title up to 100, description up to 500, check up to 300; evidence and a note up to 500; 1 to 40 steps.")).toBe(true);
+    expect(entry?.endsWith("Limits: goal up to 300 characters; a step's title up to 100, check up to 300, details up to 4,000; evidence and a note up to 500; 1 to 40 steps.")).toBe(true);
   });
 
   it("QA19-H6 the artifact connector's description", async () => {

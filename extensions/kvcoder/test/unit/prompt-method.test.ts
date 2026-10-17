@@ -42,16 +42,14 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
     for (const phrase of [
       'Plan. Only after you understood the request, looked at what exists, and have your answers, and before you change anything, plan with `execution-map set`: never in your first reply, because a map made before you looked is a guess.',
       'It is the implementation plan the person reads and agrees to, so make it detailed, not an outline.',
-      "A step's description says what it changes and how, naming the files or parts and the approach, in words the person understands without reading the code; its check is the exact command you will run or the thing you will look at.",
       "end the map with the project's own checks (its build, lint, and tests)",
-      'Confirm the plan. The person agrees to the map before you work on it. Once an `execution-map set` that made the first map of the request succeeded, or one that changed what the person gets (the goal, what done looks like, what stays as it is, stored data, or what could go wrong), and before you start any step, call `ask choice` with other set to true.',
+      'Confirm the plan. The person agrees to the map before you work on it. Once the first map of the request, or a map you set again with a change to what the person gets (the goal, what done looks like, what stays as it is, stored data, or what could go wrong), has details on every step (its undetailed list is empty), and before you start any step, call `ask choice` with other set to true.',
       'then it asks whether to start, with the option that starts first and an option that changes the plan, so the person can write what to change.',
-      'When they ask for changes, set the map again with them and ask again; start only after they chose to start.',
+      'When they ask for changes, set the map again with them, detail what changed, and ask again; start only after they chose to start.',
       'A change of status with `execution-map update` needs no confirmation.',
     ]) expect(lead, phrase).toContain(phrase);
     for (const gone of ['`ask confirm`', 'Set it in the same reply as your first call', 'For a large, ambiguous, or risky task']) expect(lead, gone).not.toContain(gone);
     expect(executionMapDescription).toContain('the implementation plan the person reads, agrees to, and watches as a diagram');
-    expect(executionMapDescription).toContain('A step says what it changes and how in its description, which the person opens with a press');
   });
 
   it('M2.4-E276 and E282 a branch means delegation, the steps of the lead are one line, and the map is followed and kept live', () => {
@@ -69,7 +67,7 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
       'When several steps are ready together they are branches: mark each doing and start them all in one reply, one `delegate run` each, so they run at the same time.',
       'As soon as its check passed, mark it done with your evidence',
       "Mark a step you can't finish failed with a note that says why, and one that turned out unneeded skipped with a note.",
-      'When the plan itself changes (a step is missing, one is no longer needed, or the order was wrong), set the map again before you go on: a step whose id stays keeps how far it got.',
+      'When the plan itself changes (a step is missing, one is no longer needed, or the order was wrong), set the map again before you go on: a step whose id stays keeps how far it got and its details.',
     ]) expect(lead, phrase).toContain(phrase);
   });
 
@@ -180,5 +178,19 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
     const worker = workingMethod('worker');
     expect(worker).toContain('Write each file in its own call, with `fs write`.');
     expect(worker).not.toContain('Read everything they sent');
+  });
+
+  it('QA54-H10 the lead sets the skeleton first, details each step in Markdown, and asks once every step has details', () => {
+    const lead = workingMethod('lead');
+    for (const phrase of [
+      'then the steps, each with a title, what it comes after, what it uses, and how you will check it.',
+      "A step's details say what it changes and how, naming the files or parts and the approach, in words the person understands without reading the code: write them in Markdown, with a list, a table, or a Mermaid diagram or chart in a fenced mermaid block where it shows the step better than words, and never SVG.",
+      "Set the map's skeleton first, with no details, then write each step's details with `execution-map detail`, one call per step, all in the reply after the set.",
+      'When you set the map again, a step whose id stays keeps its details: detail again only a step whose approach changed, and each new step.',
+      'has details on every step (its undetailed list is empty), and before you start any step',
+    ]) expect(lead, phrase).toContain(phrase);
+    expect(lead).not.toContain("A step's description");
+    expect(executionMapDescription).toContain("Set the skeleton first: each step names who does it in uses and comes after the steps it follows. Then write each step's details with detail, one call per step: what it changes and how, in Markdown, with lists, tables, and Mermaid diagrams or charts in fenced mermaid blocks, never SVG. The person opens them with a press, and a step can't be doing until it has them.");
+    expect(executionMapDescription).toMatch(/Limits: goal up to 300 characters; a step's title up to 100, check up to 300, details up to 4,000; [^.]*; 1 to 40 steps\.$/);
   });
 });

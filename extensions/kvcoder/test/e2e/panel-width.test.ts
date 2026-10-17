@@ -12,8 +12,8 @@ afterEach(async () => { await world?.close(); world = undefined; });
 
 const sessionSchema = z.object({ id: z.string(), status: z.string() });
 const steps = [
-  { id: 'read', title: 'Read the settings code', description: 'Read it.', check: 'check read' },
-  ...['store', 'page', 'form', 'help'].map((id) => ({ id, title: `Settings ${id}`, description: `Change ${id}.`, after: ['read'], check: `check ${id}` })),
+  { id: 'read', title: 'Read the settings code', check: 'check read' },
+  ...['store', 'page', 'form', 'help'].map((id) => ({ id, title: `Settings ${id}`, after: ['read'], check: `check ${id}` })),
 ];
 
 const widthOf = async (page: Page, selector: string): Promise<number> => {

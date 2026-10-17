@@ -121,6 +121,7 @@ function mapSummary(t: Translate, command: string, payload: Record<string, unkno
   const steps: unknown = payload['steps'];
   const ids = Array.isArray(steps) ? steps.flatMap((step: unknown) => (text(fields(step)['id']) === undefined ? [] : [String(fields(step)['id'])])).join(', ') : undefined;
   if (command === 'set') return summary(t('kvcoder.ui.call.mapSet'), text(payload['goal']), progress);
+  if (command === 'detail') return summary(t('kvcoder.ui.call.mapDetail'), text(payload['id']), progress);
   if (command === 'update') return summary(t('kvcoder.ui.call.mapUpdate'), ids === '' ? undefined : ids, progress);
   if (command === 'note') return summary(t('kvcoder.ui.call.mapNote'), text(payload['text']));
   return command === 'get' ? summary(t('kvcoder.ui.call.mapGet'), undefined, progress) : undefined;

@@ -28,7 +28,7 @@ describe("the lead's prompt (08 §8.2, ADR 0022, 2 to 4)", () => {
     const prompt = lead();
     expect(lineOf(prompt, 'Understand. ')).toContain('Work out what the person needs, not only what they typed:');
     const plan = lineOf(prompt, 'Plan. ');
-    expect(plan).toContain('each with a title, a description, what it comes after, what it uses, and how you will check it.');
+    expect(plan).toContain('each with a title, what it comes after, what it uses, and how you will check it.');
     expect(plan).toContain('yourself, with a connector from the list below, for an ordinary or small change; or a worker of the `delegate` connector whose description fits');
     expect(plan).toContain('A branch means delegation: steps side by side on the map run at the same time, each done by a worker.');
   });

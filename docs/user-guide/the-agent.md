@@ -35,7 +35,7 @@ The map is the agent's plan for a larger task, drawn in the panel beside the cha
 - **Steps.** Each step is one concrete stage: what changes, who does it, and how it will be checked. A map has 1 to 40 steps.
 - **Who does a step.** The agent itself, with a connector, for an ordinary change, or a specialist worker when the step needs that skill: a designer, an architect, a tester, or a reviewer.
 - **The shape.** The agent's own steps are one line, in the order it does them. Steps side by side are branches: each one is done by a worker at the same time.
-- **A step's details.** Press a step to open a dialog with what it changes and how, what it comes after and uses, its check, its evidence, and its note. The dialog follows the step while the agent works.
+- **A step's details.** The agent draws the steps first, then writes each step's details: what it changes and how, as formatted text that can hold lists, tables, diagrams, and charts. It asks you to approve the plan once every step has its details, and a step can't start without them. Press a step to open a dialog with its details, what it comes after and uses, its check, its evidence, and its note. The dialog follows the step while the agent works.
 - **Progress.** Each step shows as to do, doing, done, failed, or skipped. If the agent changes files or runs a command while steps are left and none is marked as doing, kvman reminds it to mark one or update the map. Nothing is blocked.
 - **Changing it.** Ask the agent. A change to what you get (the goal, what done looks like, what stays as it is, stored data, or what could go wrong) is confirmed with you again; a change inside the plan, such as who does a step or the order, is made and told in one line.
 

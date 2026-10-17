@@ -4,9 +4,10 @@ import { command, runs, says, shell, systemPrompt, toolResults, type RunCallSpec
 import { newSession, turnState } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
-const step = (id: string, after: string[] = []) => ({ id, title: `Do ${id}`, description: `How ${id} is done`, ...(after.length === 0 ? {} : { after }), check: `check ${id}` });
+const step = (id: string, after: string[] = []) => ({ id, title: `Do ${id}`, ...(after.length === 0 ? {} : { after }), check: `check ${id}` });
 const set = (...steps: ReturnType<typeof step>[]): RunCallSpec => command('execution-map', 'set', { goal: 'Ship it', steps });
 const update = (...steps: Record<string, string>[]): RunCallSpec => command('execution-map', 'update', { steps });
+const detail = (id: string): RunCallSpec => command('execution-map', 'detail', { id, details: `How ${id} is done` });
 const evidence = 'pnpm test passed, 12 of 12';
 const done = (id: string) => ({ id, status: 'done', evidence });
 const parsed = (text: string | undefined) => JSON.parse(text ?? 'null') as Record<string, unknown>;
@@ -23,11 +24,11 @@ async function chat(...replies: Parameters<Awaited<ReturnType<typeof kvcoder.sta
 describe('the execution map (08 §8.5, ADR 0064)', { timeout: 30_000 }, () => {
   it('M2.4-E220 set makes the map and returns where the work is', async () => {
     const { kernel, fake, sessionId } = await chat(runs(set(step('read'), step('build', ['read']))), says('planned'));
-    expect(parsed(toolResults(fake)[0])).toEqual({ goal: 'Ship it', progress: '0 of 2 done', doing: [], ready: ['read: Do read'], waiting: ['build: Do build'], failed: [], notes: 0 });
+    expect(parsed(toolResults(fake)[0])).toEqual({ goal: 'Ship it', progress: '0 of 2 done', doing: [], ready: ['read: Do read'], waiting: ['build: Do build'], failed: [], undetailed: ['read: Do read', 'build: Do build'], notes: 0 });
     const map = await kernel.exec('kvcoder.map.get', { sessionId });
     expect(map?.steps.map((found) => [found.id, found.status, found.after])).toEqual([['read', 'todo', []], ['build', 'todo', ['read']]]);
     expect(map).toMatchObject({ goal: 'Ship it', version: 1, notes: [] });
-    expect(systemPrompt(fake, 0)).toMatch(/- execution-map: [^\n]*\n {2}set +\{ goal, steps: \[\{ id, title, description, after\?, uses\?, check \}\] \}\n {2}update +\{ steps: \[\{ id, status: "todo" \| "doing" \| "done" \| "failed" \| "skipped", evidence\?, note\? \}\] \}\n {2}note +\{ text \}\n {2}get +\{\}/);
+    expect(systemPrompt(fake, 0)).toMatch(/- execution-map: [^\n]*\n {2}set +\{ goal, steps: \[\{ id, title, after\?, uses\?, check \}\] \}\n {2}detail +\{ id, details \}\n {2}update +\{ steps: \[\{ id, status: "todo" \| "doing" \| "done" \| "failed" \| "skipped", evidence\?, note\? \}\] \}\n {2}note +\{ text \}\n {2}get +\{ id\? \}/);
   });
 
   it('M2.4-E220 a step names what it uses as one name or a list, kept as one text', async () => {
@@ -69,8 +70,8 @@ describe('the execution map (08 §8.5, ADR 0064)', { timeout: 30_000 }, () => {
   });
 
   it('M2.4-E224 the map calls of one reply apply in the order the model gave them', async () => {
-    const { fake } = await chat(runs(set(step('a'), step('b', ['a']))), runs(update({ id: 'a', status: 'doing' }), update(done('a')), update({ id: 'b', status: 'doing' })), runs(update({ id: 'b', status: 'done' })), says('ok'));
-    expect(toolResults(fake, 2).slice(1).map((text) => parsed(text)['progress'])).toEqual(['0 of 2 done', '1 of 2 done', '1 of 2 done']);
+    const { fake } = await chat(runs(set(step('a'), step('b', ['a'])), detail('a'), detail('b')), runs(update({ id: 'a', status: 'doing' }), update(done('a')), update({ id: 'b', status: 'doing' })), runs(update({ id: 'b', status: 'done' })), says('ok'));
+    expect(toolResults(fake, 2).slice(3).map((text) => parsed(text)['progress'])).toEqual(['0 of 2 done', '1 of 2 done', '1 of 2 done']);
     expect(parsed(toolResults(fake, 2).at(-1))['doing']).toEqual(['b: Do b']);
     expect(toolResults(fake, 3).slice(-1)).toEqual(['error VALIDATION_FAILED: b needs evidence to be done: say what you ran or checked and what it showed.']);
   });
@@ -88,22 +89,6 @@ describe('the execution map (08 §8.5, ADR 0064)', { timeout: 30_000 }, () => {
     const map = await kernel.exec('kvcoder.map.get', { sessionId });
     expect(map?.steps[0]?.status).toBe('todo');
     expect(await kernel.exec('kvcoder.map.get', { sessionId: helperId })).toEqual(map);
-  });
-
-  it('M2.4-E259 a step carries its description, a new set replaces it, and a step without one is refused', async () => {
-    const { kernel, fake, sessionId } = await chat(
-      runs(set(step('read'))),
-      runs(update(done('read'))),
-      runs(set({ ...step('read'), description: 'Read src/settings.ts and its test.' })),
-      runs(command('execution-map', 'get')),
-      says('ok'),
-    );
-    expect(parsed(toolResults(fake, 4).at(-1))).toMatchObject({ steps: [{ id: 'read', description: 'Read src/settings.ts and its test.', status: 'done' }] });
-    expect((await kernel.exec('kvcoder.map.get', { sessionId }))?.steps.map((found) => found.description)).toEqual(['Read src/settings.ts and its test.']);
-    const { description: _left, ...bare } = step('a');
-    const refused = await chat(runs(command('execution-map', 'set', { goal: 'Ship it', steps: [bare] }), set({ ...step('a'), description: '' }), set({ ...step('a'), description: 'x'.repeat(501) })), says('ok'));
-    expect(toolResults(refused.fake, 1).map((text) => text.slice(0, 23))).toEqual(Array.from({ length: 3 }, () => 'error VALIDATION_FAILED'));
-    expect(await refused.kernel.exec('kvcoder.map.get', { sessionId: refused.sessionId })).toBeNull();
   });
 
   it('M2.4-E226 a chat with no map answers null, and deleting a chat deletes its map', async () => {

@@ -33,17 +33,24 @@ describe('the execution map as the person sees it (08 §8.7, ADR 0064)', () => {
     expect(view.find('[data-test="map-note"]').text()).toContain('The date field is wrong.');
   });
 
-  it('M2.4-E261 and E278 the dialog of a step shows its description first, and a step without one has no such row', async () => {
-    const map = executionMap([mapStep('read', { description: 'Read src/settings.ts and its test, and list what the page needs.' }), mapStep('page', { after: ['read'] })]);
-    const view = await mounted(ExecutionMap, createFakeKvman(), { map });
+  it('QA54-H8 and M2.4-E278 the dialog of a step shows its details as Markdown first, and a step without them has no such row', async () => {
+    const details = '## Read\n\n- src/settings.ts\n\n```mermaid\ngraph TD; a-->b\n```';
+    const map = executionMap([mapStep('read', { details }), mapStep('page', { after: ['read'] })]);
+    const fake = createFakeKvman();
+    const view = await mounted(ExecutionMap, fake, { map });
     await view.find('[data-test="map-step-read"]').trigger('click');
     expect(view.find('[data-test="map-detail-status"]').text()).toBe('Step · To do');
-    expect(view.find('[data-test="map-description"]').text()).toBe('AboutRead src/settings.ts and its test, and list what the page needs.');
-    expect(view.findAll('[data-test="map-detail"] dt').map((label) => label.text())).toEqual(['About', 'Check']);
+    expect(view.find('[data-test="map-details"] dt').text()).toBe('Details');
+    expect(view.find('[data-test="map-details"] [data-test="markdown"]').text()).toBe(details);
+    expect(view.findAll('[data-test="map-detail"] dt').map((label) => label.text())).toEqual(['Details', 'Check']);
     await view.find('[data-test="map-detail-close"]').trigger('click');
     await view.find('[data-test="map-step-page"]').trigger('click');
-    expect(view.find('[data-test="map-description"]').exists()).toBe(false);
+    expect(view.find('[data-test="map-details"]').exists()).toBe(false);
     expect(view.findAll('[data-test="map-detail"] dt').map((label) => label.text())).toEqual(['After', 'Check']);
+    await view.find('[data-test="map-detail-close"]').trigger('click');
+    fake.language.value = 'ar';
+    await view.find('[data-test="map-step-read"]').trigger('click');
+    expect(view.find('[data-test="map-details"] dt').text()).toBe('التفاصيل');
     view.unmount();
   });
 
