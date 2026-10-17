@@ -66,5 +66,6 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `adr/0083-sign-in-introduces-kvman.md` | pi-ai 1.2.0, every sign-in introduces itself as `kvman`, and OpenRouter's router models stay out of the list by name |
 | `adr/0084-an-mcp-run-shows-its-steps.md` | An `mcp run` call shows its steps numbered, each with its arguments, in its card and its approval |
 | `adr/0085-background-runs-the-person-sees-and-a-kvman-that-survives.md` | A background helper's approvals show in the chat, runs say they wait, `delegate continue`, quieter notices, IMMEDIATE main-thread writes and a crash record, fewer map confirmations, a folder watcher on Linux |
+| `adr/0086-the-map-is-set-as-a-skeleton-and-each-step-detailed.md` | `execution-map set` writes the skeleton and `detail` each step's Markdown details (up to 4,000, Mermaid diagrams and charts), `undetailed` in progress, `doing` needs details, a light `get`, and the person confirms the detailed plan |
 
 The plan is complete. Implementation starts with M1.1.
