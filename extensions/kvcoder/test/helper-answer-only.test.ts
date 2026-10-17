@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { command, runs, says, shell, systemPrompt, toolResults } from './support/model-script.ts';
+import { command, runs, says, shell, systemPrompt, toolResults, withoutHelperId } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 import { worker, workers } from './support/workers.ts';
 
@@ -56,7 +56,7 @@ describe('a helper answers the lead only (ADR 0063)', { timeout: 30_000 }, () =>
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     expect(toolResults(fake, 2)).toEqual(["error VALIDATION_FAILED: ask isn't available in this subagent."]);
-    expect(toolResults(fake).at(-1)).toBe('Questions: which one?');
+    expect(withoutHelperId(toolResults(fake).at(-1) ?? '')).toBe('Questions: which one?');
     expect((await turnState(kernel, sessionId)).turn?.pending).toEqual([]);
   });
 

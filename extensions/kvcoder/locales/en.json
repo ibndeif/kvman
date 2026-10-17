@@ -208,6 +208,7 @@
   "kvcoder.ask.choice.check.description": "Asks the person to choose among options and waits for the answer.",
   "kvcoder.ask.confirm.check.description": "Asks the person yes or no and waits for the answer.",
   "kvcoder.delegate.check.description": "Runs a worker on a task; several runs in one reply run in parallel.",
+  "kvcoder.delegate.continue.check.description": "Sends a follow-up to a helper of this chat that has ended, such as one that came back blocked or with questions: it continues with its own history.",
   "kvcoder.delegate.worker.check.description": "Checks that a worker's program is installed; a subagent is always ready.",
   "kvcoder.delegate.worker.run.description": "Runs a program worker's program on its task, and gives the chat its answer.",
   "kvcoder.connector.help.get.description": "Gives a connector's help: its commands, or one command's payload, result, and examples.",

@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { command, fsCall, runs, says, shell, systemPrompt, toolResults } from './support/model-script.ts';
+import { command, fsCall, runs, says, shell, systemPrompt, toolResults, withoutHelperId } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 import { worker, workers } from './support/workers.ts';
 
@@ -57,7 +57,7 @@ describe("the rules of a worker's subagent (08 §8.5, ADR 0009, 102; ADR 0021)",
     fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Loop' })), runs(shell('echo 1')), { chunks: [{ text: 'still going' }, { toolCall: { id: 'x', name: 'run', arguments: { description: 'Again.', connector: 'shell', command: 'exec', payload: { line: 'echo 2', risky: false } } } }] }, says('parent done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
-    expect(toolResults(fake, 3)).toEqual(['subagent ended maxSteps\n\nIts last message before it stopped (unfinished, not a result):\nstill going']);
+    expect(toolResults(fake, 3).map(withoutHelperId)).toEqual(['subagent ended maxSteps\n\nIts last message before it stopped (unfinished, not a result):\nstill going']);
   });
 
   it('M2.4-E2 every command that names a subagent session fails VALIDATION_FAILED, and reads work', async () => {

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { shippedWorkers } from '../src/delegate/workers.ts';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { command, fsCall, runs, says, shell, systemPrompt, toolResults } from './support/model-script.ts';
+import { command, fsCall, runs, says, shell, systemPrompt, toolResults, withoutHelperId } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 import { worker, workers } from './support/workers.ts';
 
@@ -31,7 +31,7 @@ describe("the rules of a worker's child and of the workers setting (08 §8.5, AD
     await kernel.clock.advance(0);
     expect(indexed(systemPrompt(fake, 1))).toEqual(['fs']);
     expect(toolResults(fake, 2)[0]).toMatch(/^\{"path":/);
-    expect(toolResults(fake, 3)).toEqual(['child done']);
+    expect(toolResults(fake, 3).map(withoutHelperId)).toEqual(['child done']);
   });
 
   it.each([
@@ -74,7 +74,7 @@ describe("the rules of a worker's child and of the workers setting (08 §8.5, AD
     expect(systemPrompt(fake, 1)).toContain('## Worker: careful\nBe careful.');
     expect(systemPrompt(fake, 2)).toContain('## Worker: careful\nBe careful.');
     expect(systemPrompt(fake, 2)).not.toContain('Be bold.');
-    expect(toolResults(fake, 3)).toEqual(['child done']);
+    expect(toolResults(fake, 3).map(withoutHelperId)).toEqual(['child done']);
   });
 
   it("QA31-E10 / E151 a worker's unknown model fails its child, and the call returns subagent ended failed with the code", async () => {
@@ -83,7 +83,7 @@ describe("the rules of a worker's child and of the workers setting (08 §8.5, AD
     fake.reply(runs(delegate('lost')), says('parent done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
-    expect(toolResults(fake)).toEqual(['subagent ended failed: kvai/MODEL_UNKNOWN']);
+    expect(toolResults(fake).map(withoutHelperId)).toEqual(['subagent ended failed: kvai/MODEL_UNKNOWN']);
     expect(shippedWorkers.every((entry) => entry.model === null)).toBe(true);
   });
 });

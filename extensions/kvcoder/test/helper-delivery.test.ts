@@ -77,7 +77,7 @@ async function probe(mode: 'commit' | 'rollback' | 'twice' | 'background') {
 
 describe("a helper's end and its delivery are one transaction (KVC-06, ADR 0052)", () => {
   it('M2.4-E124 the transaction that ends the helper resolves the call that waits on it and prepares the next step', async () => {
-    expect(await probe('commit')).toEqual({ delivered: [['step']], child: 'done', parentStatus: 'running', prepared: true, pending: [], results: ['child answer'], messages: [], turns: 1 });
+    expect(await probe('commit')).toEqual({ delivered: [['step']], child: 'done', parentStatus: 'running', prepared: true, pending: [], results: [expect.stringMatching(/^child answer\n\n\(helper \S+\)$/)], messages: [], turns: 1 });
   });
 
   it('M2.4-E124 a fault in that transaction leaves neither the end nor the delivery', async () => {
@@ -85,7 +85,7 @@ describe("a helper's end and its delivery are one transaction (KVC-06, ADR 0052)
   });
 
   it('M2.4-E124 ending twice delivers once', async () => {
-    expect(await probe('twice')).toMatchObject({ delivered: [['step'], null], child: 'done', results: ['child answer'] });
+    expect(await probe('twice')).toMatchObject({ delivered: [['step'], null], child: 'done', results: [expect.stringMatching(/^child answer\n\n\(helper \S+\)$/)] });
   });
 
   it("M2.4-E125 a background helper's end appends its message and opens the idle parent's turn together", async () => {

@@ -40,6 +40,11 @@ export function shell(line: string, payload: Record<string, unknown> = {}): RunC
   return { connector: 'shell', command: 'exec', payload: { line, risky: false, ...payload } };
 }
 
+/** A helper's result without the line `(helper <id>)` that ends it (ADR 0085, 4). */
+export function withoutHelperId(text: string): string {
+  return text.replace(/\n\n\(helper [^)\n]+\)$/, '');
+}
+
 /** A reply of plain text. */
 export function says(text: string): FakeReply {
   return { chunks: [{ text }] };

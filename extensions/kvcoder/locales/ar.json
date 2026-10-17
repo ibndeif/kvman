@@ -208,6 +208,7 @@
   "kvcoder.ask.choice.check.description": "يطلب من المستخدم الاختيار من بين خيارات وينتظر الإجابة.",
   "kvcoder.ask.confirm.check.description": "يسأل المستخدم سؤال نعم أو لا وينتظر الإجابة.",
   "kvcoder.delegate.check.description": "يشغّل مساعدًا على مهمة؛ وعدة تشغيلات في رد واحد تعمل بالتوازي.",
+  "kvcoder.delegate.continue.check.description": "يرسل متابعة إلى مساعد في هذه المحادثة أنهى عمله، مثل مساعد عاد متوقفًا أو بأسئلة: فيكمل بسجله نفسه.",
   "kvcoder.delegate.worker.check.description": "يتحقق من أن برنامج المساعد مثبت؛ والوكيل المساعد جاهز دائمًا.",
   "kvcoder.delegate.worker.run.description": "يشغّل برنامج المساعد على مهمته، ويعطي المحادثة إجابته.",
   "kvcoder.connector.help.get.description": "يعيد مساعدة موصّل: أوامره، أو حمولة أمر واحد ونتيجته وأمثلته.",

@@ -5,7 +5,7 @@ import { shippedWorkers, workersSchema } from '../src/delegate/workers.ts';
 import { connectorDocSchema } from '../src/schemas/registry.ts';
 import { readOnlyAllows } from '../src/turns/read-only.ts';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { command, fsCall, runs, says, shell, systemPrompt, toolResults } from './support/model-script.ts';
+import { command, fsCall, runs, says, shell, systemPrompt, toolResults, withoutHelperId } from './support/model-script.ts';
 import { newSession } from './support/turns.ts';
 import { worker, workers } from './support/workers.ts';
 
@@ -41,7 +41,7 @@ describe('a read-only worker (KVC-33, ADR 0056)', { timeout: 30_000 }, () => {
     expect(child[8]).toMatch(/^error VALIDATION_FAILED: A helper writes no artifact/);
     expect(['new.txt', 'ran.txt'].map((file) => existsSync(path.join(kernel.homeFolder, file)))).toEqual([false, false]);
     expect(await kernel.exec('todo.item.list', {})).toEqual([]);
-    expect(toolResults(fake).at(-1)).toBe('report ready');
+    expect(withoutHelperId(toolResults(fake).at(-1) ?? '')).toBe('report ready');
   });
 
   it("M2.4-E172 a read-only helper's prompt lists only what it may run, and keeps that when the worker is edited", async () => {

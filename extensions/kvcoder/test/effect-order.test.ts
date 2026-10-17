@@ -3,7 +3,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { TestKernel } from '@kvman/testkit';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { command, fsCall, runs, says, shell, toolResults } from './support/model-script.ts';
+import { command, fsCall, runs, says, shell, toolResults, withoutHelperId } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
@@ -90,6 +90,6 @@ describe("effects run in the model's order (KVC-07, ADR 0046)", { timeout: 30_00
     fake.reply(runs(helper, helper), says('one'), says('two'), says('done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
-    expect(toolResults(fake).sort()).toEqual(['one', 'two']);
+    expect(toolResults(fake).map(withoutHelperId).sort()).toEqual(['one', 'two']);
   });
 });

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { heldReply } from './support/held-reply.ts';
 import { wait } from './support/wait.ts';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { command, requestMessages, runs, says, textOf, unstamped } from './support/model-script.ts';
+import { command, requestMessages, runs, says, textOf, unstamped, withoutHelperId } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
@@ -52,6 +52,6 @@ describe('steering (08 §8.1, ADR 0009, 90 and 102)', { timeout: 30_000 }, () =>
     expect((await turnState(kernel, sessionId)).session.status).toBe('waiting');
     child.release();
     await kernel.clock.advance(0);
-    expect(roles(requestMessages(fake)).slice(-2)).toEqual(['tool:child answer', 'user:meanwhile']);
+    expect(roles(requestMessages(fake)).slice(-2).map(withoutHelperId)).toEqual(['tool:child answer', 'user:meanwhile']);
   });
 });

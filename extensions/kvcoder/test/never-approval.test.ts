@@ -3,7 +3,7 @@ import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import type { TestKernel } from '@kvman/testkit';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { command, fsCall, runs, says, shell, toolResults, type RunCallSpec } from './support/model-script.ts';
+import { command, fsCall, runs, says, shell, toolResults, type RunCallSpec, withoutHelperId } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 import { wait } from './support/wait.ts';
 import { programWorker, useWorkerPrograms } from './support/worker-programs.ts';
@@ -66,7 +66,7 @@ describe('with never no call asks the person (08 §8.3, ADR 0077)', { timeout: 3
     const { kernel, fake, sessionId } = await started(never, runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Check' })), runs(shell('touch child.txt', { risky: true })), says('child done'), says('parent done'));
     await done(kernel, sessionId);
     expect(home(kernel, 'child.txt')).toBe(true);
-    expect(toolResults(fake, 3)).toEqual(['child done']);
+    expect(toolResults(fake, 3).map(withoutHelperId)).toEqual(['child done']);
   });
 
   it("M2.4-E294 the agent's own question still waits for the person", async () => {

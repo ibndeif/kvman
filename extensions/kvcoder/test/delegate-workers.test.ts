@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { shippedWorkers } from '../src/delegate/workers.ts';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { command, requestTools, runs, says, shell, systemPrompt, toolResults } from './support/model-script.ts';
+import { command, requestTools, runs, says, shell, systemPrompt, toolResults, withoutHelperId } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 import { worker, workers } from './support/workers.ts';
 
@@ -28,7 +28,7 @@ describe('the delegate connector and its workers (08 §8.5, ADR 0021)', { timeou
     const prompt = systemPrompt(fake, 0);
     expect(prompt.split('\n').filter((line) => line.startsWith('- ')).map((line) => line.slice(2, line.indexOf(':')))).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'todo']);
     expect(prompt).not.toContain('- subagent: ');
-    expect(prompt).toContain('\n  run  { worker, title, task, background? }\n  help { command? }');
+    expect(prompt).toContain('\n  run      { worker, title, task, background? }\n  continue { id, message, background? }\n  help     { command? }');
     expect(toolResults(fake)).toEqual(['error VALIDATION_FAILED: There is no connector subagent. The connectors are: shell, fs, artifact, execution-map, background, ask, delegate, todo.']);
   });
 
@@ -59,7 +59,7 @@ describe('the delegate connector and its workers (08 §8.5, ADR 0021)', { timeou
     expect(systemPrompt(fake, 1)).toContain(`## Guide\nRead the guide.\n\n## Worker: reviewer\n${reviewer?.instructions ?? ''}\n\nYou are read-only here: `);
     expect(systemPrompt(fake, 1)).toMatch(/so don't make one; say what should change and why\.\n\n## Connectors\n/);
     expect(fake.requests()[1]?.body).toMatchObject({ messages: [expect.anything(), { role: 'user', content: 'Review src/a.ts' }] });
-    expect(toolResults(fake, 2)).toEqual(['two defects']);
+    expect(toolResults(fake, 2).map(withoutHelperId)).toEqual(['two defects']);
     expect(systemPrompt(fake, 0)).not.toContain('## Worker:');
   });
 
@@ -82,7 +82,7 @@ describe('the delegate connector and its workers (08 §8.5, ADR 0021)', { timeou
   it('QA31-H7 general has no worker block', async () => {
     const { fake } = await turn({}, runs(delegate('general')), says('child done'), says('parent done'));
     expect(systemPrompt(fake, 1)).not.toContain('## Worker:');
-    expect(toolResults(fake, 2)).toEqual(['child done']);
+    expect(toolResults(fake, 2).map(withoutHelperId)).toEqual(['child done']);
   });
 
   it('QA31-H8 a child session names its worker, and a top-level one has none', async () => {

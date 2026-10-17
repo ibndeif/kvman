@@ -11,6 +11,7 @@ import { registerFsConnector } from './connectors/fs.ts';
 import { registerMcpConnector } from './connectors/mcp.ts';
 import { registerShellConnector } from './connectors/shell.ts';
 import { registerDelegateConnector } from './connectors/delegate.ts';
+import { registerContinueCheck } from './delegate/continue-helper.ts';
 import { registerWorkerRun } from './delegate/register-worker-run.ts';
 import { registerDocs } from './docs.ts';
 import { registerProcessHandlers, interruptLeftovers } from './jobs/process-handlers.ts';
@@ -54,6 +55,7 @@ export default (ctx: Ctx): void => {
   registerBackgroundConnector(ctx);
   registerAskConnector(ctx);
   registerDelegateConnector(ctx);
+  registerContinueCheck(ctx);
   registerWorkerRun(ctx);
   registerMcpConnector(ctx);
   registerMcp(ctx);

@@ -62,8 +62,9 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
       '  choice  { prompt, multiple, options: [{ id, label, description? }], other? }',
       '  confirm { prompt, danger? }',
       '  help    { command? }',
-      '  run  { worker, title, task, background? }',
-      '  help { command? }',
+      '  run      { worker, title, task, background? }',
+      '  continue { id, message, background? }',
+      '  help     { command? }',
     ]);
   });
 

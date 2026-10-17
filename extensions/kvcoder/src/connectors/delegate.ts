@@ -6,7 +6,7 @@ import { settingSchemas } from '../register-settings.ts';
 import type { CreationGuard } from '../delegate/permission.ts';
 import type { SessionDoc } from '../schemas/records.ts';
 import { now } from '../sessions/session-lookup.ts';
-import { records, txRecords } from '../store/collections.ts';
+import { records, txRecords, type TxRecords } from '../store/collections.ts';
 import { appendMessage, noUsage, userContent } from '../turns/history.ts';
 import { beginTurn, openTurn } from '../turns/start-turn.ts';
 import { callInput, type ConnectorCommand } from './connector-command.ts';
@@ -37,9 +37,18 @@ export const delegateRunSchema = z.strictObject({
   background: z.boolean().describe('true lets you go on at once; the answer arrives later as a message.').exactOptional(),
 });
 
+export const delegateContinueSchema = z.strictObject({
+  id: z.string().min(1).describe('The helper to continue: the id in the line (helper <id>) under its result.'),
+  message: z.string().min(1).describe('What the helper is to do next; it still has its task and everything it did.'),
+  background: z.boolean().describe('true lets you go on at once; the answer arrives later as a message.').exactOptional(),
+});
+
 export const delegateCommands = {
   run: { registration: 'kvcoder.delegate.check', description: 'Runs a worker on a task; several runs in one reply run in parallel.', payload: delegateRunSchema, asks: false, result: "the worker's final answer, or started <id> with background." },
+  continue: { registration: 'kvcoder.delegate.continue.check', description: 'Sends a follow-up to a helper of this chat that has ended, such as one that came back blocked or with questions: it continues with its own history.', payload: delegateContinueSchema, asks: false, result: "the helper's new answer, or started <id> with background." },
 } satisfies Record<string, ConnectorCommand>;
+
+export type DelegateContinue = z.output<typeof delegateContinueSchema>;
 
 export type DelegateRun = z.output<typeof delegateRunSchema>;
 
@@ -97,6 +106,12 @@ export async function createChild(ctx: Ctx, parent: Stored<SessionDoc>, worker: 
   return childId;
 }
 
+// A child's turn starts on its parent's newest message: its task, or the message of a `continue` (ADR 0085, 4).
+function awaitsParent(store: TxRecords, child: Stored<SessionDoc>): boolean {
+  const [last] = store.messages.find({ sessionId: child.id }, { limit: 1, order: 'desc' });
+  return last?.kind === 'user' && last.source?.kind === 'subagent' && last.source.sessionId === child.parentId;
+}
+
 /** Starts the child's turn and tells the parent's stream, so the conversation can stream the child (ADR 0009, 99). */
 export async function startChild(ctx: Ctx, childId: string, guard: CreationGuard): Promise<void> {
   const turnId = await ctx.store.transaction((tx) => {
@@ -104,7 +119,7 @@ export async function startChild(ctx: Ctx, childId: string, guard: CreationGuard
     const parent = guard(store);
     const child = store.sessions.get(childId);
     if (child !== undefined && child.parentId !== parent.id) throw invalid('The child no longer belongs to its originating session.');
-    return child === undefined || child.status !== 'idle' || child.turnId !== null || child.endedTurns !== 0 ? undefined : openTurn(store, child);
+    return child === undefined || child.status !== 'idle' || child.turnId !== null || !awaitsParent(store, child) ? undefined : openTurn(store, child);
   });
   if (turnId === undefined) return;
   const jobId = await beginTurn(ctx, childId, turnId, false);

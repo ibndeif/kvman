@@ -2,7 +2,8 @@ import { ProblemError, type Ctx, type Stored } from '@kvman/sdk';
 import { isAskKind, type QuestionKind } from '../connectors/ask.ts';
 import { payloadJsonSchema } from '../connectors/connector-command.ts';
 import { parseRunArgs, type RunCall } from '../calls/run-tool.ts';
-import { createChild, delegateRunSchema, startChild } from '../connectors/delegate.ts';
+import { createChild, delegateContinueSchema, delegateRunSchema, startChild } from '../connectors/delegate.ts';
+import { continuableHelper, messageHelper } from '../delegate/continue-helper.ts';
 import { createRun } from '../delegate/runs.ts';
 import { startBackgroundRun } from '../delegate/start-background.ts';
 import { availableWorker, isProgram } from '../delegate/workers.ts';
@@ -87,6 +88,19 @@ async function delegateOutcome(env: CallEnv, toolCallId: string, call: RunCall, 
   return result(toolCallId, textResult(call, `started ${childId}`));
 }
 
+// A checked `delegate continue` (ADR 0085, 4): the helper gets its message and goes on, waited for or in the background.
+async function continueOutcome(env: CallEnv, toolCallId: string, call: RunCall, held: boolean): Promise<CallOutcome> {
+  const { ctx, session } = env;
+  const request = delegateContinueSchema.parse(call.payload);
+  const { worker } = await continuableHelper(ctx, session.id, request.id);
+  const guard = await creationGuard(ctx, env.lease, worker);
+  if (held) return heldBackRun(toolCallId, call);
+  if (!(await messageHelper(ctx, env.lease, request, call.description, guard))) return refused(toolCallId, 'The originating step is no longer current.');
+  if (request.background !== true) return { kind: 'subagent', childSessionId: request.id };
+  await startChild(ctx, request.id, await creationGuard(ctx, env.lease, worker));
+  return result(toolCallId, textResult(call, `started ${request.id}`));
+}
+
 function evaluateCall(env: CallEnv, toolCall: ToolCall, held: boolean): Promise<CallOutcome> {
   if (toolCall.name !== 'run') return Promise.resolve(refused(toolCall.id, `The call's arguments are invalid: the tool is run, not ${toolCall.name}.`));
   const args = parseRunArgs(toolCall.arguments);
@@ -104,7 +118,7 @@ function changesThings(toolCall: ToolCall): boolean {
 }
 
 const fileRead = 'kvcoder.fs.file.get';
-const isHelperRun = (call: RunCall): boolean => call.connector === 'delegate' && call.command === 'run';
+const isHelperRun = (call: RunCall): boolean => call.connector === 'delegate' && (call.command === 'run' || call.command === 'continue');
 const waitsForDecision = (outcome: CallOutcome): boolean => outcome.kind === 'deferred' || (outcome.kind === 'question' && outcome.questionKind === 'approval');
 // A helper run that would start behind a pending approval isn't started (ADR 0046, amendment 4); one that asks first is still asked.
 const heldBackRun = (toolCallId: string, call: RunCall): CallOutcome => result(toolCallId, failedCall(call, errorOutput({ code: 'VALIDATION_FAILED', message: 'Not started: an earlier call in this reply waits for a decision. Make this call again after it is decided.' }).output));
@@ -172,7 +186,7 @@ async function evaluateCurrentCall(env: CallEnv, toolCall: ToolCall, call: RunCa
   if (!done.isError && target.registration === fileRead && typeof call.payload['path'] === 'string') await recordFileView(ctx, session.id, call.payload['path']);
   if (done.isError || (call.connector !== 'ask' && call.connector !== 'delegate')) return result(toolCall.id, done);
   if (call.connector === 'delegate') {
-    try { return await delegateOutcome(env, toolCall.id, call, held); }
+    try { return await (call.command === 'continue' ? continueOutcome(env, toolCall.id, call, held) : delegateOutcome(env, toolCall.id, call, held)); }
     catch (error) {
       if (!(error instanceof ProblemError) || ctx.job.signal.aborted) throw error;
       return result(toolCall.id, failedCall(call, errorOutput(error.problem).output));

@@ -102,7 +102,7 @@ describe("kvcoder's catalogs (02 §2.11)", { timeout: 30_000 }, () => {
     const en = catalog('en');
     const ar = catalog('ar');
     const added = Object.keys(en).filter((key) => key.startsWith('kvcoder.config.workers.') || key.startsWith('kvcoder.delegate.'));
-    expect(added).toHaveLength(69);
+    expect(added).toHaveLength(70);
     for (const key of [...added, 'kvcoder.config.connector.delegate', 'kvcoder.errors.WORKER_NOT_FOUND']) {
       expect(ar[key], key).toBeTruthy();
       expect(placeholders(ar[key] ?? ''), key).toEqual(placeholders(en[key] ?? ''));

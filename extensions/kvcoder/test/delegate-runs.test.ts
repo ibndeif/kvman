@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { wait } from './support/wait.ts';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { command, requestMessages, runs, says, shell, systemPrompt, textOf, toolResults } from './support/model-script.ts';
+import { command, requestMessages, runs, says, shell, systemPrompt, textOf, toolResults, withoutHelperId } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
@@ -29,7 +29,7 @@ describe('delegate runs (08 §8.5, ADR 0021)', { timeout: 30_000 }, () => {
 
     const served = [1, 2].map((index) => textOf(requestMessages(fake, index).at(-1)));
     const answerOf = (task: string): string => (served.indexOf(task) === 0 ? 'first answer' : 'second answer');
-    expect(toolResults(fake, 3)).toEqual([answerOf('Task A'), answerOf('Task B')]);
+    expect(toolResults(fake, 3).map(withoutHelperId)).toEqual([answerOf('Task A'), answerOf('Task B')]);
     const fresh = served.indexOf('Task A') + 1;
     expect(requestMessages(fake, fresh).filter((message) => message.role === 'user').map(textOf)).toEqual(['Task A']);
     expect(systemPrompt(fake, fresh)).toContain('You are kvman Coder');
@@ -54,7 +54,7 @@ describe('delegate runs (08 §8.5, ADR 0021)', { timeout: 30_000 }, () => {
     const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });
     const arrived = messages.find((message) => message.source?.kind === 'subagent');
     expect(arrived?.source).toEqual({ kind: 'subagent', sessionId: childId });
-    expect(String(arrived?.content['content'])).toMatch(new RegExp(`^The background call \`A test call\\.\` \\(job ${childId}\\) finished:\\n(one|two|three)$`));
+    expect(String(arrived?.content['content'])).toMatch(new RegExp(`^The background call \`A test call\\.\` \\(job ${childId}\\) finished:\\n(one|two|three)\\n\\n\\(helper ${childId}\\)$`));
   });
 
   it("QA49-H1 a run's title names its helper: the child session's title, and the run's title in the job list", async () => {
@@ -99,7 +99,7 @@ describe('delegate runs (08 §8.5, ADR 0021)', { timeout: 30_000 }, () => {
     await kernel.exec('kvcoder.question.answer', { questionId: String(child.turn?.pending[0]?.questionId), answer: { confirmed: true } });
     await kernel.clock.advance(0);
     expect(toolResults(fake, 2)).toEqual(['child\n[exit code 0]']);
-    expect(toolResults(fake, 3)).toEqual(['child done']);
+    expect(toolResults(fake, 3).map(withoutHelperId)).toEqual(['child done']);
     expect((await turnState(kernel, sessionId)).turn).toMatchObject({ outcome: 'done' });
   });
 });

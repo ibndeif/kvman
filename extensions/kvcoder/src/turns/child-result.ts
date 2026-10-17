@@ -19,9 +19,11 @@ function stoppedBy(store: TxRecords, childId: string): { code: string; reason: s
 export function childResultInTx(store: TxRecords, childId: string, outcome: Outcome): { text: string; isError: boolean } {
   const [last] = store.messages.find({ sessionId: childId, kind: 'assistant' }, { limit: 1, order: 'desc' });
   const answer = last === undefined ? '' : textOf(last.content['content']);
-  if (outcome === 'done') return { text: truncate(answer), isError: false };
+  // Every helper result ends with the helper's id, which `delegate continue` takes (ADR 0085, 4).
+  const id = `\n\n(helper ${childId})`;
+  if (outcome === 'done') return { text: `${truncate(answer)}${id}`, isError: false };
   const why = stoppedBy(store, childId);
   const lines = [`subagent ended ${outcome}${why === undefined ? '' : `: ${why.code}`}`, ...(why?.reason === undefined ? [] : [why.reason])];
   if (answer !== '') lines.push('', 'Its last message before it stopped (unfinished, not a result):', answer);
-  return { text: truncate(lines.join('\n')), isError: true };
+  return { text: `${truncate(lines.join('\n'))}${id}`, isError: true };
 }
