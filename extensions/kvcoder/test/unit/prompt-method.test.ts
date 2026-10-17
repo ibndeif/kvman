@@ -44,9 +44,10 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
       'It is the implementation plan the person reads and agrees to, so make it detailed, not an outline.',
       "A step's description says what it changes and how, naming the files or parts and the approach, in words the person understands without reading the code; its check is the exact command you will run or the thing you will look at.",
       "end the map with the project's own checks (its build, lint, and tests)",
-      'Confirm the plan. The person agrees to the map before you work on it. Once an `execution-map set` that made the map or changed its steps succeeded, and before you start any step, call `ask choice` with other set to true.',
+      'Confirm the plan. The person agrees to the map before you work on it. Once an `execution-map set` that made the first map of the request succeeded, or one that changed what the person gets (the goal, what done looks like, what stays as it is, stored data, or what could go wrong), and before you start any step, call `ask choice` with other set to true.',
       'then it asks whether to start, with the option that starts first and an option that changes the plan, so the person can write what to change.',
-      'When they ask for changes, set the map again with them and ask again; start only after they chose to start. A change of status with `execution-map update` needs no confirmation.',
+      'When they ask for changes, set the map again with them and ask again; start only after they chose to start.',
+      'A change of status with `execution-map update` needs no confirmation.',
     ]) expect(lead, phrase).toContain(phrase);
     for (const gone of ['`ask confirm`', 'Set it in the same reply as your first call', 'For a large, ambiguous, or risky task']) expect(lead, gone).not.toContain(gone);
     expect(executionMapDescription).toContain('the implementation plan the person reads, agrees to, and watches as a diagram');

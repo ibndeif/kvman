@@ -70,8 +70,7 @@ describe('crash invariants 3 and 5 (12 §12.2)', { timeout: 120_000 }, () => {
     await second.call('commands', 'kvcoder.message.send', { sessionId, text: 'back' });
     await until(() => second.call('queries', 'kvcoder.session.get', { sessionId }), sessionSchema, (session) => session.status === 'idle');
     const { messages } = messagesSchema.parse(await second.call('queries', 'kvcoder.message.list', { sessionId, limit: 50 }));
-    const told = messages.map((message) => String(message.content['content'])).filter((text) => text.includes('The process was interrupted because kvman stopped.'));
-    expect(told).toHaveLength(1);
-    expect(told[0]).toMatch(/Its last output:\n[\s\S]*serving$/);
+    const told = messages.map((message) => String(message.content['content'])).filter((text) => text.startsWith('While kvman was stopped'));
+    expect(told).toEqual([`While kvman was stopped, these background calls ended:\n- \`echo serving; sleep 60\` (job ${job?.id ?? ''}): interrupted because kvman stopped.`]);
   });
 });
