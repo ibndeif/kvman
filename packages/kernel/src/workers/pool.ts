@@ -4,9 +4,9 @@ import type { KernelLogger } from '../logging/logger.ts';
 import { kernelProblem } from '../problems.ts';
 import { toMainSchema, type AbortReason, type RegistrySummary, type RootJob, type SyncEnd, type ToMain, type WorkerRequest, type WorkerSetup } from './protocol.ts';
 
-// The main thread's pool of worker threads (plan 02 §2.2). Each worker runs up to `concurrency` root jobs at once;
-// nested sync calls run inside their root job and take no slot. A worker that dies fails its jobs `WORKER_CRASHED`,
-// and a replacement takes its place. After a hot reload the old pool retires: its workers take no new jobs and exit
+// The main thread's pool of worker threads (plan 02 §2.2). Each worker runs up to `concurrency` root jobs at once, and
+// a new job goes to the least-busy one; nested sync calls run inside their root job and take no slot. A worker that
+// dies fails its jobs `WORKER_CRASHED`, and a replacement takes its place. After a hot reload the old pool retires: its workers take no new jobs and exit
 // when their running jobs end (plan 02 §2.9).
 
 export type PoolEvents = {
@@ -79,15 +79,17 @@ export async function startPool(options: PoolOptions): Promise<WorkerPool> {
     for (const worker of workers) if (worker.running.size === 0) void stopWorker(worker);
   };
 
+  // The worker running the fewest jobs with a free slot, the earliest started on a tie (ADR 0088, 2).
+  const leastBusy = (): PoolWorker | undefined =>
+    workers.reduce<PoolWorker | undefined>((best, worker) => (worker.running.size < options.concurrency && (best === undefined || worker.running.size < best.running.size) ? worker : best), undefined);
+
   const drain = (): void => {
-    for (const worker of workers) {
-      while (worker.running.size < options.concurrency && queue.length > 0) {
-        const queued = queue.shift();
-        if (queued === undefined) break;
-        nextRequest += 1;
-        worker.running.set(nextRequest, queued.pending);
-        worker.thread.postMessage({ kind: 'run', requestId: nextRequest, job: queued.job });
-      }
+    for (let worker = leastBusy(); worker !== undefined && queue.length > 0; worker = leastBusy()) {
+      const queued = queue.shift();
+      if (queued === undefined) break;
+      nextRequest += 1;
+      worker.running.set(nextRequest, queued.pending);
+      worker.thread.postMessage({ kind: 'run', requestId: nextRequest, job: queued.job });
     }
   };
 
