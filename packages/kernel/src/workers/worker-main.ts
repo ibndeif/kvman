@@ -71,7 +71,7 @@ async function loadExtension(extension: WorkerExtension): Promise<void> {
   const module: unknown = await import(extension.entryUrl);
   const entry = typeof module === 'object' && module !== null && 'default' in module ? module.default : undefined;
   if (!isEntry(entry)) throw kernelProblem('EXTENSION_INVALID', `${extension.name}: its entry doesn't default-export a function.`, { extension: extension.name });
-  entry(createExtensionCtx({ name: extension.name, namespace: extension.namespace }, services));
+  entry(createExtensionCtx({ name: extension.name, namespace: extension.namespace }, services, extension.indexes));
 }
 
 function loadProblem(extension: WorkerExtension, error: unknown): Problem {

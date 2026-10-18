@@ -1,4 +1,4 @@
-import { callerSchema, extensionSourceSchema, installSourceSchema, jsonSchema, presetSchema, problemSchema, workspaceSchema, z } from '@kvman/sdk';
+import { callerSchema, extensionSourceSchema, installSourceSchema, jsonSchema, presetSchema, problemSchema, storeIndexesSchema, workspaceSchema, z } from '@kvman/sdk';
 
 // The messages between the main thread and a worker, checked on arrival like any other boundary.
 
@@ -64,7 +64,7 @@ export const workerSetupSchema = z.object({
   homeFolder: z.string(),
   database: z.string(),
   extensions: z.array(
-    z.object({ name: z.string(), namespace: z.string(), entryUrl: z.string(), version: z.string(), source: extensionSourceSchema, revision: z.number().int() }),
+    z.object({ name: z.string(), namespace: z.string(), entryUrl: z.string(), version: z.string(), source: extensionSourceSchema, revision: z.number().int(), indexes: storeIndexesSchema }),
   ),
   languages: z.array(z.string()),
   presetSettings: z.record(z.string(), jsonSchema),

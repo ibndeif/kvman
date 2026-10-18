@@ -1,4 +1,4 @@
-import { jsonSchema, problemCodeSchema, ProblemError, type Ctx, type CurrentJob, type Json } from '@kvman/sdk';
+import { jsonSchema, problemCodeSchema, ProblemError, type Ctx, type CurrentJob, type Json, type StoreIndexes } from '@kvman/sdk';
 import type { Files } from '../files/files.ts';
 import type { KernelLogger, LogFields } from '../logging/logger.ts';
 import { kernelProblem } from '../problems.ts';
@@ -73,7 +73,7 @@ function secretsOf(owner: Owner, services: WorkerServices): Ctx['secrets'] {
   };
 }
 
-export function createExtensionCtx(owner: Owner, services: WorkerServices): Ctx {
+export function createExtensionCtx(owner: Owner, services: WorkerServices, indexes: StoreIndexes): Ctx {
   const registry = services.environment.registry;
   return {
     registerCommand: (name, registration) => registerJob(registry, owner, 'command', name, registration),
@@ -88,7 +88,7 @@ export function createExtensionCtx(owner: Owner, services: WorkerServices): Ctx 
     },
     get store() {
       const job = requireJob('ctx.store');
-      return createStore(services.connection, { extension: owner.name, workspaceId: job.workspace.id }, services.ids, () => requireWritable(job, 'A store write'));
+      return createStore(services.connection, { extension: owner.name, workspaceId: job.workspace.id, indexes }, services.ids, () => requireWritable(job, 'A store write'));
     },
     files: filesCalls(owner, services.files),
     settings: settingsCalls(owner, registry, services.settings),

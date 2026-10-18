@@ -29,6 +29,7 @@ import { openSecretsFile } from './secrets/secrets-file.ts';
 import { kernelSettingDefinitions } from './settings/kernel-settings.ts';
 import { createSettings } from './settings/settings.ts';
 import { openDatabase, type Connection } from './storage/database.ts';
+import { createIndexes, dropOtherIndexes } from './store/indexes.ts';
 import { keepWasmCode } from './wasm-code-gc.ts';
 import { createWorkspaces, homeWorkspaceId, openWorkspaceOf } from './workspaces/workspaces.ts';
 
@@ -145,6 +146,7 @@ export async function startKernel(options: KernelOptions): Promise<Kernel> {
       sdkVersion: kernelSdkVersion(),
       kernelCatalogs,
       logger,
+      indexes: { create: (indexes) => createIndexes(connection, indexes), dropOthers: (indexes) => dropOtherIndexes(connection, indexes) },
       pool: {
         size: settings.workers,
         concurrency: settings.concurrency,

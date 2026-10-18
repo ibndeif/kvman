@@ -1,6 +1,7 @@
 import { z } from '@kvman/sdk';
 import { findLimitMaximum } from '../limits.ts';
 import { kernelProblem } from '../problems.ts';
+import { typeOf, valueOf } from './indexes.ts';
 import { validationFailed } from './json-values.ts';
 
 // `find` and `count` filters: equality on top-level fields, combined with AND (plan 02 §2.5).
@@ -13,26 +14,23 @@ const findOptionsSchema = z.strictObject({
   after: z.string().min(1).optional(),
 });
 
-export type SqlFilter = { sql: string; values: (string | number)[] };
+export type SqlFilter = { sql: string; values: (string | number)[]; fields: string[] };
 
-function fieldPath(field: string): string {
-  return `$."${field.replaceAll('"', '\\"')}"`;
-}
-
-function condition(field: string, value: string | number | boolean | null): SqlFilter {
-  const path = fieldPath(field);
-  if (value === null) return { sql: "json_type(data, ?) = 'null'", values: [path] };
-  if (typeof value === 'boolean') return { sql: `json_type(data, ?) = '${value ? 'true' : 'false'}'`, values: [path] };
-  if (typeof value === 'number') return { sql: "json_type(data, ?) IN ('integer', 'real') AND json_extract(data, ?) = ?", values: [path, path, value] };
-  return { sql: "json_type(data, ?) = 'text' AND json_extract(data, ?) = ?", values: [path, path, value] };
+// Each field's type and value are spelled as its declared index spells them, so SQLite can match them (ADR 0088, 3).
+function condition(field: string, value: string | number | boolean | null): Omit<SqlFilter, 'fields'> {
+  if (value === null) return { sql: `${typeOf(field)} = 'null'`, values: [] };
+  if (typeof value === 'boolean') return { sql: `${typeOf(field)} = '${value ? 'true' : 'false'}'`, values: [] };
+  if (typeof value === 'number') return { sql: `${typeOf(field)} IN ('integer', 'real') AND ${valueOf(field)} = ?`, values: [value] };
+  return { sql: `${typeOf(field)} = 'text' AND ${valueOf(field)} = ?`, values: [value] };
 }
 
 export function filterSql(filter: unknown): SqlFilter {
   const parsed = filterSchema.safeParse(filter);
   if (!parsed.success) throw validationFailed('The filter', parsed.error);
+  const fields = Object.keys(parsed.data);
   const conditions = Object.entries(parsed.data).map(([field, value]) => condition(field, value));
-  if (conditions.length === 0) return { sql: '1', values: [] };
-  return { sql: conditions.map((part) => `(${part.sql})`).join(' AND '), values: conditions.flatMap((part) => part.values) };
+  if (conditions.length === 0) return { sql: '1', values: [], fields };
+  return { sql: conditions.map((part) => `(${part.sql})`).join(' AND '), values: conditions.flatMap((part) => part.values), fields };
 }
 
 export function findOptions(options: unknown): { limit: number; order: 'asc' | 'desc'; after?: string } {

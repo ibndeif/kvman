@@ -4,12 +4,14 @@ import { checkAndOrder, checkReload, dependentsOf } from '../extensions/load-ord
 import { readExtension, readExtensions, type ExtensionFolders, type ReadExtension } from '../extensions/manifests.ts';
 import { mergeCatalogs, readOwnerCatalogs, type Catalogs, type OwnerCatalogs } from '../localization/catalogs.ts';
 import type { KernelLogger } from '../logging/logger.ts';
+import { declaredIndexes, type StoreIndex } from '../store/indexes.ts';
 import { startPool, type PoolOptions, type WorkerPool } from '../workers/pool.ts';
 import type { AbortReason } from '../workers/protocol.ts';
 
 // The extensions of a run and the workers that load them (plan 02 §2.9). A hot reload of `path:` extensions starts a
 // fresh pool with the new code; the old pool retires, so its running jobs finish on the old code. A reload that fails
-// keeps the previous code and pool.
+// keeps the previous code and pool. The store keeps the indexes the run declares (ADR 0088, 3): new ones are built
+// before the workers that use them start, and unused ones are dropped once no older worker may still name them.
 
 export type RunExtension = ReadExtension & { revision: number; catalogs: OwnerCatalogs };
 
@@ -19,12 +21,17 @@ export type ExtensionRunOptions = {
   sdkVersion: string;
   kernelCatalogs: OwnerCatalogs;
   pool: Omit<PoolOptions, 'setup'> & { setup: Omit<PoolOptions['setup'], 'extensions' | 'languages'> };
+  indexes: { create(indexes: readonly StoreIndex[]): void; dropOthers(indexes: readonly StoreIndex[]): void };
   logger: KernelLogger;
 };
 
 // What a successful reload did: the reloaded extensions, and the extensions whose `kernel.started` handlers run again
 // (the reloaded ones and their dependents), in load order.
 export type Reload = { reloaded: RunExtension[]; startedAgain: string[] };
+
+function indexesOf(extensions: readonly RunExtension[]): StoreIndex[] {
+  return declaredIndexes(extensions.map((extension) => ({ name: extension.name, indexes: extension.manifest.kvman.indexes })));
+}
 
 function catalogsOf(kernelCatalogs: OwnerCatalogs, extensions: readonly RunExtension[]): Catalogs {
   return mergeCatalogs([kernelCatalogs, ...extensions.map((extension) => extension.catalogs)]);
@@ -50,15 +57,26 @@ export async function startExtensionRun(options: ExtensionRunOptions) {
           version: extension.manifest.version,
           source: extension.source,
           revision: extension.revision,
+          indexes: extension.manifest.kvman.indexes ?? {},
         })),
       },
     });
 
   let extensions = checkAndOrder(readExtensions(options.preset, options.folders), options.sdkVersion).map((extension) => withCatalogs(extension, 0));
   let catalogs = catalogsOf(options.kernelCatalogs, extensions);
+  options.indexes.create(indexesOf(extensions));
+  options.indexes.dropOthers(indexesOf(extensions));
   let pool = await launch(extensions, catalogs);
   const retiring = new Set<WorkerPool>();
   const pools = (): WorkerPool[] => [pool, ...retiring];
+
+  const dropUnusedIndexes = (): void => {
+    try {
+      options.indexes.dropOthers(indexesOf(extensions));
+    } catch (error) {
+      options.logger.error('Store indexes no extension declares could not be dropped; the next start drops them.', { reason: error instanceof Error ? error.message : String(error) });
+    }
+  };
 
   const warnDroppedNames = (reloaded: ReadonlySet<string>, next: WorkerPool): void => {
     const kept = new Set(next.summary.jobs.map((job) => job.name));
@@ -83,12 +101,16 @@ export async function startExtensionRun(options: ExtensionRunOptions) {
         return changed.has(extension.name) || before === undefined ? withCatalogs(extension, (before?.revision ?? -1) + 1) : before;
       });
       const nextCatalogs = catalogsOf(options.kernelCatalogs, next);
+      options.indexes.create(indexesOf(next));
       const nextPool = await launch(next, nextCatalogs);
       for (const warning of warnings) options.logger.warn('A reloaded extension no longer satisfies a dependent.', warning);
       warnDroppedNames(changed, nextPool);
       const old = pool;
       retiring.add(old);
-      void old.retire().then(() => retiring.delete(old));
+      void old.retire().then(() => {
+        retiring.delete(old);
+        if (retiring.size === 0) dropUnusedIndexes();
+      });
       pool = nextPool;
       extensions = next;
       catalogs = nextCatalogs;

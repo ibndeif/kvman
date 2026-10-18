@@ -54,4 +54,15 @@ describe('extension manifest (02 §2.9, ADR 0009)', () => {
     const { kvman: _kvman, ...withoutKvman } = manifest;
     expect(issuePaths(withoutKvman)).toEqual(['kvman']);
   });
+
+  it('QA56-E1 indexes are non-empty lists of distinct field names (ADR 0088, 3)', () => {
+    const withIndexes = (indexes: unknown) => ({ ...manifest, kvman: { ...manifest.kvman, indexes } });
+    expect(issuePaths(withIndexes({ messages: [['sessionId'], ['sessionId', 'block']], turns: [['sessionId']] }))).toEqual([]);
+    expect(issuePaths(withIndexes({ messages: [] }))).toEqual(['kvman.indexes.messages']);
+    expect(issuePaths(withIndexes({ messages: [[]] }))).toEqual(['kvman.indexes.messages.0']);
+    expect(issuePaths(withIndexes({ messages: [['']] }))).toEqual(['kvman.indexes.messages.0.0']);
+    expect(issuePaths(withIndexes({ messages: [['sessionId', 'sessionId']] }))).toEqual(['kvman.indexes.messages.0']);
+    expect(issuePaths(withIndexes({ messages: [['sessionId', 5]] }))).toEqual(['kvman.indexes.messages.0.1']);
+    expect(issuePaths(withIndexes({ '': [['sessionId']] }))).toEqual(['kvman.indexes.']);
+  });
 });

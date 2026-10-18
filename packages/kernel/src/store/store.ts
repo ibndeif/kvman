@@ -1,4 +1,4 @@
-import type { Collection, JsonObject, Kv, Store, StoreScope, Transaction, TransactionCollection, TransactionKv, TransactionScope, z } from '@kvman/sdk';
+import type { Collection, JsonObject, Kv, Store, StoreIndexes, StoreScope, Transaction, TransactionCollection, TransactionKv, TransactionScope, z } from '@kvman/sdk';
 import type { IdGenerator } from '../ids.ts';
 import { kernelProblem } from '../problems.ts';
 import type { Connection } from '../storage/database.ts';
@@ -8,7 +8,8 @@ import { kvOf, type ScopeKey, type WriteGuard } from './kv.ts';
 // An extension's store (plan 02 §2.5): Promise-based calls that each commit alone, and `transaction`, whose `tx` has the
 // same shape with synchronous calls inside one SQLite transaction.
 
-export type StoreOwner = { extension: string; workspaceId: string };
+// `indexes` are the ones the extension declares (ADR 0088, 3); none when it is left out.
+export type StoreOwner = { extension: string; workspaceId: string; indexes?: StoreIndexes };
 
 const anyWrite: WriteGuard = () => undefined;
 
@@ -33,10 +34,10 @@ function asyncCollection<Document extends JsonObject>(collection: TransactionCol
   };
 }
 
-function syncScope(connection: Connection, key: ScopeKey, ids: IdGenerator, beforeWrite: WriteGuard): TransactionScope {
+function syncScope(connection: Connection, key: ScopeKey, ids: IdGenerator, beforeWrite: WriteGuard, indexes: StoreIndexes): TransactionScope {
   return {
     kv: kvOf(connection, key, beforeWrite),
-    collection: <Document extends JsonObject>(name: string, schema: z.ZodType<Document>) => collectionOf(connection, key, name, schema, ids, beforeWrite),
+    collection: <Document extends JsonObject>(name: string, schema: z.ZodType<Document>) => collectionOf(connection, key, name, schema, ids, beforeWrite, Object.hasOwn(indexes, name) ? (indexes[name] ?? []) : []),
   };
 }
 
@@ -53,8 +54,8 @@ function isThenable(value: unknown): boolean {
 
 function runTransaction<Result>(connection: Connection, owner: StoreOwner, ids: IdGenerator, beforeWrite: WriteGuard, fn: (tx: Transaction) => Result): Result {
   const tx: Transaction = {
-    ...syncScope(connection, { extension: owner.extension, scope: owner.workspaceId }, ids, beforeWrite),
-    global: syncScope(connection, { extension: owner.extension, scope: globalScope }, ids, beforeWrite),
+    ...syncScope(connection, { extension: owner.extension, scope: owner.workspaceId }, ids, beforeWrite, owner.indexes ?? {}),
+    global: syncScope(connection, { extension: owner.extension, scope: globalScope }, ids, beforeWrite, owner.indexes ?? {}),
   };
   // IMMEDIATE takes the write lock at the start, waiting out the busy timeout: a deferred transaction that read first
   // fails at once with "database is locked" when it writes after another connection committed (WAL's stale snapshot).
@@ -68,8 +69,8 @@ function runTransaction<Result>(connection: Connection, owner: StoreOwner, ids: 
 }
 
 export function createStore(connection: Connection, owner: StoreOwner, ids: IdGenerator, beforeWrite: WriteGuard = anyWrite): Store {
-  const workspace = syncScope(connection, { extension: owner.extension, scope: owner.workspaceId }, ids, beforeWrite);
-  const global = syncScope(connection, { extension: owner.extension, scope: globalScope }, ids, beforeWrite);
+  const workspace = syncScope(connection, { extension: owner.extension, scope: owner.workspaceId }, ids, beforeWrite, owner.indexes ?? {});
+  const global = syncScope(connection, { extension: owner.extension, scope: globalScope }, ids, beforeWrite, owner.indexes ?? {});
   return {
     ...asyncScope(workspace),
     global: asyncScope(global),

@@ -65,6 +65,24 @@
     "dependencies": {
       "@kvman/kvai": "^0.1.0",
       "@kvman/kvwebui": "^0.1.0"
+    },
+    "indexes": {
+      "sessions": [["parentId"], ["parentId", "status"], ["stepJobId"]],
+      "messages": [["sessionId"], ["sessionId", "block"], ["sessionId", "kind"], ["sessionId", "turnId", "kind"]],
+      "turns": [["sessionId"]],
+      "queued": [["sessionId"]],
+      "questions": [["sessionId"]],
+      "maps": [["sessionId"]],
+      "step-intents": [["sessionId", "turnId"]],
+      "answer-receipts": [["questionId"]],
+      "send-receipts": [["sendId"]],
+      "file-views": [["sessionId", "path"]],
+      "file-backups": [["sessionId"], ["sessionId", "path"]],
+      "file-parts": [["sessionId", "path"], ["sessionId", "path", "part"]],
+      "artifacts": [["sessionId"], ["sessionId", "artifactId"]],
+      "background": [["sessionId"], ["sessionId", "ref"]],
+      "runs": [["sessionId"], ["jobId"]],
+      "processes": [["sessionId"], ["sessionId", "reported"], ["workspaceId"]]
     }
   }
 }

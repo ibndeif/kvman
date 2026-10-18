@@ -3,6 +3,7 @@ import type { IdGenerator } from '../ids.ts';
 import { kernelProblem } from '../problems.ts';
 import type { Connection } from '../storage/database.ts';
 import { filterSql, findOptions } from './filters.ts';
+import { indexFor, indexName, sqlText } from './indexes.ts';
 import { storedText, validationFailed } from './json-values.ts';
 import type { ScopeKey, WriteGuard } from './kv.ts';
 
@@ -17,9 +18,18 @@ export function collectionOf<Document extends JsonObject>(
   schema: z.ZodType<Document>,
   ids: IdGenerator,
   beforeWrite: WriteGuard,
+  indexes: readonly (readonly string[])[],
 ): TransactionCollection<Document> {
   const where = 'extension = ? AND scope = ? AND collection = ?';
   const owner = [key.extension, key.scope, name] as const;
+  // A lookup names the declared index it uses; SQLite can't weigh JSON expressions, and a partial index needs the
+  // extension and collection as literals (ADR 0088, 3).
+  const lookup = (fields: readonly string[]): { from: string; values: readonly string[] } => {
+    const index = indexFor(indexes, fields);
+    if (index === undefined) return { from: `store_documents WHERE ${where}`, values: owner };
+    const named = indexName({ extension: key.extension, collection: name, fields: index });
+    return { from: `store_documents INDEXED BY ${named} WHERE extension = ${sqlText(key.extension)} AND scope = ? AND collection = ${sqlText(name)}`, values: [key.scope] };
+  };
 
   const checked = (value: unknown, what: string): Document => {
     const parsed = schema.safeParse(value);
@@ -53,13 +63,15 @@ export function collectionOf<Document extends JsonObject>(
       const direction = order === 'asc' ? 'ASC' : 'DESC';
       const cursor = after === undefined ? '' : ` AND id ${order === 'asc' ? '>' : '<'} ?`;
       const cursorValues = after === undefined ? [] : [after];
-      const sql = `SELECT id, data FROM store_documents WHERE ${where} AND ${condition.sql}${cursor} ORDER BY id ${direction} LIMIT ?`;
-      return connection.prepare<unknown[], Row>(sql).all(...owner, ...condition.values, ...cursorValues, limit).map(read);
+      const { from, values } = lookup(condition.fields);
+      const sql = `SELECT id, data FROM ${from} AND ${condition.sql}${cursor} ORDER BY id ${direction} LIMIT ?`;
+      return connection.prepare<unknown[], Row>(sql).all(...values, ...condition.values, ...cursorValues, limit).map(read);
     },
     count(filter) {
       const condition = filterSql(filter);
-      const sql = `SELECT count(*) AS total FROM store_documents WHERE ${where} AND ${condition.sql}`;
-      return connection.prepare<unknown[], { total: number }>(sql).get(...owner, ...condition.values)?.total ?? 0;
+      const { from, values } = lookup(condition.fields);
+      const sql = `SELECT count(*) AS total FROM ${from} AND ${condition.sql}`;
+      return connection.prepare<unknown[], { total: number }>(sql).get(...values, ...condition.values)?.total ?? 0;
     },
     update(id, patch) {
       beforeWrite();
