@@ -14,9 +14,10 @@ kvai.complete {
   systemPrompt?: string,
   messages: Message[],              // pi-ai's user, assistant, and toolResult messages
   tools?: [{ name, description, parameters }],   // parameters: JSON Schema
-  thinking?: 'off' | 'minimal' | 'low' | 'medium' | 'high',   // default 'off'
+  thinking?: 'off' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max',   // default 'off'
   maxTokens?: number,               // default: pi-ai's default for the model
   sessionId?: string,               // the conversation the call belongs to
+  cacheRetention?: 'short' | 'long', // how long the provider keeps the prompt's cache
 } → { message: AssistantMessage, stopReason: 'stop' | 'length' | 'toolUse', usage: { input, output, cacheRead, cacheWrite, cost } }
 ```
 
@@ -24,6 +25,8 @@ kvai.complete {
 - `usage.cost` is pi-ai's total cost in US dollars. kvai turns pi-ai's own request retries off (ADR 0009, 59).
 - Tool calls in the answer are returned, never run.
 - `sessionId` is a non-empty string that names the conversation a call belongs to, such as a harness's chat id. kvai passes it to pi-ai as `sessionId`, which sends it as the provider's prompt cache key and session affinity, so the calls of one conversation read the provider's cache; a delegate command receives it with the rest of the input. Left out, nothing is sent (ADR 0012, 6).
+- `cacheRetention` is passed to pi-ai, which maps `long` to the provider's longer prompt cache where the model has one (an hour on Anthropic, 24 hours on OpenAI) and to its default elsewhere; left out, pi-ai's default, `short`, applies (ADR 0087, 4).
+- `thinking` is one of the model's `thinkingLevels` (§7.2); a level the model doesn't have is moved by pi-ai to the nearest one it has, the next higher, else the next lower (ADR 0087, 11).
 - **Streaming.** While the call runs, kvai reports these through `ctx.job.progress`. They reach the root job's stream as `{ source: '@kvman/kvai', data }`, so the UI of the harness's turn sees them.
   - `{ type: 'text', delta }`
   - `{ type: 'thinking', delta }`
@@ -82,7 +85,7 @@ kvai.complete {
 | `kvai.provider.signin.cancel` | command | `{ provider }` → `{}`: cancels the provider's running sign-in; none running does nothing (ADR 0009, 232) |
 | `kvai.provider.add` | command | §7.2 → `{}` |
 | `kvai.provider.remove` | command | `{ id }` → `{}` (also removes its models) |
-| `kvai.model.list` | query | `{ provider? }` → `[{ id, name, provider, reasoning, input: ('text' \| 'image')[], contextWindow, maxTokens, cost, builtIn, isDefault }]` |
+| `kvai.model.list` | query | `{ provider? }` → `[{ id, name, provider, reasoning, thinkingLevels, input: ('text' \| 'image')[], contextWindow, maxTokens, cost, builtIn, isDefault }]`; `thinkingLevels` lists the model's levels from `off` to `max` in order: pi-ai's `getSupportedThinkingLevels` for a built-in model, and for a custom one `off` to `high` when it reasons, else `off` alone (ADR 0087, 11) |
 | `kvai.model.add` | command | `{ provider, id, name, reasoning, input, contextWindow, maxTokens, cost? }` → `{}` |
 | `kvai.model.remove` | command | `{ id }` → `{}` |
 | `kvai.model.default.get` | query | `{}` → `{ id, name, ready }`: `kvai.defaultModel` in the workspace, its name (`null` when unset or unknown), and whether its provider can be called (ADR 0009, 79) |
