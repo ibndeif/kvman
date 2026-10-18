@@ -1,5 +1,14 @@
 # @kvman/kvbuilder
 
+## 0.3.4
+
+### Patch Changes
+
+- 365922a: The building guide shows `run` calls without a `description`, as kvcoder's `run` tool now takes them (ADR 0089).
+- Updated dependencies [d541dbc]
+  - @kvman/sdk@0.1.3
+  - @kvman/testkit@0.1.7
+
 ## 0.3.3
 
 ### Patch Changes

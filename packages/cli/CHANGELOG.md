@@ -1,5 +1,38 @@
 # kvman
 
+## 0.4.4
+
+### Patch Changes
+
+- Updated dependencies [07ec488]
+- Updated dependencies [8c275ef]
+- Updated dependencies [365922a]
+- Updated dependencies [6ad064f]
+- Updated dependencies [ac2c55b]
+- Updated dependencies [300ac31]
+- Updated dependencies [365922a]
+- Updated dependencies [7df0a47]
+- Updated dependencies [93e1df1]
+- Updated dependencies [9da6fe8]
+- Updated dependencies [7a79138]
+- Updated dependencies [5678b05]
+- Updated dependencies [07ec488]
+- Updated dependencies [d3c2492]
+- Updated dependencies [92a5247]
+- Updated dependencies [425de8c]
+- Updated dependencies [57090ed]
+- Updated dependencies [b5d822b]
+- Updated dependencies [d541dbc]
+- Updated dependencies [8c275ef]
+- Updated dependencies [6db8ee9]
+- Updated dependencies [d541dbc]
+  - @kvman/kvai@0.1.4
+  - @kvman/kvbuilder@0.3.4
+  - @kvman/kvcoder@0.1.11
+  - @kvman/sdk@0.1.3
+  - @kvman/kvwebui@0.1.4
+  - @kvman/kernel@0.4.4
+
 ## 0.4.3
 
 ### Patch Changes

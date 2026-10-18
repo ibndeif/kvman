@@ -1,5 +1,14 @@
 # @kvman/kvai
 
+## 0.1.4
+
+### Patch Changes
+
+- 07ec488: `kvai.complete` takes `cacheRetention?: 'short' | 'long'` and passes it to pi-ai, which uses the provider's longer prompt cache for `long` where the model has one (ADR 0087, 4).
+- 8c275ef: `kvai.complete` takes the thinking levels `xhigh` and `max`, and `kvai.model.list` gives each model its `thinkingLevels`: pi-ai's for a built-in model, and `off` to `high` for a custom one that reasons, else `off` alone (ADR 0087, 11).
+- Updated dependencies [d541dbc]
+  - @kvman/sdk@0.1.3
+
 ## 0.1.3
 
 ### Patch Changes

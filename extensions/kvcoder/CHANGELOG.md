@@ -1,5 +1,33 @@
 # @kvman/kvcoder
 
+## 0.1.11
+
+### Patch Changes
+
+- 6ad064f: A background helper's approvals and questions show in the chat, under "A background helper needs your decision.", whether the lead is running, waiting, or idle; before, nothing showed them and the helper waited forever (ADR 0085, 1).
+- ac2c55b: A background helper waiting on the person's approval or answer has the status `waiting`, and `background output`, `background wait`, and `kvcoder.job.get` say how far a helper got (`progress`) and what it waits on (`waitingFor`); `wait` ends as soon as a helper waits, and the Running chip shows it as "Waiting for you" (ADR 0085, 2).
+- 300ac31: A model call that fails `kvai/CONTEXT_TOO_LONG` now gets a summary by force and one more call before the turn fails, which also covers a chat whose model's window is unknown; compaction's count gives each image 1,600 tokens (ADR 0087, 2).
+- 365922a: A chat reads like a colleague at work (ADR 0089): the `run` tool takes `{ connector, command, payload }` with no `description`, and each call's card, approval, background job, and helper progress names the call from itself; the lead says in a sentence or two what it found and what it does next between calls; it makes an execution map only for work that changes several dependent parts or is hard to take back; and it asks every question in the same reply.
+- 7df0a47: `delegate continue { id, message, background? }` sends a follow-up to an ended subagent helper of the chat, which goes on with its own history instead of a new helper reading everything again; every helper result ends with the line `(helper <id>)` (ADR 0085, 4).
+- 93e1df1: A turn that ends while its last reply's calls wait or run now stores a result for each of them, so the model is never sent a call without one: a held result as it was, `not run: <why>` for a call that never started, and `stopped while it ran (<why>): what it changed is unknown, so check before you run it again` for one that was running (ADR 0087, 1).
+- 9da6fe8: The lead asks the person to confirm a map only for the request's first map and for a change to what they get; a change inside the plan, such as who does a step, is made and told in one line, and a choice just made is never asked again. The worker list marks read-only workers with `; read-only` (ADR 0085, 7 and 9).
+- 7a79138: A helper starts with its parent's check results, less the program workers', and never runs a program worker's check, since it can't delegate; a helper stored without checks runs only the binary connectors' (ADR 0087, 10).
+- 5678b05: `kvcoder.job.list` and the `background list` connector read each job's row only, no longer a helper's messages, result, or progress, which only `kvcoder.job.get` returns; a chat with 19 helpers lists its jobs in 18 ms instead of 1.7 s, so the chat's polling no longer keeps a worker busy and delays the person's sends and answers.
+- 07ec488: A chat's steps and summaries ask for the provider's long prompt cache, so waits on the person, approvals, background runs, and helpers don't make the whole conversation be written to the cache again; a helper's steps and a title keep the default (ADR 0087, 4).
+- d3c2492: The execution map is set as a skeleton, and `execution-map detail { id, details }` writes each step's details in Markdown, up to 4,000 characters, with Mermaid diagrams and charts, shown as Markdown in the step's dialog. A step's `description` is now `details`, and a stored description is read as details. Every map result lists the steps still `undetailed`, `doing` needs details, and `get {}` leaves the details out while `get { id }` reads one step whole (ADR 0086).
+- 92a5247: An `mcp run` call shows its steps numbered, each tool with its arguments under it, in its card and in its approval, in place of its payload as nested rows (ADR 0084).
+- 425de8c: The `artifact` connector's entry asks the agent to change part of an existing artifact with `edit` and to write it again only when most of it changes, and the lead's Delegate rule asks it to quote the short lines a worker needs in the brief, so the worker doesn't read again what the lead holds (ADR 0087, 5 and 8).
+- 57090ed: A process, a program worker's run, or a helper that the agent stopped itself sends no later notice, and the background runs that ended while kvman was stopped are reported at the chat's next message in one message, one line per run (ADR 0085, 5).
+- b5d822b: A failed model call is tried five times, after 1, 4, 15, and 60 seconds, and the activity line says why and after how long, such as "Retrying in 15 s: the provider is limiting calls (3 of 5)"; the `retry` chunk adds `waitMs` and `reason` (ADR 0087, 3 and 6).
+- d541dbc: kvcoder declares indexes for the fields it filters its sessions, messages, turns, and other growing records by, so a chat's lookups no longer read every record of the workspace (ADR 0088, 3).
+- 8c275ef: The thinking pickers list the chosen model's own levels, up to Extra high and Max where it has them, and show Off greyed for a model that doesn't think. A chat, a new chat, and a helper always keep a level their model has: a level the model lacks moves to the nearest one, the next higher, else the next lower (ADR 0087, 11).
+- 6db8ee9: A message from the person ends a running `background wait` at once, with the note "The person sent a message.", so the lead reads it in seconds instead of after up to ten minutes (ADR 0085, 3).
+- Updated dependencies [07ec488]
+- Updated dependencies [8c275ef]
+- Updated dependencies [d541dbc]
+  - @kvman/kvai@0.1.4
+  - @kvman/sdk@0.1.3
+
 ## 0.1.10
 
 ### Patch Changes
