@@ -81,4 +81,18 @@ describe('a background helper that waits on the person (ADR 0085, 2)', { timeout
     expect(ended).not.toHaveProperty('waitingFor');
     await say(kernel, fake, sessionId, command('background', 'stop', { id: processId }));
   });
+
+  it("QA56-H1 a job list's row is the job's row without its output and progress (ADR 0088, 1)", async () => {
+    const { kernel, fake, sessionId, helperId } = await waitingHelper();
+    const [turn] = await kernel.exec('kvcoder.turn.list', { sessionId: helperId, limit: 1 });
+    fake.reply(says('helper done'), says('noted'));
+    await kernel.exec('kvcoder.question.answer', { questionId: turnSchema.parse(turn).pending[0]?.questionId ?? '', answer: { confirmed: false } });
+    await kernel.clock.advance(0);
+    await vi.waitFor(async () => expect(await kernel.exec('kvcoder.job.get', { sessionId, id: helperId })).toMatchObject({ status: 'succeeded' }), wait);
+    await vi.waitFor(async () => expect((await kernel.exec('kvcoder.session.get', { sessionId })).status).toBe('idle'), wait);
+    const { output, progress, ...row } = await kernel.exec('kvcoder.job.get', { sessionId, id: helperId });
+    expect(output).toEqual(expect.stringContaining('helper done'));
+    expect(progress).toMatchObject({ recentCalls: ['List the folder.', 'List it again.', 'Say hi in the shell.'] });
+    expect(await kernel.exec('kvcoder.job.list', { sessionId })).toEqual([row]);
+  });
 });

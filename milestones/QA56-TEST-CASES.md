@@ -15,7 +15,7 @@ Paths are relative to the repository root.
 
 - **QA56-H1 a job list reads rows only.** *Given* a chat with an ended background helper that wrote messages, *when*
   the person lists the chat's jobs, *then* the helper's row is the row `kvcoder.job.get` returns for it, without
-  `output` or `progress`, and `kvcoder.job.get` still returns both. `extensions/kvcoder/test/job-api.test.ts`
+  `output` or `progress`, and `kvcoder.job.get` still returns both. `extensions/kvcoder/test/background-waiting.test.ts`
 - **QA56-H2 a job goes to the least-busy worker.** *Given* `kernel.workers: 2` and a job held at a gate, *when* another
   job runs, *then* it runs on the other worker's thread. `packages/testkit/test/jobs/worker-placement.test.ts`
 - **QA56-H3 a tie goes to the earliest started worker.** *Given* `kernel.workers: 2` and no running job, *when* two jobs
