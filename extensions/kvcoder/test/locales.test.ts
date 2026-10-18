@@ -110,6 +110,18 @@ describe("kvcoder's catalogs (02 §2.11)", { timeout: 30_000 }, () => {
     expect(Object.keys(en).filter((key) => key.includes('subagent.check') || key === 'kvcoder.config.connector.subagent')).toEqual([]);
   });
 
+  it('QA55-E17 the two new thinking levels and both retry lines are in both languages', () => {
+    const en = catalog('en');
+    const ar = catalog('ar');
+    expect([en['kvcoder.ui.thinkingLevels.xhigh'], en['kvcoder.ui.thinkingLevels.max']]).toEqual(['Extra high', 'Max']);
+    expect([ar['kvcoder.ui.thinkingLevels.xhigh'], ar['kvcoder.ui.thinkingLevels.max']]).toEqual(['مرتفع جدًا', 'أقصى']);
+    for (const key of ['kvcoder.ui.activity.retryingRateLimited', 'kvcoder.ui.activity.retryingUnavailable']) {
+      expect(placeholders(en[key] ?? '')).toEqual(['attempt', 'of', 'seconds']);
+      expect(placeholders(ar[key] ?? '')).toEqual(['attempt', 'of', 'seconds']);
+    }
+    expect(en['kvcoder.ui.activity.retrying']).toBeUndefined();
+  });
+
   it('QA44-E6 the error of a summary with no text is in both languages', () => {
     expect(catalog('en')['kvcoder.errors.SUMMARY_EMPTY']).toBe('The model returned no summary.');
     expect(catalog('ar')['kvcoder.errors.SUMMARY_EMPTY']).toBe('لم يُرجع النموذج ملخصًا.');
