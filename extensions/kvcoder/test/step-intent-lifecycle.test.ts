@@ -87,7 +87,7 @@ async function withWorld(run: (kernel: TestKernel, fake: Awaited<ReturnType<type
       peerDependencies: manifest.peerDependencies, kvman: { namespace: 'step-probe', source: 'index.ts', dependencies: { '@kvman/kvcoder': '^0.1.0' } } }));
     writeFileSync(path.join(extra, 'index.ts'), probe);
     kernel = await createTestKernel({ extensions: [path.join(kvcoderFolder, '../kvai'), path.join(kvcoderFolder, '../kvwebui'), root, extra],
-      settings: { 'kernel.workers': 2, 'kvwebui.home': 'kvcoder.chat', 'kvai.defaultModel': 'fake/m1', 'kvcoder.approval': 'auto' } });
+      settings: { 'kernel.workers': 2, 'kernel.workerConcurrency': 1, 'kvwebui.home': 'kvcoder.chat', 'kvai.defaultModel': 'fake/m1', 'kvcoder.approval': 'auto' } });
     await kernel.exec('kvai.provider.add', { id: 'fake', title: 'Fake', api: 'openai-completions', baseUrl: fake.baseUrl });
     await kernel.exec('kvai.model.add', { provider: 'fake', id: 'm1', name: 'M1', input: ['text'], reasoning: true, contextWindow: 128_000, maxTokens: 8192 });
     await run(kernel, fake, await newSession(kernel));

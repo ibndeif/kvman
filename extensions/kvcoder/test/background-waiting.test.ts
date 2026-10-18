@@ -90,7 +90,7 @@ describe('a background helper that waits on the person (ADR 0085, 2)', { timeout
     await kernel.clock.advance(0);
     await vi.waitFor(async () => expect(await kernel.exec('kvcoder.job.get', { sessionId, id: helperId })).toMatchObject({ status: 'succeeded' }), wait);
     await vi.waitFor(async () => expect((await kernel.exec('kvcoder.session.get', { sessionId })).status).toBe('idle'), wait);
-    const { output, progress, ...row } = await kernel.exec('kvcoder.job.get', { sessionId, id: helperId });
+    const { output, progress, ...row } = z.looseObject({ output: z.unknown(), progress: z.unknown() }).parse(await kernel.exec('kvcoder.job.get', { sessionId, id: helperId }));
     expect(output).toEqual(expect.stringContaining('helper done'));
     expect(progress).toMatchObject({ recentCalls: ['List the folder.', 'List it again.', 'Say hi in the shell.'] });
     expect(await kernel.exec('kvcoder.job.list', { sessionId })).toEqual([row]);

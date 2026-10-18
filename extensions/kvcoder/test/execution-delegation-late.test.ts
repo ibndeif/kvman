@@ -1,15 +1,23 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { answerOwner, first } from './support/answer-world.ts';
 import { openGate } from './support/gates.ts';
 import { command, runs, says, toolResults } from './support/model-script.ts';
 import { disable, permissionControl, permissionSnapshot, readyReply, withPermissionWorld } from './support/permission-world.ts';
 import { programWorker, useWorkerPrograms } from './support/worker-programs.ts';
+import { wait } from './support/wait.ts';
 import { workers } from './support/workers.ts';
 
 const programs = useWorkerPrograms();
 const delegate = () => command('delegate', 'run', { worker: 'helper', title: 'Helper', task: 'say:answer' });
 type Mode = 'duplicate' | 'foreign-turn' | 'held' | 'check' | 'job-null' | 'job-foreign' | 'new-turn';
 const alter = (kernel: Parameters<typeof permissionControl>[0], sessionId: string, mode: Mode) => kernel.exec('kvcoder.permission-fixture.delegation', { sessionId, mode }, answerOwner);
+// The step publishes the run's job id after its enqueue returns; the queued job may reach its entry gate first when it
+// runs on another worker (ADR 0088, 2), so the perturbations wait for that publication.
+const publishedRun = (kernel: Parameters<typeof permissionControl>[0], sessionId: string) => vi.waitFor(async () => {
+  const run = first((await permissionSnapshot(kernel, sessionId)).runs);
+  if (run.jobId === null) throw new Error('Expected actual queued job publication');
+  return { ...run, jobId: run.jobId };
+}, wait);
 
 // Schema-valid record perturbations are fixture controls, not new product APIs.
 describe('delegation authority after metadata awaits (ADR0044)', { timeout: 30_000 }, () => {
@@ -22,8 +30,7 @@ describe('delegation authority after metadata awaits (ADR0044)', { timeout: 30_0
       fake.reply(runs(delegate()), says('done'));
       try {
         await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' }); await entry.waiting;
-        const run = first((await permissionSnapshot(kernel, sessionId)).runs);
-        if (run.jobId === null) throw new Error('Expected actual queued job publication');
+        const run = await publishedRun(kernel, sessionId);
         await permissionControl(kernel, 'metadata', metadataName); entry.release(); await metadata.waiting;
         if (change === 'disable') await disable(kernel, ['delegate']); else await alter(kernel, sessionId, change);
         const changed = await permissionSnapshot(kernel, sessionId);
@@ -57,8 +64,7 @@ describe('delegation authority after metadata awaits (ADR0044)', { timeout: 30_0
       await permissionControl(kernel, 'program-entry', entryName); fake.reply(runs(delegate()), newer.reply);
       try {
         await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' }); await entry.waiting;
-        const old = first((await permissionSnapshot(kernel, sessionId)).runs);
-        if (old.jobId === null) throw new Error('Expected old actual job');
+        const old = await publishedRun(kernel, sessionId);
         await permissionControl(kernel, 'metadata', metadataName); entry.release(); await metadata.waiting;
         await alter(kernel, sessionId, 'new-turn'); await newer.waiting;
         const current = await permissionSnapshot(kernel, sessionId);
