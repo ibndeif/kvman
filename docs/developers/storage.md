@@ -33,6 +33,7 @@ await notes.delete(note.id);
 - Separate pages are not a snapshot: unread deletions disappear, matching new IDs beyond the position may appear, and changed rows behind the cursor are not revisited. Define and recheck the consistency your operation needs. A `null` filter matches explicit JSON null, not missing fields or schema defaults.
 - `update` and `delete` of a missing id fail `NOT_FOUND`.
 - A document or a kv value is JSON of at most 16 MiB (`TOO_LARGE`).
+- **Indexes.** Without one, `find` and `count` read every document of the collection in that scope, so they slow down as it grows. Declare the field sets you filter a growing collection by in your manifest's `kvman.indexes`, each an ordered list of top-level fields ([anatomy.md](anatomy.md)): `"indexes": { "notes": [["pinned"], ["owner", "pinned"]] }`. kvman builds them at start (and after a hot reload) and drops the ones no longer declared. A lookup uses the index whose fields are exactly its filter's, else the one with the most leading fields in it; results are the same either way. Declare `["owner"]` as well as `["owner", "pinned"]` when you also filter by `owner` alone, so its results come in id order without a sort. A `count` still visits each match.
 
 **Atomicity.** Each call commits on its own. `ctx.store.transaction(fn)` runs `fn(tx)` in one SQLite transaction. `tx` has the store's shape (including `tx.global`), but its calls are **synchronous**, so the lock is never held across an `await`. If `fn` returns a Promise, the transaction is rolled back and fails `VALIDATION_FAILED`.
 

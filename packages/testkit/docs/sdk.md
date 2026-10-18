@@ -117,7 +117,7 @@ Every call returns a Promise, except inside a transaction.
 
 | API | Calls |
 |---|---|
-| `ctx.store` (this workspace), `ctx.store.global` (every workspace) | `kv.get(key)` → the value or `undefined`, `kv.set(key, value)`, `kv.delete(key)`; `collection(name, schema)` with `insert(doc)` → the document with its `id`, `get(id)` → it or `undefined`, `find(filter, { limit, order?: 'asc' \| 'desc', after? })` (equality on top-level fields, `limit` at most 1000, `after` an id to continue from), `count(filter)`, `update(id, patch)` (top-level fields replace), `delete(id)` |
+| `ctx.store` (this workspace), `ctx.store.global` (every workspace) | `kv.get(key)` → the value or `undefined`, `kv.set(key, value)`, `kv.delete(key)`; `collection(name, schema)` with `insert(doc)` → the document with its `id`, `get(id)` → it or `undefined`, `find(filter, { limit, order?: 'asc' \| 'desc', after? })` (equality on top-level fields, `limit` at most 1000, `after` an id to continue from), `count(filter)`, `update(id, patch)` (top-level fields replace), `delete(id)`; a collection that grows is indexed by the field sets it is filtered by, declared in `package.json` as `kvman.indexes`, e.g. `{ "notes": [["owner"], ["owner", "pinned"]] }` |
 | `ctx.store.transaction((tx) => …)` | runs synchronous `tx` calls (the same shape, `tx.global` too) in one transaction; returning a Promise fails |
 | `ctx.files` | `write(name, data, type)` → `{ id, name, type, size, owner, workspaceId, createdAt }`, `get(id)`, `read(id)` → a Buffer, `path(id)`, `unlink(id)` (yours, or a person's upload) |
 | `ctx.settings` | `get(key)` reads any key (workspace, else global, else preset, else default); `set(key, value, { scope: 'global' \| 'workspace' })` sets one of yours |
