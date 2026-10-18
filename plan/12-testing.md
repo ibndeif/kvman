@@ -46,3 +46,4 @@ The reference machine has 4 cores and 16 GB. Cold start is the median of 5 runs,
 | cold start to URL, coder preset (with `kernel.workers: 3`, the reference machine's default; ADR 0011, 27) | ≤ 3 s | M2.5 |
 | idle RSS, coder preset (with `kernel.workers: 3`, the reference machine's default) | ≤ 300 MB | M2.5 |
 | kvcoder prompt build with 10 sections (fake model) | p99 ≤ 50 ms | M2.4 |
+| `kvcoder.job.list`, a chat with 20 ended helpers, 5,000 messages in the workspace | p50 ≤ 50 ms | ADR 0088 |

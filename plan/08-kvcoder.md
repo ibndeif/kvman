@@ -188,6 +188,8 @@ await ctx.exec('kvcoder.slash.register', {
 
 **Where entries live.** Connectors, slash commands, session handlers, handler-job ids, and global sections are in kvcoder's global store. Sessions and the other sections are in the workspace store.
 
+**Indexes** (ADR 0088, 3). kvcoder declares the field sets it filters its growing collections by: `sessions` (`parentId`; `parentId, status`; `stepJobId`), `messages` (`sessionId`; `sessionId, block`; `sessionId, kind`; `sessionId, turnId, kind`), `turns`, `queued`, `questions`, and `maps` (`sessionId`), `step-intents` (`sessionId, turnId`), `answer-receipts` (`questionId`), `send-receipts` (`sendId`), `file-views` (`sessionId, path`), `file-backups` (`sessionId`; `sessionId, path`), `file-parts` (`sessionId, path`; `sessionId, path, part`), `artifacts` (`sessionId`; `sessionId, artifactId`), `background` (`sessionId`; `sessionId, ref`), `runs` (`sessionId`; `jobId`), and the global `processes` (`sessionId`; `sessionId, reported`; `workspaceId`).
+
 **Ownership and lifetime.**
 - **Ownership.** The caller (`ctx.job.caller`) owns what it registers, and only the owner replaces or removes it. A connector name owned by another extension fails with `kvcoder/NAME_TAKEN`.
 - **Connectors and slash commands last one run.** kvcoder clears them in its own `kernel.started` handler. That handler runs first, because registering extensions declare kvcoder as a dependency (§2.15). Each extension then registers its connectors and slash commands again in its own `kernel.started` handler. A hot reload of kvcoder reruns its dependents' handlers too (§2.9).

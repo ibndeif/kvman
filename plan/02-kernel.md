@@ -31,7 +31,7 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 ## 2.2 Workers
 
 - The kernel starts a pool of `worker_threads`. The size is the `kernel.workers` setting: default CPU cores − 1, minimum 1.
-- Every worker loads every extension of the run. Any job runs on any free worker.
+- Every worker loads every extension of the run. Any job runs on any free worker: a job that starts goes to the worker running the fewest jobs, the earliest started on a tie (ADR 0088, 2).
 - A worker's `process.argv` is the main thread's, copied in when it starts, so `process.argv[1]` is kvman's entry file in every handler (ADR 0009, 114).
 - A worker runs up to `kernel.workerConcurrency` jobs at once (default 32), since handlers mostly wait on I/O. A job that hogs the CPU slows only its own worker.
 - **The current job.** A worker tracks each running job with `AsyncLocalStorage`. Inside a handler, `ctx.store`, `ctx.files`, `ctx.settings`, `ctx.secrets`, and the job calls use that job's workspace and caller, and `ctx.job` describes it (§3.3). Calling any of these outside a job fails with `NO_JOB`.
@@ -70,6 +70,7 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
   - **Continuation** (ADR0040). Optional `after` is a non-empty string ID position: the next results have IDs strictly greater than it in ascending order, strictly less in descending order. Its document need not still exist. Calls without it, Promise/synchronous transaction returns, filters and ownership scope are unchanged; invalid options fail `VALIDATION_FAILED`. This is not a snapshot across calls: unread deletions disappear and matching new IDs beyond the position can appear; consumers must define their revalidation policy.
   - `update` and `delete` of a missing id fail `NOT_FOUND`.
   - A document or a kv value is JSON of at most 16 MiB (`TOO_LARGE`).
+  - **Indexes** (ADR 0088, 3). An extension declares, in its manifest's `kvman.indexes` (§2.9), the field sets it filters a collection by; an index serves that collection in every scope. At start, before the workers, and after a reload, the kernel keeps exactly the indexes the run's extensions declare: it creates the missing ones and drops its other store indexes, never touching data. An index holds each field's JSON type and value. A `find` or `count` uses the declared index whose fields are exactly the filter's, in any order; otherwise the one with the most leading fields that are all in the filter; otherwise none. Results, their order, and their errors are the same with or without one.
 - **Scope.** `ctx.store` is the current job's workspace; `ctx.store.global` is home-wide. Both hold only the calling extension's data.
 - **Atomicity.** Each call commits on its own. `ctx.store.transaction(fn)` runs `fn(tx)` in one SQLite transaction. `tx` has the store's shape (including `tx.global`), but its calls are synchronous, so the lock is never held across an `await`. If `fn` returns a Promise, the transaction is rolled back and fails with `VALIDATION_FAILED`. A transaction takes the write lock when it starts (ADR 0009, 111).
 
@@ -124,6 +125,8 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
   "kvman": { "namespace": "kvcoder", "source": "src/index.ts",
              "dependencies": { "@kvman/kvai": "^0.1.0", "@kvman/kvwebui": "^0.1.0" } } }
 ```
+
+**Indexes.** `kvman.indexes` is optional: it maps a collection name to a non-empty list of indexes, each a non-empty list of distinct top-level field names, such as `"indexes": { "messages": [["sessionId"], ["sessionId", "block"]] }` (§2.5; ADR 0088, 3).
 
 **The SDK.** An extension lists `@kvman/sdk` as a peerDependency. The kernel resolves every extension's `@kvman/sdk` import to its own copy (a Node module resolve hook), so all extensions share one SDK and one zod. Extensions build their schemas with the SDK's `z`, never their own zod.
 
