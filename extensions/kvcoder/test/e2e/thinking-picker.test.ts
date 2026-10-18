@@ -19,6 +19,9 @@ describe('the thinking level of the send box in Chromium (08 §8.7, ADR 0071, 5)
     const kvman = await world.start();
     world.fake.reply(says('Hello.'));
     const sessionId = sessionSchema.parse(await kvman.call('commands', 'kvcoder.session.create', { title: 'Thinking' })).id;
+    // The world's model doesn't think, so the chat uses one that does: its levels are off to high (ADR 0087, 11).
+    await kvman.call('commands', 'kvai.model.add', { provider: 'fake', id: 'thinker', name: 'Thinker', reasoning: true, input: ['text'], contextWindow: 128_000, maxTokens: 8192 });
+    await kvman.call('commands', 'kvcoder.session.configure', { sessionId, model: 'fake/thinker', thinking: 'medium' });
     await kvman.call('commands', 'kvcoder.message.send', { sessionId, text: 'Hi' });
     await until(() => kvman.call('queries', 'kvcoder.session.get', { sessionId }), sessionSchema, (found) => found.status === 'idle');
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
