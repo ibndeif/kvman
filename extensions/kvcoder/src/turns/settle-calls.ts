@@ -1,11 +1,12 @@
-import type { Ctx, Stored } from '@kvman/sdk';
+import type { Ctx } from '@kvman/sdk';
 import { dropRun } from '../delegate/runs.ts';
 import { startPending } from '../delegate/start-pending.ts';
 import { firePoint } from '../registry/session-points.ts';
-import type { HeldResult, JsonValue, Pending, SessionDoc, TurnDoc } from '../schemas/records.ts';
+import type { Pending, TurnDoc } from '../schemas/records.ts';
 import { now } from '../sessions/session-lookup.ts';
 import { records, txRecords, type TxRecords } from '../store/collections.ts';
-import { appendMessage, appendQueued } from './history.ts';
+import { appendResults } from './call-results.ts';
+import { appendQueued } from './history.ts';
 import type { CallOutcome, ToolCall } from './run-calls.ts';
 import type { StepLease } from './step-claim.ts';
 import { liveStep, settleStep } from './step-intents.ts';
@@ -16,24 +17,6 @@ import { advanceStep, dispatchNext } from './step-next.ts';
 // transaction so an answer always finds them.
 
 type Calls = TurnDoc['calls'];
-
-// A result's details without a second copy of its output (ADR 0034, 7): the output stays only where it differs from the
-// text the model gets, which is a shell line's and a binary's.
-function storedDetails(held: HeldResult): JsonValue {
-  const details = held.details;
-  if (typeof details !== 'object' || details === null || Array.isArray(details) || details['output'] !== held.text) return details;
-  return Object.fromEntries(Object.entries(details).filter(([name]) => name !== 'output'));
-}
-
-/** Appends a step's results as toolResult messages, in the model's call order. */
-export function appendResults(store: TxRecords, session: Stored<SessionDoc>, turnId: string, calls: Calls, results: readonly HeldResult[]): void {
-  for (const call of calls) {
-    const held = results.find((candidate) => candidate.toolCallId === call.toolCallId);
-    if (held === undefined) continue;
-    const content: Record<string, JsonValue> = { role: 'toolResult', toolCallId: call.toolCallId, toolName: call.toolName, content: [{ type: 'text', text: held.text }], isError: held.isError, timestamp: Date.now() };
-    appendMessage(store, session, { kind: 'toolResult', content: held.details === null ? content : { ...content, details: storedDetails(held) }, turnId });
-  }
-}
 
 function pendingOf(store: TxRecords, sessionId: string, rootSessionId: string, turnId: string, toolCallId: string, outcome: Exclude<CallOutcome, { kind: 'result' | 'deferred' }>): Pending {
   if (outcome.kind === 'subagent') return { toolCallId, kind: 'subagent', questionId: null, question: null, childSessionId: outcome.childSessionId, runId: null };

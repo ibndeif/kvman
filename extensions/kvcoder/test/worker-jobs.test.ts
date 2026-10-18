@@ -58,7 +58,7 @@ describe("a program worker's run as a job of its chat (08 §8.5 and §8.6, ADR 0
     expect(await kernel.exec('kvcoder.job.get', { sessionId, id: String(row?.id) })).toMatchObject({ status: 'cancelled', output: 'pie was stopped' });
   });
 
-  it('QA32-E9 cancelling the turn kills the program, and no result is appended', async () => {
+  it('QA32-E9 cancelling the turn kills the program, and its call says it was stopped while it ran', async () => {
     const { kernel, fake, sessionId, pid } = await running(false);
     await kernel.exec('kvcoder.turn.cancel', { sessionId });
     await gone(pid);
@@ -69,7 +69,7 @@ describe("a program worker's run as a job of its chat (08 §8.5 and §8.6, ADR 0
     expect((await kernel.exec('kvcoder.job.list', { sessionId })).map((row) => row.status)).toEqual(['cancelled']);
     expect(fake.requests()).toHaveLength(1);
     const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });
-    expect(messages.filter((message) => message.kind === 'toolResult')).toEqual([]);
+    expect(messages.filter((message) => message.kind === 'toolResult').map((message) => message.content['content'])).toEqual([[{ type: 'text', text: 'stopped while it ran (the person stopped the turn): what it changed is unknown, so check before you run it again' }]]);
   });
 
   it('QA32-E10 deleting the chat kills its background run and forgets it', async () => {

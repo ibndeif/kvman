@@ -5,6 +5,7 @@ import { now } from '../sessions/session-lookup.ts';
 import type { TxRecords } from '../store/collections.ts';
 import { appendBackgroundInTx, backgroundText } from './background.ts';
 import { childResultInTx } from './child-result.ts';
+import { appendEndedCalls } from './ended-calls.ts';
 import { appendNotice, appendQueued } from './history.ts';
 import { heldText, resolvePendingInTx } from './resolve.ts';
 import type { StepLease } from './step-claim.ts';
@@ -61,6 +62,7 @@ export function endTurnState(store: TxRecords, sessionId: string, turnId: string
   const runs = turn.pending.flatMap(item => item.runId === null ? [] : [item.runId]);
   const endedAt = now();
   const durationMs = Math.max(Date.parse(endedAt) - Date.parse(turn.startedAt), 0);
+  appendEndedCalls(store, session, turn, outcome);
   store.turns.update(turnId, { endedAt, durationMs, outcome, calls: [], pending: [], results: [], deferredCalls: [] });
   for (const question of store.questions.find({ sessionId }, { limit: 1000 })) store.questions.delete(question.id);
   appendQueued(store, session, null);

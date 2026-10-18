@@ -19,7 +19,8 @@ import { incompleteHint, incompleteReply, incompleteRetries, lostHint, lostRetri
 import { modelMessages, sentHistory } from './model-context.ts';
 import { completeWithRetries } from './model-retry.ts';
 import { evaluateCalls, runApproved, runDeferred, type ToolCall } from './run-calls.ts';
-import { appendResults, settleCalls } from './settle-calls.ts';
+import { appendResults } from './call-results.ts';
+import { settleCalls } from './settle-calls.ts';
 import { addCallUsage } from './usage.ts';
 import { claimStepInput, currentStep, stepInputSchema, type StepLease } from './step-claim.ts';
 import { liveStep } from './step-intents.ts';
