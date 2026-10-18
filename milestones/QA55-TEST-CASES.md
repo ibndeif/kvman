@@ -44,7 +44,7 @@ Paths are under `extensions/`.
 - **QA55-H9 the retry line says why and when.** *Given* a `retry` chunk `{ attempt: 3, of: 5, waitMs: 15000,
   reason: 'rateLimited' }`, *then* the activity line reads
   `Retrying in 15 s: the provider is limiting calls (3 of 5)`; with `reason: 'unavailable'` it reads
-  `Retrying in 15 s: the provider didn't answer (3 of 5)`. `kvcoder/test/web/live-step.test.ts`
+  `Retrying in 15 s: the provider didn't answer (3 of 5)`. `kvcoder/test/web/live-view.test.ts`
 - **QA55-H10 a helper reuses its parent's checks.** *Given* a chat whose checks hold a binary connector's and a program
   worker's result, *when* it delegates to a subagent worker, *then* the helper's checks are the binary connector's
   alone and no check program runs at the helper's first step. `kvcoder/test/helper-checks.test.ts`

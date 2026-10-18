@@ -4,12 +4,15 @@ import { callView } from './call-view.ts';
 // What a running step streams (plan 08 §8.7, ADR 0009, 99, 142): kvai's text and thinking deltas build the pending
 // answer, and its tool-call chunks give each call's description and connector command as the model writes them (ADR 144; ADR 0011, 13); kvcoder's
 // chunks tell the conversation to follow the next step, show a subagent, that a summary is being made (whose text
-// isn't the answer), or that a failed model call is being tried again (ADR 0009, 155).
+// isn't the answer), or that a failed model call is being tried again, why, and after how long (ADR 0009, 155; ADR 0087, 6).
 
 /** A tool call being written or run. `carried` marks a call the previous step approved and this one is running. */
 export type LiveCall = { name: string; description?: string; label?: string; complete: boolean; carried?: boolean };
 
-export type Live = { text: string; thinking: string; summarizing: boolean; calls: LiveCall[]; retry: { attempt: number; of: number } | null; startedAt: number };
+/** A failed model call tried again: which try is next, of how many, the wait before it in seconds, and why. */
+export type Retry = { attempt: number; of: number; seconds: number; reason: 'rateLimited' | 'unavailable' };
+
+export type Live = { text: string; thinking: string; summarizing: boolean; calls: LiveCall[]; retry: Retry | null; startedAt: number };
 
 export type Phase = 'waiting' | 'retrying' | 'thinking' | 'writing' | 'preparing' | 'running';
 
@@ -60,7 +63,8 @@ export function applyEvent(live: Live, event: StreamEvent): StepSignal {
   if (data['type'] === 'compaction') live.summarizing = data['state'] === 'started';
   if (data['type'] === 'retry' && typeof data['attempt'] === 'number' && typeof data['of'] === 'number') {
     // The failed attempt's partial text, thinking, and unfinished calls aren't the reply: the next attempt starts clean.
-    Object.assign(live, { text: '', thinking: '', calls: live.calls.filter((call) => call.carried === true), retry: { attempt: data['attempt'], of: data['of'] } });
+    const retry: Retry = { attempt: data['attempt'], of: data['of'], seconds: typeof data['waitMs'] === 'number' ? Math.round(data['waitMs'] / 1000) : 0, reason: data['reason'] === 'rateLimited' ? 'rateLimited' : 'unavailable' };
+    Object.assign(live, { text: '', thinking: '', calls: live.calls.filter((call) => call.carried === true), retry });
   }
   if (data['type'] === 'follow' && typeof data['jobId'] === 'string') return { kind: 'follow', jobId: data['jobId'] };
   if (data['type'] === 'subagent' && typeof data['sessionId'] === 'string' && typeof data['jobId'] === 'string') return { kind: 'subagent', sessionId: data['sessionId'], jobId: data['jobId'] };

@@ -17,6 +17,8 @@ const soFar = computed(() => {
   if (props.turn.usage.cost === 0) return kvman.t('kvcoder.ui.turnSteps', { steps: props.turn.steps });
   return kvman.t('kvcoder.ui.turnSoFar', { steps: props.turn.steps, cost: formatCost(props.turn.usage.cost) });
 });
+// A retry's line says why and after how long (ADR 0087, 6).
+const title = computed(() => (props.live.retry !== null && phase.value === 'retrying' ? kvman.t(props.live.retry.reason === 'rateLimited' ? 'kvcoder.ui.activity.retryingRateLimited' : 'kvcoder.ui.activity.retryingUnavailable', props.live.retry) : kvman.t(`kvcoder.ui.activity.${phase.value}`)));
 const seconds = computed(() => Math.max(0, Math.floor((now.value - props.live.startedAt) / 1000)));
 </script>
 
@@ -30,7 +32,7 @@ const seconds = computed(() => Math.max(0, Math.floor((now.value - props.live.st
           <span v-if="call.label" class="kvc-muted" dir="ltr" data-test="activity-label">{{ call.label }}</span>
         </span>
       </template>
-      <span v-else style="font-weight: 500" data-test="activity-title">{{ kvman.t(`kvcoder.ui.activity.${phase}`, props.live.retry ?? {}) }}</span>
+      <span v-else style="font-weight: 500" data-test="activity-title">{{ title }}</span>
     </span>
     <span v-if="props.live.calls.length > 0" class="kvc-muted" data-test="activity-phase">{{ kvman.t(`kvcoder.ui.activity.${phase}`) }}</span>
     <span v-if="soFar" class="kvc-muted" data-test="activity-turn">{{ soFar }}</span>

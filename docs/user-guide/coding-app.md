@@ -34,7 +34,7 @@ The agent knows when you wrote: each message reaches it with the day, date, and 
 
 A turn is a chain of steps. In each step the model answers, and its answer may hold calls, which run before the next step. The turn ends when the agent answers in text alone.
 
-- **While it works**, the line at the end of the conversation says what the step is doing, then the turn so far, such as "Turn: 18 steps · about $0.84". A failed model call is retried by itself and shows **Retrying… (2 of 4)**.
+- **While it works**, the line at the end of the conversation says what the step is doing, then the turn so far, such as "Turn: 18 steps · about $0.84". A failed model call is retried by itself, up to five tries, and the line says why and when, such as **Retrying in 15 s: the provider is limiting calls (3 of 5)**.
 - **Each call is a card.** Closed, it shows what the agent says it is doing, then one line with what was done and the outcome, such as `Edit src/app.ts +12 −3` or `$ npm test`, and the time it took, from the model writing the call to its end. Open it to see the diff, the output, or the fields. A call the agent judged risky has the chip **Risky**.
 - **A failed call** has a red border, **Failed**, and one short reason, such as "The command failed." or "You denied this call.". **Show details** shows the raw error. A request of the agent's that wasn't valid ran nothing: it shows **Not run**, without the red, and the agent usually corrects it in its next step.
 - **After the answer**, the conversation shows the turn's time and cost. Hover for its tokens.

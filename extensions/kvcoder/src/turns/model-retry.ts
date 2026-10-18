@@ -4,10 +4,11 @@ import { delay } from '../delay.ts';
 import { invalid } from '../problems.ts';
 import { currentStep, type StepLease } from './step-claim.ts';
 
-// A step's model call, tried again when it fails for a temporary reason (plan 08 §8.2, ADR 0009, 154, 155, and 203):
-// four tries in all, after 1 s, 4 s, and then 15 s. Any other failure, and a stop, end it at once.
+// A step's model call, tried again when it fails for a temporary reason (plan 08 §8.2, ADR 0009, 154, 155, and 203;
+// ADR 0087, 3 and 6): five tries in all, after 1 s, 4 s, 15 s, and then 60 s, each announced with why and how long.
+// Any other failure, and a stop, end it at once.
 
-const waitsMs = [1_000, 4_000, 15_000] as const;
+const waitsMs = [1_000, 4_000, 15_000, 60_000] as const;
 
 const transient = (error: ProblemError): boolean => error.problem.code === 'kvai/RATE_LIMITED' || (error.problem.code === 'kvai/PROVIDER_ERROR' && error.problem.params?.['transient'] === true);
 
@@ -20,7 +21,7 @@ export async function completeWithRetries(ctx: Ctx, input: InputOf<'kvai.complet
       const wait = waitsMs[attempt - 1];
       if (!(error instanceof ProblemError) || !transient(error) || wait === undefined || ctx.job.signal.aborted) throw error;
       ctx.log.warn('A model call failed for a temporary reason; trying again.', { code: error.problem.code, attempt });
-      ctx.job.progress({ type: 'retry', attempt: attempt + 1, of: waitsMs.length + 1 });
+      ctx.job.progress({ type: 'retry', attempt: attempt + 1, of: waitsMs.length + 1, waitMs: wait, reason: error.problem.code === 'kvai/RATE_LIMITED' ? 'rateLimited' : 'unavailable' });
       await delay(wait, ctx.job.signal);
       ctx.job.signal.throwIfAborted();
     }
