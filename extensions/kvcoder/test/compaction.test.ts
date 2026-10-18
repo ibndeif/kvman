@@ -40,16 +40,18 @@ describe('compaction (08 §8.1)', { timeout: 30_000 }, () => {
     expect(stream.chunks.slice(started + 1).find((chunk) => chunk.source === '@kvman/kvai')?.data).toEqual({ type: 'text', delta: 'SUMMARY' });
   });
 
-  it('M2.4-E48 a failed summary adds a notice and the step goes on; CONTEXT_TOO_LONG ends the turn; compact runs by hand', async () => {
+  it('M2.4-E48 a failed summary adds a notice and the step goes on; CONTEXT_TOO_LONG with a summary that fails again ends the turn; compact runs by hand', async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
     await history(kernel, fake, sessionId);
     const tooLong = "This model's maximum context length is 128000 tokens. However, your messages resulted in 200000 tokens.";
-    fake.reply({ status: 500, body: { error: { message: 'down', type: 'server_error' } } }, { status: 400, body: { error: { message: tooLong, type: 'invalid_request_error' } } });
+    const down = { status: 500, body: { error: { message: 'down', type: 'server_error' } } };
+    fake.reply(down, { status: 400, body: { error: { message: tooLong, type: 'invalid_request_error' } } }, down);
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'message 8' });
     await kernel.clock.advance(0);
     const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });
     expect(messages.filter((message) => message.kind === 'notice').map((message) => message.content)).toEqual([
+      { code: 'SUMMARY_FAILED', params: { code: 'kvai/PROVIDER_ERROR' } },
       { code: 'SUMMARY_FAILED', params: { code: 'kvai/PROVIDER_ERROR' } },
       { code: 'STEP_FAILED', params: { code: 'kvai/CONTEXT_TOO_LONG', details: { model: 'fake/m1' } } },
     ]);

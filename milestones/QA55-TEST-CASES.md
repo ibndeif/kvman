@@ -76,9 +76,9 @@ Paths are under `extensions/`.
 - **QA55-E6 too long with nothing to summarize.** *Given* a chat whose older messages are under the minimum, *when* the
   call fails `kvai/CONTEXT_TOO_LONG`, *then* no summary is stored, the model isn't called again, and the turn ends
   `failed` with `STEP_FAILED`. `kvcoder/test/context-overflow.test.ts`
-- **QA55-E7 a model kvai doesn't list is summarized on overflow.** *Given* a session whose model isn't in
-  `kvai.model.list`, *when* its call fails `kvai/CONTEXT_TOO_LONG`, *then* the forced summary runs and the model is
-  called again. `kvcoder/test/context-overflow.test.ts`
+- **QA55-E7 a model whose window is unknown is summarized on overflow.** *Given* a session created with no model, which
+  calls `kvai.defaultModel` and so is never compacted by size, *when* its call fails `kvai/CONTEXT_TOO_LONG`, *then* the
+  forced summary runs and the model is called again. `kvcoder/test/context-overflow.test.ts`
 - **QA55-E8 five failures end the turn.** *Given* a model that fails `kvai/PROVIDER_ERROR` with `transient: true` five
   times, *then* the turn ends `failed` with `STEP_FAILED`, and the four chunks carry `reason: 'unavailable'`.
   `kvcoder/test/model-retry.test.ts`

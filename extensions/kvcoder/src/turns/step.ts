@@ -8,7 +8,7 @@ import { shellFor } from '../calls/shell-program.ts';
 import { sessionTools, type SessionTools } from '../prompt/session-prompt.ts';
 import { ownerName } from '../jobs/process-records.ts';
 import { activeConnectors } from '../registry/register-connectors.ts';
-import { readSettings } from '../register-settings.ts';
+import { readSettings, type StepSettings } from '../register-settings.ts';
 import type { HeldResult, SessionDoc } from '../schemas/records.ts';
 import { txRecords } from '../store/collections.ts';
 import { compact, promptBasis } from './compaction.ts';
@@ -74,7 +74,10 @@ async function withChecks(ctx: Ctx, session: Stored<SessionDoc>, lease: StepLeas
 
 const toolCallSchema = z.object({ type: z.literal('toolCall'), id: z.string(), name: z.string(), arguments: z.record(z.string(), z.json()) });
 
-async function callModel(ctx: Ctx, session: Stored<SessionDoc>, lease: StepLease, tools: SessionTools): Promise<{ calls: ToolCall[]; seq: number; lost: number | undefined; incomplete: Incomplete | undefined } | undefined> {
+type Answer = { calls: ToolCall[]; seq: number; lost: number | undefined; incomplete: Incomplete | undefined };
+
+// `overflow` says what a `kvai/CONTEXT_TOO_LONG` does: hand the failure back for a summary, or end the turn (ADR 0087, 2).
+async function callModel(ctx: Ctx, session: Stored<SessionDoc>, lease: StepLease, tools: SessionTools, overflow: 'summarize' | 'end'): Promise<Answer | { tooLong: ProblemError } | undefined> {
   const messages = await modelMessages(ctx, await sentHistory(ctx, session.id, session.nextSeq));
   if (await currentStep(ctx, lease) === undefined) return undefined;
   const started = Date.now();
@@ -101,9 +104,27 @@ async function callModel(ctx: Ctx, session: Stored<SessionDoc>, lease: StepLease
     return { calls, seq, lost, incomplete: calls.length > 0 || lost !== undefined ? undefined : incompleteReply(blocks, answer.stopReason) };
   } catch (error) {
     if (!(error instanceof ProblemError) || ctx.job.signal.aborted) throw error;
-    await endTurn(ctx, session.id, lease.turnId, 'failed', 'step', { code: 'STEP_FAILED', params: { code: error.problem.code, details: failureDetails(error) } }, lease);
+    if (overflow === 'summarize' && error.problem.code === 'kvai/CONTEXT_TOO_LONG') return { tooLong: error };
+    await stepFailed(ctx, session, lease, error);
     return undefined;
   }
+}
+
+async function stepFailed(ctx: Ctx, session: Stored<SessionDoc>, lease: StepLease, error: ProblemError): Promise<void> {
+  await endTurn(ctx, session.id, lease.turnId, 'failed', 'step', { code: 'STEP_FAILED', params: { code: error.problem.code, details: failureDetails(error) } }, lease);
+}
+
+// A conversation too long for the model is summarized by force and sent once more; with no summary the turn ends.
+async function afterOverflow(ctx: Ctx, session: Stored<SessionDoc>, lease: StepLease, tools: SessionTools, settings: Pick<StepSettings, 'compactAt' | 'compactKeep'>, tooLong: ProblemError): Promise<Answer | undefined> {
+  const summarized = await compact(ctx, session, { force: true, compactAt: settings.compactAt, keep: settings.compactKeep, prompt: tools.built.prompt, tools: tools.listed.map(listed => listed.name), turnId: lease.turnId, lease });
+  const current = await currentStep(ctx, lease);
+  if (current === undefined) return undefined;
+  if (!summarized) {
+    await stepFailed(ctx, current.session, lease, tooLong);
+    return undefined;
+  }
+  const answer = await callModel(ctx, current.session, lease, tools, 'end');
+  return answer === undefined || 'tooLong' in answer ? undefined : answer;
 }
 
 function failureDetails(error: ProblemError): JsonValue {
@@ -154,7 +175,8 @@ async function runStep(ctx: Ctx, lease: StepLease): Promise<void> {
   await compact(ctx, checked, { force: false, compactAt: settings.compactAt, keep: settings.compactKeep, prompt: tools.built.prompt, tools: tools.listed.map(listed => listed.name), turnId: lease.turnId, lease });
   const current = await currentStep(ctx, lease);
   if (current === undefined) return;
-  const answer = await callModel(ctx, current.session, lease, tools);
+  const first = await callModel(ctx, current.session, lease, tools, 'summarize');
+  const answer = first !== undefined && 'tooLong' in first ? await afterOverflow(ctx, current.session, lease, tools, settings, first.tooLong) : first;
   if (answer === undefined) return;
   if (answer.calls.length === 0) { await finishWithoutCalls(ctx, lease, settings.maxSteps, answer.lost, answer.incomplete); return; }
   const env = { ctx, session: current.session, tools, approval: settings.approval, lease };

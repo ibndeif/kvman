@@ -21,4 +21,9 @@ describe("what is sent of a message, for compaction's count (08 §8.1, ADR 0033,
     expect(sentCharacters({ content: { role: 'user', content: 'four', timestamp: 1 } })).toBe(4);
     expect(sentCharacters({ content: { code: 'CANCELLED', params: {} } })).toBe(0);
   });
+
+  it('QA55-H4 an image a message shows counts 6,400 characters', () => {
+    expect(sentCharacters({ content: { role: 'user', content: 'four', timestamp: 1 }, fileIds: ['a', 'b'] })).toBe(4 + 12_800);
+    expect(sentCharacters({ content: { role: 'user', content: 'four', timestamp: 1 }, fileIds: null })).toBe(4);
+  });
 });
