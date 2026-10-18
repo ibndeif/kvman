@@ -7,7 +7,7 @@ import { useDismiss } from './use-dismiss.ts';
 // artifact panel shows. The button holds the current choice on one line; Up and Down move through the open list, Enter
 // picks, Escape and a press outside close. The list is kvcoder's own, so its place is the stylesheet's: under its
 // button, and above it in the send box.
-const props = defineProps<{ options: { id: string; label: string }[]; current: string | undefined; label: string; test: string }>();
+const props = defineProps<{ options: { id: string; label: string }[]; current: string | undefined; label: string; test: string; disabled?: boolean }>();
 const emit = defineEmits<{ pick: [id: string] }>();
 const open = ref(false);
 const highlight = ref(0);
@@ -45,7 +45,7 @@ useDismiss(() => open.value, () => root.value, close);
 
 <template>
   <div ref="root" class="kvc-picker">
-    <button ref="trigger" type="button" class="kvc-button" aria-haspopup="listbox" :aria-expanded="open" :aria-label="`${props.label}: ${shown}`" :title="shown" :data-test="props.test" @click="toggle" @keydown="onKey">
+    <button ref="trigger" type="button" class="kvc-button" :disabled="props.disabled === true" aria-haspopup="listbox" :aria-expanded="open" :aria-label="`${props.label}: ${shown}`" :title="shown" :data-test="props.test" @click="toggle" @keydown="onKey">
       <span class="kvc-picker-label">{{ shown }}</span><ChevronDown :size="16" aria-hidden="true" />
     </button>
     <div v-if="open" class="kvc-popover kvc-choices" role="listbox" :aria-label="props.label" :data-test="`${props.test}-list`">

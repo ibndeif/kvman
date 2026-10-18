@@ -54,6 +54,7 @@ describe('providers and models (07 §7.2)', () => {
       name: 'M1',
       provider: 'fake',
       reasoning: true,
+      thinkingLevels: ['off', 'minimal', 'low', 'medium', 'high'],
       input: ['text'],
       contextWindow: 128_000,
       maxTokens: 8192,
@@ -65,7 +66,7 @@ describe('providers and models (07 §7.2)', () => {
     const fakeOnly = await kernel.exec('kvai.model.list', { provider: 'fake' });
     expect(fakeOnly.map((model) => model.id)).toEqual(['fake/m1', 'fake/m2']);
     const sonnet = all.find((model) => model.id === 'anthropic/claude-sonnet-5-5');
-    expect(Object.keys(sonnet ?? {}).sort()).toEqual(['builtIn', 'contextWindow', 'cost', 'id', 'input', 'isDefault', 'maxTokens', 'name', 'provider', 'reasoning']);
+    expect(Object.keys(sonnet ?? {}).sort()).toEqual(['builtIn', 'contextWindow', 'cost', 'id', 'input', 'isDefault', 'maxTokens', 'name', 'provider', 'reasoning', 'thinkingLevels']);
     expect(all.every((model) => Object.values(model.cost).every((rate) => rate >= 0))).toBe(true);
     const ids = all.map((model) => model.id);
     expect(ids).toContain('openrouter/anthropic/claude-sonnet-5.5');

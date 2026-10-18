@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 import { toastProblem, useKvman } from './kvman.ts';
-import { modelGroups, thinkingLevels, type ModelRow, type ProviderRow } from './model-groups.ts';
+import { levelsOf, modelGroups, nearestLevel, type ModelRow, type ProviderRow } from './model-groups.ts';
 import ModelPicker from './ModelPicker.vue';
 import { ownConnectors } from './use-connectors.ts';
 import { draftOf, draftProblems, entryOf, workerKinds, type DraftField, type WorkerEntry } from './worker-entry.ts';
@@ -26,6 +26,12 @@ const editing = props.entry !== undefined;
 const leadOnly: readonly string[] = ['delegate', 'ask', 'execution-map'];
 const offered = computed(() => [...ownConnectors.filter((name) => !leadOnly.includes(name)), ...added.value]);
 const groups = computed(() => modelGroups(providers.value, models.value, draft.model));
+// The levels of the worker's model, or every level for the chat's own (ADR 0087, 11); a chosen level moves with the model.
+const levels = computed(() => levelsOf(groups.value, draft.model));
+function pickModel(modelId: string): void {
+  draft.model = modelId;
+  if (draft.thinking !== '') draft.thinking = nearestLevel(levels.value, draft.thinking);
+}
 
 onMounted(async () => {
   try {
@@ -105,13 +111,13 @@ function submit(): void {
     </fieldset>
     <div class="kvc-form-field" data-test="worker-model">
       <span class="kvc-form-label">{{ text('model') }}</span>
-      <ModelPicker :groups="groups" :current="draft.model" :empty="text('sameModel')" :none="text('sameModel')" @pick="(modelId) => (draft.model = modelId)" @none="draft.model = null" />
+      <ModelPicker :groups="groups" :current="draft.model" :empty="text('sameModel')" :none="text('sameModel')" @pick="pickModel" @none="draft.model = null" />
     </div>
     <label class="kvc-form-field">
       <span class="kvc-form-label">{{ text('thinking') }}</span>
       <select v-model="draft.thinking" class="kvc-button" data-test="worker-thinking">
         <option value="">{{ text('sameThinking') }}</option>
-        <option v-for="level in thinkingLevels" :key="level" :value="level">{{ kvman.t(`kvcoder.ui.thinkingLevels.${level}`) }}</option>
+        <option v-for="level in levels" :key="level" :value="level">{{ kvman.t(`kvcoder.ui.thinkingLevels.${level}`) }}</option>
       </select>
     </label>
     </template>

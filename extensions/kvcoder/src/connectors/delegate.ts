@@ -8,6 +8,8 @@ import type { SessionDoc } from '../schemas/records.ts';
 import { now } from '../sessions/session-lookup.ts';
 import { records, txRecords, type TxRecords } from '../store/collections.ts';
 import { appendMessage, noUsage, userContent } from '../turns/history.ts';
+import { modelInfo } from '../turns/model-info.ts';
+import { nearestLevel } from '../thinking-levels.ts';
 import { beginTurn, openTurn } from '../turns/start-turn.ts';
 import { callInput, type ConnectorCommand } from './connector-command.ts';
 
@@ -73,11 +75,17 @@ export function registerDelegateConnector(ctx: Ctx): void {
 export async function createChild(ctx: Ctx, parent: Stored<SessionDoc>, worker: SubagentWorker, run: { title: string; task: string }, guard: CreationGuard): Promise<string> {
   // A worker that names no model uses the one set for helpers, and the chat's own when none is (ADR 0069, 3).
   const helperModel = settingSchemas.model.parse(await ctx.settings.get('kvcoder.delegate.model'));
+  // The helper's level is one its model has (ADR 0087, 11); the levels are looked up before the transaction, for the
+  // model the parent has now, and used only when the canonical parent still has it.
+  const expected = worker.model ?? helperModel ?? parent.model;
+  const levels = (await modelInfo(ctx, expected))?.thinkingLevels;
   const childId = await ctx.store.transaction((tx) => {
     const store = txRecords(tx);
     const canonical = guard(store);
     if (canonical.id !== parent.id) throw invalid('Delegation requires its originating session.');
     const stamp = now();
+    const model = worker.model ?? helperModel ?? canonical.model;
+    const wanted = worker.thinking ?? canonical.thinking;
     const child = store.sessions.insert({
       title: shownTitle(run.title),
       autoTitle: false,
@@ -85,8 +93,8 @@ export async function createChild(ctx: Ctx, parent: Stored<SessionDoc>, worker: 
       status: 'idle',
       parentId: parent.id,
       worker: { name: worker.name, instructions: worker.instructions, readOnly: worker.readOnly },
-      model: worker.model ?? helperModel ?? canonical.model,
-      thinking: worker.thinking ?? canonical.thinking,
+      model,
+      thinking: levels !== undefined && model === expected ? nearestLevel(levels, wanted) : wanted,
       stepJobId: null,
       stepGeneration: 0,
       stepIntentId: null,

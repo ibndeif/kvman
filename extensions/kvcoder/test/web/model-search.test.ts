@@ -7,9 +7,10 @@ import { searchGroups } from '../../web/src/model-groups.ts';
 import { createFakeKvman } from './support/fake-kvman.ts';
 import { session } from './support/fixtures.ts';
 
+const levels = ['off', 'low', 'medium', 'high'] as const;
 const groups: ModelGroup[] = [
-  { provider: 'openrouter', title: 'OpenRouter', models: [{ id: 'openrouter/z-ai/glm-5.3-flash', name: 'Z.ai: GLM 5.3 Flash' }, { id: 'openrouter/z-ai/glm-4.7-flash', name: 'Z.ai: GLM 4.7 Flash' }, { id: 'openrouter/acme/big-one', name: 'Acme Big One' }] },
-  { provider: 'zai', title: 'Z.ai', models: [{ id: 'zai/glm-5.3-flash', name: 'GLM-5.3-Flash' }, { id: 'zai/glm-5.3', name: 'GLM-5.3' }, { id: 'zai/other', name: 'Other' }] },
+  { provider: 'openrouter', title: 'OpenRouter', models: [{ id: 'openrouter/z-ai/glm-5.3-flash', name: 'Z.ai: GLM 5.3 Flash', thinkingLevels: levels }, { id: 'openrouter/z-ai/glm-4.7-flash', name: 'Z.ai: GLM 4.7 Flash', thinkingLevels: levels }, { id: 'openrouter/acme/big-one', name: 'Acme Big One', thinkingLevels: levels }] },
+  { provider: 'zai', title: 'Z.ai', models: [{ id: 'zai/glm-5.3-flash', name: 'GLM-5.3-Flash', thinkingLevels: levels }, { id: 'zai/glm-5.3', name: 'GLM-5.3', thinkingLevels: levels }, { id: 'zai/other', name: 'Other', thinkingLevels: levels }] },
 ];
 
 function pickerFor(current: string | null) {

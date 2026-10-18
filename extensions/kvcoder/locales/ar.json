@@ -147,6 +147,8 @@
   "kvcoder.ui.thinkingLevels.low": "منخفض",
   "kvcoder.ui.thinkingLevels.medium": "متوسط",
   "kvcoder.ui.thinkingLevels.high": "مرتفع",
+  "kvcoder.ui.thinkingLevels.xhigh": "مرتفع جدًا",
+  "kvcoder.ui.thinkingLevels.max": "أقصى",
   "kvcoder.ui.menu": "المزيد",
   "kvcoder.ui.rename": "إعادة التسمية",
   "kvcoder.ui.fork": "نسخ إلى محادثة جديدة",

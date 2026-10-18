@@ -1,10 +1,12 @@
+import { thinkingLevels, type ThinkingLevel } from '../../src/thinking-levels.ts';
+
 // The model picker's groups (plan 08 §8.7, ADR 0009, 136, 140): the models of providers that can be called, under each
 // provider's title, in title order; the session's own model is listed whatever its provider's status. A search keeps
 // the models whose name or id has every word typed.
 
 export type ProviderRow = { id: string; title: string; status: 'ready' | 'needsKey' | 'noKey' };
-export type ModelRow = { id: string; name: string; provider: string };
-export type ModelGroup = { provider: string; title: string; models: { id: string; name: string }[] };
+export type ModelRow = { id: string; name: string; provider: string; thinkingLevels: readonly Thinking[] };
+export type ModelGroup = { provider: string; title: string; models: { id: string; name: string; thinkingLevels: readonly Thinking[] }[] };
 
 export function modelGroups(providers: readonly ProviderRow[], models: readonly ModelRow[], current: string | null): ModelGroup[] {
   const titles = new Map(providers.map((provider) => [provider.id, provider.title]));
@@ -13,7 +15,7 @@ export function modelGroups(providers: readonly ProviderRow[], models: readonly 
   const groups = new Map<string, ModelGroup>();
   for (const model of shown) {
     const group = groups.get(model.provider) ?? { provider: model.provider, title: titles.get(model.provider) ?? model.provider, models: [] };
-    group.models.push({ id: model.id, name: model.name });
+    group.models.push({ id: model.id, name: model.name, thinkingLevels: model.thinkingLevels });
     groups.set(model.provider, group);
   }
   return [...groups.values()].sort((first, second) => first.title.localeCompare(second.title));
@@ -29,5 +31,10 @@ export function searchGroups(groups: readonly ModelGroup[], query: string): Foun
   return { groups: kept, shown: kept.reduce((sum, group) => sum + group.models.length, 0), total: groups.reduce((sum, group) => sum + group.models.length, 0) };
 }
 
-export const thinkingLevels = ['off', 'minimal', 'low', 'medium', 'high'] as const;
-export type Thinking = (typeof thinkingLevels)[number];
+export { nearestLevel, thinkingLevels } from '../../src/thinking-levels.ts';
+export type Thinking = ThinkingLevel;
+
+/** The thinking levels of a model the groups list, or every level for one they don't (ADR 0087, 11). */
+export function levelsOf(groups: readonly ModelGroup[], modelId: string | null): readonly Thinking[] {
+  return groups.flatMap((group) => group.models).find((model) => model.id === modelId)?.thinkingLevels ?? thinkingLevels;
+}

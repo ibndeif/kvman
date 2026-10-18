@@ -1,13 +1,14 @@
 import { z } from '@kvman/sdk';
 import { artifactFormats } from '../artifacts/artifact-format.ts';
 import type { JsonValue } from '../connector-call.ts';
+import { thinkingLevels } from '../thinking-levels.ts';
 
 export type { JsonValue };
 
 // kvcoder's records (plan 08 §8.1): sessions, messages, turns, and what waits on the person.
 
-/** How hard the model thinks, as kvai takes it. */
-export const thinkingSchema = z.enum(['off', 'minimal', 'low', 'medium', 'high']);
+/** How hard the model thinks, as kvai takes it (ADR 0087, 11). */
+export const thinkingSchema = z.enum(thinkingLevels);
 
 const tokens = z.number().int().nonnegative();
 

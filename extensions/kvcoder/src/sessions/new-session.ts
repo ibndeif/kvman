@@ -7,9 +7,11 @@ import type { SessionDoc, Title } from '../schemas/records.ts';
 import { records } from '../store/collections.ts';
 import { cancelTurn } from '../turns/end-turn.ts';
 import { noUsage } from '../turns/history.ts';
+import { levelFor } from '../turns/model-info.ts';
 import { now } from './session-lookup.ts';
 
-// A new top-level session (plan 08 §8.1): `kvcoder.model` (or `kvai.defaultModel`) and `kvcoder.thinking`. Creating one
+// A new top-level session (plan 08 §8.1): `kvcoder.model` (or `kvai.defaultModel`) and `kvcoder.thinking`, moved to a
+// level the model has (ADR 0087, 11). Creating one
 // schedules the daily retention job, keyed so it never piles up (ADR 0009, 103).
 
 export async function newSession(ctx: Ctx, title: Title | undefined): Promise<Stored<SessionDoc>> {
@@ -23,7 +25,7 @@ export async function newSession(ctx: Ctx, title: Title | undefined): Promise<St
     parentId: null,
     worker: null,
     model,
-    thinking: settingSchemas.thinking.parse(await ctx.settings.get('kvcoder.thinking')),
+    thinking: await levelFor(ctx, model, settingSchemas.thinking.parse(await ctx.settings.get('kvcoder.thinking'))),
     stepJobId: null,
     stepGeneration: 0,
     stepIntentId: null,

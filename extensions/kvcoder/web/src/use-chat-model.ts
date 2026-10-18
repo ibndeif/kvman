@@ -1,11 +1,11 @@
 import { computed, onMounted, ref } from 'vue';
 import { startSettingsOf, type StartSettings } from './start-settings.ts';
 import type { Kvman } from '@kvman/sdk/web';
-import { modelGroups, thinkingLevels, type ModelRow, type ProviderRow, type Thinking } from './model-groups.ts';
+import { levelsOf, modelGroups, nearestLevel, thinkingLevels, type ModelRow, type ProviderRow, type Thinking } from './model-groups.ts';
 
 // The model and thinking level a new chat would use, and whether the model can be called (plan 08 §8.7, ADR 0009,
 // 194): `kvcoder.model`, or `kvai.defaultModel` when that is `null`, and `kvcoder.thinking`, unless the person picked
-// others for this chat.
+// others for this chat. The level shown is one the model has, and it is what the new chat is set to (ADR 0087, 11).
 export type StartState = 'loading' | 'ready' | 'needsKey' | 'noModel';
 
 function modelSetting(settings: readonly { key: string; value: unknown }[], key: string): string | null {
@@ -48,8 +48,8 @@ export function useChatModel(kvman: Kvman, failed: (error: unknown) => void) {
   });
 
   const current = computed(() => picked.value ?? configured.value);
-  const thinking = computed(() => pickedThinking.value ?? configuredThinking.value);
   const groups = computed(() => modelGroups(providers.value, models.value, current.value));
+  const thinking = computed(() => nearestLevel(levelsOf(groups.value, current.value), pickedThinking.value ?? configuredThinking.value));
   const provider = computed(() => providers.value.find((row) => row.id === models.value.find((model) => model.id === current.value)?.provider));
   const state = computed<StartState>(() => {
     if (!loaded.value) return 'loading';
@@ -59,7 +59,7 @@ export function useChatModel(kvman: Kvman, failed: (error: unknown) => void) {
   });
 
   /** What the person changed for this chat, as `kvcoder.session.configure` takes it. */
-  const changes = (): { model?: string; thinking?: Thinking } => ({ ...(picked.value === null ? {} : { model: picked.value }), ...(pickedThinking.value === null ? {} : { thinking: pickedThinking.value }) });
+  const changes = (): { model?: string; thinking?: Thinking } => ({ ...(picked.value === null ? {} : { model: picked.value }), ...(picked.value === null && pickedThinking.value === null ? {} : { thinking: thinking.value }) });
 
   return {
     start,

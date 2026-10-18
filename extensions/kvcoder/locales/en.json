@@ -147,6 +147,8 @@
   "kvcoder.ui.thinkingLevels.low": "Low",
   "kvcoder.ui.thinkingLevels.medium": "Medium",
   "kvcoder.ui.thinkingLevels.high": "High",
+  "kvcoder.ui.thinkingLevels.xhigh": "Extra high",
+  "kvcoder.ui.thinkingLevels.max": "Max",
   "kvcoder.ui.menu": "More",
   "kvcoder.ui.rename": "Rename",
   "kvcoder.ui.fork": "Fork into a new chat",

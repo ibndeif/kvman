@@ -24,7 +24,7 @@ The agent knows when you wrote: each message reaches it with the day, date, and 
 
 ## The send box
 
-- **The model and the thinking level** of the chat sit after the attach button. Each opens a list above the box. A change applies from the next step, and the model you pick becomes the default for new chats too.
+- **The model and the thinking level** of the chat sit after the attach button. Each opens a list above the box. A change applies from the next step, and the model you pick becomes the default for new chats too. The thinking list shows the levels the chosen model has, up to **Extra high** and **Max** where it has them; picking a model without the current level moves it to the nearest one, and a model that doesn't think shows **Off** greyed.
 - **Files.** Attach them with the paperclip, or paste them. In the desktop app on Linux, Ctrl+V with a copied image attaches it.
   - An image (PNG, JPEG, GIF, or WebP) goes to the model as a picture, and the model is told its name and that it isn't a file in your folder. A model that takes no images refuses it.
   - Any other file is copied into your workspace folder under `attachments/` when you send, and the message names it, so the agent opens it with its file commands. Nothing there is overwritten: a second `notes.md` becomes `notes-2.md`.

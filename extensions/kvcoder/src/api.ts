@@ -1,11 +1,12 @@
 import type { Json } from '@kvman/sdk';
 import type { Worker } from './delegate/workers.ts';
 import type { Message, Session, Turn } from './sessions/session-view.ts';
+import type { ThinkingLevel } from './thinking-levels.ts';
 
 // kvcoder's public names for typed calls (plan 03 §3.2): a caller gets them after `import type {} from '@kvman/kvcoder'`.
 
 type Empty = Record<string, never>;
-type Thinking = 'off' | 'minimal' | 'low' | 'medium' | 'high';
+type Thinking = ThinkingLevel;
 type Status = 'idle' | 'running' | 'waiting';
 type SessionId = { sessionId: string };
 type Example = { description: string; input: Json };

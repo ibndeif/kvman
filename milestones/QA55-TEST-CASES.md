@@ -52,8 +52,9 @@ Paths are under `extensions/`.
   `off, minimal, low, medium, high, xhigh, max`, on `openai` the levels `off, low, medium, high, xhigh, max`, a custom
   reasoning model `off` to `high`, and a custom model that doesn't reason `off` alone.
   `kvai/test/thinking-levels.test.ts`
-- **QA55-H12 xhigh is a level.** *When* a session is configured with `thinking: 'xhigh'` on a model that has it,
-  *then* the session keeps `xhigh` and its step sends `thinking: 'xhigh'`. `kvcoder/test/thinking-levels.test.ts`
+- **QA55-H12 xhigh is a level.** *When* a session is configured with `thinking: 'xhigh'` on a model that has it
+  (`openai-codex/gpt-6-luna`), *then* the session keeps `xhigh`; and `kvai.complete` takes `xhigh` and `max`.
+  `kvcoder/test/thinking-levels.test.ts`, `kvai/test/thinking-levels.test.ts`
 - **QA55-H13 the picker shows the model's levels.** *Given* a chat on a model with `off` to `max`, *then* the thinking
   picker lists seven levels, `Extra high` and `Max` among them; on a model with `off` alone it is disabled and shows
   `Off`. `kvcoder/test/web/thinking-picker.test.ts`

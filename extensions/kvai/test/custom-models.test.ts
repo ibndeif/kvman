@@ -32,7 +32,7 @@ describe('custom providers and models (07 §7.2, ADR 0009, 54–57)', () => {
     await kernel.exec('kvai.model.add', { provider: 'fake', id: 'm1', name: 'M1 again', ...model });
     const rows = await kernel.exec('kvai.model.list', { provider: 'fake' });
     expect(rows.filter((row) => row.id === 'fake/m1')).toEqual([
-      { id: 'fake/m1', name: 'M1 again', provider: 'fake', ...model, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, builtIn: false, isDefault: false },
+      { id: 'fake/m1', name: 'M1 again', provider: 'fake', ...model, thinkingLevels: ['off'], cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, builtIn: false, isDefault: false },
     ]);
     fake.reply({ chunks: [{ text: 'free' }], usage: { input: 100, output: 50 } });
     const answer = await kernel.exec('kvai.complete', { model: 'fake/m1', messages: [userSays('hi')] });

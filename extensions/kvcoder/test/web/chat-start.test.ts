@@ -86,7 +86,8 @@ describe("the Chat page's new chat (08 §8.7, ADR 0009, 194)", () => {
     await second.find('[data-test="model-picker"]').trigger('click');
     await second.find('[data-test="model-zed/z1"]').trigger('click');
     await send(second, 'Build it');
-    expect(modelOnly.calls.filter((call) => call.name === 'kvcoder.session.configure')).toEqual([{ name: 'kvcoder.session.configure', input: { sessionId: 's9', model: 'zed/z1' } }]);
+    // A picked model is sent with the level the picker shows for it (ADR 0087, 11).
+    expect(modelOnly.calls.filter((call) => call.name === 'kvcoder.session.configure')).toEqual([{ name: 'kvcoder.session.configure', input: { sessionId: 's9', model: 'zed/z1', thinking: 'medium' } }]);
     second.unmount();
   });
 

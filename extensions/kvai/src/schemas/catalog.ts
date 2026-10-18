@@ -1,4 +1,5 @@
 import { z } from '@kvman/sdk';
+import { thinkingSchema } from './complete.ts';
 
 // Providers and models (plan 07 §7.2, ADR 0009, 52–57): the admin API's shapes and the documents kept in kvai's
 // global store. A full model id is `<provider>/<model>`; provider ids never contain `/`.
@@ -118,6 +119,8 @@ export const modelRowSchema = z.object({
   name: z.string(),
   provider: z.string(),
   reasoning: z.boolean(),
+  /** The model's thinking levels, in order (ADR 0087, 11). */
+  thinkingLevels: z.array(thinkingSchema),
   input: z.array(z.enum(['text', 'image'])),
   contextWindow: z.number(),
   maxTokens: z.number(),

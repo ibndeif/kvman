@@ -5,6 +5,7 @@ import { readSettings } from '../register-settings.ts';
 import { statusSchema, thinkingSchema } from '../schemas/records.ts';
 import { records } from '../store/collections.ts';
 import { compact } from '../turns/compaction.ts';
+import { levelFor } from '../turns/model-info.ts';
 import { deleteSessionTree, newSession } from './new-session.ts';
 import { findSession, now, ownSession } from './session-lookup.ts';
 import { sessionSchema, sessionView } from './session-view.ts';
@@ -59,8 +60,10 @@ export function registerSessions(ctx: Ctx): void {
     output: z.object({}),
     public: true,
     handle: async ({ sessionId, model, thinking }) => {
-      await ownSession(ctx, sessionId);
-      await records(ctx.store).sessions.update(sessionId, { ...(model === undefined ? {} : { model }), ...(thinking === undefined ? {} : { thinking }), updatedAt: now() });
+      const session = await ownSession(ctx, sessionId);
+      // The level is kept to one the session's model has (ADR 0087, 11).
+      const level = model === undefined && thinking === undefined ? undefined : await levelFor(ctx, model ?? session.model, thinking ?? session.thinking);
+      await records(ctx.store).sessions.update(sessionId, { ...(model === undefined ? {} : { model }), ...(level === undefined ? {} : { thinking: level }), updatedAt: now() });
       return {};
     },
   });

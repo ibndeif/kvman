@@ -1,4 +1,4 @@
-import type { Model, Api } from '@earendil-works/pi-ai';
+import { getSupportedThinkingLevels, type Model, type Api } from '@earendil-works/pi-ai';
 import { z, type Ctx } from '@kvman/sdk';
 import { builtinCatalog, builtinModel, builtinModels } from './catalog/builtin-catalog.ts';
 import type { CustomCatalog } from './catalog/custom-catalog.ts';
@@ -12,13 +12,16 @@ const empty = z.object({});
 
 function builtinRow(model: Model<Api>): ModelRow {
   const { input, output, cacheRead, cacheWrite } = model.cost;
-  const base = { name: model.name, provider: model.provider, reasoning: model.reasoning, input: model.input };
+  const base = { name: model.name, provider: model.provider, reasoning: model.reasoning, thinkingLevels: getSupportedThinkingLevels(model), input: model.input };
   return { id: `${model.provider}/${model.id}`, ...base, contextWindow: model.contextWindow, maxTokens: model.maxTokens, cost: { input, output, cacheRead, cacheWrite }, builtIn: true, isDefault: false };
 }
 
+// A custom model has no level map, so it has pi-ai's levels for such a model: up to `high` when it reasons (ADR 0087, 11).
+const customReasoningLevels: ModelRow['thinkingLevels'] = ['off', 'minimal', 'low', 'medium', 'high'];
+
 function customRow(model: StoredModel): ModelRow {
   const { provider, modelId, name, reasoning, input, contextWindow, maxTokens, cost } = model;
-  return { id: `${provider}/${modelId}`, name, provider, reasoning, input, contextWindow, maxTokens, cost, builtIn: false, isDefault: false };
+  return { id: `${provider}/${modelId}`, name, provider, reasoning, thinkingLevels: reasoning ? customReasoningLevels : ['off'], input, contextWindow, maxTokens, cost, builtIn: false, isDefault: false };
 }
 
 function registerModelCatalog(ctx: Ctx, catalog: CustomCatalog): void {

@@ -3,8 +3,8 @@ import { assistantMessageSchema, messageSchema, stopReasonSchema, toolSchema } f
 
 // `kvai.complete`'s input and output (plan 07 §7.1). A delegate command takes and returns the same shapes.
 
-/** How hard a reasoning model thinks; `off` (the default) turns thinking off. */
-export const thinkingSchema = z.enum(['off', 'minimal', 'low', 'medium', 'high']);
+/** How hard a reasoning model thinks, from none to the most; `off` (the default) turns thinking off (ADR 0087, 11). */
+export const thinkingSchema = z.enum(['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max']);
 
 /** How long the provider keeps the prompt's cache: `long` is its longer cache where the model has one (ADR 0087, 4). */
 export const cacheRetentionSchema = z.enum(['short', 'long']);
