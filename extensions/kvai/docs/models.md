@@ -20,6 +20,7 @@ Input:
 - `thinking?: 'off' | 'minimal' | 'low' | 'medium' | 'high'` — default `'off'`.
 - `maxTokens?: number` — default: the model's own default.
 - `sessionId?: string` — the conversation the call belongs to. kvai passes it to the provider as its prompt cache key and session affinity, so the calls of one conversation read the provider's cache. Left out, nothing is sent.
+- `cacheRetention?: 'short' | 'long'` — how long the provider keeps the prompt's cache: `long` is its longer cache where the model has one (an hour on Anthropic, 24 hours on OpenAI). Left out, pi-ai's default, `short`, applies.
 
 Output: `{ message: AssistantMessage, stopReason: 'stop' | 'length' | 'toolUse', usage: { input, output, cacheRead, cacheWrite, cost } }`. The message keeps `role`, `content`, `api`, `provider`, `model`, `responseId?`, `usage`, `stopReason`, and `timestamp`.
 

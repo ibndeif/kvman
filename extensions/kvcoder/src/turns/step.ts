@@ -19,6 +19,7 @@ import { incompleteHint, incompleteReply, incompleteRetries, lostHint, lostRetri
 import { modelMessages, sentHistory } from './model-context.ts';
 import { completeWithRetries } from './model-retry.ts';
 import { evaluateCalls, runApproved, runDeferred, type ToolCall } from './run-calls.ts';
+import { cacheRetentionOf } from './cache-retention.ts';
 import { appendResults } from './call-results.ts';
 import { settleCalls } from './settle-calls.ts';
 import { addCallUsage } from './usage.ts';
@@ -82,7 +83,7 @@ async function callModel(ctx: Ctx, session: Stored<SessionDoc>, lease: StepLease
   if (await currentStep(ctx, lease) === undefined) return undefined;
   const started = Date.now();
   try {
-    const answer = await completeWithRetries(ctx, { ...(session.model === null ? {} : { model: session.model }), sessionId: session.id, systemPrompt: tools.built.prompt, messages, tools: [runTool(tools.listed.map(listed => listed.name))], thinking: session.thinking }, lease);
+    const answer = await completeWithRetries(ctx, { ...(session.model === null ? {} : { model: session.model }), sessionId: session.id, ...cacheRetentionOf(session), systemPrompt: tools.built.prompt, messages, tools: [runTool(tools.listed.map(listed => listed.name))], thinking: session.thinking }, lease);
     const durationMs = Date.now() - started;
     const { blocks, broken } = repairedCalls(answer.message.content);
     const message = { ...answer.message, content: blocks };

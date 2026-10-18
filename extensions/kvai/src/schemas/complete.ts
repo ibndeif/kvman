@@ -6,6 +6,9 @@ import { assistantMessageSchema, messageSchema, stopReasonSchema, toolSchema } f
 /** How hard a reasoning model thinks; `off` (the default) turns thinking off. */
 export const thinkingSchema = z.enum(['off', 'minimal', 'low', 'medium', 'high']);
 
+/** How long the provider keeps the prompt's cache: `long` is its longer cache where the model has one (ADR 0087, 4). */
+export const cacheRetentionSchema = z.enum(['short', 'long']);
+
 /** `kvai.complete`'s input. */
 export const completeInputSchema = z.object({
   model: z.string().min(1).exactOptional(),
@@ -15,6 +18,7 @@ export const completeInputSchema = z.object({
   thinking: thinkingSchema.exactOptional(),
   maxTokens: z.number().int().positive().exactOptional(),
   sessionId: z.string().min(1).exactOptional(),
+  cacheRetention: cacheRetentionSchema.exactOptional(),
 });
 
 /** One call's usage: tokens by kind, and the cost in US dollars. */
