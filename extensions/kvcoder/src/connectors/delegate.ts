@@ -1,5 +1,5 @@
 import { z, type Ctx, type Stored } from '@kvman/sdk';
-import { availableWorker, type SubagentWorker, type Worker } from '../delegate/workers.ts';
+import { availableWorker, workerCheckName, type SubagentWorker, type Worker } from '../delegate/workers.ts';
 import { firePoint } from '../registry/session-points.ts';
 import { invalid } from '../problems.ts';
 import { settingSchemas } from '../register-settings.ts';
@@ -96,7 +96,8 @@ export async function createChild(ctx: Ctx, parent: Stored<SessionDoc>, worker: 
       usage: noUsage(),
     usageBy: { summary: noUsage(), title: noUsage(), helpers: noUsage() },
       durationMs: 0,
-      checks: null,
+      // A helper starts with its parent's check results: it can't delegate, so the program workers' are left out (ADR 0087, 10).
+      checks: canonical.checks === null ? null : canonical.checks.filter((check) => !check.name.startsWith(workerCheckName(''))),
       connectors: worker.connectors,
       optedIn: [],
       createdAt: stamp,

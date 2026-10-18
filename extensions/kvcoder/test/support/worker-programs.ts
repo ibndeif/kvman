@@ -18,7 +18,7 @@ import path from 'node:path';
 const name = path.basename(process.argv[1]);
 const folder = path.dirname(process.argv[1]);
 const args = process.argv.slice(2);
-if (args[0] === '--version') { console.log('1.0.0'); process.exit(0); }
+if (args[0] === '--version') { appendFileSync(path.join(folder, name + '.versions'), 'x\\n'); console.log('1.0.0'); process.exit(0); }
 appendFileSync(path.join(folder, name + '.calls'), JSON.stringify({ args, cwd: process.cwd() }) + '\\n');
 const say = (text) => console.log(name === 'opencode' ? JSON.stringify({ type: 'text', part: { text } }) : text);
 const [verb, ...rest] = (args.at(-1) ?? '').split('\\n').at(-1).split(':');
@@ -54,6 +54,8 @@ export type Programs = {
   /** Lets every waiting fixture go on. */
   release(): void;
   calls(kind: ProgramKind): { args: string[]; cwd: string }[];
+  /** How many times the program was checked with `--version`. */
+  versions(kind: ProgramKind): number;
   pid(kind: ProgramKind): number | undefined;
   remove(kind: ProgramKind): void;
 };
@@ -84,6 +86,7 @@ export function useWorkerPrograms(): { install(...kinds: readonly ProgramKind[])
         gate,
         release: () => writeFileSync(gate, ''),
         calls: (kind) => read(`${kind}.calls`).split('\n').filter((line) => line !== '').map(callSchema),
+        versions: (kind) => read(`${kind}.versions`).split('\n').filter((line) => line !== '').length,
         pid: (kind) => (read(`${kind}.pid`) === '' ? undefined : Number(read(`${kind}.pid`))),
         remove: (kind) => rmSync(path.join(folder, kind)),
       };

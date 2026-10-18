@@ -65,7 +65,8 @@ async function beginStep(ctx: Ctx, lease: StepLease, maxSteps: number | null): P
 
 async function withChecks(ctx: Ctx, session: Stored<SessionDoc>, lease: StepLease): Promise<Stored<SessionDoc> | undefined> {
   if (session.checks !== null) return session;
-  const checks = [...(await runBinaryChecks(ctx, await shellFor(ctx), await activeConnectors(ctx))), ...(await workerChecks(ctx))];
+  // A helper never delegates, so it never checks a program worker (ADR 0087, 10).
+  const checks = [...(await runBinaryChecks(ctx, await shellFor(ctx), await activeConnectors(ctx))), ...(session.parentId === null ? await workerChecks(ctx) : [])];
   return ctx.store.transaction(tx => {
     ctx.job.signal.throwIfAborted();
     const store = txRecords(tx);
