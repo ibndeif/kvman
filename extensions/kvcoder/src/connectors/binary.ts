@@ -19,11 +19,11 @@ export function registerBinaryConnector(ctx: Ctx): void {
     input: lineCallInput(execPayload).extend({ connector: z.string().describe('The binary connector whose program runs.') }),
     output: lineRunSchema,
     ...lineRunOptions,
-    handle: async ({ sessionId, description, connector, payload }) => {
+    handle: async ({ sessionId, connector, payload }) => {
       const binary = (await activeConnectors(ctx)).find((candidate) => candidate.name === connector && candidate.kind === 'binary');
       if (binary === undefined) throw notFound(`There is no binary connector ${connector}.`, { connector });
       const args = payload.args?.trim() ?? '';
-      return runLine(ctx, { sessionId, description }, args === '' ? connector : `${connector} ${args}`, payload);
+      return runLine(ctx, sessionId, args === '' ? connector : `${connector} ${args}`, payload);
     },
   });
 }

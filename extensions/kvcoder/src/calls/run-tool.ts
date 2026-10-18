@@ -1,10 +1,10 @@
 import { z } from '@kvman/sdk';
 import type { JsonValue } from '../connector-call.ts';
 
-// The agent's one tool (plan 08 §8.2, ADR 0011, 1): `run { description, connector, command, payload }` runs one command
+// The agent's one tool (plan 08 §8.2, ADR 0011, 1; ADR 0089, 1): `run { connector, command, payload }` runs one command
 // of a connector. The payload has no schema here: the model learns it from the prompt's connector index or the connector's `help`.
 
-const exampleCall = '{ "description": "Listing the project\'s source files", "connector": "fs", "command": "list", "payload": { "path": "src" } }';
+const exampleCall = '{ "connector": "fs", "command": "list", "payload": { "path": "src" } }';
 
 export function runTool(connectors: readonly string[]) {
   return {
@@ -17,12 +17,11 @@ export function runTool(connectors: readonly string[]) {
     parameters: {
       type: 'object',
       properties: {
-        description: { type: 'string', description: 'One sentence saying what this call does, for a person who knows nothing about how you work ("Editing app.ts to add the save button"). Write it first.' },
         connector: { type: 'string', enum: [...connectors], description: 'The connector to use.' },
         command: { type: 'string', description: "One of the connector's commands, or help." },
         payload: { type: 'object', description: "The command's input, as the system prompt or the connector's help gives it. Leave it out for a command that takes none." },
       },
-      required: ['description', 'connector', 'command'],
+      required: ['connector', 'command'],
       additionalProperties: false,
     },
   };
@@ -31,18 +30,16 @@ export function runTool(connectors: readonly string[]) {
 const payloadSchema = z.record(z.string(), z.json());
 
 const argsSchema = z.strictObject({
-  description: z.string().trim().min(1),
   connector: z.string().min(1),
   command: z.string().min(1),
   payload: payloadSchema.default({}),
 });
 
-/** A call as the model made it: what it says to the person, and the connector command with its payload. */
+/** A call as the model made it: the connector command with its payload. */
 export type RunCall = z.output<typeof argsSchema>;
 
 // What each argument must be, as a failed call says it.
 const requirements: Record<string, string> = {
-  description: 'one sentence saying what this call does, for the person',
   connector: "one of the session's connectors",
   command: "one of the connector's commands, or help",
   payload: "a JSON object: the command's input",

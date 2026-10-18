@@ -33,7 +33,7 @@ describe('risky calls ask, the others run (08 §8.3, ADR 0009, 161)', { timeout:
     const { session, turn } = await turnState(kernel, sessionId);
     expect(session.status).toBe('waiting');
     expect(turn?.pending.map((item) => item.kind)).toEqual(['approval']);
-    expect(turn?.pending[0]?.question).toEqual({ description: 'A test call.', connector: 'shell', command: 'exec', payload: { line: 'touch risky.txt', risky: true } });
+    expect(turn?.pending[0]?.question).toEqual({ connector: 'shell', command: 'exec', payload: { line: 'touch risky.txt', risky: true } });
     expect(existsSync(home(kernel, 'safe.txt'))).toBe(true);
     expect(existsSync(home(kernel, 'risky.txt'))).toBe(false);
     await answer(kernel, sessionId, 0, true);

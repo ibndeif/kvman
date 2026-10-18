@@ -30,7 +30,7 @@ describe('an mcp call asks as a shell call does (08 §8.3 and §8.5, ADR 0020, 7
     const { session, turn } = await turnState(kernel, sessionId);
     expect(session.status).toBe('waiting');
     expect(turn?.pending.map((item) => item.kind)).toEqual(['approval']);
-    expect(turn?.pending[0]?.question).toEqual({ description: 'A test call.', connector: 'mcp', command: 'call', payload: { server: 'demo', tool: 'echo', arguments: { text: 'risky' }, risky: true } });
+    expect(turn?.pending[0]?.question).toEqual({ connector: 'mcp', command: 'call', payload: { server: 'demo', tool: 'echo', arguments: { text: 'risky' }, risky: true } });
     await answer(kernel, sessionId, true);
     const results = toolResults(fake);
     expect(results.slice(0, 2)).toEqual(['safe', 'risky']);

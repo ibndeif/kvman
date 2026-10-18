@@ -12,7 +12,7 @@ const kvcoder = useKvcoder();
 const programs = useWorkerPrograms();
 
 type World = Awaited<ReturnType<typeof kvcoder.start>>;
-const delegate = (task: string, fields: Record<string, unknown> = {}) => ({ ...command('delegate', 'run', { worker: 'pie', title: 'Helper', task, ...fields }), description: 'Asking pi to look.' });
+const delegate = (task: string, fields: Record<string, unknown> = {}) => command('delegate', 'run', { worker: 'pie', title: 'Helper', task, ...fields });
 const requests = (fake: { requests(): readonly unknown[] }, count: number) => vi.waitFor(() => expect(fake.requests()).toHaveLength(count), wait);
 const gone = (pid: number) => vi.waitFor(() => expect(alive(pid)).toBe(false), wait);
 
@@ -38,7 +38,7 @@ describe("a program worker's run as a job of its chat (08 §8.5 and §8.6, ADR 0
     const { kernel, fake, installed, sessionId } = await running(false);
     const [row] = await kernel.exec('kvcoder.job.list', { sessionId });
     fake.reply(runs(command('background', 'list'), command('background', 'output', { id: String(row?.id) })), says('done'));
-    expect(row).toEqual({ id: expect.any(String) as unknown, kind: 'worker', title: 'pie', call: 'Asking pi to look.', status: 'running', startedAt: expect.any(String) as unknown, links: [] });
+    expect(row).toEqual({ id: expect.any(String) as unknown, kind: 'worker', title: 'pie', call: 'Helper', status: 'running', startedAt: expect.any(String) as unknown, links: [] });
     expect('output' in (await kernel.exec('kvcoder.job.get', { sessionId, id: String(row?.id) }))).toBe(false);
     installed.release();
     await requests(fake, 3);

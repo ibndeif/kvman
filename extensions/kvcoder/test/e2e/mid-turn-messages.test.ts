@@ -35,7 +35,7 @@ describe('a running turn in Chromium (08 §8.7, ADR 0034, 8)', { timeout: 120_00
     await page.goto(`${kvman.origin}/kvcoder/session/${sessionId}`);
     await page.locator('[data-test="assistant-message"]').first().waitFor();
 
-    const call = { toolCall: { id: 'call-echo', name: 'run', arguments: { description: 'Saying hi', connector: 'shell', command: 'exec', payload: { line: 'echo hi', risky: false } } } };
+    const call = { toolCall: { id: 'call-echo', name: 'run', arguments: { connector: 'shell', command: 'exec', payload: { line: 'echo hi', risky: false } } } };
     const first = heldReply(call);
     const second = heldReply({ text: 'second answer' });
     world.fake.reply(first.reply, second.reply);
@@ -43,7 +43,7 @@ describe('a running turn in Chromium (08 §8.7, ADR 0034, 8)', { timeout: 120_00
     await page.locator('[data-test="send"]').click();
     await page.locator('[data-test="user-message"]', { hasText: 'continue' }).waitFor({ timeout: 5000 });
     first.release();
-    await page.locator('[data-test="call-card"]', { hasText: 'Saying hi' }).waitFor({ timeout: 5000 });
+    await page.locator('[data-test="call-card"]', { hasText: 'echo hi' }).waitFor({ timeout: 5000 });
     expect(await page.locator('[data-test="assistant-message"]').count()).toBe(1);
     second.release();
     await page.locator('[data-test="assistant-message"]').nth(1).waitFor({ timeout: 5000 });

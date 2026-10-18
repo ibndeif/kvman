@@ -19,7 +19,7 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
     expect(headers.map((line) => /^- ([\w-]+): /.exec(line)?.[1])).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'todo', 'node']);
     expect(headers.at(-2)).toBe('- todo: Keep a todo list. Commands: add, wait, fail, list, help.');
     expect(headers.at(-1)).toBe('- node: Node.js. Commands: exec, help.');
-    expect(prompt).toContain('Your one tool is run: it runs one command of a connector, as { description, connector, command, payload }.');
+    expect(prompt).toContain('Your one tool is run: it runs one command of a connector, as { connector, command, payload }.');
   });
 
   it("QA19-H1 the prompt gives the payloads of kvcoder's connectors", async () => {

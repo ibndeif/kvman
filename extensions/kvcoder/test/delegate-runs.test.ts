@@ -54,19 +54,19 @@ describe('delegate runs (08 §8.5, ADR 0021)', { timeout: 30_000 }, () => {
     const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });
     const arrived = messages.find((message) => message.source?.kind === 'subagent');
     expect(arrived?.source).toEqual({ kind: 'subagent', sessionId: childId });
-    expect(String(arrived?.content['content'])).toMatch(new RegExp(`^The background call \`A test call\\.\` \\(job ${childId}\\) finished:\\n(one|two|three)\\n\\n\\(helper ${childId}\\)$`));
+    expect(String(arrived?.content['content'])).toMatch(new RegExp(`^The background call \`Helper\` \\(job ${childId}\\) finished:\\n(one|two|three)\\n\\n\\(helper ${childId}\\)$`));
   });
 
-  it("QA49-H1 a run's title names its helper: the child session's title, and the run's title in the job list", async () => {
+  it("QA49-H1 and QA57-H5 a run's title names its helper: the child session's title, and the run's title and call in the job list", async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    fake.reply(runs({ ...command('delegate', 'run', { worker: 'general', title: 'Node.js expert', task: 'Find why the pool leaks handles.\nReport the cause.', background: true }), description: 'Finding the leak' }), says('one'), says('two'), says('three'), says('four'));
+    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Node.js expert', task: 'Find why the pool leaks handles.\nReport the cause.', background: true })), says('one'), says('two'), says('three'), says('four'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     const [started] = toolResults(fake, 1).length > 0 ? toolResults(fake, 1) : toolResults(fake, 2);
     const childId = /^started (\S+)$/.exec(started ?? '')?.[1] ?? '';
     expect((await kernel.exec('kvcoder.session.get', { sessionId: childId })).title).toBe('Node.js expert');
-    expect((await kernel.exec('kvcoder.job.list', { sessionId })).map((job) => [job.id, job.kind, job.title, job.call])).toEqual([[childId, 'subagent', 'Node.js expert', 'Finding the leak']]);
+    expect((await kernel.exec('kvcoder.job.list', { sessionId })).map((job) => [job.id, job.kind, job.title, job.call])).toEqual([[childId, 'subagent', 'Node.js expert', 'Node.js expert']]);
   });
 
   it('QA49-E1 / E155 a run needs its title: none, or one of 201 characters, fails VALIDATION_FAILED and makes no helper', async () => {

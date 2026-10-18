@@ -36,7 +36,7 @@ describe("a preset's agent profile (08 §8.2, ADR 0082, 11)", { timeout: 30_000 
     await kernel.clock.advance(0);
     const lead = systemPrompt(fake, 0);
     expect(lead.startsWith('You are kvman Coder, the lead engineer on this work')).toBe(true);
-    expect(lead).toContain('\nPlan. Only after you understood the request');
+    expect(lead).toContain('\nPlan. Only when your path needs a map, and only after you understood the request');
     expect(lead).toContain('- execution-map: ');
     await expect(kernel.exec('kernel.settings.set', { key: 'kvcoder.profile', value: { method: 'general' }, scope: 'global' })).rejects.toMatchObject({ problem: { code: 'VALIDATION_FAILED' } });
     for (const profile of [{ other: true }, { identity: '' }, { method: 'casual' }]) {

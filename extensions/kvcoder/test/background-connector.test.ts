@@ -42,19 +42,19 @@ describe('the background connector (08 §8.5, ADR 0011, 6)', { timeout: 60_000 }
     expect(processes.map((row) => row.name)).not.toContain(`job-${id}`);
   });
 
-  it('QA18-H10 and QA31-E13 a background run of a worker returns its id, is listed as a subagent, and answers later as a message', async () => {
+  it('QA18-H10, QA31-E13, and QA57-H5 a background run of a worker returns its id, is listed as a subagent named by its title, and answers later as a message', async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
     let release = (): void => undefined;
     const held = new Promise<void>((resolve) => (release = resolve));
-    fake.reply(runs({ ...command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Look around', background: true }), description: 'Asking a helper to look around.' }), { chunks: [{ wait: held }, { text: 'found it' }] }, says('parent went on'), says('after the answer'));
+    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Look around', background: true })), { chunks: [{ wait: held }, { text: 'found it' }] }, says('parent went on'), says('after the answer'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await vi.waitFor(async () => expect((await turnState(kernel, sessionId)).turn).toMatchObject({ outcome: 'done' }), wait);
     const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });
     const started = JSON.stringify(messages.find((message) => message.kind === 'toolResult')?.content['content']);
     const childId = /started ([0-9a-f-]{36})/.exec(started)?.[1] ?? '';
     expect((await kernel.exec('kvcoder.session.get', { sessionId: childId })).parentId).toBe(sessionId);
-    expect(await kernel.exec('kvcoder.job.list', { sessionId })).toEqual([expect.objectContaining({ id: childId, kind: 'subagent', call: 'Asking a helper to look around.', status: 'running' }) as unknown]);
+    expect(await kernel.exec('kvcoder.job.list', { sessionId })).toEqual([expect.objectContaining({ id: childId, kind: 'subagent', call: 'Helper', status: 'running' }) as unknown]);
     release();
     await vi.waitFor(async () => {
       const after = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });

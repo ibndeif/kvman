@@ -208,8 +208,10 @@ describe('a long chat in Chromium (08 §8.7, ADR 0009, 195–199)', { timeout: 1
     await page.close();
   });
 
-  it('QA10-H10 a card\'s description and its connector command share one edge: the right in Arabic, the left in English', async () => {
-    const { kvman, sessionId } = await chatWith(runs(shell('echo hello')), says('Done.'));
+  it('QA10-H10 and QA57-E5 a stored call\'s description and its closed line share one edge: the right in Arabic, the left in English', async () => {
+    // A call with a description, as a chat stored before ADR 0089 holds it: `run` refuses it now, and its card still shows it.
+    const described = { chunks: [{ toolCall: { id: 'c1', name: 'run', arguments: { description: 'Saying hello', connector: 'shell', command: 'exec', payload: { line: 'echo hello', risky: false } } } }] };
+    const { kvman, sessionId } = await chatWith(described, says('Done.'));
     for (const language of ['ar', 'en'] as const) {
       await kvman.call('commands', 'kernel.settings.set', { key: 'kernel.language', value: language, scope: 'global' });
       const page = await openChat(kvman, sessionId);

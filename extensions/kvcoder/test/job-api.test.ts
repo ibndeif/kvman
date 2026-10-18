@@ -35,7 +35,7 @@ describe("a chat's background jobs for the person (08 §8.6, ADR 0009, 152)", { 
     posixShell();
     const { kernel, sessionId, jobId } = await startJob('echo "Serving on http://localhost:8000."; sleep 30');
     const [row] = await kernel.exec('kvcoder.job.list', { sessionId });
-    expect(row).toEqual({ id: jobId, kind: 'process', title: 'A test call.', call: 'echo "Serving on http://localhost:8000."; sleep 30', status: 'running', startedAt: expect.any(String) as unknown, links: ['http://localhost:8000'] });
+    expect(row).toEqual({ id: jobId, kind: 'process', title: 'echo "Serving on http://localhost:8000."; sleep 30', call: 'echo "Serving on http://localhost:8000."; sleep 30', status: 'running', startedAt: expect.any(String) as unknown, links: ['http://localhost:8000'] });
     expect(await kernel.exec('kvcoder.job.get', { sessionId, id: jobId })).toMatchObject({ id: jobId, status: 'running', output: 'Serving on http://localhost:8000.' });
     for (const call of [kernel.exec('kvcoder.job.list', { sessionId }, { as: '@test/todo' }), kernel.exec('kvcoder.job.get', { sessionId, id: jobId }, { as: '@test/todo' }), kernel.exec('kvcoder.job.cancel', { sessionId, id: jobId }, { as: '@test/todo' })]) {
       await expect(call).rejects.toMatchObject({ problem: { code: 'NOT_PUBLIC' } });

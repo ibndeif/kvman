@@ -31,7 +31,7 @@ describe('the real shell (08 §8.3)', { timeout: 30_000 }, () => {
     expect(results[2]).toBe('read:1\n[exit code 0]');
     expect(results[3]).toMatch(/^(out\nerr|err\nout)\n\[exit code 3\]$/);
     const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });
-    expect(messages.at(-2)?.content['details']).toMatchObject({ description: 'A test call.', connector: 'shell', command: 'exec', output: expect.stringContaining('out') as unknown, exitCode: 3, durationMs: expect.any(Number) as unknown });
+    expect(messages.at(-2)?.content['details']).toMatchObject({ connector: 'shell', command: 'exec', output: expect.stringContaining('out') as unknown, exitCode: 3, durationMs: expect.any(Number) as unknown });
   });
 
   it('M2.4-E26 a call past its timeout is killed with its process group and reports the timeout', async () => {
@@ -65,7 +65,7 @@ describe('the real shell (08 §8.3)', { timeout: 30_000 }, () => {
     posixShell();
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    fake.reply({ chunks: [{ toolCall: { id: 'a', name: 'run', arguments: { description: 'No command.', connector: 'shell' } } }, { toolCall: { id: 'b', name: 'python', arguments: { command: 'ls' } } }] }, says('ok'));
+    fake.reply({ chunks: [{ toolCall: { id: 'a', name: 'run', arguments: { connector: 'shell' } } }, { toolCall: { id: 'b', name: 'python', arguments: { command: 'ls' } } }] }, says('ok'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     const [missing, wrong] = toolResults(fake);

@@ -9,10 +9,10 @@ This page is for anyone whose extension should be usable by kvman's agent, or wh
 kvman's agent has one tool, `run`, and a **connector** is a named set of commands it runs with it. A connector is the only way the agent reaches anything outside the model: the shell and files are kvcoder's own connectors, and your extension adds its own. (The person can also add MCP servers, which the agent reaches through kvcoder's `mcp` connector; an extension that owns its commands registers a connector instead.)
 
 ```json
-{ "description": "Adding milk to the notes", "connector": "notes", "command": "add", "payload": { "text": "Buy milk" } }
+{ "connector": "notes", "command": "add", "payload": { "text": "Buy milk" } }
 ```
 
-`description` is one sentence for the person. `payload` is your command's input. Register a connector from your `kernel.started` handler, every start:
+`payload` is your command's input; the call's card in the chat names the call from it. Register a connector from your `kernel.started` handler, every start:
 
 ```ts
 ctx.registerHandler('kernel.started', {

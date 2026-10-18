@@ -6,8 +6,8 @@ import type { FakeOpenAI, FakeReply } from '@kvman/testkit/fake-openai';
 
 let counter = 0;
 
-/** A call of the `run` tool: a connector's command with its payload, and what it tells the person. */
-export type RunCallSpec = { connector: string; command: string; payload?: Record<string, unknown>; description?: string };
+/** A call of the `run` tool: a connector's command with its payload. */
+export type RunCallSpec = { connector: string; command: string; payload?: Record<string, unknown> };
 
 /** A reply that calls any tool with any arguments, as a model that gets a call wrong does. */
 export function rawCall(name: string, args: Record<string, unknown>): FakeReply {
@@ -20,7 +20,7 @@ export function runs(...calls: readonly RunCallSpec[]): FakeReply {
   return {
     chunks: calls.map((call) => {
       counter += 1;
-      return { toolCall: { id: `call-${counter}`, name: 'run', arguments: { description: call.description ?? 'A test call.', connector: call.connector, command: call.command, ...(call.payload === undefined ? {} : { payload: call.payload }) } } };
+      return { toolCall: { id: `call-${counter}`, name: 'run', arguments: { connector: call.connector, command: call.command, ...(call.payload === undefined ? {} : { payload: call.payload }) } } };
     }),
   };
 }

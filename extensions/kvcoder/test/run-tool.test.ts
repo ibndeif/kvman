@@ -26,8 +26,8 @@ describe('the run tool (08 §8.2 and §8.3, ADR 0011)', { timeout: 30_000 }, () 
     const { fake } = await call({ connector: 'todo', command: 'list' });
     const tools = requestTools(fake, 0).map((tool) => toolSchema.parse(tool).function);
     expect(tools.map((tool) => tool.name)).toEqual(['run']);
-    expect(Object.keys(tools[0]?.parameters.properties ?? {})).toEqual(['description', 'connector', 'command', 'payload']);
-    expect(tools[0]?.parameters.required).toEqual(['description', 'connector', 'command']);
+    expect(Object.keys(tools[0]?.parameters.properties ?? {})).toEqual(['connector', 'command', 'payload']);
+    expect(tools[0]?.parameters.required).toEqual(['connector', 'command']);
     expect(tools[0]?.parameters.properties['connector']?.enum).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'todo']);
   });
 
@@ -56,20 +56,12 @@ describe('the run tool (08 §8.2 and §8.3, ADR 0011)', { timeout: 30_000 }, () 
   });
 
   it('QA18-E2 a payload sent as a JSON string is parsed, and one that holds no object is refused', async () => {
-    const parsed = await turn(rawCall('run', { description: 'Adding milk.', connector: 'todo', command: 'add', payload: '{"text":"milk"}' }));
+    const parsed = await turn(rawCall('run', { connector: 'todo', command: 'add', payload: '{"text":"milk"}' }));
     expect(await parsed.kernel.exec('todo.item.list', {})).toEqual([{ text: 'milk' }]);
     for (const payload of ['not json', '[1]', '"text"']) {
-      const refused = await turn(rawCall('run', { description: 'Adding milk.', connector: 'todo', command: 'add', payload }));
+      const refused = await turn(rawCall('run', { connector: 'todo', command: 'add', payload }));
       expect(refused.results[0], payload).toContain('payload: The payload must be a JSON object');
       expect(await refused.kernel.exec('todo.item.list', {})).toEqual([]);
-    }
-  });
-
-  it('QA18-E3 a missing or blank description fails and nothing runs', async () => {
-    for (const description of [undefined, '   ']) {
-      const { results, kernel } = await turn(rawCall('run', { ...(description === undefined ? {} : { description }), connector: 'todo', command: 'add', payload: { text: 'milk' } }));
-      expect(results[0]).toMatch(/^error VALIDATION_FAILED: The call's arguments are invalid: description: .+ \(it must be one sentence saying what this call does, for the person\)\. Call run again with the arguments fixed\.$/);
-      expect(await kernel.exec('todo.item.list', {})).toEqual([]);
     }
   });
 

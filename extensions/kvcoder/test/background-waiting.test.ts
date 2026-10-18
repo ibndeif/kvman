@@ -12,9 +12,9 @@ import { worker, workers } from './support/workers.ts';
 
 const kvcoder = useKvcoder();
 const helperReply = runs(
-  { ...fsCall('list', { path: '.' }), description: 'List the folder.' },
-  { ...fsCall('list', { path: '.' }), description: 'List it again.' },
-  { ...shell('echo hi', { risky: true }), description: 'Say hi in the shell.' },
+  fsCall('list', { path: '.' }),
+  fsCall('search', { pattern: 'hello' }),
+  shell('echo hi', { risky: true }),
 );
 const parsed = (text: string | undefined) => z.record(z.string(), z.unknown()).parse(JSON.parse(text ?? 'null'));
 const turnSchema = z.object({ pending: z.array(z.object({ questionId: z.string().nullable() })) });
@@ -40,7 +40,7 @@ async function waitingHelper() {
 }
 
 describe('a background helper that waits on the person (ADR 0085, 2)', { timeout: 60_000 }, () => {
-  it('QA53-H10 a waiting helper says so and how far it got', async () => {
+  it('QA53-H10 and QA57-H6 a waiting helper says so and how far it got, naming each call by its command and subject', async () => {
     const { kernel, fake, sessionId, helperId } = await waitingHelper();
     const { messages } = await kernel.exec('kvcoder.message.list', { sessionId: helperId, limit: 100 });
     const newest = z.object({ createdAt: z.string() }).parse(messages.at(-1)).createdAt;
@@ -48,8 +48,8 @@ describe('a background helper that waits on the person (ADR 0085, 2)', { timeout
       id: helperId,
       kind: 'subagent',
       status: 'waiting',
-      waitingFor: ['Say hi in the shell.'],
-      progress: { steps: 1, lastActivityAt: newest, recentCalls: ['List the folder.', 'List it again.', 'Say hi in the shell.'] },
+      waitingFor: ['shell exec echo hi'],
+      progress: { steps: 1, lastActivityAt: newest, recentCalls: ['fs list .', 'fs search hello', 'shell exec echo hi'] },
     };
     const began = Date.now();
     const [output, waited] = await say(kernel, fake, sessionId, command('background', 'output', { id: helperId }), command('background', 'wait', { id: helperId, timeoutMs: 600_000 }));
@@ -92,7 +92,7 @@ describe('a background helper that waits on the person (ADR 0085, 2)', { timeout
     await vi.waitFor(async () => expect((await kernel.exec('kvcoder.session.get', { sessionId })).status).toBe('idle'), wait);
     const { output, progress, ...row } = z.looseObject({ output: z.unknown(), progress: z.unknown() }).parse(await kernel.exec('kvcoder.job.get', { sessionId, id: helperId }));
     expect(output).toEqual(expect.stringContaining('helper done'));
-    expect(progress).toMatchObject({ recentCalls: ['List the folder.', 'List it again.', 'Say hi in the shell.'] });
+    expect(progress).toMatchObject({ recentCalls: ['fs list .', 'fs search hello', 'shell exec echo hi'] });
     expect(await kernel.exec('kvcoder.job.list', { sessionId })).toEqual([row]);
   });
 });

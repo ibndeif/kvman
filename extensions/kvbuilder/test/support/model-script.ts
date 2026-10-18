@@ -8,7 +8,7 @@ let counter = 0;
 /** A reply that calls the `run` tool once: a connector's command with its payload. */
 export function runs(connector: string, command: string, payload: Record<string, unknown> = {}): FakeReply {
   counter += 1;
-  return { chunks: [{ toolCall: { id: `call-${String(counter)}`, name: 'run', arguments: { description: 'A walkthrough step.', connector, command, payload } } }] };
+  return { chunks: [{ toolCall: { id: `call-${String(counter)}`, name: 'run', arguments: { connector, command, payload } } }] };
 }
 
 /** A reply that runs one line in the shell, not marked risky. */

@@ -25,12 +25,12 @@ export type LineRun = z.output<typeof lineRunSchema>;
 
 type LineOptions = { background?: boolean | undefined; timeoutMs?: number | undefined };
 
-export async function runLine(ctx: Ctx, call: { sessionId: string; description: string }, line: string, options: LineOptions): Promise<LineRun> {
+export async function runLine(ctx: Ctx, sessionId: string, line: string, options: LineOptions): Promise<LineRun> {
   const shell = await shellFor(ctx);
   const timeoutMs = callTimeout(options.timeoutMs);
   if (options.background !== true) return { ...(await runShell(shell, line, ctx.job.workspace.path, timeoutMs, ctx.job.signal)), signal: null, timeoutMs, jobId: null, ended: true };
   const started = Date.now();
-  const run = await startProcess(ctx, call.sessionId, shell, { title: call.description, line });
+  const run = await startProcess(ctx, sessionId, shell, line);
   return { output: run.output, exitCode: run.exitCode, signal: run.signal, timedOut: false, leftoverStopped: false, durationMs: Date.now() - started, timeoutMs, jobId: run.jobId, ended: run.ended };
 }
 

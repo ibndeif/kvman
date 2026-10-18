@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { risky } from '../../src/connectors/payload-fields.ts';
 import { buildPrompt } from '../../src/prompt/build-prompt.ts';
+import { workingMethod } from '../../src/prompt/working-method.ts';
 import type { Section } from '../../src/registry/register-sections.ts';
 
 const section = (id: string, order: number, size: number): Section => ({ id, title: id, order, owner: '@test/todo', global: false, sessionId: null, content: 'x'.repeat(size), size });
@@ -11,7 +12,7 @@ describe('the prompt builder (08 §8.2)', () => {
     expect(buildPrompt({ ...base, platform: 'darwin', shell: 'bash' }).prompt).toContain('in the folder /w on macOS.\nReply in English (en)');
     const windows = buildPrompt({ ...base, platform: 'win32', shell: 'powershell' }).prompt;
     expect(windows).toContain('on Windows');
-    expect(windows).toContain('Your one tool is run: it runs one command of a connector, as { description, connector, command, payload }.');
+    expect(windows).toContain('Your one tool is run: it runs one command of a connector, as { connector, command, payload }.');
     expect(windows).toContain('the shell is PowerShell.');
     expect(windows.endsWith('## Connectors\n- todo: Keep a todo list. Commands: add, list, help.')).toBe(true);
     expect(windows).toContain('To put a question to the person (a choice, a yes or no, a free answer), call `ask`.');
@@ -46,7 +47,7 @@ describe('the prompt builder (08 §8.2)', () => {
         'No path is fixed: you choose it for each task from what the task is',
         'Never assume or invent names, paths, APIs, or behavior',
         'ask before any work.',
-        'put each question in its own `ask` call, with all the calls in one reply, and use `ask choice` whenever you offer options, your recommended one first and each option saying what it leads to.',
+        'put every question in the same reply, one `ask` call each, never one question per reply, and use `ask choice` whenever you offer options, your recommended one first and each option saying what it leads to.',
         'plan with `execution-map set`',
         'call `ask choice` with other set to true',
         'mark it done with your evidence',
@@ -57,7 +58,7 @@ describe('the prompt builder (08 §8.2)', () => {
         'in an artifact, not in a reply.',
         'In one reply, reads and searches run at the same time, and calls that change something (shell lines, writes, edits) run one after another in the order you give them. So put independent calls (reads, searches, separate files, separate workers) in one reply, and a call that needs another call\'s result in a later reply: several new files are several `fs write` calls in one reply, not one reply each.',
         'To put a question to the person (a choice, a yes or no, a free answer), call `ask`.',
-        'Keep replies short: say what you did and what is left.',
+        'Your final answer says what you did and what is left.',
       ]) expect(prompt, phrase).toContain(phrase);
     }
   });
@@ -69,7 +70,7 @@ describe('the prompt builder (08 §8.2)', () => {
         'Every connector has the command help. A command listed below with its payload needs no help call; for any other command, or for what a field means, call the connector\'s help with { "command": "<name>" } before the first use.',
         'A small, clear change needs doing and checking, and nothing more.',
         'ask before any work.',
-        'put each question in its own `ask` call, with all the calls in one reply, and use `ask choice` whenever you offer options, your recommended one first and each option saying what it leads to.',
+        'put every question in the same reply, one `ask` call each, never one question per reply, and use `ask choice` whenever you offer options, your recommended one first and each option saying what it leads to.',
         'Before you say that something runs or works, check it the way the person would: run it, request its address, or run its test; if you couldn\'t, say what is unchecked.',
       ])
         expect(prompt, sentence).toContain(sentence);
@@ -102,11 +103,21 @@ describe('the prompt builder (08 §8.2)', () => {
 
   it('QA9-H18 and QA10-H1 the base prompt ends its working method with the call-or-final-answer rule, and never makes a call that does nothing', () => {
     const { prompt } = buildPrompt({ role: 'lead', workspacePath: '/w', language: 'en', platform: 'linux', shell: 'bash', sections: [], connectors: [] });
-    const rule = 'Say what you are about to do in the same reply as the call that does it, and never make a call that does nothing, such as `true`, just to keep going. A reply with no tool call is your final answer and ends the turn: when work remains, your reply must contain the call that does the next piece. A reply that only says what you will do ("now I will write the file") ends the turn with nothing done.';
+    const rule = 'A reply with no tool call is your final answer and ends the turn: when work remains, your reply must contain the call that does the next piece. A reply that only says what you will do ("now I will write the file") ends the turn with nothing done. Never make a call that does nothing, such as `true`, just to keep going.';
     expect(prompt).toContain(rule);
     expect(prompt).not.toContain('never end one by promising');
+    expect(prompt).not.toContain('Say what you are about to do in the same reply');
     const method = prompt.split('How you work.')[1] ?? '';
     expect(method.trimEnd().endsWith(rule)).toBe(true);
+  });
+
+  it('QA57-H9 and QA57-H10 a map only for large or risky work, and every question in the same reply', () => {
+    const method = workingMethod('lead');
+    expect(method).toContain('Work that changes several parts that depend on each other, or that is hard to take back, needs an execution map the person agreed to; other work, even of a few steps, needs no map: do it, and say where you are as you go.');
+    expect(method).toContain('Plan. Only when your path needs a map, and only after you understood the request');
+    expect(method).not.toContain('Work in several parts');
+    expect(method).toContain('put every question in the same reply, one `ask` call each, never one question per reply');
+    expect(workingMethod('lead', 'general')).toContain('one question per call, all the calls in the same reply and never one question per reply');
   });
 
   it('QA5-E2 a prompt with no connectors has no index', () => {

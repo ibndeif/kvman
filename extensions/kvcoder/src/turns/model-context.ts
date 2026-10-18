@@ -71,6 +71,21 @@ async function userMessage(ctx: Ctx, message: Stored<MessageDoc>): Promise<Json>
   return { ...message.content, content: [{ type: 'text', text: `${sentText(message)}${imagesNote(shown)}` }, ...images] };
 }
 
+// A `run` call stored before ADR 0089 holds a description, which `run` no longer takes; the model is sent the call
+// without it, so an older chat doesn't teach it the argument (ADR 0089, 1).
+function withoutDescription(block: Json): Json {
+  if (typeof block !== 'object' || block === null || Array.isArray(block) || block['type'] !== 'toolCall') return block;
+  const args = block['arguments'];
+  if (typeof args !== 'object' || args === null || Array.isArray(args) || !('description' in args)) return block;
+  const { description: _description, ...rest } = args;
+  return { ...block, arguments: rest };
+}
+
+function assistantMessage(message: Stored<MessageDoc>): Json {
+  const content = message.content['content'];
+  return Array.isArray(content) ? { ...message.content, content: content.map(withoutDescription) } : message.content;
+}
+
 const summaryLead = 'A summary of the earlier conversation:';
 
 /** A stored summary as it is sent: the model's text, then what kvman added when it stored it (ADR 0066, 2). */
@@ -83,6 +98,6 @@ export function summaryText(summary: Pick<MessageDoc, 'content'> | undefined): s
 /** The messages a step sends, checked as kvai takes them. */
 export async function modelMessages(ctx: Ctx, history: History) {
   const lead: Json[] = history.summary === undefined ? [] : [{ role: 'user', content: `${summaryLead}\n${summaryText(history.summary)}`, timestamp: Date.parse(history.summary.createdAt) }];
-  const rest = await Promise.all(history.messages.map((message) => (message.kind === 'user' ? userMessage(ctx, message) : Promise.resolve<Json>(message.content))));
+  const rest = await Promise.all(history.messages.map((message) => (message.kind === 'user' ? userMessage(ctx, message) : Promise.resolve(message.kind === 'assistant' ? assistantMessage(message) : message.content))));
   return messageSchema.array().parse([...lead, ...rest]);
 }

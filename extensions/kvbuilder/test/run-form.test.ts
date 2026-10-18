@@ -28,6 +28,7 @@ describe("kvbuilder's connectors through the run tool (09 §9.1, ADR 0011)", { t
       expect(text).not.toMatch(/'\{[^']*\}'/);
       expect(text).not.toMatch(/ -h\b|--async|heredoc/);
     }
-    expect(page('building')).toContain('`run { description, connector, command, payload }`');
+    expect(page('building')).toContain('`run { connector, command, payload }`');
+    expect(page('building')).not.toContain('"description": "');
   });
 });

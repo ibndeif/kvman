@@ -3,10 +3,9 @@
 A **connector** is a named set of commands the agent runs with its one tool, `run`:
 
 ```json
-{ "description": "Adding milk to the notes", "connector": "notes", "command": "add", "payload": { "text": "Buy milk" } }
+{ "connector": "notes", "command": "add", "payload": { "text": "Buy milk" } }
 ```
 
-- `description` is one sentence for the person, shown on the call's card.
 - `connector` and `command` name what runs; `payload` is the command's input, and may be left out when it takes none.
 - Every connector has the command `help`: with no payload it describes the connector and its commands, and with `{ "command": "add" }` it gives that command's payload and result as JSON Schema, with its examples.
 
@@ -44,7 +43,7 @@ ctx.registerHandler('kernel.started', {
 
 Mark a command with `asks: true` when it changes something the person didn't make in this chat: their settings, their data, what is installed.
 
-- Every call of it becomes an approval card in the chat, showing the call's `description`, the connector and command, and the payload. The turn waits for the answer.
+- Every call of it becomes an approval card in the chat, showing the connector and command, and the payload. The turn waits for the answer.
 - It asks with `kvcoder.approval` on `auto` and on `ask`, and runs at once on `never`, where nothing asks. Otherwise that setting covers kvcoder's own `shell`, `fs`, and `mcp` calls, which carry `risky`; a registered command has no `risky`, so the flag on its entry decides.
 - **Allow** runs the command at the start of the next step, and its result goes to the agent as usual. **Deny** returns `denied by the user`, and the command never runs.
 - The payload isn't checked before the person is asked; the kernel validates it when the command runs.

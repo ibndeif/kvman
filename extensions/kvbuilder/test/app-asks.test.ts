@@ -19,7 +19,7 @@ describe('the kvman connector asks before it changes the app (09 §9.1, ADR 0022
 
     const waiting = await turn(kernel, sessionId);
     expect(waiting.session.status).toBe('waiting');
-    expect(waiting.turn?.pending).toEqual([expect.objectContaining({ kind: 'approval', question: { description: 'A walkthrough step.', connector: 'kvman', command: 'settings-set', payload: { key: 'kvwebui.theme', value: 'dark', scope: 'global' } } })]);
+    expect(waiting.turn?.pending).toEqual([expect.objectContaining({ kind: 'approval', question: { connector: 'kvman', command: 'settings-set', payload: { key: 'kvwebui.theme', value: 'dark', scope: 'global' } } })]);
     expect(await theme(kernel)).toEqual(before);
 
     await kernel.exec('kvcoder.question.answer', { questionId: String(waiting.turn?.pending[0]?.questionId), answer: { confirmed: true } });
@@ -51,7 +51,7 @@ describe('the kvman connector asks before it changes the app (09 §9.1, ADR 0022
     await kernel.clock.advance(0);
     const waiting = await turn(kernel, sessionId);
     expect(waiting.session.status).toBe('waiting');
-    expect(waiting.turn?.pending).toEqual([expect.objectContaining({ kind: 'approval', question: { description: 'A walkthrough step.', connector: 'kvman', command: 'preset-set', payload: { key: 'kvwebui.home', value: 'kvwebui.extensions' } } })]);
+    expect(waiting.turn?.pending).toEqual([expect.objectContaining({ kind: 'approval', question: { connector: 'kvman', command: 'preset-set', payload: { key: 'kvwebui.home', value: 'kvwebui.extensions' } } })]);
     expect(await kernel.exec('kvbuilder.app.preset.get', {})).toEqual(before);
     await kernel.exec('kvcoder.question.answer', { questionId: String(waiting.turn?.pending[0]?.questionId), answer: { confirmed: true } });
     await kernel.clock.advance(0);

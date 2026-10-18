@@ -143,7 +143,7 @@ const helpSchema = z.object({ text: z.string() });
 /** The test kernel `runConnector` needs: `@kvman/testkit`'s, with kvcoder loaded. */
 export type ConnectorKernel = { exec(name: string, input: Record<string, Json>, options?: { as?: string; workspaceId?: string }): Promise<unknown> };
 
-/** A call as the `run` tool makes it, without its description. */
+/** A call as the `run` tool makes it. */
 export type ConnectorCall = { connector: string; command: string; payload?: Record<string, Json> };
 
 const insideTurn = (connector: string): CallResult => ({ output: `${connector} runs only inside a turn`, exitCode: 1 });

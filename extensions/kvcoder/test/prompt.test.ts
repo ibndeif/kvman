@@ -57,7 +57,7 @@ describe('the prompt (08 §8.2, §8.4)', { timeout: 30_000 }, () => {
     const system = new Map([['linux', 'Linux'], ['darwin', 'macOS'], ['win32', 'Windows']]).get(process.platform);
     expect(prompt).toContain(`in the folder ${kernel.homeFolder} on ${String(system)}`);
     expect(prompt).toContain('Reply in Arabic (ar) unless the person writes in another language.');
-    expect(prompt).toContain('Your one tool is run: it runs one command of a connector, as { description, connector, command, payload }.');
+    expect(prompt).toContain('Your one tool is run: it runs one command of a connector, as { connector, command, payload }.');
     expect(prompt).toContain(`Each \`shell exec\` starts in the workspace folder, so cd doesn't carry over to the next call; the shell is ${process.platform === 'win32' ? 'PowerShell' : 'bash'}.`);
     expect(prompt).toContain('- shell: Run a line in the real shell');
     expect(prompt).toContain('Set background to true for a server or any command that keeps running; to show the person an app you started, give its address to artifact write with the format url.\n  exec { line, background?, timeoutMs?, risky }\n  help { command? }');

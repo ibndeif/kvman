@@ -46,17 +46,17 @@ describe('waiting for a background run, and reading less of it (08 §8.5, ADR 00
     for (const refused of [short, long]) expect(refused).toMatch(/^error VALIDATION_FAILED: timeoutMs: /);
   });
 
-  it('M2.4-E240 list gives short rows with a title, and output takes the number of lines', async () => {
+  it('M2.4-E240 and QA57-H4 list gives short rows titled by the line, and output takes the number of lines', async () => {
     posixShell();
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    const description = `Counts to three and then keeps the process alive for a while ${'so that the title is long '.repeat(3)}`.trim();
-    const [started = ''] = await say(kernel, fake, sessionId, { ...shell('echo one; echo two; echo three; sleep 30', { background: true }), description });
+    const line = `echo one; echo two; echo three; sleep 30 # ${'so that the title is long '.repeat(3)}`.trim();
+    const [started = ''] = await say(kernel, fake, sessionId, shell(line, { background: true }));
     const [list, tail] = await say(kernel, fake, sessionId, command('background', 'list'), command('background', 'output', { id: idOf(started), lines: 2 }));
     const [row] = JSON.parse(list ?? '[]') as Record<string, unknown>[];
     expect(Object.keys(row ?? {}).sort()).toEqual(['id', 'kind', 'startedAt', 'status', 'title']);
-    expect(row).toMatchObject({ id: idOf(started), kind: 'process', status: 'running', title: `${description.slice(0, 79)}…` });
-    expect(parsed(tail)).toMatchObject({ call: 'echo one; echo two; echo three; sleep 30', output: 'two\nthree' });
+    expect(row).toMatchObject({ id: idOf(started), kind: 'process', status: 'running', title: `${line.slice(0, 79)}…` });
+    expect(parsed(tail)).toMatchObject({ call: line, output: 'two\nthree' });
     await say(kernel, fake, sessionId, command('background', 'stop', { id: idOf(started) }));
   });
 });

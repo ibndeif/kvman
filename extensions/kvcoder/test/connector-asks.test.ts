@@ -46,7 +46,7 @@ describe('a registered command that asks the person first (08 §8.3 and §8.4, A
     const sessionId = await sent(world, runs(command('guarded', 'add', { text: 'milk' })), says('done'));
     const waiting = await turnState(world.kernel, sessionId);
     expect(waiting.session.status).toBe('waiting');
-    expect(waiting.turn?.pending).toEqual([expect.objectContaining({ kind: 'approval', question: { description: 'A test call.', connector: 'guarded', command: 'add', payload: { text: 'milk' } } })]);
+    expect(waiting.turn?.pending).toEqual([expect.objectContaining({ kind: 'approval', question: { connector: 'guarded', command: 'add', payload: { text: 'milk' } } })]);
     expect(await items(world.kernel)).toEqual([]);
     await answer(world.kernel, sessionId, true);
     expect(await items(world.kernel)).toEqual([{ text: 'milk' }]);

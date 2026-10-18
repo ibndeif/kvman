@@ -17,7 +17,7 @@ const fillerText = 'x'.repeat(4096);
 
 const delegations: FakeReply = {
   chunks: Array.from({ length: helpers }, (_unused, index) => ({
-    toolCall: { id: `delegate-${index}`, name: 'run', arguments: { description: `Helper ${index}.`, connector: 'delegate', command: 'run', payload: { worker: 'helper', title: `Helper ${index}`, task: 'Say done.', background: true } } },
+    toolCall: { id: `delegate-${index}`, name: 'run', arguments: { connector: 'delegate', command: 'run', payload: { worker: 'helper', title: `Helper ${index}`, task: 'Say done.', background: true } } },
   })),
 };
 // Every other model call (each helper's, and the lead's after it) says done; spares keep a late call from a retry.

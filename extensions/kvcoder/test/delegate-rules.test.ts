@@ -54,7 +54,7 @@ describe("the rules of a worker's subagent (08 §8.5, ADR 0009, 102; ADR 0021)",
   it('M2.4-E45 a child that ends maxSteps returns "subagent ended maxSteps" as an error', async () => {
     const { kernel, fake } = await kvcoder.start({ settings: { 'kvcoder.maxSteps': 2 } });
     const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Loop' })), runs(shell('echo 1')), { chunks: [{ text: 'still going' }, { toolCall: { id: 'x', name: 'run', arguments: { description: 'Again.', connector: 'shell', command: 'exec', payload: { line: 'echo 2', risky: false } } } }] }, says('parent done'));
+    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Loop' })), runs(shell('echo 1')), { chunks: [{ text: 'still going' }, { toolCall: { id: 'x', name: 'run', arguments: { connector: 'shell', command: 'exec', payload: { line: 'echo 2', risky: false } } } }] }, says('parent done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     expect(toolResults(fake, 3).map(withoutHelperId)).toEqual(['subagent ended maxSteps\n\nIts last message before it stopped (unfinished, not a result):\nstill going']);

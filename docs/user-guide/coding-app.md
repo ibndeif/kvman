@@ -43,7 +43,7 @@ The header shows the chat's time, its cost, and **Memory**, how full the model's
 
 ## Approvals and questions
 
-- **An approval** shows each call the agent wants to run: its description, its line or the file it would change, and **Deny** and **Allow** in a row under it. With several pending, **Deny all** and **Allow all** close the card. A denied call tells the agent "denied by the user". When kvman asks is the setting `kvcoder.approval` ([the-agent.md](the-agent.md#approval)).
+- **An approval** shows each call the agent wants to run: its line or the file it would change, and **Deny** and **Allow** in a row under it. With several pending, **Deny all** and **Allow all** close the card. A denied call tells the agent "denied by the user". When kvman asks is the setting `kvcoder.approval` ([the-agent.md](the-agent.md#approval)).
 - **A question** is a card with free text, a choice (pick one or several, or write your own), or yes or no. Before larger work, the agent asks you this way to agree to its plan. A question you skip shows **Skipped**.
 - A message you send in the box also dismisses the pending questions and denies the pending calls.
 

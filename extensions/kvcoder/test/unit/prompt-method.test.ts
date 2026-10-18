@@ -15,7 +15,7 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
     for (const phrase of [
       'No path is fixed: you choose it for each task from what the task is, and you change it when what you find changes it.',
       'Size up the task first. Read the request and look at what it touches, then judge four things: how clear it is (can you say what done looks like?), how much it changes (one place, or several parts that depend on each other), what could go wrong and how hard that is to take back, and whether the person will look at the result (a screen, a page, a report).',
-      'choose the lightest path that delivers the task well. A question needs an answer from what you read, and no change. A small, clear change needs doing and checking, and nothing more. An unclear request needs its questions answered before any work. Work in several parts, or work that is hard to take back, needs an execution map the person agreed to.',
+      'choose the lightest path that delivers the task well. A question needs an answer from what you read, and no change. A small, clear change needs doing and checking, and nothing more. An unclear request needs its questions answered before any work. Work that changes several parts that depend on each other, or that is hard to take back, needs an execution map the person agreed to; other work, even of a few steps, needs no map: do it, and say where you are as you go.',
       'A task that turns out larger than it looked gets its map then, and one that turns out simple drops what it does not need.',
       'These are the parts of a path. Use only the ones your path has.',
       'With no map, make the smallest change that does the task, check it, and fix a failure at its cause.',
@@ -40,7 +40,7 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
   it('M2.4-E256 and E263 the map is the detailed plan, made after looking, and the person agrees to it before any step starts', () => {
     const lead = workingMethod('lead');
     for (const phrase of [
-      'Plan. Only after you understood the request, looked at what exists, and have your answers, and before you change anything, plan with `execution-map set`: never in your first reply, because a map made before you looked is a guess.',
+      'Plan. Only when your path needs a map, and only after you understood the request, looked at what exists, and have your answers, and before you change anything, plan with `execution-map set`: never in your first reply, because a map made before you looked is a guess.',
       'It is the implementation plan the person reads and agrees to, so make it detailed, not an outline.',
       "end the map with the project's own checks (its build, lint, and tests)",
       'Confirm the plan. The person agrees to the map before you work on it. Once the first map of the request, or a map you set again with a change to what the person gets (the goal, what done looks like, what stays as it is, stored data, or what could go wrong), has details on every step (its undetailed list is empty), and before you start any step, call `ask choice` with other set to true.',
@@ -121,15 +121,23 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
     expect(artifactDescription.startsWith('Show the person something to read or see: a report, a design, an HTML page, or the localhost address')).toBe(true);
   });
 
-  it('M2.4-E301 and E302 the lead talks to the person clearly and briefly, and a worker does not get that rule', () => {
-    const rule = 'Talk to the person clearly and briefly. Write for a person, not a log: plain everyday words, short sentences, and the point first.';
-    const lead = workingMethod('lead');
-    for (const phrase of [
-      rule,
-      'Leave out your inner steps, connector and command names, payloads, ids, and long output unless they ask; name a file or a technical term only when it helps them, and explain the term in a few words.',
-      'Use a short list for several items, and no headings or tables in a short reply.',
-    ]) expect(lead, phrase).toContain(phrase);
-    expect(workingMethod('worker')).not.toContain(rule);
+  it('M2.4-E301, E302, and QA57-H8 the lead narrates its work briefly, and a worker does not get that rule', () => {
+    const rule = 'Talk to the person as you work, the way a colleague thinks aloud. Between calls, when you learn something that changes what you do next, say so in a sentence or two in the reply that makes the next call: what you found, and what you do now';
+    for (const lead of [workingMethod('lead'), workingMethod('lead', 'general')]) {
+      for (const phrase of [
+        rule,
+        "Don't announce routine calls, and don't repeat what a call's card already shows.",
+        'Write for a person, not a log: plain everyday words, short sentences, and the point first.',
+        'Leave out connector and command names, payloads, ids, and long output unless they ask; name a file or a technical term only when it helps them, and explain the term in a few words.',
+        'Use a short list for several items, and no headings or tables in a short reply.',
+      ]) expect(lead, phrase).toContain(phrase);
+      expect(lead).not.toContain('Leave out your inner steps');
+      expect(lead).not.toContain('Say what you are about to do in the same reply');
+    }
+    for (const worker of [workingMethod('worker'), workingMethod('worker', 'general')]) {
+      expect(worker).not.toContain(rule);
+      expect(worker).not.toContain('Say what you are about to do in the same reply');
+    }
   });
 
   it('M2.4-E307 the lead understands the goal behind the request, what exists, and what was left unsaid', () => {

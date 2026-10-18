@@ -70,7 +70,7 @@ describe('an answered question in Chromium (08 §8.7, ADR 0013, 1)', { timeout: 
     world = await kvmanWorld();
     const kvman = await world.start();
     const long = Array.from({ length: 80 }, (_, index) => `Paragraph ${index + 1}.`).join('\n\n');
-    const ask = { toolCall: { id: 'call-ask', name: 'run', arguments: { description: 'A test call.', connector: 'ask', command: 'choice', payload: question } } };
+    const ask = { toolCall: { id: 'call-ask', name: 'run', arguments: { connector: 'ask', command: 'choice', payload: question } } };
     world.fake.reply({ chunks: [{ text: long }, ask] }, says('Done.'));
     const sessionId = sessionSchema.parse(await kvman.call('commands', 'kvcoder.session.create', { title: 'Scope' })).id;
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });

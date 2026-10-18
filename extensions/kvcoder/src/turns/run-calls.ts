@@ -68,7 +68,7 @@ async function delegateOutcome(env: CallEnv, toolCallId: string, call: RunCall, 
       return { kind: 'question', questionKind: 'approval', question: call };
     }
     if (held) return heldBackRun(toolCallId, call);
-    const started = await createRun(ctx, session.id, worker, { description: call.description, task: run.task }, run.background === true ? null : toolCallId, guard);
+    const started = await createRun(ctx, session.id, worker, run, run.background === true ? null : toolCallId, guard);
     if (run.background !== true) return { kind: 'worker', runId: started.id };
     if (await currentStep(ctx, env.lease) === undefined) return refused(toolCallId, 'The originating step is no longer current.');
     await startBackgroundRun(ctx, started, () => creationGuard(ctx, env.lease, worker), store => liveStep(store, env.lease, env.lease.jobId) !== undefined);
@@ -80,7 +80,7 @@ async function delegateOutcome(env: CallEnv, toolCallId: string, call: RunCall, 
   const current = await ctx.store.transaction(tx => {
     const store = txRecords(tx);
     if (liveStep(store, env.lease, env.lease.jobId) === undefined) return false;
-    store.background.insert({ sessionId: session.id, ref: childId, kind: 'subagent', call: call.description, startedAt: now() });
+    store.background.insert({ sessionId: session.id, ref: childId, kind: 'subagent', call: run.title, startedAt: now() });
     return true;
   });
   if (!current || await currentStep(ctx, env.lease) === undefined) return refused(toolCallId, 'The originating step is no longer current.');
@@ -95,7 +95,7 @@ async function continueOutcome(env: CallEnv, toolCallId: string, call: RunCall, 
   const { worker } = await continuableHelper(ctx, session.id, request.id);
   const guard = await creationGuard(ctx, env.lease, worker);
   if (held) return heldBackRun(toolCallId, call);
-  if (!(await messageHelper(ctx, env.lease, request, call.description, guard))) return refused(toolCallId, 'The originating step is no longer current.');
+  if (!(await messageHelper(ctx, env.lease, request, guard))) return refused(toolCallId, 'The originating step is no longer current.');
   if (request.background !== true) return { kind: 'subagent', childSessionId: request.id };
   await startChild(ctx, request.id, await creationGuard(ctx, env.lease, worker));
   return result(toolCallId, textResult(call, `started ${request.id}`));

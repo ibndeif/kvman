@@ -63,16 +63,15 @@ function orderKey(ctx: Ctx, session: Stored<SessionDoc>, call: RunCall, target: 
   return artifactCalls.has(target.registration) && typeof id === 'string' ? `artifact:${chatIdOf(session)}:${id}` : undefined;
 }
 
-// A built-in command's job takes the chat and the payload; a line in the real shell also takes the words that name a
-// background run, and a binary its connector. A registered command takes the payload as its whole input.
+// A built-in command's job takes the chat and the payload, and a binary also its connector. A registered command takes
+// the payload as its whole input.
 function jobInput(sessionId: string, call: RunCall, target: CommandTarget): Record<string, JsonValue> {
   if (target.builtin === undefined) return call.payload;
   const input = { sessionId, payload: call.payload };
-  if (target.registration === shellRun) return { ...input, description: call.description };
-  return target.registration === binaryExec.registration ? { ...input, description: call.description, connector: call.connector } : input;
+  return target.registration === binaryExec.registration ? { ...input, connector: call.connector } : input;
 }
 
-const words = (call: RunCall) => ({ description: call.description, connector: call.connector, command: call.command });
+const words = (call: RunCall) => ({ connector: call.connector, command: call.command });
 
 /** A call that failed before or while it ran: the error the model reads. */
 export function failedCall(call: RunCall, output: string, durationMs = 0): CallDone {

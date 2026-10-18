@@ -27,7 +27,7 @@ const opened = (wrapper: Wrapper) => wrapper.find('[data-test="call-card"] butto
 const found = (wrapper: Wrapper, name: string) => wrapper.find(`[data-test="${name}"]`);
 
 describe("a call's card says what the call does (08 §8.7, ADR 0011, 13)", () => {
-  it('QA18-H19 closed, the card shows the description, then what the call did and the time; opened, the call by its kind (ADR 0036)', async () => {
+  it("QA18-H19 and QA57-E5 closed, the card shows a stored call's description, then what the call did and the time; opened, the call by its kind (ADR 0036)", async () => {
     const edit = await card({ description: 'Editing app.ts to add the save button', connector: 'fs', command: 'edit', payload: { path: 'src/app.ts', edits: [{ oldText: 'a', newText: 'b' }] } }, '{"path":"src/app.ts","replacements":1,"firstChangedLine":1,"fromLine":1,"content":"b"}');
     expect(found(edit, 'call-description').text()).toBe('Editing app.ts to add the save button');
     expect([found(edit, 'call-words').text(), found(edit, 'call-subject').text(), found(edit, 'call-outcome').text()]).toEqual(['Edit', 'src/app.ts', '+1 −1']);

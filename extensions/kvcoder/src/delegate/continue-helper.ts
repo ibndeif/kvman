@@ -44,7 +44,7 @@ export function registerContinueCheck(ctx: Ctx): void {
  * Gives the helper its message, in the transaction that checks the originating step and the grants again; with
  * `background`, the chat also records it as a background run, or starts the record over when it already has one.
  */
-export async function messageHelper(ctx: Ctx, lease: StepLease, request: DelegateContinue, description: string, guard: CreationGuard): Promise<boolean> {
+export async function messageHelper(ctx: Ctx, lease: StepLease, request: DelegateContinue, guard: CreationGuard): Promise<boolean> {
   return ctx.store.transaction((tx) => {
     const store = txRecords(tx);
     const parent = guard(store);
@@ -53,8 +53,8 @@ export async function messageHelper(ctx: Ctx, lease: StepLease, request: Delegat
     if (request.background === true) {
       if (liveStep(store, lease, lease.jobId) === undefined) return false;
       const [entry] = store.background.find({ sessionId: parent.id, ref: child.id }, { limit: 1 });
-      if (entry === undefined) store.background.insert({ sessionId: parent.id, ref: child.id, kind: 'subagent', call: description, startedAt: now() });
-      else store.background.update(entry.id, { call: description, startedAt: now() });
+      if (entry === undefined) store.background.insert({ sessionId: parent.id, ref: child.id, kind: 'subagent', call: child.title, startedAt: now() });
+      else store.background.update(entry.id, { startedAt: now() });
     }
     appendMessage(store, child, { kind: 'user', content: userContent(request.message), source: { kind: 'subagent', sessionId: parent.id } });
     return true;

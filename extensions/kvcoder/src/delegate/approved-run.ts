@@ -56,7 +56,7 @@ export async function startApprovedRun(ctx: Ctx, approved: Approved): Promise<st
       const store = txRecords(tx), found = currentApproval(store, approved, authority);
       if (found === undefined) return undefined;
       delegationInTx(store, sessionId, prepared, worker.name, worker.kind);
-      const saved = recordRun(store, sessionId, worker, { description: call.description, task: payload.task }, background ? null : toolCallId);
+      const saved = recordRun(store, sessionId, worker, payload, background ? null : toolCallId);
       store.questions.delete(question.id);
       if (!background) store.turns.update(question.turnId, { pending: found.turn.pending.map(item => item.toolCallId === toolCallId ? { toolCallId, kind: 'worker' as const, questionId: null, question: null, childSessionId: null, runId: saved.id } : item) });
       return saved;
@@ -84,7 +84,7 @@ export async function startApprovedRun(ctx: Ctx, approved: Approved): Promise<st
   const text = `started ${run.id}`;
   const identity = await ctx.store.transaction(tx => {
     const store = txRecords(tx);
-    return waitingInTx(store, authority) === undefined ? null : resolvePendingInTx(store, sessionId, toolCallId, { toolCallId, text, isError: false, run: null, details: { description: call.description, connector: call.connector, command: call.command, output: text, durationMs: 0 } });
+    return waitingInTx(store, authority) === undefined ? null : resolvePendingInTx(store, sessionId, toolCallId, { toolCallId, text, isError: false, run: null, details: { connector: call.connector, command: call.command, output: text, durationMs: 0 } });
   });
   return identity === null ? null : dispatchStep(ctx, identity, false);
 }

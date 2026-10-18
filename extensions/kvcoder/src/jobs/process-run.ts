@@ -27,12 +27,12 @@ export function startedOutcome(doc: Pick<ProcessDoc, 'end' | 'exitCode' | 'signa
   return { ended: true, exitCode: null, signal: null };
 }
 
-/** Starts `line` in the real shell for a session; a line that can't start fails `VALIDATION_FAILED` and leaves no record. */
-export async function startProcess(ctx: Ctx, sessionId: string, shell: ShellCommand, labelled: { title: string; line: string }): Promise<StartedProcess> {
+/** Starts `line` in the real shell for a session, titled by the line (ADR 0089, 1); a line that can't start fails `VALIDATION_FAILED` and leaves no record. */
+export async function startProcess(ctx: Ctx, sessionId: string, shell: ShellCommand, line: string): Promise<StartedProcess> {
   const store = records(ctx.store);
-  const doc = await store.processes.insert({ workspaceId: ctx.job.workspace.id, sessionId, title: labelled.title, call: labelled.line, startedAt: now(), reported: false, starting: true });
+  const doc = await store.processes.insert({ workspaceId: ctx.job.workspace.id, sessionId, title: line, call: line, startedAt: now(), reported: false, starting: true });
   try {
-    await ctx.processes.start(processName(doc.id), { command: shell.program, args: shell.args(labelled.line), env: plainEnvironment(process.env) });
+    await ctx.processes.start(processName(doc.id), { command: shell.program, args: shell.args(line), env: plainEnvironment(process.env) });
   } catch (error) {
     await store.processes.delete(doc.id);
     throw error;

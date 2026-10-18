@@ -22,6 +22,6 @@ export function registerShellConnector(ctx: Ctx): void {
     input: lineCallInput(execPayload),
     output: lineRunSchema,
     ...lineRunOptions,
-    handle: ({ sessionId, description, payload }) => runLine(ctx, { sessionId, description }, payload.line, payload),
+    handle: ({ sessionId, payload }) => runLine(ctx, sessionId, payload.line, payload),
   });
 }

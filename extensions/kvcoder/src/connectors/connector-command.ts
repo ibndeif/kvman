@@ -24,5 +24,5 @@ export function callInput<Payload extends z.ZodType>(payload: Payload) {
 
 /** The same for a command that runs in the real shell: with the call's description, which names a background run. */
 export function lineCallInput<Payload extends z.ZodType>(payload: Payload) {
-  return z.strictObject({ sessionId, description: z.string().describe("The call's description, for the person."), payload: payload.describe("The command's payload.") });
+  return z.strictObject({ sessionId, payload: payload.describe("The command's payload.") });
 }

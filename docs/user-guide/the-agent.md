@@ -9,14 +9,14 @@ The agent is told to work as a lead engineer who owns the result. No path is fix
 - a question gets an answer, and nothing changes;
 - a small, clear change is made and checked;
 - an unclear request gets its questions first;
-- work in several parts, or work that is hard to undo, gets an **execution map** you agree to;
+- work that changes several parts that depend on each other, or that is hard to undo, gets an **execution map** you agree to, and other work, even of a few steps, is just done;
 - a result you will look at, such as a page or a design, is shown to you.
 
 A path is made of these parts, used only when the task needs them:
 
 1. **Understand.** It reads everything you sent, attached files too, then looks at what exists, including what already does part of what you asked, so it builds on that. It works out what you want to end up with, what done looks like to you, what must keep working, and what you didn't say that changes the result. It never invents a name, a path, or a behavior.
-2. **Clarify.** It looks up what looking would answer. It decides an ordinary detail that is easy to change, and tells you what it chose. It asks you, before any work, about what only you can decide, all its questions in one round, with its recommended option first. When what you asked for works against your goal, or a clearly better way exists, it says so and offers both.
-3. **Plan.** It draws the execution map, only after it understood and has your answers.
+2. **Clarify.** It looks up what looking would answer. It decides an ordinary detail that is easy to change, and tells you what it chose. It asks you, before any work, about what only you can decide, all its questions in one round, together in one reply, with its recommended option first. When what you asked for works against your goal, or a clearly better way exists, it says so and offers both.
+3. **Plan.** When the work needs a map, it draws it, only after it understood and has your answers.
 4. **Confirm the plan.** It says back in a few lines the goal, what done looks like, what stays as it is, and the choices it made, then asks whether to start. You can write what to change, and it plans again.
 5. **Execute.** It follows the map, marks each step as it starts it, and marks it done only with evidence: what it ran and what that showed.
 6. **Stay on the task.** A problem your task doesn't need isn't looked into. It goes on the map's **Noted for later** list and is reported at the end.
@@ -24,7 +24,7 @@ A path is made of these parts, used only when the task needs them:
 8. **Show what you will look at.** A screen, a page, or a style is shown in an artifact, and a page is tried before you see it.
 9. **Finish.** It cleans up what it left behind, stops what is no longer needed, and leaves running what you will try yourself, with its address. Its last answer says, in plain words, what was done, what was checked, what wasn't, what still runs, and what it noted for later. When it learned how your project is built, tested, or run and your `AGENTS.md` doesn't say it, it offers to add a short Commands section there.
 
-It talks to you in plain words and short sentences, with the point first. When you use kvman's own words (extension, preset, setting), it uses them too.
+It talks to you as it works, like a colleague thinking aloud: between calls, a sentence or two on what it found and what it does next, in plain words with the point first. When you use kvman's own words (extension, preset, setting), it uses them too.
 
 These are instructions to a model, not guarantees: read the map and the call cards, and stop the turn when it goes the wrong way. `/prompt` shows the exact text.
 

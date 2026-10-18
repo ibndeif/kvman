@@ -38,7 +38,7 @@ describe('approval of the calls that can ask (08 §8.3, ADR 0011, 7)', { timeout
       const waiting = await looked(seed, asking(risky), settings('auto'), ['seed.txt']);
       const { turn } = await turnState(waiting.kernel, waiting.sessionId);
       expect(turn?.pending.map((item) => item.kind)).toEqual(['approval', 'approval', 'approval', 'approval']);
-      expect(turn?.pending[2]?.question).toEqual({ description: 'A test call.', connector: 'fs', command: 'write', payload: { path: 'write.txt', content: 'x', ...risky } });
+      expect(turn?.pending[2]?.question).toEqual({ connector: 'fs', command: 'write', payload: { path: 'write.txt', content: 'x', ...risky } });
       expect(made.map((file) => exists(waiting.kernel, file))).toEqual([false, false, false]);
       await answerAll(waiting.kernel, waiting.sessionId, true);
       expect(made.map((file) => exists(waiting.kernel, file))).toEqual([true, true, true]);

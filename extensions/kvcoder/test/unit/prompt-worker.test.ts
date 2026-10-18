@@ -3,7 +3,7 @@ import { buildPrompt } from '../../src/prompt/build-prompt.ts';
 
 const promptOf = (role: 'lead' | 'worker'): string => buildPrompt({ role, workspacePath: '/w', language: 'en', platform: 'linux', shell: 'bash', sections: [], connectors: [] }).prompt;
 
-const closingRule = 'A reply that only says what you will do ("now I will write the file") ends the turn with nothing done.';
+const closingRule = 'Never make a call that does nothing, such as `true`, just to keep going.';
 
 describe("a worker's prompt (08 §8.2 and §8.5, ADR 0022, 3)", () => {
   it('QA33-H7 a worker does the one task the lead gave it, in three steps', () => {
@@ -21,7 +21,7 @@ describe("a worker's prompt (08 §8.2 and §8.5, ADR 0022, 3)", () => {
   it('QA33-H8 both roles keep the tool, the connectors with risky, and the closing rule', () => {
     for (const role of ['lead', 'worker'] as const) {
       const prompt = promptOf(role);
-      expect(prompt, role).toContain('Your one tool is run: it runs one command of a connector, as { description, connector, command, payload }.');
+      expect(prompt, role).toContain('Your one tool is run: it runs one command of a connector, as { connector, command, payload }.');
       expect(prompt, role).toContain('Connectors are the only way you act.');
       expect(prompt, role).toContain('`shell exec`, `fs write`, `fs edit`, `mcp call`, and `mcp run` take risky, which you always send');
       expect(prompt.endsWith(closingRule), role).toBe(true);

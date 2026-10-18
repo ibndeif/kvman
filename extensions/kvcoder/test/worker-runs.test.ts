@@ -79,7 +79,7 @@ describe("a program worker's run (08 §8.5, ADR 0021, 10 to 16 and 31 to 36)", {
     await requests(fake, 3);
     const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });
     expect(messages.find((message) => message.source?.kind === 'job')?.source).toEqual({ kind: 'job', jobId: runId });
-    expect(textOf(requestMessages(fake, 2).at(-1))).toBe(`The background call \`A test call.\` (job ${runId}) finished:\nreleased`);
+    expect(textOf(requestMessages(fake, 2).at(-1))).toBe(`The background call \`Helper\` (job ${runId}) finished:\nreleased`);
   });
 
   it("QA32-H11 a run adds nothing to the chat's usage", async () => {

@@ -16,7 +16,7 @@ const relay: FixtureExtension = {
   entry: `import { z, type Ctx } from '@kvman/sdk';
 const usage = { input: 1, output: 1, cacheRead: 0, cacheWrite: 0, totalTokens: 2, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } };
 const reply = (content, stopReason) => ({ message: { role: 'assistant', content, api: 'relay', provider: 'relay', model: 'r1', usage, stopReason, timestamp: 1 }, stopReason, usage: { input: 1, output: 1, cacheRead: 0, cacheWrite: 0, cost: 0 } });
-const delegate = { type: 'toolCall', id: 'c1', name: 'run', arguments: { description: 'Handing it over', connector: 'delegate', command: 'run', payload: { worker: 'general', title: 'Helper', task: 'Do it' } } };
+const delegate = { type: 'toolCall', id: 'c1', name: 'run', arguments: { connector: 'delegate', command: 'run', payload: { worker: 'general', title: 'Helper', task: 'Do it' } } };
 const kindOf = (input) => {
   const last = JSON.stringify(input.messages.at(-1) ?? {});
   if (input.maxTokens === 30) return 'title';

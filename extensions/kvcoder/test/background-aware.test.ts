@@ -12,11 +12,11 @@ function posixShell(): void {
 }
 
 describe('the agent knows what runs in the background (08 §8.5, ADR 0068, 4 and 5)', { timeout: 60_000 }, () => {
-  it("M2.4-E241 the person's message carries what still runs, and nothing when nothing does", async () => {
+  it("M2.4-E241 and QA57-H4 the person's message carries what still runs, named by its line, and nothing when nothing does", async () => {
     posixShell();
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    fake.reply(runs({ ...shell('sleep 30', { background: true }), description: 'Serves the app.' }), says('started'));
+    fake.reply(runs(shell('sleep 30', { background: true })), says('started'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'start it' });
     await kernel.clock.advance(0);
     const id = /^started (\S+)/.exec(toolResults(fake)[0] ?? '')?.[1] ?? '';
@@ -24,10 +24,10 @@ describe('the agent knows what runs in the background (08 §8.5, ADR 0068, 4 and
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'what now?' });
     await kernel.clock.advance(0);
     const people = (await kernel.exec('kvcoder.message.list', { sessionId, limit: 50 })).messages.filter((message) => message.kind === 'user');
-    expect(people.map((message) => message.content['running'])).toEqual([undefined, [`${id} (process): Serves the app.`]]);
+    expect(people.map((message) => message.content['running'])).toEqual([undefined, [`${id} (process): sleep 30`]]);
     expect(people.map((message) => message.content['content'])).toEqual(['start it', 'what now?']);
     const sent = requestMessages(fake).filter((message) => message.role === 'user').map((message) => unstamped(textOf(message)));
-    expect(sent).toEqual(['start it', `what now?\n\n[kvman: still running in the background: ${id} (process): Serves the app.. Use the background connector to wait for, read, or stop one.]`]);
+    expect(sent).toEqual(['start it', `what now?\n\n[kvman: still running in the background: ${id} (process): sleep 30. Use the background connector to wait for, read, or stop one.]`]);
     fake.reply(runs(command('background', 'stop', { id })), says('stopped'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'stop it' });
     await kernel.clock.advance(0);

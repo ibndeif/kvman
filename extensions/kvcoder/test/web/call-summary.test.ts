@@ -90,6 +90,27 @@ describe("a closed card's line (08 §8.7, ADR 0036, 2)", () => {
     expect(part(read, 'show-all').text()).toBe('عرض كل الأسطر (40)');
   });
 
+  it('QA57-H2 a call with no description is titled by its own line: an artifact write or edit, and help, in English and Arabic', async () => {
+    const bare = (connector: string, command: string, payload: Call['payload'] = {}): Call => ({ connector, command, payload });
+    const made: [Call, Parameters<typeof ranCard>[1]][] = [
+      [bare('artifact', 'write', { id: 'plan', title: 'The plan', content: '# Plan' }), { id: 'plan', version: 1 }],
+      [bare('artifact', 'edit', { id: 'plan', edits: [{ oldText: 'Plan', newText: 'Roadmap' }] }), { id: 'plan', version: 2 }],
+      [bare('fs', 'help', { command: 'edit' }), 'fs edit: Replaces text.'],
+      [bare('fs', 'help'), 'fs: Files.'],
+    ];
+    const shown: string[] = [];
+    for (const [call, output] of made) {
+      const card = await ranCard(call, output);
+      expect(part(card, 'call-description').exists()).toBe(false);
+      shown.push(closedLine(card));
+    }
+    expect(shown).toEqual(['Write artifact plan', 'Edit artifact plan', 'Help fs edit', 'Help fs']);
+    const fake = createFakeKvman();
+    fake.language.value = 'ar';
+    const words = await Promise.all(made.slice(0, 3).map(async ([call, output]) => part(await ranCard(call, output, { fake }), 'call-words').text()));
+    expect(words).toEqual(['كتابة المُخرَج', 'تعديل المُخرَج', 'مساعدة']);
+  });
+
   it('QA54-H9 a detail call names the step it detailed, in English and Arabic', async () => {
     const made = call('execution-map', 'detail', { id: 'read', details: '## Read' });
     const output = { goal: 'Ship the page', progress: '0 of 2 done', doing: [], ready: ['read: Read'], waiting: [], failed: [], undetailed: ['build: Build'], notes: 0 };

@@ -29,7 +29,7 @@ function languageName(code: string): string {
   return name === undefined || name === code ? code : `${name} (${code})`;
 }
 
-// The base prompt (ADR 0009, 163 and 166; ADR 0011, 1; ADR 0022): who the agent is, its one tool, connectors, and how it works.
+// The base prompt (ADR 0009, 163 and 166; ADR 0011, 1; ADR 0022; ADR 0089, 1): who the agent is, its one tool, connectors, and how it works.
 function basePrompt(input: PromptInput): string {
   const shell = input.shell === 'bash' ? 'bash' : 'PowerShell';
   const identity = [
@@ -37,7 +37,7 @@ function basePrompt(input: PromptInput): string {
     `Reply in ${languageName(input.language)} unless the person writes in another language.`,
     'Each message from the person starts with the date and time it was sent, in brackets; the newest one is the current time.',
   ].join('\n');
-  const tool = 'Your one tool is run: it runs one command of a connector, as { description, connector, command, payload }. description is one sentence for the person, saying what the call does. Below, `fs write` means the connector fs and its command write.';
+  const tool = 'Your one tool is run: it runs one command of a connector, as { connector, command, payload }. Below, `fs write` means the connector fs and its command write.';
   const connectors = `Connectors are the only way you act. When a connector other than shell covers a task, use it instead of a shell line: it checks its input, returns structured results, and is shown to the person. Use shell only for what no other connector does. Every connector has the command help. A command listed below with its payload needs no help call; for any other command, or for what a field means, call the connector's help with { "command": "<name>" } before the first use. \`shell exec\`, \`fs write\`, \`fs edit\`, \`mcp call\`, and \`mcp run\` take risky, which you always send and judge for each call from what the call does, not from which command it is. It is false for the ordinary work of the task: creating, editing, or rewriting a file inside the workspace folder that the task needs, whoever made it (\`fs undo\` takes such a change back), running the project's own build, tests, and tools, and a tool that only reads. It is true, and the person is then asked first, only when the call could do what is hard to take back or reaches past the task: anything outside the workspace folder; deleting files, or overwriting them with a shell line; a file that holds secrets, such as .env or a key; rewriting or discarding git history or uncommitted work (push --force, reset --hard, clean); sudo, or an install outside the project; sending something out (a push, a publish, a deploy, a message, a write to a remote service); and the Commands section of AGENTS.md. When you can't tell whether a call can be taken back, it is true. Each \`shell exec\` starts in the workspace folder, so cd doesn't carry over to the next call; the shell is ${shell}.`;
   return [identity, tool, connectors, workingMethod(input.role, input.profile?.method)].join('\n\n');
 }

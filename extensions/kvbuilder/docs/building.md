@@ -4,7 +4,7 @@ kvbuilder ("kvman builder") is the extension that lets kvman's agent build and m
 
 ## The connectors
 
-The agent calls each connector with kvcoder's `run` tool: `run { description, connector, command, payload }`. Every connector also has `help`, which describes its commands, and one command's payload with `{ "command": "<name>" }`.
+The agent calls each connector with kvcoder's `run` tool: `run { connector, command, payload }`. Every connector also has `help`, which describes its commands, and one command's payload with `{ "command": "<name>" }`.
 
 | Connector | Commands | Use it to |
 |---|---|---|
@@ -19,18 +19,18 @@ Folders and files are always relative to the workspace folder, and must stay ins
 The payload is the command's input as JSON:
 
 ```json
-{ "description": "Scaffolding the notes extension", "connector": "ext", "command": "new", "payload": { "name": "notes", "namespace": "notes", "folder": "notes" } }
-{ "description": "Checking the notes project", "connector": "ext", "command": "check", "payload": { "folder": "notes" } }
-{ "description": "Switching the default model", "connector": "kvman", "command": "model-set", "payload": { "model": "anthropic/claude-sonnet-5-5" } }
-{ "description": "Adding the notes extension to the app", "connector": "kvman", "command": "extensions-install", "payload": { "source": "npm:@acme/notes@1.2.3" } }
-{ "description": "Adding the notes project of this workspace to the app", "connector": "kvman", "command": "extensions-install", "payload": { "source": "path:notes" } }
-{ "description": "Reading what kvai offers", "connector": "kvman", "command": "extensions-get", "payload": { "name": "@kvman/kvai" } }
-{ "description": "Finding the jobs that failed", "connector": "kvman", "command": "jobs-list", "payload": { "status": "failed", "limit": 20 } }
-{ "description": "Listing the chats", "connector": "kvman", "command": "query-get", "payload": { "name": "kvcoder.session.list", "input": { "limit": 10 } } }
-{ "description": "Previewing the notes project", "connector": "preview", "command": "start", "payload": { "extensions": ["notes"] } }
-{ "description": "Reading the greeting in the preview", "connector": "preview", "command": "query-get", "payload": { "name": "notes.greeting.get" } }
-{ "description": "Adding a note in the preview", "connector": "preview", "command": "command-run", "payload": { "name": "notes.item.add", "input": { "text": "Milk" } } }
-{ "description": "Reading the views guide", "connector": "docs", "command": "get", "payload": { "extension": "@kvman/kvwebui", "topic": "views" } }
+{ "connector": "ext", "command": "new", "payload": { "name": "notes", "namespace": "notes", "folder": "notes" } }
+{ "connector": "ext", "command": "check", "payload": { "folder": "notes" } }
+{ "connector": "kvman", "command": "model-set", "payload": { "model": "anthropic/claude-sonnet-5-5" } }
+{ "connector": "kvman", "command": "extensions-install", "payload": { "source": "npm:@acme/notes@1.2.3" } }
+{ "connector": "kvman", "command": "extensions-install", "payload": { "source": "path:notes" } }
+{ "connector": "kvman", "command": "extensions-get", "payload": { "name": "@kvman/kvai" } }
+{ "connector": "kvman", "command": "jobs-list", "payload": { "status": "failed", "limit": 20 } }
+{ "connector": "kvman", "command": "query-get", "payload": { "name": "kvcoder.session.list", "input": { "limit": 10 } } }
+{ "connector": "preview", "command": "start", "payload": { "extensions": ["notes"] } }
+{ "connector": "preview", "command": "query-get", "payload": { "name": "notes.greeting.get" } }
+{ "connector": "preview", "command": "command-run", "payload": { "name": "notes.item.add", "input": { "text": "Milk" } } }
+{ "connector": "docs", "command": "get", "payload": { "extension": "@kvman/kvwebui", "topic": "views" } }
 ```
 
 A command that takes nothing, such as `ext list`, `kvman preset-get`, `kvman health-get`, or `docs list`, needs no payload.

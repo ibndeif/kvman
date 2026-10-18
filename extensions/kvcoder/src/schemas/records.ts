@@ -116,8 +116,10 @@ export const pendingSchema = z.object({
   runId: z.string().nullable().default(null),
 });
 
-/** A call the person approves before it runs: what the model said it does, and the connector command with its payload. */
-export const runCallSchema = z.strictObject({ description: z.string(), connector: z.string(), command: z.string(), payload: z.record(z.string(), z.json()) });
+// A call stored before ADR 0089 also holds the model's description of it, which only its approval card still shows
+// (ADR 0089, 1).
+/** A call the person approves before it runs: the connector command with its payload. */
+export const runCallSchema = z.strictObject({ description: z.string().exactOptional(), connector: z.string(), command: z.string(), payload: z.record(z.string(), z.json()) });
 
 // An approved call of the old shell tool. It is kept only so a turn stored before `run` still parses; it is never run
 // (ADR 0011, 12).

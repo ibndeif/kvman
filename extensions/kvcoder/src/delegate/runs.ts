@@ -1,4 +1,5 @@
 import type { Ctx, Stored } from '@kvman/sdk';
+import type { DelegateRun } from '../connectors/delegate.ts';
 import type { HeldResult, RunDoc, RunStaging } from '../schemas/records.ts';
 import { now } from '../sessions/session-lookup.ts';
 import { records, txRecords, type TxRecords } from '../store/collections.ts';
@@ -16,17 +17,17 @@ import type { ProgramWorker } from './workers.ts';
 
 export type RunEnd = { status: Exclude<RunDoc['status'], 'running'>; exitCode: number | null; text: string; isError: boolean; staging?: RunStaging };
 
-/** Records a run of `worker` on `task`; `toolCallId` is the call that waits on it, or `null` for a background run. */
-export function recordRun(store: TxRecords, sessionId: string, worker: ProgramWorker, call: { description: string; task: string }, toolCallId: string | null): Stored<RunDoc> {
-  const line = commandLine(worker, call.task);
-  return store.runs.insert({ sessionId, toolCallId, worker: worker.name, kind: worker.kind, call: call.description, command: line.command, args: line.args, timeoutMs: worker.timeoutMs, jobId: null, status: 'running', startedAt: now(), endedAt: null, exitCode: null, output: null, staging: null });
+/** Records a run of `worker` on `task`, named by its title (ADR 0089, 1); `toolCallId` is the call that waits on it, or `null` for a background run. */
+export function recordRun(store: TxRecords, sessionId: string, worker: ProgramWorker, run: Pick<DelegateRun, 'title' | 'task'>, toolCallId: string | null): Stored<RunDoc> {
+  const line = commandLine(worker, run.task);
+  return store.runs.insert({ sessionId, toolCallId, worker: worker.name, kind: worker.kind, call: run.title, command: line.command, args: line.args, timeoutMs: worker.timeoutMs, jobId: null, status: 'running', startedAt: now(), endedAt: null, exitCode: null, output: null, staging: null });
 }
 
-export async function createRun(ctx: Ctx, sessionId: string, worker: ProgramWorker, call: { description: string; task: string }, toolCallId: string | null, guard: CreationGuard): Promise<Stored<RunDoc>> {
+export async function createRun(ctx: Ctx, sessionId: string, worker: ProgramWorker, run: Pick<DelegateRun, 'title' | 'task'>, toolCallId: string | null, guard: CreationGuard): Promise<Stored<RunDoc>> {
   return ctx.store.transaction(tx => {
     const store = txRecords(tx);
     guard(store);
-    return recordRun(store, sessionId, worker, call, toolCallId);
+    return recordRun(store, sessionId, worker, run, toolCallId);
   });
 }
 

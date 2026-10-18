@@ -133,11 +133,14 @@ export function callSummary(t: Translate, view: CallView, result?: unknown): Cal
   const payload = view.fields ?? {};
   if (connector === undefined || command === undefined) return undefined;
   if (view.line !== undefined) return { subject: `$ ${view.line}` };
+  if (command === 'help') return summary(t('kvcoder.ui.call.help'), [connector, text(payload['command'])].filter((part) => part !== undefined).join(' '));
   if (connector === 'fs') return fsSummary(t, command, payload, result);
   if (connector === 'mcp') return mcpSummary(t, command, payload, result);
   if (connector === 'background') return backgroundSummary(t, command, payload, result);
   if (connector === 'execution-map') return mapSummary(t, command, payload, result);
   if (connector === 'delegate' && command === 'run') return summary(t('kvcoder.ui.call.delegate'), [text(payload['worker']), text(payload['title'])].filter((part) => part !== undefined).join(' · '));
   if (connector === 'artifact' && command === 'get') return summary(t('kvcoder.ui.call.readArtifact'), text(payload['id']));
+  // A call names what it does from itself (ADR 0089, 1).
+  if (connector === 'artifact' && (command === 'write' || command === 'edit')) return summary(t(`kvcoder.ui.call.${command}Artifact`), text(payload['id']));
   return undefined;
 }

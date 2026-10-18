@@ -133,7 +133,7 @@ describe('original step intent lifecycle (ADR0041, spec08 E75–E88)', { timeout
     await withWorld(async (kernel, fake, sessionId) => {
       const blockName = `intent-block-${sessionId}`, sendName = `intent-send-${sessionId}`;
       const block = openGate(blockName), send = openGate(sendName);
-      const model = modelGate({ toolCall: { id: 'once', name: 'run', arguments: { description: 'Count once.', connector: 'step-probe', command: 'hit', payload: { text: 'once' } } } });
+      const model = modelGate({ toolCall: { id: 'once', name: 'run', arguments: { connector: 'step-probe', command: 'hit', payload: { text: 'once' } } } });
       fake.reply(model.reply, says('done'));
       try {
         const blocker = await kernel.execAsync('step-probe.block', { gate: blockName });

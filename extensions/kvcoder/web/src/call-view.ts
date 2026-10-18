@@ -1,5 +1,5 @@
-// What a call shows the person (plan 08 §8.7, ADR 0011, 13; ADR 0036): the description the model wrote, the connector
-// and its command, and the payload, which for a line in the shell is the line itself. A call stored before the `run`
+// What a call shows the person (plan 08 §8.7, ADR 0011, 13; ADR 0036): the description a call stored before ADR 0089
+// holds, the connector and its command, and the payload, which for a line in the shell is the line itself. A call stored before the `run`
 // tool has only its command line and the words it came with.
 
 const lineLimit = 200;
