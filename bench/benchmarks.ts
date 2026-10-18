@@ -4,6 +4,7 @@ import { execNoop } from './exec-noop.ts';
 import { coldStart } from './cold-start.ts';
 import { httpNoop } from './http-noop.ts';
 import { idleRss } from './idle-rss.ts';
+import { kvcoderJobList } from './kvcoder-job-list.ts';
 import { kvcoderPrompt } from './kvcoder-prompt.ts';
 import { storeFind } from './store-find.ts';
 
@@ -15,4 +16,4 @@ export type Benchmark = {
   measure: () => Promise<Metrics>;
 };
 
-export const benchmarks: readonly Benchmark[] = [storeFind, execNoop, execAsyncThroughput, httpNoop, kvcoderPrompt, coldStart, idleRss];
+export const benchmarks: readonly Benchmark[] = [storeFind, execNoop, execAsyncThroughput, httpNoop, kvcoderPrompt, kvcoderJobList, coldStart, idleRss];
