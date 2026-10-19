@@ -18,7 +18,7 @@ describe('a helper answers the lead only (ADR 0063)', { timeout: 30_000 }, () =>
     const lead = systemPrompt(fake, 0);
     const helper = systemPrompt(fake, 1);
     expect(helper).not.toContain('- ask: ');
-    expect(helper).toMatch(/- artifact: [^\n]*\n {2}get +\{ id \}\n {2}help +\{ command\? \}/);
+    expect(helper).toMatch(/- artifact: [^\n]*\n {2}get +\{ id \(≤50\) \}\n {2}help +\{ command\? \}/);
     expect(helper).toContain('Result: what you did or found. Evidence: ');
     expect(helper).toContain('Files changed: ');
     expect(helper).toContain('Unchecked: ');
