@@ -12,6 +12,7 @@ import { readSettings, type StepSettings } from '../register-settings.ts';
 import type { HeldResult, SessionDoc } from '../schemas/records.ts';
 import { txRecords } from '../store/collections.ts';
 import { compact, promptBasis } from './compaction.ts';
+import { clearOldResults } from './clear-results.ts';
 import { endTurn } from './end-turn.ts';
 import { endTurnState } from './end-turn-state.ts';
 import { appendMessage, appendQueued, userContent } from './history.ts';
@@ -173,8 +174,12 @@ async function runStep(ctx: Ctx, lease: StepLease): Promise<void> {
   const checked = await withChecks(ctx, begun, lease);
   if (checked === undefined) return;
   const tools = await sessionTools(ctx, checked);
-  if (await currentStep(ctx, lease) === undefined) return;
-  await compact(ctx, checked, { force: false, compactAt: settings.compactAt, keep: settings.compactKeep, prompt: tools.built.prompt, tools: tools.listed.map(listed => listed.name), turnId: lease.turnId, lease });
+  const started = await currentStep(ctx, lease);
+  if (started === undefined) return;
+  const names = tools.listed.map(listed => listed.name);
+  // A step that cleared old results doesn't summarize: the next call reports the prompt's real size (ADR 0094, 1).
+  const cleared = await clearOldResults(ctx, checked, lease, started.turn.steps === 1, { prompt: tools.built.prompt, model: checked.model, basis: promptBasis(tools.built.prompt, names) });
+  if (!cleared) await compact(ctx, checked, { force: false, compactAt: settings.compactAt, keep: settings.compactKeep, prompt: tools.built.prompt, tools: tools.listed.map(listed => listed.name), turnId: lease.turnId, lease });
   const current = await currentStep(ctx, lease);
   if (current === undefined) return;
   const first = await callModel(ctx, current.session, lease, tools, 'summarize');

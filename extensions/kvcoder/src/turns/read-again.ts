@@ -11,8 +11,9 @@ const isRead = (details: Json | undefined): boolean => typeof details === 'objec
 export async function alreadyRead(ctx: Ctx, sessionId: string, text: string): Promise<boolean> {
   const session = await records(ctx.store).sessions.get(sessionId);
   if (session === undefined) return false;
-  const { messages } = await sentHistory(ctx, sessionId, session.nextSeq);
-  return messages.some((message) => message.kind === 'toolResult' && isRead(message.content['details']) && textOf(message.content['content']) === text);
+  const { messages, cleared } = await sentHistory(ctx, sessionId, session.nextSeq);
+  // A result the model is sent cleared is not one it holds (ADR 0094, 1).
+  return messages.some((message) => message.kind === 'toolResult' && message.seq > cleared && isRead(message.content['details']) && textOf(message.content['content']) === text);
 }
 
 /** What a read returns in place of text the chat already holds. */

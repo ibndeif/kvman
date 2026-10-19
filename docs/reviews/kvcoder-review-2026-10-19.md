@@ -281,7 +281,7 @@ first fetch per domain asks.
 | 14 turn as story | D | D1 | 0093 | QA61 | done |
 | 17 changes view | D | D2 | 0093 | QA61 | done |
 | 19 narrow widths | D | D3 | 0093 | QA61 | done |
-| 1 clearing | E | E1 | 0094 | QA62 | decided |
+| 1 clearing | E | E1 | 0094 | QA62 | done |
 | 6 stalled stream | E | E2 | 0094 | QA62 | needs a week of gap measurement first |
 | 5 check after edits | E | E3 | 0094 | QA62 | decided |
 | 8 fallback model | E | E4 | 0094 | QA62 | decided |

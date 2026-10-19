@@ -55,6 +55,8 @@ export const sessionDocSchema = z.object({
   thinking: thinkingSchema,
   // "Decide for me": the chat has no `ask`, and the lead makes each choice itself (ADR 0092, 2).
   decides: z.boolean().default(false),
+  // The last tool result sent cleared (ADR 0094, 1).
+  clearedThroughSeq: z.number().int().nullable().default(null),
   usageBy: usageBySchema.default({ summary: noTokens, title: noTokens, helpers: noTokens }),
   stepJobId: z.string().nullable(),
   stepGeneration: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).default(0),
