@@ -24,6 +24,8 @@ import { helperAllows, helperRefusal } from './helper-calls.ts';
 import { readOnlyAllows, readOnlyRefusal } from './read-only.ts';
 import type { ApprovalRule } from '../schemas/approval-rule.ts';
 import { ruleCovers } from './approval-rules.ts';
+import type { Check } from '../schemas/check.ts';
+import { checkLines, lastFileChange } from './check-after-edits.ts';
 
 // How one call of a reply runs (plan 08 §8.3): the `run` tool names a connector's command, which runs as a kernel job.
 // `shell exec`, a binary's `exec`, `fs write`, and `fs edit` ask the person first when `kvcoder.approval` is
@@ -42,7 +44,7 @@ export type CallOutcome =
   /** An effect held back behind an earlier call's pending approval, to run in the model's order (ADR 0046). */
   | { kind: 'deferred'; call: RunCall };
 
-export type CallEnv = { ctx: Ctx; session: Stored<SessionDoc>; tools: SessionTools; approval: 'ask' | 'auto' | 'never'; allowed: readonly ApprovalRule[]; lease: StepLease };
+export type CallEnv = { ctx: Ctx; session: Stored<SessionDoc>; tools: SessionTools; approval: 'ask' | 'auto' | 'never'; allowed: readonly ApprovalRule[]; check: Check; lease: StepLease };
 
 const result = (toolCallId: string, done: CallDone): CallOutcome => ({ kind: 'result', held: { toolCallId, ...done, run: null } });
 
@@ -148,7 +150,21 @@ export async function evaluateCalls(env: CallEnv, calls: readonly ToolCall[]): P
     if (outcome === undefined) throw invalid('A call of the reply was not evaluated.');
     return outcome;
   });
-  return reminded(env, calls, outcomes);
+  return checked(env, calls, await reminded(env, calls, outcomes));
+}
+
+// The person's check runs after the reply's last file change that ran at once and succeeded (ADR 0094, 3).
+async function checked(env: CallEnv, calls: readonly ToolCall[], outcomes: CallOutcome[]): Promise<CallOutcome[]> {
+  if (env.check === null) return outcomes;
+  const parsed = calls.map((toolCall) => {
+    const args = toolCall.name === 'run' ? parseRunArgs(toolCall.arguments) : undefined;
+    return args?.success === true ? args.data : undefined;
+  });
+  const index = lastFileChange(parsed, outcomes.map((outcome) => outcome.kind === 'result' && !outcome.held.isError));
+  const outcome = index === undefined ? undefined : outcomes[index];
+  if (index === undefined || outcome?.kind !== 'result') return outcomes;
+  const lines = await checkLines(env.ctx, env.session.id, env.check);
+  return outcomes.with(index, { kind: 'result', held: { ...outcome.held, text: `${outcome.held.text}${lines}` } });
 }
 
 // The lead's reply that changed something while its map says no task is being done is told so once (ADR 0074, 6).

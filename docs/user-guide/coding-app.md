@@ -81,6 +81,8 @@ A model can hold only so much. When a chat reaches 60% of the model's memory (`k
 
 ## Useful settings
 
+Two settings on the **Settings** page help the agent work on its own. **Check after changes** (`kvcoder.check`) is a line kvman runs after the agent changes files, such as `pnpm typecheck`; its result is added to the change, so the agent sees an error in the same step. **Fallback model** (`kvcoder.fallbackModel`) is the model a chat moves to when its own reaches a usage limit; the chat says when it moved.
+
 Open **Extensions**, then **Coder**. The **Agent** card holds the model a new chat starts with (`kvcoder.model`), the **Model for workers** (`kvcoder.delegate.model`: the chat's own by default), and **Approval** (`kvcoder.approval`). The page also holds the thinking level (`kvcoder.thinking`), a turn's step limit (`kvcoder.maxSteps`, none by default), when a chat is summarized (`kvcoder.compactAt`) and how many messages stay whole (`kvcoder.compactKeep`), how many chats to keep (`kvcoder.sessions.keep`), and the **Connectors**, each with a switch. Every change is saved as you make it, for all workspaces or only this one, as the switch at the top of the page says. See [extensions.md](extensions.md) and [settings-and-secrets.md](settings-and-secrets.md).
 
 ## Next

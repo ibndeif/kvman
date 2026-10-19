@@ -4,6 +4,7 @@ import { mcpServersSchema } from './mcp/servers.ts';
 import { thinkingSchema } from './schemas/records.ts';
 import { binaryConnectorSchema, wordSchema } from './schemas/registry.ts';
 import { approvalRuleSchema } from './schemas/approval-rule.ts';
+import { checkSchema } from './schemas/check.ts';
 
 /** A preset's agent profile (ADR 0082, 11): who the agent is, how it works, and the Chat page's words, as translation keys. */
 const profileSchema = z.strictObject({
@@ -20,6 +21,8 @@ export const settingSchemas = {
   maxSteps: z.number().int().positive().nullable(),
   approval: z.enum(['ask', 'auto', 'never']),
   allowed: z.array(approvalRuleSchema).max(200),
+  check: checkSchema,
+  fallbackModel: z.string().min(1).nullable(),
   preferences: z.string().refine((text) => Buffer.byteLength(text, 'utf8') <= 16_384, 'The preferences hold at most 16 KB.'),
   shellPath: z.string().min(1).nullable(),
   compactAt: z.number().gt(0).max(1),
@@ -40,6 +43,8 @@ export function registerSettings(ctx: Ctx): void {
   ctx.registerSetting('kvcoder.approval', { description: 'When a call asks the person first: only the ones the model marks risky (auto), every one that can ask (ask), or none at all (never).', schema: settingSchemas.approval, default: 'auto' });
   ctx.registerSetting('kvcoder.approval.allowed', { description: 'The approval rules: a line whose every command starts with one of these prefixes, or a file change, runs without asking.', schema: settingSchemas.allowed, default: [] });
   ctx.registerSetting('kvcoder.preferences', { description: "The person's standing preferences, sent in every chat's prompt.", schema: settingSchemas.preferences, default: '' });
+  ctx.registerSetting('kvcoder.check', { description: 'A line run after a reply that changed files, such as the project\'s type check; its exit code and output end the change\'s result.', schema: settingSchemas.check, default: null });
+  ctx.registerSetting('kvcoder.fallbackModel', { description: 'The model a chat moves to when its model reaches a usage limit, or a rate limit after all tries; null for none.', schema: settingSchemas.fallbackModel, default: null });
   ctx.registerSetting('kvcoder.shell.path', { description: 'The shell program to run; null finds bash, or pwsh then powershell.exe on Windows.', schema: settingSchemas.shellPath, default: null });
   ctx.registerSetting('kvcoder.compactAt', { description: "The share of the model's context window above which older messages are summarized.", schema: settingSchemas.compactAt, default: 0.6 });
   ctx.registerSetting('kvcoder.compactKeep', { description: 'How many of the newest messages stay whole when older messages are summarized.', schema: settingSchemas.compactKeep, default: 10 });
@@ -71,6 +76,8 @@ export async function readSettings(ctx: Ctx) {
     maxSteps: await read('kvcoder.maxSteps', settingSchemas.maxSteps),
     approval: await read('kvcoder.approval', settingSchemas.approval),
     allowed: await read('kvcoder.approval.allowed', settingSchemas.allowed),
+    check: await read('kvcoder.check', settingSchemas.check),
+    fallbackModel: await read('kvcoder.fallbackModel', settingSchemas.fallbackModel),
     shellPath: await read('kvcoder.shell.path', settingSchemas.shellPath),
     compactAt: await read('kvcoder.compactAt', settingSchemas.compactAt),
     compactKeep: await read('kvcoder.compactKeep', settingSchemas.compactKeep),

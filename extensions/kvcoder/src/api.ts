@@ -84,6 +84,8 @@ declare module '@kvman/sdk' {
     'kvcoder.approval': 'ask' | 'auto' | 'never';
     'kvcoder.approval.allowed': ({ kind: 'line'; prefix: string } | { kind: 'files' })[];
     'kvcoder.preferences': string;
+    'kvcoder.check': { line: string; timeoutMs: number } | null;
+    'kvcoder.fallbackModel': string | null;
     'kvcoder.shell.path': string | null;
     'kvcoder.compactAt': number;
     'kvcoder.compactKeep': number;
