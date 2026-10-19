@@ -26,6 +26,7 @@ export async function newSession(ctx: Ctx, title: Title | undefined): Promise<St
     worker: null,
     model,
     thinking: await levelFor(ctx, model, settingSchemas.thinking.parse(await ctx.settings.get('kvcoder.thinking'))),
+    decides: false,
     stepJobId: null,
     stepGeneration: 0,
     stepIntentId: null,

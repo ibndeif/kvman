@@ -39,7 +39,7 @@ export function registerForkExport(ctx: Ctx): void {
       const updated = await ctx.store.transaction((tx) => {
         const store = txRecords(tx);
         for (const { id: _id, ...message } of copied) store.messages.insert({ ...message, sessionId: fork.id, turnId: null });
-        return store.sessions.update(fork.id, { model: source.model, thinking: source.thinking, nextSeq: (copied.at(-1)?.seq ?? -1) + 1 });
+        return store.sessions.update(fork.id, { model: source.model, thinking: source.thinking, decides: source.decides, nextSeq: (copied.at(-1)?.seq ?? -1) + 1 });
       });
       await firePoint(ctx, 'kvcoder.session.forked', { fromSessionId: sessionId, toSessionId: fork.id, throughSeq: last });
       return sessionView(updated);

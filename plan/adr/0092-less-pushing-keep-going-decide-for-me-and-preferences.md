@@ -30,7 +30,8 @@ The kvcoder review of 2026-10-19 (`docs/reviews/kvcoder-review-2026-10-19.md`, P
      for a connector that doesn't exist;
    - the lead's prompt ends its method with: the person asked you to decide in this chat, so make each choice
      yourself, the one you would recommend, say in a line what you chose and why, and go on; approvals still ask.
-   The send box has the switch "Decide for me" beside the thinking picker, `aria-pressed`, off by default; on the Chat
+   A fork keeps it, as it keeps the model and the thinking level. The send box has the switch "Decide for me" beside
+   the thinking picker, `aria-pressed`, off by default; on the Chat
    page it is set on the chat it creates, as the model is. Approvals are unaffected, and so are helpers, which never
    have `ask`.
 3. **The person's preferences** (asked; recommended: a setting in both scopes, written only by the person). The setting

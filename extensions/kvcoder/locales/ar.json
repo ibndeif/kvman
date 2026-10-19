@@ -150,6 +150,8 @@
   "kvcoder.ui.reach.session": "هذه المحادثة",
   "kvcoder.ui.leftOut": "مستبعد: يتجاوز 64 كيلوبايت",
   "kvcoder.ui.model": "النموذج",
+  "kvcoder.ui.decideForMe": "قرّر عني",
+  "kvcoder.ui.decideForMeHint": "يتخذ الوكيل كل قرار بنفسه، بالخيار الذي يوصي به، ولا يسألك أسئلة في هذه المحادثة. طلبات الموافقة تبقى كما هي.",
   "kvcoder.ui.thinking": "التفكير",
   "kvcoder.ui.thinkingLevels.off": "بدون",
   "kvcoder.ui.thinkingLevels.minimal": "أدنى",

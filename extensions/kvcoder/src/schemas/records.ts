@@ -53,6 +53,8 @@ export const sessionDocSchema = z.object({
   worker: z.object({ name: z.string(), instructions: z.string(), readOnly: z.boolean().default(false) }).nullable().default(null),
   model: z.string().nullable(),
   thinking: thinkingSchema,
+  // "Decide for me": the chat has no `ask`, and the lead makes each choice itself (ADR 0092, 2).
+  decides: z.boolean().default(false),
   usageBy: usageBySchema.default({ summary: noTokens, title: noTokens, helpers: noTokens }),
   stepJobId: z.string().nullable(),
   stepGeneration: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).default(0),

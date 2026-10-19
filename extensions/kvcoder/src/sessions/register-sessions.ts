@@ -62,15 +62,15 @@ export function registerSessions(ctx: Ctx): void {
     },
   });
   ctx.registerCommand('kvcoder.session.configure', {
-    description: "Changes a session's model or thinking level, from its next step.",
-    input: z.object({ sessionId: z.string(), model: z.string().min(1).exactOptional(), thinking: thinkingSchema.exactOptional() }),
+    description: "Changes a session's model, thinking level, or Decide for me, from its next step.",
+    input: z.object({ sessionId: z.string(), model: z.string().min(1).exactOptional(), thinking: thinkingSchema.exactOptional(), decides: z.boolean().exactOptional() }),
     output: z.object({}),
     public: true,
-    handle: async ({ sessionId, model, thinking }) => {
+    handle: async ({ sessionId, model, thinking, decides }) => {
       const session = await ownSession(ctx, sessionId);
       // The level is kept to one the session's model has (ADR 0087, 11).
       const level = model === undefined && thinking === undefined ? undefined : await levelFor(ctx, model ?? session.model, thinking ?? session.thinking);
-      await records(ctx.store).sessions.update(sessionId, { ...(model === undefined ? {} : { model }), ...(level === undefined ? {} : { thinking: level }), updatedAt: now() });
+      await records(ctx.store).sessions.update(sessionId, { ...(model === undefined ? {} : { model }), ...(level === undefined ? {} : { thinking: level }), ...(decides === undefined ? {} : { decides }), updatedAt: now() });
       return {};
     },
   });

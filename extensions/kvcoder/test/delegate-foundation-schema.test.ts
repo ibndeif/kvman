@@ -31,7 +31,7 @@ describe('E120 internal lifecycle fields', () => {
     expect.soft(parsedSession).toHaveProperty('deleting', false);
     expect.soft(parsedTurn).toHaveProperty('deferredCalls', []);
     expect(sessionView({ ...parsedSession, id: 'session' })).toEqual({
-      id: 'session', title: 'Test', status: 'idle', model: null, thinking: 'off',
+      id: 'session', title: 'Test', status: 'idle', model: null, thinking: 'off', decides: false,
       usage: noUsage(), durationMs: 0, waitingOn: null, createdAt: stamp, updatedAt: stamp,
     });
     expect(turnView({ ...parsedTurn, id: 'turn' })).toEqual({

@@ -84,6 +84,8 @@
 a.kvc-button { text-decoration: none; color: inherit; }
 .kvc-button:disabled { opacity: 0.5; cursor: default; }
 .kvc-primary { background: var(--kv-color-primary); border-color: var(--kv-color-primary); color: var(--kv-color-on-primary); }
+/* "Decide for me" when it is on (ADR 0092, 2). */
+.kvc-decide[aria-pressed='true'] { background: var(--kv-color-primary); border-color: var(--kv-color-primary); color: var(--kv-color-on-primary); }
 .kvc-ghost { border-color: transparent; background: transparent; }
 .kvc-actions { display: flex; gap: var(--kv-space-sm); justify-content: flex-end; flex-wrap: wrap; }
 /* The column breaks a word anywhere, so an action's label is kept whole (ADR 0062, 1). */

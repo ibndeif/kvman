@@ -43,7 +43,7 @@ export function useSessionActions(kvman: Kvman, sessionId: () => string, changed
   return {
     working,
     compact,
-    configure: (change: { model?: string; thinking?: Thinking }) =>
+    configure: (change: { model?: string; thinking?: Thinking; decides?: boolean }) =>
       run(async () => {
         await kvman.exec('kvcoder.session.configure', { sessionId: sessionId(), ...change });
         if (change.model !== undefined) await rememberModel(kvman, change.model);

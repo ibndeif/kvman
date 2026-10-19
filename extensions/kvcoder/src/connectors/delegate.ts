@@ -95,6 +95,7 @@ export async function createChild(ctx: Ctx, parent: Stored<SessionDoc>, worker: 
       worker: { name: worker.name, instructions: worker.instructions, readOnly: worker.readOnly },
       model,
       thinking: levels !== undefined && model === expected ? nearestLevel(levels, wanted) : wanted,
+      decides: false,
       stepJobId: null,
       stepGeneration: 0,
       stepIntentId: null,

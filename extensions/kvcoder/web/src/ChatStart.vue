@@ -68,7 +68,7 @@ async function runRegistered(entry: RegisteredSlash, argument: string): Promise<
   </div>
   <MessageComposer :stoppable="false" :placeholder="kvman.t(chat.start.value?.placeholder ?? 'kvcoder.ui.startPlaceholder')" :blocked="chat.state.value !== 'ready'" commands="wait" :registered="props.registered" @send="send" @registered="runRegistered">
     <template #controls>
-      <ModelControls :groups="chat.groups.value" :model="chat.current.value" :thinking="chat.thinking.value" :empty="chat.state.value === 'loading' ? '' : kvman.t('kvcoder.ui.chooseModel')" @model="pickModel" @thinking="chat.pickThinking" />
+      <ModelControls :groups="chat.groups.value" :model="chat.current.value" :thinking="chat.thinking.value" :empty="chat.state.value === 'loading' ? '' : kvman.t('kvcoder.ui.chooseModel')" :decides="chat.decides.value" @model="pickModel" @thinking="chat.pickThinking" @decides="chat.pickDecides" />
     </template>
   </MessageComposer>
 </template>

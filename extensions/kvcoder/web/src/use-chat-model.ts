@@ -23,6 +23,8 @@ export function useChatModel(kvman: Kvman, failed: (error: unknown) => void) {
   const models = ref<ModelRow[]>([]);
   const configured = ref<string | null>(null);
   const picked = ref<string | null>(null);
+  // "Decide for me" for the chat the Chat page creates (ADR 0092, 2).
+  const decides = ref(false);
   const configuredThinking = ref<Thinking>('medium');
   const pickedThinking = ref<Thinking | null>(null);
   const loaded = ref(false);
@@ -59,7 +61,7 @@ export function useChatModel(kvman: Kvman, failed: (error: unknown) => void) {
   });
 
   /** What the person changed for this chat, as `kvcoder.session.configure` takes it. */
-  const changes = (): { model?: string; thinking?: Thinking } => ({ ...(picked.value === null ? {} : { model: picked.value }), ...(picked.value === null && pickedThinking.value === null ? {} : { thinking: thinking.value }) });
+  const changes = (): { model?: string; thinking?: Thinking; decides?: true } => ({ ...(picked.value === null ? {} : { model: picked.value }), ...(picked.value === null && pickedThinking.value === null ? {} : { thinking: thinking.value }), ...(decides.value ? { decides: true as const } : {}) });
 
   return {
     start,
@@ -71,5 +73,7 @@ export function useChatModel(kvman: Kvman, failed: (error: unknown) => void) {
     changes,
     pickModel: (modelId: string): void => void (picked.value = modelId),
     pickThinking: (level: Thinking): void => void (pickedThinking.value = level),
+    decides,
+    pickDecides: (on: boolean): void => void (decides.value = on),
   };
 }

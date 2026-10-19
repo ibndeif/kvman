@@ -150,6 +150,8 @@
   "kvcoder.ui.reach.session": "this chat",
   "kvcoder.ui.leftOut": "Left out: over 64 KB",
   "kvcoder.ui.model": "Model",
+  "kvcoder.ui.decideForMe": "Decide for me",
+  "kvcoder.ui.decideForMeHint": "The agent makes each choice itself, the one it recommends, and asks you no questions in this chat. Approvals still ask.",
   "kvcoder.ui.thinking": "Thinking",
   "kvcoder.ui.thinkingLevels.off": "Off",
   "kvcoder.ui.thinkingLevels.minimal": "Minimal",

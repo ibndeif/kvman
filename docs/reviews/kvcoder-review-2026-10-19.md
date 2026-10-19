@@ -276,7 +276,7 @@ first fetch per domain asks.
 | 16 approval card | B | B3, B5 | 0091 | QA59 | done |
 | 15 needs you | B | B7, B8 | 0091 | QA59 | done |
 | 10 keep going | C | C1 | 0092 | QA60 | done |
-| 11 decide for me | C | C2 | 0092 | QA60 | decided |
+| 11 decide for me | C | C2 | 0092 | QA60 | done |
 | 12 preferences | C | C3 | 0092 | QA60 | decided |
 | 14 turn as story | D | D1 | 0093 | QA61 | decided |
 | 17 changes view | D | D2 | 0093 | QA61 | decided |

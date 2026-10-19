@@ -15,6 +15,8 @@ export type PromptInput = {
   shell: 'bash' | 'powershell';
   language: string;
   sections: readonly Section[];
+  /** "Decide for me" (ADR 0092, 2): the lead makes each choice itself. */
+  decides?: boolean;
   /** The worker a subagent runs for: its instructions follow the sections (ADR 0021, 8). */
   worker?: { name: string; instructions: string; readOnly?: boolean };
   connectors: readonly { name: string; description: string; commands: readonly string[]; signatures?: readonly string[] }[];
@@ -29,6 +31,9 @@ function languageName(code: string): string {
   return name === undefined || name === code ? code : `${name} (${code})`;
 }
 
+/** The method's last line in a chat set to "Decide for me" (ADR 0092, 2). */
+export const decideLine = 'The person asked you to decide in this chat: make each choice yourself, the one you would recommend, say in a line what you chose and why, and go on. Approvals still ask.';
+
 // The base prompt (ADR 0009, 163 and 166; ADR 0011, 1; ADR 0022; ADR 0089, 1): who the agent is, its one tool, connectors, and how it works.
 function basePrompt(input: PromptInput): string {
   const shell = input.shell === 'bash' ? 'bash' : 'PowerShell';
@@ -39,7 +44,8 @@ function basePrompt(input: PromptInput): string {
   ].join('\n');
   const tool = 'Your one tool is run: it runs one command of a connector, as { connector, command, payload }. Below, `fs write` means the connector fs and its command write.';
   const connectors = `Connectors are the only way you act. When a connector other than shell covers a task, use it instead of a shell line: it checks its input, returns structured results, and is shown to the person. Use shell only for what no other connector does. Every connector has the command help. A command listed below with its payload needs no help call; for any other command, or for what a field means, call the connector's help with { "command": "<name>" } before the first use. \`shell exec\`, \`fs write\`, \`fs edit\`, \`mcp call\`, and \`mcp run\` take risky, which you always send and judge for each call from what the call does, not from which command it is. It is false for the ordinary work of the task: creating, editing, or rewriting a file inside the workspace folder that the task needs, whoever made it and whether or not the repository has uncommitted changes (\`fs undo\` takes such a change back, so a change to a file is never risky by itself), running the project's own build, tests, and tools, and a tool that only reads. It is true, and the person is then asked first, only when the call could do what is hard to take back or reaches past the task: anything outside the workspace folder; deleting files, or overwriting them with a shell line; a file that holds secrets, such as .env or a key; rewriting or discarding git history or uncommitted work (push --force, git reset, checkout, restore, stash drop, clean); sudo, or an install outside the project; sending something out (a push, a publish, a deploy, a message, a write to a remote service); and the Commands section of AGENTS.md. When you can't tell whether a call can be taken back, it is true. Each \`shell exec\` starts in the workspace folder, so cd doesn't carry over to the next call; the shell is ${shell}.`;
-  return [identity, tool, connectors, workingMethod(input.role, input.profile?.method)].join('\n\n');
+  const method = workingMethod(input.role, input.profile?.method);
+  return [identity, tool, connectors, input.decides === true && input.role === 'lead' ? `${method}\n${decideLine}` : method].join('\n\n');
 }
 
 // A connector's entry: its owner's description, then its commands, which kvcoder adds (ADR 0009, 164; ADR 0011, 3). A

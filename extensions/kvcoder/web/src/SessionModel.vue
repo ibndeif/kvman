@@ -5,7 +5,7 @@ import ModelControls from './ModelControls.vue';
 import { useModelGroups } from './use-model-groups.ts';
 import { useSessionActions } from './use-session-actions.ts';
 
-// The open chat's model and thinking level, in its send box (plan 08 §8.7, ADR 0017, 3): a change runs
+// The open chat's model, thinking level, and Decide for me, in its send box (plan 08 §8.7, ADR 0017, 3; ADR 0092, 2): a change runs
 // `kvcoder.session.configure` and applies from the next step.
 const props = defineProps<{ session: Session }>();
 const emit = defineEmits<{ changed: [] }>();
@@ -15,5 +15,5 @@ const actions = useSessionActions(kvman, () => props.session.id, () => emit('cha
 </script>
 
 <template>
-  <ModelControls :groups="groups" :model="props.session.model ?? null" :thinking="props.session.thinking" @model="(model) => actions.configure({ model })" @thinking="(thinking) => actions.configure({ thinking })" />
+  <ModelControls :groups="groups" :model="props.session.model ?? null" :thinking="props.session.thinking" :decides="props.session.decides" @model="(model) => actions.configure({ model })" @thinking="(thinking) => actions.configure({ thinking })" @decides="(decides) => actions.configure({ decides })" />
 </template>

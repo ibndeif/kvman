@@ -27,7 +27,7 @@ declare module '@kvman/sdk' {
   interface Commands {
     'kvcoder.session.create': { input: { title?: string }; output: Session };
     'kvcoder.session.rename': { input: { sessionId: string; title: string }; output: Empty };
-    'kvcoder.session.configure': { input: { sessionId: string; model?: string; thinking?: Thinking }; output: Empty };
+    'kvcoder.session.configure': { input: { sessionId: string; model?: string; thinking?: Thinking; decides?: boolean }; output: Empty };
     'kvcoder.session.delete': { input: SessionId; output: Empty };
     'kvcoder.session.compact': { input: SessionId; output: { summarized: boolean } };
     'kvcoder.mcp.server.check': { input: { name: string }; output: McpCheck };

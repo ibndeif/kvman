@@ -11,7 +11,7 @@ import type { FakeKvman } from './fake-kvman.ts';
 const usage = { input: 1200, output: 300, cacheRead: 0, cacheWrite: 0, cost: 0.02 };
 
 export function session(fields: Partial<Session> = {}): Session {
-  return { id: 's1', title: 'Notes page', status: 'idle', waitingOn: null, model: 'fake/m1', thinking: 'medium', usage, durationMs: 48_000, createdAt: '2026-10-01T09:00:00.000Z', updatedAt: '2026-10-01T09:00:00.000Z', ...fields };
+  return { id: 's1', title: 'Notes page', status: 'idle', waitingOn: null, model: 'fake/m1', thinking: 'medium', decides: false, usage, durationMs: 48_000, createdAt: '2026-10-01T09:00:00.000Z', updatedAt: '2026-10-01T09:00:00.000Z', ...fields };
 }
 
 let seq = 0;

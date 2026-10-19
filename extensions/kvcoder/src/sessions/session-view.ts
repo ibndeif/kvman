@@ -12,6 +12,7 @@ export const sessionSchema = z.object({
   worker: z.string().exactOptional(),
   model: z.string().nullable(),
   thinking: thinkingSchema,
+  decides: z.boolean(),
   stepJobId: z.string().exactOptional(),
   usage: usageSchema,
   usageBy: usageBySchema.exactOptional(),
@@ -67,6 +68,7 @@ export function sessionView(doc: Stored<SessionDoc>, waitingOn: WaitingOn = null
     ...(doc.worker === null ? {} : { worker: doc.worker.name }),
     model: doc.model,
     thinking: doc.thinking,
+    decides: doc.decides,
     ...(doc.stepJobId === null ? {} : { stepJobId: doc.stepJobId }),
     usage: doc.usage,
     // Only a session that spent something apart from its own replies says how (ADR 0058, 1).

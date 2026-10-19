@@ -13,7 +13,8 @@ const leadOnly: ReadonlySet<string> = new Set(['ask', 'delegate', 'execution-map
 /** The existing connector scope predicate, shared by prompt and execution (ADR0044). */
 function allowedNames(session: SessionDoc, connectors: readonly ConnectorRow[], disabled: ReadonlySet<string>): Set<string> {
   const names = [...builtinConnectors, ...connectors.map(connector => connector.name)].filter(name => !disabled.has(name));
-  if (session.parentId === null) return new Set(names);
+  // A chat set to "Decide for me" asks the person nothing (ADR 0092, 2).
+  if (session.parentId === null) return new Set(session.decides ? names.filter(name => name !== 'ask') : names);
   // A helper hands work to no one, asks the person nothing (ADR 0063, 2), and keeps no map: the lead's is the chat's (ADR 0064, 1).
   return new Set(names.filter(name => !leadOnly.has(name) && (session.connectors === null || session.connectors.includes(name))));
 }

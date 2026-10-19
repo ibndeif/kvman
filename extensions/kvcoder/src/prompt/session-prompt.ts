@@ -62,6 +62,7 @@ export async function sessionTools(ctx: Ctx, session: Stored<SessionDoc>): Promi
     language: z.string().parse(await ctx.settings.get('kernel.language')),
     sections: [...(await sectionsFor(ctx, current.id)), ...(await rules)],
     ...(current.worker === null ? {} : { worker: current.worker }),
+    decides: current.decides,
     connectors: listed,
   });
   for (const section of built.left) ctx.log.warn('A section was left out of a prompt past 64 KB of sections.', { owner: section.owner, id: section.id });
