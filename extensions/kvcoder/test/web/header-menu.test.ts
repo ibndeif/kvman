@@ -60,7 +60,7 @@ describe("the chat's header, its menu, and the send box's pickers (08 §8.7, ADR
     const header = view.find('header');
     expect(header.findAll('[data-test]').map((part) => part.attributes('data-test'))).toEqual(['session-title', 'session-totals', 'chat-menu']);
     const row = view.find('.kvc-composer-row');
-    expect(row.findAll('button, select').map((control) => control.attributes('data-test') ?? control.attributes('aria-label'))).toEqual(['Attach files', 'model-picker', 'thinking-picker', 'send']);
+    expect(row.findAll('button, select').map((control) => control.attributes('data-test') ?? control.attributes('aria-label'))).toEqual(['Attach files', 'model-picker', 'thinking-picker', 'decide-switch', 'send']);
     await row.find('[data-test="model-picker"]').trigger('click');
     await row.find('[data-test="model-fake/m2"]').trigger('click');
     await flushPromises();
