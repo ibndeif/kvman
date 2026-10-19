@@ -9,7 +9,8 @@ import { resolveInWorkspace } from './workspace-path.ts';
 // `fs search` (plan 08 §8.5, ADR 0011, 8; ADR 0055): the lines that match a regular expression or a plain text, in a
 // file or under a folder inside the workspace folder, in path order. Dependency and dot folders are skipped, and so is
 // what Git ignores and anything that isn't UTF-8 text; a symlink is never followed, so the walk can't leave the
-// workspace or loop. A file's matching runs where it can be interrupted, so a slow expression is stopped.
+// workspace or loop. A file's matching runs where it can be interrupted, so a slow expression is stopped. `context`
+// adds the lines around each match, and `filesOnly` gives each file's count in place of its lines (ADR 0090, 3).
 
 const matchesLimit = 200;
 const lineLimit = 500;
@@ -18,13 +19,26 @@ const lineLimit = 500;
 export type SearchLimits = { fileMs: number; totalMs: number };
 export const searchLimits: SearchLimits = { fileMs: 2_000, totalMs: 10_000 };
 
-export type Match = { line: number; text: string };
+/** A matching line, or with `context` a line around one. */
+export type Match = { line: number; text: string; context?: true };
 
-/** The matches of one file; files are in path order (ADR 0034, 5). */
-export type FileMatches = { path: string; matches: Match[] };
+/** The matches of one file, or with `filesOnly` their count; files are in path order (ADR 0034, 5). */
+export type FileMatches = { path: string; matches: Match[] } | { path: string; count: number };
 
 export type SearchResult = { files: FileMatches[]; truncated: boolean; reason?: 'matches' | 'time' };
-export type SearchInput = { pattern: string; path?: string | undefined; literal?: boolean | undefined; glob?: string | undefined };
+export type SearchInput = { pattern: string; path?: string | undefined; literal?: boolean | undefined; glob?: string | undefined; context?: number | undefined; filesOnly?: boolean | undefined };
+
+/** The most lines `context` adds on each side of a match. */
+export const contextLimit = 10;
+
+// The kept matches and the lines around them, each line once, in line order; `last` is the file's last real line.
+function shownLines(lines: readonly string[], kept: readonly number[], context: number): Match[] {
+  const last = lines.length - (lines.at(-1) === '' ? 2 : 1);
+  const hits = new Set(kept);
+  const shown = new Set<number>();
+  for (const index of kept) for (let line = Math.max(index - context, 0); line <= Math.min(index + context, Math.max(last, index)); line += 1) shown.add(line);
+  return [...shown].sort((first, second) => first - second).map((index) => ({ line: index + 1, text: (lines[index] ?? '').slice(0, lineLimit), ...(hits.has(index) ? {} : { context: true as const }) }));
+}
 
 function expression(pattern: string): RegExp {
   try {
@@ -50,6 +64,8 @@ function matchingLines(lines: readonly string[], pattern: RegExp | string, timeo
 }
 
 export async function searchText(workspace: string, input: SearchInput, signal: AbortSignal, limits: SearchLimits = searchLimits): Promise<SearchResult> {
+  if (input.filesOnly === true && input.context !== undefined) throw invalid('context and filesOnly can\'t be used together: filesOnly gives no lines to show context around.', { pattern: input.pattern });
+  const context = Math.min(Math.max(input.context ?? 0, 0), contextLimit);
   const pattern = input.literal === true ? input.pattern : expression(input.pattern);
   const requested = input.path === undefined || input.path === '' ? '.' : input.path;
   const target = await resolveInWorkspace(workspace, requested);
@@ -77,9 +93,16 @@ export async function searchText(workspace: string, input: SearchInput, signal: 
     const lines = text.split(/\r?\n/);
     const hits = matchingLines(lines, pattern, Math.min(limits.fileMs, left));
     if (hits === undefined) return { files: grouped, truncated: true, reason: 'time' };
+    if (hits.length === 0) continue;
+    const shown = path.relative(base, file).split(path.sep).join('/');
+    if (input.filesOnly === true) {
+      if (grouped.length === matchesLimit) return { files: grouped, truncated: true, reason: 'matches' };
+      grouped.push({ path: shown, count: hits.length });
+      continue;
+    }
     const kept = hits.slice(0, matchesLimit - count);
     count += kept.length;
-    if (kept.length > 0) grouped.push({ path: path.relative(base, file).split(path.sep).join('/'), matches: kept.map((index) => ({ line: index + 1, text: (lines[index] ?? '').slice(0, lineLimit) })) });
+    if (kept.length > 0) grouped.push({ path: shown, matches: shownLines(lines, kept, context) });
     if (kept.length < hits.length) return { files: grouped, truncated: true, reason: 'matches' };
   }
   return { files: grouped, truncated: false };

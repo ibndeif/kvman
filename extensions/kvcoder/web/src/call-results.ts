@@ -7,7 +7,8 @@ export type EditResult = { replacements: number; firstChangedLine: number };
 export type ReadResult = { fromLine: number; content: string };
 export type Entry = { name: string; kind: 'file' | 'folder'; bytes: number };
 export type RunResult = { call: string; status: string; answer: boolean; ranMs?: number; exitCode?: number; output?: unknown; problem?: unknown };
-export type FileMatches = { path: string; matches: { line: number; text: string }[] };
+/** A searched file: its lines (with `context`, the lines around a match too) and its count of matches (ADR 0090, 3). */
+export type FileMatches = { path: string; matches: { line: number; text: string; context: boolean }[]; count: number };
 
 export function editResult(result: unknown): EditResult | undefined {
   const { replacements, firstChangedLine } = fields(result);
@@ -35,14 +36,17 @@ export function pathsResult(result: unknown): string[] | undefined {
   return Array.isArray(paths) ? paths.filter((entry): entry is string => typeof entry === 'string') : undefined;
 }
 
+// A file of `filesOnly` has its count and no lines.
 function matchesOf(value: unknown): FileMatches[] {
-  const { path, matches } = fields(value);
-  if (typeof path !== 'string' || !Array.isArray(matches)) return [];
+  const { path, matches, count } = fields(value);
+  if (typeof path !== 'string') return [];
+  if (typeof count === 'number') return [{ path, matches: [], count }];
+  if (!Array.isArray(matches)) return [];
   const found = matches.flatMap((match: unknown) => {
-    const { line, text } = fields(match);
-    return typeof line === 'number' && typeof text === 'string' ? [{ line, text }] : [];
+    const { line, text, context } = fields(match);
+    return typeof line === 'number' && typeof text === 'string' ? [{ line, text, context: context === true }] : [];
   });
-  return [{ path, matches: found }];
+  return [{ path, matches: found, count: found.filter((match) => !match.context).length }];
 }
 
 const runStatuses = ['running', 'succeeded', 'failed', 'cancelled', 'interrupted'] as const;

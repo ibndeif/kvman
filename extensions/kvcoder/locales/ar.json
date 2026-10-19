@@ -531,6 +531,7 @@
   "kvcoder.ui.call.lines": "الأسطر {from}–{to} من {total}",
   "kvcoder.ui.call.entries": "{count} عنصر",
   "kvcoder.ui.call.entriesFirst": "أول {count} عنصر",
+  "kvcoder.ui.call.matchCount": "النتائج: {count}",
   "kvcoder.ui.call.matches": "{matches} نتيجة في {files} ملف",
   "kvcoder.ui.call.matchesFirst": "أول {matches} نتيجة في {files} ملف",
   "kvcoder.ui.call.toolCount": "{count} أداة",

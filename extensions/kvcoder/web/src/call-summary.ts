@@ -1,4 +1,4 @@
-import { runResult, runStatusText } from './call-results.ts';
+import { runResult, runStatusText, searchResult } from './call-results.ts';
 import type { CallView } from './call-view.ts';
 import { diffCounts, diffLines, textLines } from './edit-diff.ts';
 import { fields, type Translate } from './kvman.ts';
@@ -71,13 +71,11 @@ function pathsText(t: Translate, result: Record<string, unknown>): string | unde
   return t(result['truncated'] === true ? 'kvcoder.ui.call.filesFirst' : 'kvcoder.ui.call.files', { count: paths.length });
 }
 
+// Lines shown around a match aren't matches; a file of `filesOnly` gives its count (ADR 0090, 3).
 function matchesText(t: Translate, result: Record<string, unknown>): string | undefined {
-  const files: unknown = result['files'];
-  if (!Array.isArray(files)) return undefined;
-  const matches = files.reduce((sum: number, file: unknown) => {
-    const found: unknown = fields(file)['matches'];
-    return sum + (Array.isArray(found) ? found.length : 0);
-  }, 0);
+  const files = searchResult(result);
+  if (files === undefined) return undefined;
+  const matches = files.reduce((sum, file) => sum + file.count, 0);
   return t(result['truncated'] === true ? 'kvcoder.ui.call.matchesFirst' : 'kvcoder.ui.call.matches', { matches, files: files.length });
 }
 

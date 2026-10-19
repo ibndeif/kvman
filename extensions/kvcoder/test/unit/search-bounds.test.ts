@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { searchText } from '../../src/files/search-text.ts';
+import { searchText, type FileMatches, type Match } from '../../src/files/search-text.ts';
 
 const folders: string[] = [];
 afterEach(() => {
@@ -20,13 +20,15 @@ function workspace(files: Record<string, string>): string {
 }
 const live = new AbortController().signal;
 const paths = (result: { files: { path: string }[] }) => result.files.map((file) => file.path);
+// A file's lines; a files-only result has none.
+const linesOf = (file: FileMatches | undefined): Match[] | undefined => (file !== undefined && 'matches' in file ? file.matches : undefined);
 
 describe('a bounded, stoppable search (KVC-29, ADR 0055)', () => {
   it('M2.4-E168 literal text, a glob by name and by path', async () => {
     const folder = workspace({ 'a.ts': 'price is $5 (a.b)\n', 'src/b.ts': 'axb\n$5 (a.b)\n', 'src/deep/c.ts': '$5 (a.b)\n', 'src/d.md': '$5 (a.b)\n' });
     expect(paths(await searchText(folder, { pattern: '$5 (a.b)', literal: true }, live))).toEqual(['a.ts', 'src/b.ts', 'src/d.md', 'src/deep/c.ts']);
-    expect((await searchText(folder, { pattern: 'a.b' }, live)).files.find((file) => file.path === 'src/b.ts')?.matches.map((match) => match.line)).toEqual([1, 2]);
-    expect((await searchText(folder, { pattern: 'a.b', literal: true }, live)).files.find((file) => file.path === 'src/b.ts')?.matches.map((match) => match.line)).toEqual([2]);
+    expect(linesOf((await searchText(folder, { pattern: 'a.b' }, live)).files.find((file) => file.path === 'src/b.ts'))?.map((match) => match.line)).toEqual([1, 2]);
+    expect(linesOf((await searchText(folder, { pattern: 'a.b', literal: true }, live)).files.find((file) => file.path === 'src/b.ts'))?.map((match) => match.line)).toEqual([2]);
     expect(paths(await searchText(folder, { pattern: '5', glob: '*.ts' }, live))).toEqual(['a.ts', 'src/b.ts', 'src/deep/c.ts']);
     expect(paths(await searchText(folder, { pattern: '5', glob: 'src/**/*.ts' }, live))).toEqual(['src/b.ts', 'src/deep/c.ts']);
     expect(paths(await searchText(folder, { pattern: '5', path: 'src', glob: '*/c.ts' }, live))).toEqual(['src/deep/c.ts']);
@@ -67,7 +69,7 @@ describe('a bounded, stoppable search (KVC-29, ADR 0055)', () => {
     const folder = workspace({ 'many.txt': 'x\n'.repeat(250) });
     const result = await searchText(folder, { pattern: 'x' }, live);
     expect(result).toMatchObject({ truncated: true, reason: 'matches' });
-    expect(result.files[0]?.matches).toHaveLength(200);
+    expect(linesOf(result.files[0])).toHaveLength(200);
     const stopped = new AbortController();
     stopped.abort(new Error('stopped'));
     await expect(searchText(folder, { pattern: 'x' }, stopped.signal)).rejects.toThrow('stopped');

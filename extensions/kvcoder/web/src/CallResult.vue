@@ -53,7 +53,8 @@ const asFields = computed(() => kind.value !== 'line' && typeof props.result ===
   <template v-else-if="files !== undefined">
     <div v-for="file in files" :key="file.path" class="kvc-block" data-test="call-file">
       <div class="kvc-mono kvc-file-path" data-test="call-file-path">{{ file.path }}</div>
-      <FoldedLines :lines="file.matches.map((match) => ({ text: match.text, number: match.line }))" />
+      <FoldedLines v-if="file.matches.length > 0" :lines="file.matches.map((match) => ({ text: match.text, number: match.line }))" />
+      <p v-else class="kvc-muted kvc-call-parts" data-test="call-file-count">{{ kvman.t('kvcoder.ui.call.matchCount', { count: file.count }) }}</p>
     </div>
   </template>
   <template v-else-if="kind === 'write' && asFields" />

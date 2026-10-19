@@ -531,6 +531,7 @@
   "kvcoder.ui.call.lines": "Lines {from}–{to} of {total}",
   "kvcoder.ui.call.entries": "{count} entries",
   "kvcoder.ui.call.entriesFirst": "The first {count} entries",
+  "kvcoder.ui.call.matchCount": "Matches: {count}",
   "kvcoder.ui.call.matches": "{matches} matches in {files} files",
   "kvcoder.ui.call.matchesFirst": "The first {matches} matches in {files} files",
   "kvcoder.ui.call.toolCount": "{count} tools",
