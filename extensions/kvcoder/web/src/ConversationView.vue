@@ -8,7 +8,7 @@ import MessageComposer from './MessageComposer.vue';
 import ChatStart from './ChatStart.vue';
 import CommandProgress from './CommandProgress.vue';
 import ConversationHeader from './ConversationHeader.vue';
-import { problemKey, problemOf, toastProblem, tokensUsed, totals, useKvman } from './kvman.ts';
+import { fields, problemKey, problemOf, toastProblem, tokensUsed, totals, useKvman } from './kvman.ts';
 import ActivityLine from './ActivityLine.vue';
 import { messageDraft, sendDraft, type Outgoing } from './message-drafts.ts';
 import { callViews } from './message-parts.ts';
@@ -125,6 +125,11 @@ const recoverable = computed(() => {
   const last = messages.value.at(-1);
   return session.value?.status === 'idle' && last?.kind === 'notice' && recoverableNotices.has(String(last.content['code']));
 });
+// The failure's own code, which decides which recovery action comes first (ADR 0090, 5).
+const failedWith = computed(() => {
+  const params = fields(messages.value.at(-1)?.content['params']);
+  return typeof params['code'] === 'string' ? params['code'] : undefined;
+});
 // A slash command of the send box runs what the chat's menu runs (ADR 0017, 6). One that waits shows its line in the
 // chat, so it leaves the prompt, and a summary says how it ended (ADR 0019, 1, 4, and 5).
 const slashCommands = useSlashCommands(kvman);
@@ -240,7 +245,7 @@ const key = (message: Message): string => message.id;
                 <span v-if="turnTotals.has(message.id)" class="kvc-muted" :title="turnTotals.get(message.id)?.tokens" data-test="turn-totals">{{ turnTotals.get(message.id)?.text }}</span>
               </template>
               <div v-if="stepsLeft > 0" class="kvc-notice" data-test="map-remaining">{{ kvman.t('kvcoder.ui.map.remaining', { count: stepsLeft }) }} <button type="button" class="kvc-link-button" data-test="map-show" @click="executionMap.shown.value = true">{{ kvman.t('kvcoder.ui.map.show') }}</button></div>
-              <RecoveryActions v-if="recoverable" :session-id="session.id" @sent="follow.resume(); conversation.refresh()" />
+              <RecoveryActions v-if="recoverable" :session-id="session.id" :failed-with="failedWith" @sent="follow.resume(); conversation.refresh()" />
             <div v-if="live.summarizing" class="kvc-notice" data-test="summarizing">{{ kvman.t('kvcoder.ui.summarizing') }}</div>
               <div v-if="running && (live.text !== '' || live.thinking !== '')" class="kvc-answer" data-test="live-answer">
                 <details v-if="live.thinking !== ''" :open="live.text === '' && live.calls.length === 0" data-test="live-thinking"><summary class="kvc-muted">{{ kvman.t('kvcoder.ui.thinkingNow') }}</summary><p class="kvc-muted" style="white-space: pre-wrap">{{ live.thinking }}</p></details>

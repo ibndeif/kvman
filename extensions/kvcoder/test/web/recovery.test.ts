@@ -13,10 +13,10 @@ const models = [
   { id: 'fake/m1', name: 'M1', provider: 'fake' },
 ];
 
-function failedWorld(code: string, status: 'idle' | 'running' | 'waiting' = 'idle'): World {
+function failedWorld(code: string, status: 'idle' | 'running' | 'waiting' = 'idle', failure = 'kvai/PROVIDER_ERROR'): World {
   return {
     found: session({ status }),
-    messages: [user('go'), message('notice', { code, params: { code: 'kvai/RATE_LIMITED' } })],
+    messages: [user('go'), message('notice', { code, params: { code: failure } })],
     omitted: 0,
     turns: [turn()],
   };
@@ -38,7 +38,26 @@ async function pickModel(wrapper: Awaited<ReturnType<typeof mounted>>, modelId: 
   await flushPromises();
 }
 
+// The two actions in the order they are on the page.
+const actionOrder = (wrapper: Awaited<ReturnType<typeof mounted>>): string[] => wrapper.findAll('[data-test="recovery"] > *').map((part) => (part.attributes('data-test') === 'retry' ? 'retry' : 'model'));
+
 describe("a failed turn's recovery (08 §8.7, ADR 0009, 204, 205)", () => {
+  it('QA58-H8 after a usage, key, or rate failure another model comes first', async () => {
+    for (const failure of ['kvai/USAGE_LIMIT', 'kvai/KEY_MISSING', 'kvai/RATE_LIMITED']) {
+      const wrapper = await mounted(ConversationView, recoverableFake(failedWorld('STEP_FAILED', 'idle', failure)), { sessionId: 's1' });
+      expect(actionOrder(wrapper)).toEqual(['model', 'retry']);
+      wrapper.unmount();
+    }
+  });
+
+  it('QA58-E12 any other failure keeps Retry first', async () => {
+    for (const [code, failure] of [['STEP_FAILED', 'kvai/PROVIDER_ERROR'], ['REPLY_LOST', 'kvai/PROVIDER_ERROR'], ['REPLY_INCOMPLETE', 'kvai/PROVIDER_ERROR'], ['INTERRUPTED', 'INTERRUPTED']] as const) {
+      const wrapper = await mounted(ConversationView, recoverableFake(failedWorld(code, 'idle', failure)), { sessionId: 's1' });
+      expect(actionOrder(wrapper)).toEqual(['retry', 'model']);
+      wrapper.unmount();
+    }
+  });
+
   it('QA10-H4 a failed turn shows Retry and Choose another model', async () => {
     for (const code of ['STEP_FAILED', 'REPLY_LOST', 'REPLY_INCOMPLETE', 'INTERRUPTED']) {
       const fake = recoverableFake(failedWorld(code));
