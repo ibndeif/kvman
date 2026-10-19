@@ -35,10 +35,18 @@ describe('a helper never outlives what started it (KVC-04 and KVC-05)', { timeou
         await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
         await vi.waitFor(() => expect(fake.requests().length).toBeGreaterThanOrEqual(2), wait);
         await kernel.exec('kvcoder.session.delete', { sessionId });
-        // The helper's model call is still held: its step must already be stopped, not left to finish by itself.
-        for (const status of ['running', 'queued'] as const) {
-          const jobs = await kernel.exec('kernel.jobs.list', { status, limit: 50 });
-          expect(jobs.filter(job => job.name === 'kvcoder.turn.step')).toEqual([]);
+        // The held model call never ends by itself, so only the delete's cancel can end the step that waits on it: a
+        // cancel aborts the job's signal, and the job ends when its handler settles (plan 02 §2.3).
+        await vi.waitFor(async () => {
+          for (const status of ['running', 'queued'] as const) {
+            const jobs = await kernel.exec('kernel.jobs.list', { status, limit: 50 });
+            expect(jobs.filter(job => job.name === 'kvcoder.turn.step')).toEqual([]);
+          }
+        }, wait);
+        const steps = (await kernel.exec('kernel.jobs.list', { limit: 50 })).filter(job => job.name === 'kvcoder.turn.step');
+        expect(steps.map(job => job.status)).toContain('cancelled');
+        for (const id of new Set(steps.map(job => String((job.input as { sessionId: string }).sessionId)))) {
+          await expect(kernel.exec('kvcoder.session.get', { sessionId: id }), id).rejects.toMatchObject({ problem: { code: 'kvcoder/SESSION_NOT_FOUND' } });
         }
         const before = fake.requests().length;
         held.release(); await kernel.clock.advance(0);
