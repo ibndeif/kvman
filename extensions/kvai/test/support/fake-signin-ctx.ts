@@ -33,7 +33,7 @@ export function makeFakeClock(start = 1_000_000): { clock: LeaseClock; current()
 }
 
 export type FakeSigninCtx = {
-  ctx: Pick<Ctx, 'secrets' | 'store' | 'job' | 'problem' | 'cancel'>;
+  ctx: Pick<Ctx, 'secrets' | 'store' | 'job' | 'problem' | 'cancel' | 'log'>;
   controller: AbortController;
   chunks: Json[];
 };
@@ -94,6 +94,8 @@ export function makeFakeSigninCtx(jobId: string, shared: SharedSigninMaps): Fake
       secrets,
       store,
       job,
+      // A model call logs its silences (ADR 0094, 2); these tests don't read the log.
+      log: { debug: (): void => undefined, info: (): void => undefined, warn: (): void => undefined, error: (): void => undefined },
       problem: (code: string, params?: Readonly<Record<string, Json>>): ProblemError =>
         new ProblemError({ code, message: code, ...(params === undefined ? {} : { params }) }),
       cancel: (cancelledId: string): Promise<void> => {
