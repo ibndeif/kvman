@@ -25,9 +25,13 @@ The kvcoder review of 2026-10-19 (`docs/reviews/kvcoder-review-2026-10-19.md`, P
 2. **What a rule allows** (asked; recommended).
    - A `line` rule covers a `shell exec` line, and a binary connector's line `<name> <args>`, when every part of the
      line starts with an allowed prefix followed by nothing or by a space or tab. The parts are what is between
-     `&&`, `||`, `;`, `|`, `&`, and line breaks. A line that holds `$(`, a backtick, `<(`, `>(`, `<`, or `>` has no
-     parts that a rule can cover, so it asks.
-   - A `files` rule covers `fs write`, `edit`, `undo`, and `assemble`.
+     `&&`, `||`, `;`, `|`, `&`, and line breaks. A part is covered only when it holds plain words: letters, digits,
+     spaces, and `_ - . , / : = + @ % ~ * ' "`; one with `$`, a backtick, a bracket, a brace, `<`, `>`, or `\` asks,
+     since bash or PowerShell could run another command inside it (as PowerShell does with `(…)` and `@(…)`).
+   - A `files` rule covers `fs write`, `edit`, `undo`, and `assemble`, except a file whose real path is in a `.git`
+     folder, a `.env` or `.env.*` file, or the project's `AGENTS.md` or `CLAUDE.md`: Git's hooks run code, `.env`
+     holds secrets, and the project's rules steer the agent, so those still ask. (These two narrowings came from the
+     security review of the first implementation, not from the owner's question.)
    - A rule never covers an `mcp` call, a registered command with `asks: true`, or a program worker set to ask.
    - With `kvcoder.approval` `auto`, a call the model marks risky that a rule covers runs without asking; with `ask`,
      every call a rule covers runs without asking (asked; recommended: rules apply with both); `never` needs none.
@@ -41,8 +45,9 @@ The kvcoder review of 2026-10-19 (`docs/reviews/kvcoder-review-2026-10-19.md`, P
    other answer, or on a question that isn't an approval, fails `VALIDATION_FAILED`. A prefix that doesn't cover the
    call is saved as written and the call still runs, since the person allowed it.
 4. **Deny with a reason** (asked; recommended). `kvcoder.question.answer` takes `reason` (1 to 1,000 characters) with
-   an approval answered `{ confirmed: false }`; the model then reads `denied by the user: <reason>`. The card's
-   "Deny…" opens a box for the reason with "Deny"; an empty box denies without one. `reason` with any other answer
+   an approval answered `{ confirmed: false }`; the model then reads `denied by the user: <reason>`. The card keeps
+   Deny as one press and adds "Deny and say why…", which opens a box for the reason with "Deny"; an empty box denies
+   without one. `reason` with any other answer
    fails `VALIDATION_FAILED`. A retry with the same answer, reason, and rule is acknowledged; with another, it fails
    `VALIDATION_FAILED` as a different answer does (the receipt's fingerprint covers them).
 5. **The risky wording** (asked; recommended). The base prompt and `risky`'s description say that creating, editing,

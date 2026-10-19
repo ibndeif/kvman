@@ -28,7 +28,8 @@ Paths are relative to the repository root.
   model reads `denied by the user: use pnpm test instead`. `extensions/kvcoder/test/approval-remember.test.ts`
 - **QA59-H6 the card offers Always allow and Deny with a reason.** *Given* an approval of `pnpm exec vitest run`,
   *then* the card shows a field holding `pnpm exec` and "Always allow"; pressing it answers with that prefix (or the
-  one the person typed); "Deny…" opens a box and "Deny" sends what was typed as `reason`, or no `reason` when empty;
+  one the person typed); Deny still denies at once, and "Deny and say why…" opens a box whose "Deny" sends what was
+  typed as `reason`, or no `reason` when empty;
   a file change offers "Always allow file changes here". `extensions/kvcoder/test/web/approval-always.test.ts`
 - **QA59-H7 Configuration lists the rules and removes one.** *Given* two rules, *then* the Approval row lists
   `Always allowed: pnpm exec` and "Always allowed: file changes", and Remove writes the list without that rule.
@@ -61,8 +62,9 @@ Paths are relative to the repository root.
 - **QA59-E1 a chained line asks unless every part is covered.** *Given* a `pnpm exec` rule, *then*
   `pnpm exec a && rm -rf b`, `pnpm exec a | sh`, and `pnpm exec a & curl x` ask, while
   `pnpm exec a && pnpm exec b` runs. `extensions/kvcoder/test/unit/approval-rules.test.ts`
-- **QA59-E2 shell syntax that hides a command always asks.** *Then* lines holding `$(`, a backtick, `<(`, `>(`, `<`,
-  or `>` are never covered, whatever the rules. `extensions/kvcoder/test/unit/approval-rules.test.ts`
+- **QA59-E2 a part with more than plain words always asks.** *Then* lines holding `$(`, `$`, a backtick, `<(`, `<`,
+  `>`, `\`, PowerShell's `(…)` and `@(…)`, braces, or brackets are never covered, whatever the rules, and a line of
+  plain words, globs, and quotes is. `extensions/kvcoder/test/unit/approval-rules.test.ts`
 - **QA59-E3 a prefix matches at a word's end only.** *Then* a `git status` rule covers `git status` and
   `git status --short`, not `git statuses` or `git stash`. `extensions/kvcoder/test/unit/approval-rules.test.ts`
 - **QA59-E4 a binary's line is matched as `<name> <args>`.** *Given* a `gh pr` rule, *then* `gh exec { args: 'pr list' }`
@@ -81,6 +83,9 @@ Paths are relative to the repository root.
 - **QA59-E10 no notification in the wrong moments.** *Then* none is shown while the page is visible, without
   permission, for a chat already `person` at the previous read, or where the page has no notifications (no line
   either). `extensions/kvcoder/test/web/notify.test.ts`
+- **QA59-E12 a files rule leaves code and secrets to the person.** *Then* `.git/…` (also through a symlink), `.env`,
+  `.env.local`, and the top `AGENTS.md` or `CLAUDE.md` still ask, while `docs/AGENTS.md` and `src/app.ts` don't.
+  `extensions/kvcoder/test/unit/approval-rules.test.ts`
 - **QA59-E11 an old receipt still acknowledges.** *Given* a receipt written before this ADR (its fingerprint over the
   answer alone), *then* a retry with the same answer and no reason is acknowledged.
   `extensions/kvcoder/test/approval-remember.test.ts`

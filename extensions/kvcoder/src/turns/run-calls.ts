@@ -181,7 +181,7 @@ async function evaluateCurrentCall(env: CallEnv, toolCall: ToolCall, call: RunCa
     if (invalid !== undefined) return result(toolCall.id, failedCall(call, invalid));
     const asks = env.approval === 'ask' || (env.approval === 'auto' && call.payload['risky'] !== false);
     // A call the person's rules cover runs without asking, with `ask` too (ADR 0091, 2).
-    if (asks && !ruleCovers(env.allowed, call, target.registration)) return { kind: 'question', questionKind: 'approval', question: call };
+    if (asks && !(await ruleCovers(env.allowed, call, target.registration, ctx.job.workspace.path))) return { kind: 'question', questionKind: 'approval', question: call };
   }
   if (target.asks === true && env.approval !== 'never') return { kind: 'question', questionKind: 'approval', question: call };
   if (held && !isHelperRun(call) && (target.builtin === undefined || target.builtin.asks === true)) return { kind: 'deferred', call };
