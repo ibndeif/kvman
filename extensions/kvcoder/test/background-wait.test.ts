@@ -38,12 +38,12 @@ describe('waiting for a background run, and reading less of it (08 §8.5, ADR 00
     await say(kernel, fake, sessionId, command('background', 'stop', { id: idOf(slow) }));
   });
 
-  it("M2.4-E239 wait refuses an id the chat didn't start, and a time out of range", async () => {
+  it("M2.4-E239 wait refuses an id the chat didn't start, and cuts a time out of range (QA58-H6)", async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
     const [unknown = '', short = '', long = ''] = await say(kernel, fake, sessionId, command('background', 'wait', { id: 'nope' }), command('background', 'wait', { id: 'nope', timeoutMs: 10 }), command('background', 'wait', { id: 'nope', timeoutMs: 600_001 }));
     expect(unknown).toMatch(/^error kvcoder\/JOB_NOT_FOUND: /);
-    for (const refused of [short, long]) expect(refused).toMatch(/^error VALIDATION_FAILED: timeoutMs: /);
+    for (const cut of [short, long]) expect(cut).toMatch(/^error kvcoder\/JOB_NOT_FOUND: /);
   });
 
   it('M2.4-E240 and QA57-H4 list gives short rows titled by the line, and output takes the number of lines', async () => {

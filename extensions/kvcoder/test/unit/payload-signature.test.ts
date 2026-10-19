@@ -5,6 +5,20 @@ import { invalidPayloadOutput, payloadSignature } from '../../src/connector-call
 // A payload's signature, written from its JSON Schema (plan 08 §8.3, ADR 0012, 3 and 4).
 
 describe('the payload signature (ADR 0012, 3)', () => {
+  it('QA58-H7 a string with a maximum length shows it, and a field without one does not', () => {
+    const schema: Json = {
+      type: 'object',
+      properties: {
+        goal: { type: 'string', maxLength: 300 },
+        steps: { type: 'array', items: { type: 'object', properties: { id: { type: 'string', maxLength: 50 }, after: { type: 'array', items: { type: 'string' } }, note: { type: 'string', maxLength: 300 } }, required: ['id'] } },
+        free: { type: 'string' },
+        count: { type: 'number', maximum: 10 },
+      },
+      required: ['goal', 'steps'],
+    };
+    expect(payloadSignature(schema)).toBe('{ goal (≤300), steps: [{ id (≤50), after?, note? (≤300) }], free?, count? }');
+  });
+
   it('QA19-H2 a signature is written from a JSON Schema', () => {
     const schema: Json = {
       type: 'object',

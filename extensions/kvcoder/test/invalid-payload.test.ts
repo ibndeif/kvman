@@ -16,7 +16,7 @@ describe("an invalid payload returns its problems and the command's payload (08 
     expect(results[0]).toContain('id: ');
     expect(results[0]).toContain('title: ');
     expect(results[0]).toContain('payload: Unrecognized key: "name"');
-    expect(results[0]?.endsWith('The payload of artifact write is\n{ id, title, format?: "markdown" | "html" | "url", content }')).toBe(true);
+    expect(results[0]?.endsWith('The payload of artifact write is\n{ id (≤50), title (≤100), format?: "markdown" | "html" | "url", content }')).toBe(true);
     expect(results[0]).not.toContain('$schema');
     expect(results[0]).not.toContain('"properties"');
   });

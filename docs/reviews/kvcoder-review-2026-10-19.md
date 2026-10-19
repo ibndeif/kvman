@@ -269,7 +269,7 @@ first fetch per domain asks.
 | 4 `replaceAll` | A | A1 | 0090 | QA58 | done |
 | 2 `fs find` | A | A2 | 0090 | QA58 | done |
 | 3 search context | A | A3 | 0090 | QA58 | done |
-| 7 limits | A | A4 | 0090 | QA58 | decided |
+| 7 limits | A | A4 | 0090 | QA58 | done |
 | 18 failure actions | A | A5 | 0090 | QA58 | decided |
 | 20 polish | A | A6 | 0090 | QA58 | decided |
 | 9 approval rules | B | B1–B4, B6 | 0091 | QA59 | decided |

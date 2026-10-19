@@ -29,8 +29,8 @@ describe('the map set as a skeleton, each step detailed on its own (08 §8.5, AD
     expect(parsed(toolResults(fake, 1).at(-1))).toEqual({ goal: 'Ship it', progress: '0 of 2 done', doing: [], ready: ['read: Do read'], waiting: ['build: Do build'], failed: [], undetailed: ['read: Do read', 'build: Do build'], notes: 0 });
     expect((await map())?.steps.map((found) => found.details)).toEqual([null, null]);
     const prompt = systemPrompt(fake, 0);
-    expect(prompt).toMatch(/\n {2}set +\{ goal, steps: \[\{ id, title, after\?, uses\?, check \}\] \}\n {2}detail +\{ id, details \}\n/);
-    expect(prompt).toMatch(/\n {2}get +\{ id\? \}/);
+    expect(prompt).toMatch(/\n {2}set +\{ goal \(≤300\), steps: \[\{ id \(≤50\), title \(≤100\), after\?, uses\?, check \(≤300\) \}\] \}\n {2}detail +\{ id \(≤50\), details \(≤4000\) \}\n/);
+    expect(prompt).toMatch(/\n {2}get +\{ id\? \(≤50\) \}/);
   });
 
   it('QA54-H2 detail writes one step whole, and a second detail replaces it', async () => {

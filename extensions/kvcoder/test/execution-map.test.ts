@@ -28,7 +28,7 @@ describe('the execution map (08 §8.5, ADR 0064)', { timeout: 30_000 }, () => {
     const map = await kernel.exec('kvcoder.map.get', { sessionId });
     expect(map?.steps.map((found) => [found.id, found.status, found.after])).toEqual([['read', 'todo', []], ['build', 'todo', ['read']]]);
     expect(map).toMatchObject({ goal: 'Ship it', version: 1, notes: [] });
-    expect(systemPrompt(fake, 0)).toMatch(/- execution-map: [^\n]*\n {2}set +\{ goal, steps: \[\{ id, title, after\?, uses\?, check \}\] \}\n {2}detail +\{ id, details \}\n {2}update +\{ steps: \[\{ id, status: "todo" \| "doing" \| "done" \| "failed" \| "skipped", evidence\?, note\? \}\] \}\n {2}note +\{ text \}\n {2}get +\{ id\? \}/);
+    expect(systemPrompt(fake, 0)).toMatch(/- execution-map: [^\n]*\n {2}set +\{ goal \(≤300\), steps: \[\{ id \(≤50\), title \(≤100\), after\?, uses\?, check \(≤300\) \}\] \}\n {2}detail +\{ id \(≤50\), details \(≤4000\) \}\n {2}update +\{ steps: \[\{ id \(≤50\), status: "todo" \| "doing" \| "done" \| "failed" \| "skipped", evidence\? \(≤500\), note\? \(≤300\) \}\] \}\n {2}note +\{ text \(≤500\) \}\n {2}get +\{ id\? \(≤50\) \}/);
   });
 
   it('M2.4-E220 a step names what it uses as one name or a list, kept as one text', async () => {

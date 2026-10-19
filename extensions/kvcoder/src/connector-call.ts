@@ -46,6 +46,7 @@ type Field = {
   properties?: Record<string, Field> | undefined;
   required?: string[] | undefined;
   items?: Field | undefined;
+  maxLength?: number | undefined;
 };
 
 const field: z.ZodType<Field> = z.lazy(() =>
@@ -55,6 +56,7 @@ const field: z.ZodType<Field> = z.lazy(() =>
     properties: z.record(z.string(), field).optional(),
     required: z.array(z.string()).optional(),
     items: field.optional(),
+    maxLength: z.number().optional(),
   }),
 );
 
@@ -75,10 +77,11 @@ function fieldSignature(name: string, schema: Field, required: boolean): string 
   if (schema.enum !== undefined && schema.enum.length > 0 && schema.enum.every((value) => typeof value === 'string')) {
     return `${name}${mark}: ${schema.enum.map((value) => JSON.stringify(value)).join(' | ')}`;
   }
-  return `${name}${mark}`;
+  // A string's length limit is shown, so a text the model writes fits the first time (ADR 0090, 4).
+  return schema.type === 'string' && schema.maxLength !== undefined ? `${name}${mark} (≤${String(schema.maxLength)})` : `${name}${mark}`;
 }
 
-/** A payload's signature written from its JSON Schema, such as `{ a, b?, c: [{ x }] }`; `undefined` when the schema isn't an object with properties. */
+/** A payload's signature written from its JSON Schema, such as `{ a, b? (≤300), c: [{ x }] }`; `undefined` when the schema isn't an object with properties. */
 export function payloadSignature(schema: Json | undefined): string | undefined {
   if (schema === undefined) return undefined;
   const parsed = payloadObject.safeParse(schema);

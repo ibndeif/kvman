@@ -6,13 +6,13 @@ import { changeFile, undoChange } from '../files/file-change.ts';
 import { assembleParts, partsLimit, savePart } from '../files/file-parts.ts';
 import { findPaths } from '../files/find-paths.ts';
 import { listEntries } from '../files/list-entries.ts';
-import { readLines } from '../files/read-file.ts';
+import { readLines, readLinesLimit } from '../files/read-file.ts';
 import { searchText } from '../files/search-text.ts';
 import { resolveInWorkspace } from '../files/workspace-path.ts';
 import { invalid, notFound } from '../problems.ts';
 import { records } from '../store/collections.ts';
 import { callInput, type ConnectorCommand } from './connector-command.ts';
-import { edits, risky } from './payload-fields.ts';
+import { cutInto, edits, risky } from './payload-fields.ts';
 
 // The `fs` connector (plan 08 §8.5, ADR 0009, 157 to 160; ADR 0011, 8): `read`, `list`, and `search` look inside the
 // workspace folder; `write` creates or replaces a file and `edit` replaces text in one, after the approval the shell's
@@ -30,7 +30,7 @@ const payloads = {
     path: filePath('The file to read'),
     fromLine: z.number().int().min(1).describe('The first line to return, counting from 1. The default is 1.').exactOptional(),
     fromColumn: z.number().int().min(1).describe('The character of fromLine to start at, from 1: pass it only as a result gave it in next.').exactOptional(),
-    lines: z.number().int().min(1).max(2000).describe('How many lines to return: 2000 by default, which is also the most.').exactOptional(),
+    lines: z.number().int().describe('How many lines to return: 2000 by default, which is also the most; a larger number is cut to 2000.').exactOptional(),
   }),
   list: z.strictObject({ path: z.string().describe('The folder to list, relative to the workspace folder, or absolute inside it; the workspace folder when left out or empty.').exactOptional() }),
   find: z.strictObject({
@@ -133,7 +133,7 @@ export function registerFsConnector(ctx: Ctx): void {
     description: commands.read.description,
     input: callInput(payloads.read),
     output: z.object({ path: z.string(), fromLine: z.number().int(), totalLines: z.number().int(), content: z.string(), truncated: z.boolean(), next: z.object({ fromLine: z.number().int(), fromColumn: z.number().int().exactOptional() }).exactOptional() }),
-    handle: ({ sessionId, payload }) => asProblems(() => readLines(ctx.job.workspace.path, payload, async (real) => (await records(ctx.store).fileViews.find({ sessionId, path: real }, { limit: 1 }))[0]?.fingerprint)),
+    handle: ({ sessionId, payload }) => asProblems(() => readLines(ctx.job.workspace.path, { ...payload, lines: cutInto(payload.lines ?? readLinesLimit, 1, readLinesLimit) }, async (real) => (await records(ctx.store).fileViews.find({ sessionId, path: real }, { limit: 1 }))[0]?.fingerprint)),
   });
   ctx.registerQuery('kvcoder.fs.entry.list', {
     description: commands.list.description,

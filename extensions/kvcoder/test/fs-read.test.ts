@@ -18,7 +18,7 @@ describe('fs read (08 §8.5, ADR 0011, 8)', { timeout: 30_000 }, () => {
     expect((await turnState(kernel, sessionId)).turn).toMatchObject({ outcome: 'done', pending: [] });
   });
 
-  it('QA18-E17 read is bounded by lines and bytes, and refuses what it cannot read', async () => {
+  it('QA18-E17 and QA58-H6 read is bounded by lines and bytes, and refuses what it cannot read', async () => {
     const prepare = (folder: string): void => {
       writeFileSync(path.join(folder, 'long.txt'), Array.from({ length: 3000 }, (_, index) => `line ${String(index + 1)}\n`).join(''));
       writeFileSync(path.join(folder, 'wide.txt'), `${'w'.repeat(20_000)}\n${'x'.repeat(20_000)}\nlast`);
@@ -45,7 +45,8 @@ describe('fs read (08 §8.5, ADR 0011, 8)', { timeout: 30_000 }, () => {
     expect(long.totalLines).toBe(3000);
     expect(long.content.split('\n')).toHaveLength(2001);
     expect(long.content.endsWith('line 2000\n')).toBe(true);
-    expect(results[1]).toMatch(/^error VALIDATION_FAILED: lines: /);
+    // QA58-H6: a larger number of lines is cut to 2000 (ADR 0090, 4).
+    expect((json(results[1]) as { content: string }).content.split('\n')).toHaveLength(2001);
     expect(json(results[2])).toEqual({ path: 'wide.txt', fromLine: 1, totalLines: 3, content: `${'w'.repeat(20_000)}\n`, truncated: true, next: { fromLine: 2 } });
     expect(json(results[3])).toEqual({ path: 'long.txt', fromLine: 3001, totalLines: 3000, content: '', truncated: false });
     expect(results[4]).toBe("error NOT_FOUND: missing.txt doesn't exist.");

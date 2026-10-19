@@ -3,6 +3,7 @@ import { delay } from '../delay.ts';
 import { cancelJob, jobDetail, jobRows, type JobRow } from '../jobs/job-rows.ts';
 import { records } from '../store/collections.ts';
 import { callInput, type ConnectorCommand } from './connector-command.ts';
+import { cutInto } from './payload-fields.ts';
 
 // The `background` connector (plan 08 §8.5, ADR 0011, 6): what this chat started with `background: true`, a process or
 // a subagent, listed, read, waited for, or stopped by the id the starting call returned. The agent sees no kernel job.
@@ -17,13 +18,16 @@ const started = z.strictObject({ id });
 /** How long `wait` waits when the call names no time, the most it waits, and how often it looks. */
 export const waitDefaultMs = 120_000;
 export const waitLimitMs = 600_000;
+const waitLeastMs = 1_000;
+const linesDefault = 100;
+const linesLimit = 500;
 const lookEveryMs = 500;
 const titleShown = 80;
 
 const payloads = {
   list: z.strictObject({}),
-  output: z.strictObject({ id, lines: z.number().int().min(1).max(500).describe("How many of a process's last lines to return: 100 by default, 500 at most.").exactOptional() }),
-  wait: z.strictObject({ id, timeoutMs: z.number().int().min(1000).max(waitLimitMs).describe('The most to wait, in milliseconds: 120000 by default, 600000 at most.').exactOptional() }),
+  output: z.strictObject({ id, lines: z.number().int().describe("How many of a process's last lines to return: 100 by default, 500 at most; a larger number is cut to 500.").exactOptional() }),
+  wait: z.strictObject({ id, timeoutMs: z.number().int().describe('The most to wait, in milliseconds: 120000 by default, from 1000 to 600000; a number outside them is cut into them.').exactOptional() }),
   stop: started,
 };
 
@@ -68,7 +72,7 @@ export function registerBackgroundConnector(ctx: Ctx): void {
     input: callInput(payloads.output),
     output: detailSchema,
     handle: async ({ sessionId, payload }) => {
-      const found = await startedBy(ctx, sessionId, payload.id, payload.lines);
+      const found = await startedBy(ctx, sessionId, payload.id, cutInto(payload.lines ?? linesDefault, 1, linesLimit));
       return { ...forAgent(found.row), ...found.detail };
     },
   });
@@ -81,7 +85,7 @@ export function registerBackgroundConnector(ctx: Ctx): void {
     retries: 0,
     timeoutMs: waitLimitMs + 60_000,
     handle: async ({ sessionId, payload }) => {
-      const until = Date.now() + (payload.timeoutMs ?? waitDefaultMs);
+      const until = Date.now() + cutInto(payload.timeoutMs ?? waitDefaultMs, waitLeastMs, waitLimitMs);
       let found = await startedBy(ctx, sessionId, payload.id);
       while (found.row.status === 'running' && Date.now() < until) {
         if (await personWrote(ctx, sessionId)) return { ...forAgent(found.row), ...found.detail, note: 'The person sent a message.' };

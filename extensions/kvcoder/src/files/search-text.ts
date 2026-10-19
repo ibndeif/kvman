@@ -1,6 +1,7 @@
 import { readFile, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { createContext, Script } from 'node:vm';
+import { cutInto } from '../connectors/payload-fields.ts';
 import { invalid, notFound } from '../problems.ts';
 import { decodeText, isMissing } from './read-file.ts';
 import { filesIn, globMatcher } from './workspace-files.ts';
@@ -65,7 +66,7 @@ function matchingLines(lines: readonly string[], pattern: RegExp | string, timeo
 
 export async function searchText(workspace: string, input: SearchInput, signal: AbortSignal, limits: SearchLimits = searchLimits): Promise<SearchResult> {
   if (input.filesOnly === true && input.context !== undefined) throw invalid('context and filesOnly can\'t be used together: filesOnly gives no lines to show context around.', { pattern: input.pattern });
-  const context = Math.min(Math.max(input.context ?? 0, 0), contextLimit);
+  const context = cutInto(input.context ?? 0, 0, contextLimit);
   const pattern = input.literal === true ? input.pattern : expression(input.pattern);
   const requested = input.path === undefined || input.path === '' ? '.' : input.path;
   const target = await resolveInWorkspace(workspace, requested);

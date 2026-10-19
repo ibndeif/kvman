@@ -9,6 +9,9 @@ export const risky = z
 
 export const background = z.boolean().describe('true keeps a server or any long-running command running after the call returns; follow it up with the background connector.').exactOptional();
 
+/** A number that bounds how long or how much, cut into its range instead of refused (ADR 0090, 4). */
+export const cutInto = (value: number, least: number, most: number): number => Math.min(Math.max(value, least), most);
+
 export const timeoutMs = z.number().int().positive().describe('How long the command may run, in milliseconds: 120000 by default, at most 600000. Ignored with background.').exactOptional();
 
 export const edits = z
