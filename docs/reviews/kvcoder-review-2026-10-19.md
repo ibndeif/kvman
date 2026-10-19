@@ -271,7 +271,7 @@ first fetch per domain asks.
 | 3 search context | A | A3 | 0090 | QA58 | done |
 | 7 limits | A | A4 | 0090 | QA58 | done |
 | 18 failure actions | A | A5 | 0090 | QA58 | done |
-| 20 polish | A | A6 | 0090 | QA58 | decided |
+| 20 polish | A | A6 | 0090 | QA58 | done |
 | 9 approval rules | B | B1–B4, B6 | 0091 | QA59 | decided |
 | 16 approval card | B | B3, B5 | 0091 | QA59 | decided |
 | 15 needs you | B | B7, B8 | 0091 | QA59 | decided |

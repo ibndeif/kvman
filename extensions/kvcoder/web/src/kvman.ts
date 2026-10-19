@@ -1,6 +1,7 @@
 import { inject } from 'vue';
 import type { Kvman } from '@kvman/sdk/web';
 import type {} from '../../src/index.ts';
+import { hoursText } from './durations.ts';
 
 // kvcoder's components read kvwebui's `kvman` (plan 06 §6.4) and translate what kvcoder stores.
 
@@ -103,7 +104,7 @@ const compact = (count: number): string => new Intl.NumberFormat(pageLanguage(),
 /** Time and cost, in the UI language (ADR 0035, 5): what a chat or a turn took. */
 export function totals(t: Translate, usage: { cost: number }, durationMs: number): string {
   const seconds = Math.round(durationMs / 1000);
-  const time = seconds < 60 ? t('kvcoder.ui.seconds', { count: seconds }) : t('kvcoder.ui.minutes', { count: Math.round(seconds / 60) });
+  const time = seconds < 60 ? t('kvcoder.ui.seconds', { count: seconds }) : seconds < 3600 ? t('kvcoder.ui.minutes', { count: Math.round(seconds / 60) }) : hoursText(t, seconds);
   return t('kvcoder.ui.totals', { time, cost: formatCost(usage.cost) });
 }
 

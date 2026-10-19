@@ -16,7 +16,8 @@ import { matchingCommands, typedCommand, type ListedSlash, type RegisteredSlash,
 // `registered` (ADR 0027, 9; ADR 0028, 1 and 3). The text and attachments are the chat's draft: they stay until the
 // send is confirmed, the box is disabled while it is on its way, and a failed send says so above the box (ADR 0048, 6).
 // Stop shows for a `stoppable` turn, reads "Stopping…" while `stopping`, and a failed stop says so too (ADR 0049, 3).
-const props = defineProps<{ sessionId?: string | undefined; stoppable: boolean; stopping?: boolean | undefined; stopError?: unknown; placeholder: string; blocked?: boolean | undefined; commands?: 'run' | 'wait' | undefined; registered?: readonly RegisteredSlash[] | undefined }>();
+// In the empty box, Esc presses Stop and Up brings back `lastSent`, the person's last message (ADR 0090, 6).
+const props = defineProps<{ sessionId?: string | undefined; lastSent?: string | undefined; stoppable: boolean; stopping?: boolean | undefined; stopError?: unknown; placeholder: string; blocked?: boolean | undefined; commands?: 'run' | 'wait' | undefined; registered?: readonly RegisteredSlash[] | undefined }>();
 const emit = defineEmits<{ send: [message: { text: string; fileIds: string[] }]; stop: []; command: [name: SlashName, argument: string]; registered: [command: RegisteredSlash, argument: string] }>();
 const kvman = useKvman();
 const draft = computed(() => messageDraft(kvman.workspace.value.id, props.sessionId));
@@ -127,8 +128,17 @@ function commandKey(event: KeyboardEvent): boolean {
   return true;
 }
 
+// Keys that act only on an empty box: a list or menu that is open has had them first.
+function emptyBoxKey(event: KeyboardEvent): boolean {
+  if (draft.value.text !== '') return false;
+  if (event.key === 'Escape' && props.stoppable && props.stopping !== true) emit('stop');
+  else if (event.key === 'ArrowUp' && props.lastSent !== undefined && props.lastSent !== '') draft.value.text = props.lastSent;
+  else return false;
+  return true;
+}
+
 function onKey(event: KeyboardEvent): void {
-  if (commandKey(event)) return event.preventDefault();
+  if (commandKey(event) || emptyBoxKey(event)) return event.preventDefault();
   if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
   event.preventDefault();
   send();

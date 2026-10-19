@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import SessionList from '../../web/src/SessionList.vue';
+import arabic from '../../locales/ar.json' with { type: 'json' };
+import { durationText } from '../../web/src/durations.ts';
 import { formatCost, tokensUsed, totals } from '../../web/src/kvman.ts';
 import { createFakeKvman } from './support/fake-kvman.ts';
 import { mounted, session } from './support/fixtures.ts';
@@ -11,6 +13,22 @@ afterEach(() => {
 const usage = { input: 1200, output: 300, cost: 0.02 };
 
 describe('times and numbers in the page language (ADR 0009, 132)', () => {
+  it('QA58-H9 an hour or more reads in hours and minutes, in English and Arabic', () => {
+    const { t } = createFakeKvman().kvman;
+    document.documentElement.lang = 'en';
+    expect(durationText(t, 3_725_000)).toBe('1 h 2 min');
+    expect(totals(t, { cost: 44.01 }, 77_640_000)).toBe('21 h 34 min · $44.01');
+    expect(arabic['kvcoder.ui.hoursMinutes']).toBe('{hours} س {minutes} د');
+  });
+
+  it('QA58-E15 under an hour is unchanged, and exactly an hour reads 1 h 0 min', () => {
+    const { t } = createFakeKvman().kvman;
+    document.documentElement.lang = 'en';
+    expect(durationText(t, 3_599_000)).toBe('59 min 59 s');
+    expect(durationText(t, 3_600_000)).toBe('1 h 0 min');
+    expect(totals(t, { cost: 0.5 }, 1_800_000)).toBe('30 min · $0.50');
+  });
+
   it('QA1-H3 the session list and the totals follow the language kvwebui set, not the browser', async () => {
     const fake = createFakeKvman();
     fake.handle('kvcoder.session.list', () => [session({ id: 'a', title: 'Today one', updatedAt: new Date().toISOString() })]);

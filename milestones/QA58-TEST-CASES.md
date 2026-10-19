@@ -42,7 +42,7 @@ Paths are relative to the repository root.
 - **QA58-H9 an hour reads in hours.** *Then* a call of 3,725 s reads `1 h 2 min` and a header total of 77,640 s reads
   `21 h 34 min`, in English and Arabic. `extensions/kvcoder/test/web/formats.test.ts`
 - **QA58-H10 a count reads right in the singular.** *Then* an edit that made one replacement shows
-  `Replaced: 1 · from line 82`. `extensions/kvcoder/test/web/result-card.test.ts`
+  `Replaced: 1 · from line 82`. `extensions/kvcoder/test/web/call-views.test.ts`
 - **QA58-H11 Esc stops the turn.** *Given* a running turn and an empty send box, *when* the person presses Esc in it,
   *then* Stop's action runs once. `extensions/kvcoder/test/web/composer-keys.test.ts`
 - **QA58-H12 Up recalls the last message.** *Given* a chat whose person's last message is `fix the tests`, *when* the

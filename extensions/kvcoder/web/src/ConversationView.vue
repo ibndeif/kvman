@@ -11,7 +11,7 @@ import ConversationHeader from './ConversationHeader.vue';
 import { fields, problemKey, problemOf, toastProblem, tokensUsed, totals, useKvman } from './kvman.ts';
 import ActivityLine from './ActivityLine.vue';
 import { messageDraft, sendDraft, type Outgoing } from './message-drafts.ts';
-import { callViews } from './message-parts.ts';
+import { callViews, lastTyped } from './message-parts.ts';
 import MessageItem from './MessageItem.vue';
 import PendingCards from './PendingCards.vue';
 import RecoveryActions from './RecoveryActions.vue';
@@ -48,6 +48,7 @@ const panelShown = computed(() => executionMap.shown.value || (artifacts.open.va
 // An ending with steps left says so (ADR 0064, 11).
 const stepsLeft = computed(() => (session.value?.status === 'idle' ? executionMap.counts.value?.left ?? 0 : 0));
 const calls = computed(() => callViews(messages.value));
+const lastSent = computed(() => lastTyped(messages.value));
 const finishedRuns = useFinishedRuns(kvman, () => sessionId.value, messages, readFailed);
 const recoverableNotices = new Set(['STEP_FAILED', 'REPLY_LOST', 'REPLY_INCOMPLETE', 'INTERRUPTED']);
 const running = computed(() => session.value?.status === 'running');
@@ -265,7 +266,7 @@ const key = (message: Message): string => message.id;
           </div>
           <button v-if="follow.away.value" type="button" class="kvc-button kvc-jump" data-test="jump-to-latest" @click="jumpToLatest"><ArrowDown :size="16" aria-hidden="true" />{{ kvman.t('kvcoder.ui.jumpToLatest') }}</button>
         </div>
-        <MessageComposer :session-id="session.id" :stoppable="stoppable" :stopping="stopping === session.id" :stop-error="stopFailed?.sessionId === session.id ? stopFailed.error : undefined" :placeholder="kvman.t('kvcoder.ui.placeholder')" :blocked="actions.working.value !== undefined" commands="run" :registered="slashCommands" @send="send" @stop="stop" @command="command" @registered="registered">
+        <MessageComposer :session-id="session.id" :last-sent="lastSent" :stoppable="stoppable" :stopping="stopping === session.id" :stop-error="stopFailed?.sessionId === session.id ? stopFailed.error : undefined" :placeholder="kvman.t('kvcoder.ui.placeholder')" :blocked="actions.working.value !== undefined" commands="run" :registered="slashCommands" @send="send" @stop="stop" @command="command" @registered="registered">
           <template #controls><SessionModel :session="session" @changed="conversation.refresh()" /></template>
         </MessageComposer>
       </template>
