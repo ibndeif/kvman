@@ -25,7 +25,8 @@ Paths are relative to the repository root.
 ## Edge cases
 
 - **QA63-E1 private addresses are refused, also after a redirect.** *Then* `http://127.0.0.1:3737/`, a host that
-  resolves to `10.0.0.5`, `169.254.169.254`, `::1`, `fc00::1`, and a redirect from a public host to a private one are
+  resolves to `10.0.0.5`, `169.254.169.254`, `::1`, `fc00::1`, IPv4 inside IPv6 in any spelling (`[::ffff:127.0.0.1]`,
+  `[::ffff:a9fe:a9fe]`, `[64:ff9b::127.0.0.1]`, `[2002:7f00:1::]`), and a redirect from a public host to a private one are
   refused `VALIDATION_FAILED`, and nothing is requested from them. `extensions/kvcoder/test/unit/web-page.test.ts`,
   `extensions/kvcoder/test/web-fetch.test.ts`
 - **QA63-E2 bad addresses and types.** *Then* `ftp://` and an address with credentials fail `VALIDATION_FAILED`; an image

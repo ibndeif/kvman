@@ -1,13 +1,15 @@
+import { isIP } from 'node:net';
 import { describe, expect, it } from 'vitest';
 import { bodyLimit, fetchPage, type PageResponse, type WebTransport } from '../../src/web/fetch-page.ts';
 import { isPrivateAddress } from '../../src/web/private-address.ts';
 
-// web fetch's reading of a page (08 §8.5, ADR 0095), with the network replaced by a table of answers.
+// web fetch's reading of a page (08 §8.5, ADR 0095), with the network replaced by a table of answers. An address is
+// its own resolution, as with the network.
 type Answer = Partial<PageResponse> & { body?: Buffer };
 function transport(hosts: Record<string, string[]>, pages: Record<string, Answer>) {
   const requested: string[] = [];
   const used: WebTransport = {
-    resolve: (host) => Promise.resolve(hosts[host] ?? []),
+    resolve: (host) => Promise.resolve(isIP(host) !== 0 ? [host] : (hosts[host] ?? [])),
     request: (url) => {
       requested.push(url.href);
       const answer = pages[url.href] ?? { status: 404 };
@@ -43,8 +45,10 @@ describe('web fetch reads a page (ADR 0095)', () => {
   });
 
   it('QA63-E1 private and local addresses are refused, also after a redirect, and never requested', async () => {
-    for (const address of ['127.0.0.1', '10.0.0.5', '172.20.1.1', '192.168.1.1', '169.254.169.254', '0.0.0.0', '100.64.0.1', '224.0.0.1', '::1', '::', 'fc00::1', 'fe80::1', '::ffff:127.0.0.1', 'not-an-address']) expect(isPrivateAddress(address), address).toBe(true);
-    for (const address of ['93.184.216.34', '8.8.8.8', '2606:4700::1111']) expect(isPrivateAddress(address), address).toBe(false);
+    for (const address of ['127.0.0.1', '10.0.0.5', '172.20.1.1', '192.168.1.1', '169.254.169.254', '0.0.0.0', '100.64.0.1', '224.0.0.1', '::1', '::', 'fc00::1', 'fe80::1', 'fe80::1%eth0', 'fec0::1', 'ff02::1', '::ffff:127.0.0.1', '::ffff:7f00:1', '0:0:0:0:0:ffff:7f00:0001', '::ffff:a9fe:a9fe', '::7f00:1', '64:ff9b::a00:5', '64:ff9b:1::8.8.8.8', '2002:c0a8:101::1', 'not-an-address']) expect(isPrivateAddress(address), address).toBe(true);
+    for (const address of ['93.184.216.34', '8.8.8.8', '2606:4700::1111', '::ffff:8.8.8.8', '::ffff:808:808', '64:ff9b::808:808', '2002:808:808::1']) expect(isPrivateAddress(address), address).toBe(false);
+    // The URL parser writes IPv4 inside IPv6 as hex (`[::ffff:7f00:1]`), and that form is refused too.
+    for (const url of ['http://[::ffff:127.0.0.1]/', 'http://[::ffff:a9fe:a9fe]/', 'http://[64:ff9b::127.0.0.1]/', 'http://[2002:7f00:1::]/', 'http://[0:0:0:0:0:ffff:7f00:0001]/']) await expect(fetchPage(url, transport({}, {}).used, live), url).rejects.toMatchObject({ problem: { code: 'VALIDATION_FAILED' } });
     const { used, requested } = transport({ ...publicHost, 'inside.example.test': ['10.0.0.5'] }, { 'https://docs.example.test/jump': { status: 302, location: 'https://inside.example.test/secret' } });
     for (const url of ['http://127.0.0.1:3737/api', 'http://[::1]/', 'https://inside.example.test/', 'https://docs.example.test/jump']) await expect(fetchPage(url, used, live), url).rejects.toMatchObject({ problem: { code: 'VALIDATION_FAILED' } });
     expect(requested).toEqual(['https://docs.example.test/jump']);

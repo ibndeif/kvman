@@ -24,7 +24,10 @@ current documentation rather than rely on memory. Claude Code has a WebFetch too
 3. **Never a private address** (asked; recommended). Before each request, and again for each redirect, the host is
    resolved and the request is refused, `VALIDATION_FAILED`, when any of its addresses is loopback, private,
    link-local, unique-local, unspecified, or a multicast address; the connection then uses the address that was
-   checked, so a second resolution can't change it. kvman's own listener is therefore out of reach.
+   checked, so a second resolution can't change it. kvman's own listener is therefore out of reach. Addresses are
+   compared as numbers, so an IPv4 address carried inside IPv6 (`::ffff:7f00:1`, NAT64 `64:ff9b::/96`, 6to4
+   `2002::/16`) is judged as that IPv4 address in any spelling (a security review of the first version found
+   `[::ffff:127.0.0.1]` passing, since the URL parser writes it in hex).
 4. **The person is asked per domain** (asked; recommended). With `kvcoder.approval` `auto` or `ask`, the first fetch
    from a host in a chat asks as a risky call does, and an allowed one adds the host to the chat's `webHosts` (a
    session field, old records `[]`), so later fetches from it run at once; with `never` none asks. A read-only
