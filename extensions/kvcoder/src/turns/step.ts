@@ -15,7 +15,8 @@ import { compact, promptBasis } from './compaction.ts';
 import { clearOldResults } from './clear-results.ts';
 import { endTurn } from './end-turn.ts';
 import { endTurnState } from './end-turn-state.ts';
-import { appendMessage, appendQueued, userContent } from './history.ts';
+import { appendMessage, appendNotice, appendQueued, userContent } from './history.ts';
+import { levelFor } from './model-info.ts';
 import { incompleteHint, incompleteReply, incompleteRetries, lostHint, lostRetries, lostTokens, repairedCalls, type Incomplete } from './lost-reply.ts';
 import { modelMessages, sentHistory } from './model-context.ts';
 import { completeWithRetries } from './model-retry.ts';
@@ -80,7 +81,10 @@ const toolCallSchema = z.object({ type: z.literal('toolCall'), id: z.string(), n
 type Answer = { calls: ToolCall[]; seq: number; lost: number | undefined; incomplete: Incomplete | undefined };
 
 // `overflow` says what a `kvai/CONTEXT_TOO_LONG` does: hand the failure back for a summary, or end the turn (ADR 0087, 2).
-async function callModel(ctx: Ctx, session: Stored<SessionDoc>, lease: StepLease, tools: SessionTools, overflow: 'summarize' | 'end'): Promise<Answer | { tooLong: ProblemError } | undefined> {
+// A usage limit, or a rate limit after all tries, hands the failure back when the chat has another model to move to.
+const fallbackCodes: ReadonlySet<string> = new Set(['kvai/USAGE_LIMIT', 'kvai/RATE_LIMITED']);
+
+async function callModel(ctx: Ctx, session: Stored<SessionDoc>, lease: StepLease, tools: SessionTools, overflow: 'summarize' | 'end', fallback: string | null = null): Promise<Answer | { tooLong: ProblemError } | { limited: ProblemError } | undefined> {
   const messages = await modelMessages(ctx, await sentHistory(ctx, session.id, session.nextSeq));
   if (await currentStep(ctx, lease) === undefined) return undefined;
   const started = Date.now();
@@ -108,6 +112,7 @@ async function callModel(ctx: Ctx, session: Stored<SessionDoc>, lease: StepLease
   } catch (error) {
     if (!(error instanceof ProblemError) || ctx.job.signal.aborted) throw error;
     if (overflow === 'summarize' && error.problem.code === 'kvai/CONTEXT_TOO_LONG') return { tooLong: error };
+    if (fallback !== null && fallback !== session.model && fallbackCodes.has(error.problem.code)) return { limited: error };
     await stepFailed(ctx, session, lease, error);
     return undefined;
   }
@@ -127,7 +132,23 @@ async function afterOverflow(ctx: Ctx, session: Stored<SessionDoc>, lease: StepL
     return undefined;
   }
   const answer = await callModel(ctx, current.session, lease, tools, 'end');
-  return answer === undefined || 'tooLong' in answer ? undefined : answer;
+  return answer === undefined || 'tooLong' in answer || 'limited' in answer ? undefined : answer;
+}
+
+// The chat moves to the fallback model, says so, and the step calls the model once more (ADR 0094, 4).
+async function afterLimit(ctx: Ctx, session: Stored<SessionDoc>, lease: StepLease, tools: SessionTools, fallback: string, limited: ProblemError): Promise<Answer | undefined> {
+  const thinking = await levelFor(ctx, fallback, session.thinking);
+  const moved = await ctx.store.transaction(tx => {
+    ctx.job.signal.throwIfAborted();
+    const store = txRecords(tx);
+    const live = liveStep(store, lease, lease.jobId);
+    if (live === undefined) return undefined;
+    appendNotice(store, live.session, 'MODEL_SWITCHED', { from: live.session.model ?? '', to: fallback, code: limited.problem.code }, lease.turnId);
+    return store.sessions.update(session.id, { model: fallback, thinking });
+  });
+  if (moved === undefined) return undefined;
+  const answer = await callModel(ctx, moved, lease, tools, 'end');
+  return answer === undefined || 'tooLong' in answer || 'limited' in answer ? undefined : answer;
 }
 
 function failureDetails(error: ProblemError): JsonValue {
@@ -182,8 +203,12 @@ async function runStep(ctx: Ctx, lease: StepLease): Promise<void> {
   if (!cleared) await compact(ctx, checked, { force: false, compactAt: settings.compactAt, keep: settings.compactKeep, prompt: tools.built.prompt, tools: tools.listed.map(listed => listed.name), turnId: lease.turnId, lease });
   const current = await currentStep(ctx, lease);
   if (current === undefined) return;
-  const first = await callModel(ctx, current.session, lease, tools, 'summarize');
-  const answer = first !== undefined && 'tooLong' in first ? await afterOverflow(ctx, current.session, lease, tools, settings, first.tooLong) : first;
+  const fallback = settings.fallbackModel;
+  const first = await callModel(ctx, current.session, lease, tools, 'summarize', fallback);
+  let answer: Answer | undefined;
+  if (first === undefined || 'tooLong' in first) answer = first === undefined ? undefined : await afterOverflow(ctx, current.session, lease, tools, settings, first.tooLong);
+  else if ('limited' in first) answer = fallback === null ? undefined : await afterLimit(ctx, current.session, lease, tools, fallback, first.limited);
+  else answer = first;
   if (answer === undefined) return;
   if (answer.calls.length === 0) { await finishWithoutCalls(ctx, lease, settings.maxSteps, answer.lost, answer.incomplete); return; }
   const env = { ctx, session: current.session, tools, approval: settings.approval, allowed: settings.allowed, check: settings.check, lease };

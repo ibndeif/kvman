@@ -21,6 +21,7 @@
   "kvcoder.notices.CANCELLED": "أوقفتَ هذه الجولة.",
   "kvcoder.notices.INTERRUPTED": "انقطعت هذه الجولة. قد تكون آثارها غير معروفة؛ لن تُعاد الخطوة القديمة تلقائيًا. أرسل رسالة جديدة للمتابعة.",
   "kvcoder.notices.STEP_FAILED": "توقفت الجولة: {error}",
+  "kvcoder.notices.MODEL_SWITCHED": "بلغ {from} حده، فانتقلت هذه المحادثة إلى النموذج البديل {to}.",
   "kvcoder.notices.MAX_STEPS": "توقفت الجولة بعد بلوغ الحد الأقصى للخطوات ({steps}).",
   "kvcoder.notices.SUMMARY_FAILED": "تعذّر تلخيص الرسائل السابقة: {error}",
   "kvcoder.notices.REPLY_LOST": "لم يصل رد النموذج كاملًا بعد عدة محاولات (ضاع نحو {tokens} توكن). اكتب «تابع» للمحاولة من جديد، أو اختر نموذجًا آخر.",

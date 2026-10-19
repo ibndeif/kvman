@@ -21,6 +21,7 @@
   "kvcoder.notices.CANCELLED": "You stopped this turn.",
   "kvcoder.notices.INTERRUPTED": "This turn was interrupted. Its effects may be unknown; the old step will not be replayed automatically. Send a new message to continue.",
   "kvcoder.notices.STEP_FAILED": "The turn stopped: {error}",
+  "kvcoder.notices.MODEL_SWITCHED": "{from} reached its limit, so this chat moved to the fallback model {to}.",
   "kvcoder.notices.MAX_STEPS": "The turn stopped after {steps} steps.",
   "kvcoder.notices.SUMMARY_FAILED": "The earlier messages couldn't be summarized: {error}",
   "kvcoder.notices.REPLY_LOST": "The model's reply was lost on the way, again and again (about {tokens} tokens never arrived). Say continue to try again, or choose another model.",
