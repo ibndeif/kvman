@@ -56,7 +56,7 @@ const contributions = {
   nav: [{ id: 'chat', page: 'chat', title: 'kvcoder.pages.chat', icon: 'message-square', order: 10 }],
   panels: [],
   status: [
-    { id: 'waiting', query: 'kvcoder.session.count', input: { status: 'waiting' }, text: 'kvcoder.status.waiting', params: { count: { $output: 'count' } }, order: 10 },
+    { id: 'waiting', query: 'kvcoder.session.count', input: { waitingOn: 'person' }, text: 'kvcoder.status.waiting', params: { count: { $output: 'count' } }, titleCount: 'count', order: 10 },
     {
       id: 'chat',
       query: 'kvcoder.session.get',

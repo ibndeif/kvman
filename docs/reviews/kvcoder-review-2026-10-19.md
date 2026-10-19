@@ -274,7 +274,7 @@ first fetch per domain asks.
 | 20 polish | A | A6 | 0090 | QA58 | done |
 | 9 approval rules | B | B1–B4, B6 | 0091 | QA59 | done |
 | 16 approval card | B | B3, B5 | 0091 | QA59 | done |
-| 15 needs you | B | B7, B8 | 0091 | QA59 | decided |
+| 15 needs you | B | B7, B8 | 0091 | QA59 | done |
 | 10 keep going | C | C1 | 0092 | QA60 | decided |
 | 11 decide for me | C | C2 | 0092 | QA60 | decided |
 | 12 preferences | C | C3 | 0092 | QA60 | decided |

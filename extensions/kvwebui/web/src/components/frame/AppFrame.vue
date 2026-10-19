@@ -40,8 +40,12 @@ const workspaceName = computed(() => {
   return state.workspaces.value.find((workspace) => workspace.id === state.workspace.value)?.name ?? state.workspace.value;
 });
 
+// The status items' counts start the title, so a person who looks at the tab sees what waits (ADR 0091, 7).
+const titleCount = computed(() => [...state.titleCounts.values()].reduce((sum, count) => sum + count, 0));
+
 watchEffect(() => {
-  document.title = [pageTitle.value, workspaceName.value, t(appTitle.value)].join(' · ');
+  const title = [pageTitle.value, workspaceName.value, t(appTitle.value)].join(' · ');
+  document.title = titleCount.value > 0 ? `(${String(titleCount.value)}) ${title}` : title;
 });
 </script>
 

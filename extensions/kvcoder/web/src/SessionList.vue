@@ -3,16 +3,22 @@ import { Plus } from '@lucide/vue';
 import { computed, onUnmounted, shallowRef, watch } from 'vue';
 import type { Session } from '../../src/index.ts';
 import { pageLanguage, titleText, toastProblem, useKvman } from './kvman.ts';
+import { needsYouNotices } from './needs-you-notices.ts';
 
 // The session list (ADR 0009, 104): translated titles, each chat's status, Today and Earlier, the open chat
-// highlighted, and "New chat", which opens the Chat page. It reads the list again every few seconds.
+// highlighted, and "New chat", which opens the Chat page. It reads the list again every few seconds. "Needs you" is for a
+// chat that waits on the person; one that waits on its helpers is working (ADR 0091, 6), and a chat that starts needing
+// the person while the page is hidden is notified (ADR 0091, 7).
 const props = defineProps<{ sessionId?: string | undefined }>();
 const kvman = useKvman();
 const sessions = shallowRef<Session[]>([]);
+const notify = needsYouNotices(kvman);
 
 async function load(): Promise<void> {
   try {
+    const workspaceId = kvman.workspace.value.id;
     sessions.value = await kvman.exec('kvcoder.session.list', { limit: 200 });
+    notify(workspaceId, sessions.value);
   } catch (error) {
     toastProblem(kvman, error);
   }
@@ -43,8 +49,8 @@ watch([() => props.sessionId, () => kvman.workspace.value.id], () => void load()
       <span class="kvc-group">{{ kvman.t(`kvcoder.ui.${group.key}`) }}</span>
       <button v-for="session in group.items" :key="session.id" type="button" class="kvc-session" :aria-current="session.id === props.sessionId ? 'page' : undefined" :data-test="`session-${session.id}`" @click="kvman.navigate('kvcoder.session', { sessionId: session.id })">
         <span>{{ titleText(kvman.t, session.title) }}</span>
-        <span v-if="session.status === 'running'" class="kvc-spin" :aria-label="kvman.t('kvcoder.ui.status.running')" data-test="running" />
-        <span v-else-if="session.status === 'waiting'" class="kvc-chip kvc-warn" data-test="needs-you">{{ kvman.t('kvcoder.ui.needsYou') }}</span>
+        <span v-if="session.waitingOn === 'person'" class="kvc-chip kvc-warn" data-test="needs-you">{{ kvman.t('kvcoder.ui.needsYou') }}</span>
+        <span v-else-if="session.status === 'running' || session.waitingOn === 'helpers'" class="kvc-spin" :aria-label="kvman.t('kvcoder.ui.status.running')" data-test="running" />
         <span v-else class="kvc-muted">{{ when(session) }}</span>
       </button>
     </template>

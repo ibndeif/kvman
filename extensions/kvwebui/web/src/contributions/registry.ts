@@ -11,7 +11,8 @@ import type { Values, View } from './views.ts';
 export type PageEntry = { id: string; namespace: string; title: string; params: string[]; view: View };
 export type NavEntry = { id: string; namespace: string; page: string; title: string; icon: string; order: number };
 export type PanelEntry = { id: string; namespace: string; title: string; icon: string; view: View };
-export type StatusEntry = { id: string; namespace: string; query: string; input: Values; text: string; params: Values; order: number };
+/** A status item; `titleCount` names the output field whose number the tab's title starts with (ADR 0091, 7). */
+export type StatusEntry = { id: string; namespace: string; query: string; input: Values; text: string; params: Values; order: number; titleCount?: string };
 export type LoadFailure = { extension: string; namespace: string; problem: Problem };
 
 // `configurations` holds each namespace's configuration view (ADR 0014, 2), kvwebui's own included.

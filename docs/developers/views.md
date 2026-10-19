@@ -13,7 +13,7 @@ Register a public query named `<namespace>.ui.get` that takes `{}` and returns:
   pages:  [{ id, title, params?: string[], view }],
   nav:    [{ id, page, title, icon, order }],     // icon: a lucide icon name, such as 'notebook'
   panels: [{ id, title, icon, view }],
-  status: [{ id, query, input, text, params?, order }],
+  status: [{ id, query, input, text, params?, order, titleCount? }],
   configuration?: view,                         // your extension's page under Extensions
 }
 ```
@@ -22,7 +22,7 @@ Register a public query named `<namespace>.ui.get` that takes `{}` and returns:
 - A page's URL is `/<namespace>/<page>`, followed by its params in order: `params: ['noteId']` gives `/notes/note/:noteId`.
 - A **nav** item points at one of your own pages, one that has no params.
 - A **panel** is a side area opened from a strip of icons; one is open at a time, and it shows on every page.
-- A **status** item is a line in the status bar fed by a query: `text` is a key whose `params` may use `{ "$output": field, "format"?: "compact" | "usd" }` read from the query's output (a dotted path is allowed). Its query reruns after every command the UI runs, when a job the UI started ends, and every 30 seconds.
+- A **status** item is a line in the status bar fed by a query: `text` is a key whose `params` may use `{ "$output": field, "format"?: "compact" | "usd" }` read from the query's output (a dotted path is allowed). Its query reruns after every command the UI runs, when a job the UI started ends, and every 30 seconds. With `titleCount`, a field of its output written as a `$output` field is, its number starts the tab's title as `(N) ` while it is above 0, so a person sees what waits from another tab.
 - The preset decides the home page: `kvwebui.home` is preset-only and names a page with no params, such as `notes.list`. Without a value it is the built-in Extensions page, so a project that depends on kvwebui passes `npm run check` without setting it.
 
 kvwebui validates every answer. An extension whose answer is invalid, or whose `ui.get` fails, contributes nothing, and a dismissible error card names it; others are unaffected. An answer is invalid when it names an unknown component or a query that isn't public, a nav item points at a page with params or at a page that isn't yours, an id repeats, an icon isn't a lucide name, a form's command isn't a known public command, a `$param` names a param its page doesn't declare, or a `setting` view is outside `configuration` or names a key that isn't yours.

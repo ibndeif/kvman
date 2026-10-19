@@ -1,5 +1,5 @@
 import type { Json, PresetState, Problem, Workspace } from '@kvman/sdk';
-import { inject, ref, shallowRef, type InjectionKey, type Ref, type ShallowRef } from 'vue';
+import { inject, reactive, ref, shallowRef, type InjectionKey, type Ref, type ShallowRef } from 'vue';
 import type { Router } from 'vue-router';
 import { createApi, type Api } from '../api/client.ts';
 import type { ExtensionInfo, Health, SettingInfo } from '../api/kernel.ts';
@@ -37,6 +37,8 @@ export type Kvwebui = {
   followed: Map<string, Promise<void>>;
   // Grows after each command the UI runs; the page's queries and the status items rerun when it changes.
   revision: Ref<number>;
+  // Each shown status item's number for the tab's title, by its id (ADR 0091, 7).
+  titleCounts: Map<string, number>;
   language: Ref<string>;
   booted: Ref<boolean>;
   bootProblem: ShallowRef<Problem | undefined>;
@@ -98,6 +100,7 @@ export function createState(router: Router, fetcher: typeof fetch, loader: Compo
     jobs: createJobStreams(api),
     followed: new Map(),
     revision: ref(0),
+    titleCounts: reactive(new Map<string, number>()),
     language: ref('en'),
     booted: ref(false),
     bootProblem: shallowRef(),

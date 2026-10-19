@@ -57,7 +57,7 @@ declare module '@kvman/sdk' {
   interface Queries {
     'kvcoder.session.list': { input: { limit: number }; output: Session[] };
     'kvcoder.session.get': { input: SessionId; output: Session };
-    'kvcoder.session.count': { input: { status?: Status }; output: { count: number } };
+    'kvcoder.session.count': { input: { status?: Status; waitingOn?: 'person' }; output: { count: number } };
     'kvcoder.context.get': { input: { sessionId: string }; output: { tokens: number; window: number | null; compactAt: number; estimated: boolean } };
     'kvcoder.message.list': { input: { sessionId: string; limit: number; afterSeq?: number; beforeSeq?: number }; output: { messages: Message[]; omitted: number } };
     'kvcoder.job.list': { input: SessionId; output: JobRow[] };

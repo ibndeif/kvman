@@ -1,4 +1,5 @@
 import { z, type Stored } from '@kvman/sdk';
+import type { WaitingOn } from './waiting-on.ts';
 import { checkSchema, outcomeSchema, pendingSchema, sourceSchema, statusSchema, thinkingSchema, titleSchema, usageBySchema, usageSchema, messageKindSchema, type MessageDoc, type QueuedDoc, type SessionDoc, type TurnDoc } from '../schemas/records.ts';
 
 // The public shapes of sessions, messages, and turns (plan 08 §8.1), from kvcoder's records.
@@ -16,6 +17,7 @@ export const sessionSchema = z.object({
   usageBy: usageBySchema.exactOptional(),
   durationMs: z.number(),
   checks: z.array(checkSchema).exactOptional(),
+  waitingOn: z.enum(['person', 'helpers']).nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -55,7 +57,8 @@ export type Session = z.output<typeof sessionSchema>;
 export type Message = z.output<typeof messageSchema>;
 export type Turn = z.output<typeof turnSchema>;
 
-export function sessionView(doc: Stored<SessionDoc>): Session {
+/** A session as it is shown, with who it waits on when the caller worked that out (ADR 0091, 6). */
+export function sessionView(doc: Stored<SessionDoc>, waitingOn: WaitingOn = null): Session {
   return {
     id: doc.id,
     title: doc.title,
@@ -70,6 +73,7 @@ export function sessionView(doc: Stored<SessionDoc>): Session {
     ...(Object.values(doc.usageBy).every((part) => part.input + part.output + part.cacheRead + part.cacheWrite === 0) ? {} : { usageBy: doc.usageBy }),
     durationMs: doc.durationMs,
     ...(doc.checks === null ? {} : { checks: doc.checks }),
+    waitingOn,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };

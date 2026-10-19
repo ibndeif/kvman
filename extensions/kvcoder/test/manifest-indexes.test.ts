@@ -4,7 +4,7 @@ import { extensionManifestSchema } from '@kvman/sdk';
 
 // The field sets kvcoder filters its growing collections by (plan 08 §8.4, ADR 0088, 3).
 const planned = {
-  sessions: [['parentId'], ['parentId', 'status'], ['stepJobId']],
+  sessions: [['parentId'], ['parentId', 'status'], ['stepJobId'], ['status']],
   messages: [['sessionId'], ['sessionId', 'block'], ['sessionId', 'kind'], ['sessionId', 'turnId', 'kind']],
   turns: [['sessionId']],
   queued: [['sessionId']],

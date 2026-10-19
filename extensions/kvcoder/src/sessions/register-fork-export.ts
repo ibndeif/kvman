@@ -6,6 +6,7 @@ import { messagesFrom } from '../turns/message-blocks.ts';
 import { newSession } from './new-session.ts';
 import { ownSession } from './session-lookup.ts';
 import { messageView, sessionSchema, sessionView, turnView } from './session-view.ts';
+import { waitingOnOf } from './waiting-on.ts';
 
 // Fork and export (plan 08 §8.6, ADR 0009, 103).
 
@@ -15,7 +16,7 @@ async function sessionExport(ctx: Ctx, sessionId: string): Promise<Record<string
   if (session === undefined) return {};
   const turns = (await allDocs((options) => store.turns.find({ sessionId }, options))).map(turnView);
   const messages = (await messagesFrom(ctx, sessionId, 0, session.nextSeq)).map(messageView);
-  return { session: sessionView(session), turns, messages };
+  return { session: sessionView(session, await waitingOnOf(ctx, sessionId)), turns, messages };
 }
 
 /** An export file's name: the title with characters files can't hold replaced, or the id for a chat with no title. */

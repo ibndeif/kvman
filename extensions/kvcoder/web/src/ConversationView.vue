@@ -5,6 +5,7 @@ import type { Json } from '@kvman/sdk';
 import type { Message } from '../../src/index.ts';
 import ArtifactPanel from './ArtifactPanel.vue';
 import MessageComposer from './MessageComposer.vue';
+import NotifyLine from './NotifyLine.vue';
 import ChatStart from './ChatStart.vue';
 import CommandProgress from './CommandProgress.vue';
 import ConversationHeader from './ConversationHeader.vue';
@@ -245,6 +246,7 @@ const key = (message: Message): string => message.id;
                 <MessageItem :message="message" :calls="calls" :finished-runs="finishedRuns" @open-artifact="executionMap.selectArtifact($event)" />
                 <span v-if="turnTotals.has(message.id)" class="kvc-muted" :title="turnTotals.get(message.id)?.tokens" data-test="turn-totals">{{ turnTotals.get(message.id)?.text }}</span>
               </template>
+              <NotifyLine v-if="session.waitingOn === 'person'" />
               <div v-if="stepsLeft > 0" class="kvc-notice" data-test="map-remaining">{{ kvman.t('kvcoder.ui.map.remaining', { count: stepsLeft }) }} <button type="button" class="kvc-link-button" data-test="map-show" @click="executionMap.shown.value = true">{{ kvman.t('kvcoder.ui.map.show') }}</button></div>
               <RecoveryActions v-if="recoverable" :session-id="session.id" :failed-with="failedWith" @sent="follow.resume(); conversation.refresh()" />
             <div v-if="live.summarizing" class="kvc-notice" data-test="summarizing">{{ kvman.t('kvcoder.ui.summarizing') }}</div>

@@ -67,7 +67,7 @@
       "@kvman/kvwebui": "^0.1.0"
     },
     "indexes": {
-      "sessions": [["parentId"], ["parentId", "status"], ["stepJobId"]],
+      "sessions": [["parentId"], ["parentId", "status"], ["stepJobId"], ["status"]],
       "messages": [["sessionId"], ["sessionId", "block"], ["sessionId", "kind"], ["sessionId", "turnId", "kind"]],
       "turns": [["sessionId"]],
       "queued": [["sessionId"]],

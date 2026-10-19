@@ -9,6 +9,7 @@ import { levelFor } from '../turns/model-info.ts';
 import { deleteSessionTree, newSession } from './new-session.ts';
 import { findSession, now, ownSession } from './session-lookup.ts';
 import { sessionSchema, sessionView } from './session-view.ts';
+import { waitingChats, waitingOnOf } from './waiting-on.ts';
 
 // Sessions (plan 08 §8.6). A subagent session is for reading: commands that change one fail (ADR 0009, 102).
 
@@ -27,21 +28,27 @@ export function registerSessions(ctx: Ctx): void {
     input: z.object({ limit: z.number().int().positive().max(1000) }),
     output: z.array(sessionSchema),
     public: true,
-    handle: async ({ limit }) => (await records(ctx.store).sessions.find({ parentId: null }, { limit, order: 'desc' })).map(sessionView),
+    handle: async ({ limit }) => {
+      const waiting = await waitingChats(ctx);
+      return (await records(ctx.store).sessions.find({ parentId: null }, { limit, order: 'desc' })).map((session) => sessionView(session, waiting.get(session.id) ?? null));
+    },
   });
   ctx.registerQuery('kvcoder.session.count', {
-    description: "Counts this workspace's top-level sessions, of one status or all.",
-    input: z.object({ status: statusSchema.exactOptional() }),
+    description: "Counts this workspace's top-level sessions, of one status or all, or the ones waiting on the person.",
+    input: z.object({ status: statusSchema.exactOptional(), waitingOn: z.literal('person').exactOptional() }),
     output: z.object({ count: z.number().int() }),
     public: true,
-    handle: async ({ status }) => ({ count: await records(ctx.store).sessions.count(status === undefined ? { parentId: null } : { parentId: null, status }) }),
+    handle: async ({ status, waitingOn }) => {
+      if (waitingOn !== undefined) return { count: [...(await waitingChats(ctx)).values()].filter((on) => on === waitingOn).length };
+      return { count: await records(ctx.store).sessions.count(status === undefined ? { parentId: null } : { parentId: null, status }) };
+    },
   });
   ctx.registerQuery('kvcoder.session.get', {
     description: 'Gives a session.',
     input: sessionIdSchema,
     output: sessionSchema,
     public: true,
-    handle: async ({ sessionId }) => sessionView(await findSession(ctx, sessionId)),
+    handle: async ({ sessionId }) => sessionView(await findSession(ctx, sessionId), await waitingOnOf(ctx, sessionId)),
   });
   ctx.registerCommand('kvcoder.session.rename', {
     description: 'Renames a session; kvcoder never retitles it after that.',

@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { CircleAlert } from '@lucide/vue';
-import { toRef } from 'vue';
+import { onUnmounted, toRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { problemKey, problemParams } from '../../api/problem-text.ts';
 import { useQuery } from '../../composables/use-query.ts';
 import { useKvwebui } from '../../state/kvwebui.ts';
 import type { StatusEntry } from '../../contributions/registry.ts';
-import { resolveValues, textParams } from '../../contributions/references.ts';
+import { resolve, resolveValues, textParams } from '../../contributions/references.ts';
 
 // A contributed status item (plan 06 §6.3): its text filled from its query's output; a failure shows an error mark
 // with the translated Problem as its tooltip (ADR 0009, 73). Its input reads the page's route params, and its numbers
@@ -15,6 +15,14 @@ const props = defineProps<{ item: StatusEntry; params: Readonly<Record<string, s
 const { t } = useI18n();
 const state = useKvwebui();
 const { data, problem } = useQuery(() => props.item.query, () => resolveValues(props.item.input, { params: props.params }), toRef(props, 'tick'));
+
+// An item with `titleCount` gives the tab's title its number while it is shown (ADR 0091, 7).
+watch(data, (output) => {
+  if (props.item.titleCount === undefined) return;
+  const count = resolve({ $output: props.item.titleCount }, { output: output ?? null });
+  state.titleCounts.set(props.item.id, typeof count === 'number' && count > 0 ? count : 0);
+});
+onUnmounted(() => state.titleCounts.delete(props.item.id));
 </script>
 
 <template>

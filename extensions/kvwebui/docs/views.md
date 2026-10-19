@@ -9,7 +9,7 @@ An extension adds UI by registering the public query `<namespace>.ui.get`, which
   pages:  [{ id, title, params?: string[], view }],
   nav:    [{ id, page, title, icon, order }],     // icon: a lucide name, such as 'puzzle'
   panels: [{ id, title, icon, view }],
-  status: [{ id, query, input, text, params?, order }],
+  status: [{ id, query, input, text, params?, order, titleCount? }],
   configuration?: view,                         // your extension's page under Extensions
 }
 ```

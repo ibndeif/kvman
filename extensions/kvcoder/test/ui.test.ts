@@ -16,7 +16,7 @@ describe("kvcoder's UI contributions (08 §8.7, ADR 0009, 104)", { timeout: 30_0
       ],
       nav: [{ id: 'chat', page: 'chat', icon: 'message-square' }],
       status: [
-        { id: 'waiting', query: 'kvcoder.session.count', input: { status: 'waiting' }, text: 'kvcoder.status.waiting', params: { count: { $output: 'count' } } },
+        { id: 'waiting', query: 'kvcoder.session.count', input: { waitingOn: 'person' }, text: 'kvcoder.status.waiting', params: { count: { $output: 'count' } }, titleCount: 'count' },
         { id: 'chat', query: 'kvcoder.session.get', input: { sessionId: { $param: 'sessionId' } }, text: 'kvcoder.status.chat', params: { input: { $output: 'usage.input', format: 'compact' }, output: { $output: 'usage.output', format: 'compact' }, cost: { $output: 'usage.cost', format: 'usd' } } },
       ],
     });

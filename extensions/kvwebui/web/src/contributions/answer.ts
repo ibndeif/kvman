@@ -12,7 +12,7 @@ export const contributionsSchema = z.object({
   pages: z.array(z.object({ id: localIdSchema, title: textKey, params: z.array(z.string().regex(/^[A-Za-z][A-Za-z0-9]*$/)).exactOptional(), view: viewSchema })),
   nav: z.array(z.object({ id: localIdSchema, page: localIdSchema, title: textKey, icon: z.string().min(1), order: z.number() })),
   panels: z.array(z.object({ id: localIdSchema, title: textKey, icon: z.string().min(1), view: viewSchema })),
-  status: z.array(z.object({ id: localIdSchema, query: z.string().min(1), input: values, text: textKey, params: values.exactOptional(), order: z.number() })),
+  status: z.array(z.object({ id: localIdSchema, query: z.string().min(1), input: values, text: textKey, params: values.exactOptional(), order: z.number(), titleCount: z.string().min(1).exactOptional() })),
   configuration: viewSchema.exactOptional(),
 });
 
