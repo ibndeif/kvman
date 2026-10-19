@@ -25,7 +25,7 @@ function mcpTools(payload: JsonFields): string | undefined {
 function subjectOf(connector: string, command: string, payload: JsonFields): string | undefined {
   if (command === 'exec') return connector === 'shell' ? text(payload['line']) : joined(' ', [connector, text(payload['args'])]);
   if (command === 'help') return text(payload['command']);
-  if (connector === 'fs' && command === 'search') return text(payload['pattern']);
+  if (connector === 'fs' && (command === 'search' || command === 'find')) return text(payload['pattern']);
   if (connector === 'delegate' && command === 'run') return joined(' · ', [text(payload['worker']), text(payload['title'])]);
   if (connector === 'mcp') return joined(' · ', [text(payload['server']), mcpTools(payload)]);
   return text(payload['path']) ?? text(payload['id']);

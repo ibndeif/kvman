@@ -267,7 +267,7 @@ first fetch per domain asks.
 | Item | Phase | Decision | ADR | Scenarios | Status |
 |---|---|---|---|---|---|
 | 4 `replaceAll` | A | A1 | 0090 | QA58 | done |
-| 2 `fs find` | A | A2 | 0090 | QA58 | decided |
+| 2 `fs find` | A | A2 | 0090 | QA58 | done |
 | 3 search context | A | A3 | 0090 | QA58 | decided |
 | 7 limits | A | A4 | 0090 | QA58 | decided |
 | 18 failure actions | A | A5 | 0090 | QA58 | decided |

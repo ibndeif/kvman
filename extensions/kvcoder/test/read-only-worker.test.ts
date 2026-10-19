@@ -44,7 +44,7 @@ describe('a read-only worker (KVC-33, ADR 0056)', { timeout: 30_000 }, () => {
     expect(withoutHelperId(toolResults(fake).at(-1) ?? '')).toBe('report ready');
   });
 
-  it("M2.4-E172 a read-only helper's prompt lists only what it may run, and keeps that when the worker is edited", async () => {
+  it("M2.4-E172 and QA58-E8 a read-only helper's prompt lists only what it may run, and keeps that when the worker is edited", async () => {
     const { kernel, fake } = await kvcoder.start({ settings: workers(worker('strict', { readOnly: true }), worker('free')) });
     const sessionId = await newSession(kernel);
     fake.reply(runs(delegate('strict'), delegate('free')), says('one'), says('two'), says('done'));
@@ -54,7 +54,8 @@ describe('a read-only worker (KVC-33, ADR 0056)', { timeout: 30_000 }, () => {
     const strict = prompts.find((prompt) => prompt.includes('You are read-only here'));
     const free = prompts.find((prompt) => !prompt.includes('You are read-only here'));
     expect(strict).toContain('- fs: ');
-    expect(strict).toMatch(/\n {2}read +\{ path, fromLine\?, fromColumn\?, lines\? \}\n {2}list +\{ path\? \}\n {2}search +\{ pattern, path\?, literal\?, glob\? \}\n {2}help +\{ command\? \}/);
+    // QA58-E8: a read-only helper has fs find too.
+    expect(strict).toMatch(/\n {2}read +\{ path, fromLine\?, fromColumn\?, lines\? \}\n {2}list +\{ path\? \}\n {2}find +\{ pattern, path\? \}\n {2}search +\{ pattern, path\?, literal\?, glob\? \}\n {2}help +\{ command\? \}/);
     expect(strict).not.toContain('- shell: ');
     expect(strict).toContain('- todo: Keep a todo list. Commands: list, help.');
     expect(free).toContain('- shell: ');

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { File, Folder } from '@lucide/vue';
 import { computed, ref } from 'vue';
-import { editResult, listResult, readResult, runResult, searchResult } from './call-results.ts';
+import { editResult, listResult, pathsResult, readResult, runResult, searchResult } from './call-results.ts';
 import { sizeText } from './call-summary.ts';
 import { callKind, type CallView } from './call-view.ts';
 import { fieldValue } from './field-rows.ts';
@@ -13,7 +13,7 @@ import { useKvman } from './kvman.ts';
 import RunOutput from './RunOutput.vue';
 import { folded, numberedLines } from './shown-lines.ts';
 
-// What a call returned, by its kind (ADR 0036, 3): an edit's count, a read's numbered lines, a list's rows, a search's
+// What a call returned, by its kind (ADR 0036, 3): an edit's count, a read's numbered lines, a list's rows, a find's paths (ADR 0090, 2), a search's
 // matches under each file, a helper's answer in Markdown, a background run's row and output (ADR 0062, 2). Any other result that is JSON shows as fields, and the rest as text.
 const props = defineProps<{ view: CallView; output: string; result?: unknown }>();
 const kvman = useKvman();
@@ -22,6 +22,9 @@ const edited = computed(() => (kind.value === 'edit' ? editResult(props.result) 
 const read = computed(() => (kind.value === 'read' ? readResult(props.result) : undefined));
 const entries = computed(() => (kind.value === 'list' ? listResult(props.result) : undefined));
 const files = computed(() => (kind.value === 'search' ? searchResult(props.result) : undefined));
+const paths = computed(() => (kind.value === 'find' ? pathsResult(props.result) : undefined));
+const allPaths = ref(false);
+const shownPaths = computed(() => folded(paths.value ?? [], allPaths.value));
 const run = computed(() => (kind.value === 'run-output' ? runResult(props.result) : undefined));
 const allEntries = ref(false);
 const shownEntries = computed(() => folded(entries.value ?? [], allEntries.value));
@@ -39,6 +42,13 @@ const asFields = computed(() => kind.value !== 'line' && typeof props.result ===
       <span v-if="entry.kind === 'file'" class="kvc-muted" data-test="call-entry-size">{{ sizeText(kvman.t, entry.bytes) }}</span>
     </div>
     <FoldButton :count="entries.length" :open="allEntries" @toggle="allEntries = !allEntries" />
+  </div>
+  <div v-else-if="paths !== undefined" class="kvc-block kvc-entries" data-test="call-paths">
+    <div v-for="found in shownPaths" :key="found" class="kvc-entry" data-test="call-path">
+      <File :size="14" aria-hidden="true" />
+      <span class="kvc-mono" dir="auto">{{ found }}</span>
+    </div>
+    <FoldButton :count="paths.length" :open="allPaths" @toggle="allPaths = !allPaths" />
   </div>
   <template v-else-if="files !== undefined">
     <div v-for="file in files" :key="file.path" class="kvc-block" data-test="call-file">

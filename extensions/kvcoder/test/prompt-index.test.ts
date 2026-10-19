@@ -37,6 +37,7 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
       '  help { command? }',
       '  read     { path, fromLine?, fromColumn?, lines? }',
       '  list     { path? }',
+      '  find     { pattern, path? }',
       '  search   { pattern, path?, literal?, glob? }',
       '  write    { path, content, risky }',
       '  edit     { path, edits: [{ oldText, newText, replaceAll? }], risky }',
@@ -94,6 +95,7 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
     expect(index.filter((line) => line.startsWith('  '))).toEqual([
       '  read     { path, fromLine?, fromColumn?, lines? }',
       '  list     { path? }',
+      '  find     { pattern, path? }',
       '  search   { pattern, path?, literal?, glob? }',
       '  write    { path, content, risky }',
       '  edit     { path, edits: [{ oldText, newText, replaceAll? }], risky }',

@@ -4,6 +4,7 @@ import { z, type Ctx } from '@kvman/sdk';
 import { applyEdits, type EditedText } from '../files/edit-text.ts';
 import { changeFile, undoChange } from '../files/file-change.ts';
 import { assembleParts, partsLimit, savePart } from '../files/file-parts.ts';
+import { findPaths } from '../files/find-paths.ts';
 import { listEntries } from '../files/list-entries.ts';
 import { readLines } from '../files/read-file.ts';
 import { searchText } from '../files/search-text.ts';
@@ -20,7 +21,7 @@ import { edits, risky } from './payload-fields.ts';
 
 /** What the prompt's index says the connector is for. */
 export const fsDescription =
-  'Read, list, search, create, and change files in the workspace folder. Use it instead of cat, ls, grep, or shell redirection: read a file before you change it (a change to a file this chat has not read, or that changed since, fails), write for a new file or a full rewrite (a long file in pieces with part, then assemble), one file per call, and edit for exact text replacements in an existing file.';
+  'Read, list, search, create, and change files in the workspace folder. Use it instead of cat, ls, find, grep, or shell redirection: find a file by name or path pattern with find, not by listing folder after folder; read a file before you change it (a change to a file this chat has not read, or that changed since, fails), write for a new file or a full rewrite (a long file in pieces with part, then assemble), one file per call, and edit for exact text replacements in an existing file.';
 
 const filePath = (what: string) => z.string().min(1).describe(`${what}, relative to the workspace folder, or absolute inside it.`);
 
@@ -32,6 +33,10 @@ const payloads = {
     lines: z.number().int().min(1).max(2000).describe('How many lines to return: 2000 by default, which is also the most.').exactOptional(),
   }),
   list: z.strictObject({ path: z.string().describe('The folder to list, relative to the workspace folder, or absolute inside it; the workspace folder when left out or empty.').exactOptional() }),
+  find: z.strictObject({
+    pattern: z.string().min(1).describe('A glob: ** is any run of characters, * any run but /, and ? one character but /. With a /, it matches the path from path, as src/**/*.ts; without one, the file name, as *.test.ts.'),
+    path: z.string().describe('The folder to look under, relative to the workspace folder, or absolute inside it; the workspace folder when left out or empty.').exactOptional(),
+  }),
   search: z.strictObject({
     pattern: z.string().min(1).describe('A JavaScript regular expression, matched against each line, case-sensitive; plain text with literal.'),
     path: z.string().describe('The file or folder to search, relative to the workspace folder, or absolute inside it; the workspace folder when left out or empty.').exactOptional(),
@@ -48,6 +53,7 @@ const payloads = {
 export const fsCommands = {
   read: { registration: 'kvcoder.fs.file.get', description: 'Reads lines of a text file.', payload: payloads.read, asks: false, bounded: true },
   list: { registration: 'kvcoder.fs.entry.list', description: 'Lists the files and folders of one folder.', payload: payloads.list, asks: false, bounded: true },
+  find: { registration: 'kvcoder.fs.path.list', description: 'Finds the files whose path matches a glob, under a folder, newest first.', payload: payloads.find, asks: false, bounded: true },
   search: { registration: 'kvcoder.fs.text.search', description: 'Finds the lines that match a regular expression, in a file or under a folder.', payload: payloads.search, asks: false, bounded: true },
   write: { registration: 'kvcoder.fs.write', description: 'Creates a file and its parent folders, or replaces the file.', payload: payloads.write, asks: true },
   edit: { registration: 'kvcoder.fs.edit', description: 'Replaces exact pieces of text in an existing file; if one replacement fails, nothing is written.', payload: payloads.edit, asks: true },
@@ -132,6 +138,12 @@ export function registerFsConnector(ctx: Ctx): void {
     input: callInput(payloads.list),
     output: z.object({ path: z.string(), entries: z.array(z.object({ name: z.string(), kind: z.enum(['file', 'folder']), bytes: z.number().int() })), truncated: z.boolean() }),
     handle: ({ payload }) => asProblems(() => listEntries(ctx.job.workspace.path, payload)),
+  });
+  ctx.registerQuery('kvcoder.fs.path.list', {
+    description: commands.find.description,
+    input: callInput(payloads.find),
+    output: z.object({ paths: z.array(z.string()), truncated: z.boolean() }),
+    handle: ({ payload }) => asProblems(() => findPaths(ctx.job.workspace.path, payload, ctx.job.signal)),
   });
   ctx.registerQuery('kvcoder.fs.text.search', {
     description: commands.search.description,

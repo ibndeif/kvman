@@ -48,6 +48,13 @@ describe("a closed card's line (08 §8.7, ADR 0036, 2)", () => {
     expect(part(safe, 'call-risky').exists()).toBe(false);
   });
 
+  it('QA58-H13 a find call has its own line, and opened lists its paths', async () => {
+    const found = await ranCard(call('fs', 'find', { pattern: '*.ts' }), { paths: ['src/a.ts', 'src/b.ts'], truncated: false });
+    expect(closedLine(found)).toBe('Find *.ts 2 files');
+    const cut = await ranCard(call('fs', 'find', { pattern: '*.ts' }), { paths: ['a.ts'], truncated: true });
+    expect(closedLine(cut)).toBe('Find *.ts The first 1 files');
+  });
+
   it('QA48-E8 a cut list or search says the first', async () => {
     const list = await ranCard(call('fs', 'list', {}), { path: '.', entries: Array.from({ length: 1000 }, (_entry, index) => ({ name: `f${index}`, kind: 'file', bytes: 1 })), truncated: true });
     expect(closedLine(list)).toBe('List . The first 1000 entries');

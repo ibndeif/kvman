@@ -29,6 +29,12 @@ export function listResult(result: unknown): Entry[] | undefined {
   return Array.isArray(entries) ? entries.flatMap(entryOf) : undefined;
 }
 
+/** The paths `fs find` returned (ADR 0090, 2). */
+export function pathsResult(result: unknown): string[] | undefined {
+  const paths: unknown = fields(result)['paths'];
+  return Array.isArray(paths) ? paths.filter((entry): entry is string => typeof entry === 'string') : undefined;
+}
+
 function matchesOf(value: unknown): FileMatches[] {
   const { path, matches } = fields(value);
   if (typeof path !== 'string' || !Array.isArray(matches)) return [];

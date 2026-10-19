@@ -45,7 +45,7 @@ describe("a connector's help (08 §8.3, ADR 0011, 4)", { timeout: 30_000 }, () =
   it('QA18-E8 help of a command the connector does not have fails NOT_FOUND, and help takes nothing else', async () => {
     const { results } = await looked(nothing, [command('todo', 'help', { command: 'nope' }), command('fs', 'help', { command: 'nope' }), command('todo', 'help', { topic: 'add' })]);
     expect(results[0]).toBe('error NOT_FOUND: todo has no command nope. Its commands are: add, wait, fail, list, help.');
-    expect(results[1]).toBe('error NOT_FOUND: fs has no command nope. Its commands are: read, list, search, write, edit, undo, part, assemble, help.');
+    expect(results[1]).toBe('error NOT_FOUND: fs has no command nope. Its commands are: read, list, find, search, write, edit, undo, part, assemble, help.');
     expect(results[2]).toBe('error VALIDATION_FAILED: help takes { "command"? }.');
   });
 });

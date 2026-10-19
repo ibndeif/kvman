@@ -65,6 +65,12 @@ function entriesText(t: Translate, result: Record<string, unknown>): string | un
   return t(result['truncated'] === true ? 'kvcoder.ui.call.entriesFirst' : 'kvcoder.ui.call.entries', { count: entries.length });
 }
 
+function pathsText(t: Translate, result: Record<string, unknown>): string | undefined {
+  const paths: unknown = result['paths'];
+  if (!Array.isArray(paths)) return undefined;
+  return t(result['truncated'] === true ? 'kvcoder.ui.call.filesFirst' : 'kvcoder.ui.call.files', { count: paths.length });
+}
+
 function matchesText(t: Translate, result: Record<string, unknown>): string | undefined {
   const files: unknown = result['files'];
   if (!Array.isArray(files)) return undefined;
@@ -88,6 +94,7 @@ function fsSummary(t: Translate, command: string, payload: Record<string, unknow
   if (command === 'write') return summary(t('kvcoder.ui.call.write'), path, done === undefined ? undefined : writtenText(t, done));
   if (command === 'read') return summary(t('kvcoder.ui.call.read'), path, done === undefined ? undefined : linesText(t, done));
   if (command === 'list') return summary(t('kvcoder.ui.call.list'), path ?? '.', done === undefined ? undefined : entriesText(t, done));
+  if (command === 'find') return summary(t('kvcoder.ui.call.find'), text(payload['pattern']), done === undefined ? undefined : pathsText(t, done));
   if (command === 'search') return summary(t('kvcoder.ui.call.search'), text(payload['pattern']), done === undefined ? undefined : matchesText(t, done));
   return undefined;
 }

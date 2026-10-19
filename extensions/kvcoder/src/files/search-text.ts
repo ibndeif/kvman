@@ -1,10 +1,9 @@
-import { execFile } from 'node:child_process';
-import { lstat, readdir, readFile, realpath, stat } from 'node:fs/promises';
+import { readFile, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
-import { promisify } from 'node:util';
 import { createContext, Script } from 'node:vm';
 import { invalid, notFound } from '../problems.ts';
 import { decodeText, isMissing } from './read-file.ts';
+import { filesIn, globMatcher } from './workspace-files.ts';
 import { resolveInWorkspace } from './workspace-path.ts';
 
 // `fs search` (plan 08 §8.5, ADR 0011, 8; ADR 0055): the lines that match a regular expression or a plain text, in a
@@ -27,9 +26,6 @@ export type FileMatches = { path: string; matches: Match[] };
 export type SearchResult = { files: FileMatches[]; truncated: boolean; reason?: 'matches' | 'time' };
 export type SearchInput = { pattern: string; path?: string | undefined; literal?: boolean | undefined; glob?: string | undefined };
 
-const skipped = (name: string): boolean => name === 'node_modules' || name.startsWith('.');
-const run = promisify(execFile);
-
 function expression(pattern: string): RegExp {
   try {
     return new RegExp(pattern);
@@ -37,51 +33,6 @@ function expression(pattern: string): RegExp {
     if (error instanceof SyntaxError) throw invalid(`The pattern isn't a regular expression: ${error.message}`, { pattern });
     throw error;
   }
-}
-
-// A glob as an expression: `**` is any run, `*` any run but `/`, `?` one character but `/`.
-function globExpression(glob: string): RegExp {
-  const body = glob.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*\*\/?|\*|\?/g, (found) => (found.startsWith('**') ? '.*' : found === '*' ? '[^/]*' : '[^/]'));
-  return new RegExp(`^${body}$`);
-}
-
-// Every file under `folder`, in path order.
-async function* filesUnder(folder: string, signal: AbortSignal): AsyncGenerator<string> {
-  for (const entry of (await readdir(folder, { withFileTypes: true })).sort((first, second) => (first.name < second.name ? -1 : 1))) {
-    signal.throwIfAborted();
-    const child = path.join(folder, entry.name);
-    if (skipped(entry.name)) continue;
-    if (entry.isDirectory()) yield* filesUnder(child, signal);
-    else if (entry.isFile()) yield child;
-  }
-}
-
-// Git lists symlinks too, and a folder on the way may be one: only a regular file whose real path is under the
-// searched folder is read, as the walk never follows a link.
-async function regularInside(file: string, folder: string): Promise<boolean> {
-  const found = await lstat(file).catch(() => undefined);
-  if (found?.isFile() !== true) return false;
-  const inside = path.relative(folder, await realpath(file));
-  return inside !== '' && !inside.startsWith('..') && !path.isAbsolute(inside);
-}
-
-// The files Git lists under `folder` as tracked or untracked and not ignored; `undefined` where Git can't say.
-// A repository's own configuration may name a program as its file monitor, which listing would run: it is turned off.
-async function gitFiles(folder: string, signal: AbortSignal): Promise<string[] | undefined> {
-  let listed: string;
-  try {
-    listed = (await run('git', ['-c', 'core.fsmonitor=false', 'ls-files', '--cached', '--others', '--exclude-standard', '-z'], { cwd: folder, signal, maxBuffer: 64 * 1024 * 1024 })).stdout;
-  } catch {
-    signal.throwIfAborted();
-    return undefined;
-  }
-  const real = await realpath(folder);
-  const files: string[] = [];
-  for (const name of listed.split('\0').filter((entry) => entry !== '' && !entry.split('/').some(skipped)).sort()) {
-    const file = path.join(real, name);
-    if (await regularInside(file, real)) files.push(file);
-  }
-  return files;
 }
 
 const matching = new Script('lines.flatMap((line, index) => (pattern.test(line) ? [index] : []))');
@@ -107,9 +58,8 @@ export async function searchText(workspace: string, input: SearchInput, signal: 
     throw error;
   });
   const base = await realpath(workspace);
-  const named = input.glob === undefined ? undefined : globExpression(input.glob);
-  const wanted = (file: string): boolean => named === undefined || named.test(input.glob?.includes('/') === true ? path.relative(target, file).split(path.sep).join('/') : path.basename(file));
-  const files = !found.isDirectory() ? [target] : ((await gitFiles(target, signal)) ?? filesUnder(target, signal));
+  const wanted = input.glob === undefined ? () => true : globMatcher(input.glob, target);
+  const files = !found.isDirectory() ? [target] : await filesIn(target, signal);
   const grouped: FileMatches[] = [];
   const started = Date.now();
   let count = 0;

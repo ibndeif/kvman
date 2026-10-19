@@ -58,7 +58,7 @@ describe('the fs connector (08 §8.5, ADR 0009, 157 to 160)', { timeout: 30_000 
 
   it('QA4-H7 fs help lists its commands', async () => {
     const { results } = await run([command('fs', 'help')]);
-    expect(results[0]).toMatch(/^fs: Read, list, search, create, and change files in the workspace folder\..*\n\nCommands:\n {2}read +.*\n {2}list +.*\n {2}search +.*\n {2}write +.*\n {2}edit +.*\n {2}undo +.*\n {2}part +.*\n {2}assemble +.*\n {2}help +/);
+    expect(results[0]).toMatch(/^fs: Read, list, search, create, and change files in the workspace folder\..*\n\nCommands:\n {2}read +.*\n {2}list +.*\n {2}find +.*\n {2}search +.*\n {2}write +.*\n {2}edit +.*\n {2}undo +.*\n {2}part +.*\n {2}assemble +.*\n {2}help +/);
   });
 
   it('QA4-H12 two edits of one file in one reply both land', async () => {
@@ -111,7 +111,7 @@ describe('the fs connector (08 §8.5, ADR 0009, 157 to 160)', { timeout: 30_000 
       fsCall('edit', { path: 'a.txt', edits: [] }),
       fsCall('write', { path: 'a.txt', content: 'x', mode: 'append' }),
     ]);
-    expect(results[0]).toBe('error NOT_FOUND: fs has no command nope. Its commands are: read { path, fromLine?, fromColumn?, lines? }, list { path? }, search { pattern, path?, literal?, glob? }, write { path, content, risky }, edit { path, edits: [{ oldText, newText, replaceAll? }], risky }, undo { path, risky }, part { path, part, content }, assemble { path, risky }, help.');
+    expect(results[0]).toBe('error NOT_FOUND: fs has no command nope. Its commands are: read { path, fromLine?, fromColumn?, lines? }, list { path? }, find { pattern, path? }, search { pattern, path?, literal?, glob? }, write { path, content, risky }, edit { path, edits: [{ oldText, newText, replaceAll? }], risky }, undo { path, risky }, part { path, part, content }, assemble { path, risky }, help.');
     expect(results[1]).toMatch(/^error VALIDATION_FAILED: path: .*The payload of fs write is\n\{ path, content, risky \}$/s);
     expect(results[2]).toMatch(/^error VALIDATION_FAILED: edits: /);
     expect(results[3]).toMatch(/^error VALIDATION_FAILED: payload: .*mode/);
