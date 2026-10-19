@@ -1,6 +1,5 @@
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
-import type { JsonObject } from '@kvman/sdk';
 import type { Message } from '../../src/index.ts';
 import ConversationView from '../../web/src/ConversationView.vue';
 import { createFakeKvman } from './support/fake-kvman.ts';
@@ -8,7 +7,7 @@ import { answer, message, mounted, serve, session, turn, user } from './support/
 
 // A turn as a story (08 §8.7, ADR 0093, 1): calls in a row fold into one row; the final answer is marked.
 let ids = 0;
-function called(connector: string, command: string, payload: JsonObject, result: { text: string; isError?: boolean; durationMs?: number }, turnId = 't1'): Message[] {
+function called(connector: string, command: string, payload: Message['content'], result: { text: string; isError?: boolean; durationMs?: number }, turnId = 't1'): Message[] {
   ids += 1;
   const id = `c${ids}`;
   return [

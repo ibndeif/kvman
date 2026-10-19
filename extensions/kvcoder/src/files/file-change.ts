@@ -3,6 +3,7 @@ import { chmodSync, readFileSync, renameSync, rmSync, statSync, unlinkSync, writ
 import { readFile } from 'node:fs/promises';
 import { ProblemError, type Ctx } from '@kvman/sdk';
 import { invalid, notFound } from '../problems.ts';
+import { executionRootInTx } from '../sessions/execution-root.ts';
 import { now } from '../sessions/session-lookup.ts';
 import { txRecords, type TxRecords } from '../store/collections.ts';
 import { resolveInWorkspace } from './workspace-path.ts';
@@ -63,6 +64,14 @@ function requireSeen(store: TxRecords, file: ChangedFile, bytes: Buffer): void {
   if (view.fingerprint !== fingerprintOf(bytes)) throw invalid(`${file.shown} changed since this chat read it. Read it again with fs read, then make the change.`, { path: file.shown });
 }
 
+// The chat at the root records each file its tree changed, once, with when it last did (ADR 0093, 2).
+function noteChange(store: TxRecords, file: ChangedFile): void {
+  const sessionId = executionRootInTx(store, file.sessionId)?.id ?? file.sessionId;
+  const [noted] = store.fileChanges.find({ sessionId, path: file.real }, { limit: 1 });
+  if (noted === undefined) store.fileChanges.insert({ sessionId, path: file.real, firstAt: now(), lastAt: now() });
+  else store.fileChanges.update(noted.id, { lastAt: now() });
+}
+
 function saveCopy(store: TxRecords, file: ChangedFile, previous: Buffer | undefined, written: string): void {
   if (previous !== undefined && previous.length > copyLimit) return;
   store.fileBackups.insert({ sessionId: file.sessionId, path: file.real, previous: previous === undefined ? null : previous.toString('base64'), written, createdAt: now() });
@@ -80,6 +89,7 @@ export function changeFile<Value>(ctx: Ctx, file: ChangedFile, plan: (previous: 
     const written = fingerprintOf(planned.content);
     saveCopy(store, file, found?.bytes, written);
     setView(store, file, written);
+    noteChange(store, file);
     replace(file.real, planned.content, found?.mode, ctx.job.id);
     return { ...planned.value, created: found === undefined };
   });
@@ -94,6 +104,7 @@ export function undoChange(ctx: Ctx, file: ChangedFile): Promise<{ path: string;
     const found = existing(file);
     if (found === undefined || fingerprintOf(found.bytes) !== copy.written) throw invalid(`${file.shown} changed since that change, so it isn't undone. Read it to see what it holds now.`, { path: file.shown });
     store.fileBackups.delete(copy.id);
+    noteChange(store, file);
     const previous = copy.previous === null ? undefined : Buffer.from(copy.previous, 'base64');
     if (previous === undefined) {
       for (const view of store.fileViews.find({ sessionId: file.sessionId, path: file.real }, { limit: 1 })) store.fileViews.delete(view.id);

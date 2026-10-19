@@ -67,6 +67,7 @@ export function serve(fake: FakeKvman, world: World): void {
   fake.handle('kvcoder.job.list', () => world.jobs ?? []);
   fake.handle('kvcoder.map.get', () => world.map ?? null);
   fake.handle('kvcoder.artifact.list', () => world.artifacts ?? []);
+  fake.handle('kvcoder.change.list', () => ({ files: [], diffs: true }));
   fake.handle('kvcoder.artifact.get', (input) => {
     const found = (world.artifactContents ?? {})[String(input['id'])];
     if (found === undefined) throw Object.assign(new Error(`Unknown artifact ${String(input['id'])}`), { problem: { code: 'NOT_FOUND', message: 'Unknown artifact.', params: {} } });

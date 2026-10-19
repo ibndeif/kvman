@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Ellipsis, PanelRight, Workflow } from '@lucide/vue';
+import { Ellipsis, FileDiff, PanelRight, Workflow } from '@lucide/vue';
 import { computed, ref, useTemplateRef } from 'vue';
 import type { Session } from '../../src/index.ts';
 import { contextLine, costParts, titleText, tokensUsed, totals, useKvman } from './kvman.ts';
@@ -14,8 +14,8 @@ import type { WaitingAction } from './use-session-actions.ts';
 // It spans the conversation and the artifact panel (ADR 0018, 8).
 // The menu and its delete confirmation close on a press outside them and on Escape. The conversation runs what the
 // menu picks, and while one of its actions is `working` the four that wait are disabled (ADR 0019, 2 and 3).
-const props = withDefaults(defineProps<{ session: Session; tab: 'chat' | 'prompt'; turns: number; context?: ContextSize | null; runningSince?: string | undefined; artifacts?: number; artifactsOpen?: boolean; map?: { done: number; total: number } | undefined; mapOpen?: boolean; working?: boolean }>(), { context: null, runningSince: undefined, artifacts: 0, artifactsOpen: false, map: undefined, mapOpen: false, working: false });
-const emit = defineEmits<{ tab: [tab: 'chat' | 'prompt']; action: [name: WaitingAction | 'delete', argument: string]; toggleArtifacts: []; toggleMap: []; backgroundRunning: [count: number] }>();
+const props = withDefaults(defineProps<{ session: Session; tab: 'chat' | 'prompt'; turns: number; context?: ContextSize | null; runningSince?: string | undefined; artifacts?: number; artifactsOpen?: boolean; map?: { done: number; total: number } | undefined; mapOpen?: boolean; changes?: number; changesOpen?: boolean; working?: boolean }>(), { context: null, runningSince: undefined, artifacts: 0, artifactsOpen: false, map: undefined, mapOpen: false, changes: 0, changesOpen: false, working: false });
+const emit = defineEmits<{ tab: [tab: 'chat' | 'prompt']; action: [name: WaitingAction | 'delete', argument: string]; toggleArtifacts: []; toggleMap: []; toggleChanges: []; backgroundRunning: [count: number] }>();
 const kvman = useKvman();
 const menu = ref(false);
 const renaming = ref<string | null>(null);
@@ -30,6 +30,7 @@ const summaryHint = computed(() => `${kvman.t('kvcoder.ui.turns', { count: props
 const filled = computed(() => contextLine(kvman.t, props.context));
 const mapLabel = computed(() => (props.map === undefined ? '' : kvman.t('kvcoder.ui.map.toggle', props.map)));
 const artifactsLabel = computed(() => kvman.t('kvcoder.ui.artifacts.toggle', { count: props.artifacts }));
+const changesLabel = computed(() => kvman.t('kvcoder.ui.changes.toggle', { count: props.changes }));
 
 function closeMenus(): void {
   menu.value = false;
@@ -62,6 +63,7 @@ function rename(): void {
     </div>
     <JobsChip :session-id="props.session.id" :stamp="props.session.updatedAt" @running="(count) => emit('backgroundRunning', count)" />
     <button v-if="props.map !== undefined" type="button" class="kvc-button" :aria-pressed="props.mapOpen" :aria-label="mapLabel" :title="mapLabel" data-test="map-toggle" @click="emit('toggleMap')"><Workflow :size="16" aria-hidden="true" />{{ kvman.t('kvcoder.ui.map.count', props.map) }}</button>
+    <button v-if="props.changes > 0" type="button" class="kvc-button" :aria-pressed="props.changesOpen" :aria-label="changesLabel" :title="changesLabel" data-test="changes-toggle" @click="emit('toggleChanges')"><FileDiff :size="16" aria-hidden="true" />{{ props.changes }}</button>
     <button v-if="props.artifacts > 0" type="button" class="kvc-button" :aria-pressed="props.artifactsOpen" :aria-label="artifactsLabel" :title="artifactsLabel" data-test="artifacts-toggle" @click="emit('toggleArtifacts')"><PanelRight :size="16" aria-hidden="true" />{{ props.artifacts }}</button>
     <div ref="more" style="position: relative">
       <button type="button" class="kvc-button kvc-ghost" :aria-label="kvman.t('kvcoder.ui.menu')" :aria-expanded="menu" data-test="chat-menu" @click="menu = !menu; confirming = false"><Ellipsis :size="18" /></button>

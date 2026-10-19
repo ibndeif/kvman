@@ -2,18 +2,16 @@
 import { ArrowDown } from '@lucide/vue';
 import { computed, nextTick, ref, useTemplateRef, watch } from 'vue';
 import type { Json } from '@kvman/sdk';
-import type { Message } from '../../src/index.ts';
 import ArtifactPanel from './ArtifactPanel.vue';
 import MessageComposer from './MessageComposer.vue';
 import NotifyLine from './NotifyLine.vue';
 import ChatStart from './ChatStart.vue';
 import CommandProgress from './CommandProgress.vue';
 import ConversationHeader from './ConversationHeader.vue';
-import { fields, problemKey, problemOf, toastProblem, tokensUsed, totals, useKvman } from './kvman.ts';
+import { fields, problemKey, problemOf, toastProblem, useKvman } from './kvman.ts';
 import ActivityLine from './ActivityLine.vue';
 import { messageDraft, sendDraft, type Outgoing } from './message-drafts.ts';
-import { callViews, lastTyped, textOf } from './message-parts.ts';
-import { foldedRows, type Row } from './call-folds.ts';
+import { callViews, lastTyped } from './message-parts.ts';
 import CallFold from './CallFold.vue';
 import MessageItem from './MessageItem.vue';
 import PendingCards from './PendingCards.vue';
@@ -25,6 +23,8 @@ import SubagentCard from './SubagentCard.vue';
 import WorkerCard from './WorkerCard.vue';
 import { useAnswers } from './use-answers.ts';
 import { useArtifacts } from './use-artifacts.ts';
+import { useChanges, useChangesPanel } from './use-changes.ts';
+import { useStory } from './use-story.ts';
 import { useConversation } from './use-conversation.ts';
 import { useExecutionMap } from './use-execution-map.ts';
 import { useFollowLatest } from './use-follow-latest.ts';
@@ -47,26 +47,15 @@ const conversation = useConversation(kvman, () => sessionId.value, readFailed, (
 const { session, messages, omitted, turns, live, children, helpers } = conversation;
 const artifacts = useArtifacts(kvman, () => sessionId.value, () => session.value?.updatedAt, readFailed);
 const executionMap = useExecutionMap(kvman, () => sessionId.value, () => session.value?.updatedAt, artifacts, readFailed);
-const panelShown = computed(() => executionMap.shown.value || (artifacts.open.value && artifacts.shown.value !== undefined));
+// The chat's changes take the panel when the person asks for them (ADR 0093, 2).
+const changes = useChanges(kvman, () => sessionId.value, () => session.value?.updatedAt, readFailed);
+const { toggleChanges, closePanel } = useChangesPanel(changes, executionMap, artifacts);
+const panelShown = computed(() => changes.shown.value || executionMap.shown.value || (artifacts.open.value && artifacts.shown.value !== undefined));
 // An ending with steps left says so (ADR 0064, 11).
 const stepsLeft = computed(() => (session.value?.status === 'idle' ? executionMap.counts.value?.left ?? 0 : 0));
 const calls = computed(() => callViews(messages.value));
-// Calls in a row fold into one row; a turn's line follows the row that holds its last message (ADR 0093, 1).
-const rows = computed(() => foldedRows(messages.value, calls.value));
-const rowKey = (row: Row): string => {
-  const first = row.kind === 'fold' ? row.messages[0] : row.message;
-  return first === undefined ? 'fold' : key(first);
-};
-const rowTotals = (row: Row) => (row.kind === 'fold' ? row.messages.map((message) => turnTotals.value.get(message.id)).findLast((found) => found !== undefined) : turnTotals.value.get(row.message.id));
-const runningTurnId = computed(() => (session.value?.status === 'idle' ? undefined : turns.value[0]?.outcome === undefined ? turns.value[0]?.id : undefined));
-// An ended turn's last text is its final answer, and is marked (ADR 0093, 1).
-const finalAnswers = computed(() => {
-  const ended = new Set(turns.value.filter((turn) => turn.outcome !== undefined).map((turn) => turn.id));
-  const last = new Map<string, string>();
-  for (const message of messages.value) if (message.kind === 'assistant' && message.turnId !== undefined && ended.has(message.turnId) && textOf(message.content['content']).trim() !== '') last.set(message.turnId, message.id);
-  return new Set(last.values());
-});
 const lastSent = computed(() => lastTyped(messages.value));
+const { rows, rowKey, rowTotals, runningTurnId, finalAnswers } = useStory(kvman.t, messages, calls, turns, session);
 const finishedRuns = useFinishedRuns(kvman, () => sessionId.value, messages, readFailed);
 const recoverableNotices = new Set(['STEP_FAILED', 'REPLY_LOST', 'REPLY_INCOMPLETE', 'INTERRUPTED']);
 const running = computed(() => session.value?.status === 'running');
@@ -74,17 +63,6 @@ const running = computed(() => session.value?.status === 'running');
 const runningSince = computed(() => (running.value && turns.value[0]?.outcome === undefined ? turns.value[0]?.startedAt : undefined));
 const pending = computed(() => (session.value?.status === 'waiting' ? (turns.value[0]?.pending ?? []) : []));
 
-// Each ended turn's totals go under its last message: its last answer, or the cards of its last calls (ADR 0035, 1).
-const turnTotals = computed(() => {
-  const last = new Map<string, string>();
-  for (const message of messages.value) if ((message.kind === 'assistant' || message.kind === 'toolResult') && message.turnId !== undefined) last.set(message.turnId, message.id);
-  const shown = new Map<string, { text: string; tokens: string }>();
-  for (const turn of turns.value) {
-    const messageId = last.get(turn.id);
-    if (messageId !== undefined && turn.outcome !== undefined) shown.set(messageId, { text: totals(kvman.t, turn.usage, turn.durationMs), tokens: tokensUsed(kvman.t, turn.usage) });
-  }
-  return shown;
-});
 
 // The draft stays until the send is confirmed; a failure shows above the send box (ADR 0048, 6).
 async function send(message: Outgoing): Promise<void> {
@@ -234,12 +212,11 @@ async function registered(entry: RegisteredSlash, argument: string): Promise<voi
   await send({ text: argument === '' ? kvman.t(entry.message) : argument, fileIds: [] });
 }
 
-const key = (message: Message): string => message.id;
 </script>
 
 <template>
   <div class="kvc-workspace">
-    <ConversationHeader v-if="session && sessionId !== undefined" :session="session" :tab="tab" :turns="turns.length" :context="conversation.context.value" :running-since="runningSince" :artifacts="artifacts.list.value.length" :artifacts-open="artifacts.open.value && !executionMap.shown.value" :map="executionMap.counts.value" :map-open="executionMap.shown.value" :working="actions.working.value !== undefined" @tab="tab = $event" @action="command" @toggle-artifacts="executionMap.toggleArtifacts()" @toggle-map="executionMap.toggle()" @background-running="(count) => (backgroundRunning = count)" />
+    <ConversationHeader v-if="session && sessionId !== undefined" :session="session" :tab="tab" :turns="turns.length" :context="conversation.context.value" :running-since="runningSince" :artifacts="artifacts.list.value.length" :artifacts-open="artifacts.open.value && !executionMap.shown.value" :map="executionMap.counts.value" :map-open="executionMap.shown.value" :changes="changes.count.value" :changes-open="changes.shown.value" :working="actions.working.value !== undefined" @tab="tab = $event" @action="command" @toggle-artifacts="executionMap.toggleArtifacts()" @toggle-map="executionMap.toggle()" @toggle-changes="toggleChanges" @background-running="(count) => (backgroundRunning = count)" />
     <div class="kvc-stage">
     <section class="kvc-conversation" data-test="conversation">
       <ChatStart v-if="props.sessionId === undefined" :registered="slashCommands" />
@@ -291,7 +268,7 @@ const key = (message: Message): string => message.id;
         </MessageComposer>
       </template>
     </section>
-    <ArtifactPanel v-if="panelShown" :list="artifacts.list.value" :shown="artifacts.shown.value" :content="artifacts.content.value" :map="executionMap.map.value" :map-shown="executionMap.shown.value" @select="executionMap.selectArtifact($event)" @select-map="executionMap.shown.value = true" @close="executionMap.close()" />
+    <ArtifactPanel v-if="panelShown" :list="artifacts.list.value" :shown="artifacts.shown.value" :content="artifacts.content.value" :map="executionMap.map.value" :map-shown="executionMap.shown.value" :session-id="sessionId" :changes="changes.list.value" :changes-count="changes.count.value" :changes-shown="changes.shown.value" @select="changes.shown.value = false; executionMap.selectArtifact($event)" @select-map="changes.shown.value = false; executionMap.shown.value = true" @select-changes="toggleChanges" @close="closePanel" @changed="changes.reload()" @commit="send({ text: kvman.t('kvcoder.ui.changes.commitMessage'), fileIds: [] })" />
     </div>
   </div>
 </template>

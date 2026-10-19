@@ -78,6 +78,7 @@
       "send-receipts": [["sendId"]],
       "file-views": [["sessionId", "path"]],
       "file-backups": [["sessionId"], ["sessionId", "path"]],
+      "file-changes": [["sessionId"], ["sessionId", "path"]],
       "file-parts": [["sessionId", "path"], ["sessionId", "path", "part"]],
       "artifacts": [["sessionId"], ["sessionId", "artifactId"]],
       "background": [["sessionId"], ["sessionId", "ref"]],

@@ -32,10 +32,11 @@ the UI:
    - A turn's line (`{time} · {cost}`) follows the fold that holds its last message.
 2. **The Changes view** (asked; recommended: this chat's files, diffed with Git).
    - Each successful `fs write`, `edit`, `undo`, or `assemble` records its file in the workspace collection
-     `file-changes { sessionId, path, firstAt }` (index `sessionId`; `sessionId, path`), once per file, under the chat at
+     `file-changes { sessionId, path, firstAt, lastAt }` (index `sessionId`; `sessionId, path`), once per file, under the chat at
      the root, so a helper's changes count for its chat; the records are deleted with the chat. Changes made by a shell
      line aren't known, and the view says so.
-   - `kvcoder.change.list { sessionId }` (public query) → `{ files: [{ path, added, removed, diff, state }], diffs }`,
+   - `kvcoder.change.list { sessionId, withDiffs? }` (public query; `withDiffs: false` lists the files without running
+     Git, for the header's count) → `{ files: [{ path, added, removed, diff, state }], diffs }`,
      newest first, at most 200: `state` is `changed`, `created`, or `deleted`; in a Git repository a tracked file is
      diffed against `HEAD`, and otherwise the file is diffed against the oldest copy the chat's backups keep, or against
      nothing for a file the chat created (`git diff --no-index`). `diff` is the unified diff, cut at 64 KB; `diffs` is

@@ -176,6 +176,8 @@ export const answerReceiptDocSchema = z.object({
 
 // What a chat last saw of a file, and a file's content before one of the chat's changes (ADR 0053, 2 and 4).
 export const fileViewDocSchema = z.object({ sessionId: z.string(), path: z.string(), fingerprint: z.string().regex(/^[0-9a-f]{64}$/), updatedAt: z.iso.datetime() });
+// A file a chat changed with `fs`, under the chat at the root, for its Changes view (ADR 0093, 2).
+export const fileChangeDocSchema = z.object({ sessionId: z.string(), path: z.string(), firstAt: z.iso.datetime(), lastAt: z.iso.datetime() });
 export const fileBackupDocSchema = z.object({ sessionId: z.string(), path: z.string(), previous: z.string().nullable(), written: z.string().regex(/^[0-9a-f]{64}$/), createdAt: z.iso.datetime() });
 
 // One numbered piece of a long file a chat is writing, held until `fs assemble` (ADR 0054, 2).
@@ -262,6 +264,7 @@ export type StepIntentDoc = z.output<typeof stepIntentDocSchema>;
 export type MessageDoc = z.output<typeof messageDocSchema>;
 export type QueuedDoc = z.output<typeof queuedDocSchema>;
 export type TurnDoc = z.output<typeof turnDocSchema>;
+export type FileChangeDoc = z.output<typeof fileChangeDocSchema>;
 export type Pending = z.output<typeof pendingSchema>;
 export type HeldResult = z.output<typeof heldResultSchema>;
 export type RunCallDoc = z.output<typeof runCallSchema>;

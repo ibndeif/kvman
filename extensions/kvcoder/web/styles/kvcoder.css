@@ -195,6 +195,11 @@ a.kvc-button { text-decoration: none; color: inherit; }
 .kvc-remember { display: block; margin-block-start: 4px; }
 .kvc-fold-body { display: flex; flex-direction: column; gap: 6px; padding: 6px 8px 8px; border-block-start: 1px solid var(--kv-color-border); }
 .kvc-final { border-inline-start: 3px solid var(--kv-color-primary); padding-inline-start: 12px; }
+.kvc-changes { display: flex; flex-direction: column; gap: 8px; }
+.kvc-change-head { flex: 1 1 auto; min-inline-size: 0; display: flex; align-items: center; gap: 8px; text-align: start; }
+.kvc-diff > [data-kind='added'] { color: var(--kv-color-success, inherit); background: color-mix(in srgb, var(--kv-color-success, green) 12%, transparent); }
+.kvc-diff > [data-kind='removed'] { color: var(--kv-color-danger); background: color-mix(in srgb, var(--kv-color-danger) 12%, transparent); }
+.kvc-diff > [data-kind='hunk'], .kvc-diff > [data-kind='head'] { color: var(--kv-color-muted, inherit); }
 .kvc-rules { display: flex; flex-direction: column; gap: 6px; margin-block-start: 8px; }
 .kvc-rule { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .kvc-form-error { color: var(--kv-color-danger); font-size: 12.5px; }

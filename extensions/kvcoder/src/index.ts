@@ -8,6 +8,7 @@ import { registerAskConnector } from './connectors/ask.ts';
 import { registerBackgroundConnector } from './connectors/background.ts';
 import { registerBinaryConnector } from './connectors/binary.ts';
 import { registerFsConnector } from './connectors/fs.ts';
+import { registerChanges } from './files/register-changes.ts';
 import { registerMcpConnector } from './connectors/mcp.ts';
 import { registerShellConnector } from './connectors/shell.ts';
 import { registerDelegateConnector } from './connectors/delegate.ts';
@@ -49,6 +50,7 @@ export default (ctx: Ctx): void => {
   registerShellConnector(ctx);
   registerBinaryConnector(ctx);
   registerFsConnector(ctx);
+  registerChanges(ctx);
   registerArtifactConnector(ctx);
   registerExecutionMapConnector(ctx);
   registerMaps(ctx);
