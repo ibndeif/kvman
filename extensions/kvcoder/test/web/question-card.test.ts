@@ -36,7 +36,7 @@ describe('question cards (08 §8.5, ADR 0009, 104, 141, 143)', () => {
       { questionId: 'a3', view: callView({ description: 'Clean.', connector: 'shell', command: 'exec', payload: { line: 'rm -rf dist' } }) },
     ];
     const card = await mounted(ApprovalsCard, createFakeKvman(), { approvals });
-    expect(card.findAll('[data-test^="approval-"]').map((row) => row.text())).toEqual(['Reinstall.$ npm ciDenyAllow', 'Build.$ npm run buildDenyAllow', 'Clean.$ rm -rf distDenyAllow']);
+    expect(card.findAll('[data-test^="approval-"]').map((row) => row.text())).toEqual(['Reinstall.$ npm ciDeny and say why…Always allow lines that start withAlways allowDenyAllow', 'Build.$ npm run buildDeny and say why…Always allow lines that start withAlways allowDenyAllow', 'Clean.$ rm -rf distDeny and say why…Always allow lines that start withAlways allowDenyAllow']);
     await card.find('[data-test="approval-a1"] [data-test="deny"]').trigger('click');
     await card.find('[data-test="approval-a2"] [data-test="allow"]').trigger('click');
     await card.find('[data-test="allow-all"]').trigger('click');

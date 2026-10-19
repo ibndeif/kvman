@@ -5,6 +5,7 @@ import { turnSchema, turnView } from '../sessions/session-view.ts';
 import { records, txRecords } from '../store/collections.ts';
 import { cancelTurn } from './end-turn.ts';
 import { applyAnswer } from './apply-answer.ts';
+import { answerExtrasShape, checkExtras, rememberRule } from './answer-extras.ts';
 import { receiptJob } from './receipt-job.ts';
 import { recoverWorkspace } from './recover-workspace.ts';
 import { retryTurn } from './retry-turn.ts';
@@ -48,19 +49,24 @@ export function registerTurns(ctx: Ctx): void {
   });
   ctx.registerCommand('kvcoder.question.answer', {
     description: "Answers a pending question or approval; returns the next step's job id once nothing else is pending.",
-    input: z.object({ questionId: z.string(), answer: z.json() }),
+    input: z.object({ questionId: z.string(), answer: z.json(), ...answerExtrasShape }),
     output: z.object({ jobId: z.string().nullable() }),
     public: true,
     retries: 0,
-    handle: async ({ questionId, answer }) => {
+    handle: async ({ questionId, answer, remember, reason }) => {
       userOnly(ctx, 'kvcoder.question.answer');
-      let result = await ctx.store.transaction(tx => applyAnswer(ctx, txRecords(tx), questionId, answer));
+      const extras = { remember, reason };
+      // A rule is saved before the answer applies, and only for a question that can take it (ADR 0091, 3).
+      const asked = remember === undefined && reason === undefined ? undefined : await records(ctx.store).questions.get(questionId);
+      if (asked !== undefined) checkExtras(asked, answer, extras);
+      if (asked !== undefined && remember !== undefined) await rememberRule(ctx, remember);
+      let result = await ctx.store.transaction(tx => applyAnswer(ctx, txRecords(tx), questionId, answer, extras));
       if (result.kind === 'delegate') {
         // Legacy positive launch has no receipt: recover first, then retain exact approval identity through preparation.
         await recoverWorkspace(ctx);
         const expected = result.question;
         result = await ctx.store.transaction(tx => {
-          const store = txRecords(tx), current = applyAnswer(ctx, store, questionId, answer, expected);
+          const store = txRecords(tx), current = applyAnswer(ctx, store, questionId, answer, extras, expected);
           return current;
         });
         if (result.kind === 'delegate') {

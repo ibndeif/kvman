@@ -251,6 +251,10 @@ a.kvc-button { text-decoration: none; color: inherit; }
 .kvc-field-items { display: flex; flex-direction: column; gap: 2px; }
 .kvc-approval { border-block-start: 1px solid var(--kv-color-border); }
 .kvc-approval > .kvc-actions { padding-block-start: 0; }
+.kvc-always > .kvc-link-button { margin-inline-end: auto; }
+.kvc-reason, .kvc-always { padding-block-start: 0; align-items: center; flex-wrap: wrap; }
+.kvc-reason > textarea { flex: 1 1 16rem; }
+.kvc-always > input { flex: 0 1 14rem; min-inline-size: 8rem; }
 .kvc-run-row { display: flex; align-items: baseline; gap: 10px; }
 .kvc-run-row > .kvc-run-call { flex: 1 1 auto; min-inline-size: 0; }
 .kvc-run-row > .kvc-chip, .kvc-run-row > .kvc-muted { flex: 0 0 auto; white-space: nowrap; }

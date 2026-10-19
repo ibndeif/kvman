@@ -6,8 +6,10 @@ import type { LiveCall } from './live-step.ts';
 import { problemOf, toastProblem } from './kvman.ts';
 import { ownsQuestionDraft, questionDraft, settledQuestions, settleQuestionDraft, type QuestionOwner } from './question-drafts.ts';
 
-export type Answer = { questionId: string; answer: Json };
-export type Decision = { approvals: Approval[]; confirmed: boolean; owner?: QuestionOwner | undefined };
+/** A rule the person asked to remember with an allowed call (ADR 0091, 3). */
+export type Rule = { kind: 'line'; prefix: string } | { kind: 'files' };
+export type Answer = { questionId: string; answer: Json; remember?: Rule; reason?: string };
+export type Decision = { approvals: Approval[]; confirmed: boolean; owner?: QuestionOwner | undefined; remember?: Rule | undefined; reason?: string | undefined };
 export type Answers = {
   hidden: Ref<Set<string>>;
   answer(answer: Answer): Promise<void>;
@@ -70,9 +72,10 @@ export function useAnswers(kvman: Kvman, refresh: (ran: readonly LiveCall[]) => 
   return {
     hidden,
     answer: answer => send([answer]),
-    decide: ({ approvals, confirmed, owner: asker }) => {
+    decide: ({ approvals, confirmed, owner: asker, remember, reason }) => {
       if (confirmed) for (const approval of approvals) allowed.set(approval.questionId, allowedCall(approval));
-      return send(approvals.map(approval => ({ questionId: approval.questionId, answer: { confirmed } })), asker);
+      const extras = { ...(remember === undefined ? {} : { remember }), ...(reason === undefined ? {} : { reason }) };
+      return send(approvals.map(approval => ({ questionId: approval.questionId, answer: { confirmed }, ...extras })), asker);
     },
   };
 }

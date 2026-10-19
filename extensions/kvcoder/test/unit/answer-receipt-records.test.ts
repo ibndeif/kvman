@@ -17,7 +17,8 @@ describe('answer receipt data contract (M2.4-E99)', () => {
       questionKind: 'text' | 'choice' | 'confirm' | 'approval';
       answerFingerprint: string; createdAt: string;
     }>();
-    expectTypeOf<InputOf<'kvcoder.question.answer'>>().toEqualTypeOf<{ questionId: string; answer: Json }>();
+    // QA59-H4 and QA59-H5: an approval's answer may carry a rule to remember or a reason (ADR 0091, 3 and 4).
+    expectTypeOf<InputOf<'kvcoder.question.answer'>>().toEqualTypeOf<{ questionId: string; answer: Json; remember?: { kind: 'line'; prefix: string } | { kind: 'files' }; reason?: string }>();
     expectTypeOf<OutputOf<'kvcoder.question.answer'>>().toEqualTypeOf<{ jobId: string | null }>();
     expectTypeOf<Extract<keyof Session, 'answerFingerprint' | 'questionKind'>>().toEqualTypeOf<never>();
     expect(answerReceiptDocSchema.parse(receipt)).toEqual(receipt);
