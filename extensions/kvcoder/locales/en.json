@@ -324,6 +324,8 @@
   "kvcoder.ui.map.note": "Note",
   "kvcoder.ui.map.noted": "Noted for later ({count})",
   "kvcoder.ui.map.remaining": "{count} steps of the execution map are not done.",
+  "kvcoder.ui.map.continue": "Continue",
+  "kvcoder.ui.map.continueMessage": "Continue.",
   "kvcoder.ui.map.show": "Show the map",
   "kvcoder.ui.map.close": "Close",
   "kvcoder.ui.artifacts.frameLabel": "Preview of {title}",

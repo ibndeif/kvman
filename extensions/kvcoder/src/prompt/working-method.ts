@@ -1,5 +1,5 @@
 // How the agent works (plan 08 §8.2; ADR 0022, 2 to 4; ADR 0065; ADR 0072; ADR 0074; ADR 0075; ADR 0078; ADR 0081; ADR 0089): the lead of a chat sizes up each task and chooses its path from the
-// named parts; a worker does the one task it was given and answers the lead alone (ADR 0063). Both end with the call-or-final-answer rule.
+// named parts; a worker does the one task it was given and answers the lead alone (ADR 0063). Both end with keeping going to the end (ADR 0092, 1) and the call-or-final-answer rule.
 
 /** Who reads the prompt: the agent of a chat, or the subagent of one of its workers. */
 export type Role = 'lead' | 'worker';
@@ -16,6 +16,9 @@ const asking = 'To put a question to the person (a choice, a yes or no, a free a
 const checked = "Before you say that something runs or works, check it the way the person would: run it, request its address, or run its test; if you couldn't, say what is unchecked. After you start a server, request its address once before you give it to the person.";
 const narrate =
   "Talk to the person as you work, the way a colleague thinks aloud. Between calls, when you learn something that changes what you do next, say so in a sentence or two in the reply that makes the next call: what you found, and what you do now (\"The import fails because the path is passed as an id; fixing the importer next.\"). Don't announce routine calls, and don't repeat what a call's card already shows. Write for a person, not a log: plain everyday words, short sentences, and the point first. Leave out connector and command names, payloads, ids, and long output unless they ask; name a file or a technical term only when it helps them, and explain the term in a few words. Use a short list for several items, and no headings or tables in a short reply. Your final answer says what you did and what is left.";
+// A task given as a list runs to its end, not in batches the person must push along (ADR 0092, 1).
+const keepGoing =
+  'Keep going until the work is done. When the task has several items, or the map has steps ready, work through them to the end or until something blocks the work, and report once at the end, not after each batch. Only a finished task, a blocker, or a question that needs an answer ends a turn.';
 const callOrFinalAnswer =
   'A reply with no tool call is your final answer and ends the turn: when work remains, your reply must contain the call that does the next piece. A reply that only says what you will do ("now I will write the file") ends the turn with nothing done. Never make a call that does nothing, such as `true`, just to keep going.';
 
@@ -40,6 +43,7 @@ const leadMethod = [
   asking,
   checked,
   narrate,
+  keepGoing,
   callOrFinalAnswer,
 ].join('\n');
 
@@ -55,6 +59,7 @@ const generalLeadMethod = [
   asking,
   checked,
   narrate,
+  keepGoing,
   callOrFinalAnswer,
 ].join('\n');
 
@@ -67,7 +72,7 @@ const generalDoIt = '2. Do it. Do the task with your connectors, check what you 
 const workerReturn =
   '3. Return. Your last reply is the only thing the lead agent reads, so put everything it needs there, under these headings. Result: what you did or found. Evidence: what you ran or read that shows it, with paths and lines. Files changed: each path and what changed, or none. Unchecked: what you could not verify or left undone. Questions: what the lead must decide or ask the person, or none. Keep it as short as the facts allow.';
 
-const workerMethodOf = (doIt: string, simplestRule: string): string => [...workerStart, doIt, workerReturn, evidence, simplestRule, together, context, checked, callOrFinalAnswer].join('\n');
+const workerMethodOf = (doIt: string, simplestRule: string): string => [...workerStart, doIt, workerReturn, evidence, simplestRule, together, context, checked, keepGoing, callOrFinalAnswer].join('\n');
 const workerMethod = workerMethodOf(engineeringDoIt, simplest);
 const generalWorkerMethod = workerMethodOf(generalDoIt, generalSimplest);
 

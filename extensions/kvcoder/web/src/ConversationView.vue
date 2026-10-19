@@ -247,7 +247,7 @@ const key = (message: Message): string => message.id;
                 <span v-if="turnTotals.has(message.id)" class="kvc-muted" :title="turnTotals.get(message.id)?.tokens" data-test="turn-totals">{{ turnTotals.get(message.id)?.text }}</span>
               </template>
               <NotifyLine v-if="session.waitingOn === 'person'" />
-              <div v-if="stepsLeft > 0" class="kvc-notice" data-test="map-remaining">{{ kvman.t('kvcoder.ui.map.remaining', { count: stepsLeft }) }} <button type="button" class="kvc-link-button" data-test="map-show" @click="executionMap.shown.value = true">{{ kvman.t('kvcoder.ui.map.show') }}</button></div>
+              <div v-if="stepsLeft > 0" class="kvc-notice" data-test="map-remaining">{{ kvman.t('kvcoder.ui.map.remaining', { count: stepsLeft }) }} <button type="button" class="kvc-link-button" data-test="map-show" @click="executionMap.shown.value = true">{{ kvman.t('kvcoder.ui.map.show') }}</button> <button type="button" class="kvc-button" data-test="map-continue" @click="send({ text: kvman.t('kvcoder.ui.map.continueMessage'), fileIds: [] })">{{ kvman.t('kvcoder.ui.map.continue') }}</button></div>
               <RecoveryActions v-if="recoverable" :session-id="session.id" :failed-with="failedWith" @sent="follow.resume(); conversation.refresh()" />
             <div v-if="live.summarizing" class="kvc-notice" data-test="summarizing">{{ kvman.t('kvcoder.ui.summarizing') }}</div>
               <div v-if="running && (live.text !== '' || live.thinking !== '')" class="kvc-answer" data-test="live-answer">

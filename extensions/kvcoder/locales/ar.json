@@ -324,6 +324,8 @@
   "kvcoder.ui.map.note": "ملاحظة",
   "kvcoder.ui.map.noted": "مؤجَّل لوقت لاحق ({count})",
   "kvcoder.ui.map.remaining": "{count} من خطوات خريطة التنفيذ لم تُنجز.",
+  "kvcoder.ui.map.continue": "تابع",
+  "kvcoder.ui.map.continueMessage": "تابع.",
   "kvcoder.ui.map.show": "عرض الخريطة",
   "kvcoder.ui.map.close": "إغلاق",
   "kvcoder.ui.artifacts.frameLabel": "معاينة {title}",

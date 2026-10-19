@@ -202,3 +202,14 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
     expect(executionMapDescription).toMatch(/Limits: goal up to 300 characters; a step's title up to 100, check up to 300, details up to 4,000; [^.]*; 1 to 40 steps\.$/);
   });
 });
+
+describe('keep going until the work is done (08 §8.2, ADR 0092, 1)', () => {
+  it('QA60-H1 every method keeps working through a list or the ready steps, and reports once at the end', () => {
+    const rule = 'Keep going until the work is done. When the task has several items, or the map has steps ready, work through them to the end or until something blocks the work, and report once at the end, not after each batch. Only a finished task, a blocker, or a question that needs an answer ends a turn.';
+    for (const [role, method] of [['lead', 'engineering'], ['lead', 'general'], ['worker', 'engineering'], ['worker', 'general']] as const) {
+      const lines = workingMethod(role, method).split('\n');
+      expect(lines.at(-2), `${role} ${method}`).toBe(rule);
+      expect(lines.at(-1), `${role} ${method}`).toMatch(/^A reply with no tool call is your final answer/);
+    }
+  });
+});
