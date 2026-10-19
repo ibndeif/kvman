@@ -33,9 +33,16 @@ export type SessionTools = {
 
 /** Prompt-time listing shares the execution predicate but never serves as later execution authority (ADR0044). */
 export async function sessionTools(ctx: Ctx, session: Stored<SessionDoc>): Promise<SessionTools> {
-  const rules = projectRules(ctx.job.workspace.path);
-  const shell = await shellFor(ctx);
-  const grants = await sessionGrants(ctx, session.id);
+  // The settings and files the prompt needs are read together: each read waits on the kernel, so one after another
+  // they add up (the person's preferences among them, ADR 0092, 3).
+  const [rules, preferences, shell, profile, language, grants] = await Promise.all([
+    projectRules(ctx.job.workspace.path),
+    preferencesSection(ctx),
+    shellFor(ctx),
+    agentProfile(ctx),
+    ctx.settings.get('kernel.language'),
+    sessionGrants(ctx, session.id),
+  ]);
   if (grants === undefined) throw invalid('The session ancestry is no longer available.');
   const { connectors, disabled, names, workers, servers } = grants;
   const descriptions = { ...builtinDescriptions(shell.kind), delegate: delegateIndexDescription(workers), mcp: mcpIndexDescription(servers) };
@@ -56,12 +63,12 @@ export async function sessionTools(ctx: Ctx, session: Stored<SessionDoc>): Promi
   const listed = [...builtins.filter(connector => connector.commands.length > 0), ...registered.filter(connector => connector.commands.length > 0)];
   const built = buildPrompt({
     role: current.parentId === null ? 'lead' : 'worker',
-    profile: await agentProfile(ctx),
+    profile,
     workspacePath: ctx.job.workspace.path,
     platform: process.platform,
     shell: shell.kind,
-    language: z.string().parse(await ctx.settings.get('kernel.language')),
-    sections: [...(await preferencesSection(ctx)), ...(await sectionsFor(ctx, current.id)), ...(await rules)],
+    language: z.string().parse(language),
+    sections: [...preferences, ...(await sectionsFor(ctx, current.id)), ...rules],
     ...(current.worker === null ? {} : { worker: current.worker }),
     decides: current.decides,
     connectors: listed,
