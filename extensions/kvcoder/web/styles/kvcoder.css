@@ -189,6 +189,8 @@ a.kvc-button { text-decoration: none; color: inherit; }
 .kvc-form-label { font-weight: 600; padding: 0; }
 /* The confirmation of the `never` approval mode, under its control (ADR 0077, 4). */
 .kvc-confirm { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--kv-color-danger); border-radius: var(--kv-radius); }
+.kvc-rules { display: flex; flex-direction: column; gap: 6px; margin-block-start: 8px; }
+.kvc-rule { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .kvc-form-error { color: var(--kv-color-danger); font-size: 12.5px; }
 .kvc-form-choice { display: flex; flex-wrap: wrap; gap: var(--kv-space-md); margin: 0; padding: 0; border: 0; }
 .kvc-form-choice > legend { margin-block-end: 6px; }

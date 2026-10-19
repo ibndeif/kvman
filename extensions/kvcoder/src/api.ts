@@ -72,7 +72,7 @@ declare module '@kvman/sdk' {
     'kvcoder.map.get': { input: SessionId; output: { goal: string; steps: { id: string; title: string; details: string | null; after: string[]; uses: string | null; check: string; status: 'todo' | 'doing' | 'done' | 'failed' | 'skipped'; evidence: string | null; note: string | null }[]; notes: { text: string; createdAt: string }[]; version: number; updatedAt: string } | null };
     'kvcoder.artifact.get': { input: { sessionId: string; id: string }; output: { id: string; title: string; format: 'markdown' | 'html' | 'url'; version: number; content: string; createdAt: string; updatedAt: string } };
     'kvcoder.artifact.write': { input: { sessionId: string; payload: { id: string; title: string; format?: 'markdown' | 'html' | 'url'; content: string } }; output: { id: string; version: number; created: boolean; bytes: number } };
-    'kvcoder.artifact.edit': { input: { sessionId: string; payload: { id: string; edits: { oldText: string; newText: string }[] } }; output: { id: string; version: number; replacements: number; firstChangedLine: number } };
+    'kvcoder.artifact.edit': { input: { sessionId: string; payload: { id: string; edits: { oldText: string; newText: string; replaceAll?: boolean }[] } }; output: { id: string; version: number; replacements: number; firstChangedLine: number } };
   }
   interface Settings {
     'kvcoder.model': string | null;
@@ -80,6 +80,7 @@ declare module '@kvman/sdk' {
     'kvcoder.thinking': Thinking;
     'kvcoder.maxSteps': number | null;
     'kvcoder.approval': 'ask' | 'auto' | 'never';
+    'kvcoder.approval.allowed': ({ kind: 'line'; prefix: string } | { kind: 'files' })[];
     'kvcoder.shell.path': string | null;
     'kvcoder.compactAt': number;
     'kvcoder.compactKeep': number;

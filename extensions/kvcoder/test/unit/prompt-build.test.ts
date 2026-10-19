@@ -85,9 +85,9 @@ describe('the prompt builder (08 §8.2)', () => {
     }
   });
 
-  it('QA19-H15 and M2.4-E264 the prompt says how to judge risky, to request a started server, and what a small task needs', () => {
+  it('QA19-H15, M2.4-E264, and QA59-H8 the prompt says how to judge risky, to request a started server, and what a small task needs', () => {
     const { prompt } = buildPrompt({ role: 'lead', workspacePath: '/w', language: 'en', platform: 'linux', shell: 'bash', sections: [], connectors: [] });
-    const judged = "`shell exec`, `fs write`, `fs edit`, `mcp call`, and `mcp run` take risky, which you always send and judge for each call from what the call does, not from which command it is. It is false for the ordinary work of the task: creating, editing, or rewriting a file inside the workspace folder that the task needs, whoever made it (`fs undo` takes such a change back), running the project's own build, tests, and tools, and a tool that only reads. It is true, and the person is then asked first, only when the call could do what is hard to take back or reaches past the task: anything outside the workspace folder; deleting files, or overwriting them with a shell line; a file that holds secrets, such as .env or a key; rewriting or discarding git history or uncommitted work (push --force, reset --hard, clean); sudo, or an install outside the project; sending something out (a push, a publish, a deploy, a message, a write to a remote service); and the Commands section of AGENTS.md. When you can't tell whether a call can be taken back, it is true. Each `shell exec` starts in the workspace folder";
+    const judged = "`shell exec`, `fs write`, `fs edit`, `mcp call`, and `mcp run` take risky, which you always send and judge for each call from what the call does, not from which command it is. It is false for the ordinary work of the task: creating, editing, or rewriting a file inside the workspace folder that the task needs, whoever made it and whether or not the repository has uncommitted changes (`fs undo` takes such a change back, so a change to a file is never risky by itself), running the project's own build, tests, and tools, and a tool that only reads. It is true, and the person is then asked first, only when the call could do what is hard to take back or reaches past the task: anything outside the workspace folder; deleting files, or overwriting them with a shell line; a file that holds secrets, such as .env or a key; rewriting or discarding git history or uncommitted work (push --force, git reset, checkout, restore, stash drop, clean); sudo, or an install outside the project; sending something out (a push, a publish, a deploy, a message, a write to a remote service); and the Commands section of AGENTS.md. When you can't tell whether a call can be taken back, it is true. Each `shell exec` starts in the workspace folder";
     for (const role of ['lead', 'worker'] as const) {
       const of = buildPrompt({ role, workspacePath: '/w', language: 'en', platform: 'linux', shell: 'bash', sections: [], connectors: [] }).prompt;
       expect(of, role).toContain(judged);
@@ -109,6 +109,11 @@ describe('the prompt builder (08 §8.2)', () => {
     expect(prompt).not.toContain('Say what you are about to do in the same reply');
     const method = prompt.split('How you work.')[1] ?? '';
     expect(method.trimEnd().endsWith(rule)).toBe(true);
+  });
+
+  it('QA59-H8 risky says a file change is never risky by itself, and names what discards uncommitted work', () => {
+    expect(risky.description).toContain('whether or not there are uncommitted changes (fs undo takes it back)');
+    expect(risky.description).toContain('git push --force, reset, checkout, restore, stash drop, or clean');
   });
 
   it('QA57-H9 and QA57-H10 a map only for large or risky work, and every question in the same reply', () => {

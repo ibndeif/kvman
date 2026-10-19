@@ -181,7 +181,7 @@ async function runStep(ctx: Ctx, lease: StepLease): Promise<void> {
   const answer = first !== undefined && 'tooLong' in first ? await afterOverflow(ctx, current.session, lease, tools, settings, first.tooLong) : first;
   if (answer === undefined) return;
   if (answer.calls.length === 0) { await finishWithoutCalls(ctx, lease, settings.maxSteps, answer.lost, answer.incomplete); return; }
-  const env = { ctx, session: current.session, tools, approval: settings.approval, lease };
+  const env = { ctx, session: current.session, tools, approval: settings.approval, allowed: settings.allowed, lease };
   const outcomes = await evaluateCalls(env, answer.calls);
   await settleCalls(ctx, lease, answer.calls, outcomes, settings.maxSteps);
 }

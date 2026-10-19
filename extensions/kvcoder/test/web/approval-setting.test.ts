@@ -104,3 +104,23 @@ describe("the approval setting in kvcoder's configuration (08 §8.7, ADR 0077)",
     expect(view.find('[data-test="approval-never-yes"]').text()).toBe('أوقف السؤال');
   });
 });
+
+describe('the approval rules under the Approval row (08 §8.7, ADR 0091, 1)', () => {
+  it('QA59-H7 lists the rules and Remove writes the list without one', async () => {
+    const fake = createFakeKvman();
+    const rules = [{ kind: 'line', prefix: 'pnpm exec' }, { kind: 'files' }];
+    serveSettings(fake, { [key]: { default: 'auto' }, 'kvcoder.approval.allowed': { default: [], global: rules } });
+    const view = await mounted(ApprovalSetting, fake);
+    expect(view.findAll('[data-test="approval-rule-text"]').map((row) => row.text())).toEqual(['Always allowed: pnpm exec …', 'Always allowed: file changes']);
+    await view.findAll('[data-test="approval-rule-remove"]')[0]?.trigger('click');
+    await flushPromises();
+    expect(settingWrites(fake)).toEqual([{ name: 'kernel.settings.set', input: { key: 'kvcoder.approval.allowed', value: [{ kind: 'files' }], scope: 'global' } }]);
+  });
+
+  it('QA59-H7 says when no command is always allowed', async () => {
+    const fake = createFakeKvman();
+    serveSettings(fake, { [key]: { default: 'auto' }, 'kvcoder.approval.allowed': { default: [] } });
+    const view = await mounted(ApprovalSetting, fake);
+    expect(view.find('[data-test="approval-rules-none"]').text()).toBe('No commands are always allowed.');
+  });
+});

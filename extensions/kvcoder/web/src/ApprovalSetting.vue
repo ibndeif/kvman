@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { nextTick, ref, useTemplateRef } from 'vue';
 import ApprovalNote from './ApprovalNote.vue';
+import ApprovalRules from './ApprovalRules.vue';
 import { useKvman } from './kvman.ts';
 import SettingFrame from './SettingFrame.vue';
 import { useSetting } from './use-setting.ts';
@@ -44,5 +45,6 @@ async function picked(event: Event): Promise<void> {
       </div>
     </SettingFrame>
     <ApprovalNote :refresh-key="approval.value.value" />
+    <ApprovalRules />
   </div>
 </template>
