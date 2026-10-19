@@ -20,6 +20,7 @@ export const settingSchemas = {
   maxSteps: z.number().int().positive().nullable(),
   approval: z.enum(['ask', 'auto', 'never']),
   allowed: z.array(approvalRuleSchema).max(200),
+  preferences: z.string().refine((text) => Buffer.byteLength(text, 'utf8') <= 16_384, 'The preferences hold at most 16 KB.'),
   shellPath: z.string().min(1).nullable(),
   compactAt: z.number().gt(0).max(1),
   compactKeep: z.number().int().min(1).max(100),
@@ -38,6 +39,7 @@ export function registerSettings(ctx: Ctx): void {
   ctx.registerSetting('kvcoder.maxSteps', { description: 'The most steps a turn takes before it stops; null sets no limit.', schema: settingSchemas.maxSteps, default: null });
   ctx.registerSetting('kvcoder.approval', { description: 'When a call asks the person first: only the ones the model marks risky (auto), every one that can ask (ask), or none at all (never).', schema: settingSchemas.approval, default: 'auto' });
   ctx.registerSetting('kvcoder.approval.allowed', { description: 'The approval rules: a line whose every command starts with one of these prefixes, or a file change, runs without asking.', schema: settingSchemas.allowed, default: [] });
+  ctx.registerSetting('kvcoder.preferences', { description: "The person's standing preferences, sent in every chat's prompt.", schema: settingSchemas.preferences, default: '' });
   ctx.registerSetting('kvcoder.shell.path', { description: 'The shell program to run; null finds bash, or pwsh then powershell.exe on Windows.', schema: settingSchemas.shellPath, default: null });
   ctx.registerSetting('kvcoder.compactAt', { description: "The share of the model's context window above which older messages are summarized.", schema: settingSchemas.compactAt, default: 0.6 });
   ctx.registerSetting('kvcoder.compactKeep', { description: 'How many of the newest messages stay whole when older messages are summarized.', schema: settingSchemas.compactKeep, default: 10 });

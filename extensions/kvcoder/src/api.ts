@@ -81,6 +81,7 @@ declare module '@kvman/sdk' {
     'kvcoder.maxSteps': number | null;
     'kvcoder.approval': 'ask' | 'auto' | 'never';
     'kvcoder.approval.allowed': ({ kind: 'line'; prefix: string } | { kind: 'files' })[];
+    'kvcoder.preferences': string;
     'kvcoder.shell.path': string | null;
     'kvcoder.compactAt': number;
     'kvcoder.compactKeep': number;

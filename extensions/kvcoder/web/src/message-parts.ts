@@ -152,8 +152,11 @@ export function shownUserText(text: string, label: string): string {
 /** The text the person last typed in the chat, without the files line kvcoder added, for Up in the send box (ADR 0090, 6). */
 export function lastTyped(messages: readonly Message[]): string | undefined {
   const last = messages.findLast((message) => message.kind === 'user' && message.source?.kind === 'user');
-  return last === undefined ? undefined : textOf(last.content['content']).replace(attachedFiles, '');
+  return last === undefined ? undefined : typedText(textOf(last.content['content']));
 }
+
+/** A person's message as they typed it, without the files line kvcoder added. */
+export const typedText = (text: string): string => text.replace(attachedFiles, '');
 
 /** The id of the run a background result is of: its job, or its subagent's session (ADR 0036, 14). */
 export function backgroundRef(message: Message): string | undefined {

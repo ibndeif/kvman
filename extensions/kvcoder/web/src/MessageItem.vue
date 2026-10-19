@@ -3,7 +3,8 @@ import { BellRing, Info, NotebookText, ScrollText } from '@lucide/vue';
 import { computed } from 'vue';
 import type { Message } from '../../src/index.ts';
 import { failureReason, fields, isolateValue, problemKey, stringValues, useKvman } from './kvman.ts';
-import { answeredQuestion, artifactOf, backgroundName, backgroundRef, extensionCardOf, isBackground, isKvcoderHint, resultCard, shownUserText, stagingRunOf, textOf, thinkingOf } from './message-parts.ts';
+import { answeredQuestion, artifactOf, backgroundName, backgroundRef, extensionCardOf, isBackground, isKvcoderHint, resultCard, shownUserText, stagingRunOf, textOf, thinkingOf, typedText } from './message-parts.ts';
+import RememberThis from './RememberThis.vue';
 import AnsweredCard from './AnsweredCard.vue';
 import ArtifactCard from './ArtifactCard.vue';
 import CallCard from './CallCard.vue';
@@ -74,6 +75,7 @@ const markdown = (body: string) => ({ type: 'markdown' as const, text: 'kvcoder.
       <img v-for="fileId in props.message.fileIds" :key="fileId" :src="imageUrl(fileId)" :alt="kvman.t('kvcoder.ui.attachment')" style="block-size: 48px; border-radius: 6px" />
     </span>
     <span v-if="props.message.queued" class="kvc-muted" style="display: block" data-test="queued">{{ kvman.t('kvcoder.ui.queued') }}</span>
+    <RememberThis v-else-if="props.message.source?.kind === 'user' && typedText(text).trim() !== ''" :text="typedText(text).trim()" />
   </div>
   <div v-else-if="props.message.kind === 'assistant' && (thinking !== '' || text !== '')" class="kvc-answer" data-test="assistant-message">
     <details v-if="thinking !== ''" data-test="thinking"><summary class="kvc-muted">{{ kvman.t('kvcoder.ui.thought') }}</summary><p class="kvc-muted" style="white-space: pre-wrap">{{ thinking }}</p></details>

@@ -5,6 +5,7 @@ import { shellFor } from '../calls/shell-program.ts';
 import { builtinConnectors } from '../connector-call.ts';
 import { delegateIndexDescription } from '../connectors/delegate.ts';
 import { mcpIndexDescription } from '../connectors/mcp.ts';
+import { preferencesSection } from './person-preferences.ts';
 import { projectRules } from './project-rules.ts';
 import type { ConnectorRow } from '../registry/register-connectors.ts';
 import { helperAllows } from '../turns/helper-calls.ts';
@@ -60,7 +61,7 @@ export async function sessionTools(ctx: Ctx, session: Stored<SessionDoc>): Promi
     platform: process.platform,
     shell: shell.kind,
     language: z.string().parse(await ctx.settings.get('kernel.language')),
-    sections: [...(await sectionsFor(ctx, current.id)), ...(await rules)],
+    sections: [...(await preferencesSection(ctx)), ...(await sectionsFor(ctx, current.id)), ...(await rules)],
     ...(current.worker === null ? {} : { worker: current.worker }),
     decides: current.decides,
     connectors: listed,

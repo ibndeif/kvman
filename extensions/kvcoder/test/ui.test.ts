@@ -31,7 +31,7 @@ describe("kvcoder's UI contributions (08 §8.7, ADR 0009, 104)", { timeout: 30_0
     const answer = z.object({ configuration: z.object({ children: z.array(z.object({ title: z.string(), children: z.array(z.record(z.string(), z.json())) })) }) }).parse(await kernel.exec('kvcoder.ui.get', {}));
     const cards = answer.configuration.children.map((card) => [card.title, card.children.map((child) => child['key'] ?? child['component'] ?? child['text'])]);
     expect(cards).toEqual([
-      ['kvcoder.config.agent', ['kvcoder.model', 'kvcoder.model', 'kvcoder.approval', 'kvcoder.thinking', 'kvcoder.maxSteps', 'kvcoder.compactAt', 'kvcoder.compactKeep']],
+      ['kvcoder.config.agent', ['kvcoder.model', 'kvcoder.model', 'kvcoder.approval', 'kvcoder.preferences', 'kvcoder.thinking', 'kvcoder.maxSteps', 'kvcoder.compactAt', 'kvcoder.compactKeep']],
       ['kvcoder.config.chats', ['kvcoder.sessions.keep']],
       ['kvcoder.config.connectors', ['kvcoder.config.connectors.intro', 'kvcoder.connectors']],
     ]);
