@@ -10,6 +10,7 @@ import { registerBinaryConnector } from './connectors/binary.ts';
 import { registerFsConnector } from './connectors/fs.ts';
 import { registerChanges } from './files/register-changes.ts';
 import { registerMcpConnector } from './connectors/mcp.ts';
+import { registerWebConnector } from './connectors/web.ts';
 import { registerShellConnector } from './connectors/shell.ts';
 import { registerDelegateConnector } from './connectors/delegate.ts';
 import { registerContinueCheck } from './delegate/continue-helper.ts';
@@ -60,6 +61,7 @@ export default (ctx: Ctx): void => {
   registerContinueCheck(ctx);
   registerWorkerRun(ctx);
   registerMcpConnector(ctx);
+  registerWebConnector(ctx);
   registerMcp(ctx);
   registerConnectorHelp(ctx);
   registerInterruptions(ctx);

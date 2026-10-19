@@ -10,7 +10,7 @@ const kvcoder = useKvcoder();
 
 const owner = '@test/todo';
 const notes = { name: 'notes', description: 'Notes.', optIn: true as const, commands: [{ name: 'add', command: 'todo.item.add' }] };
-const always = ['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'todo'];
+const always = ['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'web', 'todo'];
 const runToolSchema = z.object({ function: z.object({ parameters: z.object({ properties: z.object({ connector: z.object({ enum: z.array(z.string()) }) }) }) }) });
 const runEnum = (tools: unknown[]): string[] => runToolSchema.parse(tools[0]).function.parameters.properties.connector.enum;
 

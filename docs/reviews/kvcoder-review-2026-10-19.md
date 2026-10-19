@@ -285,7 +285,7 @@ first fetch per domain asks.
 | 6 stalled stream | E | E2 | 0094 | QA62 | step 1 done (silences logged); the cut-off waits for a week of logs |
 | 5 check after edits | E | E3 | 0094 | QA62 | done |
 | 8 fallback model | E | E4 | 0094 | QA62 | done |
-| 13 web fetch | E | E5 | 0094 | QA62 | needs a dependency answer |
+| 13 web fetch | E | E5 | 0095 | QA63 | done (`turndown` 7.2.4) |
 
 ## Measuring the result
 

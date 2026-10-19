@@ -44,7 +44,7 @@ export function grantsInTx(store: TxRecords, session: Stored<SessionDoc>, prepar
     ...builtinConnectors.filter(name => allowed.has(name) && present[name] !== false),
     ...connectors.filter(connector => allowed.has(connector.name) && (connector.kind === 'commands' || passed.has(connector.name))).map(connector => connector.name),
   ];
-  return { session, connectors, disabled, names, workers, servers };
+  return { session, connectors, disabled, names, workers, servers, webHosts: root.webHosts };
 }
 export type SessionGrants = NonNullable<ReturnType<typeof grantsInTx>>;
 

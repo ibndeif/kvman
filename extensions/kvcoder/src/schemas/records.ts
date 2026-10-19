@@ -57,6 +57,8 @@ export const sessionDocSchema = z.object({
   decides: z.boolean().default(false),
   // The last tool result sent cleared (ADR 0094, 1).
   clearedThroughSeq: z.number().int().nullable().default(null),
+  // The hosts this chat let web fetch reach (ADR 0095, 4).
+  webHosts: z.array(z.string()).default([]),
   usageBy: usageBySchema.default({ summary: noTokens, title: noTokens, helpers: noTokens }),
   stepJobId: z.string().nullable(),
   stepGeneration: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).default(0),

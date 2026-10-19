@@ -44,6 +44,7 @@
     "@lucide/vue": "1.49.0",
     "@modelcontextprotocol/sdk": "1.32.1",
     "cross-spawn": "7.0.6",
+    "turndown": "7.2.4",
     "vue": "3.5.43"
   },
   "devDependencies": {
@@ -51,6 +52,7 @@
     "@kvman/sdk": "workspace:*",
     "@kvman/testkit": "workspace:*",
     "@types/cross-spawn": "6.0.6",
+    "@types/turndown": "5.0.6",
     "@vitejs/plugin-vue": "6.0.9",
     "@vue/test-utils": "2.5.1",
     "happy-dom": "20.14.5",
@@ -67,23 +69,148 @@
       "@kvman/kvwebui": "^0.1.0"
     },
     "indexes": {
-      "sessions": [["parentId"], ["parentId", "status"], ["stepJobId"], ["status"]],
-      "messages": [["sessionId"], ["sessionId", "block"], ["sessionId", "kind"], ["sessionId", "turnId", "kind"]],
-      "turns": [["sessionId"]],
-      "queued": [["sessionId"]],
-      "questions": [["sessionId"]],
-      "maps": [["sessionId"]],
-      "step-intents": [["sessionId", "turnId"]],
-      "answer-receipts": [["questionId"]],
-      "send-receipts": [["sendId"]],
-      "file-views": [["sessionId", "path"]],
-      "file-backups": [["sessionId"], ["sessionId", "path"]],
-      "file-changes": [["sessionId"], ["sessionId", "path"]],
-      "file-parts": [["sessionId", "path"], ["sessionId", "path", "part"]],
-      "artifacts": [["sessionId"], ["sessionId", "artifactId"]],
-      "background": [["sessionId"], ["sessionId", "ref"]],
-      "runs": [["sessionId"], ["jobId"]],
-      "processes": [["sessionId"], ["sessionId", "reported"], ["workspaceId"]]
+      "sessions": [
+        [
+          "parentId"
+        ],
+        [
+          "parentId",
+          "status"
+        ],
+        [
+          "stepJobId"
+        ],
+        [
+          "status"
+        ]
+      ],
+      "messages": [
+        [
+          "sessionId"
+        ],
+        [
+          "sessionId",
+          "block"
+        ],
+        [
+          "sessionId",
+          "kind"
+        ],
+        [
+          "sessionId",
+          "turnId",
+          "kind"
+        ]
+      ],
+      "turns": [
+        [
+          "sessionId"
+        ]
+      ],
+      "queued": [
+        [
+          "sessionId"
+        ]
+      ],
+      "questions": [
+        [
+          "sessionId"
+        ]
+      ],
+      "maps": [
+        [
+          "sessionId"
+        ]
+      ],
+      "step-intents": [
+        [
+          "sessionId",
+          "turnId"
+        ]
+      ],
+      "answer-receipts": [
+        [
+          "questionId"
+        ]
+      ],
+      "send-receipts": [
+        [
+          "sendId"
+        ]
+      ],
+      "file-views": [
+        [
+          "sessionId",
+          "path"
+        ]
+      ],
+      "file-backups": [
+        [
+          "sessionId"
+        ],
+        [
+          "sessionId",
+          "path"
+        ]
+      ],
+      "file-changes": [
+        [
+          "sessionId"
+        ],
+        [
+          "sessionId",
+          "path"
+        ]
+      ],
+      "file-parts": [
+        [
+          "sessionId",
+          "path"
+        ],
+        [
+          "sessionId",
+          "path",
+          "part"
+        ]
+      ],
+      "artifacts": [
+        [
+          "sessionId"
+        ],
+        [
+          "sessionId",
+          "artifactId"
+        ]
+      ],
+      "background": [
+        [
+          "sessionId"
+        ],
+        [
+          "sessionId",
+          "ref"
+        ]
+      ],
+      "runs": [
+        [
+          "sessionId"
+        ],
+        [
+          "jobId"
+        ]
+      ],
+      "processes": [
+        [
+          "sessionId"
+        ],
+        [
+          "sessionId",
+          "reported"
+        ],
+        [
+          "workspaceId"
+        ]
+      ]
     }
   }
 }

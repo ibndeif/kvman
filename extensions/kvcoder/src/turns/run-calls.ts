@@ -16,6 +16,7 @@ import type { SessionTools } from '../prompt/session-prompt.ts';
 import type { HeldResult, SessionDoc } from '../schemas/records.ts';
 import { now } from '../sessions/session-lookup.ts';
 import { txRecords } from '../store/collections.ts';
+import { hostOf } from '../web/web-hosts.ts';
 import { currentStep, type StepLease } from './step-claim.ts';
 import { liveStep } from './step-intents.ts';
 import { failedCall, orderedCall, runHelp, runTarget, targetOf, textResult, type CallDone, type CommandTarget } from './run-command.ts';
@@ -192,6 +193,12 @@ async function evaluateCurrentCall(env: CallEnv, toolCall: ToolCall, call: RunCa
   if (session.parentId !== null && !helperAllows(target.builtin)) return result(toolCall.id, failedCall(call, errorOutput({ code: 'VALIDATION_FAILED', message: helperRefusal }).output));
   // A read-only worker's helper is refused before anyone is asked (ADR 0056, 3).
   if (session.worker?.readOnly === true && !readOnlyAllows(call.command, target.builtin, target)) return result(toolCall.id, failedCall(call, errorOutput({ code: 'VALIDATION_FAILED', message: readOnlyRefusal(call.connector, call.command) }).output));
+  // The first fetch from a host asks, and a read-only helper fetches only from a host its chat allowed (ADR 0095, 4).
+  const host = hostOf(call);
+  if (host !== undefined && !permitted.grants.webHosts.includes(host)) {
+    if (session.worker?.readOnly === true) return result(toolCall.id, failedCall(call, errorOutput({ code: 'VALIDATION_FAILED', message: `This helper is read-only: its chat hasn't allowed ${host}, so it isn't fetched. Report what you need from it instead.` }).output));
+    if (env.approval !== 'never') return { kind: 'question', questionKind: 'approval', question: call };
+  }
   if (target.builtin?.asks === true) {
     const invalid = invalidPayload(call, target);
     if (invalid !== undefined) return result(toolCall.id, failedCall(call, invalid));
@@ -216,6 +223,7 @@ async function evaluateCurrentCall(env: CallEnv, toolCall: ToolCall, call: RunCa
   return isAskKind(call.command) ? { kind: 'question', questionKind: call.command, question: call.payload } : result(toolCall.id, done);
 }
 
+// Whether the chat at the root has let web fetch reach the host.
 /** What an approved call of the old shell tool returns: it is never run (ADR 0011, 12). */
 const oldCallText = 'denied by the user\nMake this call again with the run tool.';
 

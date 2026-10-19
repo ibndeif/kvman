@@ -39,7 +39,7 @@ describe('the mcp connector in the prompt and the run tool (08 §8.2, ADR 0020, 
     const lines = entry(systemPrompt(fake), 'mcp');
     expect(lines[0]).toMatch(/^- mcp: Tools from the MCP servers the person added\. .* Servers: demo \(A demo server\), remote \(Over HTTP\)\.$/);
     expect(lines.slice(1)).toEqual(['  tools { server, tool? }', '  call  { server, tool, arguments?, timeoutMs?, risky }', '  run   { server, steps: [{ tool, arguments? }], timeoutMs?, risky }', '  help  { command? }']);
-    expect(connectorsOf(requestTools(fake)[0])).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'mcp', 'todo']);
+    expect(connectorsOf(requestTools(fake)[0])).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'mcp', 'web', 'todo']);
   });
 
   it("QA29-H9 a workspace's own servers replace the global ones", async () => {
@@ -57,8 +57,8 @@ describe('the mcp connector in the prompt and the run tool (08 §8.2, ADR 0020, 
     const prompt = systemPrompt(fake, 0);
     expect(entry(prompt, 'mcp')).toEqual([]);
     expect(prompt).not.toContain('MCP');
-    expect(connectorsOf(requestTools(fake, 0)[0])).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'todo']);
-    expect(toolResults(fake)).toEqual(['error VALIDATION_FAILED: There is no connector mcp. The connectors are: shell, fs, artifact, execution-map, background, ask, delegate, todo.']);
+    expect(connectorsOf(requestTools(fake, 0)[0])).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'web', 'todo']);
+    expect(toolResults(fake)).toEqual(['error VALIDATION_FAILED: There is no connector mcp. The connectors are: shell, fs, artifact, execution-map, background, ask, delegate, web, todo.']);
     expect((await kernel.exec('kvcoder.connector.list', {})).map((connector) => connector.name)).toEqual(['todo']);
   });
 

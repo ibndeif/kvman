@@ -79,6 +79,10 @@ A model can hold only so much. When a chat reaches 60% of the model's memory (`k
 - After a failed turn you get **Retry** and **Choose another model** under the notice.
 - The status bar shows **Waiting for you: N** when chats wait for you.
 
+## Pages on the web
+
+The agent reads a page on the web, such as a library's current documentation, with the `web` connector: it gets the page as Markdown, not raw HTML. The first time a chat reaches a site, you're asked; once you allow it, that chat reads from the site without asking again. It never reaches a private or local address, such as kvman itself or your router, and a page built by JavaScript or behind a sign-in reads as what the server sends. Turn it off as any connector, under **Connectors**.
+
 ## Useful settings
 
 Two settings on the **Settings** page help the agent work on its own. **Check after changes** (`kvcoder.check`) is a line kvman runs after the agent changes files, such as `pnpm typecheck`; its result is added to the change, so the agent sees an error in the same step. **Fallback model** (`kvcoder.fallbackModel`) is the model a chat moves to when its own reaches a usage limit; the chat says when it moved.

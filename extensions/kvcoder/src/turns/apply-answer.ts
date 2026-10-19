@@ -6,6 +6,7 @@ import { runCallSchema, type AnswerReceiptDoc, type HeldResult, type QuestionDoc
 import { now } from '../sessions/session-lookup.ts';
 import type { TxRecords } from '../store/collections.ts';
 import { answerFingerprint } from './answer-fingerprint.ts';
+import { allowHostInTx } from '../web/web-hosts.ts';
 import { checkExtras, type AnswerExtras } from './answer-extras.ts';
 import { heldText, resolvePendingInTx } from './resolve.ts';
 import type { StepIdentity } from './step-intents.ts';
@@ -42,6 +43,8 @@ export function applyAnswer(ctx: Ctx, store: TxRecords, questionId: string, answ
     : call !== undefined
       ? { toolCallId: question.toolCallId, text: '', details: null, isError: false, run: call }
       : heldText(question.toolCallId, extras.reason === undefined ? 'denied by the user' : `denied by the user: ${extras.reason}`, true);
+  // An allowed fetch lets the chat reach its host from now on (ADR 0095, 4).
+  if (call !== undefined) allowHostInTx(store, question.sessionId, call);
   const fingerprint = answerFingerprint(question.kind, answer, extras);
   ctx.job.signal.throwIfAborted();
   store.questions.delete(questionId);

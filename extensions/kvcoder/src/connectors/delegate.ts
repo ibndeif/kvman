@@ -97,6 +97,7 @@ export async function createChild(ctx: Ctx, parent: Stored<SessionDoc>, worker: 
       thinking: levels !== undefined && model === expected ? nearestLevel(levels, wanted) : wanted,
       decides: false,
       clearedThroughSeq: null,
+      webHosts: [],
       stepJobId: null,
       stepGeneration: 0,
       stepIntentId: null,

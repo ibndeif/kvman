@@ -48,6 +48,11 @@ describe("a closed card's line (08 §8.7, ADR 0036, 2)", () => {
     expect(part(safe, 'call-risky').exists()).toBe(false);
   });
 
+  it('QA63-H4 a fetch call reads Fetch and its address', async () => {
+    const fetched = await ranCard(call('web', 'fetch', { url: 'https://docs.example.test/a' }), { url: 'https://docs.example.test/a', status: 200, type: 'text/html', content: '# A' });
+    expect(closedLine(fetched)).toBe('Fetch https://docs.example.test/a');
+  });
+
   it('QA58-H13 a find call has its own line, and opened lists its paths', async () => {
     const found = await ranCard(call('fs', 'find', { pattern: '*.ts' }), { paths: ['src/a.ts', 'src/b.ts'], truncated: false });
     expect(closedLine(found)).toBe('Find *.ts 2 files');

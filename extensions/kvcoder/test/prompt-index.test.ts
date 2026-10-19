@@ -16,7 +16,7 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
     const prompt = systemPrompt(fake);
     const index = (prompt.split('## Connectors\n')[1] ?? '').split('\n');
     const headers = index.filter((line) => line.startsWith('- '));
-    expect(headers.map((line) => /^- ([\w-]+): /.exec(line)?.[1])).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'todo', 'node']);
+    expect(headers.map((line) => /^- ([\w-]+): /.exec(line)?.[1])).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'web', 'todo', 'node']);
     expect(headers.at(-2)).toBe('- todo: Keep a todo list. Commands: add, wait, fail, list, help.');
     expect(headers.at(-1)).toBe('- node: Node.js. Commands: exec, help.');
     expect(prompt).toContain('Your one tool is run: it runs one command of a connector, as { connector, command, payload }.');
@@ -27,8 +27,8 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
     const prompt = systemPrompt(fake);
     const index = (prompt.split('## Connectors\n')[1] ?? '').split('\n');
     const headers = index.filter((line) => line.startsWith('- '));
-    expect(headers.map((line) => /^- ([\w-]+): /.exec(line)?.[1])).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'todo', 'node']);
-    expect(headers.slice(0, 7).every((line) => /^- [\w-]+: \S.*[.!?]$/.test(line) && !line.includes('Commands:'))).toBe(true);
+    expect(headers.map((line) => /^- ([\w-]+): /.exec(line)?.[1])).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'web', 'todo', 'node']);
+    expect(headers.slice(0, 8).every((line) => /^- [\w-]+: \S.*[.!?]$/.test(line) && !line.includes('Commands:'))).toBe(true);
     expect(headers.at(-2)).toBe('- todo: Keep a todo list. Commands: add, wait, fail, list, help.');
     expect(headers.at(-1)).toBe('- node: Node.js. Commands: exec, help.');
     const lines = index.filter((line) => line.startsWith('  '));
@@ -67,6 +67,8 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
       '  run      { worker, title (≤200), task, background? }',
       '  continue { id, message, background? }',
       '  help     { command? }',
+      '  fetch { url }',
+      '  help  { command? }',
     ]);
   });
 

@@ -16,7 +16,8 @@ current documentation rather than rely on memory. Claude Code has a WebFetch too
    redirects, reads at most 5 MB in at most 30 s, and returns `{ "url", "status", "type", "content" }`: `url` the last
    address, `type` the media type, and `content` the page as Markdown for `text/html`, or the text itself for
    `text/plain`, `text/markdown`, `application/json`, and other `text/*` types. Any other type fails
-   `VALIDATION_FAILED`; a status of 400 or more is an error result with its status. `content` is cut as a connector
+   `VALIDATION_FAILED`; a status of 400 or more, a connection that fails, and a page past its 30 s fail
+   `kvcoder/WEB_FAILED { url, status? , reason? }`. `content` is cut as a connector
    result is (30 KB, its first and last 15 KB).
 2. **The dependency** (asked; recommended: `turndown`). HTML becomes Markdown with `turndown` 7.2.4, pinned exactly;
    its `<script>`, `<style>`, and `<noscript>` are removed first.

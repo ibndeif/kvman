@@ -145,6 +145,7 @@ export function callSummary(t: Translate, view: CallView, result?: unknown): Cal
   if (connector === 'execution-map') return mapSummary(t, command, payload, result);
   if (connector === 'delegate' && command === 'run') return summary(t('kvcoder.ui.call.delegate'), [text(payload['worker']), text(payload['title'])].filter((part) => part !== undefined).join(' · '));
   if (connector === 'artifact' && command === 'get') return summary(t('kvcoder.ui.call.readArtifact'), text(payload['id']));
+  if (connector === 'web' && command === 'fetch') return summary(t('kvcoder.ui.call.fetch'), text(payload['url']));
   // A call names what it does from itself (ADR 0089, 1).
   if (connector === 'artifact' && (command === 'write' || command === 'edit')) return summary(t(`kvcoder.ui.call.${command}Artifact`), text(payload['id']));
   return undefined;
