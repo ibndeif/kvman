@@ -32,6 +32,7 @@ kvai.complete {
   - `{ type: 'thinking', delta }`
   - `{ type: 'toolcall', name }`, when a tool call starts, then `{ type: 'toolcall', name, arguments }` each time one more argument is complete and once more with all of them when the call ends (`arguments` holds the completed values only, ADR 0009, 144, with a value over 16 KiB, a string's bytes or any other value's JSON, sent as `null`, ADR 0009, 189, and ADR 0011, 22)
 - **Cancel.** The job's signal aborts the provider call.
+- **Silences.** At the end of each call, kvai logs the time to its first stream event and its longest gap between events, as numbers with the model's id and no payload, so a cut-off for a silent stream can be chosen from real use (ADR 0094, 2).
 - **Failures.** The harness decides whether to call again. Each Problem's `params` name what failed (ADR 0009, 63).
 
   | Code | When |

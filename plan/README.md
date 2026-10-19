@@ -74,5 +74,6 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `adr/0091-fewer-waits-approvals-remembered-and-needs-you.md` | Fewer waits: approval rules kept per workspace and offered as "Always allow", a denial with a reason, edits never risky by themselves, `waitingOn` so "Needs you" is true, a notification and a count in the tab's title |
 | `adr/0092-less-pushing-keep-going-decide-for-me-and-preferences.md` | Less pushing: keep working through a list or a map to its end, a Continue button, a per-chat "Decide for me" without `ask`, and the person's preferences in every prompt with "Remember this" |
 | `adr/0093-a-chat-you-can-read-and-review.md` | A chat you can read and review: calls folded between the agent's text, cards closed, a marked final answer, a Changes view diffed with Git with Undo and Commit, and a chat list that is a drawer on narrow screens |
+| `adr/0094-context-and-robustness.md` | Context and robustness: old tool results cleared in place when the cache expired or the prompt is half full, a model call's longest silence logged, a check after edits, a fallback model on a usage limit |
 
 The plan is complete. Implementation starts with M1.1.
