@@ -71,5 +71,6 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `adr/0088-a-chat-that-answers-at-once.md` | A chat that answers at once: job lists that read rows only, each job on the least-busy worker, collections that declare indexes in the manifest, and a benchmark for the job list |
 | `adr/0089-a-conversation-that-reads-like-a-colleague.md` | A conversation that reads like a colleague: `run` without a description, the lead narrates briefly between calls, a map only for large or risky work, every question in one reply |
 | `adr/0090-fewer-failed-and-wasted-steps.md` | Fewer failed and wasted steps: `replaceAll`, `fs find`, search `context` and `filesOnly`, limits cut or shown in signatures, the better recovery action first, hours in durations, Esc and Up in the send box |
+| `adr/0091-fewer-waits-approvals-remembered-and-needs-you.md` | Fewer waits: approval rules kept per workspace and offered as "Always allow", a denial with a reason, edits never risky by themselves, `waitingOn` so "Needs you" is true, a notification and a count in the tab's title |
 
 The plan is complete. Implementation starts with M1.1.

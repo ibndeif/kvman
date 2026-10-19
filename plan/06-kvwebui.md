@@ -58,7 +58,7 @@ An extension contributes UI by registering the public query `<namespace>.ui.get`
   pages:  [{ id, title, params?: string[], view }],
   nav:    [{ id, page, title, icon, order }],     // icon: a lucide name
   panels: [{ id, title, icon, view }],
-  status: [{ id, query, input, text, params?, order }],
+  status: [{ id, query, input, text, params?, order, titleCount? }],
   configuration?: View,                         // shown on the extension's page (§6.6)
 }
 ```
@@ -78,7 +78,7 @@ An extension contributes UI by registering the public query `<namespace>.ui.get`
 - **Routes.** A page's URL is `/<namespace>/<page>`, followed by its params in order: `params: ['sessionId']` gives `/kvcoder/session/:sessionId`. `kvwebui.home` names the page shown at `/`.
 - **The home page.** The preset decides it: `kvwebui.home` is preset-only (§2.8), so the person can't change it in Settings; without a value it is the Extensions page, `kvwebui.extensions` (ADR 0082, 1).
   - When that page doesn't exist at load (its extension isn't loaded, its `ui.get` failed, or the page has params), `/` shows the built-in Extensions page with an error card: "Home page `<id>` isn't available" (`kvwebui.errors.HOME_UNAVAILABLE`), plus the Problem of the extension that should provide it, if any.
-- **Status items.** A status item's `params` values may be `{ "$output": field, "format"?: "compact" | "usd" }`, read from its query's output: `field` may be a dotted path (`usage.input`), and `format` shows a compact number or US dollars in the UI language (ADR 0009, 146). Its `input` may use `{ "$param": name }`, read from the current page's route params; on a page without that param the item isn't shown. Its query reruns after any command the UI runs, when a job the UI started ends, and every 30 s; so does the built-in health item.
+- **Status items.** A status item's `params` values may be `{ "$output": field, "format"?: "compact" | "usd" }`, read from its query's output: `field` may be a dotted path (`usage.input`), and `format` shows a compact number or US dollars in the UI language (ADR 0009, 146). Its `input` may use `{ "$param": name }`, read from the current page's route params; on a page without that param the item isn't shown. Its query reruns after any command the UI runs, when a job the UI started ends, and every 30 s; so does the built-in health item. A status item's `titleCount` names a field of its query's output, written as a `$output` field is; when the shown items' counts add up to more than 0, the tab's title starts with `(N) ` (ADR 0091, 7).
 
 ## 6.4 View trees
 
