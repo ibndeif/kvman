@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Check, ChevronDown, Search } from '@lucide/vue';
-import { computed, nextTick, onBeforeUnmount, ref, useTemplateRef, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, useTemplateRef, watch, type Component } from 'vue';
 import { useKvman } from './kvman.ts';
 import { searchGroups, type ModelGroup } from './model-groups.ts';
 
@@ -10,7 +10,7 @@ import { searchGroups, type ModelGroup } from './model-groups.ts';
 // every frame while it is open, since the header can move the button without changing the conversation's size (ADR 0009,
 // 211 and 221). With `none`, the list starts with that entry, for a setting that can be empty (ADR 0015, 3): it says
 // `none` when picked, and is left out while the person searches.
-const props = defineProps<{ groups: ModelGroup[]; current: string | null; empty?: string | undefined; none?: string | undefined; disabled?: boolean }>();
+const props = defineProps<{ groups: ModelGroup[]; current: string | null; empty?: string | undefined; none?: string | undefined; disabled?: boolean; icon?: Component | undefined }>();
 const emit = defineEmits<{ pick: [modelId: string]; none: [] }>();
 const kvman = useKvman();
 const open = ref(false);
@@ -119,8 +119,8 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="kvc-picker">
-    <button ref="trigger" type="button" class="kvc-button" aria-haspopup="listbox" :aria-expanded="open" :aria-label="`${kvman.t('kvcoder.ui.model')}: ${label}`" :disabled="props.disabled" data-test="model-picker" @click="open ? close() : show()">
-      <span class="kvc-picker-label">{{ label }}</span><ChevronDown :size="16" aria-hidden="true" />
+    <button ref="trigger" type="button" class="kvc-button" aria-haspopup="listbox" :aria-expanded="open" :aria-label="`${kvman.t('kvcoder.ui.model')}: ${label}`" :disabled="props.disabled" :title="label" data-test="model-picker" @click="open ? close() : show()">
+      <component :is="props.icon" v-if="props.icon" :size="16" class="kvc-picker-icon" aria-hidden="true" /><span class="kvc-picker-label">{{ label }}</span><ChevronDown :size="16" aria-hidden="true" />
     </button>
     <div v-if="open" ref="panel" class="kvc-popover" data-test="model-popover" @keydown.esc.stop="close">
       <label class="kvc-search"><Search :size="16" aria-hidden="true" />

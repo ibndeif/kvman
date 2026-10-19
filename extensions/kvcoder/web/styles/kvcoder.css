@@ -200,6 +200,24 @@ a.kvc-button { text-decoration: none; color: inherit; }
 .kvc-diff > [data-kind='added'] { color: var(--kv-color-success, inherit); background: color-mix(in srgb, var(--kv-color-success, green) 12%, transparent); }
 .kvc-diff > [data-kind='removed'] { color: var(--kv-color-danger); background: color-mix(in srgb, var(--kv-color-danger) 12%, transparent); }
 .kvc-diff > [data-kind='hunk'], .kvc-diff > [data-kind='head'] { color: var(--kv-color-muted, inherit); }
+.kvc-picker-icon { display: none; flex: none; }
+/* The panel's list of what it shows keeps the header one short row. */
+.kvc-artifact-name .kvc-picker > .kvc-button { padding-block: 2px; min-block-size: 0; }
+.kvc-decide { white-space: nowrap; }
+/* A narrow chat shows its pickers as icons, named by their label and tooltip (ADR 0093, 3). */
+@container kvc-workspace (max-inline-size: 30rem) {
+  .kvc-composer-row .kvc-picker-icon { display: block; }
+  .kvc-composer-row .kvc-picker-label { display: none; }
+}
+/* Below 60 rem of page the chat list is a drawer the conversation opens (ADR 0093, 3). */
+.kvc-chats-bar { display: none; }
+@media (max-width: 60rem) {
+  .kvc-sessions { display: none; }
+  .kvc-drawer .kvc-sessions { display: flex; inline-size: 100%; border-inline-end: 0; }
+  .kvc-chats-bar { display: flex; padding-block: 4px; padding-inline: var(--kv-space-md); border-block-end: 1px solid var(--kv-color-border); }
+}
+.kvc-drawer-backdrop { position: fixed; inset: 0; z-index: 40; background: rgb(0 0 0 / 0.35); }
+.kvc-drawer { position: absolute; inset-block: 0; inset-inline-start: 0; inline-size: min(85vw, 20rem); background: var(--kv-color-surface); box-shadow: 0 12px 32px rgb(0 0 0 / 0.2); overflow-y: auto; }
 .kvc-rules { display: flex; flex-direction: column; gap: 6px; margin-block-start: 8px; }
 .kvc-rule { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .kvc-form-error { color: var(--kv-color-danger); font-size: 12.5px; }

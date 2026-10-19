@@ -3,6 +3,7 @@ import { ArrowDown } from '@lucide/vue';
 import { computed, nextTick, ref, useTemplateRef, watch } from 'vue';
 import type { Json } from '@kvman/sdk';
 import ArtifactPanel from './ArtifactPanel.vue';
+import ChatsDrawer from './ChatsDrawer.vue';
 import MessageComposer from './MessageComposer.vue';
 import NotifyLine from './NotifyLine.vue';
 import ChatStart from './ChatStart.vue';
@@ -216,6 +217,7 @@ async function registered(entry: RegisteredSlash, argument: string): Promise<voi
 
 <template>
   <div class="kvc-workspace">
+    <ChatsDrawer :session-id="sessionId" />
     <ConversationHeader v-if="session && sessionId !== undefined" :session="session" :tab="tab" :turns="turns.length" :context="conversation.context.value" :running-since="runningSince" :artifacts="artifacts.list.value.length" :artifacts-open="artifacts.open.value && !executionMap.shown.value" :map="executionMap.counts.value" :map-open="executionMap.shown.value" :changes="changes.count.value" :changes-open="changes.shown.value" :working="actions.working.value !== undefined" @tab="tab = $event" @action="command" @toggle-artifacts="executionMap.toggleArtifacts()" @toggle-map="executionMap.toggle()" @toggle-changes="toggleChanges" @background-running="(count) => (backgroundRunning = count)" />
     <div class="kvc-stage">
     <section class="kvc-conversation" data-test="conversation">

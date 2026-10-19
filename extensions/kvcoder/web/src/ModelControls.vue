@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Bot, Brain, Sparkles } from '@lucide/vue';
 import { computed } from 'vue';
 import ChoicePicker from './ChoicePicker.vue';
 import { useKvman } from './kvman.ts';
@@ -23,7 +24,7 @@ function pickThinking(id: string): void {
 </script>
 
 <template>
-  <ModelPicker :groups="props.groups" :current="props.model" :empty="props.empty" @pick="(modelId) => emit('model', modelId)" />
-  <ChoicePicker test="thinking-picker" :label="kvman.t('kvcoder.ui.thinking')" :current="shown" :options="levels" :disabled="!thinks" @pick="pickThinking" />
-  <button type="button" class="kvc-button kvc-decide" :aria-pressed="props.decides" :title="kvman.t('kvcoder.ui.decideForMeHint')" data-test="decide-switch" @click="emit('decides', !props.decides)">{{ kvman.t('kvcoder.ui.decideForMe') }}</button>
+  <ModelPicker :groups="props.groups" :current="props.model" :empty="props.empty" :icon="Bot" @pick="(modelId) => emit('model', modelId)" />
+  <ChoicePicker test="thinking-picker" :icon="Brain" :label="kvman.t('kvcoder.ui.thinking')" :current="shown" :options="levels" :disabled="!thinks" @pick="pickThinking" />
+  <button type="button" class="kvc-button kvc-decide" :aria-pressed="props.decides" :title="kvman.t('kvcoder.ui.decideForMeHint')" data-test="decide-switch" :aria-label="kvman.t('kvcoder.ui.decideForMe')" @click="emit('decides', !props.decides)"><Sparkles :size="16" class="kvc-picker-icon" aria-hidden="true" /><span class="kvc-picker-label">{{ kvman.t('kvcoder.ui.decideForMe') }}</span></button>
 </template>
