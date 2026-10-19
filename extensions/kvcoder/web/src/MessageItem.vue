@@ -15,7 +15,7 @@ import type { FinishedRun } from './use-finished-runs.ts';
 
 // One stored message (plan 08 §8.7): the person's text and images, an answer in Markdown with its thinking folded, a
 // tool result's card (an answered question shows its answer), kvcoder's notices and other extensions' notes translated, a summary, and background results with how long they ran.
-const props = defineProps<{ message: Message; calls: ReadonlyMap<string, CallView>; finishedRuns?: ReadonlyMap<string, FinishedRun> | undefined }>();
+const props = defineProps<{ message: Message; calls: ReadonlyMap<string, CallView>; finishedRuns?: ReadonlyMap<string, FinishedRun> | undefined; final?: boolean | undefined }>();
 const emit = defineEmits<{ openArtifact: [id: string] }>();
 const kvman = useKvman();
 const text = computed(() => textOf(props.message.content['content']));
@@ -77,7 +77,7 @@ const markdown = (body: string) => ({ type: 'markdown' as const, text: 'kvcoder.
     <span v-if="props.message.queued" class="kvc-muted" style="display: block" data-test="queued">{{ kvman.t('kvcoder.ui.queued') }}</span>
     <RememberThis v-else-if="props.message.source?.kind === 'user' && typedText(text).trim() !== ''" :text="typedText(text).trim()" />
   </div>
-  <div v-else-if="props.message.kind === 'assistant' && (thinking !== '' || text !== '')" class="kvc-answer" data-test="assistant-message">
+  <div v-else-if="props.message.kind === 'assistant' && (thinking !== '' || text !== '')" class="kvc-answer" :class="{ 'kvc-final': props.final === true && text !== '' }" :data-final="props.final === true && text !== '' ? 'true' : undefined" data-test="assistant-message">
     <details v-if="thinking !== ''" data-test="thinking"><summary class="kvc-muted">{{ kvman.t('kvcoder.ui.thought') }}</summary><p class="kvc-muted" style="white-space: pre-wrap">{{ thinking }}</p></details>
     <component :is="kvman.View" v-if="text !== ''" :view="markdown(text)" />
   </div>

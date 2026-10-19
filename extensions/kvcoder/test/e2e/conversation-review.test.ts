@@ -41,6 +41,8 @@ describe('the conversation view in Chromium (08 §8.7, ADR 0017)', { timeout: 12
     const time = page.locator('[data-test="call-card"] [data-test="call-time"]').first();
     await time.waitFor();
     expect(await time.textContent()).toMatch(/^[1-9]\d* ms$|^\d\.\d s$/);
+    // Every card starts closed (ADR 0093, 1): the write's opens with a press.
+    await page.locator('[data-test="call-card"] > button').first().click();
     expect(await page.locator('[data-test="call-parts"]').textContent()).toMatch(/^Written in .+ · ran in \d+ ms$/);
     expect(await page.locator('[data-test="call-failed"]').count()).toBe(0);
 

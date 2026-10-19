@@ -84,6 +84,8 @@ describe('the live view of a running step (08 §8.7, ADR 0009, 142, 143)', () =>
     ];
     serve(fake, { found: session(), messages, omitted: 0, turns: [turn()] });
     const wrapper = await mounted(ConversationView, fake, { sessionId: 's1' });
+    // The two cards fold into one row (ADR 0093, 1), which opens with a press.
+    await wrapper.find('[data-test="call-fold-head"]').trigger('click');
     const [first, second] = wrapper.findAll('[data-test="call-card"]');
     expect(first?.find('[data-test="call-description"]').text()).toBe('Running the tests.');
     expect(first?.find('[data-test="call-subject"]').text()).toBe('$ npm test');

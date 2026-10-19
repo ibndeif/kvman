@@ -12,7 +12,9 @@ import ConversationHeader from './ConversationHeader.vue';
 import { fields, problemKey, problemOf, toastProblem, tokensUsed, totals, useKvman } from './kvman.ts';
 import ActivityLine from './ActivityLine.vue';
 import { messageDraft, sendDraft, type Outgoing } from './message-drafts.ts';
-import { callViews, lastTyped } from './message-parts.ts';
+import { callViews, lastTyped, textOf } from './message-parts.ts';
+import { foldedRows, type Row } from './call-folds.ts';
+import CallFold from './CallFold.vue';
 import MessageItem from './MessageItem.vue';
 import PendingCards from './PendingCards.vue';
 import RecoveryActions from './RecoveryActions.vue';
@@ -49,6 +51,21 @@ const panelShown = computed(() => executionMap.shown.value || (artifacts.open.va
 // An ending with steps left says so (ADR 0064, 11).
 const stepsLeft = computed(() => (session.value?.status === 'idle' ? executionMap.counts.value?.left ?? 0 : 0));
 const calls = computed(() => callViews(messages.value));
+// Calls in a row fold into one row; a turn's line follows the row that holds its last message (ADR 0093, 1).
+const rows = computed(() => foldedRows(messages.value, calls.value));
+const rowKey = (row: Row): string => {
+  const first = row.kind === 'fold' ? row.messages[0] : row.message;
+  return first === undefined ? 'fold' : key(first);
+};
+const rowTotals = (row: Row) => (row.kind === 'fold' ? row.messages.map((message) => turnTotals.value.get(message.id)).findLast((found) => found !== undefined) : turnTotals.value.get(row.message.id));
+const runningTurnId = computed(() => (session.value?.status === 'idle' ? undefined : turns.value[0]?.outcome === undefined ? turns.value[0]?.id : undefined));
+// An ended turn's last text is its final answer, and is marked (ADR 0093, 1).
+const finalAnswers = computed(() => {
+  const ended = new Set(turns.value.filter((turn) => turn.outcome !== undefined).map((turn) => turn.id));
+  const last = new Map<string, string>();
+  for (const message of messages.value) if (message.kind === 'assistant' && message.turnId !== undefined && ended.has(message.turnId) && textOf(message.content['content']).trim() !== '') last.set(message.turnId, message.id);
+  return new Set(last.values());
+});
 const lastSent = computed(() => lastTyped(messages.value));
 const finishedRuns = useFinishedRuns(kvman, () => sessionId.value, messages, readFailed);
 const recoverableNotices = new Set(['STEP_FAILED', 'REPLY_LOST', 'REPLY_INCOMPLETE', 'INTERRUPTED']);
@@ -242,9 +259,10 @@ const key = (message: Message): string => message.id;
                 <button type="button" class="kvc-button" data-test="show-earlier" @click="showEarlier">{{ kvman.t('kvcoder.ui.showEarlier', { count: Math.min(omitted, 200) }) }}</button>
                 <button type="button" class="kvc-button" data-test="earlier" @click="exportEarlier">{{ kvman.t('kvcoder.ui.earlierMessages', { count: omitted }) }}</button>
               </div>
-              <template v-for="message in messages" :key="key(message)">
-                <MessageItem :message="message" :calls="calls" :finished-runs="finishedRuns" @open-artifact="executionMap.selectArtifact($event)" />
-                <span v-if="turnTotals.has(message.id)" class="kvc-muted" :title="turnTotals.get(message.id)?.tokens" data-test="turn-totals">{{ turnTotals.get(message.id)?.text }}</span>
+              <template v-for="row in rows" :key="rowKey(row)">
+                <CallFold v-if="row.kind === 'fold'" :messages="row.messages" :calls="calls" :finished-runs="finishedRuns" :running="row.messages.some((message) => message.turnId !== undefined && message.turnId === runningTurnId)" />
+                <MessageItem v-else :message="row.message" :calls="calls" :finished-runs="finishedRuns" :final="finalAnswers.has(row.message.id)" @open-artifact="executionMap.selectArtifact($event)" />
+                <span v-if="rowTotals(row) !== undefined" class="kvc-muted" :title="rowTotals(row)?.tokens" data-test="turn-totals">{{ rowTotals(row)?.text }}</span>
               </template>
               <NotifyLine v-if="session.waitingOn === 'person'" />
               <div v-if="stepsLeft > 0" class="kvc-notice" data-test="map-remaining">{{ kvman.t('kvcoder.ui.map.remaining', { count: stepsLeft }) }} <button type="button" class="kvc-link-button" data-test="map-show" @click="executionMap.shown.value = true">{{ kvman.t('kvcoder.ui.map.show') }}</button> <button type="button" class="kvc-button" data-test="map-continue" @click="send({ text: kvman.t('kvcoder.ui.map.continueMessage'), fileIds: [] })">{{ kvman.t('kvcoder.ui.map.continue') }}</button></div>

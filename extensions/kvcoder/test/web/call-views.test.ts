@@ -5,13 +5,14 @@ const call = (connector: string, command: string, payload: Call['payload'] = {})
 const lines = (count: number): string => Array.from({ length: count }, (_line, index) => `line ${index + 1}\n`).join('');
 
 describe("an opened card shows the call by its kind (08 §8.7, ADR 0036, 3 and 5 to 8)", () => {
-  it('QA48-H3 an edit is open and shows a diff per edit, each line in its own direction, and no JSON', async () => {
+  it('QA48-H3 and QA61-H2 an edit starts closed, and opened shows a diff per edit, each line in its own direction, and no JSON', async () => {
     const edits = [
       { oldText: '# الحقول المطلوبة\nappealNumber: رقم التظلم\n', newText: '# رقم التظلم\nappealNumber: رقم التظلم الخاص\nلا ترجع appealNumber\n' },
       { oldText: '- لا ترجع التواريخ.', newText: '- لا ترجع التواريخ.\n- العلامة محل التظلم.' },
     ];
     const card = await ranCard(call('fs', 'edit', { path: 'lib/prompts/extract.txt', risky: false, edits }), { path: 'lib/prompts/extract.txt', replacements: 2, firstChangedLine: 27, fromLine: 24, content: 'x\n' });
-    expect(isOpen(card)).toBe(true);
+    expect(isOpen(card)).toBe(false);
+    await pressed(card);
     const diffs = parts(card, 'call-diff').map((diff) => diff.findAll('[data-test="call-line-row"]').map((row) => row.attributes('data-kind')));
     expect(diffs).toEqual([['removed', 'removed', 'added', 'added', 'added'], ['context', 'added']]);
     expect(parts(card, 'call-line-text').map((line) => line.attributes('dir'))).toEqual(Array.from({ length: 7 }, () => 'auto'));
@@ -21,9 +22,10 @@ describe("an opened card shows the call by its kind (08 §8.7, ADR 0036, 3 and 5
     for (const hidden of ['\\n', 'oldText', 'risky', 'firstChangedLine', '{']) expect(text, hidden).not.toContain(hidden);
   });
 
-  it('QA48-H4 a write is open and shows its content as numbered lines', async () => {
+  it('QA48-H4 and QA61-H2 a write starts closed, and opened shows its content as numbered lines', async () => {
     const card = await ranCard(call('fs', 'write', { path: 'notes.md', content: '# Notes\n\nMilk\n', risky: false }), { path: 'notes.md', created: true, bytes: 15 });
-    expect(isOpen(card)).toBe(true);
+    expect(isOpen(card)).toBe(false);
+    await pressed(card);
     expect(shownLines(card, 'call-content')).toEqual(['1# Notes', '2', '3Milk']);
     expect(part(card, 'call-result-fields').exists()).toBe(false);
   });
@@ -145,11 +147,12 @@ describe("an opened card shows the call by its kind (08 §8.7, ADR 0036, 3 and 5
     ];
     for (const [made, output] of closed) expect(isOpen(await ranCard(made, output)), `${made.connector} ${made.command}`).toBe(false);
     const edit = await ranCard(call('fs', 'edit', { path: 'a.txt', edits: [{ oldText: 'a', newText: 'b' }], risky: false }), { path: 'a.txt', replacements: 1, firstChangedLine: 1, fromLine: 1, content: 'b' });
-    await pressed(edit);
     expect(isOpen(edit)).toBe(false);
     expect(part(edit, 'call-diff').exists()).toBe(false);
     await pressed(edit);
     expect(isOpen(edit)).toBe(true);
+    await pressed(edit);
+    expect(isOpen(edit)).toBe(false);
   });
 
   it("QA48-E12 a result that isn't what the kind returns shows as text, and the closed line has no outcome", async () => {
@@ -164,6 +167,7 @@ describe("an opened card shows the call by its kind (08 §8.7, ADR 0036, 3 and 5
 describe('a count that reads right in the singular (ADR 0090, 6)', () => {
   it('QA58-H10 an edit with one replacement says Replaced: 1', async () => {
     const card = await ranCard(call('fs', 'edit', { path: 'a.ts', risky: false, edits: [{ oldText: 'a', newText: 'b' }] }), { path: 'a.ts', replacements: 1, firstChangedLine: 82, fromLine: 79, content: 'b\n' });
+    await pressed(card);
     expect(part(card, 'call-replacements').text()).toBe('Replaced: 1 · from line 82');
   });
 });

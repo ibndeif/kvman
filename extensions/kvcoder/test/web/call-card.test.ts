@@ -33,6 +33,7 @@ describe("a call's card says what the call does (08 §8.7, ADR 0011, 13)", () =>
     expect([found(edit, 'call-words').text(), found(edit, 'call-subject').text(), found(edit, 'call-outcome').text()]).toEqual(['Edit', 'src/app.ts', '+1 −1']);
     expect(found(edit, 'call-label').exists()).toBe(false);
     expect(found(edit, 'call-time').text()).toBe('200 ms');
+    await opened(edit);
     expect(edit.findAll('[data-test="call-diff"] [data-test="call-line-row"]').map((row) => [row.attributes('data-kind'), row.text()])).toEqual([['removed', '−a'], ['added', '+b']]);
     edit.unmount();
 

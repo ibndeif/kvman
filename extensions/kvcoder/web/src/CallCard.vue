@@ -15,11 +15,12 @@ import LinkedText from './LinkedText.vue';
 // the outcome, and its time, all from the same edge; a failed call has a danger border and says "Failed". The time is
 // the whole wait: the model writing the call, then the call running (ADR 0017, 1). Opened, it shows the two parts, then
 // the call by its kind. A failed call starts closed with a short reason; one the agent got wrong is quiet, and one that
-// isn't a line keeps its error and request behind "Show details" (ADR 0079). A change starts open.
+// isn't a line keeps its error and request behind "Show details" (ADR 0079).
 const props = defineProps<{ view: CallView; failed?: boolean | undefined; durationMs?: number | undefined; output?: string | undefined; running?: boolean | undefined }>();
 const kvman = useKvman();
 const kind = computed(() => callKind(props.view));
-const open = ref(props.output !== undefined && props.failed !== true && (kind.value === 'edit' || kind.value === 'write'));
+// Every card starts closed, a change's too, so a turn reads as the agent's text (ADR 0093, 1).
+const open = ref(false);
 const details = ref(false);
 const failure = computed(() => (props.failed === true && props.output !== undefined ? callFailure(props.output) : undefined));
 const quiet = computed(() => failure.value?.kind === 'invalid');

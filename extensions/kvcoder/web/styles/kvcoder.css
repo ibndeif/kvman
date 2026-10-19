@@ -193,6 +193,8 @@ a.kvc-button { text-decoration: none; color: inherit; }
 .kvc-confirm { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--kv-color-danger); border-radius: var(--kv-radius); }
 .kvc-preferences { inline-size: 100%; min-block-size: 6rem; resize: vertical; }
 .kvc-remember { display: block; margin-block-start: 4px; }
+.kvc-fold-body { display: flex; flex-direction: column; gap: 6px; padding: 6px 8px 8px; border-block-start: 1px solid var(--kv-color-border); }
+.kvc-final { border-inline-start: 3px solid var(--kv-color-primary); padding-inline-start: 12px; }
 .kvc-rules { display: flex; flex-direction: column; gap: 6px; margin-block-start: 8px; }
 .kvc-rule { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .kvc-form-error { color: var(--kv-color-danger); font-size: 12.5px; }
