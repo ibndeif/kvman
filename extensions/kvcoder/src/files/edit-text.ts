@@ -4,9 +4,10 @@ import { invalid } from '../problems.ts';
 const refused = (reason: string) => invalid(`${reason} Nothing was written.`);
 
 // The text side of `fs edit` (plan 08 §8.5, ADR 0009, 159): every edit is matched exactly, once, against the file as
-// it was, the edits are applied together, and the file's BOM and first line ending are kept.
+// it was, the edits are applied together, and the file's BOM and first line ending are kept. An edit with
+// `replaceAll` replaces each occurrence, found as `String.replaceAll` finds them (ADR 0090, 1).
 
-export type TextEdit = { oldText: string; newText: string };
+export type TextEdit = { oldText: string; newText: string; replaceAll?: boolean | undefined };
 
 /** The edited file's text, how many replacements were made, and the first and last changed lines, counted in the edited text. */
 export type EditedText = { text: string; replacements: number; firstChangedLine: number; lastChangedLine: number };
@@ -24,14 +25,20 @@ function occurrences(content: string, needle: string): number[] {
   return found;
 }
 
-function locate(content: string, edit: TextEdit, editIndex: number): Match {
+// Every place `needle` occurs, each after the end of the one before.
+function separateOccurrences(content: string, needle: string): number[] {
+  const found: number[] = [];
+  for (let index = content.indexOf(needle); index >= 0; index = content.indexOf(needle, index + needle.length)) found.push(index);
+  return found;
+}
+
+function locate(content: string, edit: TextEdit, editIndex: number): Match[] {
   const oldText = withLineFeeds(edit.oldText);
   if (oldText === '') throw refused(`edits[${editIndex}].oldText is empty.`);
-  const found = occurrences(content, oldText);
-  const [index] = found;
-  if (index === undefined) throw refused(`edits[${editIndex}] was not found; oldText must match the file exactly, including whitespace and line breaks.`);
-  if (found.length > 1) throw refused(`edits[${editIndex}] was found ${found.length} times; add more surrounding text so it matches once.`);
-  return { index, length: oldText.length, edit: editIndex, newText: withLineFeeds(edit.newText) };
+  const found = edit.replaceAll === true ? separateOccurrences(content, oldText) : occurrences(content, oldText);
+  if (found.length === 0) throw refused(`edits[${editIndex}] was not found; oldText must match the file exactly, including whitespace and line breaks.`);
+  if (found.length > 1 && edit.replaceAll !== true) throw refused(`edits[${editIndex}] was found ${found.length} times; add more surrounding text so it matches once, or set replaceAll to replace every one.`);
+  return found.map((index) => ({ index, length: oldText.length, edit: editIndex, newText: withLineFeeds(edit.newText) }));
 }
 
 function checkDisjoint(matches: readonly Match[]): void {
@@ -48,7 +55,7 @@ export function applyEdits(original: string, edits: readonly TextEdit[]): Edited
   const body = hasMark ? original.slice(1) : original;
   const crlf = body.indexOf('\r\n') >= 0 && body.indexOf('\r\n') === body.indexOf('\n') - 1;
   const content = withLineFeeds(body);
-  const matches = edits.map((edit, editIndex) => locate(content, edit, editIndex)).sort((first, second) => first.index - second.index);
+  const matches = edits.flatMap((edit, editIndex) => locate(content, edit, editIndex)).sort((first, second) => first.index - second.index);
   checkDisjoint(matches);
   const edited = matches.reduceRight((text, match) => text.slice(0, match.index) + match.newText + text.slice(match.index + match.length), content);
   if (edited === content) throw refused('The edits change nothing in the file.');

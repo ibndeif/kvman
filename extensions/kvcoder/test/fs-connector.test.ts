@@ -111,7 +111,7 @@ describe('the fs connector (08 §8.5, ADR 0009, 157 to 160)', { timeout: 30_000 
       fsCall('edit', { path: 'a.txt', edits: [] }),
       fsCall('write', { path: 'a.txt', content: 'x', mode: 'append' }),
     ]);
-    expect(results[0]).toBe('error NOT_FOUND: fs has no command nope. Its commands are: read { path, fromLine?, fromColumn?, lines? }, list { path? }, search { pattern, path?, literal?, glob? }, write { path, content, risky }, edit { path, edits: [{ oldText, newText }], risky }, undo { path, risky }, part { path, part, content }, assemble { path, risky }, help.');
+    expect(results[0]).toBe('error NOT_FOUND: fs has no command nope. Its commands are: read { path, fromLine?, fromColumn?, lines? }, list { path? }, search { pattern, path?, literal?, glob? }, write { path, content, risky }, edit { path, edits: [{ oldText, newText, replaceAll? }], risky }, undo { path, risky }, part { path, part, content }, assemble { path, risky }, help.');
     expect(results[1]).toMatch(/^error VALIDATION_FAILED: path: .*The payload of fs write is\n\{ path, content, risky \}$/s);
     expect(results[2]).toMatch(/^error VALIDATION_FAILED: edits: /);
     expect(results[3]).toMatch(/^error VALIDATION_FAILED: payload: .*mode/);

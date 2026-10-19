@@ -12,6 +12,12 @@ export const background = z.boolean().describe('true keeps a server or any long-
 export const timeoutMs = z.number().int().positive().describe('How long the command may run, in milliseconds: 120000 by default, at most 600000. Ignored with background.').exactOptional();
 
 export const edits = z
-  .array(z.strictObject({ oldText: z.string().describe('The exact text to replace, as it is now, whitespace and line breaks included. It must occur once.'), newText: z.string().describe('The text that replaces it.') }))
+  .array(
+    z.strictObject({
+      oldText: z.string().describe('The exact text to replace, as it is now, whitespace and line breaks included. It must occur once, unless replaceAll is true.'),
+      newText: z.string().describe('The text that replaces it.'),
+      replaceAll: z.boolean().describe('true replaces every occurrence of oldText, such as a name used in many places; it must occur at least once.').exactOptional(),
+    }),
+  )
   .min(1)
   .describe('The replacements, applied together. They must not overlap; put several changes to one target in one call.');

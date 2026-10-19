@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { applyEdits } from '../../src/files/edit-text.ts';
 
-const refused = (original: string, edits: { oldText: string; newText: string }[], message: RegExp): void => {
+const refused = (original: string, edits: { oldText: string; newText: string; replaceAll?: boolean }[], message: RegExp): void => {
   expect(() => applyEdits(original, edits)).toThrowError(expect.objectContaining({ problem: expect.objectContaining({ code: 'VALIDATION_FAILED', message: expect.stringMatching(message) as unknown }) as unknown }) as Error);
 };
 
@@ -63,5 +63,32 @@ describe('applyEdits (08 §8.5, ADR 0009, 159)', () => {
       ['abc', [{ oldText: 'b', newText: 'b' }]],
     ];
     for (const [text, edits] of refusals) refused(text, edits, / Nothing was written\.$/);
+  });
+});
+
+describe('applyEdits with replaceAll (08 §8.5, ADR 0090, 1)', () => {
+  it('QA58-H1 replaceAll replaces every occurrence, and an edit without it still matches once', () => {
+    const edited = applyEdits('x = 1\ny = 0\nx = 1\nx = 1\n', [{ oldText: 'x = 1', newText: 'x = 2', replaceAll: true }, { oldText: 'y = 0', newText: 'y = 9' }]);
+    expect(edited).toEqual({ text: 'x = 2\ny = 9\nx = 2\nx = 2\n', replacements: 4, firstChangedLine: 1, lastChangedLine: 4 });
+  });
+
+  it('QA58-E1 replaceAll with nothing to replace is refused', () => {
+    refused('abc', [{ oldText: 'zzz', newText: 'x', replaceAll: true }], /^edits\[0\] was not found;.* Nothing was written\.$/);
+  });
+
+  it('QA58-E2 replaceAll finds occurrences left to right, as String.replaceAll does', () => {
+    expect(applyEdits('aaaa', [{ oldText: 'aa', newText: 'b', replaceAll: true }])).toMatchObject({ text: 'bb', replacements: 2 });
+  });
+
+  it('QA58-E3 an occurrence that overlaps another edit is refused, naming both', () => {
+    refused('ab ab', [{ oldText: 'ab', newText: 'x', replaceAll: true }, { oldText: 'b ab', newText: 'y' }], /^edits\[\d\] and edits\[\d\] overlap/);
+  });
+
+  it('QA58-E4 replaceAll that changes nothing is refused', () => {
+    refused('a a a', [{ oldText: 'a', newText: 'a', replaceAll: true }], /^The edits change nothing in the file\./);
+  });
+
+  it('QA58-H1 a repeated text without replaceAll says how to replace every one', () => {
+    refused('x\nx\n', [{ oldText: 'x', newText: 'y' }], /was found 2 times; add more surrounding text so it matches once, or set replaceAll to replace every one\./);
   });
 });
