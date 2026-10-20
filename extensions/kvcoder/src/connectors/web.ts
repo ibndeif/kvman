@@ -1,5 +1,5 @@
 import { z, type Ctx } from '@kvman/sdk';
-import { fetchPage, networkTransport } from '../web/fetch-page.ts';
+import { fetchPage, networkTransport } from '../web-fetch/fetch-page.ts';
 import { callInput, type ConnectorCommand } from './connector-command.ts';
 
 // The `web` connector (plan 08 §8.5, ADR 0095): a page on the web, read as Markdown or text.

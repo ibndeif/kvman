@@ -6,7 +6,7 @@ import { runCallSchema, type AnswerReceiptDoc, type HeldResult, type QuestionDoc
 import { now } from '../sessions/session-lookup.ts';
 import type { TxRecords } from '../store/collections.ts';
 import { answerFingerprint } from './answer-fingerprint.ts';
-import { allowHostInTx } from '../web/web-hosts.ts';
+import { allowHostInTx } from '../web-fetch/web-hosts.ts';
 import { checkExtras, type AnswerExtras } from './answer-extras.ts';
 import { heldText, resolvePendingInTx } from './resolve.ts';
 import type { StepIdentity } from './step-intents.ts';

@@ -9,7 +9,7 @@ describe('registering a connector for the run tool (08 §8.4, ADR 0011, 4 and 5)
     const { kernel } = await kvcoder.start();
     const register = (input: Json) => kernel.exec('kvcoder.connector.register', input as never, { as: '@test/todo' });
     await expect(register({ name: 'notes', description: 'Notes.', commands: [{ name: 'help', command: 'todo.item.list' }] })).rejects.toMatchObject({ problem: { code: 'VALIDATION_FAILED' } });
-    for (const name of ['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate']) {
+    for (const name of ['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'web']) {
       await expect(register({ name, description: 'Mine.', binary: { check: 'true' } }), name).rejects.toMatchObject({ problem: { code: 'kvcoder/NAME_TAKEN' } });
     }
     await register({ name: 'jobs', description: 'A name that is free again.', binary: { check: 'true' } });

@@ -16,7 +16,7 @@ import type { SessionTools } from '../prompt/session-prompt.ts';
 import type { HeldResult, SessionDoc } from '../schemas/records.ts';
 import { now } from '../sessions/session-lookup.ts';
 import { txRecords } from '../store/collections.ts';
-import { hostOf } from '../web/web-hosts.ts';
+import { hostOf } from '../web-fetch/web-hosts.ts';
 import { currentStep, type StepLease } from './step-claim.ts';
 import { liveStep } from './step-intents.ts';
 import { failedCall, orderedCall, runHelp, runTarget, targetOf, textResult, type CallDone, type CommandTarget } from './run-command.ts';

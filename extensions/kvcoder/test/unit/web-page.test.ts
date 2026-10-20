@@ -1,7 +1,7 @@
 import { isIP } from 'node:net';
 import { describe, expect, it } from 'vitest';
-import { bodyLimit, fetchPage, type PageResponse, type WebTransport } from '../../src/web/fetch-page.ts';
-import { isPrivateAddress } from '../../src/web/private-address.ts';
+import { bodyLimit, fetchPage, type PageResponse, type WebTransport } from '../../src/web-fetch/fetch-page.ts';
+import { isPrivateAddress } from '../../src/web-fetch/private-address.ts';
 
 // web fetch's reading of a page (08 §8.5, ADR 0095), with the network replaced by a table of answers. An address is
 // its own resolution, as with the network.
