@@ -1,5 +1,11 @@
 # @kvman/kvwebui
 
+## 0.1.5
+
+### Patch Changes
+
+- 0962c2d: A status item may set `titleCount`, a field of its query's output; the tab's title then starts with `(N) ` while the items' counts add up to more than 0 (ADR 0091, 7).
+
 ## 0.1.4
 
 ### Patch Changes

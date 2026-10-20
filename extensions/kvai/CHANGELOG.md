@@ -1,5 +1,13 @@
 # @kvman/kvai
 
+## 0.1.5
+
+### Patch Changes
+
+- 383ba9e: pi-ai loads with a worker's first model call or model list, not when kvai loads, as ADR 0009, 52 intended: idle memory with the coder preset falls from about 307 to 238 MB.
+- de50f7d: Each model call logs its model, the time to its stream's first event, and its longest gap between events, with no payload, so a cut-off for a silent stream can be chosen from real use (ADR 0094, 2).
+- dd316f0: A model stream with no event for 300 s, before its first event or between two, is aborted as a temporary `kvai/PROVIDER_ERROR` (`stream stalled`), so the caller's retries take it; a cancel stays a cancel (ADR 0096).
+
 ## 0.1.4
 
 ### Patch Changes

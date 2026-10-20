@@ -1,5 +1,35 @@
 # @kvman/kvcoder
 
+## 0.1.12
+
+### Patch Changes
+
+- 4a85fa1: The approval card offers "Always allow" (a line's first two words, editable, or file changes), which saves the rule with `remember` on `kvcoder.question.answer`, and "Deny and say why…", whose `reason` the model reads as `denied by the user: <reason>` (ADR 0091, 3 and 4).
+- 160b165: Approval rules (`kvcoder.approval.allowed`): a shell or binary line whose every command starts with an allowed prefix, or a file change, runs without asking, under `auto` and `ask`; Configuration's Approval row lists them with Remove. The prompt says a change to a file in the workspace is never risky by itself (ADR 0091, 1, 2, and 5).
+- 5fd2aa9: A Changes view: the files a chat changed with `fs` (`kvcoder.change.list`, diffed with Git against `HEAD` or the chat's oldest kept copy), with Undo (`kvcoder.change.undo`) and Commit, opened from the header's "Changes (N)" (ADR 0093, 2).
+- b390837: `kvcoder.check`: a line kvman runs after a reply whose file changes ran and succeeded; its exit code and last 4 KB end the last change's result (ADR 0094, 3).
+- 428587e: Old tool results are sent cleared, as one line naming the call, when a turn starts after an hour without a model call or when the prompt is half full with much to clear; the newest 40,000 tokens of results are always kept, and the stored chat doesn't change (ADR 0094, 1).
+- 6107ae4: "Decide for me": a chat's `decides` (session view, `kvcoder.session.configure`), switched in the send box, takes the `ask` connector away and tells the lead to make each choice itself and say it in a line; approvals still ask (ADR 0092, 2).
+- b6d134b: `kvcoder.fallbackModel`: when a step's model reaches a usage limit, or a rate limit after all tries, the chat moves to the fallback, the notice `MODEL_SWITCHED` says so, and the step calls the model once more (ADR 0094, 4).
+- 3c0adb1: A turn in fewer steps (ADR 0097): both methods start with putting independent calls in one reply, and the new `fs read-files` reads up to 10 files in one call. `fs read` and `fs edit` read to the model as numbered lines (the call card is unchanged), a failed edit names where its text was found or nearly found, an old call's long text is cleared with its result, the map's rules live in the `execution-map` entry with its true limits, the retry hints no longer ask for one call per reply, and "Decide for me" no longer tells the lead to call `ask`.
+- 77a06e4: `fs find { pattern, path? }` lists the files whose path matches a glob, newest first, at most 200, skipping what `fs search` skips; its card reads `Find <pattern> N files` (ADR 0090, 2).
+- 584b114: The agent keeps working through a task's items or the map's ready steps to the end, reporting once, and the line under the steps not done has a Continue button that sends "Continue." (ADR 0092, 1).
+- abbec11: `background wait`'s `timeoutMs`, `background output`'s `lines`, `fs read`'s `lines`, and `fs search`'s `context` are cut into their range instead of refused, and a payload signature shows a string's maximum length as `name (≤N)` (ADR 0090, 4).
+- f51cb06: On a narrow page the chat list is a drawer opened from a "Chats" button, the send box no longer covers the messages, and in a narrow conversation the model, thinking, and Decide for me controls show as icons (ADR 0093, 3).
+- 0962c2d: A session's view says who it waits on (`waitingOn`: `person`, `helpers`, or `null`); the list shows "Needs you" only for the person, the "Waiting for you" count and the tab's title count chats waiting on the person, and a chat that starts needing the person while the page is hidden shows a system notification once the person turned them on (ADR 0091, 6 and 7).
+- b234c9f: The person's preferences (`kvcoder.preferences`, up to 16 KB) are sent in every chat's prompt right after the base prompt; the Agent card edits them, and "Remember this" on a message the person sent adds it (ADR 0092, 3).
+- 196f008: After a turn fails because the model's account reached its usage limit, has no key, or is limiting calls, "Choose another model" comes before Retry (ADR 0090, 5).
+- 868d3ae: `fs edit` and `artifact edit` take `replaceAll: true` on an edit, which replaces every occurrence of its `oldText`, counted in `replacements` (ADR 0090, 1).
+- cfc8672: `fs search` takes `context` (0 to 10 lines around each match, marked `context`) and `filesOnly` (each file with its count of matching lines); the default result is unchanged (ADR 0090, 3).
+- 1dca173: A time of an hour or more reads in hours and minutes, an edit's count reads "Replaced: N", Esc in the empty send box stops the running turn, and Up in it brings back the person's last message (ADR 0090, 6).
+- e01e63d: A turn reads as a story: call cards in a row fold into one row that says what they did and how long they took, every card starts closed, and a turn's final answer is marked (ADR 0093, 1).
+- 1211a58: `web fetch` judges an IPv4 address carried inside IPv6 (`[::ffff:7f00:1]`, NAT64, 6to4) as that IPv4 address, so no spelling of a local address is reached (ADR 0095, 3).
+- 683c88b: `web fetch { url }`: kvcoder's own connector `web` reads a page as Markdown (with `turndown`) or text, never from a private or local address, and asks before a chat's first page from each site (ADR 0095).
+- Updated dependencies [383ba9e]
+- Updated dependencies [de50f7d]
+- Updated dependencies [dd316f0]
+  - @kvman/kvai@0.1.5
+
 ## 0.1.11
 
 ### Patch Changes
