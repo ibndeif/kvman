@@ -282,7 +282,7 @@ first fetch per domain asks.
 | 17 changes view | D | D2 | 0093 | QA61 | done |
 | 19 narrow widths | D | D3 | 0093 | QA61 | done |
 | 1 clearing | E | E1 | 0094 | QA62 | done |
-| 6 stalled stream | E | E2 | 0094 | QA62 | step 1 done (silences logged); the cut-off waits for a week of logs |
+| 6 stalled stream | E | E2 | 0094, 0096 | QA62, QA64 | done: silences logged, and a stream silent for 300 s is retried |
 | 5 check after edits | E | E3 | 0094 | QA62 | done |
 | 8 fallback model | E | E4 | 0094 | QA62 | done |
 | 13 web fetch | E | E5 | 0095 | QA63 | done (`turndown` 7.2.4) |

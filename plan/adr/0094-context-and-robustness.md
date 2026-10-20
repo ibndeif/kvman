@@ -33,7 +33,7 @@ The kvcoder review of 2026-10-19 (`docs/reviews/kvcoder-review-2026-10-19.md`, P
 2. **A model call's longest silence is logged** (asked; recommended: measure first). kvai logs, at the end of each
    model call, the time to its first stream event and its longest gap between events, as numbers with the model's id
    and no payload. The cut-off that ends a silent stream as a temporary failure is decided from a week of those logs, in
-   a later ADR.
+   a later ADR (ADR 0096 set it to 300 s before those logs existed).
 3. **A check after edits** (asked; recommended: a setting the person fills). The setting `kvcoder.check`
    (`{ line, timeoutMs }` or `null`, the default; global and workspace scopes; `timeoutMs` from 1,000 to 600,000, 60,000
    by default) holds a line the person trusts. After the calls of a reply, the lead's or a helper's, when an `fs write`,

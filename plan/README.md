@@ -76,5 +76,6 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `adr/0093-a-chat-you-can-read-and-review.md` | A chat you can read and review: calls folded between the agent's text, cards closed, a marked final answer, a Changes view diffed with Git with Undo and Commit, and a chat list that is a drawer on narrow screens |
 | `adr/0094-context-and-robustness.md` | Context and robustness: old tool results cleared in place when the cache expired or the prompt is half full, a model call's longest silence logged, a check after edits, a fallback model on a usage limit |
 | `adr/0095-web-fetch.md` | `web fetch`: a page read as Markdown with turndown, never a private address (checked again at each redirect), and the person asked once per host in a chat |
+| `adr/0096-a-silent-stream-is-retried.md` | a model stream silent for 300 s is aborted as a temporary `kvai/PROVIDER_ERROR` (`stream stalled`), so the step retries it |
 
 The plan is complete. Implementation starts with M1.1.
