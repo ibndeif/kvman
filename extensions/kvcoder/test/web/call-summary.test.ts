@@ -57,16 +57,16 @@ describe("a closed card's line (08 §8.7, ADR 0036, 2)", () => {
     const found = await ranCard(call('fs', 'find', { pattern: '*.ts' }), { paths: ['src/a.ts', 'src/b.ts'], truncated: false });
     expect(closedLine(found)).toBe('Find *.ts 2 files');
     const cut = await ranCard(call('fs', 'find', { pattern: '*.ts' }), { paths: ['a.ts'], truncated: true });
-    expect(closedLine(cut)).toBe('Find *.ts The first 1 files');
+    expect(closedLine(cut)).toBe('Find *.ts The first 1 file');
   });
 
   it('QA58-H4 and QA58-H5 lines around a match are not counted, and a files-only search shows each count', async () => {
     const context = await ranCard(call('fs', 'search', { pattern: 'hit', context: 1 }), { files: [{ path: 'a.ts', matches: [{ line: 1, text: 'x', context: true }, { line: 2, text: 'hit' }, { line: 3, text: 'y', context: true }] }], truncated: false });
-    expect(closedLine(context)).toBe('Search hit 1 matches in 1 files');
+    expect(closedLine(context)).toBe('Search hit 1 match in 1 file');
     const counts = await ranCard(call('fs', 'search', { pattern: 'hit', filesOnly: true }), { files: [{ path: 'a.ts', count: 3 }, { path: 'b.ts', count: 2 }], truncated: false });
     expect(closedLine(counts)).toBe('Search hit 5 matches in 2 files');
     await pressed(counts);
-    expect(counts.findAll('[data-test="call-file-count"]').map((row) => row.text())).toEqual(['Matches: 3', 'Matches: 2']);
+    expect(counts.findAll('[data-test="call-file-count"]').map((row) => row.text())).toEqual(['3 matches', '2 matches']);
   });
 
   it('QA48-E8 a cut list or search says the first', async () => {

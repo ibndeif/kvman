@@ -38,7 +38,7 @@ const changes = computed(() => pending.value.starting.length + pending.value.rem
     <div class="flex flex-wrap items-end gap-4">
       <div class="flex grow flex-col gap-1.5">
         <h1 class="m-0 text-[26px] font-semibold tracking-tight">{{ t('kvwebui.pages.extensions') }}</h1>
-        <p class="m-0 text-muted">{{ t('kvwebui.extensions.intro', { count: String(state.extensions.value.length), preset: state.health.value?.preset ?? '' }) }}</p>
+        <p class="m-0 text-muted">{{ t('kvwebui.extensions.intro', { count: state.extensions.value.length, preset: state.health.value?.preset ?? '' }) }}</p>
       </div>
       <label class="flex h-9 w-65 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-muted">
         <Search class="size-4" aria-hidden="true" />
@@ -47,7 +47,7 @@ const changes = computed(() => pending.value.starting.length + pending.value.rem
     </div>
     <div v-if="changes > 0" role="status" class="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-accent-soft px-4.5 py-3 text-accent-ink" data-test="restart-banner">
       <span class="font-semibold">{{ t('kvwebui.extensions.banner') }}</span>
-      <span>{{ t('kvwebui.extensions.banner.count', { count: String(changes) }) }}</span>
+      <span>{{ t('kvwebui.extensions.banner.count', { count: changes }) }}</span>
       <RestartNow />
     </div>
     <ErrorCard v-if="state.health.value?.rolledBack" :problem="state.health.value.rolledBack" title="kvwebui.extensions.rolledBack" data-test="rolled-back" />

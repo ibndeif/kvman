@@ -75,8 +75,9 @@ function pathsText(t: Translate, result: Record<string, unknown>): string | unde
 function matchesText(t: Translate, result: Record<string, unknown>): string | undefined {
   const files = searchResult(result);
   if (files === undefined) return undefined;
-  const matches = files.reduce((sum, file) => sum + file.count, 0);
-  return t(result['truncated'] === true ? 'kvcoder.ui.call.matchesFirst' : 'kvcoder.ui.call.matches', { matches, files: files.length });
+  const count = files.reduce((sum, file) => sum + file.count, 0);
+  const matches = t(result['truncated'] === true ? 'kvcoder.ui.call.matchesFirst' : 'kvcoder.ui.call.matchCount', { count });
+  return t('kvcoder.ui.call.matches', { matches, files: t('kvcoder.ui.call.files', { count: files.length }) });
 }
 
 const countText = (t: Translate, key: string, items: unknown): string | undefined => (Array.isArray(items) ? t(key, { count: items.length }) : undefined);

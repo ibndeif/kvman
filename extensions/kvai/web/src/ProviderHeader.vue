@@ -47,7 +47,7 @@ function back(): void {
       <div class="kvai-provider-titles">
         <h1 class="kvai-provider-title">{{ props.row.title }}</h1>
         <span class="kvai-muted kvai-default-meta" data-test="provider-sub"
-          ><span class="kvai-mono">{{ props.row.id }}</span> · <span>{{ kvman.t('kvai.ui.providers.modelCount', { count: String(props.row.models) }) }}</span></span
+          ><span class="kvai-mono">{{ props.row.id }}</span> · <span>{{ kvman.t('kvai.ui.providers.modelCount', { count: props.row.models }) }}</span></span
         >
       </div>
       <span class="kvai-spacer"></span>

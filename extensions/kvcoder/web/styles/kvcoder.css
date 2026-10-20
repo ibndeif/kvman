@@ -116,6 +116,8 @@ a.kvc-button { text-decoration: none; color: inherit; }
 .kvc-activity-text { display: flex; flex-direction: column; gap: 6px; flex: 1 1 auto; min-inline-size: 0; }
 .kvc-activity-call { display: flex; flex-direction: column; gap: 2px; }
 .kvc-oneline { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kvc-fold-words { flex: 1 1 auto; text-align: start; }
+.kvc-fold-failed { color: var(--kv-color-danger); }
 .kvc-picker { position: relative; }
 .kvc-picker-label { max-inline-size: 16rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .kvc-popover { position: absolute; inset-inline-start: 0; inset-block-start: calc(100% + 6px); z-index: 20; box-sizing: border-box; inline-size: min(26rem, calc(100cqw - 2 * var(--kv-space-lg))); display: flex; flex-direction: column; gap: 6px; padding: 8px; border: 1px solid var(--kv-color-border); border-radius: 12px; background: var(--kv-color-surface); box-shadow: 0 12px 32px rgb(0 0 0 / 0.14); }

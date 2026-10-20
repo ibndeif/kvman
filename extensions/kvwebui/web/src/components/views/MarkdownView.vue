@@ -3,8 +3,8 @@ import type { Json } from '@kvman/sdk';
 import DOMPurify from 'dompurify';
 import MarkdownIt from 'markdown-it';
 import { computed, type Directive } from 'vue';
-import { useI18n } from 'vue-i18n';
-import { resolveValues, textParams, type Scope } from '../../contributions/references.ts';
+import { useViewText } from '../../composables/use-view-text.ts';
+import { resolveValues, type Scope } from '../../contributions/references.ts';
 import type { View } from '../../contributions/views.ts';
 import { drawDiagrams } from './mermaid-diagrams.ts';
 import QueryFrame from './QueryFrame.vue';
@@ -14,7 +14,7 @@ import QueryFrame from './QueryFrame.vue';
 // right in an Arabic app, and an Arabic one right to left in an English app. A fenced `mermaid` block is marked here
 // and drawn as a diagram after each render (ADR 0067).
 const props = defineProps<{ view: Extract<View, { type: 'markdown' }>; scope: Scope }>();
-const { t } = useI18n();
+const viewText = useViewText();
 const markdown = new MarkdownIt({ html: false, linkify: true });
 const directedBlocks = new Set(['paragraph_open', 'heading_open', 'bullet_list_open', 'ordered_list_open', 'list_item_open', 'blockquote_open', 'table_open']);
 markdown.core.ruler.push('kvwebui-direction', (state) => {
@@ -36,7 +36,7 @@ const fieldOf = (data: Json): string => {
 </script>
 
 <template>
-  <div v-if="props.view.text !== undefined" v-diagrams class="kvwebui-markdown" data-test="markdown" v-html="render(t(props.view.text, textParams(props.view.params, props.scope)))" />
+  <div v-if="props.view.text !== undefined" v-diagrams class="kvwebui-markdown" data-test="markdown" v-html="render(viewText(props.view.text, props.view.params, props.scope))" />
   <QueryFrame v-else v-slot="{ data }" :query="props.view.query ?? ''" :input="input">
     <div v-diagrams class="kvwebui-markdown" data-test="markdown" v-html="render(fieldOf(data))" />
   </QueryFrame>

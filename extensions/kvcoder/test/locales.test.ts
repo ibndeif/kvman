@@ -12,8 +12,9 @@ function catalog(language: string): Record<string, string> {
   return catalogSchema.parse(JSON.parse(readFileSync(path.join(kvcoderFolder, 'locales', `${language}.json`), 'utf8')));
 }
 
+// The names a text uses: its plural forms repeat them, and a form may leave the count out (ADR 0098, 1).
 function placeholders(text: string): string[] {
-  return [...text.matchAll(/\{(\w+)\}/g)].map((match) => match[1] ?? '').sort();
+  return [...new Set([...text.matchAll(/\{(\w+)\}/g)].map((match) => match[1] ?? ''))].sort();
 }
 
 // Every literal `t('kvcoder.…')` in the components.

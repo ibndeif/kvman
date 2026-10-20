@@ -27,7 +27,7 @@ function openProvider(providerId: string): void {
   <section data-test="connected-section" :aria-label="kvman.t('kvai.ui.providers.connected')">
     <div class="kvai-section-head">
       <h2 class="kvai-section-title">{{ kvman.t('kvai.ui.providers.connected') }}</h2>
-      <span class="kvai-muted" data-test="connected-count">{{ kvman.t('kvai.ui.providers.connectedCount', { count: String(connected.length) }) }}</span>
+      <span class="kvai-muted" data-test="connected-count">{{ kvman.t('kvai.ui.providers.connectedCount', { count: connected.length }) }}</span>
     </div>
     <div v-if="connected.length > 0" class="kvai-grid-connected">
       <article v-for="row in connected" :key="row.id" class="kvai-card" data-test="connected-card">
@@ -35,7 +35,7 @@ function openProvider(providerId: string): void {
           <ProviderAvatar :provider-id="row.id" :title="row.title" size="md" />
           <div class="kvai-stack">
             <span class="kvai-card-title">{{ row.title }}</span>
-            <span class="kvai-muted" data-test="connected-models">{{ kvman.t('kvai.ui.providers.modelCount', { count: String(row.models) }) }}</span>
+            <span class="kvai-muted" data-test="connected-models">{{ kvman.t('kvai.ui.providers.modelCount', { count: row.models }) }}</span>
           </div>
           <span v-if="row.id === defaultProvider" class="kvai-chip" data-test="connected-default" data-tone="info">{{
             kvman.t('kvai.ui.models.default')

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ChevronRight } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
-import { resolveValues, textParams, type Scope } from '../../contributions/references.ts';
+import { useViewText } from '../../composables/use-view-text.ts';
+import { resolveValues, type Scope } from '../../contributions/references.ts';
 import type { View } from '../../contributions/views.ts';
 import { pageLocation } from '../../state/navigation.ts';
 import { useKvwebui } from '../../state/kvwebui.ts';
@@ -19,6 +20,7 @@ import TableView from './TableView.vue';
 const props = defineProps<{ view: View; scope: Scope }>();
 const state = useKvwebui();
 const { t } = useI18n();
+const viewText = useViewText();
 const gaps = { sm: 'gap-2', md: 'gap-4', lg: 'gap-6' };
 const headings = { 1: 'text-[26px] font-semibold tracking-tight', 2: 'text-base font-semibold', 3: 'text-sm font-semibold' };
 </script>
@@ -36,9 +38,9 @@ const headings = { 1: 'text-[26px] font-semibold tracking-tight', 2: 'text-base 
     <ViewNode v-for="(child, index) in props.view.children" :key="index" :view="child" :scope="props.scope" />
   </section>
   <component :is="`h${props.view.level}`" v-else-if="props.view.type === 'heading'" class="m-0" :class="headings[props.view.level]">
-    {{ t(props.view.text, textParams(props.view.params, props.scope)) }}
+    {{ viewText(props.view.text, props.view.params, props.scope) }}
   </component>
-  <p v-else-if="props.view.type === 'text'" class="m-0 text-muted">{{ t(props.view.text, textParams(props.view.params, props.scope)) }}</p>
+  <p v-else-if="props.view.type === 'text'" class="m-0 text-muted">{{ viewText(props.view.text, props.view.params, props.scope) }}</p>
   <MarkdownView v-else-if="props.view.type === 'markdown'" :view="props.view" :scope="props.scope" />
   <TableView v-else-if="props.view.type === 'table'" :view="props.view" :scope="props.scope" />
   <ListView v-else-if="props.view.type === 'list'" :view="props.view" :scope="props.scope" />
@@ -49,7 +51,7 @@ const headings = { 1: 'text-[26px] font-semibold tracking-tight', 2: 'text-base 
     :to="pageLocation(state.registry.value, props.view.to.page, resolveValues(props.view.to.params, props.scope))"
     class="flex w-fit items-center gap-1 font-medium text-primary"
   >
-    {{ t(props.view.text, textParams(props.view.params, props.scope)) }}<ChevronRight class="size-4 rtl:-scale-x-100" aria-hidden="true" />
+    {{ viewText(props.view.text, props.view.params, props.scope) }}<ChevronRight class="size-4 rtl:-scale-x-100" aria-hidden="true" />
   </RouterLink>
   <ButtonView v-else-if="props.view.type === 'button'" :view="props.view" :scope="props.scope" />
   <SettingView v-else-if="props.view.type === 'setting'" :view="props.view" />

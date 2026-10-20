@@ -103,7 +103,7 @@ watch(() => [props.state.highlighted.value, props.state.loading.value], scrollTo
           </template>
           <p v-if="props.state.shown.value.length === 0" class="kvai-muted kvai-picker-note" data-test="picker-none">{{ kvman.t('kvai.ui.picker.noMatch') }}</p>
         </div>
-        <p class="kvai-muted kvai-picker-note" data-test="picker-count">{{ kvman.t('kvai.ui.picker.count', { shown: props.state.shown.value.length, total: props.state.total.value }) }}</p>
+        <p class="kvai-muted kvai-picker-note" data-test="picker-count">{{ kvman.t('kvai.ui.picker.count', { shown: props.state.shown.value.length, count: props.state.total.value }) }}</p>
       </template>
     </template>
     <p v-if="props.state.pickError.value !== null" class="kvai-error kvai-picker-note" data-test="picker-pick-error" role="alert">

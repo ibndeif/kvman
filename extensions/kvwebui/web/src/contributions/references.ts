@@ -84,6 +84,19 @@ function formatNumber(amount: number, format: OutputFormat, language: string): s
   return isolated(new Intl.NumberFormat(language, amount < 0.0001 ? { ...currency, maximumSignificantDigits: 1 } : { ...currency, minimumFractionDigits: 4 }).format(amount), language);
 }
 
+// A param's value before a status param's `format` turns it into text.
+function unformatted(value: Json, scope: Scope): Json {
+  const formatted = formattedOutput(value);
+  return formatted === undefined ? resolve(value, scope) : resolve({ $output: formatted.name }, scope);
+}
+
+/** A text's `count` param when it resolves to a number, which chooses the text's plural form (ADR 0098, 1). */
+export function countParam(values: Values | undefined, scope: Scope): number | undefined {
+  const count = values?.['count'];
+  const shown = count === undefined ? undefined : unformatted(count, scope);
+  return typeof shown === 'number' ? shown : undefined;
+}
+
 const asText = (value: Json): string => (typeof value === 'string' ? value : JSON.stringify(value));
 
 // Params for a translated text: each value as a string, so vue-i18n fills it as is. A formatted output param shows its
@@ -92,7 +105,7 @@ export function textParams(values: Values | undefined, scope: Scope, language = 
   return Object.fromEntries(
     Object.entries(values ?? {}).map(([key, value]) => {
       const formatted = formattedOutput(value);
-      const shown = formatted === undefined ? resolve(value, scope) : resolve({ $output: formatted.name }, scope);
+      const shown = unformatted(value, scope);
       const format = outputFormats.find((known) => known === formatted?.format);
       return [key, typeof shown === 'number' && format !== undefined ? formatNumber(shown, format, language) : asText(shown)];
     }),

@@ -34,6 +34,17 @@ export const ViewStub = defineComponent({
 
 type Channel = { events: StreamEvent[]; ended: boolean; wake: (() => void) | undefined };
 
+// kvwebui's choice of a plural form (ADR 0098, 1); a text with the wrong number of forms fails the test.
+const categoryOrder: readonly Intl.LDMLPluralRule[] = ['zero', 'one', 'two', 'few', 'many', 'other'];
+function pluralForm(key: string, text: string, language: string, count: unknown): string {
+  const forms = text.split('|').map((form) => form.trim());
+  if (forms.length === 1) return text;
+  const rules = new Intl.PluralRules(language);
+  const categories = categoryOrder.filter((category) => rules.resolvedOptions().pluralCategories.includes(category));
+  if (forms.length !== categories.length) throw new Error(`${key} has ${forms.length} plural forms; ${language} has ${categories.length}.`);
+  return (typeof count === 'number' ? forms[categories.indexOf(rules.select(count))] : forms.at(-1)) ?? text;
+}
+
 export function createFakeKvman(): FakeKvman {
   const handlers = new Map<string, Handler>();
   const calls: FakeKvman['calls'] = [];
@@ -65,7 +76,7 @@ export function createFakeKvman(): FakeKvman {
     }
   }
   const translate = (key: string, params?: Record<string, unknown>): string => {
-    const text = (language.value === 'ar' ? catalogs.ar : catalogs.en)[key] ?? key;
+    const text = pluralForm(key, (language.value === 'ar' ? catalogs.ar : catalogs.en)[key] ?? key, language.value, params?.['count']);
     return text.replace(/\{(\w+)\}/g, (_match, name: string) => String(params?.[name] ?? `{${name}}`));
   };
   const kvman = {

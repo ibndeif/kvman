@@ -38,7 +38,7 @@ function openProvider(providerId: string): void {
   <section data-test="all-section" :aria-label="kvman.t('kvai.ui.providers.all')">
     <div class="kvai-section-head">
       <h2 class="kvai-section-title">{{ kvman.t('kvai.ui.providers.all') }}</h2>
-      <span class="kvai-muted" data-test="all-count">{{ kvman.t('kvai.ui.providers.allCount', { count: String(candidates.length) }) }}</span>
+      <span class="kvai-muted" data-test="all-count">{{ kvman.t('kvai.ui.providers.allCount', { count: candidates.length }) }}</span>
       <span class="kvai-spacer"></span>
       <span class="kvai-search">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
@@ -52,7 +52,7 @@ function openProvider(providerId: string): void {
           type="search"
           class="kvai-search-input"
           data-test="all-search"
-          :placeholder="kvman.t('kvai.ui.providers.searchPlaceholder', { count: String(candidates.length) })"
+          :placeholder="kvman.t('kvai.ui.providers.searchPlaceholder', { count: candidates.length })"
         />
       </span>
     </div>
@@ -60,7 +60,7 @@ function openProvider(providerId: string): void {
       <div v-for="row in visible" :key="row.id" class="kvai-row" data-test="all-row">
         <ProviderAvatar :provider-id="row.id" :title="row.title" size="sm" />
         <span class="kvai-row-title">{{ row.title }}</span>
-        <span class="kvai-muted" data-test="all-models">{{ kvman.t('kvai.ui.providers.modelCount', { count: String(row.models) }) }}</span>
+        <span class="kvai-muted" data-test="all-models">{{ kvman.t('kvai.ui.providers.modelCount', { count: row.models }) }}</span>
         <button type="button" class="kvai-link" data-test="connect" @click="openProvider(row.id)">
           {{ kvman.t('kvai.ui.providers.connectAction') }}
         </button>

@@ -18,7 +18,8 @@ function sources(folder: string): string[] {
   });
 }
 
-const placeholders = (text: string): string[] => [...text.matchAll(/\{(\w+)\}/g)].map((match) => match[1] ?? '').sort();
+// The names a text uses: its plural forms repeat them, and a form may leave the count out (ADR 0098, 1).
+const placeholders = (text: string): string[] => [...new Set([...text.matchAll(/\{(\w+)\}/g)].map((match) => match[1] ?? ''))].sort();
 
 // Names under `kvwebui.` that aren't texts: setting keys, page ids, what a tab remembers, and the commands the app calls.
 const notTexts = new Set(['kvwebui.home', 'kvwebui.nav.order', 'kvwebui.nav.hidden', 'kvwebui.status.hidden', 'kvwebui.workspacePicker', 'kvwebui.folder', 'kvwebui.theme', 'kvwebui.settings', 'kvwebui.extensions', 'kvwebui.workspace', 'kvwebui.panel', 'kvwebui.nav.collapsed', 'kvwebui.effect.take']);

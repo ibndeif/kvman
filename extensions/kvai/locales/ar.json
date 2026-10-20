@@ -49,8 +49,8 @@
   "kvai.ui.providers.ownServer": "خادمك الخاص",
   "kvai.ui.providers.ownServerNote": "Ollama أو LM Studio",
   "kvai.ui.providers.connected": "المزوّدون المتصلون",
-  "kvai.ui.providers.connectedCount": "العدد: {count}",
-  "kvai.ui.providers.modelCount": "النماذج: {count}",
+  "kvai.ui.providers.connectedCount": "لا مزوّدين | مزوّد واحد | مزوّدان | {count} مزوّدين | {count} مزوّدًا | {count} مزوّد",
+  "kvai.ui.providers.modelCount": "لا نماذج | نموذج واحد | نموذجان | {count} نماذج | {count} نموذجًا | {count} نموذج",
   "kvai.ui.providers.manage": "إدارة",
   "kvai.ui.providers.nothingConnected": "لا يوجد مزوّد متصل بعد. اختر مزوّدًا من القائمة أدناه.",
   "kvai.ui.providers.connect": "ربط مزوّد",
@@ -67,9 +67,9 @@
   "kvai.ui.providers.tile.google": "Google",
   "kvai.ui.providers.tile.xai": "xAI",
   "kvai.ui.providers.all": "كل المزوّدين",
-  "kvai.ui.providers.allCount": "العدد: {count}",
+  "kvai.ui.providers.allCount": "لا مزوّدين | مزوّد واحد | مزوّدان | {count} مزوّدين | {count} مزوّدًا | {count} مزوّد",
   "kvai.ui.providers.searchLabel": "ابحث في المزوّدين",
-  "kvai.ui.providers.searchPlaceholder": "ابحث بين المزوّدين ({count})",
+  "kvai.ui.providers.searchPlaceholder": "ابحث بين المزوّدين | ابحث في المزوّد | ابحث بين المزوّدَين | ابحث بين {count} مزوّدين | ابحث بين {count} مزوّدًا | ابحث بين {count} مزوّد",
   "kvai.ui.providers.connectAction": "ربط",
   "kvai.ui.providers.showMore": "عرض {count} أخرى",
   "kvai.ui.providers.noMatch": "لا يوجد مزوّد مطابق.",
@@ -158,5 +158,5 @@
   "kvai.config.reset.global": "استعادة الافتراضي",
   "kvai.config.reset.workspace": "استخدام قيمة كل مساحات العمل",
   "kvai.config.ownValue": "لمساحة العمل {name} قيمة خاصة بها. انتقل إلى {name} لتغييرها.",
-  "kvai.ui.picker.count": "{shown} من أصل {total}"
+  "kvai.ui.picker.count": "{shown} من أصل {count} | {shown} من أصل نموذج واحد | {shown} من أصل نموذجين | {shown} من أصل {count} نماذج | {shown} من أصل {count} نموذجًا | {shown} من أصل {count} نموذج"
 }

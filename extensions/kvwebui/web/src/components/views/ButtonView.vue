@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useI18n } from 'vue-i18n';
 import { applyThen } from '../../composables/then.ts';
-import { resolveValues, textParams, type Scope } from '../../contributions/references.ts';
+import { useViewText } from '../../composables/use-view-text.ts';
+import { resolveValues, type Scope } from '../../contributions/references.ts';
 import type { ButtonView } from '../../contributions/views.ts';
 import { runCommand } from '../../state/commands.ts';
 import { showProblem, useKvwebui } from '../../state/kvwebui.ts';
@@ -11,7 +11,7 @@ import { showProblem, useKvwebui } from '../../state/kvwebui.ts';
 // toast with the translated Problem (§6.7), and the job's effects apply after either (§6.5).
 const props = defineProps<{ view: ButtonView; scope: Scope; small?: boolean }>();
 const state = useKvwebui();
-const { t } = useI18n();
+const viewText = useViewText();
 const busy = ref(false);
 const styles = { primary: 'border-primary bg-primary text-on-primary', secondary: 'border-line bg-surface text-ink', danger: 'border-line bg-surface text-danger' };
 
@@ -33,6 +33,6 @@ const click = async (): Promise<void> => {
     :disabled="busy"
     @click="click"
   >
-    {{ t(props.view.text, textParams(props.view.params, props.scope)) }}
+    {{ viewText(props.view.text, props.view.params, props.scope) }}
   </button>
 </template>

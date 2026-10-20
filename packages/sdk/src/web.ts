@@ -69,7 +69,7 @@ export type Kvman = {
   toast(text: string, params?: Record<string, Json>, level?: ToastLevel): void;
   /** Opens or closes a panel by its full id. */
   panel(id: string, open: boolean): void;
-  /** Translates a key with the UI language's catalog. */
+  /** Translates a key with the UI language's catalog; a numeric `count` param chooses its plural form. */
   t(key: string, params?: Record<string, unknown>): string;
   /** The tab's workspace, a live read-only ref. */
   workspace: { readonly value: Workspace };

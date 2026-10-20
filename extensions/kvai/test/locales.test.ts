@@ -25,8 +25,9 @@ function fieldsOf(schema: unknown): string[] {
   return [...Object.keys(parsed.properties ?? {}), ...(parsed.anyOf ?? []).flatMap(fieldsOf)];
 }
 
+// The names a text uses: its plural forms repeat them, and a form may leave the count out (ADR 0098, 1).
 function placeholders(text: string): string[] {
-  return [...text.matchAll(/\{(\w+)\}/g)].map((match) => match[1] ?? '').sort();
+  return [...new Set([...text.matchAll(/\{(\w+)\}/g)].map((match) => match[1] ?? ''))].sort();
 }
 
 describe("kvai's catalogs (02 §2.11)", () => {

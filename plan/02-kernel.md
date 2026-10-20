@@ -194,7 +194,7 @@ Registrations are sealed when the entry returns: a later `register*` call fails 
 
 ## 2.11 Localization
 
-- **Catalogs.** The kernel and each extension ship `locales/<lang>.json` files: a flat JSON object of strings, `{ "<namespace>.x.y": "text" }`, with every key under the owner's namespace. An unreadable catalog, or a key outside the namespace, fails the load with `EXTENSION_INVALID` (ADR 0009, 25). kvman's own packages ship `en` and `ar`; an extension may ship any other language too. Placeholders use vue-i18n's `{name}` syntax.
+- **Catalogs.** The kernel and each extension ship `locales/<lang>.json` files: a flat JSON object of strings, `{ "<namespace>.x.y": "text" }`, with every key under the owner's namespace. An unreadable catalog, or a key outside the namespace, fails the load with `EXTENSION_INVALID` (ADR 0009, 25). kvman's own packages ship `en` and `ar`; an extension may ship any other language too. Placeholders use vue-i18n's `{name}` syntax. A string may hold plural forms separated by `|`, one for each plural category of its language in the order zero, one, two, few, many, other (`Intl.PluralRules`; English `one | other`, Arabic all six), chosen by the UI from a numeric `count` param (plan 06 §6.1; ADR 0098, 1).
 - **Conventions.**
   - Error texts are `<namespace>.errors.<CODE>`.
   - A setting's, command's, or query's translated description is `<name>.description`, and a form field's label is `<command>.fields.<field>`. When a key is missing, the UI shows the registered English description.

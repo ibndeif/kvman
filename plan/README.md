@@ -78,5 +78,6 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `adr/0095-web-fetch.md` | `web fetch`: a page read as Markdown with turndown, never a private address (checked again at each redirect), and the person asked once per host in a chat |
 | `adr/0096-a-silent-stream-is-retried.md` | a model stream silent for 300 s is aborted as a temporary `kvai/PROVIDER_ERROR` (`stream stalled`), so the step retries it |
 | `adr/0097-fewer-steps-numbered-reads-and-edits-that-point.md` | independent calls first in the method and `fs read-files`; `fs read` and `fs edit` read as numbered lines; edit errors that show where; old call text cleared with its result; the map's rules in its entry; hints for one piece; "Decide for me" without `ask`; true map limits |
+| `adr/0098-counts-that-read-as-words.md` | catalog texts with plural forms chosen by a numeric `count` (`Intl.PluralRules`); a fold reads `Read 3 files, changed 1 file, ran 1 command · 1 failed`; every count text rewritten |
 
 The plan is complete. Implementation starts with M1.1.

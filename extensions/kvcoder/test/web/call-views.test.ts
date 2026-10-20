@@ -17,7 +17,7 @@ describe("an opened card shows the call by its kind (08 §8.7, ADR 0036, 3 and 5
     expect(diffs).toEqual([['removed', 'removed', 'added', 'added', 'added'], ['context', 'added']]);
     expect(parts(card, 'call-line-text').map((line) => line.attributes('dir'))).toEqual(Array.from({ length: 7 }, () => 'auto'));
     expect(shownLines(card, 'call-diff')[2]).toBe('+# رقم التظلم');
-    expect(part(card, 'call-replacements').text()).toBe('Replaced: 2 · from line 27');
+    expect(part(card, 'call-replacements').text()).toBe('2 replacements · from line 27');
     const text = part(card, 'call-card').text();
     for (const hidden of ['\\n', 'oldText', 'risky', 'firstChangedLine', '{']) expect(text, hidden).not.toContain(hidden);
   });
@@ -183,9 +183,9 @@ describe("an opened card shows the call by its kind (08 §8.7, ADR 0036, 3 and 5
 });
 
 describe('a count that reads right in the singular (ADR 0090, 6)', () => {
-  it('QA58-H10 an edit with one replacement says Replaced: 1', async () => {
+  it('QA58-H10 and QA66-H8 an edit with one replacement says 1 replacement', async () => {
     const card = await ranCard(call('fs', 'edit', { path: 'a.ts', risky: false, edits: [{ oldText: 'a', newText: 'b' }] }), { path: 'a.ts', replacements: 1, firstChangedLine: 82, fromLine: 79, content: 'b\n' });
     await pressed(card);
-    expect(part(card, 'call-replacements').text()).toBe('Replaced: 1 · from line 82');
+    expect(part(card, 'call-replacements').text()).toBe('1 replacement · from line 82');
   });
 });

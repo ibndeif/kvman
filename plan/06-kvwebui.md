@@ -6,7 +6,7 @@ kvwebui is the web app, and it is an extension like any other. The kernel serves
 
 - Vue 3 (Composition API, TypeScript, single-file components), built with Vite into `extensions/kvwebui/dist/web`. The dependencies are listed, with versions, in ADR 0009, 66.
 - vue-router and Tailwind CSS, with logical properties only, so right-to-left works.
-- vue-i18n, loading `/api/locales/:lang` for `kernel.language`, with the fallbacks of §2.11.
+- vue-i18n, loading `/api/locales/:lang` for `kernel.language`, with the fallbacks of §2.11. Each language loaded gets a plural rule from `Intl.PluralRules`: a text's plural form is chosen by its `count` param when it is a number (in `t`, `kvman.t`, a toast, and a view's, button's, status item's, or confirmation's text, before the number is formatted); a text whose number of forms isn't its language's number of categories gets vue-i18n's default choice, and one with no numeric `count` its last form (ADR 0098, 1).
 - `@lucide/vue` for icons (the successor of the deprecated `lucide-vue-next`, with the same icon names).
 - The IBM Plex Sans, IBM Plex Sans Arabic, and IBM Plex Mono fonts, bundled into the app.
 - Every enabled clickable control (button, link, summary, select, checkbox) shows `cursor: pointer`, which the CSS reset removes from buttons (ADR 0009, 209).

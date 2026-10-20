@@ -138,7 +138,7 @@ onBeforeUnmount(() => {
         </template>
         <p v-if="found.shown === 0" class="kvc-muted kvc-none" data-test="model-none">{{ kvman.t('kvcoder.ui.noModels') }}</p>
       </div>
-      <p class="kvc-muted kvc-count" data-test="model-count">{{ kvman.t('kvcoder.ui.modelsCount', { shown: found.shown, total: found.total }) }}</p>
+      <p class="kvc-muted kvc-count" data-test="model-count">{{ kvman.t('kvcoder.ui.modelsCount', { shown: found.shown, count: found.total }) }}</p>
     </div>
   </div>
 </template>
