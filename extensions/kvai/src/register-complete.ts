@@ -1,13 +1,12 @@
 import { z, type Ctx } from '@kvman/sdk';
 import type { CustomCatalog } from './catalog/custom-catalog.ts';
 import { callDelegate } from './complete/delegate-call.ts';
-import { callModel } from './complete/model-call.ts';
-import { resolveTarget } from './complete/target.ts';
 import { completeInputSchema, completeOutputSchema } from './schemas/complete.ts';
 import { addUsage } from './usage/usage-totals.ts';
 
 // `kvai.complete` and the `kvai.defaultModel` setting (plan 07 §7.1–§7.2). A retried stream would repeat its deltas,
-// so the command never retries, and it takes contexts up to 32 MiB (ADR 0003, 8 and 16).
+// so the command never retries, and it takes contexts up to 32 MiB (ADR 0003, 8 and 16). The model call and its
+// targets load pi-ai, so a worker loads them with its first call, not when kvai loads (ADR 0009, 52).
 
 const maxContextBytes = 32 * 1024 * 1024;
 
@@ -31,8 +30,9 @@ export function registerComplete(ctx: Ctx, catalog: CustomCatalog): void {
     handle: async (input) => {
       const fullId = input.model ?? (await ctx.settings.get('kvai.defaultModel'));
       if (fullId === null) throw ctx.problem('kvai/NO_MODEL');
+      const { resolveTarget } = await import('./complete/target.ts');
       const target = await resolveTarget(ctx, catalog, fullId);
-      const output = target.kind === 'delegate' ? await callDelegate(ctx, fullId, target.command, input) : await callModel(ctx, fullId, target, input);
+      const output = target.kind === 'delegate' ? await callDelegate(ctx, fullId, target.command, input) : await (await import('./complete/model-call.ts')).callModel(ctx, fullId, target, input);
       await addUsage(ctx, fullId, output.usage);
       return output;
     },

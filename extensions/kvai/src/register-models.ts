@@ -1,4 +1,4 @@
-import { getSupportedThinkingLevels, type Model, type Api } from '@earendil-works/pi-ai';
+import type { Model, Api } from '@earendil-works/pi-ai';
 import { z, type Ctx } from '@kvman/sdk';
 import { builtinCatalog, builtinModel, builtinModels } from './catalog/builtin-catalog.ts';
 import type { CustomCatalog } from './catalog/custom-catalog.ts';
@@ -10,9 +10,11 @@ import { defaultModelSchema, modelAddSchema, modelRowSchema, splitModelId, type 
 
 const empty = z.object({});
 
-function builtinRow(model: Model<Api>): ModelRow {
+type LevelsOf = (model: Model<Api>) => ModelRow['thinkingLevels'];
+
+function builtinRow(model: Model<Api>, levelsOf: LevelsOf): ModelRow {
   const { input, output, cacheRead, cacheWrite } = model.cost;
-  const base = { name: model.name, provider: model.provider, reasoning: model.reasoning, thinkingLevels: getSupportedThinkingLevels(model), input: model.input };
+  const base = { name: model.name, provider: model.provider, reasoning: model.reasoning, thinkingLevels: levelsOf(model), input: model.input };
   return { id: `${model.provider}/${model.id}`, ...base, contextWindow: model.contextWindow, maxTokens: model.maxTokens, cost: { input, output, cacheRead, cacheWrite }, builtIn: true, isDefault: false };
 }
 
@@ -32,7 +34,9 @@ function registerModelCatalog(ctx: Ctx, catalog: CustomCatalog): void {
     public: true,
     handle: async (input) => {
       const defaultId = await ctx.settings.get('kvai.defaultModel');
-      const rows = [...(await builtinModels(input.provider)).map(builtinRow), ...(await catalog.models(input.provider)).map(customRow)];
+      // pi-ai loads with the catalog, at a worker's first use, not when kvai loads (ADR 0009, 52).
+      const { getSupportedThinkingLevels } = await import('@earendil-works/pi-ai');
+      const rows = [...(await builtinModels(input.provider)).map((model) => builtinRow(model, getSupportedThinkingLevels)), ...(await catalog.models(input.provider)).map(customRow)];
       return rows.map((row) => ({ ...row, isDefault: row.id === defaultId }));
     },
   });
