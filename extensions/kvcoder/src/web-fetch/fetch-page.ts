@@ -3,7 +3,6 @@ import http from 'node:http';
 import https from 'node:https';
 import { isIP, type LookupFunction } from 'node:net';
 import { ProblemError } from '@kvman/sdk';
-import TurndownService from 'turndown';
 import { invalid } from '../problems.ts';
 import { truncate } from '../result-text.ts';
 import { isPrivateAddress } from './private-address.ts';
@@ -63,8 +62,13 @@ export const networkTransport: WebTransport = {
     }),
 };
 
-const turndown = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' });
-turndown.remove(['script', 'style', 'noscript']);
+// turndown brings a whole DOM, about 14 MB, so a worker loads it with its first page, not at start (plan 12 §12.3).
+async function markdownOf(html: string): Promise<string> {
+  const { default: TurndownService } = await import('turndown');
+  const turndown = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' });
+  turndown.remove(['script', 'style', 'noscript']);
+  return turndown.turndown(html);
+}
 
 // A checked address of the host, or a refusal naming it.
 async function checkedAddress(transport: WebTransport, url: URL): Promise<string> {
@@ -82,9 +86,9 @@ function parsed(given: string): URL {
   return url;
 }
 
-function contentOf(type: string, body: Buffer, url: string): string {
+async function contentOf(type: string, body: Buffer, url: string): Promise<string> {
   const text = body.toString('utf8');
-  if (type === 'text/html' || type === 'application/xhtml+xml') return turndown.turndown(text);
+  if (type === 'text/html' || type === 'application/xhtml+xml') return markdownOf(text);
   if (type.startsWith('text/') || textTypes.has(type) || type.endsWith('+json')) return text;
   throw invalid(`${url} is ${type === '' ? 'of no stated type' : type}, which web fetch doesn't read; only pages and text.`, { url, type });
 }
@@ -109,6 +113,6 @@ export async function fetchPage(given: string, transport: WebTransport, signal: 
     }
     if (response.status >= 400) throw webFailed(url.href, { status: response.status });
     const type = (response.type.split(';')[0] ?? '').trim().toLowerCase();
-    return { url: url.href, status: response.status, type, content: truncate(contentOf(type, response.body, url.href)) };
+    return { url: url.href, status: response.status, type, content: truncate(await contentOf(type, response.body, url.href)) };
   }
 }
