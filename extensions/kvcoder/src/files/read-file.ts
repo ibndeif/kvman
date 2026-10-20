@@ -10,7 +10,8 @@ import { resolveInWorkspace } from './workspace-path.ts';
 /** The most lines one read returns, and the default. */
 export const readLinesLimit = 2000;
 
-const contentLimit = 30 * 1024;
+/** The bytes of content one read returns at most; `fs read-files` shares them among its files (ADR 0097, 1). */
+export const readBytesLimit = 30 * 1024;
 
 const text = new TextDecoder('utf-8', { fatal: true });
 
@@ -32,18 +33,18 @@ export type FileRead = { path: string; fromLine: number; totalLines: number; con
 export type SeenFile = (real: string) => Promise<string | undefined>;
 
 // The whole characters of `text` that fit the limit, counted from its start.
-function fitting(characters: readonly string[]): number {
+function fitting(characters: readonly string[], limit: number): number {
   let bytes = 0;
   let count = 0;
   for (const character of characters) {
     bytes += Buffer.byteLength(character);
-    if (bytes > contentLimit) break;
+    if (bytes > limit) break;
     count += 1;
   }
   return count;
 }
 
-export async function readLines(workspace: string, input: { path: string; fromLine?: number | undefined; fromColumn?: number | undefined; lines?: number | undefined }, seen?: SeenFile): Promise<FileRead> {
+export async function readLines(workspace: string, input: { path: string; fromLine?: number | undefined; fromColumn?: number | undefined; lines?: number | undefined }, seen?: SeenFile, limit = readBytesLimit): Promise<FileRead> {
   const target = await resolveInWorkspace(workspace, input.path);
   const found = await stat(target).catch((error: unknown) => {
     if (isMissing(error)) throw notFound(`${input.path} doesn't exist.`, { path: input.path });
@@ -66,12 +67,12 @@ export async function readLines(workspace: string, input: { path: string; fromLi
   let size = 0;
   for (const line of lines) {
     size += Buffer.byteLength(line);
-    if (size > contentLimit) break;
+    if (size > limit) break;
     kept.push(line);
   }
   const base = { path: input.path, fromLine, totalLines: all.length };
   if (kept.length === 0 && lines.length > 0) {
-    const taken = fitting(first);
+    const taken = fitting(first, limit);
     return { ...base, content: first.slice(0, taken).join(''), truncated: true, next: { fromLine, fromColumn: fromColumn + taken } };
   }
   const nextLine = fromLine + kept.length;

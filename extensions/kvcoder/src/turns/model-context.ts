@@ -5,7 +5,7 @@ import { withCallingReply } from './call-groups.ts';
 import { blockSize } from './history.ts';
 import { latestSummary, messagesFrom } from './message-blocks.ts';
 import { messageStamp } from './message-stamp.ts';
-import { callNames, clearedText, isCleared } from './cleared-results.ts';
+import { callNames, clearedCalls, clearedPayload, clearedText, isCleared } from './cleared-results.ts';
 import { records } from '../store/collections.ts';
 
 // What a step sends the model (plan 08 §8.1): the latest summary, then the messages after it; notices, notes, and
@@ -85,9 +85,17 @@ function withoutDescription(block: Json): Json {
   return { ...block, arguments: rest };
 }
 
-function assistantMessage(message: Stored<MessageDoc>): Json {
+// A call whose result is sent cleared is sent with its long texts cleared too (ADR 0097, 4).
+function withoutClearedText(block: Json, cleared: ReadonlySet<string>): Json {
+  if (typeof block !== 'object' || block === null || Array.isArray(block) || block['type'] !== 'toolCall' || typeof block['id'] !== 'string' || !cleared.has(block['id'])) return block;
+  const args = block['arguments'];
+  if (typeof args !== 'object' || args === null || Array.isArray(args) || args['payload'] === undefined) return block;
+  return { ...block, arguments: { ...args, payload: clearedPayload(args['payload']) } };
+}
+
+function assistantMessage(message: Stored<MessageDoc>, cleared: ReadonlySet<string>): Json {
   const content = message.content['content'];
-  return Array.isArray(content) ? { ...message.content, content: content.map(withoutDescription) } : message.content;
+  return Array.isArray(content) ? { ...message.content, content: content.map((block) => withoutClearedText(withoutDescription(block), cleared)) } : message.content;
 }
 
 const summaryLead = 'A summary of the earlier conversation:';
@@ -103,9 +111,10 @@ export function summaryText(summary: Pick<MessageDoc, 'content'> | undefined): s
 export async function modelMessages(ctx: Ctx, history: History) {
   const lead: Json[] = history.summary === undefined ? [] : [{ role: 'user', content: `${summaryLead}\n${summaryText(history.summary)}`, timestamp: Date.parse(history.summary.createdAt) }];
   const names = callNames(history.messages);
+  const cleared = clearedCalls(history.messages, history.cleared);
   const rest = await Promise.all(history.messages.map((message) => {
     if (message.kind === 'user') return userMessage(ctx, message);
-    if (message.kind === 'assistant') return Promise.resolve(assistantMessage(message));
+    if (message.kind === 'assistant') return Promise.resolve(assistantMessage(message, cleared));
     // An old result is sent as a line that names its call (ADR 0094, 1).
     if (isCleared(message, history.cleared)) return Promise.resolve({ ...message.content, content: [{ type: 'text', text: clearedText(names.get(String(message.content['toolCallId'])) ?? 'a call') }] });
     return Promise.resolve(message.content);

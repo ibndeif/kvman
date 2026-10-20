@@ -1,7 +1,9 @@
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it, vi } from 'vitest';
 import type { FakeReply } from '@kvman/testkit/fake-openai';
+import { readText } from '../src/files/read-text.ts';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { longAlone, padded } from './support/long-messages.ts';
 import { command, fsCall, runs, says, systemPrompt, toolResults } from './support/model-script.ts';
@@ -11,7 +13,7 @@ import { wait } from './support/wait.ts';
 const kvcoder = useKvcoder();
 
 const unchanged = 'notes.txt is unchanged since you read these lines earlier in this conversation; that result is above.';
-const whole = (content: string, totalLines: number, fromLine = 1): string => JSON.stringify({ path: 'notes.txt', fromLine, totalLines, content, truncated: false });
+const whole = (content: string, totalLines: number, fromLine = 1): string => readText({ path: 'notes.txt', fromLine, totalLines, content, truncated: false });
 const briefing = "A worker sees none of this conversation and reads again every file it needs, so put in the brief the paths, the exact lines it needs quoted when they are short, and what you already found, so it doesn't read again what you hold.";
 
 // A chat in a workspace with `notes.txt`, whose model answers one message with `replies`, a step each.
@@ -61,5 +63,21 @@ describe('fs read says when nothing changed (08 §8.5, ADR 0034, 2 and 3)', { ti
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'again' });
     await kernel.clock.advance(0);
     expect(toolResults(fake)).toEqual([whole('one\ntwo\n', 2)]);
+  });
+
+  it('QA65-E7 a read stored before ADR 0097, whose text was its JSON, still counts as held', async () => {
+    const { kernel, fake, sessionId } = await chat([read(), says('ok')]);
+    const database = new DatabaseSync(path.join(kernel.home, 'kvman.db'));
+    try {
+      const old = JSON.stringify([{ type: 'text', text: JSON.stringify({ path: 'notes.txt', fromLine: 1, totalLines: 2, content: 'one\ntwo\n', truncated: false }) }]);
+      // A read stored then had its JSON as its text, and its details kept no copy of it (ADR 0034, 7).
+      database.prepare("UPDATE store_documents SET data = json_remove(json_set(data, '$.content.content', json(?)), '$.content.details.output') WHERE extension = '@kvman/kvcoder' AND collection = 'messages' AND json_extract(data, '$.kind') = 'toolResult'").run(old);
+    } finally {
+      database.close();
+    }
+    fake.reply(read(), says('ok'));
+    await kernel.exec('kvcoder.message.send', { sessionId, text: 'again' });
+    await kernel.clock.advance(0);
+    expect(toolResults(fake).at(-1)).toBe(unchanged);
   });
 });

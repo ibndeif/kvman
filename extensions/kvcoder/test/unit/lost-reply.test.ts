@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lostHint, lostTokens, repairedCalls, unaccountedTokens } from '../../src/turns/lost-reply.ts';
+import { incompleteHint, lostHint, lostTokens, repairedCalls, unaccountedTokens } from '../../src/turns/lost-reply.ts';
 
 const text = (characters: number) => ({ type: 'text', text: 'a'.repeat(characters) });
 const thinking = (characters: number) => ({ type: 'thinking', thinking: 'b'.repeat(characters) });
@@ -35,8 +35,15 @@ describe('a lost reply (08 §8.2, ADR 0009, 188 and 191)', () => {
     const hint = lostHint(3449);
     expect(hint).toContain('the provider produced about 3400 tokens, but no tool call or text reached me');
     expect(hint).toContain('Send it again now, calling the tool directly.');
-    expect(hint).toContain('one file per reply, under about 150 lines each');
-    expect(hint).toContain('one file per reply, under about 150 lines each, with `fs write`.');
+    // Superseded by QA65-H11: parts for that file only (ADR 0097, 6).
+    expect(hint).toContain('If it held a large file, write that file in parts of under about 150 lines with `fs part`, then `fs assemble`; only that file needs parts.');
+  });
+
+  it('QA65-H11 the hints name the piece that failed and never ask for one file or one call per reply', () => {
+    for (const hint of [lostHint(3449), incompleteHint('empty'), incompleteHint('length')]) {
+      expect(hint).not.toMatch(/one (file|tool call) per reply/);
+    }
+    expect(incompleteHint('length')).toBe('Your last reply was cut off at the length limit before it finished. Go on from where it stopped. If it was writing a long file, save that file in parts with fs part and then write it with fs assemble.');
   });
 
   it('QA8-E16 a call with no id gets one, a call with no name is dropped and counted, and a sound call next to them is kept', () => {

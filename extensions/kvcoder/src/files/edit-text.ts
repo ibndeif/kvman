@@ -1,7 +1,9 @@
 import { invalid } from '../problems.ts';
+import { manyPlaces, nearPlaces } from './edit-places.ts';
 
-// A refused edit says that nothing was written, so the model doesn't read the file again to check (ADR 0035, 3).
-const refused = (reason: string) => invalid(`${reason} Nothing was written.`);
+// A refused edit says that nothing was written, so the model doesn't read the file again to check (ADR 0035, 3); the
+// lines it points at follow, numbered (ADR 0097, 3).
+const refused = (reason: string, shown = '') => invalid(`${reason} Nothing was written.${shown === '' ? '' : `\n${shown}`}`);
 
 // The text side of `fs edit` (plan 08 §8.5, ADR 0009, 159): every edit is matched exactly, once, against the file as
 // it was, the edits are applied together, and the file's BOM and first line ending are kept. An edit with
@@ -36,8 +38,14 @@ function locate(content: string, edit: TextEdit, editIndex: number): Match[] {
   const oldText = withLineFeeds(edit.oldText);
   if (oldText === '') throw refused(`edits[${editIndex}].oldText is empty.`);
   const found = edit.replaceAll === true ? separateOccurrences(content, oldText) : occurrences(content, oldText);
-  if (found.length === 0) throw refused(`edits[${editIndex}] was not found; oldText must match the file exactly, including whitespace and line breaks.`);
-  if (found.length > 1 && edit.replaceAll !== true) throw refused(`edits[${editIndex}] was found ${found.length} times; add more surrounding text so it matches once, or set replaceAll to replace every one.`);
+  if (found.length === 0) {
+    const near = nearPlaces(content, oldText);
+    throw refused(`edits[${editIndex}] was not found; oldText must match the file exactly, including whitespace and line breaks.${near === undefined ? '' : ` ${near.sentence}`}`, near?.shown);
+  }
+  if (found.length > 1 && edit.replaceAll !== true) {
+    const places = manyPlaces(content, found);
+    throw refused(`edits[${editIndex}] was found ${found.length} times, at ${places.lines}; add more surrounding text so it matches once, or set replaceAll to replace every one.`, places.shown);
+  }
   return found.map((index) => ({ index, length: oldText.length, edit: editIndex, newText: withLineFeeds(edit.newText) }));
 }
 

@@ -35,16 +35,17 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
     expect(lines).toEqual([
       '  exec { line, background?, timeoutMs?, risky }',
       '  help { command? }',
-      '  read     { path, fromLine?, fromColumn?, lines? }',
-      '  list     { path? }',
-      '  find     { pattern, path? }',
-      '  search   { pattern, path?, literal?, glob?, context?, filesOnly? }',
-      '  write    { path, content, risky }',
-      '  edit     { path, edits: [{ oldText, newText, replaceAll? }], risky }',
-      '  undo     { path, risky }',
-      '  part     { path, part, content }',
-      '  assemble { path, risky }',
-      '  help     { command? }',
+      '  read       { path, fromLine?, fromColumn?, lines? }',
+      '  read-files { files: [{ path, fromLine?, lines? }] }',
+      '  list       { path? }',
+      '  find       { pattern, path? }',
+      '  search     { pattern, path?, literal?, glob?, context?, filesOnly? }',
+      '  write      { path, content, risky }',
+      '  edit       { path, edits: [{ oldText, newText, replaceAll? }], risky }',
+      '  undo       { path, risky }',
+      '  part       { path, part, content }',
+      '  assemble   { path, risky }',
+      '  help       { command? }',
       '  write { id (≤50), title (≤100), format?: "markdown" | "html" | "url", content }',
       '  edit  { id (≤50), edits: [{ oldText, newText, replaceAll? }] }',
       '  get   { id (≤50) }',
@@ -75,7 +76,8 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
   it('QA52-H8 the execution map states its limits in the index', async () => {
     const { fake } = await looked(() => undefined, [command('todo', 'list')], settings);
     const entry = (systemPrompt(fake).split('## Connectors\n')[1] ?? '').split('\n').find((line) => line.startsWith('- execution-map: '));
-    expect(entry?.endsWith("Limits: goal up to 300 characters; a step's title up to 100, check up to 300, details up to 4,000; evidence and a note up to 500; 1 to 40 steps.")).toBe(true);
+    // Superseded by QA65-H13: every limit as the schemas have it (ADR 0097, 8).
+    expect(entry?.endsWith("Limits: goal up to 300 characters; 1 to 40 steps; a step's id lowercase kebab case up to 50, title up to 100, uses one name up to 60 or a list of up to 5, check up to 300, and details up to 4,000; a step's evidence 10 to 500 and its note up to 300; a note of note up to 500.")).toBe(true);
   });
 
   it("QA19-H6 the artifact connector's description", async () => {
@@ -95,16 +97,17 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
     const index = (prompt.split('## Connectors\n')[1] ?? '').split('\n');
     expect(index.filter((line) => line.startsWith('- ')).map((line) => /^- ([\w-]+): /.exec(line)?.[1])).toEqual(['fs']);
     expect(index.filter((line) => line.startsWith('  '))).toEqual([
-      '  read     { path, fromLine?, fromColumn?, lines? }',
-      '  list     { path? }',
-      '  find     { pattern, path? }',
-      '  search   { pattern, path?, literal?, glob?, context?, filesOnly? }',
-      '  write    { path, content, risky }',
-      '  edit     { path, edits: [{ oldText, newText, replaceAll? }], risky }',
-      '  undo     { path, risky }',
-      '  part     { path, part, content }',
-      '  assemble { path, risky }',
-      '  help     { command? }',
+      '  read       { path, fromLine?, fromColumn?, lines? }',
+      '  read-files { files: [{ path, fromLine?, lines? }] }',
+      '  list       { path? }',
+      '  find       { pattern, path? }',
+      '  search     { pattern, path?, literal?, glob?, context?, filesOnly? }',
+      '  write      { path, content, risky }',
+      '  edit       { path, edits: [{ oldText, newText, replaceAll? }], risky }',
+      '  undo       { path, risky }',
+      '  part       { path, part, content }',
+      '  assemble   { path, risky }',
+      '  help       { command? }',
     ]);
     for (const absent of ['- ask: ', '- shell: ', '- artifact: ', '- background: ', '- delegate: ', '- todo: ', '- node: ']) expect(prompt).not.toContain(absent);
   });

@@ -11,15 +11,15 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
     const lead = workingMethod('lead');
     expect(steps(lead)).toEqual([]);
     expect(steps(workingMethod('worker'))).toEqual(['1. Understand', '2. Do it', '3. Return']);
-    expect(lead.split('\n').slice(3, 12).map((line) => line.slice(0, line.indexOf('. ')))).toEqual(['Understand', 'Clarify', 'Plan', 'Confirm the plan', 'Execute', 'Stay on the task', 'Delegate', 'Show what the person will look at', 'Finish']);
+    expect(lead.split('\n').slice(5, 14).map((line) => line.slice(0, line.indexOf('. ')))).toEqual(['Understand', 'Clarify', 'Plan', 'Confirm the plan', 'Execute', 'Stay on the task', 'Delegate', 'Show what the person will look at', 'Finish']);
     for (const phrase of [
       'No path is fixed: you choose it for each task from what the task is, and you change it when what you find changes it.',
       'Size up the task first. Read the request and look at what it touches, then judge four things: how clear it is (can you say what done looks like?), how much it changes (one place, or several parts that depend on each other), what could go wrong and how hard that is to take back, and whether the person will look at the result (a screen, a page, a report).',
       'choose the lightest path that delivers the task well. A question needs an answer from what you read, and no change. A small, clear change needs doing and checking, and nothing more. An unclear request needs its questions answered before any work. Work that changes several parts that depend on each other, or that is hard to take back, needs an execution map the person agreed to; other work, even of a few steps, needs no map: do it, and say where you are as you go.',
       'A task that turns out larger than it looked gets its map then, and one that turns out simple drops what it does not need.',
       'These are the parts of a path. Use only the ones your path has.',
-      'With no map, make the smallest change that does the task, check it, and fix a failure at its cause.',
-      'mark it done with your evidence, which is what you ran and what it showed, before you start the next step: don\'t save the marks for the end. A step is not done because you wrote it.',
+      // ADR 0097, 5: the map's own rules are in its entry; Execute keeps how each step is done.
+      'For each step, or with no map for all of what was asked, make the smallest change that does it, check it, and fix a failure at its cause. A step is not done because you wrote it.',
       'do not look into it: record it with `execution-map note`, or keep it for your final answer when there is no map, and go on.',
       'separate work that runs beside yours, or a fresh review of a change you finished',
       'show it in an artifact: the design as an HTML page before you build it when the layout is a real choice, and the running app as a url artifact once it runs',
@@ -40,9 +40,8 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
   it('M2.4-E256 and E263 the map is the detailed plan, made after looking, and the person agrees to it before any step starts', () => {
     const lead = workingMethod('lead');
     for (const phrase of [
-      'Plan. Only when your path needs a map, and only after you understood the request, looked at what exists, and have your answers, and before you change anything, plan with `execution-map set`: never in your first reply, because a map made before you looked is a guess.',
-      'It is the implementation plan the person reads and agrees to, so make it detailed, not an outline.',
-      "end the map with the project's own checks (its build, lint, and tests)",
+      'Plan. Only when your path needs a map, and only after you understood the request, looked at what exists, and have your answers, and before you change anything: never in your first reply, because a map made before you looked is a guess.',
+      'The map is the implementation plan the person reads and agrees to, so make it detailed, not an outline;',
       'Confirm the plan. The person agrees to the map before you work on it. Once the first map of the request, or a map you set again with a change to what the person gets (the goal, what done looks like, what stays as it is, stored data, or what could go wrong), has details on every step (its undetailed list is empty), and before you start any step, call `ask choice` with other set to true.',
       'then it asks whether to start, with the option that starts first and an option that changes the plan, so the person can write what to change.',
       'When they ask for changes, set the map again with them, detail what changed, and ask again; start only after they chose to start.',
@@ -50,30 +49,27 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
     ]) expect(lead, phrase).toContain(phrase);
     for (const gone of ['`ask confirm`', 'Set it in the same reply as your first call', 'For a large, ambiguous, or risky task']) expect(lead, gone).not.toContain(gone);
     expect(executionMapDescription).toContain('the implementation plan the person reads, agrees to, and watches as a diagram');
+    expect(executionMapDescription).toContain("and end with the project's own checks after everything they cover.");
   });
 
   it('M2.4-E276 and E282 a branch means delegation, the steps of the lead are one line, and the map is followed and kept live', () => {
-    const lead = workingMethod('lead');
+    expect(workingMethod('lead')).toContain('Execute. With a map, work through it as its entry says, so it always shows where you are');
     for (const phrase of [
-      'Shape the map from how the work will really run. Your own steps are one line: each comes after the one before it, in the order you will do them.',
-      'A branch means delegation: steps side by side on the map run at the same time, each done by a worker.',
-      'So draw a branch only for a piece of work you hand to a worker: it needs nothing from the other branches, it touches files or parts no other branch touches, it is large enough to be worth a worker that starts with none of this conversation, and its step names that worker in uses.',
-      "Give the branches that start together the same `after`, or none, and don't split small independent changes into branches: do them in your own line.",
-      'Where branches meet, add the step that joins them, such as wiring the parts together or the check that needs all of them, after every branch it needs.',
-      'after everything they cover.',
-      'With a map, the map is how you work, and the person follows the work on it, so it must always say where you are.',
+      'Your own steps are one line, each after the one before.',
+      'Steps side by side are branches, and a branch means delegation: draw one only for work a worker does that needs nothing from the other branches, touches files no other branch touches, and is worth a worker that starts with none of this conversation;',
+      'give the branches that start together the same after, or none, and add the step that joins them after every branch it needs.',
+      "Don't split small independent changes into branches, leave out any step that nothing needs",
       'Every map call returns the steps that are ready: take those, and never work on a step the map does not have.',
-      'Mark a step doing before your first call on it, in the same reply as that call, and when several are ready, mark each one you start.',
-      'When several steps are ready together they are branches: mark each doing and start them all in one reply, one `delegate run` each, so they run at the same time.',
-      'As soon as its check passed, mark it done with your evidence',
-      "Mark a step you can't finish failed with a note that says why, and one that turned out unneeded skipped with a note.",
-      'When the plan itself changes (a step is missing, one is no longer needed, or the order was wrong), set the map again before you go on: a step whose id stays keeps how far it got and its details.',
-    ]) expect(lead, phrase).toContain(phrase);
+      'Mark a step doing in the same reply as your first call on it, and when several are ready, mark each and start them all in one reply, one delegate run per branch.',
+      "Mark a step done with your evidence, what you ran and what it showed, as soon as its check passed and before you start the next; failed with a note when you can't finish it, and skipped with a note when it turned out unneeded.",
+      'When the plan itself changes, set the map again before you go on',
+      'Setting the map again keeps the details and the status of each step whose id stays',
+    ]) expect(executionMapDescription, phrase).toContain(phrase);
   });
 
   it('M2.4-E277 and E278 the map connector speaks of steps, never of tasks as its nodes', () => {
     const said = [executionMapDescription, ...Object.values(executionMapCommands).map((command) => command.description), JSON.stringify(payloadJsonSchema(executionMapCommands.set.payload)), JSON.stringify(payloadJsonSchema(executionMapCommands.update.payload))].join('\n');
-    expect(said).toContain('Steps side by side are branches: each is handed to a worker, so they run at the same time, and your own steps are one line.');
+    expect(said).toContain('Steps side by side are branches, and a branch means delegation');
     // "The task" is the person's request there; a node is never called one.
     expect(said.match(/\btasks\b|\b(?:a|each|one|ready) task\b/gi)).toBeNull();
     const lead = workingMethod('lead');
@@ -81,30 +77,26 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
   });
 
   it('M2.4-E279 the map is the execution path, and a step is one stage of it', () => {
-    const lead = workingMethod('lead');
-    for (const phrase of [
-      'The map is your execution path: the steps that, from what you found, are the best, most practical, and fastest way to deliver what the person asked with the connectors and workers you have.',
-      'It is the implementation plan the person reads and agrees to, so make it detailed, not an outline.',
-      'A step is one stage of the path: what gets done, who does it, and how it is checked. It may cover the few files that change together, but it is always concrete, something you can name before you start it, never a phase such as implement or a whole feature.',
-    ]) expect(lead, phrase).toContain(phrase);
-    expect(lead).not.toContain('a test, or a command to run');
+    expect(workingMethod('lead')).toContain('The map is the implementation plan the person reads and agrees to');
+    expect(executionMapDescription).toContain('Plan work as the execution map: your execution path, and the implementation plan the person reads, agrees to, and watches as a diagram.');
+    expect(executionMapDescription).toContain('A step is one concrete stage of the path, something you can name before you start it, never a phase such as implement or a whole feature: what gets done, who does it, and how it is checked; it may cover the few files that change together.');
+    expect(workingMethod('lead')).not.toContain('a test, or a command to run');
   });
 
   it('M2.4-E280 who does a step is chosen by fit and named in uses, and Delegate allows a specialist', () => {
     const lead = workingMethod('lead');
     for (const phrase of [
-      'Choose for each step whoever does it best and fastest, and name it in uses: yourself, with a connector from the list below, for an ordinary or small change; or a worker of the `delegate` connector whose description fits, when the step needs that skill:',
-      'a designer for a screen or flow whose design is a real choice, an architect for a structure decision that spans several parts, a tester for tests that are a piece of work of their own, a reviewer for a finished change that is risky or wide.',
+      'Choose for each step whoever does it best and fastest: yourself, with a connector, for an ordinary or small change, or a worker of the `delegate` connector whose description fits when the step needs that skill.',
       'Delegate. A step goes to a worker of the `delegate` connector when the worker does it better or faster than you would: a specialist whose skill the step needs, separate work that runs beside yours, or a fresh review of a change you finished; its entry lists the workers and what each is for.',
       "Don't delegate what a few calls of your own would do, and ask for one review of a piece of work, not several.",
     ]) expect(lead, phrase).toContain(phrase);
+    expect(executionMapDescription).toContain('delegate designer for a screen or flow whose design is a real choice, delegate architect for a structure decision across several parts, delegate tester for tests that are a piece of work of their own, and delegate reviewer for a finished change that is risky or wide.');
     expect(lead).not.toContain('only when it is separate work');
   });
 
   it('M2.4-E281 a step that names a worker goes to it, and the map entry says who does a step', () => {
-    expect(workingMethod('lead')).toContain('Hand any step whose uses names a worker to that worker with `delegate run`, and check its answer before you mark the step done.');
-    expect(executionMapDescription).toContain('your execution path, the steps you found to be the best and fastest way to deliver the request with the connectors and workers you have');
-    expect(executionMapDescription).toContain('names who does it in uses');
+    expect(workingMethod('lead')).toContain('hand a step whose uses names a worker to that worker with `delegate run` and check its answer');
+    expect(executionMapDescription).toContain('Its uses names who does it: you, with a connector such as fs, or a worker such as');
     expect(JSON.stringify(payloadJsonSchema(executionMapCommands.set.payload))).toContain('Who does the step: a connector such as fs, or a worker such as delegate architect; several as a list.');
   });
 
@@ -170,7 +162,7 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
   it('M2.4-E309 the plan question says back what the lead understood, and the map goal is the outcome in the person\'s terms', () => {
     const lead = workingMethod('lead');
     expect(lead).toContain('Its question first says in a few lines what you understood: the goal, what done looks like, what stays as it is, and the choices you made for the person; then it asks whether to start');
-    expect(lead).toContain('Give the goal, the outcome the person wants in their own terms, then the steps');
+    expect(executionMapDescription).toContain('Give the goal, the outcome the person wants in their own terms, then the steps.');
   });
 
   it('M2.4-E310 the lead leaves running what the person will try, and still stops what is no longer needed', () => {
@@ -189,21 +181,16 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
   });
 
   it('QA54-H10 the lead sets the skeleton first, details each step in Markdown, and asks once every step has details', () => {
-    const lead = workingMethod('lead');
+    expect(workingMethod('lead')).toContain('has details on every step (its undetailed list is empty), and before you start any step');
     for (const phrase of [
-      'then the steps, each with a title, what it comes after, what it uses, and how you will check it.',
-      "A step's details say what it changes and how, naming the files or parts and the approach, in words the person understands without reading the code: write them in Markdown, with a list, a table, or a Mermaid diagram or chart in a fenced mermaid block where it shows the step better than words, and never SVG.",
-      "Set the map's skeleton first, with no details, then write each step's details with `execution-map detail`, one call per step, all in the reply after the set.",
-      'When you set the map again, a step whose id stays keeps its details: detail again only a step whose approach changed, and each new step.',
-      'has details on every step (its undetailed list is empty), and before you start any step',
-    ]) expect(lead, phrase).toContain(phrase);
-    expect(lead).not.toContain("A step's description");
-    expect(executionMapDescription).toContain("Set the skeleton first: each step names who does it in uses and comes after the steps it follows. Then write each step's details with detail, one call per step: what it changes and how, in Markdown, with lists, tables, and Mermaid diagrams or charts in fenced mermaid blocks, never SVG. The person opens them with a press, and a step can't be doing until it has them.");
-    expect(executionMapDescription).toMatch(/Limits: goal up to 300 characters; a step's title up to 100, check up to 300, details up to 4,000; [^.]*; 1 to 40 steps\.$/);
+      "Set the skeleton first, then write each step's details with detail, one call per step, all in the reply after the set: what it changes and how, naming the files or parts and the approach in words the person understands without the code, in Markdown, with lists, tables, and Mermaid diagrams or charts in fenced mermaid blocks, never SVG.",
+      "The person opens them with a press, and a step can't be doing until it has them.",
+      'Setting the map again keeps the details and the status of each step whose id stays: detail again only a step whose approach changed, and each new step.',
+      'Its check is the exact command you will run or the thing you will look at.',
+    ]) expect(executionMapDescription, phrase).toContain(phrase);
+    expect(workingMethod('lead')).not.toContain("A step's description");
+    expect(executionMapDescription).toMatch(/Limits: goal up to 300 characters; 1 to 40 steps; [^.]*; a note of note up to 500\.$/);
   });
-});
-
-describe('keep going until the work is done (08 §8.2, ADR 0092, 1)', () => {
   it('QA60-H1 every method keeps working through a list or the ready steps, and reports once at the end', () => {
     const rule = 'Keep going until the work is done. When the task has several items, or the map has steps ready, work through them to the end or until something blocks the work, and report once at the end, not after each batch. Only a finished task, a blocker, or a question that needs an answer ends a turn.';
     for (const [role, method] of [['lead', 'engineering'], ['lead', 'general'], ['worker', 'engineering'], ['worker', 'general']] as const) {

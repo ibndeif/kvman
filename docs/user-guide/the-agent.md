@@ -46,7 +46,7 @@ Everything the agent does goes through a **connector**, a named set of commands.
 | Connector | Does |
 |---|---|
 | `shell` | Runs one line in a real shell in the workspace folder: `bash` on Linux and macOS, PowerShell on Windows. Each line starts fresh, so a `cd` doesn't carry over. A line times out after 120 s by default, up to 600 s. |
-| `fs` | Reads, lists, searches, writes, and edits files, inside the workspace folder only. |
+| `fs` | Reads, lists, searches, writes, and edits files, inside the workspace folder only. It can read several files in one call, sees each file with its line numbers, and a failed edit tells it where the text was. |
 | `artifact` | Stores something for you to read ([coding-app.md](coding-app.md#the-panel-artifacts-and-the-execution-map)). |
 | `execution-map` | Draws and updates the plan (above). |
 | `ask` | Asks you a question and waits for your answer. |

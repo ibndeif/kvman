@@ -33,8 +33,9 @@ describe('what a command returns, and what is stored of it (08 §8.3 and §8.5, 
     const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });
     const [read, line] = messages.filter((message) => message.kind === 'toolResult').map((message) => message.content['details']);
     expect(read).toMatchObject({ connector: 'fs', command: 'read' });
-    expect(read).not.toHaveProperty('output');
-    expect(results[0]).toBe('{"path":"b.txt","fromLine":1,"totalLines":1,"content":"find me\\n","truncated":false}');
+    // Superseded by QA65-H4: a read's text is numbered, so its details keep the JSON for the card (ADR 0097, 2).
+    expect(read).toMatchObject({ output: '{"path":"b.txt","fromLine":1,"totalLines":1,"content":"find me\\n","truncated":false}' });
+    expect(results[0]).toBe('b.txt · line 1 of 1\n     1\tfind me');
     expect(line).toMatchObject({ connector: 'shell', command: 'exec', output: 'hi\n', exitCode: 0 });
     expect(results[1]).toBe('hi\n[exit code 0]');
   });

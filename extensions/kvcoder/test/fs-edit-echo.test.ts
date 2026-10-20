@@ -1,5 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { z } from '@kvman/sdk';
 import { describe, expect, it } from 'vitest';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { fsCall, runs, says, toolResults } from './support/model-script.ts';
@@ -21,7 +22,11 @@ describe('what an edit returns of a long change (08 §8.5, ADR 0069, 2)', { time
     );
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
-    const [, long, short] = toolResults(fake).map((text) => JSON.parse(text) as { fromLine: number; firstChangedLine: number; content: string });
+    // The card's JSON stays in the details; the model reads it numbered (ADR 0097, 2).
+    const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });
+    const outputs = messages.filter((message) => message.kind === 'toolResult').map((message) => z.object({ details: z.object({ output: z.string() }) }).parse(message.content).details.output);
+    const [, long, short] = outputs.map((text) => JSON.parse(text) as { fromLine: number; firstChangedLine: number; content: string });
+    expect(toolResults(fake)[1]).toMatch(/^long\.txt · 1 replacement · lines 8–53 now read:\n {5}8\tline 8\n/);
     expect(long).toMatchObject({ fromLine: 8, firstChangedLine: 11 });
     expect(long?.content).toBe(`${numbered(8, 10)}${numbered(11, 13, 'new')}[… 34 lines not shown …]\n${numbered(48, 50, 'new')}${numbered(51, 53)}`);
     expect(short).toMatchObject({ fromLine: 53, firstChangedLine: 56 });

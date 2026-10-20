@@ -85,12 +85,24 @@ function summary(words: string | undefined, subject: string | undefined, outcome
   return { ...(words === undefined ? {} : { words }), ...(subject === undefined ? {} : { subject }), ...(outcome === undefined ? {} : { outcome }) };
 }
 
+// The paths `fs read-files` reads, joined (ADR 0097, 1).
+function readPaths(payload: Record<string, unknown>): string | undefined {
+  const files: unknown = payload['files'];
+  if (!Array.isArray(files)) return undefined;
+  const paths = files.flatMap((file: unknown) => {
+    const { path } = fields(file);
+    return typeof path === 'string' ? [path] : [];
+  });
+  return paths.length === 0 ? undefined : paths.join(', ');
+}
+
 function fsSummary(t: Translate, command: string, payload: Record<string, unknown>, result: unknown): CallSummary | undefined {
   const done = result === undefined ? undefined : fields(result);
   const path = text(payload['path']);
   if (command === 'edit') return summary(t('kvcoder.ui.call.edit'), path, done === undefined ? undefined : changedText(payload));
   if (command === 'write') return summary(t('kvcoder.ui.call.write'), path, done === undefined ? undefined : writtenText(t, done));
   if (command === 'read') return summary(t('kvcoder.ui.call.read'), path, done === undefined ? undefined : linesText(t, done));
+  if (command === 'read-files') return summary(t('kvcoder.ui.call.read'), readPaths(payload), done === undefined ? undefined : countText(t, 'kvcoder.ui.call.files', done['files']));
   if (command === 'list') return summary(t('kvcoder.ui.call.list'), path ?? '.', done === undefined ? undefined : entriesText(t, done));
   if (command === 'find') return summary(t('kvcoder.ui.call.find'), text(payload['pattern']), done === undefined ? undefined : pathsText(t, done));
   if (command === 'search') return summary(t('kvcoder.ui.call.search'), text(payload['pattern']), done === undefined ? undefined : matchesText(t, done));

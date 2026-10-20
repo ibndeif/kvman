@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { File, Folder } from '@lucide/vue';
 import { computed, ref } from 'vue';
-import { editResult, listResult, pathsResult, readResult, runResult, searchResult } from './call-results.ts';
+import { editResult, listResult, pathsResult, readFilesResult, readResult, runResult, searchResult, type ReadFile } from './call-results.ts';
 import { sizeText } from './call-summary.ts';
 import { callKind, type CallView } from './call-view.ts';
 import { fieldValue } from './field-rows.ts';
@@ -13,13 +13,15 @@ import { useKvman } from './kvman.ts';
 import RunOutput from './RunOutput.vue';
 import { folded, numberedLines } from './shown-lines.ts';
 
-// What a call returned, by its kind (ADR 0036, 3): an edit's count, a read's numbered lines, a list's rows, a find's paths (ADR 0090, 2), a search's
+// What a call returned, by its kind (ADR 0036, 3): an edit's count, a read's numbered lines, each file of a read-files (ADR 0097, 1), a list's rows, a find's paths (ADR 0090, 2), a search's
 // matches under each file, a helper's answer in Markdown, a background run's row and output (ADR 0062, 2). Any other result that is JSON shows as fields, and the rest as text.
 const props = defineProps<{ view: CallView; output: string; result?: unknown }>();
 const kvman = useKvman();
 const kind = computed(() => callKind(props.view));
 const edited = computed(() => (kind.value === 'edit' ? editResult(props.result) : undefined));
 const read = computed(() => (kind.value === 'read' ? readResult(props.result) : undefined));
+const readFiles = computed(() => (kind.value === 'read-files' ? readFilesResult(props.result) : undefined));
+const fileNote = (file: ReadFile): string => file.error ?? kvman.t(file.state === 'notRead' ? 'kvcoder.ui.call.fileNotRead' : 'kvcoder.ui.call.fileUnchanged');
 const entries = computed(() => (kind.value === 'list' ? listResult(props.result) : undefined));
 const files = computed(() => (kind.value === 'search' ? searchResult(props.result) : undefined));
 const paths = computed(() => (kind.value === 'find' ? pathsResult(props.result) : undefined));
@@ -55,6 +57,13 @@ const asFields = computed(() => kind.value !== 'line' && typeof props.result ===
       <div class="kvc-mono kvc-file-path" data-test="call-file-path">{{ file.path }}</div>
       <FoldedLines v-if="file.matches.length > 0" :lines="file.matches.map((match) => ({ text: match.text, number: match.line }))" />
       <p v-else class="kvc-muted kvc-call-parts" data-test="call-file-count">{{ kvman.t('kvcoder.ui.call.matchCount', { count: file.count }) }}</p>
+    </div>
+  </template>
+  <template v-else-if="readFiles !== undefined">
+    <div v-for="(file, index) in readFiles" :key="`${index}:${file.path}`" class="kvc-block" data-test="call-read-file">
+      <div class="kvc-mono kvc-file-path" dir="auto" data-test="call-file-path">{{ file.path }}</div>
+      <FoldedLines v-if="file.read !== undefined" :lines="numberedLines(file.read.content, file.read.fromLine)" />
+      <p v-else class="kvc-muted kvc-call-parts" dir="auto" data-test="call-read-file-note">{{ fileNote(file) }}</p>
     </div>
   </template>
   <template v-else-if="kind === 'write' && asFields" />

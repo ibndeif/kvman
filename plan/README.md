@@ -77,5 +77,6 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `adr/0094-context-and-robustness.md` | Context and robustness: old tool results cleared in place when the cache expired or the prompt is half full, a model call's longest silence logged, a check after edits, a fallback model on a usage limit |
 | `adr/0095-web-fetch.md` | `web fetch`: a page read as Markdown with turndown, never a private address (checked again at each redirect), and the person asked once per host in a chat |
 | `adr/0096-a-silent-stream-is-retried.md` | a model stream silent for 300 s is aborted as a temporary `kvai/PROVIDER_ERROR` (`stream stalled`), so the step retries it |
+| `adr/0097-fewer-steps-numbered-reads-and-edits-that-point.md` | independent calls first in the method and `fs read-files`; `fs read` and `fs edit` read as numbered lines; edit errors that show where; old call text cleared with its result; the map's rules in its entry; hints for one piece; "Decide for me" without `ask`; true map limits |
 
 The plan is complete. Implementation starts with M1.1.

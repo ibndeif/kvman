@@ -27,7 +27,7 @@ describe('a chat changes a file only as it last saw it (KVC-12 and KVC-13, ADR 0
     expect(refused[0]).toMatch(/^error VALIDATION_FAILED: a\.txt exists and this chat hasn't read it\. Read it first/);
     expect(refused[1]).toMatch(/^error VALIDATION_FAILED: a\.txt exists and this chat hasn't read it/);
     expect(JSON.parse(String(refused[2]))).toEqual({ path: 'fresh.txt', created: true, bytes: 1 });
-    expect(toolResults(fake).at(-1)).toContain('"replacements":1');
+    expect(toolResults(fake).at(-1)).toContain('a.txt · 1 replacement ·');
     expect(readFileSync(inHome(kernel, 'a.txt'), 'utf8')).toBe('new');
   });
 
@@ -56,7 +56,7 @@ describe('a chat changes a file only as it last saw it (KVC-12 and KVC-13, ADR 0
     await Promise.all([kernel.exec('kvcoder.message.send', { sessionId: first, text: 'edit' }), kernel.exec('kvcoder.message.send', { sessionId: second, text: 'edit' })]);
     await kernel.clock.advance(0);
     const results = [toolResults(fake, 6).at(-1), toolResults(fake, 7).at(-1)].map(String);
-    expect(results.filter((result) => result.includes('"replacements":1'))).toHaveLength(1);
+    expect(results.filter((result) => result.includes('a.txt · 1 replacement ·'))).toHaveLength(1);
     expect(results.filter((result) => /^error VALIDATION_FAILED: a\.txt changed since this chat read it/.test(result))).toHaveLength(1);
     expect(['ALPHA\nbeta\n', 'alpha\nBETA\n']).toContain(readFileSync(inHome(kernel, 'a.txt'), 'utf8'));
   });

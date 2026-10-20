@@ -19,7 +19,7 @@ The kvcoder review of 2026-10-19 (`docs/reviews/kvcoder-review-2026-10-19.md`, P
 
 ## Decisions
 
-1. **Old tool results are cleared** (asked; recommended: both moments).
+1. **Old tool results are cleared** (asked; recommended: both moments; ADR 0097, 4 clears the long text of their calls too).
    - A session record has `clearedThroughSeq` (old records read `null`). A tool result whose `seq` is at or before it is
      sent to the model as `[cleared to save memory: <call>. Make the call again if you need it.]`, where `<call>` names
      the call as `background` does (`fs read src/app.ts`; ADR 0089, 1). The stored message and the conversation don't

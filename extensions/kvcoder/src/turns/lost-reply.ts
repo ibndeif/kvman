@@ -32,7 +32,7 @@ export function lostTokens(blocks: readonly ReplyBlock[], usage: { output: numbe
 /** What the model is told about its lost reply. */
 export function lostHint(tokens: number): string {
   const about = Math.round(tokens / 100) * 100;
-  return `Your last reply was lost on the way: the provider produced about ${String(about)} tokens, but no tool call or text reached me. Send it again now, calling the tool directly. If it was a large file, send the content in smaller pieces: one file per reply, under about 150 lines each, with \`fs write\`.`;
+  return `Your last reply was lost on the way: the provider produced about ${String(about)} tokens, but no tool call or text reached me. Send it again now, calling the tool directly. If it held a large file, write that file in parts of under about 150 lines with \`fs part\`, then \`fs assemble\`; only that file needs parts.`;
 }
 
 /** A reply with no call that is empty, or that the provider cut at its length limit (ADR 0054, 1). */
@@ -49,7 +49,7 @@ export function incompleteReply(blocks: readonly ReplyBlock[], stopReason: strin
 /** What the model is told about its incomplete reply. */
 export function incompleteHint(reason: Incomplete): string {
   const what = reason === 'empty' ? 'empty: no text and no tool call reached me' : 'cut off at the length limit before it finished';
-  return `Your last reply was ${what}. Go on from where it stopped, in smaller pieces: one tool call per reply, and for a long file save it in parts with fs part and then write it with fs assemble.`;
+  return `Your last reply was ${what}. Go on from where it stopped. If it was writing a long file, save that file in parts with fs part and then write it with fs assemble.`;
 }
 
 type CallBlock = { type: string; id?: string; name?: string };

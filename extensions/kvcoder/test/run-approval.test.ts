@@ -45,7 +45,7 @@ describe('approval of the calls that can ask (08 §8.3, ADR 0011, 7)', { timeout
       const results = toolResults(waiting.fake).slice(1);
       expect(results.slice(0, 2)).toEqual(['[exit code 0]', '[exit code 0]']);
       expect(results[2]).toContain('"created":true');
-      expect(results[3]).toContain('"replacements":1');
+      expect(results[3]).toContain(' · 1 replacement ·');
     }
   });
 

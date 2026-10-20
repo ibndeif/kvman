@@ -11,7 +11,7 @@ const json = (text: string | undefined): unknown => JSON.parse(String(text));
 describe('replaceAll through the connectors (08 §8.5, ADR 0090, 1)', { timeout: 30_000 }, () => {
   it('QA58-H1 fs edit with replaceAll changes every occurrence and counts them', async () => {
     let folder = '';
-    const { results } = await looked(
+    const { results, outputs } = await looked(
       (prepared) => {
         folder = prepared;
         looked.write(prepared, 'config.ts', 'x = 1\ny = 0\nx = 1\nx = 1\n');
@@ -20,7 +20,8 @@ describe('replaceAll through the connectors (08 §8.5, ADR 0090, 1)', { timeout:
       {},
       ['config.ts'],
     );
-    expect(json(results[0])).toMatchObject({ path: 'config.ts', replacements: 4, firstChangedLine: 1 });
+    expect(json(outputs[0])).toMatchObject({ path: 'config.ts', replacements: 4, firstChangedLine: 1 });
+    expect(results[0]).toMatch(/^config\.ts · 4 replacements · lines 1–4 now read:\n/);
     expect(readFileSync(path.join(folder, 'config.ts'), 'utf8')).toBe('x = 2\ny = 9\nx = 2\nx = 2\n');
   });
 

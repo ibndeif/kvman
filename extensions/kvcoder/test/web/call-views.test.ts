@@ -50,6 +50,24 @@ describe("an opened card shows the call by its kind (08 §8.7, ADR 0036, 3 and 5
     expect(parts(card, 'call-file').map((file) => [file.find('[data-test="call-file-path"]').text(), file.findAll('[data-test="call-line-row"]').map((row) => row.text())])).toEqual([['src/a.ts', ['3const status = 1;', '40return status;']], ['src/b.ts', ['7status()']]]);
   });
 
+  it("QA65-E15 a read-files card names its files closed, and opened shows each file's lines, its error, or that it wasn't read or was unchanged", async () => {
+    const files = [
+      { path: 'src/a.ts', fromLine: 3, totalLines: 9, content: 'one\ntwo\n', truncated: false },
+      { path: 'gone.ts', error: { code: 'NOT_FOUND', message: "gone.ts doesn't exist." } },
+      { path: 'late.ts', notRead: true },
+      { path: 'held.ts', unchanged: true },
+    ];
+    const card = await ranCard(call('fs', 'read-files', { files: files.map((file) => ({ path: file.path })) }), { files });
+    expect(closedLine(card)).toBe('Read src/a.ts, gone.ts, late.ts, held.ts 4 files');
+    await pressed(card);
+    expect(parts(card, 'call-read-file').map((file) => [file.find('[data-test="call-file-path"]').text(), file.findAll('[data-test="call-line-row"]').map((row) => row.text()), file.find('[data-test="call-read-file-note"]').exists() ? file.find('[data-test="call-read-file-note"]').text() : null])).toEqual([
+      ['src/a.ts', ['3one', '4two'], null],
+      ['gone.ts', [], "gone.ts doesn't exist."],
+      ['late.ts', [], "Not read: the files before it used this call's 30 KB."],
+      ['held.ts', [], 'Unchanged since an earlier read in this chat.'],
+    ]);
+  });
+
   it("QA48-H8 an mcp call shows its arguments and the tool's text, without risky or timeoutMs", async () => {
     const card = await ranCard(call('mcp', 'call', { server: 'github', tool: 'list_issues', arguments: { repo: 'kvman', state: 'open' }, timeoutMs: 5000, risky: false }), 'No open issues.');
     await pressed(card);

@@ -154,6 +154,14 @@ describe('the artifact connector (08 §8.5, ADR 0009, 173 to 176)', { timeout: 3
     expect(await stored(world, 'plan')).toMatchObject({ version: 1, content: 'alpha beta\n' });
   });
 
+  it('QA65-E11 an artifact edit found twice names both lines, as an fs edit does', async () => {
+    const world = await started();
+    await turn(world, 'go', runs(command('artifact', 'write', { id: 'plan', title: 'Plan', content: '# Plan\n- todo\n\n- todo\n' })), says('one'));
+    const [result] = await turn(world, 'again', runs(command('artifact', 'edit', { id: 'plan', edits: [{ oldText: '- todo', newText: '- done' }] })), says('two'));
+    expect(result?.split('\n')[0]).toBe('error VALIDATION_FAILED: edits[0] was found 2 times, at lines 2, 4; add more surrounding text so it matches once, or set replaceAll to replace every one. Nothing was written.');
+    expect(result).toContain('     4\t- todo');
+  });
+
   it('QA6-E7 an edit that would pass 64 KB fails', async () => {
     const world = await started();
     await turn(world, 'go', runs(command('artifact', 'write', { id: 'big', title: 'Big', content: `START${'x'.repeat(40_000)}` })), says('one'));

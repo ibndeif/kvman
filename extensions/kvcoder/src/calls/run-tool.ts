@@ -12,6 +12,8 @@ export function runTool(connectors: readonly string[]) {
     description: [
       'Runs one command of a connector and returns its result. Connectors are the only way you act: the system prompt lists each one with its commands.',
       '',
+      'Make every independent call in the same reply, as several run calls: reads and searches run at the same time, and each reply is a step that sends the whole conversation again.',
+      '',
       `For example, ${exampleCall}. Every connector has the command help: call it with an empty payload to see the connector's commands, or with { "command": "<name>" } to see one command's payload, before the first time you use a command whose payload the system prompt doesn't list.`,
     ].join('\n'),
     parameters: {

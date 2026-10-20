@@ -14,7 +14,7 @@ import { callInfos } from '../registry/loaded.ts';
 import type { ConnectorRow } from '../registry/register-connectors.ts';
 import { truncate } from '../result-text.ts';
 import type { HeldResult, SessionDoc } from '../schemas/records.ts';
-import { alreadyRead, unchangedText } from './read-again.ts';
+import { fileResult } from './file-results.ts';
 
 // Running one connector command for the model (plan 08 §8.3, ADR 0011, 10 and 11): every command, kvcoder's own or a
 // registered one, is a kernel command or query run with `ctx.exec`. The result is what the model reads, and the
@@ -83,8 +83,6 @@ export function textResult(call: RunCall, text: string, durationMs = 0): CallDon
   return { text, isError: false, details: { ...words(call), output: text, durationMs } };
 }
 
-const fileRead = 'kvcoder.fs.file.get';
-
 /** Reserve in the caller's model-order map BEFORE independently awaited permission preparation (ADR0044). */
 export function orderedCall<Result>(ctx: Ctx, session: Stored<SessionDoc>, call: RunCall, run: () => Promise<Result>): Promise<Result> {
   // Only fixed builtin commands order work; registrations cannot shadow them. This is not an authority decision.
@@ -122,12 +120,13 @@ async function runJob(ctx: Ctx, sessionId: string, call: RunCall, target: Comman
   }
   const output = jsonOutput(done.value).output;
   const whole = builtin?.bounded === true ? output : truncate(output);
-  const text = target.registration === fileRead && (await alreadyRead(ctx, sessionId, whole)) ? unchangedText(String(call.payload['path'])) : whole;
+  const file = builtin === undefined ? undefined : await fileResult(ctx, sessionId, call, target.registration, done.value);
+  const text = file?.text ?? whole;
   const artifactId = artifactChanges.has(target.registration) ? call.payload['id'] : undefined;
   const artifact = typeof artifactId === 'string' ? await artifactCard(ctx, sessionId, artifactId) : undefined;
   // A registered command's own card shows the call with what it returned (ADR 0082, 13).
   const card = target.card === undefined ? undefined : { component: target.card, payload: call.payload, output: z.json().parse(done.value ?? null) };
-  return { text, isError: false, details: { ...words(call), output: text, durationMs: Date.now() - started, ...(artifact === undefined ? {} : { artifact }), ...(card === undefined ? {} : { card }) } };
+  return { text, isError: false, details: { ...words(call), output: file?.output ?? text, durationMs: Date.now() - started, ...(artifact === undefined ? {} : { artifact }), ...(card === undefined ? {} : { card }) } };
 }
 
 const helpSchema = z.object({ text: z.string() });

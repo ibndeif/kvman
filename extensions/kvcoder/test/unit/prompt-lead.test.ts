@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { executionMapDescription } from '../../src/connectors/execution-map.ts';
 import { buildPrompt } from '../../src/prompt/build-prompt.ts';
 
 const lead = (platform: NodeJS.Platform = 'linux'): string => buildPrompt({ role: 'lead', workspacePath: '/w', language: 'en', platform, shell: platform === 'win32' ? 'powershell' : 'bash', sections: [], connectors: [] }).prompt;
@@ -28,18 +29,19 @@ describe("the lead's prompt (08 §8.2, ADR 0022, 2 to 4)", () => {
     const prompt = lead();
     expect(lineOf(prompt, 'Understand. ')).toContain('Work out what the person needs, not only what they typed:');
     const plan = lineOf(prompt, 'Plan. ');
-    expect(plan).toContain('each with a title, what it comes after, what it uses, and how you will check it.');
-    expect(plan).toContain('yourself, with a connector from the list below, for an ordinary or small change; or a worker of the `delegate` connector whose description fits');
-    expect(plan).toContain('A branch means delegation: steps side by side on the map run at the same time, each done by a worker.');
+    // ADR 0097, 5: what a step holds and what a branch means are in the map's entry.
+    expect(plan).toContain('yourself, with a connector, for an ordinary or small change, or a worker of the `delegate` connector whose description fits');
+    expect(executionMapDescription).toContain('Its uses names who does it: you, with a connector such as fs, or a worker such as delegate designer');
+    expect(executionMapDescription).toContain('Steps side by side are branches, and a branch means delegation');
   });
 
   it('QA33-H4 independent work runs together: steps, calls, and workers, whose answers the lead checks', () => {
     const prompt = lead();
-    expect(lineOf(prompt, 'Execute. ')).toContain('When several steps are ready together they are branches: mark each doing and start them all in one reply, one `delegate run` each, so they run at the same time.');
+    expect(executionMapDescription).toContain('when several are ready, mark each and start them all in one reply, one delegate run per branch.');
     const delegate = lineOf(prompt, 'Delegate. ');
     expect(delegate).toContain('Several `delegate run` calls in one reply run in parallel.');
     expect(delegate).toContain('Read what a worker returns and check it before you rely on it: its work is your responsibility.');
-    expect(prompt).toContain('\nIn one reply, reads and searches run at the same time, and calls that change something (shell lines, writes, edits) run one after another in the order you give them. So put independent calls (reads, searches, separate files, separate workers) in one reply, and a call that needs another call\'s result in a later reply: several new files are several `fs write` calls in one reply, not one reply each.\n');
+    expect(prompt).toContain('\nWork in few steps. Each reply is a step, and every step sends the whole conversation again, so make in one reply every call you can make now: reads and searches run at the same time, and calls that change something (shell lines, writes, edits) run one after another in the order you give them. Read a few files with one `fs read-files`, put independent calls (searches, separate files, separate workers) in the same reply, and leave for a later reply only a call that needs another call\'s result. Several new files are several `fs write` calls in one reply, not one reply each.\n');
   });
 
   it('QA33-H5 the work is done when it is ready for production', () => {

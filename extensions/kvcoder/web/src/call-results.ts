@@ -5,6 +5,8 @@ import { fields, type Translate } from './kvman.ts';
 
 export type EditResult = { replacements: number; firstChangedLine: number };
 export type ReadResult = { fromLine: number; content: string };
+/** One file of `fs read-files` (ADR 0097, 1): its read, its error, or that it wasn't read or was unchanged. */
+export type ReadFile = { path: string; read?: ReadResult; error?: string; state?: 'notRead' | 'unchanged' };
 export type Entry = { name: string; kind: 'file' | 'folder'; bytes: number };
 export type RunResult = { call: string; status: string; answer: boolean; ranMs?: number; exitCode?: number; output?: unknown; problem?: unknown };
 /** A searched file: its lines (with `context`, the lines around a match too) and its count of matches (ADR 0090, 3). */
@@ -18,6 +20,23 @@ export function editResult(result: unknown): EditResult | undefined {
 export function readResult(result: unknown): ReadResult | undefined {
   const { fromLine, content } = fields(result);
   return typeof fromLine === 'number' && typeof content === 'string' ? { fromLine, content } : undefined;
+}
+
+function readFileOf(value: unknown): ReadFile[] {
+  const { path, error, notRead, unchanged } = fields(value);
+  if (typeof path !== 'string') return [];
+  const read = readResult(value);
+  if (read !== undefined) return [{ path, read }];
+  const { message } = fields(error);
+  if (typeof message === 'string') return [{ path, error: message }];
+  if (notRead === true) return [{ path, state: 'notRead' }];
+  return unchanged === true ? [{ path, state: 'unchanged' }] : [];
+}
+
+/** The files `fs read-files` returned, in order. */
+export function readFilesResult(result: unknown): ReadFile[] | undefined {
+  const files: unknown = fields(result)['files'];
+  return Array.isArray(files) ? files.flatMap(readFileOf) : undefined;
 }
 
 function entryOf(value: unknown): Entry[] {

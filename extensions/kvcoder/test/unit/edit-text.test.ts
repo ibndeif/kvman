@@ -37,7 +37,7 @@ describe('applyEdits (08 §8.5, ADR 0009, 159)', () => {
   });
 
   it('QA4-E6 text found twice is refused, overlapping occurrences included', () => {
-    refused('x = 1\nx = 1\n', [{ oldText: 'x = 1', newText: 'x = 2' }], /^edits\[0\] was found 2 times; add more surrounding text/);
+    refused('x = 1\nx = 1\n', [{ oldText: 'x = 1', newText: 'x = 2' }], /^edits\[0\] was found 2 times, at lines 1, 2; add more surrounding text/);
     refused('aaa', [{ oldText: 'aa', newText: 'b' }], /was found 2 times/);
   });
 
@@ -62,7 +62,8 @@ describe('applyEdits (08 §8.5, ADR 0009, 159)', () => {
       ['abc', [{ oldText: '', newText: 'x' }]],
       ['abc', [{ oldText: 'b', newText: 'b' }]],
     ];
-    for (const [text, edits] of refusals) refused(text, edits, / Nothing was written\.$/);
+    // The lines a refusal points at follow its first line (ADR 0097, 3).
+    for (const [text, edits] of refusals) refused(text, edits, / Nothing was written\.(\n|$)/);
   });
 });
 
@@ -89,6 +90,6 @@ describe('applyEdits with replaceAll (08 §8.5, ADR 0090, 1)', () => {
   });
 
   it('QA58-H1 a repeated text without replaceAll says how to replace every one', () => {
-    refused('x\nx\n', [{ oldText: 'x', newText: 'y' }], /was found 2 times; add more surrounding text so it matches once, or set replaceAll to replace every one\./);
+    refused('x\nx\n', [{ oldText: 'x', newText: 'y' }], /was found 2 times, at lines 1, 2; add more surrounding text so it matches once, or set replaceAll to replace every one\./);
   });
 });

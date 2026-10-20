@@ -7,6 +7,8 @@ import { assembleParts, partsLimit, savePart } from '../files/file-parts.ts';
 import { findPaths } from '../files/find-paths.ts';
 import { listEntries } from '../files/list-entries.ts';
 import { readLines, readLinesLimit } from '../files/read-file.ts';
+import { readFiles } from '../files/read-files.ts';
+import { filesEntrySchema } from '../files/read-text.ts';
 import { searchText } from '../files/search-text.ts';
 import { resolveInWorkspace } from '../files/workspace-path.ts';
 import { invalid, notFound } from '../problems.ts';
@@ -14,14 +16,17 @@ import { records } from '../store/collections.ts';
 import { callInput, type ConnectorCommand } from './connector-command.ts';
 import { cutInto, edits, risky } from './payload-fields.ts';
 
-// The `fs` connector (plan 08 §8.5, ADR 0009, 157 to 160; ADR 0011, 8): `read`, `list`, and `search` look inside the
+// The `fs` connector (plan 08 §8.5, ADR 0009, 157 to 160; ADR 0011, 8): `read`, `read-files`, `list`, and `search` look inside the
 // workspace folder; `write` creates or replaces a file and `edit` replaces text in one, after the approval the shell's
 // calls get. A change is checked against what the chat last saw of the file, replaces it whole, and can be undone
 // (ADR 0053).
 
 /** What the prompt's index says the connector is for. */
 export const fsDescription =
-  'Read, list, search, create, and change files in the workspace folder. Use it instead of cat, ls, find, grep, or shell redirection: find a file by name or path pattern with find, not by listing folder after folder; read a file before you change it (a change to a file this chat has not read, or that changed since, fails), write for a new file or a full rewrite (a long file in pieces with part, then assemble), one file per call, and edit for exact text replacements in an existing file.';
+  'Read, list, search, create, and change files in the workspace folder. Use it instead of cat, ls, find, grep, or shell redirection: find a file by name or path pattern with find, not by listing folder after folder; read several files in one call with read-files; read and read-files show each line after its number and a tab, which aren\'t part of the file, so leave them out of oldText; read a file before you change it (a change to a file this chat has not read, or that changed since, fails), write for a new file or a full rewrite (a long file in pieces with part, then assemble), one file per call, and edit for exact text replacements in an existing file.';
+
+/** The most files one `read-files` reads (ADR 0097, 1). */
+export const filesLimit = 10;
 
 const filePath = (what: string) => z.string().min(1).describe(`${what}, relative to the workspace folder, or absolute inside it.`);
 
@@ -31,6 +36,19 @@ const payloads = {
     fromLine: z.number().int().min(1).describe('The first line to return, counting from 1. The default is 1.').exactOptional(),
     fromColumn: z.number().int().min(1).describe('The character of fromLine to start at, from 1: pass it only as a result gave it in next.').exactOptional(),
     lines: z.number().int().describe('How many lines to return: 2000 by default, which is also the most; a larger number is cut to 2000.').exactOptional(),
+  }),
+  'read-files': z.strictObject({
+    files: z
+      .array(
+        z.strictObject({
+          path: filePath('A file to read'),
+          fromLine: z.number().int().min(1).describe('The first line to return, counting from 1. The default is 1.').exactOptional(),
+          lines: z.number().int().describe('How many lines to return: 2000 by default, which is also the most.').exactOptional(),
+        }),
+      )
+      .min(1)
+      .max(filesLimit)
+      .describe('The files to read, in order, 1 to 10; together they return at most 30 KB.'),
   }),
   list: z.strictObject({ path: z.string().describe('The folder to list, relative to the workspace folder, or absolute inside it; the workspace folder when left out or empty.').exactOptional() }),
   find: z.strictObject({
@@ -54,6 +72,7 @@ const payloads = {
 
 export const fsCommands = {
   read: { registration: 'kvcoder.fs.file.get', description: 'Reads lines of a text file.', payload: payloads.read, asks: false, bounded: true },
+  'read-files': { registration: 'kvcoder.fs.files.get', description: 'Reads several text files in one call, in order, each as read reads it.', payload: payloads['read-files'], asks: false, bounded: true },
   list: { registration: 'kvcoder.fs.entry.list', description: 'Lists the files and folders of one folder.', payload: payloads.list, asks: false, bounded: true },
   find: { registration: 'kvcoder.fs.path.list', description: 'Finds the files whose path matches a glob, under a folder, newest first.', payload: payloads.find, asks: false, bounded: true },
   search: { registration: 'kvcoder.fs.text.search', description: 'Finds the lines that match a regular expression, in a file or under a folder.', payload: payloads.search, asks: false, bounded: true },
@@ -108,12 +127,13 @@ const shownEdge = 6;
 
 // What an edit changed (ADR 0034, 1; ADR 0069, 2): the file's lines from 3 before the first changed line to 3 after
 // the last. A longer change shows its two ends: the model wrote the lines between them itself.
-function changedLines(edited: EditedText): { fromLine: number; content: string } {
+function changedLines(edited: EditedText): { fromLine: number; content: string; skipped?: { afterLine: number; lines: number } } {
   const lines = edited.text.replace(/^\uFEFF/, '').match(/[^\n]*\n|[^\n]+$/g) ?? [];
   const fromLine = Math.max(edited.firstChangedLine - shownAround, 1);
   const shown = lines.slice(fromLine - 1, edited.lastChangedLine + shownAround);
   if (shown.length <= 2 * shownEdge + 1) return { fromLine, content: shown.join('') };
-  return { fromLine, content: [...shown.slice(0, shownEdge), `[… ${String(shown.length - 2 * shownEdge)} lines not shown …]\n`, ...shown.slice(-shownEdge)].join('') };
+  const hidden = shown.length - 2 * shownEdge;
+  return { fromLine, content: [...shown.slice(0, shownEdge), `[… ${String(hidden)} lines not shown …]\n`, ...shown.slice(-shownEdge)].join(''), skipped: { afterLine: fromLine + shownEdge - 1, lines: hidden } };
 }
 
 async function editIn(ctx: Ctx, sessionId: string, input: z.output<typeof payloads.edit>) {
@@ -134,6 +154,12 @@ export function registerFsConnector(ctx: Ctx): void {
     input: callInput(payloads.read),
     output: z.object({ path: z.string(), fromLine: z.number().int(), totalLines: z.number().int(), content: z.string(), truncated: z.boolean(), next: z.object({ fromLine: z.number().int(), fromColumn: z.number().int().exactOptional() }).exactOptional() }),
     handle: ({ sessionId, payload }) => asProblems(() => readLines(ctx.job.workspace.path, { ...payload, lines: cutInto(payload.lines ?? readLinesLimit, 1, readLinesLimit) }, async (real) => (await records(ctx.store).fileViews.find({ sessionId, path: real }, { limit: 1 }))[0]?.fingerprint)),
+  });
+  ctx.registerQuery('kvcoder.fs.files.get', {
+    description: commands['read-files'].description,
+    input: callInput(payloads['read-files']),
+    output: z.object({ files: z.array(filesEntrySchema) }),
+    handle: ({ payload }) => readFiles(ctx.job.workspace.path, payload.files, ctx.job.signal),
   });
   ctx.registerQuery('kvcoder.fs.entry.list', {
     description: commands.list.description,
@@ -164,7 +190,7 @@ export function registerFsConnector(ctx: Ctx): void {
   ctx.registerCommand('kvcoder.fs.edit', {
     description: commands.edit.description,
     input: callInput(payloads.edit),
-    output: z.object({ path: z.string(), replacements: z.number().int(), firstChangedLine: z.number().int(), fromLine: z.number().int(), content: z.string() }),
+    output: z.object({ path: z.string(), replacements: z.number().int(), firstChangedLine: z.number().int(), fromLine: z.number().int(), content: z.string(), skipped: z.object({ afterLine: z.number().int(), lines: z.number().int() }).exactOptional() }),
     retries: 0,
     maxInputBytes: 33_554_432,
     handle: ({ sessionId, payload }) => asProblems(() => editIn(ctx, sessionId, payload)),

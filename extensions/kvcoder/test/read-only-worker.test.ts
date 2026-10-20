@@ -55,7 +55,7 @@ describe('a read-only worker (KVC-33, ADR 0056)', { timeout: 30_000 }, () => {
     const free = prompts.find((prompt) => !prompt.includes('You are read-only here'));
     expect(strict).toContain('- fs: ');
     // QA58-E8: a read-only helper has fs find too.
-    expect(strict).toMatch(/\n {2}read +\{ path, fromLine\?, fromColumn\?, lines\? \}\n {2}list +\{ path\? \}\n {2}find +\{ pattern, path\? \}\n {2}search +\{ pattern, path\?, literal\?, glob\?, context\?, filesOnly\? \}\n {2}help +\{ command\? \}/);
+    expect(strict).toMatch(/\n {2}read +\{ path, fromLine\?, fromColumn\?, lines\? \}\n {2}read-files +\{ files: \[\{ path, fromLine\?, lines\? \}\] \}\n {2}list +\{ path\? \}\n {2}find +\{ pattern, path\? \}\n {2}search +\{ pattern, path\?, literal\?, glob\?, context\?, filesOnly\? \}\n {2}help +\{ command\? \}/);
     expect(strict).not.toContain('- shell: ');
     expect(strict).toContain('- todo: Keep a todo list. Commands: list, help.');
     expect(free).toContain('- shell: ');

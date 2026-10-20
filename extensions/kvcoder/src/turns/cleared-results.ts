@@ -4,7 +4,8 @@ import type { MessageDoc } from '../schemas/records.ts';
 import { sentCharacters } from './sent-size.ts';
 
 // Old tool results sent as a line that names the call (plan 08 §8.1, ADR 0094, 1): the result at or before the chat's
-// `clearedThroughSeq` is replaced in what the model is sent; the stored message is unchanged.
+// `clearedThroughSeq` is replaced in what the model is sent, and its call's long texts too (ADR 0097, 4); the stored
+// messages are unchanged.
 
 /** Whether the model is sent this message as a cleared result. */
 export const isCleared = (message: Pick<MessageDoc, 'kind' | 'seq'>, clearedThrough: number): boolean => message.kind === 'toolResult' && message.seq <= clearedThrough;
@@ -28,6 +29,22 @@ export function callNames(messages: readonly Stored<MessageDoc>[]): Map<string, 
     }
   }
   return names;
+}
+
+/** The ids of the calls whose results are sent cleared. */
+export function clearedCalls(messages: readonly Stored<MessageDoc>[], clearedThrough: number): Set<string> {
+  return new Set(messages.flatMap((message) => (isCleared(message, clearedThrough) && typeof message.content['toolCallId'] === 'string' ? [message.content['toolCallId']] : [])));
+}
+
+/** The longest text a cleared call keeps (ADR 0097, 4). */
+export const keptCharacters = 500;
+
+/** A cleared call's payload: every string longer than 500 characters replaced by a line that says how long it was. */
+export function clearedPayload(value: Json): Json {
+  if (typeof value === 'string') return value.length > keptCharacters ? `[cleared to save memory: ${String(value.length)} characters]` : value;
+  if (Array.isArray(value)) return value.map(clearedPayload);
+  if (typeof value !== 'object' || value === null) return value;
+  return Object.fromEntries(Object.entries(value).flatMap(([name, field]) => (field === undefined ? [] : [[name, clearedPayload(field)]])));
 }
 
 /** The characters a message is sent as, a cleared result counting its line. */

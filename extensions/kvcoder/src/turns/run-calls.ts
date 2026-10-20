@@ -27,6 +27,7 @@ import type { ApprovalRule } from '../schemas/approval-rule.ts';
 import { ruleCovers } from './approval-rules.ts';
 import type { Check } from '../schemas/check.ts';
 import { checkLines, lastFileChange } from './check-after-edits.ts';
+import { seenFiles } from './file-results.ts';
 
 // How one call of a reply runs (plan 08 §8.3): the `run` tool names a connector's command, which runs as a kernel job.
 // `shell exec`, a binary's `exec`, `fs write`, and `fs edit` ask the person first when `kvcoder.approval` is
@@ -123,7 +124,6 @@ function changesThings(toolCall: ToolCall): boolean {
   return builtin === undefined || builtin.asks === true || isHelperRun(args.data);
 }
 
-const fileRead = 'kvcoder.fs.file.get';
 const isHelperRun = (call: RunCall): boolean => call.connector === 'delegate' && (call.command === 'run' || call.command === 'continue');
 const waitsForDecision = (outcome: CallOutcome): boolean => outcome.kind === 'deferred' || (outcome.kind === 'question' && outcome.questionKind === 'approval');
 // A helper run that would start behind a pending approval isn't started (ADR 0046, amendment 4); one that asks first is still asked.
@@ -211,7 +211,7 @@ async function evaluateCurrentCall(env: CallEnv, toolCall: ToolCall, call: RunCa
   if (await currentStep(ctx, env.lease) === undefined) return refused(toolCall.id, 'The originating step is no longer current.');
   const done = await runTarget(ctx, session, call, target, dispatchGuard(ctx, env.lease, call, target));
   // What the chat has now read is what it may change (ADR 0053, 2).
-  if (!done.isError && target.registration === fileRead && typeof call.payload['path'] === 'string') await recordFileView(ctx, session.id, call.payload['path']);
+  if (!done.isError) for (const seen of seenFiles(call, target.registration, done.details)) await recordFileView(ctx, session.id, seen);
   if (done.isError || (call.connector !== 'ask' && call.connector !== 'delegate')) return result(toolCall.id, done);
   if (call.connector === 'delegate') {
     try { return await (call.command === 'continue' ? continueOutcome(env, toolCall.id, call, held) : delegateOutcome(env, toolCall.id, call, held)); }

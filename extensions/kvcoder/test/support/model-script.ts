@@ -31,7 +31,7 @@ export function command(connector: string, name: string, payload?: Record<string
 }
 
 /** An `fs` call; a write or an edit runs at once, not risky unless the payload says so. */
-export function fsCall(name: 'read' | 'list' | 'search' | 'write' | 'edit', payload: Record<string, unknown> = {}): RunCallSpec {
+export function fsCall(name: 'read' | 'read-files' | 'list' | 'search' | 'write' | 'edit', payload: Record<string, unknown> = {}): RunCallSpec {
   return command('fs', name, name === 'write' || name === 'edit' ? { risky: false, ...payload } : payload);
 }
 

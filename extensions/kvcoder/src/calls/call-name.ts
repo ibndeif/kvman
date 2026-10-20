@@ -22,10 +22,18 @@ function mcpTools(payload: JsonFields): string | undefined {
   return tools.length === 0 ? undefined : tools.join(', ');
 }
 
+// The paths `fs read-files` reads (ADR 0097, 1).
+function readPaths(payload: JsonFields): string | undefined {
+  const files = payload['files'];
+  if (!Array.isArray(files)) return undefined;
+  return joined(', ', files.map((file) => (typeof file === 'object' && file !== null && !Array.isArray(file) ? text(file['path']) : undefined)));
+}
+
 function subjectOf(connector: string, command: string, payload: JsonFields): string | undefined {
   if (command === 'exec') return connector === 'shell' ? text(payload['line']) : joined(' ', [connector, text(payload['args'])]);
   if (command === 'help') return text(payload['command']);
   if (connector === 'fs' && (command === 'search' || command === 'find')) return text(payload['pattern']);
+  if (connector === 'fs' && command === 'read-files') return readPaths(payload);
   if (connector === 'delegate' && command === 'run') return joined(' · ', [text(payload['worker']), text(payload['title'])]);
   if (connector === 'mcp') return joined(' · ', [text(payload['server']), mcpTools(payload)]);
   return text(payload['path']) ?? text(payload['id']);

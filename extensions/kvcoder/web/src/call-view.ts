@@ -68,9 +68,9 @@ export function callView(given: Record<string, unknown>): CallView {
   };
 }
 
-export type CallKind = 'edit' | 'write' | 'read' | 'list' | 'find' | 'search' | 'line' | 'mcp-call' | 'mcp-run' | 'delegate' | 'run-output' | 'fields';
+export type CallKind = 'edit' | 'write' | 'read' | 'read-files' | 'list' | 'find' | 'search' | 'line' | 'mcp-call' | 'mcp-run' | 'delegate' | 'run-output' | 'fields';
 
-const fsKinds = ['edit', 'write', 'read', 'list', 'find', 'search'] as const;
+const fsKinds = ['edit', 'write', 'read', 'read-files', 'list', 'find', 'search'] as const;
 
 /** Which view shows the call (ADR 0036, 1): its own, or the fields view. */
 export function callKind(view: CallView): CallKind {
