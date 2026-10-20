@@ -1,5 +1,17 @@
 # kvman
 
+## 0.4.6
+
+### Patch Changes
+
+- Updated dependencies [1942677]
+  - @kvman/sdk@0.1.4
+  - @kvman/kvwebui@0.1.6
+  - @kvman/kvai@0.1.6
+  - @kvman/kvcoder@0.1.13
+  - @kvman/kvbuilder@0.3.5
+  - @kvman/kernel@0.4.6
+
 ## 0.4.5
 
 ### Patch Changes
