@@ -13,7 +13,7 @@ export default defineConfig({
         test: {
           name: 'node',
           include: ['test/**/*.test.ts', 'packages/*/test/**/*.test.ts', 'extensions/*/test/**/*.test.ts'],
-          exclude: ['**/node_modules/**', 'test/fixtures/**', 'extensions/*/test/web/**', 'extensions/*/test/e2e/**', 'extensions/*/test/crash/**', 'extensions/*/test/scaffold/**', 'packages/*/test/scaffold/**', 'packages/*/test/e2e/**', 'packages/desktop/test/**'],
+          exclude: ['**/node_modules/**', 'test/fixtures/**', 'extensions/*/test/web/**', 'extensions/*/test/e2e/**', 'extensions/*/test/crash/**', 'extensions/*/test/scaffold/**', 'packages/*/test/scaffold/**', 'packages/*/test/e2e/**', 'packages/desktop/test/**', 'packages/vscode/test/**'],
         },
       },
       'extensions/kvwebui/vitest.web.config.ts',
@@ -24,6 +24,8 @@ export default defineConfig({
       'extensions/kvbuilder/vitest.e2e.config.ts',
       'packages/testkit/vitest.e2e.config.ts',
       'packages/desktop/vitest.web.config.ts',
+      'packages/vscode/vitest.config.ts',
+      'packages/vscode/vitest.web.config.ts',
     ],
   },
 });

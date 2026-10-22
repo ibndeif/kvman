@@ -153,5 +153,6 @@
   "kvwebui.status.hidden.description": "Status bar items that aren't shown, by their full ids; kvwebui.folder is the workspace folder.",
   "kvwebui.workspacePicker.title": "Workspace picker",
   "kvwebui.workspacePicker.description": "Whether the top bar shows the workspace picker.",
-  "kvwebui.settings.portThisRun": "This run listens on port {port}."
+  "kvwebui.settings.portThisRun": "This run listens on port {port}.",
+  "kvwebui.pages.menu": "Pages"
 }

@@ -2,6 +2,7 @@
 import { ChevronDown, ChevronRight } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { callFailure } from './call-failure.ts';
+import CallFileActions from './CallFileActions.vue';
 import CallRequest from './CallRequest.vue';
 import CallResult from './CallResult.vue';
 import { parsedOutput } from './call-summary.ts';
@@ -57,6 +58,7 @@ const timeParts = computed(() => {
       <span v-else-if="props.failed" class="kvc-chip kvc-danger" data-test="call-failed">{{ kvman.t('kvcoder.ui.callFailed') }}</span>
       <span class="kvc-muted" data-test="call-time">{{ time }}</span>
     </button>
+    <CallFileActions :view="props.view" :result="result" :ran="props.output !== undefined && props.failed !== true && props.running !== true" />
     <template v-if="open && props.output !== undefined">
       <p v-if="timeParts !== ''" class="kvc-muted kvc-call-parts" data-test="call-parts">{{ timeParts }}</p>
       <template v-if="errorFirst">

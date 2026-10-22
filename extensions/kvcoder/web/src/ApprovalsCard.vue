@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ShieldAlert } from '@lucide/vue';
 import { reactive } from 'vue';
+import CallFileActions from './CallFileActions.vue';
 import CallRequest from './CallRequest.vue';
 import CallSummaryLine from './CallSummaryLine.vue';
 import { callKind, type CallView } from './call-view.ts';
@@ -52,6 +53,7 @@ function denyWithReason(item: Approval): void {
           <span v-if="item.view.background" class="kvc-chip" style="align-self: flex-start" data-test="call-background">{{ kvman.t('kvcoder.ui.jobs.inBackground') }}</span>
         </span>
       </div>
+      <CallFileActions :view="item.view" pending />
       <CallRequest v-if="callKind(item.view) !== 'line'" :view="item.view" />
       <div class="kvc-card-row kvc-always" data-test="always">
         <button type="button" class="kvc-link-button" :aria-expanded="reasons.has(item.questionId)" data-test="deny-why" @click="reasons.has(item.questionId) ? reasons.delete(item.questionId) : reasons.set(item.questionId, '')">{{ kvman.t('kvcoder.ui.approval.denyWhy') }}</button>

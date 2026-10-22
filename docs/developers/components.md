@@ -34,6 +34,8 @@ const kvman = inject<Kvman>('kvman');
 | `follow(jobId)` | Reruns the page's queries and applies the job's effects when the job ends. |
 | `refresh()` | Reruns the page's queries and the status items now. |
 | `navigate(page, params?)`, `toast(text, params?, level?)`, `panel(id, open)` | Act at once in the browser. |
+| `open(url)` | Opens a web address in a new tab and returns `'opened'`, or `'blocked'` when the browser refused it. Use it instead of `window.open`: in a frame that can't open windows, such as the VS Code view, kvwebui hands the address to VS Code. A `target="_blank"` link works there too. |
+| `host` | The host that embeds kvwebui, such as the VS Code extension. `host.embedded` says whether there is one; `host.openFile(path, line?)`, `host.openDiff(title, path, after)`, and `host.openChange(path)` open an absolute path in its editor, in a diff against `after`, or in its Git diff, and do nothing in a browser; `host.onInsert(handler)` gets text the host inserts and returns its removal. Show host buttons only while `host.embedded` is true. |
 | `t(key, params?)` | Translates a key. |
 | `workspace` | A live ref: `workspace.value` is the tab's `{ id, name, path }`. |
 | `scope` | A live ref: `scope.value` is `'global'` or `'workspace'`, what your extension's page under Extensions is set to save to; `'global'` anywhere else. |

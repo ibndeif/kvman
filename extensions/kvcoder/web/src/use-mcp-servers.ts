@@ -75,7 +75,7 @@ export function useMcpServers(kvman: Kvman) {
       return true;
     });
 
-  /** Starts a sign-in and opens the server's address in a new tab; the server sends that tab back to kvcoder's sign-in page. */
+  /** Starts a sign-in and opens the server's address with `kvman.open`; the server sends that tab back to kvcoder's sign-in page. */
   async function signIn(name: string): Promise<'opened' | 'blocked' | 'failed'> {
     let address: string | undefined;
     await attempt(async () => {
@@ -83,10 +83,7 @@ export function useMcpServers(kvman: Kvman) {
       return true;
     });
     if (address === undefined) return 'failed';
-    const tab = window.open(address, '_blank');
-    if (tab === null) return 'blocked';
-    tab.opener = null;
-    return 'opened';
+    return kvman.open(address);
   }
 
   /** Forgets a server's sign-in: its tokens and its registration. */

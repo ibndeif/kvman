@@ -9,6 +9,7 @@ import { registerBackgroundConnector } from './connectors/background.ts';
 import { registerBinaryConnector } from './connectors/binary.ts';
 import { registerFsConnector } from './connectors/fs.ts';
 import { registerChanges } from './files/register-changes.ts';
+import { registerFilePreview } from './files/register-preview.ts';
 import { registerMcpConnector } from './connectors/mcp.ts';
 import { registerWebConnector } from './connectors/web.ts';
 import { registerShellConnector } from './connectors/shell.ts';
@@ -52,6 +53,7 @@ export default (ctx: Ctx): void => {
   registerBinaryConnector(ctx);
   registerFsConnector(ctx);
   registerChanges(ctx);
+  registerFilePreview(ctx);
   registerArtifactConnector(ctx);
   registerExecutionMapConnector(ctx);
   registerMaps(ctx);

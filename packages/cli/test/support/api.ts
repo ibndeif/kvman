@@ -1,4 +1,4 @@
-import { request as httpRequest } from 'node:http';
+import { request as httpRequest, type IncomingHttpHeaders } from 'node:http';
 import { vi } from 'vitest';
 import { z } from '@kvman/sdk';
 
@@ -9,7 +9,7 @@ export type Api = {
   command(name: string, input: unknown, extra?: Record<string, unknown>): Promise<unknown>;
   query(name: string, input: unknown, extra?: Record<string, unknown>): Promise<unknown>;
   fetch(route: string, init?: RequestInit): Promise<Response>;
-  raw(route: string, headers: Record<string, string>): Promise<{ status: number; body: string }>;
+  raw(route: string, headers: Record<string, string>): Promise<{ status: number; body: string; headers: IncomingHttpHeaders }>;
   // Waits until a query's output passes `check`.
   until(name: string, input: unknown, check: (output: unknown) => boolean): Promise<void>;
 };
@@ -33,7 +33,7 @@ export function api(port: number): Api {
         const sent = httpRequest({ host: '127.0.0.1', port, path: route, method: 'GET', headers, setHost: false }, (response) => {
           let body = '';
           response.setEncoding('utf8').on('data', (text: string) => (body += text));
-          response.on('end', () => resolve({ status: response.statusCode ?? 0, body }));
+          response.on('end', () => resolve({ status: response.statusCode ?? 0, body, headers: response.headers }));
         });
         sent.on('error', reject);
         sent.end();

@@ -1,0 +1,139 @@
+{
+  "name": "kvman",
+  "displayName": "kvman",
+  "description": "%kvman.description%",
+  "publisher": "ibndeif",
+  "license": "MIT",
+  "icon": "media/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ibndeif/kvman.git",
+    "directory": "packages/vscode"
+  },
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "extensionKind": [
+    "ui"
+  ],
+  "main": "./extension.js",
+  "files": [
+    "extension.js",
+    "page.css",
+    "page/relay.js",
+    "media/icon.png",
+    "media/view.svg",
+    "package.nls.json",
+    "package.nls.ar.json",
+    "LICENSE"
+  ],
+  "activationEvents": [],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "kvman",
+          "title": "kvman",
+          "icon": "media/view.svg"
+        }
+      ]
+    },
+    "views": {
+      "kvman": [
+        {
+          "type": "webview",
+          "id": "kvman.view",
+          "name": "kvman"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "kvman.open",
+        "title": "%kvman.open.title%",
+        "category": "kvman"
+      },
+      {
+        "command": "kvman.showPages",
+        "title": "%kvman.showPages.title%",
+        "category": "kvman",
+        "icon": "$(list-unordered)"
+      },
+      {
+        "command": "kvman.openSettings",
+        "title": "%kvman.openSettings.title%",
+        "category": "kvman",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "kvman.openInBrowser",
+        "title": "%kvman.openInBrowser.title%",
+        "category": "kvman",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "kvman.addToChat",
+        "title": "%kvman.addToChat.title%",
+        "category": "kvman"
+      },
+      {
+        "command": "kvman.install",
+        "title": "%kvman.install.title%",
+        "category": "kvman"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "kvman.showPages",
+          "when": "view == kvman.view",
+          "group": "navigation@1"
+        },
+        {
+          "command": "kvman.openSettings",
+          "when": "view == kvman.view",
+          "group": "navigation@2"
+        },
+        {
+          "command": "kvman.openInBrowser",
+          "when": "view == kvman.view",
+          "group": "navigation@3"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "kvman.addToChat",
+          "when": "editorHasSelection",
+          "group": "kvman@1"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "kvman.addToChat",
+          "when": "!explorerResourceIsFolder",
+          "group": "kvman@1"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "kvman",
+      "properties": {
+        "kvman.path": {
+          "type": "string",
+          "default": "kvman",
+          "scope": "machine",
+          "markdownDescription": "%kvman.path.description%"
+        }
+      }
+    },
+    "taskDefinitions": [
+      {
+        "type": "kvman",
+        "properties": {}
+      }
+    ]
+  }
+}

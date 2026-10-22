@@ -31,6 +31,7 @@ The kernel serves the API with Hono (`hono` and `@hono/node-server`) on `127.0.0
 
 - kvman listens only on 127.0.0.1.
 - A request whose `Host` isn't `127.0.0.1:<port>` or `localhost:<port>` is rejected, and so is a request whose `Origin`, when present, isn't exactly `http://` plus that same Host (`Origin: null` included; ADR 0009, 36). The answer is the envelope with `FORBIDDEN_ORIGIN`, whose `params` never echo the caller's values. This keeps websites out, including through DNS rebinding.
+- **Framing.** Every answer carries `Content-Security-Policy: frame-ancestors 'self' http://127.0.0.1:* http://localhost:* vscode-webview: vscode-file:`, one fixed value. A website can't show kvman's pages in a frame; kvman itself, a local page (such as kvcoder's `url` artifact showing a preview kvman, §8.7), and a VS Code webview (§15) can (ADR 0099, 9 and 32).
 - There is no token in this phase: any local program can call the API.
 
 ## 4.3 Problems

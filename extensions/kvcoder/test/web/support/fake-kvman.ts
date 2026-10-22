@@ -19,6 +19,9 @@ export type FakeKvman = {
   refresh: ReturnType<typeof vi.fn>;
   navigate: ReturnType<typeof vi.fn>;
   toast: ReturnType<typeof vi.fn>;
+  open: ReturnType<typeof vi.fn<(url: string) => 'opened' | 'blocked'>>;
+  // The host of an embedded page (ADR 0100, 14): whether there is one, what was asked of it, and its inserting.
+  host: { embedded: boolean; openFile: ReturnType<typeof vi.fn>; openDiff: ReturnType<typeof vi.fn>; openChange: ReturnType<typeof vi.fn>; insert(text: string): void; handlers(): number };
   language: { value: string };
   scope: Ref<'global' | 'workspace'>;
   workspace: Ref<{ id: string; name: string; path: string }>;
@@ -60,6 +63,28 @@ export function createFakeKvman(): FakeKvman {
   const refresh = vi.fn();
   const navigate = vi.fn();
   const toast = vi.fn();
+  const open = vi.fn<(url: string) => 'opened' | 'blocked'>(() => 'opened');
+  const inserts = new Set<(text: string) => void>();
+  const host: FakeKvman['host'] = {
+    embedded: false,
+    openFile: vi.fn(),
+    openDiff: vi.fn(),
+    openChange: vi.fn(),
+    insert: (text) => inserts.forEach((handler) => handler(text)),
+    handlers: () => inserts.size,
+  };
+  const hostCalls = {
+    get embedded() {
+      return host.embedded;
+    },
+    openFile: host.openFile,
+    openDiff: host.openDiff,
+    openChange: host.openChange,
+    onInsert: (handler: (text: string) => void) => {
+      inserts.add(handler);
+      return () => void inserts.delete(handler);
+    },
+  };
   const exec = async (name: string, input: unknown): Promise<unknown> => {
     const fields = typeof input === 'object' && input !== null ? Object.fromEntries(Object.entries(input)) : {};
     calls.push({ name, input: fields });
@@ -89,6 +114,8 @@ export function createFakeKvman(): FakeKvman {
     navigate,
     toast,
     panel: () => undefined,
+    open,
+    host: hostCalls,
     t: translate,
     workspace,
     scope,
@@ -111,6 +138,8 @@ export function createFakeKvman(): FakeKvman {
     refresh,
     navigate,
     toast,
+    open,
+    host,
     language,
     scope,
     workspace,

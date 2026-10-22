@@ -42,6 +42,17 @@ pnpm desktop:brand <brand.json>               # build a product's own desktop ap
 
 It needs Rust with `rustfmt` and `clippy`. On Linux it also needs Tauri's libraries (`libwebkit2gtk-4.1-dev` and the others in [Tauri's prerequisites](https://v2.tauri.app/start/prerequisites/)).
 
+## The VS Code extension
+
+`packages/vscode` shows kvman in VS Code's side bar, under its own activity bar icon, like a native chat extension. It runs the `kvman` on the PATH with `--pipe` in the window's first folder (or offers to install it), and frames the web app embedded (`?embed=parent`): no frame of its own, VS Code's colors and fonts, Pages, Settings, and Open in browser in the view's title bar, "Open diff" and file paths that open in VS Code's editor, "Add to kvman chat" from the editor and the explorer, and sign-ins in the system's browser. The window that started kvman stops it when it closes, and another window starts it again when it needs it. Remote windows aren't supported yet. It is described in [the VS Code extension](docs/user-guide/vscode-extension.md) and specified in [plan/15-vscode.md](plan/15-vscode.md) (ADR 0099 and ADR 0100).
+
+```sh
+pnpm vscode:package                           # build packages/vscode/dist/kvman.vsix
+code --extensionDevelopmentPath=$PWD/packages/vscode/dist/extension   # try it after pnpm build
+```
+
+The setting `kvman.path` names the `kvman` to run, such as a script that runs `node packages/cli/dist/main.js`.
+
 ## Documentation
 
 | For | Start at |
@@ -77,6 +88,7 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm bench:check
 | `pnpm bench:check` | Runs the benchmarks against `bench/baseline.json`; `pnpm bench:record` stores a new baseline |
 | `pnpm desktop:check` | The desktop shell's Rust: `cargo fmt --check`, `cargo clippy` with warnings as errors, and `cargo test` |
 | `pnpm desktop:dev`, `desktop:build`, `desktop:brand` | Run, build, or brand the desktop app |
+| `pnpm vscode:package` | Builds the VS Code extension and packs it into `packages/vscode/dist/kvman.vsix` |
 | `pnpm changeset` | Adds a changeset, needed for every change to `@kvman/sdk`, `@kvman/testkit`, or an extension |
 
 The rules for changing kvman are in `CLAUDE.md` and [contributing](docs/developers/contributing.md). [`milestones/`](milestones/) holds what each milestone built and the scenarios that test it.
@@ -86,7 +98,9 @@ The rules for changing kvman are in `CLAUDE.md` and [contributing](docs/develope
 Eight packages are published to npm under MIT: `kvman`, `@kvman/sdk`, `@kvman/kernel`, `@kvman/testkit`, and the four extensions `@kvman/kvai`, `@kvman/kvwebui`, `@kvman/kvcoder`, and `@kvman/kvbuilder`, which `kvman` depends on ([ADR 0026](plan/adr/0026-npm-publishing.md)).
 
 1. `pnpm changeset version` turns the pending changesets into versions and changelogs.
-2. Set the version of the root, `packages/kernel`, and `packages/cli`. Run every gate, then commit. The release workflow runs no tests, so the tests run here are the only ones that count.
+2. Set the version of the root, `packages/kernel`, `packages/cli`, and `packages/vscode`. Run every gate, then commit. The release workflow runs no tests, so the tests run here are the only ones that count.
 3. Tag the commit `v<root version>` and push the tag.
 
 [`.github/workflows/release.yml`](.github/workflows/release.yml) runs on the tag. It stops unless the tag is `v<root version>`. It runs `pnpm build`, `pnpm typecheck`, and `pnpm lint`, then `pnpm changeset publish`, which publishes each version that isn't on npm yet. It uses npm trusted publishing; only the first release needed a token, in the repository secret `NPM_TOKEN`.
+
+Its `vscode` job packs the VS Code extension, attaches `kvman.vsix` to the tag's draft GitHub Release (creating the draft when there is none), and publishes it to the Visual Studio Marketplace and Open VSX under the publisher `ibndeif`, with the repository secrets `VSCE_PAT` and `OVSX_PAT` ([ADR 0099](plan/adr/0099-vscode-extension.md)). The publisher and both tokens must exist before the first tag that carries the extension.

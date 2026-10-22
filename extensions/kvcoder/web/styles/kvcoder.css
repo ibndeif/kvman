@@ -2,7 +2,10 @@
 .kvc-workspace { display: flex; flex-direction: column; flex: 1 1 0; align-self: stretch; block-size: 100%; min-inline-size: min(100%, 30rem); min-block-size: 24rem; position: relative; container-type: inline-size; container-name: kvc-workspace; }
 /* The header is above the stage, which holds the conversation and the artifact panel (ADR 0018, 8). */
 .kvc-stage { display: flex; flex: 1 1 0; min-block-size: 0; position: relative; }
-.kvc-workspace > .kvc-header { background: var(--kv-color-surface); color: var(--kv-color-text); }
+/* The header's row (ADR 0100, 15): below 60 rem the History button and New chat sit at its two ends. */
+.kvc-topline { display: flex; align-items: stretch; }
+.kvc-topline > .kvc-header { flex: 1 1 auto; min-inline-size: 0; background: var(--kv-color-surface); color: var(--kv-color-text); }
+.kvc-new-chat { display: none; }
 .kvc-conversation { display: flex; flex-direction: column; flex: 1 1 0; min-inline-size: 0; background: var(--kv-color-surface); color: var(--kv-color-text); }
 .kvc-artifact-panel { display: flex; flex-direction: column; background: var(--kv-color-surface); border-inline-start: 1px solid var(--kv-color-border); flex: 0 0 min(40%, 32rem); min-inline-size: 0; container-type: inline-size; position: relative; }
 /* The panel's edge beside the conversation is dragged to set its width, within the limits of `panel-width.ts` (ADR 0071, 4). */
@@ -216,7 +219,11 @@ a.kvc-button { text-decoration: none; color: inherit; }
 @media (max-width: 60rem) {
   .kvc-sessions { display: none; }
   .kvc-drawer .kvc-sessions { display: flex; inline-size: 100%; border-inline-end: 0; }
-  .kvc-chats-bar { display: flex; padding-block: 4px; padding-inline: var(--kv-space-md); border-block-end: 1px solid var(--kv-color-border); }
+  .kvc-topline { background: var(--kv-color-surface); border-block-end: 1px solid var(--kv-color-border); }
+  .kvc-chats-bar, .kvc-new-chat { display: flex; align-items: center; }
+  .kvc-chats-bar { padding-inline-start: var(--kv-space-sm); }
+  .kvc-new-chat { padding-inline-end: var(--kv-space-sm); }
+  .kvc-topline > .kvc-header { padding-inline: var(--kv-space-sm); border-block-end: 0; }
 }
 .kvc-drawer-backdrop { position: fixed; inset: 0; z-index: 40; background: rgb(0 0 0 / 0.35); }
 .kvc-drawer { position: absolute; inset-block: 0; inset-inline-start: 0; inline-size: min(85vw, 20rem); background: var(--kv-color-surface); box-shadow: 0 12px 32px rgb(0 0 0 / 0.2); overflow-y: auto; }

@@ -18,7 +18,8 @@
     "desktop:check": "cd packages/desktop/src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test",
     "desktop:dev": "pnpm --filter @kvman/desktop exec tauri dev",
     "desktop:build": "node release/desktop/prepare-runtime.ts && node release/desktop/try-runtime-main.ts && pnpm --filter @kvman/desktop exec tauri build",
-    "desktop:brand": "node release/desktop/brand-main.ts"
+    "desktop:brand": "node release/desktop/brand-main.ts",
+    "vscode:package": "pnpm --filter @kvman/vscode build && pnpm --filter @kvman/vscode package"
   },
   "devDependencies": {
     "@changesets/cli": "3.0.3",

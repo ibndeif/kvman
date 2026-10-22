@@ -375,3 +375,130 @@ ADR 0038. M3.2 and M3.3 also pass `pnpm desktop:check` (`cargo fmt --check`, `ca
   - A `.deb` install's button is "Download" and opens the release's page.
   - The workflow's run of the bundle fails the job when the `running` line doesn't come, when `kernel.health.get` fails, or when kvman doesn't exit 0 after its input closes.
   - A Node build whose checksum differs fails the build.
+
+## M4 — VS Code
+
+ADR 0099.
+
+### M4.1 Framing and new windows in a frame
+
+*Changed after this milestone by ADR 0100: `?embed=parent` replaces `?open=parent`, and the embedded page has no frame and talks to its host (`06` §6.2, M4.4).*
+
+- **Read:** `04` §4.2; `06` §6.2, §6.4; `08` §8.7 (the MCP sign-in); `03` (the web types); `15` §15.4; ADR 0099, 2, 9, 32, and 33.
+- **Build:**
+  - in the kernel's listener, the `frame-ancestors` policy on every answer;
+  - in kvwebui, `?open=parent` kept for the tab, the caught `target="_blank"` links, and `kvman.open`;
+  - `open` in `@kvman/sdk/web`'s `Kvman` type;
+  - kvcoder's MCP sign-in through `kvman.open`;
+  - changesets for `@kvman/sdk`, `@kvman/kvwebui`, and `@kvman/kvcoder`.
+- **Done when:**
+  - Every answer carries the policy: a JSON answer, a page, a static file, a file download, a 404, and a `FORBIDDEN_ORIGIN` answer.
+  - A page of another origin (`https://example.test`, served by Playwright's routing) can't show kvman in a frame, and a page on `127.0.0.1` of another port can.
+  - A page opened with `?open=parent` removes the parameter from the URL and, after a reload, still hands over.
+  - While it hands over, a click and a middle click on a `target="_blank"` `http:` or `https:` link post `{ kind: 'kvman.open', url }` to the parent and open no tab; a link of another scheme posts nothing.
+  - `kvman.open` posts the same while the page hands over, and otherwise opens a tab and returns `'opened'`, or `'blocked'` when the tab is refused.
+  - A page opened without `?open=parent` opens links and `kvman.open` tabs as before.
+  - kvcoder's "Sign in" opens its address through `kvman.open`, and in a page that hands over, the parent receives it.
+
+### M4.2 The VS Code extension
+
+*Changed after this milestone by ADR 0100: the view is in the activity bar, frames kvwebui embedded with VS Code's theme, has buttons in VS Code's title bar, and opens files and diffs in VS Code's editor (`15`, M4.6).*
+
+- **Read:** `15` §15.1 to §15.5, §15.7, §15.9; `14` §14.2, §14.4 (the hints); `01` §1.2 (the start folder, installing); `04` §4.2; `12` §12.1; ADR 0099.
+- **Build:** `packages/vscode`, run against the repository's own `kvman`:
+  - first, the by-hand check of ADR 0099, 35 in VS Code 1.106 on Linux: the view frames kvman, and a website can't;
+  - the manifest: the view container in the secondary side bar, the view, the three commands, `kvman.path`, the kind `ui`, and starting on the view or a command;
+  - the folder, the version check, and installing and updating with a task;
+  - starting `kvman --pipe --no-open`, with a branch per OS;
+  - the lines: the trust message, the failed state with its hints and the log, the frame for `running` and `joined`, a restart, a port that changes, and a line that can't be read;
+  - the view's page: the frame, its policy, kept when hidden, and the messages it passes on to `vscode.env.openExternal`;
+  - closing, starting again from another window, and a kvman that ends by itself;
+  - a remote window;
+  - the `en` and `ar` catalog and `package.nls` files, the Vite bundle, `pnpm vscode:package`, and the `vscode` import wall in ESLint.
+- **Done when:**
+  - Showing the view in a window with a local folder starts `kvman --pipe --no-open` in that folder, and the frame shows the line's `url` with `&open=parent`.
+  - A window with no folder starts kvman in the user's home folder.
+  - A window whose first folder isn't a `file:` folder shows "kvman works on local folders only for now." and runs nothing.
+  - With no program at `kvman.path`, the view shows "kvman isn't installed."; "Install kvman" runs the npm task, and an exit code of 0 starts kvman.
+  - A task that exits 127 shows the npm message with the link to `https://nodejs.org`, and any other failing code shows "kvman couldn't be installed." with "Try again".
+  - A kvman older than `MINIMUM_KVMAN_VERSION` shows its version, the minimum, and "Update kvman", and isn't started.
+  - On Windows the program is started through `cmd.exe /d /s /c`, and on Linux and macOS directly.
+  - A `trust` line opens the modal message with each version; "Run them" answers `{ "trust": true }`, and closing it answers `{ "trust": false }`.
+  - A `failed` line shows the code, the message, and the hint for its code, or the log's path for another code; "Show the log" opens it, and "Try again" starts kvman again.
+  - A `joined` line shows the frame, and closing that window leaves kvman running.
+  - Closing the window that owns kvman closes kvman's input, and kvman exits 0.
+  - After the owner closes, showing the view in another window starts kvman again, and that window then owns it.
+  - A `running` line with another port after a restart moves the frame to its `url`.
+  - A kvman that ends by itself, and a line that can't be read, show "kvman stopped unexpectedly." with "Start again" and "Show the log".
+  - A message from the frame with an `http:` or `https:` address opens it with `vscode.env.openExternal`; a message from another source or origin, of another shape, or with another scheme, opens nothing.
+  - The page's policy allows only frames of `http://127.0.0.1:<port>`.
+  - With VS Code in Arabic the extension's text is Arabic and right to left; in any other language it is English.
+  - The extension's calls to kvman carry no `Origin`, and it never reads `secrets.json`.
+
+### M4.3 Publishing the extension
+
+- **Read:** `15` §15.8; ADR 0026, 8 to 10; ADR 0038, 52; ADR 0099, 36, 37, and 49.
+- **Build:**
+  - a `vscode` job in `.github/workflows/release.yml` that builds the `.vsix`, creates the tag's draft GitHub Release when none exists, or adds to it (ADR 0099, 49), attaches the `.vsix`, and publishes it with `vsce publish` and `ovsx publish`, with `VSCE_PAT` and `OVSX_PAT`;
+  - the user guide's page for the extension.
+- **Done when:**
+  - `pnpm vscode:package` writes a `.vsix` with one bundled file and no `node_modules`, at the root version, and `code --install-extension` installs it.
+  - The workflow's job fails when packaging fails, and publishes nothing then.
+  - The user guide's page covers installing, the install offer, where the view is, local folders only, and the shared home.
+
+### M4.4 kvwebui embedded in a host
+
+- **Read:** `06` §6.2, §6.4; `04` §4.2; `03` (the web types); ADR 0100, 9 to 14.
+- **Build:**
+  - `?embed=parent` in place of `?open=parent`, kept for the tab, with the new-window handoff of M4.1;
+  - the embedded page without a frame;
+  - the messages to the host (`kvman.state`, `kvman.open`, `kvman.openFile`, `kvman.openDiff`, `kvman.openChange`) and from it (`kvman.theme`, `kvman.pages`, `kvman.insert`), from `window.parent` only;
+  - the host's theme: the colors mixed into kvwebui's variables, light or dark, the fonts, and the root size;
+  - the pages menu;
+  - `kvman.host` in the injected object and `@kvman/sdk/web`, with the `en` and `ar` texts and a changeset.
+- **Done when:**
+  - A page opened with `?embed=parent` removes the parameter, keeps embedded after a reload, and shows the routed page with no top bar, nav, panel strip, status bar, or workspace picker; a page without it is as before.
+  - The embedded page posts `kvman.state` with its workspace once booted and after a switch; a page that isn't embedded posts nothing.
+  - `kvman.host.openFile`, `openDiff`, and `openChange` post their messages while embedded, and post nothing otherwise; `embedded` says which.
+  - A `kvman.theme` from the parent sets kvwebui's colors, light or dark, fonts, and root font size; the same message from another window, or of another shape, changes nothing.
+  - A `kvman.pages` opens the pages menu with the nav items in order, then Settings and Extensions; a pick opens the page; a press outside or Escape closes it.
+  - A `kvman.insert` reaches each `onInsert` handler, and a removed handler gets nothing.
+  - New-window links and `kvman.open` are handed over as in M4.1, now under `?embed=parent`.
+
+### M4.5 kvcoder in a narrow host
+
+- **Read:** `08` §8.6 (`kvcoder.file.preview.get`), §8.7 (in a narrow host); `06` §6.4 (`kvman.host`); ADR 0093, 3; ADR 0100, 15 to 19.
+- **Build:**
+  - the compact header row below 60 rem, with History and New chat;
+  - `kvcoder.file.preview.get`;
+  - "Open diff" on `fs edit` and `fs write` calls while embedded;
+  - file paths that open in the host while embedded;
+  - inserted text in the open composer;
+  - the `en` and `ar` texts and a changeset.
+- **Done when:**
+  - Below 60 rem the History button, the title, the header's buttons, and New chat are one row; History opens the chat drawer, and New chat opens the Chat page with no chat.
+  - `kvcoder.file.preview.get` gives the file with the edits applied (or the content of a write), writes nothing, and fails as `fs edit` would for an edit that doesn't apply or a path outside the workspace.
+  - While embedded, an edit's approval has "Open diff", which asks the preview and calls `openDiff` with `<file name> (proposed)`; a card whose edit ran calls `openChange`; outside embedded mode there is no "Open diff".
+  - While embedded, the paths in read, read-files, edit, write, find, list (files only), and search cards, and a Changes row's "Open", call `openFile` with the absolute path and line (a search's file at its first match); outside embedded mode they are text.
+  - An inserted text is added to the open composer on a line of its own, in a chat and on a new chat, and the composer has the focus.
+
+### M4.6 The VS Code extension feels native
+
+- **Read:** `15`; `06` §6.2 (the host messages); ADR 0100, 20 to 30.
+- **Build:** in `packages/vscode`:
+  - the view container in the activity bar, `engines.vscode` `^1.95.0`, and `@types/vscode` 1.95.0;
+  - the title bar's Pages, Settings, and Open in browser, and the frame's workspace from `kvman.state`;
+  - Settings in one editor tab;
+  - the theme read from VS Code and sent on `kvman.state` and on a theme change;
+  - `kvman.openFile`, `kvman.openDiff`, and `kvman.openChange` in VS Code's editors, each message checked with zod;
+  - "Add to kvman chat" from the editor and the explorer;
+  - the `en` and `ar` texts and the `package.nls` titles;
+  - first, the by-hand check of the theme and the Pages menu in a real VS Code, as in M4.2.
+- **Done when:**
+  - The manifest has the activity-bar container, the three title-bar buttons on `kvman.view`, `kvman.addToChat` in the editor and explorer context menus, and `engines.vscode` `^1.95.0`.
+  - The frame is the line's URL with `&embed=parent`.
+  - A `kvman.state` from the frame is answered with a `kvman.theme` built from VS Code's variables, and a change of VS Code's theme sends it again.
+  - Pages sends `kvman.pages` to the frame; Open in browser opens the frame's workspace; Settings opens one tab framing the settings page of that workspace, and a second press shows it.
+  - `kvman.openFile` shows the file at its line; `kvman.openDiff` opens the diff of the file against `after` with the title, and of an empty document when the file is missing; `kvman.openChange` runs `git.openChange`, and a failure shows the message; a relative path, or another shape, opens nothing.
+  - "Add to kvman chat" with a selection sends the path, the lines, and the fenced code; with a file, its path; with no frame yet, it starts kvman and sends once `kvman.state` comes.
+  - With VS Code in Arabic the new texts are Arabic.

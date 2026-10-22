@@ -625,5 +625,10 @@
   "kvcoder.ui.failure.denied": "رفضتَ هذا الاستدعاء.",
   "kvcoder.ui.call.showDetails": "عرض التفاصيل",
   "kvcoder.ui.call.hideDetails": "إخفاء التفاصيل",
-  "kvcoder.ui.failure.command": "فشل الأمر."
+  "kvcoder.ui.failure.command": "فشل الأمر.",
+  "kvcoder.ui.history": "السجل",
+  "kvcoder.ui.host.openDiff": "افتح الفروق",
+  "kvcoder.ui.host.proposed": "{name} (مقترح)",
+  "kvcoder.ui.host.open": "افتح",
+  "kvcoder.file.preview.get.description": "يعطي الملف كما سيتركه تعديل fs edit أو كتابة fs write، مع مساره الكامل؛ ولا يكتب شيئًا."
 }

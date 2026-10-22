@@ -7,6 +7,8 @@ import { problemKey, problemParams } from '../api/problem-text.ts';
 import { emptyRegistry, type Registry } from '../contributions/registry.ts';
 import { createComponents, type ComponentLoader, type Components } from './components.ts';
 import { createConfirmations, type Confirmations } from './confirmations.ts';
+import { isEmbedded } from './embedded.ts';
+import type { HostTheme } from './host-messages.ts';
 import { createJobStreams, type JobStreams } from './job-streams.ts';
 import { tabMemory } from './tab-memory.ts';
 import { createToasts, type Toasts } from './toasts.ts';
@@ -50,6 +52,9 @@ export type Kvwebui = {
   onWorkspaceGone: (workspaceId: string) => void;
   // Loads the page again, once kvman has restarted (ADR 0024, 9).
   reload: () => void;
+  // The host of an embedded page (plan 06 §6.2, ADR 0100): whether the page is embedded, the host's theme, the pages
+  // menu, and the handlers of inserted text.
+  host: { embedded: Ref<boolean>; theme: ShallowRef<HostTheme | undefined>; pagesOpen: Ref<boolean>; inserts: Set<(text: string) => void> };
 };
 
 export const kvwebuiKey: InjectionKey<Kvwebui> = Symbol('kvwebui');
@@ -109,6 +114,7 @@ export function createState(router: Router, fetcher: typeof fetch, loader: Compo
     narrow: watchNarrow(),
     onWorkspaceGone: () => undefined,
     reload,
+    host: { embedded: ref(isEmbedded()), theme: shallowRef(), pagesOpen: ref(false), inserts: new Set() },
   };
   return state;
 }

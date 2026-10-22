@@ -51,6 +51,17 @@ describe('package import walls (plan 01 §1.4)', () => {
     await expectBlocked('imports-node-fs.ts', desktop, /may not import a Node built-in/);
   });
 
+  it('M4.2-E8 the VS Code extension imports vscode, zod, and Node built-ins, and nothing of kvman', async () => {
+    const extension = 'packages/vscode/src/fixture.ts';
+    await expectClean('imports-vscode.ts', extension);
+    await expectClean('imports-zod.ts', extension);
+    await expectClean('imports-node-child-process.ts', extension);
+    await expectBlocked('imports-sdk.ts', extension, /packages\/vscode may not import @kvman\/sdk/);
+    await expectBlocked('imports-cli.ts', extension, /packages\/vscode may not import kvman/);
+    await expectBlocked('imports-marked.ts', extension, /may import only vscode, zod, vite, not "marked"/);
+    await expectBlocked('imports-vscode.ts', 'packages/desktop/src/fixture.ts', /may import no third-party package, not "vscode"/);
+  });
+
   it('M1.1-E6 a kvman package is imported only through an entry point it exports', async () => {
     await expectClean('imports-sdk-web.ts', kernel);
     await expectBlocked('imports-sdk-internal.ts', kernel, /only through an entry point it exports/);

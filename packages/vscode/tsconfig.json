@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node", "vscode"],
+    "lib": ["es2024", "dom"]
+  },
+  "include": ["src", "test", "vite.config.ts", "vitest.config.ts", "vitest.web.config.ts"]
+}

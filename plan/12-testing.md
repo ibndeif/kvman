@@ -12,11 +12,13 @@
 | End to end | Playwright (Chromium) + a real kvman + the fake OpenAI server | kvcoder's conversation streaming, questions, subagents, right-to-left |
 | Desktop shell | `cargo test` + a fake `kvman` program that speaks the lines | the shell's Rust side: the lines, the dialogs' choices, joining, closing, a kvman that ends by itself (§14; ADR 0038, 36) |
 | Desktop page | vitest (`happy-dom`) + a fake of the shell's Rust side | the home screen: rows, remove, open a folder, a failed call, language and direction, colours, the update line |
+| VS Code extension | vitest + a fake of the `vscode` module + the fake `kvman` program | the extension: the folder, the version check, installing, the lines, the trust message, the view's states, closing, starting again, a remote window, the language (§15; ADR 0099, 35) |
+| VS Code page | vitest (`happy-dom`) | the view's page: the frame, its policy, and which messages it passes on |
 | Performance | `bench:check` | §12.3 |
 
 Tests are deterministic. They use fake clocks where time matters and no network: npm tests use a tiny in-test registry (an HTTP server on 127.0.0.1 serving package metadata and `npm pack` tarballs; for the `kvman-new` scaffold, kvman's own packages and the scaffold's dependencies packed from the monorepo's installed copies, ADR 0009, 113), and LLM tests use the fake OpenAI-compatible server (§7.4). Tests never touch the real `~/.kvman`.
 
-**Platforms.** There is no CI in this phase; the gates run locally on the developer's OS. Tests that depend on the OS (shells, process trees, file modes) cover each OS's branch and run the one that matches. Playwright and the benchmarks run on Linux. The one run on all three systems is the release's: each runner starts the bundle it built, with no window, before it publishes an installer (§14.8). No test drives the real window in this phase (ADR 0038, 36).
+**Platforms.** There is no CI in this phase; the gates run locally on the developer's OS. Tests that depend on the OS (shells, process trees, file modes) cover each OS's branch and run the one that matches. Playwright and the benchmarks run on Linux. The one run on all three systems is the release's: each runner starts the bundle it built, with no window, before it publishes an installer (§14.8). No test drives the real window, or a real VS Code, in this phase (ADR 0038, 36; ADR 0099, 35).
 
 **Local candidate (ADR0047).** Run `node release/candidate/local-candidate-main.ts` explicitly on Node24. It runs typecheck, lint, test, build, the original four-package name/JavaScript/declaration checks, then bench:check, serially and once each. Vitest retains lightweight runner coverage and does not launch repository-wide gates inside itself. Failures stop later gates; output certifies only the actual host's local pipeline, not CI, publishing, other platforms, Rust, or installers.
 

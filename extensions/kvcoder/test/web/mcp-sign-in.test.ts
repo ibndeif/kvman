@@ -50,20 +50,16 @@ describe("signing in to an MCP server from its row, and kvcoder's sign-in page (
     expect(view.find('[data-test="mcp-sign-in-reason"]').text()).toBe("The sign-in didn't work: it took more than 10 minutes");
   });
 
-  it('QA30-H8 Sign in starts the sign-in for this page, opens the address in a new tab, and checks again when the window has the focus back', async () => {
+  it('QA30-H8 M4.1-H6 Sign in starts the sign-in for this page, opens the address with kvman.open, and checks again when the window has the focus back', async () => {
     const { fake } = mcpWorld({ global: [linear] }, { checks: { linear: { status: 'signInNeeded' } } });
     fake.handle('kvcoder.mcp.sign-in.start', () => ({ url: 'https://auth.linear.app/authorize?state=s-1' }));
-    const tab = { opener: {} as unknown };
-    const open = vi.fn(() => tab);
-    vi.stubGlobal('open', open);
     const view = await mounted(McpServers, fake);
     await flushPromises();
     expect(row(view, 'linear').find('[data-test="mcp-server-state"]').text()).toContain('Sign-in needed');
     await row(view, 'linear').find('[data-test="mcp-server-sign-in"]').trigger('click');
     await flushPromises();
     expect(fake.calls.find((call) => call.name === 'kvcoder.mcp.sign-in.start')?.input).toEqual({ name: 'linear', redirectUrl: `${window.location.origin}/kvcoder/mcp-sign-in` });
-    expect(open.mock.calls).toEqual([['https://auth.linear.app/authorize?state=s-1', '_blank']]);
-    expect(tab.opener).toBeNull();
+    expect(fake.open.mock.calls).toEqual([['https://auth.linear.app/authorize?state=s-1']]);
 
     fake.handle('kvcoder.mcp.server.check', () => ({ status: 'ready', tools: 8 }));
     fake.handle('kernel.secrets.list', () => [{ extension: '@kvman/kvcoder', name: 'mcp.linear.oauth.tokens' }]);
@@ -88,18 +84,17 @@ describe("signing in to an MCP server from its row, and kvcoder's sign-in page (
     expect(row(view, 'linear').find('[data-test="mcp-server-sign-out"]').exists()).toBe(false);
   });
 
-  it('QA30-E11 a start that fails is toasted and opens no tab; a blocked tab says so', async () => {
+  it('QA30-E11 M4.1-H6 a start that fails is toasted and opens no tab; a blocked tab says so', async () => {
     const { fake } = mcpWorld({ global: [linear] }, { checks: { linear: { status: 'signInNeeded' } } });
     fake.handle('kvcoder.mcp.sign-in.start', () => {
       throw new ProblemError({ code: 'kvcoder/MCP_SIGN_IN_FAILED', message: 'x', params: { reason: 'no registration' } });
     });
-    const open = vi.fn(() => null);
-    vi.stubGlobal('open', open);
+    fake.open.mockReturnValue('blocked');
     const view = await mounted(McpServers, fake);
     await flushPromises();
     await row(view, 'linear').find('[data-test="mcp-server-sign-in"]').trigger('click');
     await flushPromises();
-    expect(open).not.toHaveBeenCalled();
+    expect(fake.open).not.toHaveBeenCalled();
     expect(fake.toast.mock.calls).toEqual([['kvcoder.errors.MCP_SIGN_IN_FAILED', { reason: 'no registration' }, 'error']]);
     fake.handle('kvcoder.mcp.sign-in.start', () => ({ url: 'https://auth.linear.app/authorize' }));
     await row(view, 'linear').find('[data-test="mcp-server-sign-in"]').trigger('click');

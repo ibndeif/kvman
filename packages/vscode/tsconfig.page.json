@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "page",
+    "outDir": "dist/extension/page",
+    "lib": ["es2024", "dom", "dom.iterable"],
+    "types": [],
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false
+  },
+  "include": ["page"]
+}

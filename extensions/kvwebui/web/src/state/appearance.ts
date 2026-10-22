@@ -32,7 +32,9 @@ export function currentTheme(state: Kvwebui): Theme {
   return theme === 'light' || theme === 'dark' ? theme : 'system';
 }
 
+// An embedded page whose host sent a theme keeps the host's light or dark (ADR 0100, 12).
 export function applyTheme(state: Kvwebui): void {
+  if (state.host.theme.value !== undefined) return;
   const theme = currentTheme(state);
   const dark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   document.documentElement.classList.toggle('dark', dark);

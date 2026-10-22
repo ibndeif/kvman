@@ -625,5 +625,10 @@
   "kvcoder.ui.failure.denied": "You denied this call.",
   "kvcoder.ui.call.showDetails": "Show details",
   "kvcoder.ui.call.hideDetails": "Hide details",
-  "kvcoder.ui.failure.command": "The command failed."
+  "kvcoder.ui.failure.command": "The command failed.",
+  "kvcoder.ui.history": "History",
+  "kvcoder.ui.host.openDiff": "Open diff",
+  "kvcoder.ui.host.proposed": "{name} (proposed)",
+  "kvcoder.ui.host.open": "Open",
+  "kvcoder.file.preview.get.description": "Gives a file as an fs edit or fs write would leave it, with its absolute path; writes nothing."
 }

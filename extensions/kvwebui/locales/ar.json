@@ -153,5 +153,6 @@
   "kvwebui.status.hidden.description": "عناصر شريط الحالة التي لا تظهر، بمعرّفاتها الكاملة، والمعرّف kvwebui.folder هو مجلد مساحة العمل.",
   "kvwebui.workspacePicker.title": "منتقي مساحة العمل",
   "kvwebui.workspacePicker.description": "هل يُظهر الشريط العلوي منتقي مساحة العمل.",
-  "kvwebui.settings.portThisRun": "يستمع هذا التشغيل على المنفذ {port}."
+  "kvwebui.settings.portThisRun": "يستمع هذا التشغيل على المنفذ {port}.",
+  "kvwebui.pages.menu": "الصفحات"
 }

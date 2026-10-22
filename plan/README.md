@@ -16,8 +16,9 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `10-testkit.md` | `createTestKernel` |
 | `11-presets.md` | The bundled `coder` preset |
 | `12-testing.md` | Test layers, crash invariants, benchmarks |
-| `13-milestones.md` | The 16 milestones: Read, Build, Done when |
+| `13-milestones.md` | The 22 milestones: Read, Build, Done when |
 | `14-desktop.md` | The desktop app: `kvman --pipe`, what the app holds, starting, the home screen, the window, updates, installers |
+| `15-vscode.md` | The VS Code extension: the view in the activity bar, starting and joining kvman, the embedded frame and its messages, VS Code's theme, files and diffs in the editor, "Add to kvman chat", closing, publishing |
 | `adr/0001-kernel.md` | Every kernel decision, with the product owner's answers |
 | `adr/0002-kvwebui.md` | Every kvwebui decision |
 | `adr/0003-kvai.md` | Every kvai decision |
@@ -79,5 +80,7 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `adr/0096-a-silent-stream-is-retried.md` | a model stream silent for 300 s is aborted as a temporary `kvai/PROVIDER_ERROR` (`stream stalled`), so the step retries it |
 | `adr/0097-fewer-steps-numbered-reads-and-edits-that-point.md` | independent calls first in the method and `fs read-files`; `fs read` and `fs edit` read as numbered lines; edit errors that show where; old call text cleared with its result; the map's rules in its entry; hints for one piece; "Decide for me" without `ask`; true map limits |
 | `adr/0098-counts-that-read-as-words.md` | catalog texts with plural forms chosen by a numeric `count` (`Intl.PluralRules`); a fold reads `Read 3 files, changed 1 file, ran 1 command · 1 failed`; every count text rewritten |
+| `adr/0099-vscode-extension.md` | The VS Code extension: the secondary side bar, the `kvman` on the PATH with an install offer, starting on first use and again from another window, local folders only, `?open=parent` and `kvman.open` for new windows in a frame, the listener's `frame-ancestors` policy, and the Marketplace and Open VSX |
+| `adr/0100-vscode-extension-that-feels-native.md` | The VS Code extension like Roo and Kilo: kvwebui embedded with `?embed=parent` (no frame, host messages, the host's theme, the pages menu, `kvman.host`), kvcoder's compact header, "Open diff", file paths and inserted text, `kvcoder.file.preview.get`, the activity bar, generic title-bar buttons, Settings in a tab, and VS Code 1.95 |
 
 The plan is complete. Implementation starts with M1.1.

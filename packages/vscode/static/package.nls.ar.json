@@ -1,0 +1,10 @@
+{
+  "kvman.description": "kvman في الشريط الجانبي الثانوي في VS Code، بجانب ملفاتك.",
+  "kvman.open.title": "افتح",
+  "kvman.openInBrowser.title": "افتح في المتصفح",
+  "kvman.install.title": "ثبّت kvman",
+  "kvman.path.description": "برنامج `kvman` الذي تشغّله الإضافة. يُبحث عنه في PATH افتراضيًا.",
+  "kvman.showPages.title": "الصفحات",
+  "kvman.openSettings.title": "الإعدادات",
+  "kvman.addToChat.title": "أضف إلى محادثة kvman"
+}

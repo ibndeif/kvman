@@ -6,6 +6,7 @@ import { readEvents } from './event-reader.ts';
 import { follow } from './follow.ts';
 import type { Kvwebui } from './kvwebui.ts';
 import { pageLocation } from './navigation.ts';
+import { hostCalls, openWindow } from './embedded.ts';
 import { openPanel } from './panels.ts';
 
 // The `kvman` object a custom component injects (plan 06 §6.4, ADR 0009, 83). Each shown component gets its own, so
@@ -53,6 +54,8 @@ export function createKvman(state: Kvwebui, t: Kvman['t'], View: Kvman['View'], 
     },
     toast: (text, params, level) => state.toasts.show({ text, params: params ?? {}, level: level ?? 'info' }),
     panel: (id, open) => openPanel(state, id, open),
+    open: openWindow,
+    host: hostCalls(state.host.inserts),
     t,
     workspace,
     scope,

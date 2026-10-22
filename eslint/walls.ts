@@ -7,6 +7,8 @@ type PackageWall = {
   kvmanPackages: readonly string[];
   thirdParty: 'declared' | readonly string[];
   nodeBuiltins: boolean;
+  // Modules the host program gives at run time, which no package.json declares (VS Code's `vscode`).
+  provided?: readonly string[];
 };
 
 const packageWalls: Record<string, PackageWall> = {
@@ -16,6 +18,9 @@ const packageWalls: Record<string, PackageWall> = {
   testkit: { kvmanPackages: ['kernel', 'sdk'], thirdParty: [], nodeBuiltins: true },
   // The desktop shell runs kvman as a program and imports nothing of it (plan 14 §14.1).
   desktop: { kvmanPackages: [], thirdParty: [], nodeBuiltins: false },
+  // The VS Code extension runs kvman as a program too (plan 15 §15.1); VS Code gives it `vscode`. Vite, a devDependency,
+  // reaches only its build config.
+  vscode: { kvmanPackages: [], thirdParty: ['vscode', 'zod', 'vite'], nodeBuiltins: true, provided: ['vscode'] },
 };
 
 const extensionWall: PackageWall = { kvmanPackages: ['sdk'], thirdParty: 'declared', nodeBuiltins: true };
@@ -80,6 +85,7 @@ function checkThirdParty({ unit, wall, use, inTest }: Context, name: string, sub
     const only = wall.thirdParty.length === 0 ? 'no third-party package' : `only ${wall.thirdParty.join(', ')}`;
     return `${unit.label} may import ${only}, not "${use.specifier}" ${reference}`;
   }
+  if (wall.provided?.includes(name) === true) return undefined;
   const declared = [...unit.manifest.dependencies, ...(inTest ? unit.manifest.devDependencies : [])];
   if (declared.includes(name)) return undefined;
   return `${unit.label} does not declare "${name}" in its package.json ${reference}`;

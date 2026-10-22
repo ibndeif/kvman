@@ -48,6 +48,7 @@ More detail: [coding-app.md](coding-app.md) and [the-agent.md](the-agent.md).
 - [first-run.md](first-run.md) — what happens the first time you start kvman
 - [web-app.md](web-app.md) — the app in your browser: sidebar, pages, status bar, language, theme
 - [desktop-app.md](desktop-app.md) — kvman in its own window
+- [vscode-extension.md](vscode-extension.md) — kvman in VS Code's side bar
 - [workspaces.md](workspaces.md) — Home, folders, closed workspaces, and what a second `kvman` does
 - [models-and-providers.md](models-and-providers.md) — connecting AI providers, the default model, your own server
 

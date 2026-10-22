@@ -9,6 +9,7 @@ import FieldsView from './FieldsView.vue';
 import FoldButton from './FoldButton.vue';
 import FoldedLines from './FoldedLines.vue';
 import FoldedOutput from './FoldedOutput.vue';
+import HostPath from './HostPath.vue';
 import { useKvman } from './kvman.ts';
 import RunOutput from './RunOutput.vue';
 import { folded, numberedLines } from './shown-lines.ts';
@@ -31,6 +32,9 @@ const run = computed(() => (kind.value === 'run-output' ? runResult(props.result
 const allEntries = ref(false);
 const shownEntries = computed(() => folded(entries.value ?? [], allEntries.value));
 const answer = computed(() => ({ type: 'markdown' as const, text: 'kvcoder.markdown', params: { text: props.output } }));
+// A listed entry's path in the workspace: the listed folder, then its name.
+const listedFolder = computed(() => (typeof props.view.fields?.['path'] === 'string' ? props.view.fields['path'].replace(/[\\/]+$/, '') : '.'));
+const entryPath = (name: string): string => (listedFolder.value === '.' || listedFolder.value === '' ? name : `${listedFolder.value}/${name}`);
 const asFields = computed(() => kind.value !== 'line' && typeof props.result === 'object' && props.result !== null);
 </script>
 
@@ -40,7 +44,8 @@ const asFields = computed(() => kind.value !== 'line' && typeof props.result ===
   <div v-else-if="entries !== undefined" class="kvc-block kvc-entries" data-test="call-entries">
     <div v-for="entry in shownEntries" :key="entry.name" class="kvc-entry" :data-kind="entry.kind" data-test="call-entry">
       <component :is="entry.kind === 'folder' ? Folder : File" :size="14" aria-hidden="true" />
-      <span class="kvc-mono" dir="auto" data-test="call-entry-name">{{ entry.name }}</span>
+      <span v-if="entry.kind === 'file'" data-test="call-entry-name"><HostPath :path="entryPath(entry.name)" :label="entry.name" /></span>
+      <span v-else class="kvc-mono" dir="auto" data-test="call-entry-name">{{ entry.name }}</span>
       <span v-if="entry.kind === 'file'" class="kvc-muted" data-test="call-entry-size">{{ sizeText(kvman.t, entry.bytes) }}</span>
     </div>
     <FoldButton :count="entries.length" :open="allEntries" @toggle="allEntries = !allEntries" />
@@ -48,20 +53,20 @@ const asFields = computed(() => kind.value !== 'line' && typeof props.result ===
   <div v-else-if="paths !== undefined" class="kvc-block kvc-entries" data-test="call-paths">
     <div v-for="found in shownPaths" :key="found" class="kvc-entry" data-test="call-path">
       <File :size="14" aria-hidden="true" />
-      <span class="kvc-mono" dir="auto">{{ found }}</span>
+      <HostPath :path="found" />
     </div>
     <FoldButton :count="paths.length" :open="allPaths" @toggle="allPaths = !allPaths" />
   </div>
   <template v-else-if="files !== undefined">
     <div v-for="file in files" :key="file.path" class="kvc-block" data-test="call-file">
-      <div class="kvc-mono kvc-file-path" data-test="call-file-path">{{ file.path }}</div>
+      <div class="kvc-file-path" data-test="call-file-path"><HostPath :path="file.path" :line="file.matches.find((match) => !match.context)?.line" /></div>
       <FoldedLines v-if="file.matches.length > 0" :lines="file.matches.map((match) => ({ text: match.text, number: match.line }))" />
       <p v-else class="kvc-muted kvc-call-parts" data-test="call-file-count">{{ kvman.t('kvcoder.ui.call.matchCount', { count: file.count }) }}</p>
     </div>
   </template>
   <template v-else-if="readFiles !== undefined">
     <div v-for="(file, index) in readFiles" :key="`${index}:${file.path}`" class="kvc-block" data-test="call-read-file">
-      <div class="kvc-mono kvc-file-path" dir="auto" data-test="call-file-path">{{ file.path }}</div>
+      <div class="kvc-file-path" data-test="call-file-path"><HostPath :path="file.path" :line="file.read?.fromLine" /></div>
       <FoldedLines v-if="file.read !== undefined" :lines="numberedLines(file.read.content, file.read.fromLine)" />
       <p v-else class="kvc-muted kvc-call-parts" dir="auto" data-test="call-read-file-note">{{ fileNote(file) }}</p>
     </div>

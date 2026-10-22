@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ChevronDown, ChevronRight } from '@lucide/vue';
 import { reactive } from 'vue';
+import { absolutePath } from './host-files.ts';
 import { toastProblem, useKvman } from './kvman.ts';
 import type { ChangeList, ChangedFile } from './use-changes.ts';
 
 // The chat's changes in the panel (plan 08 §8.7, ADR 0093, 2): each file with its counts and state, its diff on a
-// press, and Undo; Commit asks the agent to commit them, as the person's message.
+// press, and Undo; Commit asks the agent to commit them, as the person's message. In a host that embeds kvwebui, a
+// file that is there also opens in the host's editor (ADR 0100, 18).
 const props = defineProps<{ sessionId: string; list: ChangeList | undefined }>();
 const emit = defineEmits<{ changed: []; commit: [] }>();
 const kvman = useKvman();
@@ -43,6 +45,7 @@ async function undo(file: ChangedFile): Promise<void> {
             <span class="kvc-muted" dir="ltr" data-test="change-counts">+{{ file.added }} −{{ file.removed }}</span>
             <span class="kvc-chip" data-test="change-state">{{ kvman.t(`kvcoder.ui.changes.state.${file.state}`) }}</span>
           </button>
+          <button v-if="kvman.host.embedded && file.state !== 'deleted'" type="button" class="kvc-button" data-test="change-open-file" @click="kvman.host.openFile(absolutePath(kvman.workspace.value.path, file.path))">{{ kvman.t('kvcoder.ui.host.open') }}</button>
           <button type="button" class="kvc-button" :disabled="busy.has(file.path)" data-test="change-undo" @click="undo(file)">{{ kvman.t('kvcoder.ui.changes.undo') }}</button>
         </div>
         <pre v-if="opened.has(file.path)" class="kvc-block kvc-diff" dir="ltr" data-test="change-diff"><span v-for="(line, index) in file.diff.split('\n')" :key="index" :data-kind="lineKind(line)">{{ line }}

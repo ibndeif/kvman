@@ -51,6 +51,20 @@ export type View =
 /** An event of a job's stream: progress chunks, then one result or Problem. */
 export type StreamEvent = { type: 'progress'; source: string; data: Json } | { type: 'result'; output: Json } | { type: 'problem'; problem: Problem };
 
+/** What a component asks of the host that embeds kvwebui (plan 06 §6.4). */
+export type KvmanHost = {
+  /** Whether kvwebui is embedded in a host now. */
+  readonly embedded: boolean;
+  /** Opens a file, by its absolute path, in the host's editor, at a line from 1. */
+  openFile(path: string, line?: number): void;
+  /** Shows the file at an absolute path, as it is, against the text `after`, in the host's diff view. */
+  openDiff(title: string, path: string, after: string): void;
+  /** Shows the host's own diff of a file, by its absolute path, against its Git `HEAD`. */
+  openChange(path: string): void;
+  /** Gets each text the host inserts; returns the handler's removal. */
+  onInsert(handler: (text: string) => void): () => void;
+};
+
 /** The object kvwebui gives a custom component through `inject('kvman')`. */
 export type Kvman = {
   /** Runs a command or query now; a command counts as one the UI ran (queries rerun, effects apply). */
@@ -69,6 +83,10 @@ export type Kvman = {
   toast(text: string, params?: Record<string, Json>, level?: ToastLevel): void;
   /** Opens or closes a panel by its full id. */
   panel(id: string, open: boolean): void;
+  /** Opens a web address in a new tab, or hands it to the host when kvwebui is embedded (`?embed=parent`). */
+  open(url: string): 'opened' | 'blocked';
+  /** The host of an embedded kvwebui, such as the VS Code view; outside embedded mode the opens do nothing. */
+  host: KvmanHost;
   /** Translates a key with the UI language's catalog; a numeric `count` param chooses its plural form. */
   t(key: string, params?: Record<string, unknown>): string;
   /** The tab's workspace, a live read-only ref. */

@@ -10,6 +10,7 @@ import { readLines, readLinesLimit } from '../files/read-file.ts';
 import { readFiles } from '../files/read-files.ts';
 import { filesEntrySchema } from '../files/read-text.ts';
 import { searchText } from '../files/search-text.ts';
+import { textOf } from '../files/utf8-text.ts';
 import { resolveInWorkspace } from '../files/workspace-path.ts';
 import { invalid, notFound } from '../problems.ts';
 import { records } from '../store/collections.ts';
@@ -83,9 +84,6 @@ export const fsCommands = {
   assemble: { registration: 'kvcoder.fs.assemble', description: 'Writes a file from its saved parts, in order, and drops them; names the missing numbers when one is absent.', payload: payloads.assemble, asks: true },
 } satisfies Record<string, ConnectorCommand>;
 
-const strictText = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
-
-
 // The file system's own refusals (a folder in the way, no permission) are the model's to read and fix.
 const refusedByFileSystem = (error: unknown): error is Error & { code: string } => error instanceof Error && 'code' in error && typeof error.code === 'string' && /^E[A-Z]+$/.test(error.code);
 
@@ -95,14 +93,6 @@ async function asProblems<Result>(run: () => Promise<Result>): Promise<Result> {
   } catch (error) {
     if (refusedByFileSystem(error)) throw invalid(error.message);
     throw error;
-  }
-}
-
-function textOf(bytes: Buffer, requested: string): string {
-  try {
-    return strictText.decode(bytes);
-  } catch {
-    throw invalid(`${requested} isn't valid UTF-8 text, so it isn't edited.`, { path: requested });
   }
 }
 

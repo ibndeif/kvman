@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ArrowUp, Paperclip, Square, X } from '@lucide/vue';
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { clipboardImages } from './clipboard-images.ts';
 import { problemText, useKvman } from './kvman.ts';
 import { messageDraft } from './message-drafts.ts';
@@ -22,6 +22,14 @@ const emit = defineEmits<{ send: [message: { text: string; fileIds: string[] }];
 const kvman = useKvman();
 const draft = computed(() => messageDraft(kvman.workspace.value.id, props.sessionId));
 const picker = ref<HTMLInputElement | null>(null);
+const textBox = ref<HTMLTextAreaElement | null>(null);
+// Text the host inserts, such as VS Code's "Add to kvman chat", goes on a line of its own and takes the focus (ADR 0100, 19).
+const removeInsert = kvman.host.onInsert((text) => {
+  const target = draft.value;
+  target.text = `${target.text === '' || target.text.endsWith('\n') ? target.text : `${target.text}\n`}${text}\n`;
+  void nextTick(() => textBox.value?.focus());
+});
+onBeforeUnmount(removeInsert);
 const uploading = ref(false);
 const highlight = ref(0);
 const hidden = ref(false);
@@ -161,7 +169,7 @@ function onKey(event: KeyboardEvent): void {
       <div v-if="draft.files.length > 0" style="display: flex; gap: 6px; flex-wrap: wrap">
         <span v-for="file in draft.files" :key="file.id" class="kvc-chip" data-test="attachment">{{ file.name }}<button type="button" class="kvc-ghost kvc-button kvc-chip-remove" :aria-label="kvman.t('kvcoder.ui.removeAttachment')" :disabled="draft.sending" @click="draft.files = draft.files.filter((kept) => kept.id !== file.id)"><X :size="12" /></button></span>
       </div>
-      <textarea v-model="draft.text" :disabled="draft.sending" :aria-busy="draft.sending" :placeholder="props.placeholder" :aria-label="props.placeholder" rows="2" data-test="composer-text" @keydown="onKey" @paste="pasted" />
+      <textarea ref="textBox" v-model="draft.text" :disabled="draft.sending" :aria-busy="draft.sending" :placeholder="props.placeholder" :aria-label="props.placeholder" rows="2" data-test="composer-text" @keydown="onKey" @paste="pasted" />
       <div class="kvc-composer-row">
         <input ref="picker" type="file" multiple hidden data-test="composer-files" @change="chosen" />
         <button type="button" class="kvc-button" :aria-label="kvman.t('kvcoder.ui.attach')" :title="kvman.t('kvcoder.ui.attach')" :disabled="uploading || draft.sending" @click="picker?.click()"><Paperclip :size="16" /></button>

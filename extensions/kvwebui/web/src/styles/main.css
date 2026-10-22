@@ -20,8 +20,8 @@
 }
 
 @theme inline {
-  --font-sans: 'IBM Plex Sans', 'IBM Plex Sans Arabic', system-ui, sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-sans: var(--kvwebui-font-sans);
+  --font-mono: var(--kvwebui-font-mono);
   --color-ground: var(--kvwebui-ground);
   --color-surface: var(--kvwebui-surface);
   --color-sunken: var(--kvwebui-sunken);
@@ -49,6 +49,9 @@
 }
 
 :root {
+  /* An embedded page takes its host's fonts in these (ADR 0100, 12). */
+  --kvwebui-font-sans: 'IBM Plex Sans', 'IBM Plex Sans Arabic', system-ui, sans-serif;
+  --kvwebui-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
   --kvwebui-ground: #e9edf2;
   --kvwebui-surface: #f7f8fa;
   --kvwebui-sunken: #eff2f5;
@@ -120,7 +123,7 @@
   --kv-space-md: 16px;
   --kv-space-lg: 24px;
   --kv-radius: 12px;
-  --kv-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --kv-font-mono: var(--kvwebui-font-mono);
 }
 
 html,

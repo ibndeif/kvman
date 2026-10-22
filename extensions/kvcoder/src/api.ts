@@ -59,6 +59,7 @@ declare module '@kvman/sdk' {
     'kvcoder.session.get': { input: SessionId; output: Session };
     'kvcoder.change.list': { input: { sessionId: string; withDiffs?: boolean }; output: { files: { path: string; added: number; removed: number; diff: string; state: 'changed' | 'created' | 'deleted' }[]; diffs: boolean } };
     'kvcoder.change.undo': { input: { sessionId: string; path: string }; output: Empty };
+    'kvcoder.file.preview.get': { input: { path: string; edits: { oldText: string; newText: string; replaceAll?: boolean }[] } | { path: string; content: string }; output: { path: string; after: string } };
     'kvcoder.session.count': { input: { status?: Status; waitingOn?: 'person' }; output: { count: number } };
     'kvcoder.context.get': { input: { sessionId: string }; output: { tokens: number; window: number | null; compactAt: number; estimated: boolean } };
     'kvcoder.message.list': { input: { sessionId: string; limit: number; afterSeq?: number; beforeSeq?: number }; output: { messages: Message[]; omitted: number } };

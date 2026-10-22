@@ -7,13 +7,15 @@ import { builtinPages, routePage } from '../../state/navigation.ts';
 import { homeWorkspaceId, settingValue, useKvwebui } from '../../state/kvwebui.ts';
 import ConfirmDialog from '../shared/ConfirmDialog.vue';
 import ToastStack from '../shared/ToastStack.vue';
+import HostPagesMenu from './HostPagesMenu.vue';
 import LoadFailures from './LoadFailures.vue';
 import NavBar from './NavBar.vue';
 import PanelArea from './PanelArea.vue';
 import StatusBar from './StatusBar.vue';
 import TopBar from './TopBar.vue';
 
-// The frame (plan 06 §6.2): the top bar, the nav, the page, the panels, and the status bar.
+// The frame (plan 06 §6.2): the top bar, the nav, the page, the panels, and the status bar. An embedded page has none of
+// them: the page fills its host's frame, and the host opens the pages menu (ADR 0100, 10 and 13).
 const state = useKvwebui();
 const route = useRoute();
 const translator = useI18n();
@@ -50,7 +52,16 @@ watchEffect(() => {
 </script>
 
 <template>
-  <div class="flex h-full flex-col bg-ground font-sans text-sm/relaxed text-ink">
+  <div v-if="state.host.embedded.value" class="flex h-full flex-col bg-ground font-sans text-sm/relaxed text-ink" data-test="embedded">
+    <main class="flex min-h-0 min-w-0 grow flex-col gap-3 overflow-auto p-2">
+      <LoadFailures />
+      <RouterView :key="route.fullPath" />
+    </main>
+    <HostPagesMenu />
+    <ToastStack />
+    <ConfirmDialog />
+  </div>
+  <div v-else class="flex h-full flex-col bg-ground font-sans text-sm/relaxed text-ink">
     <TopBar :title="appTitle" />
     <div class="flex min-h-0 grow">
       <NavBar />

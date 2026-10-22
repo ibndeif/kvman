@@ -16,7 +16,7 @@ const developerPages = [
   'products', 'testing', 'preview-and-hot-reload', 'kernel-api', 'http-api', 'errors', 'publishing', 'architecture', 'contributing',
 ];
 const userPages = [
-  'README', 'installing', 'first-run', 'web-app', 'desktop-app', 'workspaces', 'models-and-providers', 'coding-app', 'the-agent', 'extensions', 'presets', 'settings-and-secrets',
+  'README', 'installing', 'first-run', 'web-app', 'desktop-app', 'vscode-extension', 'workspaces', 'models-and-providers', 'coding-app', 'the-agent', 'extensions', 'presets', 'settings-and-secrets',
   'building-kvman', 'building-extensions', 'troubleshooting', 'privacy-and-security',
 ];
 
@@ -114,6 +114,12 @@ describe('the documentation (QA17-H22 to H24, E24)', () => {
     expect(installing).toContain(usage);
     for (const text of ['## Removing kvman', 'kvman uninstall', '**Remove kvman?**', '**Delete it too?**', '`--keep-data`', '`--delete-data`', 'npm uninstall -g kvman']) expect(installing, text).toContain(text);
     expect(installing).not.toContain('There is no other `kvman` subcommand');
+  });
+
+  it('M4.3-H3 the VS Code extension page covers installing, the install offer, the view, local folders only, and the shared home', () => {
+    const page = read(path.join(userGuide, 'vscode-extension.md'));
+    for (const text of ['activity bar', 'Install kvman', 'npm i -g kvman --no-fund --loglevel=error', 'kvman: Open', 'local folders only', '~/.kvman', 'Open VSX', 'kvman.path', 'Open diff', 'Add to kvman chat', 'Pages']) expect(page, text).toContain(text);
+    expect(read(path.join(userGuide, 'README.md'))).toContain('[vscode-extension.md](vscode-extension.md)');
   });
 
   it('M3.1-E13 the install page and the README have --pipe', () => {

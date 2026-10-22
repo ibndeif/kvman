@@ -1,0 +1,13 @@
+html, body { block-size: 100%; margin: 0; }
+body { background: var(--vscode-sideBar-background); color: var(--vscode-foreground); font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); }
+iframe { display: block; border: 0; inline-size: 100%; block-size: 100vh; }
+.message { padding-block: 16px; padding-inline: 16px; display: flex; flex-direction: column; gap: 8px; }
+.message h1 { font-size: 1.1em; font-weight: 600; margin: 0; }
+.message p { margin: 0; line-height: 1.5; }
+.message .code { font-family: var(--vscode-editor-font-family); color: var(--vscode-descriptionForeground); overflow-wrap: anywhere; }
+.buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-block-start: 4px; }
+.button { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: 0; border-radius: 2px; padding-block: 4px; padding-inline: 12px; cursor: pointer; font: inherit; }
+.button:hover { background: var(--vscode-button-hoverBackground); }
+.link { background: none; border: 0; padding: 0; color: var(--vscode-textLink-foreground); cursor: pointer; font: inherit; text-decoration: underline; }
+.progress { block-size: 2px; inline-size: 100%; background: var(--vscode-progressBar-background); animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }

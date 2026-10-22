@@ -5,27 +5,31 @@ import { loadRegistry } from '../contributions/registry.ts';
 import { applyLanguage, applyTheme } from './appearance.ts';
 import type { I18nState } from './i18n.ts';
 import { settingValue, workspaceMemory, type Kvwebui } from './kvwebui.ts';
+import { takeEmbed } from './embedded.ts';
 import { reloadPreset } from './preset.ts';
 import { reloadWorkspaces, startWorkspace } from './workspaces.ts';
 
-// What kvwebui loads when the browser opens it (plan 06 §6.2–§6.3): the tab's workspace (taking `?workspace=` once and
-// removing it from the URL), the kernel's health, settings, and extensions, the language's catalog, and every
-// extension's contributions.
+// What kvwebui loads when the browser opens it (plan 06 §6.2–§6.3): the tab's workspace and whether it is embedded
+// (taking `?workspace=` and `?embed=parent` once and removing them from the URL), the kernel's health, settings, and
+// extensions, the language's catalog, and every extension's contributions.
 
-async function takeStartWorkspace(state: Kvwebui): Promise<void> {
+async function takeStartParameters(state: Kvwebui): Promise<void> {
   const route = state.router.currentRoute.value;
   const fromUrl = typeof route.query['workspace'] === 'string' ? route.query['workspace'] : undefined;
   await reloadWorkspaces(state);
   state.workspace.value = startWorkspace(state.workspaces.value, fromUrl);
   workspaceMemory.write(state.workspace.value);
-  if ('workspace' in route.query) {
-    const query = Object.fromEntries(Object.entries(route.query).filter(([key]) => key !== 'workspace'));
+  const embedded = takeEmbed(route.query['embed']);
+  if (embedded) state.host.embedded.value = true;
+  const taken = new Set(['workspace', ...(embedded ? ['embed'] : [])]);
+  if (Object.keys(route.query).some((key) => taken.has(key))) {
+    const query = Object.fromEntries(Object.entries(route.query).filter(([key]) => !taken.has(key)));
     await state.router.replace({ path: route.path, query, hash: route.hash });
   }
 }
 
 async function load(state: Kvwebui, i18n: I18nState): Promise<void> {
-  await takeStartWorkspace(state);
+  await takeStartParameters(state);
   const [health, settings, extensions] = await Promise.all([
     kernelQuery(state.api, 'kernel.health.get', {}),
     kernelQuery(state.api, 'kernel.settings.list', {}),

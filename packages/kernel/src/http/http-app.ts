@@ -6,17 +6,23 @@ import { kernelProblem } from '../problems.ts';
 import { registerCallRoutes } from './call-routes.ts';
 import { failure } from './envelope.ts';
 import { registerFileRoutes } from './file-routes.ts';
+import { framingPolicy } from './framing-policy.ts';
 import { registerJobRoutes } from './job-routes.ts';
 import { isOwnOrigin } from './own-origin.ts';
 import { registerWebRoutes } from './web-routes.ts';
 
-// The kernel's HTTP API (plan 04): every request passes the Host and Origin check first; a Problem thrown by a route is
-// its envelope, and anything else is logged (never with the request's body) and answered HANDLER_FAILED.
+// The kernel's HTTP API (plan 04): every answer carries the framing policy, and every request passes the Host and
+// Origin check first; a Problem thrown by a route is its envelope, and anything else is logged (never with the
+// request's body) and answered HANDLER_FAILED.
 
 export type HttpAppOptions = { kernel: Kernel; port: () => number; stopping: AbortSignal; logger: KernelLogger };
 
 export function createHttpApp({ kernel, port, stopping, logger }: HttpAppOptions): Hono {
   const app = new Hono();
+  app.use('*', async (c, next) => {
+    await next();
+    c.res.headers.set('Content-Security-Policy', framingPolicy);
+  });
   app.use('*', async (c, next) => {
     if (!isOwnOrigin(c.req.header('host'), c.req.header('origin'), port())) {
       return failure(kernelProblem('FORBIDDEN_ORIGIN', "The request's Host or Origin isn't kvman's own.").problem);
