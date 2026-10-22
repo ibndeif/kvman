@@ -70,6 +70,7 @@ The extension starts when the view is first shown or one of its commands runs, n
   - `kvman.openChange` runs VS Code's Git command `git.openChange` for the file; when it fails, VS Code shows "There's no Git change to show for this file."
   An `openFile`, `openDiff`, or `openChange` path must be absolute. Any other message, address, or path is dropped.
 - **The theme** (ADR 0100, 24). The page reads VS Code's own CSS variables (`--vscode-sideBar-background`, `--vscode-editor-background`, `--vscode-foreground`, `--vscode-descriptionForeground`, `--vscode-panel-border`, `--vscode-button-background`, `--vscode-button-foreground`, `--vscode-errorForeground`, `--vscode-editorWarning-foreground`, `--vscode-testing-iconPassed`, `--vscode-font-family`, `--vscode-editor-font-family`, `--vscode-font-size`) and VS Code's theme class on `body`, and posts them to the frame as `kvman.theme` (§6.2) on each `kvman.state` and again when VS Code's theme changes.
+- **The extension's messages.** The page passes on to the frame only `kvman.pages` and `kvman.insert` with a text, and only from its parent at its own origin, which is how VS Code delivers the extension's messages; a frame inside kvman's frame, such as an artifact, can post to the page too, and is ignored (ADR 0100, 29).
 - **Downloads** are VS Code's own behaviour for a webview.
 - **Width.** The embedded kvwebui has no frame (§6.2), and kvcoder below 60 rem is one column with its compact header (§8.7). kvwebui keeps its own language; the extension's own states (§15.3, §15.5) use VS Code's theme variables.
 

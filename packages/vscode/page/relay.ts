@@ -43,6 +43,17 @@ function theme(): unknown {
   };
 }
 
+// What the extension may give the frame (ADR 0100, 11): the pages menu's opening and text to insert. VS Code delivers the
+// extension's messages from the page's parent at the page's own origin; a frame inside kvman's frame, such as an
+// artifact, can post to this page too, so nothing else is passed on.
+function extensionMessage(data: unknown): unknown {
+  if (!isRecord(data) || data['from'] !== 'extension' || !isRecord(data['message'])) return undefined;
+  const message = data['message'];
+  if (message['kind'] === 'kvman.pages') return { kind: 'kvman.pages' };
+  if (message['kind'] === 'kvman.insert' && typeof message['text'] === 'string') return { kind: 'kvman.insert', text: message['text'] };
+  return undefined;
+}
+
 function toFrame(message: unknown): void {
   if (frame?.contentWindow && origin !== undefined) frame.contentWindow.postMessage(message, origin);
 }
@@ -58,8 +69,9 @@ window.addEventListener('message', (event) => {
       toFrame(theme());
     }
     host.postMessage({ from: 'frame', data });
-  } else if (isRecord(data) && data['from'] === 'extension' && isRecord(data['message'])) {
-    toFrame(data['message']);
+  } else if (event.source === window.parent && event.origin === window.location.origin) {
+    const message = extensionMessage(data);
+    if (message !== undefined) toFrame(message);
   }
 });
 

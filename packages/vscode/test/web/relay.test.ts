@@ -94,8 +94,22 @@ describe("the view's relay (15 §15.4, ADR 0099, 23)", () => {
     send({ kind: 'kvman.state', workspaceId: 'w1' }, 'http://127.0.0.1:3737', window);
     expect(toFrame).not.toHaveBeenCalled();
     expect(posted).toEqual([]);
-    send({ from: 'extension', message: { kind: 'kvman.pages' } }, 'vscode-webview://host', null);
-    send({ from: 'other', message: { kind: 'kvman.pages' } }, 'vscode-webview://host', null);
-    expect(toFrame.mock.calls).toEqual([[{ kind: 'kvman.pages' }, 'http://127.0.0.1:3737']]);
+    const own = window.location.origin;
+    send({ from: 'extension', message: { kind: 'kvman.pages' } }, own, window.parent);
+    send({ from: 'extension', message: { kind: 'kvman.insert', text: 'hello' } }, own, window.parent);
+    send({ from: 'other', message: { kind: 'kvman.pages' } }, own, window.parent);
+    send({ from: 'extension', message: { kind: 'kvman.theme', dark: true } }, own, window.parent);
+    send({ from: 'extension', message: { kind: 'kvman.insert', text: 5 } }, own, window.parent);
+    expect(toFrame.mock.calls).toEqual([[{ kind: 'kvman.pages' }, 'http://127.0.0.1:3737'], [{ kind: 'kvman.insert', text: 'hello' }, 'http://127.0.0.1:3737']]);
+  });
+
+  it("M4.6-E2 an extension message from another window, such as an artifact's frame inside kvman's, or another origin, is dropped", async () => {
+    await loadPage('<iframe src="about:blank"></iframe><iframe name="artifact" src="about:blank"></iframe>', 'http://127.0.0.1:3737');
+    const toFrame = vi.spyOn(frameWindow(), 'postMessage').mockImplementation(() => undefined);
+    const artifact = document.querySelectorAll('iframe')[1]?.contentWindow ?? null;
+    send({ from: 'extension', message: { kind: 'kvman.insert', text: 'injected' } }, window.location.origin, artifact);
+    send({ from: 'extension', message: { kind: 'kvman.insert', text: 'injected' } }, 'http://127.0.0.1:5173', window.parent);
+    send({ from: 'extension', message: { kind: 'kvman.insert', text: 'injected' } }, window.location.origin, null);
+    expect(toFrame).not.toHaveBeenCalled();
   });
 });
