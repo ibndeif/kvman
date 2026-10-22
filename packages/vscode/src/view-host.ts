@@ -4,7 +4,7 @@ import type { Language, Translate } from './catalog.ts';
 import type { FrameMessage } from './frame-requests.ts';
 import { readPageMessage, type PageMessage } from './page-messages.ts';
 import type { View } from './session.ts';
-import { viewHtml, type Place } from './view-html.ts';
+import { viewHtml, type PageView, type Place } from './view-html.ts';
 
 // The webview view `kvman.view` (plan 15 §15.4): it shows the session's view, keeps its page while hidden, hands each
 // page message and each time it is shown to the extension, and passes the extension's messages on to the frame.
@@ -13,7 +13,7 @@ export type ViewEvents = { shown(): void; message(message: PageMessage): void };
 export type ViewText = { language: Language; translate: Translate; logFile: string };
 
 /** The page of a webview for a view: its policy, its body, and the relay script, from the extension's folder. */
-export function webviewPage(webview: vscode.Webview, extensionUri: vscode.Uri, text: ViewText, view: View, place: Place): string {
+export function webviewPage(webview: vscode.Webview, extensionUri: vscode.Uri, text: ViewText, view: PageView, place: Place): string {
   const asset = (file: string): string => webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, file)).toString();
   return viewHtml(view, { ...text, place, cspSource: webview.cspSource, nonce: randomBytes(16).toString('base64url'), scriptUri: asset('page/relay.js'), styleUri: asset('page.css') });
 }
@@ -39,14 +39,18 @@ export class ViewHost implements vscode.WebviewViewProvider {
     this.#events = events;
   }
 
+  // The view's subscriptions end with it, since VS Code may dispose the view and resolve it again (ADR 0101, 10).
   resolveWebviewView(view: vscode.WebviewView): void {
     this.#view = view;
     view.webview.options = { enableScripts: true, localResourceRoots: [this.#extensionUri] };
-    onPageMessage(view.webview, (message) => this.#events.message(message));
-    view.onDidChangeVisibility(() => {
-      if (view.visible) this.#events.shown();
-    });
+    const subscriptions = [
+      onPageMessage(view.webview, (message) => this.#events.message(message)),
+      view.onDidChangeVisibility(() => {
+        if (view.visible) this.#events.shown();
+      }),
+    ];
     view.onDidDispose(() => {
+      for (const subscription of subscriptions) subscription.dispose();
       if (this.#view === view) this.#view = undefined;
     });
     if (this.#latest !== undefined) this.#show(this.#latest);

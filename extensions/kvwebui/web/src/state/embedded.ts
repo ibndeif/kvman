@@ -13,7 +13,9 @@ export type HostMessage =
   | { kind: 'kvman.open'; url: string }
   | { kind: 'kvman.openFile'; path: string; line?: number }
   | { kind: 'kvman.openDiff'; title: string; path: string; after: string }
-  | { kind: 'kvman.openChange'; path: string };
+  | { kind: 'kvman.openChange'; path: string }
+  | { kind: 'kvman.lost' }
+  | { kind: 'kvman.actions'; new: boolean };
 
 /** Keeps `?embed=parent` for the tab; says whether the parameter was taken, so the caller removes it from the URL. */
 export function takeEmbed(value: unknown): boolean {
@@ -71,8 +73,25 @@ export function catchNewWindowLinks(page: Document): () => void {
   };
 }
 
-/** The injected object's `host` (plan 06 §6.4): the opens post while embedded, and inserted text reaches the handlers. */
-export function hostCalls(inserts: Set<(text: string) => void>): Kvman['host'] {
+/** The page's ways to answer its host: inserted text goes to each handler, and the host's New to the latest offer. */
+export type HostHandlers = { inserts: Set<(text: string) => void>; newOffers: (() => void)[] };
+
+// The host shows its New button while any offer is held (ADR 0101, 5).
+function offerNew(offers: (() => void)[], handler: () => void): () => void {
+  const offer = (): void => handler();
+  offers.push(offer);
+  if (offers.length === 1) postToHost({ kind: 'kvman.actions', new: true });
+  return () => {
+    const index = offers.indexOf(offer);
+    if (index < 0) return;
+    offers.splice(index, 1);
+    if (offers.length === 0) postToHost({ kind: 'kvman.actions', new: false });
+  };
+}
+
+/** The injected object's `host` (plan 06 §6.4): the opens post while embedded, inserted text reaches the handlers, and the
+ * host's New reaches the latest offer. */
+export function hostCalls({ inserts, newOffers }: HostHandlers): Kvman['host'] {
   return {
     get embedded() {
       return isEmbedded();
@@ -84,5 +103,6 @@ export function hostCalls(inserts: Set<(text: string) => void>): Kvman['host'] {
       inserts.add(handler);
       return () => void inserts.delete(handler);
     },
+    offerNew: (handler) => offerNew(newOffers, handler),
   };
 }

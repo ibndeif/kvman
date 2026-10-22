@@ -14,6 +14,7 @@ const manifestSchema = z.object({
     views: z.record(z.string(), z.array(z.object({ type: z.string(), id: z.string(), name: z.string() }))),
     commands: z.array(z.object({ command: z.string(), icon: z.string().optional() })),
     menus: z.record(z.string(), z.array(z.object({ command: z.string(), when: z.string() }))),
+    keybindings: z.array(z.object({ command: z.string(), key: z.string(), mac: z.string(), when: z.string() })),
     configuration: z.object({ properties: z.record(z.string(), z.object({ type: z.string(), default: z.unknown(), scope: z.string() })) }),
   }),
 });
@@ -26,6 +27,7 @@ describe("the extension's manifest (15 §15.1 and §15.2, ADR 0099, 10 and 14)",
     expect(manifest.contributes.views).toEqual({ kvman: [{ type: 'webview', id: 'kvman.view', name: 'kvman' }] });
     expect(manifest.contributes.commands.map((command) => [command.command, command.icon])).toEqual([
       ['kvman.open', undefined],
+      ['kvman.new', '$(add)'],
       ['kvman.showPages', '$(list-unordered)'],
       ['kvman.openSettings', '$(gear)'],
       ['kvman.openInBrowser', '$(link-external)'],
@@ -33,11 +35,27 @@ describe("the extension's manifest (15 §15.1 and §15.2, ADR 0099, 10 and 14)",
       ['kvman.install', undefined],
     ]);
     const menu = (name: string) => (manifest.contributes.menus[name] ?? []).map((item) => [item.command, item.when]);
-    expect(menu('view/title')).toEqual([['kvman.showPages', 'view == kvman.view'], ['kvman.openSettings', 'view == kvman.view'], ['kvman.openInBrowser', 'view == kvman.view']]);
+    expect(menu('view/title')).toEqual([['kvman.new', 'view == kvman.view && kvman.canNew'], ['kvman.showPages', 'view == kvman.view'], ['kvman.openSettings', 'view == kvman.view'], ['kvman.openInBrowser', 'view == kvman.view']]);
     expect(menu('editor/context')).toEqual([['kvman.addToChat', 'editorHasSelection']]);
     expect(menu('explorer/context')).toEqual([['kvman.addToChat', '!explorerResourceIsFolder']]);
     // A folder's own settings can't name the program the extension runs: only the person's user settings can.
     expect(manifest.contributes.configuration.properties).toEqual({ 'kvman.path': { type: 'string', default: 'kvman', scope: 'machine' } });
+  });
+
+  it('M4.7-H7 M4.7-H8 New shows only while offered, Ctrl+Alt+K adds to the chat, and the description says the side bar', () => {
+    const manifest = manifestSchema.parse(read('manifest.json'));
+    expect(manifest.contributes.menus['commandPalette']).toEqual([{ command: 'kvman.new', when: 'kvman.canNew' }]);
+    expect(manifest.contributes.keybindings).toEqual([{ command: 'kvman.addToChat', key: 'ctrl+alt+k', mac: 'cmd+alt+k', when: 'editorTextFocus' }]);
+    const titles = z.record(z.string(), z.string());
+    const english = titles.parse(read('static/package.nls.json'));
+    const arabic = titles.parse(read('static/package.nls.ar.json'));
+    expect([english['kvman.new.title'], arabic['kvman.new.title']]).toEqual(['New', 'جديد']);
+    expect([english['kvman.description'], arabic['kvman.description']]).toEqual(["kvman in VS Code's side bar, beside your files.", 'kvman في الشريط الجانبي في VS Code، بجانب ملفاتك.']);
+  });
+
+  it('M4.7-H1 the page has no padding of its own, so the frame fills the view', () => {
+    const stylesheet = readFileSync(new URL('../static/page.css', import.meta.url), 'utf8');
+    expect(stylesheet).toMatch(/^body \{ padding: 0; \}$/m);
   });
 
   it('M4.2-E9 the package is at the root version, private, and depends on zod alone', () => {

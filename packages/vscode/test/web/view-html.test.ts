@@ -1,23 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import { translator, type Language } from '../../src/catalog.ts';
 import type { View } from '../../src/session.ts';
-import { viewHtml } from '../../src/view-html.ts';
+import { viewHtml, type PageView } from '../../src/view-html.ts';
 
 const context = (language: Language = 'en') => ({ language, translate: translator(language), place: 'view' as const, cspSource: 'https://web.source', nonce: 'n0nce', scriptUri: 'https://web.source/page/relay.js', styleUri: 'https://web.source/page.css', logFile: '/home/p/.kvman/logs/kvman.log' });
 // The page as an inert template, which loads nothing; its <html> and <body> attributes are read from its text.
-function page(view: View, language: Language = 'en'): DocumentFragment {
+function page(view: PageView, language: Language = 'en'): DocumentFragment {
   const template = document.createElement('template');
   template.innerHTML = viewHtml(view, context(language));
   return template.content;
 }
-const opening = (view: View, tag: string, language: Language = 'en') => new RegExp(`<${tag}([^>]*)>`).exec(viewHtml(view, context(language)))?.[1] ?? '';
+const opening = (view: PageView, tag: string, language: Language = 'en') => new RegExp(`<${tag}([^>]*)>`).exec(viewHtml(view, context(language)))?.[1] ?? '';
 const policyOf = (shown: DocumentFragment) => shown.querySelector('meta[http-equiv="Content-Security-Policy"]')?.getAttribute('content');
 const actions = (shown: DocumentFragment) => [...shown.querySelectorAll('button')].map((button) => [button.dataset['action'], button.textContent]);
 const failed = (code: string, message = 'the message'): View => ({ kind: 'failed', problem: { code, message } });
 
 describe("the view's page (15 §15.4, ADR 0099, 22)", () => {
   it("M4.2-H16 the frame's policy allows only kvman's origin, and the frame may use the clipboard", () => {
-    const frameView: View = { kind: 'frame', url: 'http://127.0.0.1:3737/?workspace=w1&open=parent', port: 3737 };
+    const frameView: PageView = { kind: 'frame', url: 'http://127.0.0.1:3737/?workspace=w1&open=parent', port: 3737 };
     const shown = page(frameView);
     expect(policyOf(shown)).toBe("default-src 'none'; frame-src http://127.0.0.1:3737; script-src 'nonce-n0nce'; style-src https://web.source");
     const frame = shown.querySelector('iframe');

@@ -21,7 +21,7 @@ export type FakeKvman = {
   toast: ReturnType<typeof vi.fn>;
   open: ReturnType<typeof vi.fn<(url: string) => 'opened' | 'blocked'>>;
   // The host of an embedded page (ADR 0100, 14): whether there is one, what was asked of it, and its inserting.
-  host: { embedded: boolean; openFile: ReturnType<typeof vi.fn>; openDiff: ReturnType<typeof vi.fn>; openChange: ReturnType<typeof vi.fn>; insert(text: string): void; handlers(): number };
+  host: { embedded: boolean; openFile: ReturnType<typeof vi.fn>; openDiff: ReturnType<typeof vi.fn>; openChange: ReturnType<typeof vi.fn>; insert(text: string): void; handlers(): number; pressNew(): void; newOffers(): number };
   language: { value: string };
   scope: Ref<'global' | 'workspace'>;
   workspace: Ref<{ id: string; name: string; path: string }>;
@@ -65,6 +65,7 @@ export function createFakeKvman(): FakeKvman {
   const toast = vi.fn();
   const open = vi.fn<(url: string) => 'opened' | 'blocked'>(() => 'opened');
   const inserts = new Set<(text: string) => void>();
+  const newOffers: (() => void)[] = [];
   const host: FakeKvman['host'] = {
     embedded: false,
     openFile: vi.fn(),
@@ -72,6 +73,8 @@ export function createFakeKvman(): FakeKvman {
     openChange: vi.fn(),
     insert: (text) => inserts.forEach((handler) => handler(text)),
     handlers: () => inserts.size,
+    pressNew: () => newOffers.at(-1)?.(),
+    newOffers: () => newOffers.length,
   };
   const hostCalls = {
     get embedded() {
@@ -83,6 +86,13 @@ export function createFakeKvman(): FakeKvman {
     onInsert: (handler: (text: string) => void) => {
       inserts.add(handler);
       return () => void inserts.delete(handler);
+    },
+    offerNew: (handler: () => void) => {
+      newOffers.push(handler);
+      return () => {
+        const index = newOffers.indexOf(handler);
+        if (index >= 0) newOffers.splice(index, 1);
+      };
     },
   };
   const exec = async (name: string, input: unknown): Promise<unknown> => {

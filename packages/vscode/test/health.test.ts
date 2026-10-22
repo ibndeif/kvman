@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
-import { isKvmanAlive } from '../src/health.ts';
+import { healthMilliseconds, isKvmanAlive } from '../src/health.ts';
 
 const servers: Server[] = [];
 
@@ -44,5 +44,14 @@ describe('whether kvman answers (15 §15.5, ADR 0099, 26)', () => {
     expect(alive.requests[0]?.headers.origin).toBeUndefined();
     const sources = fileURLToPath(new URL('../src/', import.meta.url));
     for (const file of readdirSync(sources)) expect(readFileSync(path.join(sources, file), 'utf8'), file).not.toContain('secrets.json');
+  });
+
+  it('M4.7-H6 a kvman that takes the call and never answers counts as gone once its time is up, 2 seconds by default', async () => {
+    const server = createServer(() => undefined);
+    servers.push(server);
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    expect(await isKvmanAlive((server.address() as AddressInfo).port, 50)).toBe(false);
+    expect(healthMilliseconds).toBe(2000);
+    server.closeAllConnections();
   });
 });

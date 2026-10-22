@@ -60,6 +60,7 @@ export function vscodeHost({ folder, view, settings, translate, logFile }: HostP
     openLog: () => void vscode.window.showTextDocument(vscode.Uri.file(logFile)).then(undefined, (error: unknown) => reportProblem(error, translate)),
     openSettings: (url) => settings.open(url),
     sendToFrame: (message) => view.post(message),
+    setCanNew: (value) => void vscode.commands.executeCommand('setContext', 'kvman.canNew', value),
     report: (error) => reportProblem(error, translate),
   };
 }

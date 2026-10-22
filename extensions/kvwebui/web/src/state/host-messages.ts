@@ -2,8 +2,9 @@ import { z } from '@kvman/sdk';
 import { isEmbedded } from './embedded.ts';
 import type { Kvwebui } from './kvwebui.ts';
 
-// What an embedded page takes from its host (plan 06 §6.2, ADR 0100, 11 to 13): the theme, the opening of the pages
-// menu, and text to insert. Only `window.parent` is heard, only while embedded; a message of another shape is ignored.
+// What an embedded page takes from its host (plan 06 §6.2, ADR 0100, 11 to 13, ADR 0101, 5): the theme, the opening of
+// the pages menu, text to insert, and a press of the host's New. Only `window.parent` is heard, only while embedded; a
+// message of another shape is ignored.
 
 const cssValue = z.string().min(1).max(500);
 
@@ -14,7 +15,7 @@ const themeSchema = z.object({
   fonts: z.object({ sans: cssValue, mono: cssValue, size: cssValue }),
 });
 
-const fromHostSchema = z.discriminatedUnion('kind', [themeSchema, z.object({ kind: z.literal('kvman.pages') }), z.object({ kind: z.literal('kvman.insert'), text: z.string().max(1_000_000) })]);
+const fromHostSchema = z.discriminatedUnion('kind', [themeSchema, z.object({ kind: z.literal('kvman.pages') }), z.object({ kind: z.literal('kvman.insert'), text: z.string().max(1_000_000) }), z.object({ kind: z.literal('kvman.new') })]);
 
 export type HostTheme = z.infer<typeof themeSchema>;
 
@@ -69,6 +70,7 @@ export function listenToHost(state: Kvwebui): () => void {
     if (message === undefined) return;
     if (message.kind === 'kvman.theme') applyHostTheme(state, message);
     else if (message.kind === 'kvman.pages') state.host.pagesOpen.value = true;
+    else if (message.kind === 'kvman.new') state.host.newOffers.at(-1)?.();
     else for (const handler of [...state.host.inserts]) handler(message.text);
   };
   window.addEventListener('message', onMessage);

@@ -29,8 +29,9 @@ export class SettingsPanel {
 
   #create(): vscode.WebviewPanel {
     const panel = vscode.window.createWebviewPanel('kvman.settings', this.#text.translate('vscode.settingsTitle'), vscode.ViewColumn.Active, { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: [this.#extensionUri] });
-    onPageMessage(panel.webview, this.#message);
+    const messages = onPageMessage(panel.webview, this.#message);
     panel.onDidDispose(() => {
+      messages.dispose();
       this.#panel = undefined;
       this.#url = undefined;
     });

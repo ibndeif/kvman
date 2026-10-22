@@ -63,6 +63,8 @@ export type KvmanHost = {
   openChange(path: string): void;
   /** Gets each text the host inserts; returns the handler's removal. */
   onInsert(handler: (text: string) => void): () => void;
+  /** Offers the host's New button while embedded; the latest offer's handler runs on each press. Returns the offer's removal. */
+  offerNew(handler: () => void): () => void;
 };
 
 /** The object kvwebui gives a custom component through `inject('kvman')`. */

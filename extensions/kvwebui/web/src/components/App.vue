@@ -13,10 +13,15 @@ const i18n = useI18nState();
 const { booted, bootProblem } = state;
 const releaseLinks = catchNewWindowLinks(document);
 const releaseHost = listenToHost(state);
-// An embedded page tells its host its workspace once booted and after each switch (ADR 0100, 11).
+// An embedded page tells its host its workspace once booted and after each switch (ADR 0100, 11), and that kvman stopped
+// answering, once until a call reaches it again (ADR 0101, 3).
 watch([booted, state.workspace], ([isBooted, workspaceId]) => {
   if (isBooted) postToHost({ kind: 'kvman.state', workspaceId });
 });
+watch(state.online, (online) => {
+  if (!online) postToHost({ kind: 'kvman.lost' });
+});
+watch(state.host.embedded, (embedded) => document.documentElement.classList.toggle('kvwebui-embedded', embedded), { immediate: true });
 onMounted(() => {
   void boot(state, i18n);
 });

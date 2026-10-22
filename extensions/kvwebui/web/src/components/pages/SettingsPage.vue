@@ -19,7 +19,7 @@ const settings = computed(() => state.settings.value.filter((setting) => setting
 <template>
   <div class="flex flex-col gap-3.5">
     <div class="flex flex-col gap-1.5">
-      <h1 class="m-0 text-[26px] font-semibold tracking-tight">{{ t('kvwebui.pages.settings') }}</h1>
+      <h1 class="m-0 text-[26px] font-semibold tracking-tight in-[.kvwebui-embedded]:text-xl">{{ t('kvwebui.pages.settings') }}</h1>
       <p class="m-0 text-muted">
         {{ t('kvwebui.settings.intro') }}
         <RouterLink to="/kvwebui/extensions" class="font-medium text-primary" data-test="settings-extensions">{{ t('kvwebui.settings.extensionsLink') }}</RouterLink>

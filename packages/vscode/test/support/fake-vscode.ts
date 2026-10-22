@@ -9,7 +9,7 @@ function emitter<Event>() {
     listeners.add(listener);
     return { dispose: () => listeners.delete(listener) };
   };
-  return { on, fire: (event: Event) => listeners.forEach((listener) => listener(event)) };
+  return { on, fire: (event: Event) => listeners.forEach((listener) => listener(event)), count: () => listeners.size };
 }
 
 export class Uri {
@@ -85,6 +85,8 @@ function webviewPart(posts: unknown[], messages: ReturnType<typeof emitter<unkno
 
 const message = emitter<unknown>();
 const visibility = emitter<undefined>();
+const viewDisposed = emitter<undefined>();
+const panelDisposed = emitter<undefined>();
 const taskEnds = emitter<{ execution: { task: Task }; exitCode: number | undefined }>();
 
 const viewPosts: unknown[] = [];
@@ -94,7 +96,7 @@ function webviewView() {
     visible: true,
     webview: webviewPart(viewPosts, message),
     onDidChangeVisibility: visibility.on,
-    onDidDispose: () => ({ dispose: () => undefined }),
+    onDidDispose: viewDisposed.on,
   };
   return view;
 }
@@ -128,6 +130,11 @@ export const fake = {
   post: (sent: unknown) => message.fire(sent),
   /** The view is shown again. */
   show: () => visibility.fire(undefined),
+  /** VS Code disposes the view, and the person closes the Settings tab. */
+  disposeView: () => viewDisposed.fire(undefined),
+  closePanel: () => panelDisposed.fire(undefined),
+  /** How many listeners the view's and the Settings tab's events have. */
+  listeners: () => ({ viewMessages: message.count(), visibility: visibility.count(), panelMessages: fake.panelMessages.count() }),
   /** A task ends: another extension's first, then the last one this extension ran. */
   endTask: (exitCode: number | undefined) => {
     taskEnds.fire({ execution: { task: new Task({ type: 'shell' }, 1, 'other', 'other', new ShellExecution('make', [])) }, exitCode: 0 });
@@ -194,7 +201,7 @@ export const window = {
       },
     };
     fake.panels.push(panel);
-    return { ...panel, get webview() { return panel.webview; }, reveal: () => void (panel.reveals += 1), onDidDispose: () => ({ dispose: () => undefined }) };
+    return { ...panel, get webview() { return panel.webview; }, reveal: () => void (panel.reveals += 1), onDidDispose: panelDisposed.on };
   },
   get activeTextEditor() {
     return fake.editor;

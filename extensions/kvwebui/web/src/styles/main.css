@@ -132,6 +132,21 @@ body,
   block-size: 100%;
 }
 
+/* An embedded page sits in a narrow host (ADR 0101, 12): compact spaces for extensions, thin scrollbars in the muted
+   color, and a document that never scrolls itself, since the page's own area scrolls. */
+.kvwebui-embedded {
+  --kv-space-sm: 6px;
+  --kv-space-md: 10px;
+  --kv-space-lg: 12px;
+  --kv-radius: 8px;
+  overflow: hidden;
+}
+.kvwebui-embedded,
+.kvwebui-embedded * {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--kvwebui-muted) 45%, transparent) transparent;
+}
+
 body {
   background: var(--kvwebui-ground);
   color: var(--kvwebui-ink);

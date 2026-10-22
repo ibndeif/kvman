@@ -502,3 +502,24 @@ ADR 0099.
   - `kvman.openFile` shows the file at its line; `kvman.openDiff` opens the diff of the file against `after` with the title, and of an empty document when the file is missing; `kvman.openChange` runs `git.openChange`, and a failure shows the message; a relative path, or another shape, opens nothing.
   - "Add to kvman chat" with a selection sends the path, the lines, and the fenced code; with a file, its path; with no frame yet, it starts kvman and sends once `kvman.state` comes.
   - With VS Code in Arabic the new texts are Arabic.
+
+### M4.7 The VS Code view, reviewed
+
+- **Read:** `15`; `06` §6.2 (the embedded page, the host messages), §6.4 (`kvman.host`); `08` §8.7 (in a narrow host); ADR 0101.
+- **Build:**
+  - in `packages/vscode`: the extension's messages known by the page's origin, no page padding, each start's own frame, `kvman.lost` and `kvman.actions`, the title bar's New with `kvman.canNew`, the health check's 2 seconds, "Add to kvman chat" for the open file and on Ctrl+Alt+K, each webview's subscriptions disposed with it, and the manifest's description;
+  - in kvwebui: the `kvwebui-embedded` class and its compact look, the page as the containing block, the pages menu's panels and Language row, panels as a sheet, the status line, `kvman.lost` with no OFFLINE toast, `kvman.actions` and `kvman.new`, and identical toasts once;
+  - `kvman.host.offerNew` in the injected object and `@kvman/sdk/web`;
+  - in kvcoder: the conversation's New offer, the compact header without New chat while embedded, and the composer at side-bar width;
+  - the `en` and `ar` texts, the `package.nls` title, and the changesets;
+  - last, the by-hand check in a real VS Code, as in M4.2.
+- **Done when:**
+  - The view's page passes `kvman.pages`, `kvman.new`, and `kvman.insert` from its own origin on to the frame, and drops them from any other origin; its `body` has no padding.
+  - A frame's `kvman.actions` with `new: true` shows the New button, and a press sends `kvman.new` to the frame, whose latest offer's handler runs; a lost frame hides the button.
+  - In a window that doesn't own kvman, `kvman.lost` with kvman gone starts kvman again and loads a new frame; with kvman answering it changes nothing; a `running` line of the same start at the same address keeps the frame ready.
+  - A health check that gets no answer within 2 seconds counts as kvman gone.
+  - "Add to kvman chat" with no selection adds the open editor's file; Ctrl+Alt+K runs it in an editor.
+  - The embedded pages menu lists the nav items, the panels, Settings, Extensions, and Language; a language pick saves `kernel.language` and applies it; a panel pick opens its sheet, whose close button closes it.
+  - The embedded status line shows the contributed status items and, while kvman doesn't answer, the reconnecting text; an OFFLINE Problem posts `kvman.lost` once and shows no toast while embedded.
+  - An identical toast that is open isn't added again.
+  - While embedded, kvcoder's conversation offers New, which opens the Chat page with no chat, and its compact header has no New chat button.

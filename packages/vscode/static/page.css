@@ -1,4 +1,6 @@
 html, body { block-size: 100%; margin: 0; }
+/* VS Code gives a webview's body inline padding; the frame fills the view (ADR 0101, 7). */
+body { padding: 0; }
 body { background: var(--vscode-sideBar-background); color: var(--vscode-foreground); font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); }
 iframe { display: block; border: 0; inline-size: 100%; block-size: 100vh; }
 .message { padding-block: 16px; padding-inline: 16px; display: flex; flex-direction: column; gap: 8px; }

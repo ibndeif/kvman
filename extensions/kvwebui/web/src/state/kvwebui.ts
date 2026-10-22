@@ -2,12 +2,13 @@ import type { Json, PresetState, Problem, Workspace } from '@kvman/sdk';
 import { inject, reactive, ref, shallowRef, type InjectionKey, type Ref, type ShallowRef } from 'vue';
 import type { Router } from 'vue-router';
 import { createApi, type Api } from '../api/client.ts';
+import { offlineProblem } from '../api/offline.ts';
 import type { ExtensionInfo, Health, SettingInfo } from '../api/kernel.ts';
 import { problemKey, problemParams } from '../api/problem-text.ts';
 import { emptyRegistry, type Registry } from '../contributions/registry.ts';
 import { createComponents, type ComponentLoader, type Components } from './components.ts';
 import { createConfirmations, type Confirmations } from './confirmations.ts';
-import { isEmbedded } from './embedded.ts';
+import { isEmbedded, type HostHandlers } from './embedded.ts';
 import type { HostTheme } from './host-messages.ts';
 import { createJobStreams, type JobStreams } from './job-streams.ts';
 import { tabMemory } from './tab-memory.ts';
@@ -26,6 +27,7 @@ export type Kvwebui = {
   workspace: Ref<string>;
   workspaces: Ref<Workspace[]>;
   health: ShallowRef<Health | undefined>;
+  // False from a call that found kvman not answering until a call reaches it again.
   online: Ref<boolean>;
   settings: ShallowRef<SettingInfo[]>;
   extensions: ShallowRef<ExtensionInfo[]>;
@@ -52,9 +54,9 @@ export type Kvwebui = {
   onWorkspaceGone: (workspaceId: string) => void;
   // Loads the page again, once kvman has restarted (ADR 0024, 9).
   reload: () => void;
-  // The host of an embedded page (plan 06 §6.2, ADR 0100): whether the page is embedded, the host's theme, the pages
-  // menu, and the handlers of inserted text.
-  host: { embedded: Ref<boolean>; theme: ShallowRef<HostTheme | undefined>; pagesOpen: Ref<boolean>; inserts: Set<(text: string) => void> };
+  // The host of an embedded page (plan 06 §6.2, ADR 0100, ADR 0101): whether the page is embedded, the host's theme, the
+  // pages menu, the handlers of inserted text, and the New offers.
+  host: HostHandlers & { embedded: Ref<boolean>; theme: ShallowRef<HostTheme | undefined>; pagesOpen: Ref<boolean> };
 };
 
 export const kvwebuiKey: InjectionKey<Kvwebui> = Symbol('kvwebui');
@@ -83,6 +85,7 @@ export function createState(router: Router, fetcher: typeof fetch, loader: Compo
   const api = createApi({
     fetch: fetcher,
     workspaceId: () => workspace.value,
+    onReach: (reached) => (state.online.value = reached),
     onProblem: (problem) => {
       if (problem.code === 'NOT_FOUND' && problem.params?.['workspaceId'] === workspace.value && workspace.value !== homeWorkspaceId) state.onWorkspaceGone(workspace.value);
     },
@@ -114,7 +117,7 @@ export function createState(router: Router, fetcher: typeof fetch, loader: Compo
     narrow: watchNarrow(),
     onWorkspaceGone: () => undefined,
     reload,
-    host: { embedded: ref(isEmbedded()), theme: shallowRef(), pagesOpen: ref(false), inserts: new Set() },
+    host: { embedded: ref(isEmbedded()), theme: shallowRef(), pagesOpen: ref(false), inserts: new Set(), newOffers: [] },
   };
   return state;
 }
@@ -127,6 +130,8 @@ export function settingValue(state: Kvwebui, key: string): Json | undefined {
   return state.settings.value.find((setting) => setting.key === key)?.value;
 }
 
+// While embedded, kvman not answering is the status line's to say, and the host starts it again (ADR 0101, 3).
 export function showProblem(state: Kvwebui, problem: Problem, hint?: string): void {
+  if (state.host.embedded.value && problem.code === offlineProblem.code) return;
   state.toasts.show({ text: problemKey(problem), params: problemParams(problem), level: 'error', ...(hint === undefined ? {} : { hint }) });
 }

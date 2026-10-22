@@ -103,13 +103,29 @@ describe("the view's relay (15 §15.4, ADR 0099, 23)", () => {
     expect(toFrame.mock.calls).toEqual([[{ kind: 'kvman.pages' }, 'http://127.0.0.1:3737'], [{ kind: 'kvman.insert', text: 'hello' }, 'http://127.0.0.1:3737']]);
   });
 
-  it("M4.6-E2 an extension message from another window, such as an artifact's frame inside kvman's, or another origin, is dropped", async () => {
+  it("M4.7-H1 the extension's kvman.pages, kvman.new, and kvman.insert at the page's own origin go to the frame, from whichever window VS Code posts them", async () => {
+    await loadPage('<iframe src="about:blank"></iframe>', 'http://127.0.0.1:3911');
+    const toFrame = vi.spyOn(frameWindow(), 'postMessage').mockImplementation(() => undefined);
+    const own = window.location.origin;
+    send({ from: 'extension', message: { kind: 'kvman.pages' } }, own, null);
+    send({ from: 'extension', message: { kind: 'kvman.new' } }, own, window);
+    send({ from: 'extension', message: { kind: 'kvman.insert', text: 'hello' } }, own, window.parent);
+    expect(toFrame.mock.calls).toEqual([
+      [{ kind: 'kvman.pages' }, 'http://127.0.0.1:3911'],
+      [{ kind: 'kvman.new' }, 'http://127.0.0.1:3911'],
+      [{ kind: 'kvman.insert', text: 'hello' }, 'http://127.0.0.1:3911'],
+    ]);
+  });
+
+  it("M4.7-E1 an extension message at another origin, such as kvman's, an artifact's, or a dev server's, is dropped", async () => {
     await loadPage('<iframe src="about:blank"></iframe><iframe name="artifact" src="about:blank"></iframe>', 'http://127.0.0.1:3737');
     const toFrame = vi.spyOn(frameWindow(), 'postMessage').mockImplementation(() => undefined);
     const artifact = document.querySelectorAll('iframe')[1]?.contentWindow ?? null;
-    send({ from: 'extension', message: { kind: 'kvman.insert', text: 'injected' } }, window.location.origin, artifact);
-    send({ from: 'extension', message: { kind: 'kvman.insert', text: 'injected' } }, 'http://127.0.0.1:5173', window.parent);
-    send({ from: 'extension', message: { kind: 'kvman.insert', text: 'injected' } }, window.location.origin, null);
+    const injected = { from: 'extension', message: { kind: 'kvman.insert', text: 'injected' } };
+    send(injected, 'http://127.0.0.1:3737', artifact);
+    send(injected, 'null', artifact);
+    send(injected, 'http://127.0.0.1:5173', window.parent);
     expect(toFrame).not.toHaveBeenCalled();
+    expect(posted).toEqual([]);
   });
 });

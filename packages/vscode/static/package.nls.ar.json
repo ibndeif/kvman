@@ -1,6 +1,7 @@
 {
-  "kvman.description": "kvman في الشريط الجانبي الثانوي في VS Code، بجانب ملفاتك.",
+  "kvman.description": "kvman في الشريط الجانبي في VS Code، بجانب ملفاتك.",
   "kvman.open.title": "افتح",
+  "kvman.new.title": "جديد",
   "kvman.openInBrowser.title": "افتح في المتصفح",
   "kvman.install.title": "ثبّت kvman",
   "kvman.path.description": "برنامج `kvman` الذي تشغّله الإضافة. يُبحث عنه في PATH افتراضيًا.",

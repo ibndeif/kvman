@@ -154,5 +154,6 @@
   "kvwebui.workspacePicker.title": "منتقي مساحة العمل",
   "kvwebui.workspacePicker.description": "هل يُظهر الشريط العلوي منتقي مساحة العمل.",
   "kvwebui.settings.portThisRun": "يستمع هذا التشغيل على المنفذ {port}.",
-  "kvwebui.pages.menu": "الصفحات"
+  "kvwebui.pages.menu": "الصفحات",
+  "kvwebui.host.reconnecting": "لا يستجيب kvman. تجري إعادة الاتصال…"
 }

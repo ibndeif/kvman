@@ -22,7 +22,7 @@ const state = useKvwebui();
 const { t } = useI18n();
 const viewText = useViewText();
 const gaps = { sm: 'gap-2', md: 'gap-4', lg: 'gap-6' };
-const headings = { 1: 'text-[26px] font-semibold tracking-tight', 2: 'text-base font-semibold', 3: 'text-sm font-semibold' };
+const headings = { 1: 'text-[26px] font-semibold tracking-tight in-[.kvwebui-embedded]:text-xl', 2: 'text-base font-semibold', 3: 'text-sm font-semibold' };
 </script>
 
 <template>

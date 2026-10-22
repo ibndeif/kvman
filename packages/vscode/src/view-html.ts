@@ -6,6 +6,9 @@ import type { Action, View } from './session.ts';
 
 // The page is the side bar's view or the Settings tab, whose colors differ (ADR 0100, 24).
 export type Place = 'view' | 'panel';
+// What a page shows: one of the extension's own states, or a frame of kvman at an address (the view's, or the Settings
+// tab's).
+export type PageView = Exclude<View, { kind: 'frame' }> | { kind: 'frame'; url: string; port: number };
 export type PageContext = { language: Language; translate: Translate; place: Place; cspSource: string; nonce: string; scriptUri: string; styleUri: string; logFile: string };
 
 type Line = { text: string; role: 'title' | 'text' | 'code' };
@@ -64,7 +67,7 @@ function policy(context: PageContext, port: number | undefined): string {
 }
 
 /** The page for a view: its policy, its body, and the relay script. */
-export function viewHtml(view: View, context: PageContext): string {
+export function viewHtml(view: PageView, context: PageContext): string {
   const framed = view.kind === 'frame';
   const origin = framed ? ` data-origin="http://127.0.0.1:${String(view.port)}"` : '';
   const place = ` data-place="${context.place}"`;

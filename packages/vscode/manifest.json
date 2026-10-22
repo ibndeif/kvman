@@ -57,6 +57,12 @@
         "category": "kvman"
       },
       {
+        "command": "kvman.new",
+        "title": "%kvman.new.title%",
+        "category": "kvman",
+        "icon": "$(add)"
+      },
+      {
         "command": "kvman.showPages",
         "title": "%kvman.showPages.title%",
         "category": "kvman",
@@ -86,7 +92,18 @@
       }
     ],
     "menus": {
+      "commandPalette": [
+        {
+          "command": "kvman.new",
+          "when": "kvman.canNew"
+        }
+      ],
       "view/title": [
+        {
+          "command": "kvman.new",
+          "when": "view == kvman.view && kvman.canNew",
+          "group": "navigation@0"
+        },
         {
           "command": "kvman.showPages",
           "when": "view == kvman.view",
@@ -118,6 +135,14 @@
         }
       ]
     },
+    "keybindings": [
+      {
+        "command": "kvman.addToChat",
+        "key": "ctrl+alt+k",
+        "mac": "cmd+alt+k",
+        "when": "editorTextFocus"
+      }
+    ],
     "configuration": {
       "title": "kvman",
       "properties": {

@@ -37,7 +37,7 @@ const changes = computed(() => pending.value.starting.length + pending.value.rem
     />
     <div class="flex flex-wrap items-end gap-4">
       <div class="flex grow flex-col gap-1.5">
-        <h1 class="m-0 text-[26px] font-semibold tracking-tight">{{ t('kvwebui.pages.extensions') }}</h1>
+        <h1 class="m-0 text-[26px] font-semibold tracking-tight in-[.kvwebui-embedded]:text-xl">{{ t('kvwebui.pages.extensions') }}</h1>
         <p class="m-0 text-muted">{{ t('kvwebui.extensions.intro', { count: state.extensions.value.length, preset: state.health.value?.preset ?? '' }) }}</p>
       </div>
       <label class="flex h-9 w-65 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-muted">

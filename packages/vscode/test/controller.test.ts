@@ -25,6 +25,7 @@ function world() {
     openLog: vi.fn(),
     openSettings: vi.fn(),
     sendToFrame: vi.fn(),
+    setCanNew: vi.fn(),
     report: vi.fn(),
   };
   const controller = new Controller(new Session({ remote: false, extensionVersion: '0.4.7', windows: false }), host);
@@ -42,7 +43,7 @@ describe('the controller (15 §15.3 to §15.5, ADR 0099)', () => {
     controller.happen({ kind: 'needed' });
     await vi.waitFor(() => expect(views.at(-1)).toEqual({ kind: 'starting' }));
     run(0).handlers.line(runningLine());
-    expect(views.at(-1)).toEqual({ kind: 'frame', url: 'http://127.0.0.1:3737/?workspace=w1&embed=parent', port: 3737 });
+    expect(views.at(-1)).toEqual({ kind: 'frame', url: 'http://127.0.0.1:3737/?workspace=w1&embed=parent', port: 3737, start: 1 });
     controller.happen({ kind: 'needed' });
     run(0).handlers.line(JSON.stringify({ kind: 'restarting' }));
     expect(views.filter((view) => view.kind === 'frame')).toHaveLength(1);
@@ -89,7 +90,7 @@ describe('the controller (15 §15.3 to §15.5, ADR 0099)', () => {
     run(0).handlers.exited();
     expect(views.at(-1)).toEqual({ kind: 'starting' });
     run(1).handlers.line(runningLine());
-    expect(views.at(-1)).toEqual({ kind: 'frame', url: 'http://127.0.0.1:3737/?workspace=w1&embed=parent', port: 3737 });
+    expect(views.at(-1)).toEqual({ kind: 'frame', url: 'http://127.0.0.1:3737/?workspace=w1&embed=parent', port: 3737, start: 2 });
   });
 
   it('M4.2-H12 a joined window that finds no kvman starts it again', async () => {

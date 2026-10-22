@@ -127,6 +127,7 @@ a.kvc-button { text-decoration: none; color: inherit; }
 /* A short list to pick from is as wide as its entries, inside what holds it (ADR 0071, 1 and 5). */
 .kvc-choices { inline-size: max-content; min-inline-size: 10rem; max-inline-size: min(22rem, calc(100cqw - 2 * var(--kv-space-md))); max-block-size: 18rem; overflow-y: auto; gap: 2px; }
 .kvc-choices > .kvc-model { flex: 0 0 auto; }
+.kvc-popover-start { inset-inline-start: auto; inset-inline-end: 0; }
 .kvc-recovery { display: flex; align-items: center; flex-wrap: wrap; gap: var(--kv-space-sm); }
 .kvc-recovery .kvc-popover { inset-block-start: auto; inset-block-end: calc(100% + 6px); }
 .kvc-search { display: flex; align-items: center; gap: 8px; padding-inline: 10px; border: 1px solid var(--kv-color-border); border-radius: 10px; }
@@ -245,6 +246,17 @@ a.kvc-button { text-decoration: none; color: inherit; }
 .kvc-composer-row .kvc-picker > .kvc-button { max-inline-size: 100%; }
 .kvc-composer-row .kvc-picker-label { min-inline-size: 0; }
 .kvc-composer .kvc-popover { inset-block-start: auto; inset-block-end: calc(100% + 6px); }
+/* At side-bar width the pickers keep their size without their chevrons, the send box and its buttons are tighter, and
+   the "Enter sends" hint only keeps its place (ADR 0101, 15). */
+@container kvc-workspace (max-inline-size: 30rem) {
+  .kvc-composer-row { flex-wrap: wrap; gap: 4px; }
+  .kvc-composer-row .kvc-picker { flex: none; }
+  .kvc-composer-row .kvc-button { min-block-size: 32px; padding-inline: 8px; }
+  .kvc-composer-row .kvc-picker-chevron { display: none; }
+  .kvc-composer-hint { visibility: hidden; }
+  .kvc-composer { padding-block: 8px 10px; padding-inline: var(--kv-space-md); }
+  .kvc-box { padding: 8px; border-radius: 12px; }
+}
 .kvc-slash { position: absolute; inset-inline: 0; inset-block-end: calc(100% + 6px); z-index: 20; display: flex; flex-direction: column; padding: 6px; border: 1px solid var(--kv-color-border); border-radius: 12px; background: var(--kv-color-surface); box-shadow: 0 12px 32px rgb(0 0 0 / 0.14); }
 .kvc-slash-row { display: flex; align-items: baseline; gap: 12px; padding-block: 7px; padding-inline: 10px; border-radius: 8px; cursor: pointer; }
 .kvc-slash-row[data-active='true'] { background: var(--kv-color-background); }

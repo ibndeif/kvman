@@ -1,10 +1,10 @@
-// What the person asks of the frame (plan 15 §15.2, §15.4, and §15.6; ADR 0100, 22, 23, and 28): Open in browser and
-// Settings need kvman's port and the frame's workspace (its latest `kvman.state`, else the start workspace); the pages
-// menu and inserted text need a frame that has said `kvman.state`. What can't be done yet waits, and each new frame
-// waits for its own `kvman.state`.
+// What the person asks of the frame (plan 15 §15.2, §15.4, and §15.6; ADR 0100, 22, 23, and 28; ADR 0101, 5): Open in
+// browser and Settings need kvman's port and the frame's workspace (its latest `kvman.state`, else the start workspace);
+// the pages menu, inserted text, and New need a frame that has said `kvman.state`. What can't be done yet waits, and each
+// new frame waits for its own `kvman.state`. The New button shows while a ready frame offers it.
 
-export type FrameMessage = { kind: 'kvman.pages' } | { kind: 'kvman.insert'; text: string };
-export type FrameEffect = { kind: 'openExternal'; url: string } | { kind: 'openSettings'; url: string } | { kind: 'sendToFrame'; message: FrameMessage };
+export type FrameMessage = { kind: 'kvman.pages' } | { kind: 'kvman.new' } | { kind: 'kvman.insert'; text: string };
+export type FrameEffect = { kind: 'openExternal'; url: string } | { kind: 'openSettings'; url: string } | { kind: 'sendToFrame'; message: FrameMessage } | { kind: 'setCanNew'; value: boolean };
 export type PageRequest = 'browser' | 'settings';
 
 export class FrameRequests {
@@ -12,26 +12,37 @@ export class FrameRequests {
   #startWorkspace = 'home';
   #workspace: string | undefined;
   #ready = false;
+  #offersNew = false;
+  #canNew = false;
   #asked = new Set<PageRequest>();
   #inserts: string[] = [];
 
-  /** A `running` or `joined` line framed kvman at `url`. */
-  shown(url: string, port: number): void {
+  /** A `running` or `joined` line framed kvman at `url` in a new frame. */
+  shown(url: string, port: number): FrameEffect[] {
     this.#port = port;
     this.#startWorkspace = new URL(url).searchParams.get('workspace') ?? 'home';
-    this.#ready = false;
+    return this.lost();
   }
 
   /** The frame said its workspace: the inserted text that waited is sent. */
   stated(workspaceId: string): FrameEffect[] {
     this.#workspace = workspaceId;
     this.#ready = true;
-    return this.#inserts.splice(0).map((text) => ({ kind: 'sendToFrame', message: { kind: 'kvman.insert', text } }));
+    const inserts = this.#inserts.splice(0).map((text): FrameEffect => ({ kind: 'sendToFrame', message: { kind: 'kvman.insert', text } }));
+    return [...inserts, ...this.#newButton()];
   }
 
-  /** kvman is gone, so the frame takes nothing until a new one says its workspace. */
-  lost(): void {
+  /** kvman is gone, or a new frame is loading, so the frame takes nothing until it says its workspace. */
+  lost(): FrameEffect[] {
     this.#ready = false;
+    this.#offersNew = false;
+    return this.#newButton();
+  }
+
+  /** The frame said whether it offers New. */
+  offers(offersNew: boolean): FrameEffect[] {
+    this.#offersNew = offersNew;
+    return this.#newButton();
   }
 
   ask(request: PageRequest): void {
@@ -61,7 +72,19 @@ export class FrameRequests {
     return this.#ready ? [{ kind: 'sendToFrame', message: { kind: 'kvman.pages' } }] : [];
   }
 
+  pressNew(): FrameEffect[] {
+    return this.#canNew ? [{ kind: 'sendToFrame', message: { kind: 'kvman.new' } }] : [];
+  }
+
   get ready(): boolean {
     return this.#ready;
+  }
+
+  // The button's state changes only when a ready frame starts or stops offering New.
+  #newButton(): FrameEffect[] {
+    const canNew = this.#ready && this.#offersNew;
+    if (canNew === this.#canNew) return [];
+    this.#canNew = canNew;
+    return [{ kind: 'setCanNew', value: canNew }];
   }
 }

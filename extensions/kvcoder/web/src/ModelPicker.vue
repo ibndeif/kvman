@@ -97,6 +97,8 @@ function pickHighlighted(): void {
   else pick(models.value[highlight.value - first.value]?.id);
 }
 
+// A press or the focus outside the picker closes it, so opening another menu from the keyboard closes this one (ADR 0101,
+// 15).
 function outside(event: Event): void {
   if (event.target instanceof Node && !trigger.value?.parentElement?.contains(event.target)) open.value = false;
 }
@@ -105,14 +107,17 @@ watch(query, () => (highlight.value = 0));
 watch(open, (isOpen) => {
   if (isOpen) {
     document.addEventListener('pointerdown', outside);
+    document.addEventListener('focusin', outside);
     frame = requestAnimationFrame(follow);
   } else {
     document.removeEventListener('pointerdown', outside);
+    document.removeEventListener('focusin', outside);
     cancelAnimationFrame(frame);
   }
 });
 onBeforeUnmount(() => {
   document.removeEventListener('pointerdown', outside);
+  document.removeEventListener('focusin', outside);
   cancelAnimationFrame(frame);
 });
 </script>
@@ -120,7 +125,7 @@ onBeforeUnmount(() => {
 <template>
   <div class="kvc-picker">
     <button ref="trigger" type="button" class="kvc-button" aria-haspopup="listbox" :aria-expanded="open" :aria-label="`${kvman.t('kvcoder.ui.model')}: ${label}`" :disabled="props.disabled" :title="label" data-test="model-picker" @click="open ? close() : show()">
-      <component :is="props.icon" v-if="props.icon" :size="16" class="kvc-picker-icon" aria-hidden="true" /><span class="kvc-picker-label">{{ label }}</span><ChevronDown :size="16" aria-hidden="true" />
+      <component :is="props.icon" v-if="props.icon" :size="16" class="kvc-picker-icon" aria-hidden="true" /><span class="kvc-picker-label">{{ label }}</span><ChevronDown :size="16" class="kvc-picker-chevron" aria-hidden="true" />
     </button>
     <div v-if="open" ref="panel" class="kvc-popover" data-test="model-popover" @keydown.esc.stop="close">
       <label class="kvc-search"><Search :size="16" aria-hidden="true" />

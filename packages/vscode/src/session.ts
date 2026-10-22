@@ -3,7 +3,8 @@ import { trustAnswer, type Line, type LineProblem, type TrustVersion } from './l
 import { isNewEnough, requiredVersion, versionIn } from './version.ts';
 
 // What the extension decides (plan 15 §15.3 to §15.5): each happening gives the view to show and the effects to carry
-// out. Nothing here touches VS Code or a process, so every decision is tested on its own.
+// out. Nothing here touches VS Code or a process, so every decision is tested on its own. A frame view carries the
+// number of the start that made it, so each start's frame is loaded afresh (ADR 0101, 8).
 
 export type Action = 'install' | 'update' | 'start' | 'showLog' | 'nodejs';
 
@@ -17,7 +18,7 @@ export type View =
   | { kind: 'installFailed'; update: boolean }
   | { kind: 'failed'; problem: LineProblem }
   | { kind: 'stopped' }
-  | { kind: 'frame'; url: string; port: number };
+  | { kind: 'frame'; url: string; port: number; start: number };
 
 export type Effect =
   | { kind: 'checkVersion' }
@@ -35,6 +36,9 @@ export type Happening =
   | { kind: 'stated'; workspaceId: string }
   | { kind: 'insert'; text: string }
   | { kind: 'pages' }
+  | { kind: 'new' }
+  | { kind: 'actions'; offersNew: boolean }
+  | { kind: 'lost' }
   | { kind: 'versionAnswered'; output: string | undefined }
   | { kind: 'installEnded'; code: number | undefined }
   | { kind: 'line'; line: Line }
@@ -61,6 +65,7 @@ export class Session {
   #owner = false;
   #versionChecked = false;
   #lastInstallUpdate = false;
+  #starts = 0;
   readonly #frame = new FrameRequests();
   readonly #options: SessionOptions;
 
@@ -88,6 +93,12 @@ export class Session {
         return [...this.#frame.insert(happening.text), ...(this.#frame.ready ? [] : this.#needed())];
       case 'pages':
         return this.#frame.pages();
+      case 'new':
+        return this.#frame.pressNew();
+      case 'actions':
+        return this.#frame.offers(happening.offersNew);
+      case 'lost':
+        return this.#lost();
       case 'versionAnswered':
         return this.#versionAnswered(happening.output);
       case 'installEnded':
@@ -121,6 +132,12 @@ export class Session {
     return [];
   }
 
+  // The frame found kvman gone (ADR 0101, 3). A window that owns kvman learns that from its own process.
+  #lost(): Effect[] {
+    const view = this.#view;
+    return view.kind === 'frame' && !this.#owner ? [{ kind: 'checkHealth', port: view.port }] : [];
+  }
+
   #versionAnswered(output: string | undefined): Effect[] {
     const version = output === undefined ? undefined : versionIn(output);
     if (version === undefined) return this.#show({ kind: 'missing' });
@@ -141,17 +158,24 @@ export class Session {
         return [{ kind: 'askTrust', versions: line.versions }];
       case 'running':
       case 'joined':
-        this.#owner = line.kind === 'running';
-        this.#frame.shown(line.url, line.port);
-        this.#view = { kind: 'frame', url: frameAddress(line.url), port: line.port };
-        return this.#frame.flush();
+        return this.#framed(line.kind === 'running', line.url, line.port);
       case 'restarting':
         return [];
       case 'failed':
         this.#owner = false;
-        this.#frame.lost();
-        return this.#show({ kind: 'failed', problem: line.problem });
+        return [...this.#frame.lost(), ...this.#show({ kind: 'failed', problem: line.problem })];
     }
+  }
+
+  // A line of the start that made the frame, at its address, keeps the frame and whether it is ready (ADR 0101, 8).
+  #framed(owner: boolean, url: string, port: number): Effect[] {
+    this.#owner = owner;
+    const view: View = { kind: 'frame', url: frameAddress(url), port, start: this.#starts };
+    const current = this.#view;
+    const kept = current.kind === 'frame' && current.url === view.url && current.start === view.start;
+    const shown = kept ? [] : this.#frame.shown(url, port);
+    this.#view = view;
+    return [...shown, ...this.#frame.flush()];
   }
 
   #pressed(action: Action): Effect[] {
@@ -173,16 +197,15 @@ export class Session {
   #start(): Effect[] {
     this.#versionChecked = true;
     this.#owner = false;
-    this.#frame.lost();
+    this.#starts += 1;
     this.#view = { kind: 'starting' };
-    return [{ kind: 'start' }];
+    return [...this.#frame.lost(), { kind: 'start' }];
   }
 
   #stopped(effects: Effect[]): Effect[] {
     this.#owner = false;
-    this.#frame.lost();
     this.#view = { kind: 'stopped' };
-    return effects;
+    return [...this.#frame.lost(), ...effects];
   }
 
   #show(view: View): Effect[] {

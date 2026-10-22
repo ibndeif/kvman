@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ArrowDown, Plus } from '@lucide/vue';
-import { computed, nextTick, ref, useTemplateRef, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, useTemplateRef, watch } from 'vue';
 import type { Json } from '@kvman/sdk';
 import ArtifactPanel from './ArtifactPanel.vue';
 import ChatsDrawer from './ChatsDrawer.vue';
@@ -63,6 +63,9 @@ const running = computed(() => session.value?.status === 'running');
 // When the running turn started, for the header's time (ADR 0018, 9).
 const runningSince = computed(() => (running.value && turns.value[0]?.outcome === undefined ? turns.value[0]?.startedAt : undefined));
 const pending = computed(() => (session.value?.status === 'waiting' ? (turns.value[0]?.pending ?? []) : []));
+// While embedded, the host's New button opens the Chat page with no chat, in place of the header's (ADR 0101, 5).
+const removeNewOffer = kvman.host.embedded ? kvman.host.offerNew(() => kvman.navigate('kvcoder.chat')) : undefined;
+onBeforeUnmount(() => removeNewOffer?.());
 
 
 // The draft stays until the send is confirmed; a failure shows above the send box (ADR 0048, 6).
@@ -220,7 +223,7 @@ async function registered(entry: RegisteredSlash, argument: string): Promise<voi
     <div class="kvc-topline" data-test="topline">
     <ChatsDrawer :session-id="sessionId" />
     <ConversationHeader v-if="session && sessionId !== undefined" :session="session" :tab="tab" :turns="turns.length" :context="conversation.context.value" :running-since="runningSince" :artifacts="artifacts.list.value.length" :artifacts-open="artifacts.open.value && !executionMap.shown.value" :map="executionMap.counts.value" :map-open="executionMap.shown.value" :changes="changes.count.value" :changes-open="changes.shown.value" :working="actions.working.value !== undefined" @tab="tab = $event" @action="command" @toggle-artifacts="executionMap.toggleArtifacts()" @toggle-map="executionMap.toggle()" @toggle-changes="toggleChanges" @background-running="(count) => (backgroundRunning = count)" />
-    <div v-if="sessionId !== undefined" class="kvc-new-chat"><button type="button" class="kvc-button kvc-ghost" :aria-label="kvman.t('kvcoder.ui.newChat')" :title="kvman.t('kvcoder.ui.newChat')" data-test="new-chat-compact" @click="kvman.navigate('kvcoder.chat')"><Plus :size="18" aria-hidden="true" /></button></div>
+    <div v-if="sessionId !== undefined && !kvman.host.embedded" class="kvc-new-chat"><button type="button" class="kvc-button kvc-ghost" :aria-label="kvman.t('kvcoder.ui.newChat')" :title="kvman.t('kvcoder.ui.newChat')" data-test="new-chat-compact" @click="kvman.navigate('kvcoder.chat')"><Plus :size="18" aria-hidden="true" /></button></div>
     </div>
     <div class="kvc-stage">
     <section class="kvc-conversation" data-test="conversation">

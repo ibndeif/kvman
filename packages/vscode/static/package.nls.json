@@ -1,6 +1,7 @@
 {
-  "kvman.description": "kvman in VS Code's secondary side bar, beside your files.",
+  "kvman.description": "kvman in VS Code's side bar, beside your files.",
   "kvman.open.title": "Open",
+  "kvman.new.title": "New",
   "kvman.openInBrowser.title": "Open in browser",
   "kvman.install.title": "Install kvman",
   "kvman.path.description": "The `kvman` program the extension runs. It is found on the PATH by default.",

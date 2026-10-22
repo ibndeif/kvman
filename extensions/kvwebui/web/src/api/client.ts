@@ -37,11 +37,14 @@ export type ApiOptions = {
   workspaceId: () => string;
   // Sees every failed call's Problem first, so a closed workspace can move the tab to Home.
   onProblem: (problem: Problem) => void;
+  // Told after each call whether it reached kvman.
+  onReach: (reached: boolean) => void;
 };
 
 export function createApi(options: ApiOptions): Api {
   const answer = async (url: string, init?: RequestInit): Promise<unknown> => {
     const response = await options.fetch(url, init).catch(() => undefined);
+    options.onReach(response !== undefined);
     if (response === undefined) throw new ProblemError(offlineProblem);
     return response.json();
   };

@@ -32,9 +32,19 @@ const hostUser = defineComponent({
   },
 });
 
-async function mountHostUser(path: string): Promise<Mounted> {
+// Offers the host's New while it is shown, and counts the presses.
+const presses = { count: 0 };
+const newOfferer = defineComponent({
+  setup: () => {
+    const kvman = useKvman();
+    onBeforeUnmount(kvman.host.offerNew(() => (presses.count += 1)));
+    return () => h('p', 'offering');
+  },
+});
+
+async function mountHostUser(path: string, offers = false): Promise<Mounted> {
   const components = createFakeComponents();
-  components.define('notes.host', hostUser);
+  components.define('notes.host', offers ? newOfferer : hostUser);
   const api = customApi(stack(custom('notes.host')));
   const page = { id: 'custom', title: 'notes.pages.list', view: stack(custom('notes.host')) };
   api.handlers.set('notes.ui.get', () => notesUi({ pages: [page], nav: [{ id: 'list', page: 'custom', title: 'notes.pages.list', icon: 'notebook', order: 10 }] }));
@@ -57,6 +67,7 @@ const rootVariable = (name: string): string => document.documentElement.style.ge
 const hostCalls = (spy: { mock: { calls: unknown[][] } }) => spy.mock.calls.map(([message]) => message).filter((message) => typeof message === 'object' && message !== null && 'kind' in message && message.kind !== 'kvman.state');
 
 afterEach(() => {
+  presses.count = 0;
   vi.restoreAllMocks();
   document.documentElement.removeAttribute('style');
 });
@@ -148,4 +159,30 @@ describe("an embedded page and its host (06 §6.2 and §6.4, ADR 0100, 11 to 14)
     window.dispatchEvent(new MessageEvent('message', { data: { kind: 'kvman.insert', text: 'late' }, source: window.parent }));
     expect(handler).not.toHaveBeenCalled();
   });
+
+  it('M4.7-H3 a New offer tells the host, a press of New runs it, and its removal tells the host again', async () => {
+    const spy = vi.spyOn(window.parent, 'postMessage').mockImplementation(() => undefined);
+    const app = await mountHostUser('/notes/custom?embed=parent', true);
+    expect(hostCalls(spy)).toEqual([{ kind: 'kvman.actions', new: true }]);
+    await fromHost(app, { kind: 'kvman.new' });
+    expect(presses.count).toBe(1);
+    await app.router.push('/kvwebui/settings');
+    await app.settle();
+    expect(hostCalls(spy)).toEqual([{ kind: 'kvman.actions', new: true }, { kind: 'kvman.actions', new: false }]);
+    await fromHost(app, { kind: 'kvman.new' });
+    expect(presses.count).toBe(1);
+  });
+
+  it('M4.7-E4 with no offer a press of New runs nothing, and a page that is not embedded posts no offer', async () => {
+    const embedded = await mountHostUser('/notes/custom?embed=parent');
+    await fromHost(embedded, { kind: 'kvman.new' });
+    expect(presses.count).toBe(0);
+    sessionStorage.clear();
+    const spy = vi.spyOn(window.parent, 'postMessage').mockImplementation(() => undefined);
+    const plain = await mountHostUser('/notes/custom', true);
+    await fromHost(plain, { kind: 'kvman.new' });
+    expect(spy).not.toHaveBeenCalled();
+    expect(presses.count).toBe(0);
+  });
 });
+

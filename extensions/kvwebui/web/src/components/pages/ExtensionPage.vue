@@ -32,7 +32,7 @@ const removed = computed(() => extension.value !== undefined && pendingChanges(s
     </RouterLink>
     <div class="flex flex-wrap items-start gap-4">
       <div class="flex min-w-0 grow flex-col gap-1.5">
-        <h1 class="m-0 text-[26px] font-semibold tracking-tight" data-test="extension-title">{{ extensionTitle(translator, extension) }}</h1>
+        <h1 class="m-0 text-[26px] font-semibold tracking-tight in-[.kvwebui-embedded]:text-xl" data-test="extension-title">{{ extensionTitle(translator, extension) }}</h1>
         <div class="flex flex-wrap items-center gap-2 text-muted">
           <span dir="ltr" class="font-mono text-[13px]" data-test="extension-name">{{ extension.name }}</span>
           <span dir="ltr" class="font-mono text-[13px]" data-test="extension-version">{{ extension.version }}</span>

@@ -29,7 +29,7 @@ Milestones are in `plan/13-milestones.md`. Do them strictly in order. For each o
 
 - **Running.** `kvman [--mode web] [--preset coder]` is a foreground app that runs locally, one per home folder (`~/.kvman`). It opens the folder it's started from as a workspace, and a second run hands its folder over to the running one. HTTP listens on `127.0.0.1:3737`.
 - **Desktop.** The desktop app (`plan/14-desktop.md`) is a Tauri shell that runs this same `kvman` with `--pipe` and shows it in a window. It holds no kvman logic, and the kernel and kvwebui don't know about it.
-- **VS Code.** The VS Code extension (`plan/15-vscode.md`) runs the `kvman` on the PATH with `--pipe` and frames kvwebui in VS Code's secondary side bar. Like the desktop app, it holds no kvman logic.
+- **VS Code.** The VS Code extension (`plan/15-vscode.md`) runs the `kvman` on the PATH with `--pipe` and frames kvwebui, embedded, in VS Code's primary side bar. Like the desktop app, it holds no kvman logic.
 - **Platforms.** Linux, macOS, and Windows, natively. Code that depends on the OS (shells, process trees, file modes) has an explicit branch per OS, and its tests cover each branch.
 - **Not a chat app.** kvman is a platform: the kernel and kvwebui hold no product concept (no chat, no agent). Product UI belongs to the extension that owns it, and presets place it.
 - **Jobs.** Everything runs as a job: a **command** (may write) or a **query** (read-only).

@@ -1,7 +1,7 @@
-// The view's page script (plan 15 §15.4, ADR 0100, 24): it passes on what kvwebui's frame posts, only from the frame's
-// own window at kvman's origin, and the presses of the extension's own buttons; it answers the frame's `kvman.state`
-// with VS Code's theme, and sends it again when VS Code's theme changes; and it gives the frame the extension's
-// messages. The extension checks every message's shape, and so does kvwebui.
+// The view's page script (plan 15 §15.4, ADR 0100, 24, ADR 0101, 6): it passes on what kvwebui's frame posts, only from
+// the frame's own window at kvman's origin, and the presses of the extension's own buttons; it answers the frame's
+// `kvman.state` with VS Code's theme, and sends it again when VS Code's theme changes; and it gives the frame the
+// extension's messages. The extension checks every message's shape, and so does kvwebui.
 
 type VsCodeApi = { postMessage(message: unknown): void };
 declare function acquireVsCodeApi(): VsCodeApi;
@@ -43,13 +43,14 @@ function theme(): unknown {
   };
 }
 
-// What the extension may give the frame (ADR 0100, 11): the pages menu's opening and text to insert. VS Code delivers the
-// extension's messages from the page's parent at the page's own origin; a frame inside kvman's frame, such as an
-// artifact, can post to this page too, so nothing else is passed on.
+// What the extension may give the frame (ADR 0100, 11, ADR 0101, 5 and 6): the pages menu's opening, a press of New,
+// and text to insert. VS Code delivers the extension's messages at the page's own origin, which no frame can claim:
+// kvman's frame and any frame inside it, such as an artifact, have other origins. Nothing else is passed on.
 function extensionMessage(data: unknown): unknown {
   if (!isRecord(data) || data['from'] !== 'extension' || !isRecord(data['message'])) return undefined;
   const message = data['message'];
   if (message['kind'] === 'kvman.pages') return { kind: 'kvman.pages' };
+  if (message['kind'] === 'kvman.new') return { kind: 'kvman.new' };
   if (message['kind'] === 'kvman.insert' && typeof message['text'] === 'string') return { kind: 'kvman.insert', text: message['text'] };
   return undefined;
 }
@@ -69,7 +70,7 @@ window.addEventListener('message', (event) => {
       toFrame(theme());
     }
     host.postMessage({ from: 'frame', data });
-  } else if (event.source === window.parent && event.origin === window.location.origin) {
+  } else if (event.origin === window.location.origin) {
     const message = extensionMessage(data);
     if (message !== undefined) toFrame(message);
   }

@@ -139,4 +139,27 @@ describe('the extension in VS Code (15, ADR 0099)', () => {
     expect(fake.shown.map((entry) => entry.path)).toEqual(['/w/a.ts']);
     expect(fake.runs.filter((run) => run.id === 'git.openChange')).toHaveLength(1);
   });
+
+  it('M4.7-H2 a frame that offers New shows the button, and a press of New reaches the frame', async () => {
+    const { fake, extension } = await activated('running');
+    deactivate = extension.deactivate;
+    await vi.waitFor(() => expect(framed(fake)).toBe(true));
+    fake.post({ from: 'frame', data: { kind: 'kvman.state', workspaceId: 'w1' } });
+    fake.post({ from: 'frame', data: { kind: 'kvman.actions', new: true } });
+    expect(fake.runs.filter((run) => run.id === 'setContext')).toEqual([{ id: 'setContext', args: ['kvman.canNew', true] }]);
+    await fake.commands.get('kvman.new')?.();
+    expect(fake.viewPosts).toEqual([{ from: 'extension', message: { kind: 'kvman.new' } }]);
+  });
+
+  it("M4.7-E6 the view's and the Settings tab's subscriptions end with them", async () => {
+    const { fake, extension } = await activated('running');
+    deactivate = extension.deactivate;
+    await vi.waitFor(() => expect(framed(fake)).toBe(true));
+    await fake.commands.get('kvman.openSettings')?.();
+    expect(fake.listeners()).toEqual({ viewMessages: 1, visibility: 1, panelMessages: 1 });
+    fake.disposeView();
+    fake.closePanel();
+    expect(fake.listeners()).toEqual({ viewMessages: 0, visibility: 0, panelMessages: 0 });
+  });
 });
+

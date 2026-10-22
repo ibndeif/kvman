@@ -7,15 +7,19 @@ import { builtinPages, routePage } from '../../state/navigation.ts';
 import { homeWorkspaceId, settingValue, useKvwebui } from '../../state/kvwebui.ts';
 import ConfirmDialog from '../shared/ConfirmDialog.vue';
 import ToastStack from '../shared/ToastStack.vue';
+import EmbeddedStatusLine from './EmbeddedStatusLine.vue';
 import HostPagesMenu from './HostPagesMenu.vue';
 import LoadFailures from './LoadFailures.vue';
 import NavBar from './NavBar.vue';
 import PanelArea from './PanelArea.vue';
+import PanelSheet from './PanelSheet.vue';
 import StatusBar from './StatusBar.vue';
 import TopBar from './TopBar.vue';
 
 // The frame (plan 06 §6.2): the top bar, the nav, the page, the panels, and the status bar. An embedded page has none of
-// them: the page fills its host's frame, and the host opens the pages menu (ADR 0100, 10 and 13).
+// them: the page fills its host's frame, panels open as a sheet over it, a slim line holds the status items, and the
+// host opens the pages menu (ADR 0100, 10 and 13; ADR 0101, 2 and 4). The page's scrolling area is the containing block
+// of what it holds, so nothing stretches the document (ADR 0101, 13).
 const state = useKvwebui();
 const route = useRoute();
 const translator = useI18n();
@@ -53,10 +57,14 @@ watchEffect(() => {
 
 <template>
   <div v-if="state.host.embedded.value" class="flex h-full flex-col bg-ground font-sans text-sm/relaxed text-ink" data-test="embedded">
-    <main class="flex min-h-0 min-w-0 grow flex-col gap-3 overflow-auto p-2">
-      <LoadFailures />
-      <RouterView :key="route.fullPath" />
-    </main>
+    <div class="relative flex min-h-0 grow flex-col">
+      <main class="relative flex min-h-0 min-w-0 grow flex-col gap-3 overflow-auto p-2">
+        <LoadFailures />
+        <RouterView :key="route.fullPath" />
+      </main>
+      <PanelSheet />
+    </div>
+    <EmbeddedStatusLine />
     <HostPagesMenu />
     <ToastStack />
     <ConfirmDialog />
@@ -65,7 +73,7 @@ watchEffect(() => {
     <TopBar :title="appTitle" />
     <div class="flex min-h-0 grow">
       <NavBar />
-      <main class="flex min-w-0 grow flex-col gap-4 overflow-auto px-4 py-5 md:px-9 md:py-7">
+      <main class="relative flex min-w-0 grow flex-col gap-4 overflow-auto px-4 py-5 md:px-9 md:py-7">
         <LoadFailures />
         <RouterView :key="route.fullPath" />
       </main>

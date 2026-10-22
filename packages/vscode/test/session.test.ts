@@ -26,7 +26,7 @@ describe('the session (15 §15.3 to §15.5, ADR 0099)', () => {
     expect(made.view).toEqual({ kind: 'starting' });
     expect(steps({ kind: 'versionAnswered', output: '0.4.7\n' })).toEqual([{ kind: 'start' }]);
     expect(steps({ kind: 'line', line: running() })).toEqual([]);
-    expect(made.view).toEqual({ kind: 'frame', url: 'http://127.0.0.1:3737/?workspace=w1&embed=parent', port: 3737 });
+    expect(made.view).toEqual({ kind: 'frame', url: 'http://127.0.0.1:3737/?workspace=w1&embed=parent', port: 3737, start: 1 });
     expect(made.owner).toBe(true);
     expect(steps({ kind: 'needed' })).toEqual([]);
   });
@@ -91,7 +91,7 @@ describe('the session (15 §15.3 to §15.5, ADR 0099)', () => {
   it('M4.2-H10 a joined line frames kvman without owning it, and its exit and the window closing change nothing', () => {
     const { made, steps } = started();
     steps({ kind: 'line', line: joined });
-    expect(made.view).toEqual({ kind: 'frame', url: 'http://127.0.0.1:3737/?workspace=w1&embed=parent', port: 3737 });
+    expect(made.view).toEqual({ kind: 'frame', url: 'http://127.0.0.1:3737/?workspace=w1&embed=parent', port: 3737, start: 1 });
     expect(made.owner).toBe(false);
     expect(steps({ kind: 'exited' }, { kind: 'closing' })).toEqual([]);
     expect(made.view.kind).toBe('frame');
@@ -118,9 +118,9 @@ describe('the session (15 §15.3 to §15.5, ADR 0099)', () => {
     const { made, steps } = started();
     steps({ kind: 'line', line: running() });
     expect(steps({ kind: 'line', line: { kind: 'restarting' } })).toEqual([]);
-    expect(made.view).toEqual({ kind: 'frame', url: 'http://127.0.0.1:3737/?workspace=w1&embed=parent', port: 3737 });
+    expect(made.view).toEqual({ kind: 'frame', url: 'http://127.0.0.1:3737/?workspace=w1&embed=parent', port: 3737, start: 1 });
     steps({ kind: 'line', line: running(3800) });
-    expect(made.view).toEqual({ kind: 'frame', url: 'http://127.0.0.1:3800/?workspace=w1&embed=parent', port: 3800 });
+    expect(made.view).toEqual({ kind: 'frame', url: 'http://127.0.0.1:3800/?workspace=w1&embed=parent', port: 3800, start: 1 });
   });
 
   it('M4.2-H14 a kvman that ends by itself, or an unreadable line, shows stopped; Start again starts it', () => {
@@ -164,5 +164,57 @@ describe('the session (15 §15.3 to §15.5, ADR 0099)', () => {
     expect(steps({ kind: 'pressed', action: 'start' })).toEqual([{ kind: 'start' }]);
     steps({ kind: 'exited' });
     expect(steps({ kind: 'needed' })).toEqual([]);
+  });
+  it('M4.7-H2 a ready frame that offers New shows the button, and a press sends kvman.new', () => {
+    const { steps } = started();
+    steps({ kind: 'line', line: running() });
+    expect(steps({ kind: 'actions', offersNew: true })).toEqual([]);
+    expect(steps({ kind: 'stated', workspaceId: 'w1' })).toEqual([{ kind: 'setCanNew', value: true }]);
+    expect(steps({ kind: 'new' })).toEqual([{ kind: 'sendToFrame', message: { kind: 'kvman.new' } }]);
+    expect(steps({ kind: 'actions', offersNew: false })).toEqual([{ kind: 'setCanNew', value: false }]);
+    expect(steps({ kind: 'new' })).toEqual([]);
+  });
+
+  it('M4.7-H4 kvman.lost in a joined window with kvman gone starts kvman, whose frame is new and waits for its kvman.state', () => {
+    const { made, steps } = started();
+    steps({ kind: 'line', line: joined }, { kind: 'stated', workspaceId: 'w1' });
+    expect(steps({ kind: 'lost' })).toEqual([{ kind: 'checkHealth', port: 3737 }]);
+    expect(steps({ kind: 'healthAnswered', alive: false })).toEqual([{ kind: 'start' }]);
+    expect(made.view).toEqual({ kind: 'starting' });
+    steps({ kind: 'line', line: running() });
+    expect(made.view).toEqual({ kind: 'frame', url: 'http://127.0.0.1:3737/?workspace=w1&embed=parent', port: 3737, start: 2 });
+    expect(made.owner).toBe(true);
+    expect(steps({ kind: 'pages' })).toEqual([]);
+    expect(steps({ kind: 'stated', workspaceId: 'w1' }, { kind: 'pages' })).toEqual([{ kind: 'sendToFrame', message: { kind: 'kvman.pages' } }]);
+  });
+
+  it('M4.7-H5 a running line of the same start at the same address keeps the frame, ready', () => {
+    const { made, steps } = started();
+    steps({ kind: 'line', line: running() }, { kind: 'stated', workspaceId: 'w1' });
+    const before = made.view;
+    steps({ kind: 'line', line: { kind: 'restarting' } }, { kind: 'line', line: running() });
+    expect(made.view).toEqual(before);
+    expect(steps({ kind: 'pages' })).toEqual([{ kind: 'sendToFrame', message: { kind: 'kvman.pages' } }]);
+  });
+
+  it('M4.7-E2 a lost frame hides New, and a press before the new frame is ready sends nothing', () => {
+    const owner = started();
+    owner.steps({ kind: 'line', line: running() }, { kind: 'stated', workspaceId: 'w1' }, { kind: 'actions', offersNew: true });
+    expect(owner.steps({ kind: 'exited' })).toEqual([{ kind: 'setCanNew', value: false }]);
+    expect(owner.steps({ kind: 'new' })).toEqual([]);
+    const joinedWorld = started();
+    joinedWorld.steps({ kind: 'line', line: joined }, { kind: 'stated', workspaceId: 'w1' }, { kind: 'actions', offersNew: true });
+    expect(joinedWorld.steps({ kind: 'lost' }, { kind: 'healthAnswered', alive: false })).toEqual([{ kind: 'checkHealth', port: 3737 }, { kind: 'setCanNew', value: false }, { kind: 'start' }]);
+    expect(joinedWorld.steps({ kind: 'line', line: running() }, { kind: 'new' })).toEqual([]);
+  });
+
+  it('M4.7-E3 kvman.lost with kvman answering, or in the window that owns kvman, starts nothing', () => {
+    const joinedWorld = started();
+    joinedWorld.steps({ kind: 'line', line: joined });
+    expect(joinedWorld.steps({ kind: 'lost' }, { kind: 'healthAnswered', alive: true })).toEqual([{ kind: 'checkHealth', port: 3737 }]);
+    expect(joinedWorld.made.view.kind).toBe('frame');
+    const owner = started();
+    owner.steps({ kind: 'line', line: running() });
+    expect(owner.steps({ kind: 'lost' })).toEqual([]);
   });
 });

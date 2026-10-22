@@ -13,13 +13,14 @@ The extension runs the `kvman` program it finds on your PATH. If there is none, 
 
 ## Using it
 
-- **Your folder.** The view opens kvman in the window's first folder, as a workspace ([workspaces.md](workspaces.md)). A window with no folder opens Home. The workspace picker in the view still switches to any other workspace.
+- **Your folder.** The view opens kvman in the window's first folder, as a workspace ([workspaces.md](workspaces.md)). A window with no folder opens Home. To work in another workspace, open its folder in a VS Code window, or use **Open in browser**.
 - **Starting.** kvman starts the first time you open the view, not when VS Code starts. If some extensions aren't part of kvman, VS Code asks first, listing each one, with **Run them**.
-- **The title bar.** **Pages** lists kvman's pages (Chat, Models, Settings, Extensions, and those your extensions add). **Settings** opens kvman's settings in an editor tab. **Open in browser** opens the same workspace in your browser.
-- **The chat.** The chat's header holds **History**, which lists your chats, and **New chat**.
+- **The title bar.** **New** (**+**) starts a new chat; it shows while the page you're on offers it. **Pages** lists kvman's pages (Chat, Models, Settings, Extensions, and those your extensions add) and any panels your extensions add, and ends with **Language**, which switches kvman's language for every window and the browser. **Settings** opens kvman's settings in an editor tab. **Open in browser** opens the same workspace in your browser.
+- **The chat.** The chat's header holds **History**, which lists your chats.
+- **The status line.** A slim line at the bottom of the view shows what your extensions report, such as the chats waiting for you and the chat's tokens and cost.
 - **Edits.** An edit the agent asks to make has **Open diff**, which shows the whole file with the change in VS Code's diff editor before you allow it; after it ran, **Open diff** shows the file's Git diff.
 - **Files.** A file path in the chat opens the file in the editor, at the line the agent read or changed.
-- **Add to kvman chat.** Right-click a selection in the editor, or a file in the explorer, and choose **Add to kvman chat**: the path and lines, and the selected code, go into the send box.
+- **Add to kvman chat.** Right-click a selection in the editor, or a file in the explorer, and choose **Add to kvman chat**, or press **Ctrl+Alt+K** (**Cmd+Alt+K** on macOS) in the editor: the path and lines, and the selected code, go into the send box. With nothing selected, the open file's path goes in.
 - **Links and sign-ins.** A link or a sign-in that opens a new window opens in your browser.
 - **Another program.** The setting `kvman.path` names another `kvman` program to run.
 
@@ -27,7 +28,7 @@ The extension runs the `kvman` program it finds on your PATH. If there is none, 
 
 All VS Code windows share one running kvman, with the terminal and the desktop app: they use the same home folder, `~/.kvman`, with the same chats, keys, and workspaces ([desktop-app.md](desktop-app.md)).
 
-The window that started kvman stops it when it closes. Another window that needs kvman then starts it again by itself. If kvman was already running, for example in a terminal, the extension uses it and leaves it running.
+The window that started kvman stops it when it closes. Another window notices at once, starts kvman again by itself, and reloads its view; meanwhile its status line says it's reconnecting. If kvman was already running, for example in a terminal, the extension uses it and leaves it running.
 
 If kvman can't start, the view shows why, with **Try again** and **Show the log**, which opens `logs/kvman.log` from kvman's home. If kvman stops unexpectedly, the view says so, with **Start again**.
 

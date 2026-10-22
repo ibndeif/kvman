@@ -154,5 +154,6 @@
   "kvwebui.workspacePicker.title": "Workspace picker",
   "kvwebui.workspacePicker.description": "Whether the top bar shows the workspace picker.",
   "kvwebui.settings.portThisRun": "This run listens on port {port}.",
-  "kvwebui.pages.menu": "Pages"
+  "kvwebui.pages.menu": "Pages",
+  "kvwebui.host.reconnecting": "kvman doesn't answer. Reconnecting…"
 }

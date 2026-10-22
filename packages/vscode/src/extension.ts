@@ -19,13 +19,18 @@ const manifestSchema = z.object({ version: z.string() });
 
 let controller: Controller | undefined;
 
-// A frame's opens go to VS Code's editors and browser; its workspace and the page's presses go to the session.
+// A frame's opens go to VS Code's editors and browser; its workspace, its New offer, its lost kvman, and the page's
+// presses go to the session.
 function route(message: PageMessage, editor: Editor, happen: Controller['happen']): void {
   switch (message.kind) {
     case 'pressed':
       return happen({ kind: 'pressed', action: message.action });
     case 'stated':
       return happen({ kind: 'stated', workspaceId: message.workspaceId });
+    case 'actions':
+      return happen({ kind: 'actions', offersNew: message.offersNew });
+    case 'lost':
+      return happen({ kind: 'lost' });
     case 'open':
       return openWeb(message.url);
     case 'openFile':
@@ -47,14 +52,15 @@ export function activate(context: vscode.ExtensionContext): void {
   const session = new Session({ remote: folder.kind === 'remote', extensionVersion, windows: process.platform === 'win32' });
   const editor = new Editor(translate);
   const happen: Controller['happen'] = (happening) => controller?.happen(happening);
-  // The Settings tab's own workspace isn't the view's, so only its opens are taken.
-  const settings = new SettingsPanel(context.extensionUri, text, (message) => (message.kind === 'stated' || message.kind === 'pressed' ? undefined : route(message, editor, happen)));
+  // The Settings tab's own workspace and offers aren't the view's, so only its opens and its lost kvman are taken.
+  const settings = new SettingsPanel(context.extensionUri, text, (message) => (message.kind === 'stated' || message.kind === 'pressed' || message.kind === 'actions' ? undefined : route(message, editor, happen)));
   const view = new ViewHost(context.extensionUri, text, { shown: () => happen({ kind: 'needed' }), message: (message) => route(message, editor, happen) });
   controller = new Controller(session, vscodeHost({ folder: folder.kind === 'local' ? folder.path : homedir(), view, settings, translate, logFile: log }));
   context.subscriptions.push(
     editor.register(),
     vscode.window.registerWebviewViewProvider('kvman.view', view, { webviewOptions: { retainContextWhenHidden: true } }),
     vscode.commands.registerCommand('kvman.open', () => vscode.commands.executeCommand('kvman.view.focus')),
+    vscode.commands.registerCommand('kvman.new', () => happen({ kind: 'new' })),
     vscode.commands.registerCommand('kvman.showPages', () => happen({ kind: 'pages' })),
     vscode.commands.registerCommand('kvman.openSettings', () => happen({ kind: 'needed', request: 'settings' })),
     vscode.commands.registerCommand('kvman.openInBrowser', () => happen({ kind: 'needed', request: 'browser' })),

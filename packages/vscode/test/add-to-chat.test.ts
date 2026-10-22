@@ -44,4 +44,17 @@ describe('Add to kvman chat (15 §15.6, ADR 0100, 28)', () => {
     expect(lastSelectedLine({ line: 2 }, { line: 5, character: 3 })).toBe(6);
     expect(lastSelectedLine({ line: 2 }, { line: 2, character: 0 })).toBe(3);
   });
+
+  it("M4.7-H7 with no selection and no file given, the open editor's file is added", async () => {
+    const { vscode, chatTextFor } = await withEditor((given) => editorOn(given, '/w/src/a.ts', [4, 2], [4, 2], ''));
+    expect(chatTextFor(undefined)).toBe('`src/a.ts`');
+    expect(chatTextFor(vscode.Uri.file('/w/README.md'))).toBe('`README.md`');
+  });
+
+  it('M4.7-E7 no editor and no file, or an untitled editor with no selection, gives nothing', async () => {
+    const { vscode, chatTextFor } = await withEditor(() => undefined);
+    expect(chatTextFor(undefined)).toBeUndefined();
+    vscode.fake.editor = { selection: Object.assign(new vscode.Range(0, 0, 0, 0), { isEmpty: true }), document: { uri: vscode.Uri.parse('untitled:Untitled-1'), languageId: 'plaintext', getText: () => '' } };
+    expect(chatTextFor(undefined)).toBeUndefined();
+  });
 });

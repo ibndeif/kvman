@@ -17,6 +17,7 @@ export type Host = {
   openLog(): void;
   openSettings(url: string): void;
   sendToFrame(message: FrameMessage): void;
+  setCanNew(value: boolean): void;
   report(error: unknown): void;
 };
 
@@ -81,6 +82,8 @@ export class Controller {
         return this.#host.openSettings(effect.url);
       case 'sendToFrame':
         return this.#host.sendToFrame(effect.message);
+      case 'setCanNew':
+        return this.#host.setCanNew(effect.value);
     }
   }
 
