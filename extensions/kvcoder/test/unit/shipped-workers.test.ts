@@ -12,16 +12,18 @@ const has = (name: string, phrases: readonly string[]): void => {
 };
 
 describe("the shipped specialists' descriptions and instructions (ADR 0076)", () => {
-  it("M2.4-E284 each specialist has its description, and instructions that add to the worker's method", () => {
+  // Superseded by QA68-H1: the council is sixth, and its instructions are the owner's debate (ADR 0103).
+  it("QA68-H1 M2.4-E284 each specialist has its description, and instructions that add to the worker's method", () => {
     expect(shippedWorkers.map((entry) => [entry.name, entry.description])).toEqual([
       ['general', 'Any separate, self-contained task'],
       ['ui-ux', 'Designs the experience and the look of a screen or flow, to usability and accessibility standards'],
       ['architect', "Designs the structure of a change, on sound engineering practice and the project's own patterns and conventions"],
       ['tester', 'QA engineer: writes and runs test cases, automated and by hand as a person would, on the critical flows, security, and performance, and reports the issues'],
       ['reviewer', 'Reviews code and reports wrong style, needless complexity, and unclean or unclear code'],
+      ['council', "A council that debates a complex request whose approach is open (an engineer, a devil's advocate, a dumb customer, and the field's top expert) until its fatal flaws are fixed, and returns the final plan; for complex work only, before any execution map"],
     ]);
     expect(worker('general').instructions).toBe('');
-    for (const entry of shippedWorkers.slice(1)) {
+    for (const entry of shippedWorkers.slice(1, 5)) {
       expect(entry.instructions.startsWith('You are a senior ')).toBe(true);
       expect(Buffer.byteLength(entry.instructions, 'utf8')).toBeLessThan(16 * 1024);
       for (const heading of ['Result:', 'Evidence:', 'Files changed:', 'Unchecked:', 'Questions:']) expect(entry.instructions).not.toContain(heading);
@@ -81,5 +83,32 @@ describe("the shipped specialists' descriptions and instructions (ADR 0076)", ()
       "Don't edit the project's files.",
     ]);
     expect(worker('reviewer').readOnly).toBe(true);
+  });
+
+  it("QA68-H2 the council records the room's debate under its rules, then the Maestro's final answer", () => {
+    has('council', [
+      "You are not an assistant, and you don't give the answer now. You are the recorder who writes down, word for word, a live deliberation in a closed operations room.",
+      'The Engineer builds the basic structure of the solution.',
+      "The Devil's Advocate is a fierce critic whose job is to destroy assumptions and hunt for loopholes.",
+      'The Dumb Customer is a sarcastic end user who hates complexity and understands everything in the worst possible way.',
+      'The Expert: analyze the goal of the task first, then call to the council the best expert in the world for this exact problem',
+      'The Maestro is completely silent during the deliberation and only watches.',
+      "Before the room meets, read what the task touches (the files, config, tests, and the project's rules)",
+      'call the Expert in first, then let the Engineer put forward the plan',
+      'Give no conclusion, summary, or final answer during it.',
+      "No flattery: the Devil's Advocate and the Dumb Customer must reject the first draft and find at least one fatal flaw in it.",
+      'foresees the disasters it causes later (its second-order effects)',
+      'Forced evolution: the views clash, and the plan changes in response to the criticism within the debate; nobody agrees quickly.',
+      'Write the record tight: each turn is a line or a few under its speaker\'s name',
+      "Don't summarize what happened. Based solely on the deliberation and the solutions and corrections it produced, engineer the comprehensive final answer",
+      "Return the record and then the Maestro's final answer under Result. Don't edit the project's files.",
+    ]);
+    expect(Buffer.byteLength(worker('council').instructions, 'utf8')).toBeLessThan(16 * 1024);
+    expect(worker('council').instructions).not.toContain('Result:');
+  });
+
+  it('QA68-H3 the council is read-only and thinks at high; the other shipped workers take the helpers\' level', () => {
+    expect(worker('council')).toMatchObject({ readOnly: true, thinking: 'high', enabled: true, kind: 'subagent', connectors: null, model: null });
+    expect(shippedWorkers.filter((entry) => entry.name !== 'council').every((entry) => entry.thinking === null)).toBe(true);
   });
 });

@@ -11,7 +11,8 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
     const lead = workingMethod('lead');
     expect(steps(lead)).toEqual([]);
     expect(steps(workingMethod('worker'))).toEqual(['1. Understand', '2. Do it', '3. Return']);
-    expect(lead.split('\n').slice(5, 15).map((line) => line.slice(0, line.indexOf('. ')))).toEqual(['Understand', 'Clarify', 'Tests the person chose', 'Plan', 'Confirm the plan', 'Execute', 'Stay on the task', 'Delegate', 'Show what the person will look at', 'Finish']);
+    // Superseded by QA68-H6: Deliberate comes before Plan (ADR 0103, 6).
+    expect(lead.split('\n').slice(5, 16).map((line) => line.slice(0, line.indexOf('. ')))).toEqual(['Understand', 'Clarify', 'Tests the person chose', 'Deliberate', 'Plan', 'Confirm the plan', 'Execute', 'Stay on the task', 'Delegate', 'Show what the person will look at', 'Finish']);
     for (const phrase of [
       'No path is fixed: you choose it for each task from what the task is, and you change it when what you find changes it.',
       'Size up the task first. Read the request and look at what it touches, then judge four things: how clear it is (can you say what done looks like?), how much it changes (one place, or several parts that depend on each other), what could go wrong and how hard that is to take back, and whether the person will look at the result (a screen, a page, a report).',
@@ -225,5 +226,38 @@ describe('tests the person chose, and checks in proportion (08 §8.2, ADR 0102, 
     const lead = workingMethod('lead', 'engineering', true);
     expect(lead).toContain("When it has none, don't ask and don't write new tests: run the existing tests that cover your change, leave the app running with its address, and record nothing.");
     expect(lead).not.toContain('Add unit tests');
+  });
+});
+
+describe('deliberating before a map, chosen apart from it (08 §8.2, ADR 0103, 6)', () => {
+  const part = (method: string): string => method.split('\n').find((line) => line.startsWith('Deliberate. ')) ?? '';
+
+  it('QA68-H6 the lead has Deliberate before Plan, with its four choices, and Size up names it; Decide for me has the same', () => {
+    for (const decides of [false, true]) {
+      const lead = workingMethod('lead', 'engineering', decides);
+      const names = lead.split('\n').map((line) => line.slice(0, line.indexOf('. ')));
+      expect(names[names.indexOf('Deliberate') - 1]).toBe(decides ? 'Tests' : 'Tests the person chose');
+      expect(names.indexOf('Plan')).toBe(names.indexOf('Deliberate') + 1);
+      expect(lead).toContain('A complex request whose approach is open needs deliberating first, with a map or without one, as Deliberate says.');
+      for (const phrase of [
+        'Only for a complex request whose approach is open: there are several real ways to do it, the choice is costly or hard to take back, or its risks are not yet clear to you.',
+        "before any map or change, hand it in one `delegate run` to the worker of the `delegate` connector that debates approaches, when its entry lists one",
+        'the map\'s steps and details when your path has a map, or the work itself when it doesn\'t.',
+        'a hard decision with a small change gets the debate and no map; a large change whose approach is clear gets a map and no debate; complex work whose approach is open gets both, the debate first; and most work gets neither.',
+      ]) expect(part(lead), phrase).toContain(phrase);
+    }
+  });
+
+  it('QA68-E1 the part names no worker, and the map entry still names none', () => {
+    expect(part(workingMethod('lead'))).not.toContain('council');
+    expect(executionMapDescription).not.toContain('council');
+  });
+
+  it('QA68-E2 never for small work, and once per request', () => {
+    expect(part(workingMethod('lead'))).toContain('Never deliberate a question, a bug fix, or a clear or small change, and deliberate once per request, not per step.');
+  });
+
+  it("QA68-E3 a worker's method and the general lead method have no Deliberate", () => {
+    for (const method of [workingMethod('worker'), workingMethod('worker', 'general'), workingMethod('lead', 'general')]) expect(method).not.toContain('Deliberate');
   });
 });

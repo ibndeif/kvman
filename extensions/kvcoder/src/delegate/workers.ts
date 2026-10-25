@@ -57,7 +57,7 @@ export const isProgram = (worker: Worker): worker is ProgramWorker => worker.kin
 /** The name a program worker's check has among a session's checks (ADR 0021, 37). */
 export const workerCheckName = (name: string): string => `worker:${name}`;
 
-const shipped = (name: string, description: string, instructions: string, readOnly = false): SubagentWorker => ({ name, description, enabled: true, kind: 'subagent', readOnly, instructions, connectors: null, model: null, thinking: null });
+const shipped = (name: string, description: string, instructions: string, readOnly = false, thinking: SubagentWorker['thinking'] = null): SubagentWorker => ({ name, description, enabled: true, kind: 'subagent', readOnly, instructions, connectors: null, model: null, thinking });
 
 // The shipped specialists' instructions (ADR 0076): each adds its role's craft to the worker's method, which already says
 // how a helper understands, does, and returns, so none of them repeats it.
@@ -99,13 +99,25 @@ const reviewer = [
   "Report each finding with its severity (must fix, should fix, or consider), its file and line, what is wrong, why it matters, and what you expect instead, with a line or two of code when that is clearer. Order the findings by severity, and leave out what the project's formatter or linter already settles. Say so plainly when you find nothing. Don't edit the project's files.",
 ].join('\n');
 
-/** The workers kvcoder ships with: they differ by their instructions, and the architect and the reviewer are read-only (ADR 0021, 5; ADR 0056, 1; ADR 0076). */
+// The owner's operations-room debate (ADR 0103), in English: a tight record of the clash, then the Maestro's answer.
+const council = [
+  "You are not an assistant, and you don't give the answer now. You are the recorder who writes down, word for word, a live deliberation in a closed operations room. No answer exists before it.",
+  "The members of the room, each named so the record is easy to follow. The Engineer builds the basic structure of the solution. The Devil's Advocate is a fierce critic whose job is to destroy assumptions and hunt for loopholes. The Dumb Customer is a sarcastic end user who hates complexity and understands everything in the worst possible way. The Expert: analyze the goal of the task first, then call to the council the best expert in the world for this exact problem, named by their field. The Maestro is completely silent during the deliberation and only watches.",
+  "Before the room meets, read what the task touches (the files, config, tests, and the project's rules), so every member argues from facts, not guesses.",
+  "The deliberation: call the Expert in first, then let the Engineer put forward the plan, and let the battle between them begin. Give no conclusion, summary, or final answer during it. Its rules are hard constraints. No flattery: the Devil's Advocate and the Dumb Customer must reject the first draft and find at least one fatal flaw in it. First principles and consequences: the Expert breaks the idea down to its roots and foresees the disasters it causes later (its second-order effects). Forced evolution: the views clash, and the plan changes in response to the criticism within the debate; nobody agrees quickly.",
+  "Write the record tight: each turn is a line or a few under its speaker's name, holding every fatal flaw raised, the arguments that settle it, and how the plan changed; no greetings, repetition, or filler.",
+  "The Maestro's phase: only once the members have exhausted their arguments and every fatal flaw has been dealt with in the debate may the Maestro speak. Don't summarize what happened. Based solely on the deliberation and the solutions and corrections it produced, engineer the comprehensive final answer: the final, clean solution, ready to carry out at once, with its steps in order, each decision and why, the risks left and how each is contained, and what done looks like.",
+  "Return the record and then the Maestro's final answer under Result. Don't edit the project's files.",
+].join('\n');
+
+/** The workers kvcoder ships with: they differ by their instructions; the architect, the reviewer, and the council are read-only, and the council thinks at high (ADR 0021, 5; ADR 0056, 1; ADR 0076; ADR 0103). */
 export const shippedWorkers: SubagentWorker[] = [
   shipped('general', 'Any separate, self-contained task', ''),
   shipped('ui-ux', 'Designs the experience and the look of a screen or flow, to usability and accessibility standards', designer),
   shipped('architect', "Designs the structure of a change, on sound engineering practice and the project's own patterns and conventions", architect, true),
   shipped('tester', 'QA engineer: writes and runs test cases, automated and by hand as a person would, on the critical flows, security, and performance, and reports the issues', tester),
   shipped('reviewer', 'Reviews code and reports wrong style, needless complexity, and unclean or unclear code', reviewer, true),
+  shipped('council', "A council that debates a complex request whose approach is open (an engineer, a devil's advocate, a dumb customer, and the field's top expert) until its fatal flaws are fixed, and returns the final plan; for complex work only, before any execution map", council, true, 'high'),
 ];
 
 /** The workers of the job's workspace, in the setting's order. */

@@ -108,6 +108,7 @@ describe("kvcoder's configuration in Chromium (06 §6.6, 08 §8.7, ADR 0014)", {
     await page.close();
   });
 
+  // Superseded by QA68-H1: the list ends with the council (ADR 0103, 1).
   it("QA31-H18 the person turns the reviewer off from delegate's cog, and it stays off after a reload", async () => {
     world = await kvmanWorld();
     const kvman = await world.start();
@@ -117,14 +118,14 @@ describe("kvcoder's configuration in Chromium (06 §6.6, 08 §8.7, ADR 0014)", {
     await cog.click();
     const names = page.locator('[data-test="workers"] [data-test="worker-name"]');
     await names.first().waitFor();
-    expect(await names.allTextContents()).toEqual(['general', 'ui-ux', 'architect', 'tester', 'reviewer']);
+    expect(await names.allTextContents()).toEqual(['general', 'ui-ux', 'architect', 'tester', 'reviewer', 'council']);
     const reviewer = page.locator('[data-test="worker-reviewer"] [data-test="worker-switch"]');
     expect(await reviewer.getAttribute('aria-checked')).toBe('true');
     await reviewer.click();
     await page.locator('[data-test="worker-reviewer"] [data-test="worker-switch"][aria-checked="false"]').waitFor();
     const stored = settingsSchema.parse(await kvman.call('queries', 'kernel.settings.list', {})).find((setting) => setting.key === 'kvcoder.delegate.workers');
     expect(stored?.source).toBe('global');
-    expect(stored?.value).toMatchObject([{ name: 'general', enabled: true }, { name: 'ui-ux', enabled: true }, { name: 'architect', enabled: true }, { name: 'tester', enabled: true }, { name: 'reviewer', enabled: false }]);
+    expect(stored?.value).toMatchObject([{ name: 'general', enabled: true }, { name: 'ui-ux', enabled: true }, { name: 'architect', enabled: true }, { name: 'tester', enabled: true }, { name: 'reviewer', enabled: false }, { name: 'council', enabled: true }]);
 
     await page.reload();
     await cog.click();

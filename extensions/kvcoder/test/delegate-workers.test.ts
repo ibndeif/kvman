@@ -8,8 +8,9 @@ import { worker, workers } from './support/workers.ts';
 const kvcoder = useKvcoder();
 
 const reviewer = shippedWorkers.find((entry) => entry.name === 'reviewer');
-const descriptions = ['Any separate, self-contained task', 'Designs the experience and the look of a screen or flow, to usability and accessibility standards', "Designs the structure of a change, on sound engineering practice and the project's own patterns and conventions", 'QA engineer: writes and runs test cases, automated and by hand as a person would, on the critical flows, security, and performance, and reports the issues', 'Reviews code and reports wrong style, needless complexity, and unclean or unclear code'];
-const named = (count: number): string => shippedWorkers.slice(0, count).map((entry, index) => `${entry.name} (${descriptions[index]}${entry.readOnly ? '; read-only' : ''})`).join(', ');
+const descriptions = ['Any separate, self-contained task', 'Designs the experience and the look of a screen or flow, to usability and accessibility standards', "Designs the structure of a change, on sound engineering practice and the project's own patterns and conventions", 'QA engineer: writes and runs test cases, automated and by hand as a person would, on the critical flows, security, and performance, and reports the issues', 'Reviews code and reports wrong style, needless complexity, and unclean or unclear code', "A council that debates a complex request whose approach is open (an engineer, a devil's advocate, a dumb customer, and the field's top expert) until its fatal flaws are fixed, and returns the final plan; for complex work only, before any execution map"];
+// The index's names of the shipped workers, less the ones `off` names.
+const named = (...off: string[]): string => shippedWorkers.map((entry, index) => ({ entry, index })).filter(({ entry }) => !off.includes(entry.name)).map(({ entry, index }) => `${entry.name} (${descriptions[index]}${entry.readOnly ? '; read-only' : ''})`).join(', ');
 const delegate = (name: string, task = 'Do it') => command('delegate', 'run', { worker: name, title: 'Helper', task });
 const indexLine = (prompt: string, connector: string): string => prompt.split('\n').find((line) => line.startsWith(`- ${connector}: `)) ?? '';
 
@@ -32,20 +33,22 @@ describe('the delegate connector and its workers (08 §8.5, ADR 0021)', { timeou
     expect(toolResults(fake)).toEqual(['error VALIDATION_FAILED: There is no connector subagent. The connectors are: shell, fs, artifact, execution-map, background, ask, delegate, web, todo.']);
   });
 
-  it('QA31-H2 the shipped workers are five subagents that differ by their instructions', async () => {
+  // Superseded by QA68-H1 and QA68-H3: six workers, the council thinking at high (ADR 0103).
+  it('QA31-H2 the shipped workers are six subagents that differ by their instructions', async () => {
     const { kernel } = await kvcoder.start();
     const setting = (await kernel.exec('kernel.settings.list', {})).find((candidate) => candidate.key === 'kvcoder.delegate.workers');
     expect(setting?.value).toEqual(shippedWorkers);
-    expect(shippedWorkers.map((entry) => entry.name)).toEqual(['general', 'ui-ux', 'architect', 'tester', 'reviewer']);
-    for (const entry of shippedWorkers) expect(entry).toMatchObject({ enabled: true, kind: 'subagent', connectors: null, model: null, thinking: null });
+    expect(shippedWorkers.map((entry) => entry.name)).toEqual(['general', 'ui-ux', 'architect', 'tester', 'reviewer', 'council']);
+    for (const entry of shippedWorkers) expect(entry).toMatchObject({ enabled: true, kind: 'subagent', connectors: null, model: null, thinking: entry.name === 'council' ? 'high' : null });
     expect(shippedWorkers.map((entry) => entry.description)).toEqual(descriptions);
     expect(shippedWorkers[0]?.instructions).toBe('');
-    expect(shippedWorkers.slice(1).map((entry) => entry.instructions.split('.')[0])).toEqual(['You are a senior UI/UX designer', 'You are a senior software architect', 'You are a senior QA engineer', 'You are a senior code reviewer']);
+    expect(shippedWorkers.slice(1).map((entry) => entry.instructions.split('.')[0])).toEqual(['You are a senior UI/UX designer', 'You are a senior software architect', 'You are a senior QA engineer', 'You are a senior code reviewer', "You are not an assistant, and you don't give the answer now"]);
   });
 
+  // Superseded by QA68-H1: the list ends with the council (ADR 0103, 1).
   it('QA31-H3 the index names the workers', async () => {
     const { fake } = await turn({}, says('done'));
-    expect(indexLine(systemPrompt(fake, 0), 'delegate').endsWith(`Workers: ${named(5)}.`)).toBe(true);
+    expect(indexLine(systemPrompt(fake, 0), 'delegate').endsWith(`Workers: ${named()}.`)).toBe(true);
   });
 
   it("QA31-H4 a run starts a child with the worker's instructions, and its answer is the result", async () => {
@@ -94,16 +97,18 @@ describe('the delegate connector and its workers (08 §8.5, ADR 0021)', { timeou
     expect(child).toMatchObject({ worker: 'tester', parentId: sessionId });
   });
 
+  // Superseded by QA68-H1: the list ends with the council (ADR 0103, 1).
   it('QA31-H9 a worker that is turned off is not named, and a run of it fails', async () => {
     const settings = workers(...shippedWorkers.map((entry) => ({ ...entry, enabled: entry.name !== 'reviewer' })));
     const { fake } = await turn(settings, runs(delegate('reviewer')), says('done'));
-    expect(indexLine(systemPrompt(fake, 0), 'delegate')).toContain(`Workers: ${named(4)}.`);
-    expect(toolResults(fake)).toEqual(['error kvcoder/WORKER_NOT_FOUND: There is no worker reviewer. The workers are: general, ui-ux, architect, tester.']);
+    expect(indexLine(systemPrompt(fake, 0), 'delegate')).toContain(`Workers: ${named('reviewer')}.`);
+    expect(toolResults(fake)).toEqual(['error kvcoder/WORKER_NOT_FOUND: There is no worker reviewer. The workers are: general, ui-ux, architect, tester, council.']);
   });
 
+  // Superseded by QA68-H1: the list ends with the council (ADR 0103, 1).
   it('QA31-E1 an unknown worker fails, and no child starts', async () => {
     const { kernel, fake, sessionId } = await turn({}, runs(delegate('nobody')), says('done'));
-    expect(toolResults(fake)).toEqual(['error kvcoder/WORKER_NOT_FOUND: There is no worker nobody. The workers are: general, ui-ux, architect, tester, reviewer.']);
+    expect(toolResults(fake)).toEqual(['error kvcoder/WORKER_NOT_FOUND: There is no worker nobody. The workers are: general, ui-ux, architect, tester, reviewer, council.']);
     expect(fake.requests()).toHaveLength(2);
     expect((await turnState(kernel, sessionId)).turn).toMatchObject({ outcome: 'done', pending: [] });
   });
@@ -125,5 +130,17 @@ describe('the delegate connector and its workers (08 §8.5, ADR 0021)', { timeou
     expect(systemPrompt(fake, 0)).not.toContain('- delegate: ');
     expect(JSON.stringify(requestTools(fake, 0))).not.toContain('"delegate"');
     expect(toolResults(fake)).toEqual(['error VALIDATION_FAILED: There is no connector delegate. The connectors are: shell, fs, artifact, execution-map, background, ask, web, todo.']);
+  });
+});
+
+describe('the council in a saved list (ADR 0103, 7)', { timeout: 30_000 }, () => {
+  it('QA68-E4 a list saved without the council keeps its entries, and a run of the council fails naming them', async () => {
+    const { fake } = await turn(workers(...shippedWorkers.filter((entry) => entry.name !== 'council')), runs(delegate('council')), says('done'));
+    expect(toolResults(fake)).toEqual(['error kvcoder/WORKER_NOT_FOUND: There is no worker council. The workers are: general, ui-ux, architect, tester, reviewer.']);
+  });
+
+  it('QA68-E5 the council turned off is left out of the index', async () => {
+    const { fake } = await turn(workers(...shippedWorkers.map((entry) => ({ ...entry, enabled: entry.name !== 'council' }))), says('done'));
+    expect(indexLine(systemPrompt(fake, 0), 'delegate').endsWith(`Workers: ${named('council')}.`)).toBe(true);
   });
 });

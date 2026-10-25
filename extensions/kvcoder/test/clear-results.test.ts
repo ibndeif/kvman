@@ -78,11 +78,12 @@ describe('old tool results cleared (ADR 0094, 1)', { timeout: 60_000 }, () => {
     expect(JSON.stringify(messages.find((message) => message.kind === 'assistant')?.content)).toContain(long);
   });
 
+  // Six reads keep the prompt well under half the 128K window, whatever the base prompt's length (ADR 0103 grew it).
   it('QA62-E1 a recent chat with little to clear sends every result whole', async () => {
     const { kernel, fake } = await kvcoder.start();
-    bigFiles(7)(kernel.homeFolder);
+    bigFiles(6)(kernel.homeFolder);
     const sessionId = await newSession(kernel);
-    fake.reply(reads(7), says('read them'));
+    fake.reply(reads(6), says('read them'));
     await send(kernel, sessionId);
     fake.reply(says('done'));
     await send(kernel, sessionId);

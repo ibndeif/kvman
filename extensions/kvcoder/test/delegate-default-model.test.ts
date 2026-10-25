@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { command, runs, says, shell } from './support/model-script.ts';
+import { shippedWorkers } from '../src/delegate/workers.ts';
+import { command, runs, says, shell, systemPrompt, toolResults } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 import { worker, workers } from './support/workers.ts';
 
@@ -44,6 +45,18 @@ describe("a helper's thinking when its worker names none (08 §8.5, ADR 0102, 3)
   it('QA67-H7 a helper thinks at medium in a chat set higher, and at the level the setting names', async () => {
     expect(await helperLevels(workers(worker('plain-worker')), 'plain-worker')).toEqual(['medium']);
     expect(await helperLevels({ ...workers(worker('plain-worker')), 'kvcoder.delegate.thinking': 'low' }, 'plain-worker')).toEqual(['low']);
+  });
+
+  it('QA68-H4 the shipped council thinks at high in a chat whose helpers think at medium, with its instructions and read-only', async () => {
+    const world = await kvcoder.start();
+    const sessionId = await newSession(world.kernel);
+    world.fake.reply(runs(delegate('council')), says('the record'), says('done'));
+    await world.kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
+    await world.kernel.clock.advance(0);
+    const helperId = /\(helper ([^)\n]+)\)$/.exec(toolResults(world.fake)[0] ?? '')?.[1];
+    expect((await world.kernel.exec('kvcoder.session.get', { sessionId: String(helperId) })).thinking).toBe('high');
+    const council = shippedWorkers.find((entry) => entry.name === 'council');
+    expect(systemPrompt(world.fake, 1)).toContain(`## Worker: council\n${council?.instructions ?? 'none'}\n\nYou are read-only here: `);
   });
 
   it("QA67-E6 and QA67-E7 a worker's own level wins, and a model that doesn't think is off", async () => {

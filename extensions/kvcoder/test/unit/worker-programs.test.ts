@@ -9,9 +9,10 @@ const parsed = (name: string, kind: 'opencode' | 'pi' | 'claude', fields: Record
 const event = (value: unknown): string => JSON.stringify(value);
 
 describe('program workers: their entries, command lines, and answers (08 §8.5, ADR 0021, 13, 31, and 32)', () => {
-  it('QA32-H1 the three kinds are entries of the setting, beside the shipped five', () => {
+  // Superseded by QA68-H1: six shipped workers (ADR 0103).
+  it('QA32-H1 the three kinds are entries of the setting, beside the shipped six', () => {
     const entries = [programWorker('oc', 'opencode'), programWorker('pie', 'pi'), programWorker('cc', 'claude'), programWorker('full', 'pi', { model: 'x/y', thinking: 'xhigh', tools: ['read', 'bash'] })];
-    expect(workersSchema.parse([...shippedWorkers, ...entries]).map((worker) => worker.kind)).toEqual(['subagent', 'subagent', 'subagent', 'subagent', 'subagent', 'opencode', 'pi', 'claude', 'pi']);
+    expect(workersSchema.parse([...shippedWorkers, ...entries]).map((worker) => worker.kind)).toEqual(['subagent', 'subagent', 'subagent', 'subagent', 'subagent', 'subagent', 'opencode', 'pi', 'claude', 'pi']);
     expect(parsed('cc', 'claude')).toMatchObject({ approval: 'auto', timeoutMs: 600_000, model: null, effort: null, permissionMode: 'acceptEdits' });
   });
 

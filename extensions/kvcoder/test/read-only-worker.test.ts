@@ -14,8 +14,9 @@ const delegate = (name: string) => command('delegate', 'run', { worker: name, ti
 const refusal = /^error VALIDATION_FAILED: This helper is read-only: .* could change something, so it isn't run\. Report what you found instead\./;
 
 describe('a read-only worker (KVC-33, ADR 0056)', { timeout: 30_000 }, () => {
-  it('M2.4-E170 the shipped architect and reviewer are read-only, and an entry without the field is not', () => {
-    expect(shippedWorkers.filter((entry) => entry.readOnly).map((entry) => entry.name)).toEqual(['architect', 'reviewer']);
+  // Superseded by QA68-H3: the council is read-only too (ADR 0103, 2).
+  it('M2.4-E170 the shipped architect, reviewer, and council are read-only, and an entry without the field is not', () => {
+    expect(shippedWorkers.filter((entry) => entry.readOnly).map((entry) => entry.name)).toEqual(['architect', 'reviewer', 'council']);
     const [old, strict] = workersSchema.parse([worker('old'), worker('strict', { readOnly: true })]);
     expect(old).toMatchObject({ readOnly: false });
     expect(strict).toMatchObject({ readOnly: true });

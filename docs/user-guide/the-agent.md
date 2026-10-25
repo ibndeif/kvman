@@ -87,7 +87,7 @@ For a dev server or anything else that must keep running, the agent starts the l
 
 A worker is another agent that does one step in a hidden helper chat. You see its steps stream in its card, and its approvals show up in your chat, also for a worker running in the background, under "A background helper needs your decision." While such a worker waits for you, the **Running** chip shows it as "Waiting for you". The agent can send a worker that has finished a follow-up, and it goes on with what it already did. A worker thinks at **Helpers' thinking** (`kvcoder.delegate.thinking`, Medium by default) unless its own setting names a level, so helpers stay quick. If the agent writes to a worker that is still busy, the message waits for the worker's next step. A worker asks you nothing and writes no artifact: its answer, with any question it has, goes to the chat's agent, the only one that talks to you. It does the one task it was given, checks it, and returns what it did, the evidence, and what is left.
 
-kvman comes with five workers:
+kvman comes with six workers:
 
 | Worker | Is |
 |---|---|
@@ -96,8 +96,11 @@ kvman comes with five workers:
 | `architect` | designs the structure of a change inside your project's own patterns; it only reads |
 | `tester` | a QA engineer: tests the critical flows, security, and performance, automated and by hand, and reports the issues |
 | `reviewer` | reports wrong style, needless complexity, and unclear code; it only reads |
+| `council` | for complex requests whose approach is open: an engineer, a devil's advocate, a dumb customer, and the best expert for the problem debate it until its fatal flaws are fixed, then a silent Maestro writes the final plan; it only reads, and thinks at High |
 
-To manage them, open **Extensions → Coder** and press the cog on the `delegate` row. There you turn a worker off, edit its instructions, choose its connectors, give it its own model or thinking level, remove it, or add your own. **Reset** brings back the five with the instructions of the version you run; a list you changed keeps your words when kvman is updated. **Model for workers**, in the Agent card, is the model a worker uses when it names none, so workers can run on a cheaper model.
+To manage them, open **Extensions → Coder** and press the cog on the `delegate` row. There you turn a worker off, edit its instructions, choose its connectors, give it its own model or thinking level, remove it, or add your own. **Reset** brings back the six with the instructions of the version you run; a list you changed keeps your words when kvman is updated. **Model for workers**, in the Agent card, is the model a worker uses when it names none, so workers can run on a cheaper model.
+
+**When the agent calls the council.** The agent decides for each request, apart from whether it makes an execution map. A hard decision with a small change gets the debate and no map; a large change whose way forward is clear gets a map and no debate; complex work whose way forward is open gets both, the debate first, so the map is built on the council's plan; most requests get neither. It never calls the council for a question, a bug fix, or a small, clear change, and calls it once per request. If you saved your own list of workers before this version, it doesn't have `council`: add it with **Add a worker**, or press **Reset**, which also resets your other workers.
 
 **Programs as workers.** A worker can be a coding program installed on this computer: **opencode**, **pi**, or **Claude Code**. It runs the program in your workspace folder, signed in the program's own way and spending on that program's account. You choose whether kvman asks before each run, how long a run may take (1 to 120 minutes), and the program's options, such as its model. The program edits files and runs commands on its own: kvman's approval cards don't cover what it does inside a run. A worker whose program isn't installed says so, and the agent isn't offered it.
 
