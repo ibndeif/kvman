@@ -75,6 +75,8 @@ export function registerDelegateConnector(ctx: Ctx): void {
 export async function createChild(ctx: Ctx, parent: Stored<SessionDoc>, worker: SubagentWorker, run: { title: string; task: string }, guard: CreationGuard): Promise<string> {
   // A worker that names no model uses the one set for helpers, and the chat's own when none is (ADR 0069, 3).
   const helperModel = settingSchemas.model.parse(await ctx.settings.get('kvcoder.delegate.model'));
+  // A worker that names no level uses the one set for helpers, medium by default, so helpers stay quick (ADR 0102, 3).
+  const helperThinking = settingSchemas.thinking.parse(await ctx.settings.get('kvcoder.delegate.thinking'));
   // The helper's level is one its model has (ADR 0087, 11); the levels are looked up before the transaction, for the
   // model the parent has now, and used only when the canonical parent still has it.
   const expected = worker.model ?? helperModel ?? parent.model;
@@ -85,7 +87,7 @@ export async function createChild(ctx: Ctx, parent: Stored<SessionDoc>, worker: 
     if (canonical.id !== parent.id) throw invalid('Delegation requires its originating session.');
     const stamp = now();
     const model = worker.model ?? helperModel ?? canonical.model;
-    const wanted = worker.thinking ?? canonical.thinking;
+    const wanted = worker.thinking ?? helperThinking;
     const child = store.sessions.insert({
       title: shownTitle(run.title),
       autoTitle: false,

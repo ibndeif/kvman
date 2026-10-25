@@ -60,9 +60,42 @@ function withParsedPayload(raw: Record<string, JsonValue>): Record<string, JsonV
 
 export type ParsedRunArgs = { success: true; data: RunCall } | { success: false; problems: string };
 
-/** A call's arguments, or what is wrong with them and what each field must be. */
-export function parseRunArgs(raw: Record<string, JsonValue>): ParsedRunArgs {
-  const parsed = argsSchema.safeParse(withParsedPayload(raw));
+const named = new Set(['connector', 'command', 'payload', 'description']);
+const lineCommands = new Set(['exec', 'help']);
+
+// Shapes models often send, made into the call they meant (ADR 0102, 5): a payload key beside the payload, a
+// `functions.` prefix on the connector, and a shell line, or a program's arguments, sent as the command.
+function repaired(raw: Record<string, JsonValue>, lineConnectors: ReadonlySet<string>): Record<string, JsonValue> {
+  const payload = raw['payload'] === undefined ? {} : raw['payload'];
+  if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) return raw;
+  const moved: Record<string, JsonValue> = { ...payload };
+  const kept: Record<string, JsonValue> = {};
+  for (const [key, value] of Object.entries(raw)) {
+    if (named.has(key)) kept[key] = value;
+    else if (key in moved) kept[key] = value;
+    else moved[key] = value;
+  }
+  const connector = typeof raw['connector'] === 'string' ? raw['connector'].replace(/^functions\./, '') : raw['connector'];
+  const command = raw['command'];
+  const field = connector === 'shell' ? 'line' : 'args';
+  if (typeof connector === 'string' && lineConnectors.has(connector) && typeof command === 'string' && !lineCommands.has(command) && !(field in moved)) {
+    return { ...kept, connector, command: 'exec', payload: { ...moved, [field]: command } };
+  }
+  return { ...kept, ...(connector === undefined ? {} : { connector }), ...(raw['payload'] === undefined && Object.keys(moved).length === 0 ? {} : { payload: moved }) };
+}
+
+/** A `run` call's arguments as they are stored and sent again: repaired when the repair makes a valid call, else as they came. */
+export function repairedArguments(raw: Record<string, JsonValue>, lineConnectors: ReadonlySet<string>): Record<string, JsonValue> {
+  const fixed = repaired(withParsedPayload(raw), lineConnectors);
+  return argsSchema.safeParse(fixed).success ? fixed : raw;
+}
+
+/**
+ * A call's arguments, or what is wrong with them and what each field must be. `lineConnectors` are the connectors
+ * that run a line (`shell` and the binary ones), whose command may come as the line itself.
+ */
+export function parseRunArgs(raw: Record<string, JsonValue>, lineConnectors: ReadonlySet<string> = new Set(['shell'])): ParsedRunArgs {
+  const parsed = argsSchema.safeParse(repaired(withParsedPayload(raw), lineConnectors));
   if (parsed.success) return { success: true, data: parsed.data };
   const problems = parsed.error.issues.map((issue) => {
     const field = String(issue.path[0] ?? 'arguments');

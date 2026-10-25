@@ -2,7 +2,7 @@ import { readFile, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { createContext, Script } from 'node:vm';
 import { cutInto } from '../connectors/payload-fields.ts';
-import { invalid, notFound } from '../problems.ts';
+import { notFound } from '../problems.ts';
 import { decodeText, isMissing } from './read-file.ts';
 import { filesIn, globMatcher } from './workspace-files.ts';
 import { resolveInWorkspace } from './workspace-path.ts';
@@ -26,7 +26,7 @@ export type Match = { line: number; text: string; context?: true };
 /** The matches of one file, or with `filesOnly` their count; files are in path order (ADR 0034, 5). */
 export type FileMatches = { path: string; matches: Match[] } | { path: string; count: number };
 
-export type SearchResult = { files: FileMatches[]; truncated: boolean; reason?: 'matches' | 'time' };
+export type SearchResult = { files: FileMatches[]; truncated: boolean; reason?: 'matches' | 'time'; note?: string };
 export type SearchInput = { pattern: string; path?: string | undefined; literal?: boolean | undefined; glob?: string | undefined; context?: number | undefined; filesOnly?: boolean | undefined };
 
 /** The most lines `context` adds on each side of a match. */
@@ -41,11 +41,12 @@ function shownLines(lines: readonly string[], kept: readonly number[], context: 
   return [...shown].sort((first, second) => first - second).map((index) => ({ line: index + 1, text: (lines[index] ?? '').slice(0, lineLimit), ...(hits.has(index) ? {} : { context: true as const }) }));
 }
 
-function expression(pattern: string): RegExp {
+// A pattern that isn't a valid expression, such as `terminate(`, is searched as plain text, and the result says so (ADR 0102, 13).
+function expression(pattern: string): { pattern: RegExp | string; note?: string } {
   try {
-    return new RegExp(pattern);
+    return { pattern: new RegExp(pattern) };
   } catch (error) {
-    if (error instanceof SyntaxError) throw invalid(`The pattern isn't a regular expression: ${error.message}`, { pattern });
+    if (error instanceof SyntaxError) return { pattern, note: `The pattern isn't a regular expression (${error.message}), so it was searched as plain text.` };
     throw error;
   }
 }
@@ -65,9 +66,14 @@ function matchingLines(lines: readonly string[], pattern: RegExp | string, timeo
 }
 
 export async function searchText(workspace: string, input: SearchInput, signal: AbortSignal, limits: SearchLimits = searchLimits): Promise<SearchResult> {
-  if (input.filesOnly === true && input.context !== undefined) throw invalid('context and filesOnly can\'t be used together: filesOnly gives no lines to show context around.', { pattern: input.pattern });
-  const context = cutInto(input.context ?? 0, 0, contextLimit);
-  const pattern = input.literal === true ? input.pattern : expression(input.pattern);
+  const read = input.literal === true ? { pattern: input.pattern } : expression(input.pattern);
+  const found = await searchFiles(workspace, input, read.pattern, signal, limits);
+  return read.note === undefined ? found : { ...found, note: read.note };
+}
+
+// With `filesOnly` there are no lines to show around a match, so `context` is ignored (ADR 0102, 13).
+async function searchFiles(workspace: string, input: SearchInput, pattern: RegExp | string, signal: AbortSignal, limits: SearchLimits): Promise<SearchResult> {
+  const context = input.filesOnly === true ? 0 : cutInto(input.context ?? 0, 0, contextLimit);
   const requested = input.path === undefined || input.path === '' ? '.' : input.path;
   const target = await resolveInWorkspace(workspace, requested);
   const found = await stat(target).catch((error: unknown) => {

@@ -6,15 +6,16 @@ import { currentStep, type StepLease } from './step-claim.ts';
 
 // A step's model call, tried again when it fails for a temporary reason (plan 08 §8.2, ADR 0009, 154, 155, and 203;
 // ADR 0087, 3 and 6): five tries in all, after 1 s, 4 s, 15 s, and then 60 s, each announced with why and how long.
-// Any other failure, and a stop, end it at once.
+// Any other failure, and a stop, end it at once. A summary's call is tried the same way (ADR 0102, 12); one made by hand
+// has no step, so nothing is checked between its tries but the job's own stop.
 
 const waitsMs = [1_000, 4_000, 15_000, 60_000] as const;
 
 const transient = (error: ProblemError): boolean => error.problem.code === 'kvai/RATE_LIMITED' || (error.problem.code === 'kvai/PROVIDER_ERROR' && error.problem.params?.['transient'] === true);
 
-export async function completeWithRetries(ctx: Ctx, input: InputOf<'kvai.complete'>, lease: StepLease): Promise<OutputOf<'kvai.complete'>> {
+export async function completeWithRetries(ctx: Ctx, input: InputOf<'kvai.complete'>, lease: StepLease | undefined): Promise<OutputOf<'kvai.complete'>> {
   for (let attempt = 1; ; attempt += 1) {
-    if (await currentStep(ctx, lease) === undefined) throw invalid('The originating step is no longer current.');
+    if (lease !== undefined && await currentStep(ctx, lease) === undefined) throw invalid('The originating step is no longer current.');
     try {
       return await ctx.exec('kvai.complete', input);
     } catch (error) {

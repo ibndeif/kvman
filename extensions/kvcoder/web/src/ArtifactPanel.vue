@@ -6,7 +6,7 @@ import ArtifactUrlFrame from './ArtifactUrlFrame.vue';
 import ChoicePicker from './ChoicePicker.vue';
 import ChangesView from './ChangesView.vue';
 import ExecutionMap from './ExecutionMap.vue';
-import type { ChangeList } from './use-changes.ts';
+import type { ChangeList, ChangeScope } from './use-changes.ts';
 import type { ExecutionMapView } from './map-layout.ts';
 import { panelWidthKey, storedWidth } from './panel-width.ts';
 import PanelResizer from './PanelResizer.vue';
@@ -20,8 +20,8 @@ import type { ArtifactContent, ArtifactSummary } from './use-artifacts.ts';
 // title is a button that opens the list of them (ADR 0071, 1): the chat's execution map first, which has no source,
 // link, or copy (ADR 0064), then its artifacts. The person drags the panel's width, which the browser keeps; one
 // outside the limits is shown at the nearest (ADR 0071, 4). The chat's changes are an entry after the map (ADR 0093, 2).
-const props = defineProps<{ list: ArtifactSummary[]; shown: string | undefined; content: ArtifactContent | undefined; map?: ExecutionMapView | null | undefined; mapShown?: boolean | undefined; sessionId?: string | undefined; changes?: ChangeList | undefined; changesCount?: number | undefined; changesShown?: boolean | undefined }>();
-const emit = defineEmits<{ select: [id: string]; selectMap: []; selectChanges: []; close: []; changed: []; commit: [] }>();
+const props = defineProps<{ list: ArtifactSummary[]; shown: string | undefined; content: ArtifactContent | undefined; map?: ExecutionMapView | null | undefined; mapShown?: boolean | undefined; sessionId?: string | undefined; changes?: ChangeList | undefined; changesCount?: number | undefined; changesShown?: boolean | undefined; changesScope?: ChangeScope | undefined }>();
+const emit = defineEmits<{ select: [id: string]; selectMap: []; selectChanges: []; close: []; changed: []; commit: []; changesScope: [scope: ChangeScope] }>();
 const kvman = useKvman();
 const summary = computed(() => props.list.find((item) => item.id === props.shown));
 // The content of the artifact shown: while another one is being read, the old one's must not stay under the new title.
@@ -98,7 +98,7 @@ const markdownView = computed(() => ({ type: 'markdown' as const, text: 'kvcoder
       </div>
     </div>
     <div class="kvc-artifact-body" data-test="artifact-body">
-      <ChangesView v-if="onChanges && props.sessionId !== undefined" :session-id="props.sessionId" :list="props.changes" @changed="emit('changed')" @commit="emit('commit')" />
+      <ChangesView v-if="onChanges && props.sessionId !== undefined" :session-id="props.sessionId" :list="props.changes" :scope="props.changesScope" @changed="emit('changed')" @commit="emit('commit')" @scope="(scope) => emit('changesScope', scope)" />
       <ExecutionMap v-else-if="onMap && props.map" :map="props.map" />
       <pre v-else-if="mode === 'source' && current !== undefined" class="kvc-artifact-source" dir="ltr" data-test="artifact-source">{{ body }}</pre>
       <component :is="kvman.View" v-else-if="format === 'markdown' && current !== undefined" :view="markdownView" />

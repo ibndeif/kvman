@@ -29,7 +29,7 @@ describe('the map set as a skeleton, each step detailed on its own (08 §8.5, AD
     expect(parsed(toolResults(fake, 1).at(-1))).toEqual({ goal: 'Ship it', progress: '0 of 2 done', doing: [], ready: ['read: Do read'], waiting: ['build: Do build'], failed: [], undetailed: ['read: Do read', 'build: Do build'], notes: 0 });
     expect((await map())?.steps.map((found) => found.details)).toEqual([null, null]);
     const prompt = systemPrompt(fake, 0);
-    expect(prompt).toMatch(/\n {2}set +\{ goal \(≤300\), steps: \[\{ id \(≤50\), title \(≤100\), after\?, uses\?, check \(≤300\) \}\] \}\n {2}detail +\{ id \(≤50\), details \(≤4000\) \}\n/);
+    expect(prompt).toMatch(/\n {2}set +\{ goal \(≤300\), steps: \[\{ id \(≤50\), title \(≤100\), after\?, uses\?, check \(≤300\), details\? \(≤4000\) \}\] \}\n {2}detail +\{ id \(≤50\), details \(≤4000\) \}\n/);
     expect(prompt).toMatch(/\n {2}get +\{ id\? \(≤50\) \}/);
   });
 
@@ -87,9 +87,28 @@ describe('the map set as a skeleton, each step detailed on its own (08 §8.5, AD
     expect((await map())?.steps[0]?.details).toBe('y'.repeat(4000));
   });
 
-  it('QA54-E4 set refuses a step with details or a description', async () => {
-    const { fake, map } = await chat(runs(set({ ...step('read'), details: 'How.' }), set({ ...step('read'), description: 'How.' })), says('ok'));
-    expect(toolResults(fake, 1).map((text) => text.slice(0, 23))).toEqual(['error VALIDATION_FAILED', 'error VALIDATION_FAILED']);
+  // Superseded by QA67-H9: set takes each step's details (ADR 0102, 4); a description is still refused.
+  it('QA54-E4 set refuses a step with a description', async () => {
+    const { fake, map } = await chat(runs(set({ ...step('read'), description: 'How.' })), says('ok'));
+    expect(toolResults(fake, 1).map((text) => text.slice(0, 23))).toEqual(['error VALIDATION_FAILED']);
+    expect(await map()).toBeNull();
+  });
+
+  it('QA67-H9 set gives a step its details in the same call, and that step can be doing', async () => {
+    const { fake, map } = await chat(runs(set({ ...step('read'), details: 'How.' }, step('page'))), runs(update({ id: 'read', status: 'doing' })), says('ok'));
+    expect(parsed(toolResults(fake, 1)[0])['undetailed']).toEqual(['page: Do page']);
+    expect(parsed(toolResults(fake, 2).at(-1))['doing']).toEqual(['read: Do read']);
+    expect((await map())?.steps.map((found) => found.details)).toEqual(['How.', null]);
+  });
+
+  it('QA67-E8 set again keeps details it isn\'t given, and replaces those it is', async () => {
+    const { map } = await chat(runs(set({ ...step('read'), details: 'Old.' }, { ...step('page'), details: 'Old page.' })), runs(set(step('read'), { ...step('page'), details: 'New page.' })), says('ok'));
+    expect((await map())?.steps.map((found) => found.details)).toEqual(['Old.', 'New page.']);
+  });
+
+  it('QA67-E9 details over 4,000 characters in set are refused and nothing is saved', async () => {
+    const { fake, map } = await chat(runs(set({ ...step('read'), details: 'x'.repeat(4001) })), says('ok'));
+    expect(toolResults(fake, 1)[0]?.slice(0, 23)).toBe('error VALIDATION_FAILED');
     expect(await map()).toBeNull();
   });
 

@@ -31,7 +31,7 @@ describe("the lead's prompt (08 §8.2, ADR 0022, 2 to 4)", () => {
     const plan = lineOf(prompt, 'Plan. ');
     // ADR 0097, 5: what a step holds and what a branch means are in the map's entry.
     expect(plan).toContain('yourself, with a connector, for an ordinary or small change, or a worker of the `delegate` connector whose description fits');
-    expect(executionMapDescription).toContain('Its uses names who does it: you, with a connector such as fs, or a worker such as delegate designer');
+    expect(executionMapDescription).toContain('Its uses names who does it: you, with a connector such as fs, or a worker of delegate whose description in the delegate entry fits the step');
     expect(executionMapDescription).toContain('Steps side by side are branches, and a branch means delegation');
   });
 

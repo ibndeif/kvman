@@ -4,7 +4,7 @@ import type { MapDoc, MapStatus, MapStep } from './map-schema.ts';
 // are ready, what a change of status needs, and what the agent reads back. A refusal is the sentence the model reads.
 
 /** A step as `set` names it. */
-export type PlannedStep = { id: string; title: string; after?: string[] | undefined; uses?: string | undefined; check: string };
+export type PlannedStep = { id: string; title: string; after?: string[] | undefined; uses?: string | undefined; check: string; details?: string | undefined };
 
 /** One change of `update`. */
 export type StepChange = { id: string; status: MapStatus; evidence?: string | undefined; note?: string | undefined };
@@ -43,7 +43,7 @@ export function shapeProblem(steps: readonly PlannedStep[]): string | undefined 
 export function plannedSteps(planned: readonly PlannedStep[], old: readonly MapStep[]): MapStep[] {
   return planned.map((step) => {
     const kept = old.find((candidate) => candidate.id === step.id);
-    return { id: step.id, title: step.title, details: kept?.details ?? null, after: step.after ?? [], uses: step.uses ?? null, check: step.check, status: kept?.status ?? 'todo', evidence: kept?.evidence ?? null, note: kept?.note ?? null };
+    return { id: step.id, title: step.title, details: step.details ?? kept?.details ?? null, after: step.after ?? [], uses: step.uses ?? null, check: step.check, status: kept?.status ?? 'todo', evidence: kept?.evidence ?? null, note: kept?.note ?? null };
   });
 }
 

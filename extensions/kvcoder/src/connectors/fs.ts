@@ -62,7 +62,7 @@ const payloads = {
     literal: z.boolean().describe('true to match pattern as plain text, not as a regular expression.').exactOptional(),
     glob: z.string().min(1).describe('Which files to search, such as *.ts or src/**/*.vue.').exactOptional(),
     context: z.number().int().describe('How many lines to show before and after each match, from 0 to 10; a number outside them is cut into them. Lines around a match are marked context.').exactOptional(),
-    filesOnly: z.boolean().describe('true gives each matching file with its count of matching lines, and no lines; not with context.').exactOptional(),
+    filesOnly: z.boolean().describe('true gives each matching file with its count of matching lines, and no lines; context is then ignored.').exactOptional(),
   }),
   write: z.strictObject({ path: filePath('The file to create or replace'), content: z.string().describe('The whole content of the file.'), risky }),
   edit: z.strictObject({ path: filePath('The existing text file to change'), edits, risky }),
@@ -166,7 +166,7 @@ export function registerFsConnector(ctx: Ctx): void {
   ctx.registerQuery('kvcoder.fs.text.search', {
     description: commands.search.description,
     input: callInput(payloads.search),
-    output: z.object({ files: z.array(z.union([z.object({ path: z.string(), matches: z.array(z.object({ line: z.number().int(), text: z.string(), context: z.literal(true).exactOptional() })) }), z.object({ path: z.string(), count: z.number().int() })])), truncated: z.boolean(), reason: z.enum(['matches', 'time']).exactOptional() }),
+    output: z.object({ files: z.array(z.union([z.object({ path: z.string(), matches: z.array(z.object({ line: z.number().int(), text: z.string(), context: z.literal(true).exactOptional() })) }), z.object({ path: z.string(), count: z.number().int() })])), truncated: z.boolean(), reason: z.enum(['matches', 'time']).exactOptional(), note: z.string().exactOptional() }),
     handle: ({ payload }) => asProblems(() => searchText(ctx.job.workspace.path, payload, ctx.job.signal)),
   });
   ctx.registerCommand('kvcoder.fs.write', {

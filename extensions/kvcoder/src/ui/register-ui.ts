@@ -13,7 +13,7 @@ const configuration = {
   type: 'stack',
   direction: 'vertical',
   children: [
-    { type: 'card', title: 'kvcoder.config.agent', children: [{ type: 'custom', component: 'kvcoder.model', props: {} }, { type: 'custom', component: 'kvcoder.model', props: { setting: 'kvcoder.delegate.model' } }, { type: 'custom', component: 'kvcoder.approval', props: {} }, { type: 'custom', component: 'kvcoder.preferences', props: {} }, ...settings(['kvcoder.thinking', 'kvcoder.maxSteps', 'kvcoder.compactAt', 'kvcoder.compactKeep'])] },
+    { type: 'card', title: 'kvcoder.config.agent', children: [{ type: 'custom', component: 'kvcoder.model', props: {} }, { type: 'custom', component: 'kvcoder.model', props: { setting: 'kvcoder.delegate.model' } }, { type: 'custom', component: 'kvcoder.approval', props: {} }, { type: 'custom', component: 'kvcoder.preferences', props: {} }, ...settings(['kvcoder.thinking', 'kvcoder.delegate.thinking', 'kvcoder.maxSteps', 'kvcoder.compactAt', 'kvcoder.compactKeep'])] },
     { type: 'card', title: 'kvcoder.config.chats', children: settings(['kvcoder.sessions.keep']) },
     {
       type: 'card',

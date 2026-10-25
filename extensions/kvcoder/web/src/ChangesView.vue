@@ -3,13 +3,14 @@ import { ChevronDown, ChevronRight } from '@lucide/vue';
 import { reactive } from 'vue';
 import { absolutePath } from './host-files.ts';
 import { toastProblem, useKvman } from './kvman.ts';
-import type { ChangeList, ChangedFile } from './use-changes.ts';
+import type { ChangeList, ChangedFile, ChangeScope } from './use-changes.ts';
 
 // The chat's changes in the panel (plan 08 §8.7, ADR 0093, 2): each file with its counts and state, its diff on a
 // press, and Undo; Commit asks the agent to commit them, as the person's message. In a host that embeds kvwebui, a
 // file that is there also opens in the host's editor (ADR 0100, 18).
-const props = defineProps<{ sessionId: string; list: ChangeList | undefined }>();
-const emit = defineEmits<{ changed: []; commit: [] }>();
+// It shows this turn's files first, and the whole chat's on the switch (ADR 0102, 9).
+const props = defineProps<{ sessionId: string; list: ChangeList | undefined; scope?: ChangeScope | undefined }>();
+const emit = defineEmits<{ changed: []; commit: []; scope: [scope: ChangeScope] }>();
 const kvman = useKvman();
 const opened = reactive(new Set<string>());
 const busy = reactive(new Set<string>());
@@ -31,6 +32,9 @@ async function undo(file: ChangedFile): Promise<void> {
 
 <template>
   <div class="kvc-changes" data-test="changes">
+    <div class="kvc-segments" role="group" :aria-label="kvman.t('kvcoder.ui.changes.scopeLabel')" data-test="changes-scope">
+      <button v-for="choice in ['turn', 'chat'] as const" :key="choice" type="button" class="kvc-button" :aria-pressed="(props.scope ?? 'turn') === choice" :data-test="`changes-scope-${choice}`" @click="emit('scope', choice)">{{ kvman.t(`kvcoder.ui.changes.scope.${choice}`) }}</button>
+    </div>
     <p v-if="props.list === undefined" class="kvc-muted">{{ kvman.t('kvcoder.ui.changes.loading') }}</p>
     <template v-else>
       <p class="kvc-muted" data-test="changes-note">{{ kvman.t(props.list.diffs ? 'kvcoder.ui.changes.note' : 'kvcoder.ui.changes.noGit') }}</p>

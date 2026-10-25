@@ -23,7 +23,8 @@ function setup(jobs: ReturnType<typeof job>[]) {
 }
 
 describe("the Running chip in the conversation's header (08 §8.7, ADR 0009, 153)", () => {
-  it('QA3-H18 the chip counts running jobs, its list shows links, logs, and Stop, and it is hidden with none running', async () => {
+  // Superseded by QA67-H15: once every job ended the chip stays as Background (N) (ADR 0102, 7).
+  it('QA3-H18 QA67-H15 the chip counts running jobs, its list shows links, logs, and Stop, and once none runs it reads Background (N)', async () => {
     const { world, fake, mount } = setup([job({ links: ['http://localhost:8000'] })]);
     const wrapper = await mount();
     expect(wrapper.find('[data-test="jobs-chip"]').text()).toBe('1 running');
@@ -42,14 +43,15 @@ describe("the Running chip in the conversation's header (08 §8.7, ADR 0009, 153
     expect(fake.calls).toContainEqual({ name: 'kvcoder.job.cancel', input: { sessionId: 's1', id: 'j1' } });
     expect(wrapper.find('[data-test="job-status"]').text()).toBe('Stopped');
     expect(wrapper.find('[data-test="job-stop-j1"]').exists()).toBe(false);
-    expect(wrapper.find('[data-test="jobs-chip"]').text()).toBe('0 running');
+    expect(wrapper.find('[data-test="jobs-chip"]').text()).toBe('Background (1)');
 
     await wrapper.find('[data-test="jobs-popover"]').trigger('keydown', { key: 'Escape' });
-    expect(wrapper.find('[data-test="jobs"]').exists()).toBe(false);
+    expect(wrapper.find('[data-test="jobs-popover"]').exists()).toBe(false);
+    expect(wrapper.find('[data-test="jobs-chip"]').text()).toBe('Background (1)');
     expect(world.jobs[0]?.status).toBe('cancelled');
   });
 
-  it('QA3-E21 the list is read again every 5 s while a job runs, and the chip goes when it ended', async () => {
+  it('QA3-E21 the list is read again every 5 s while a job runs, and the chip turns quiet when it ended', async () => {
     const { world, fake, mount } = setup([job()]);
     const wrapper = await mount();
     const reads = () => fake.calls.filter((call) => call.name === 'kvcoder.job.list').length;
@@ -59,7 +61,7 @@ describe("the Running chip in the conversation's header (08 §8.7, ADR 0009, 153
     world.jobs = [job({ status: 'failed', exitCode: 1 })];
     await vi.advanceTimersByTimeAsync(5_000);
     await flushPromises();
-    expect(wrapper.find('[data-test="jobs"]').exists()).toBe(false);
+    expect(wrapper.find('[data-test="jobs-chip"]').text()).toBe('Background (1)');
     await vi.advanceTimersByTimeAsync(10_000);
     expect(reads()).toBe(3);
   });
@@ -81,9 +83,26 @@ describe("the Running chip in the conversation's header (08 §8.7, ADR 0009, 153
     expect(wrapper.find('[data-test="job-status"]').text()).toBe('Stopped');
   });
 
-  it('QA3-H18 with nothing running, there is no chip', async () => {
-    const { mount } = setup([job({ status: 'succeeded', exitCode: 0 })]);
+  it('QA3-H18 with no background job, there is no chip', async () => {
+    const { mount } = setup([]);
     const wrapper = await mount();
     expect(wrapper.find('[data-test="jobs"]').exists()).toBe(false);
+  });
+
+  it('QA67-H15 a running process has Restart and an ended one Run again, each running kvcoder.job.restart; a helper has neither', async () => {
+    const { world, fake, mount } = setup([job(), job({ id: 'j2', status: 'succeeded', exitCode: 0, endedAt: '2026-10-01T09:00:30.000Z' }), job({ id: 'h1', kind: 'subagent', title: 'Helper' })]);
+    fake.handle('kvcoder.job.restart', (input) => {
+      world.jobs = [job({ id: 'j3' }), ...world.jobs];
+      return { id: `new-${String(input['id'])}` };
+    });
+    const wrapper = await mount();
+    await wrapper.find('[data-test="jobs-chip"]').trigger('click');
+    expect(wrapper.find('[data-test="job-restart-j1"]').text()).toBe('Restart');
+    expect(wrapper.find('[data-test="job-restart-j2"]').text()).toBe('Run again');
+    expect(wrapper.find('[data-test="job-restart-h1"]').exists()).toBe(false);
+    await wrapper.find('[data-test="job-restart-j2"]').trigger('click');
+    await flushPromises();
+    expect(fake.calls).toContainEqual({ name: 'kvcoder.job.restart', input: { sessionId: 's1', id: 'j2' } });
+    expect(wrapper.find('[data-test="job-restart-j3"]').exists()).toBe(true);
   });
 });

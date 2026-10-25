@@ -42,4 +42,20 @@ describe('the Changes view (ADR 0093, 2)', () => {
     await view.find('[data-test="artifact-close"]').trigger('click');
     expect(view.find('[data-test="changes"]').exists()).toBe(false);
   });
+
+  it("QA67-H18 the panel shows this turn's files first, Whole chat asks for all, and the header counts the whole chat", async () => {
+    const { fake, view } = await chat();
+    await view.find('[data-test="changes-toggle"]').trigger('click');
+    await flushPromises();
+    const lists = () => fake.calls.filter((call) => call.name === 'kvcoder.change.list' && call.input['withDiffs'] !== false).map((call) => call.input['scope']);
+    expect(lists()).toEqual(['turn']);
+    expect(view.find('[data-test="changes-scope-turn"]').attributes('aria-pressed')).toBe('true');
+    await view.find('[data-test="changes-scope-chat"]').trigger('click');
+    await flushPromises();
+    expect(lists()).toEqual(['turn', 'chat']);
+    expect(view.find('[data-test="changes-scope-chat"]').attributes('aria-pressed')).toBe('true');
+    expect(fake.calls.filter((call) => call.name === 'kvcoder.change.list' && call.input['withDiffs'] === false).every((call) => call.input['scope'] === undefined)).toBe(true);
+    expect(view.find('[data-test="changes-toggle"]').text()).toBe('2');
+  });
 });
+

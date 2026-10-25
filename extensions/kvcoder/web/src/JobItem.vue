@@ -1,13 +1,28 @@
 <script setup lang="ts">
-import { useKvman } from './kvman.ts';
+import { ref } from 'vue';
+import { toastProblem, useKvman } from './kvman.ts';
 import StagingNote from './StagingNote.vue';
 import { elapsed, type Job } from './use-jobs.ts';
 
 // One background job in the Running popover (ADR 0009, 153): its title, how long it has run or how it ended, its
-// localhost links, Logs, and Stop while it runs.
+// localhost links, Logs, and Stop while it runs; a process also has Restart while it runs and Run again once it ended,
+// which start its line again with no turn (ADR 0102, 7).
 const props = defineProps<{ sessionId: string; job: Job; now: number; logs?: string | undefined; stopping: boolean }>();
-const emit = defineEmits<{ stop: []; logs: [] }>();
+const emit = defineEmits<{ stop: []; logs: []; restarted: [] }>();
 const kvman = useKvman();
+const restarting = ref(false);
+
+async function restart(): Promise<void> {
+  restarting.value = true;
+  try {
+    await kvman.exec('kvcoder.job.restart', { sessionId: props.sessionId, id: props.job.id });
+    emit('restarted');
+  } catch (error) {
+    toastProblem(kvman, error);
+  } finally {
+    restarting.value = false;
+  }
+}
 </script>
 
 <template>
@@ -22,6 +37,7 @@ const kvman = useKvman();
     </div>
     <div class="kvc-actions">
       <button type="button" class="kvc-button" :aria-expanded="props.logs !== undefined" :data-test="`job-logs-${props.job.id}`" @click="emit('logs')">{{ kvman.t('kvcoder.ui.jobs.logs') }}</button>
+      <button v-if="props.job.kind === 'process'" type="button" class="kvc-button" :disabled="restarting || props.stopping" :data-test="`job-restart-${props.job.id}`" @click="restart">{{ kvman.t(props.job.status === 'running' ? 'kvcoder.ui.jobs.restart' : 'kvcoder.ui.jobs.runAgain') }}</button>
       <button v-if="props.job.status === 'running' || props.job.status === 'waiting'" type="button" class="kvc-button kvc-primary" :disabled="props.stopping" :data-test="`job-stop-${props.job.id}`" @click="emit('stop')">{{ kvman.t('kvcoder.ui.jobs.stop') }}</button>
     </div>
     <StagingNote v-if="props.job.staging !== undefined" :session-id="props.sessionId" :run-id="props.job.id" :staging="props.job.staging" />

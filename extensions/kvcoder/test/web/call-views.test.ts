@@ -146,10 +146,15 @@ describe("an opened card shows the call by its kind (08 §8.7, ADR 0036, 3 and 5
     expect(part(card, 'call-output').exists()).toBe(false);
   });
 
-  it('QA48-E6 a failed line starts closed and says the command failed, and opened keeps its line and its output', async () => {
+  // Superseded by QA67-H25 and QA67-E25: a line that exited reads calmly; one that couldn't finish says the command failed (ADR 0102, 15).
+  it('QA48-E6 QA67-E25 a line that couldn\'t finish starts closed and says the command failed; one that exited says exit N; opened, each keeps its line and its output', async () => {
+    const stopped = await ranCard(call('shell', 'exec', { line: 'npm test', risky: false }), 'FAIL 1\n[timed out after 120 s; the process tree was killed]\n[exit code 124]', { failed: true, timedOut: true, exitCode: 124 });
+    expect(part(stopped, 'call-reason').text()).toBe('The command failed.');
+    expect(part(stopped, 'call-failed').exists()).toBe(true);
     const card = await ranCard(call('shell', 'exec', { line: 'npm test', risky: false }), 'FAIL 1\n[exit code 1]', { failed: true });
     expect(isOpen(card)).toBe(false);
-    expect(part(card, 'call-reason').text()).toBe('The command failed.');
+    expect(part(card, 'call-reason').exists()).toBe(false);
+    expect(part(card, 'call-exit').text()).toBe('exit 1');
     await pressed(card);
     expect([part(card, 'call-payload').text(), part(card, 'call-output').text()]).toEqual(['$ npm test', 'FAIL 1\n[exit code 1]']);
     expect(part(card, 'call-error').exists()).toBe(false);

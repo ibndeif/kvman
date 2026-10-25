@@ -9,20 +9,22 @@ The agent is told to work as a lead engineer who owns the result. No path is fix
 - a question gets an answer, and nothing changes;
 - a small, clear change is made and checked;
 - an unclear request gets its questions first;
-- work that changes several parts that depend on each other, or that is hard to undo, gets an **execution map** you agree to, and other work, even of a few steps, is just done;
+- work that changes several parts that depend on each other, or that is hard to undo, gets an **execution map** you agree to, and other work, even of a few steps, is just done (a bug fix, or a change to one or two files, never gets a map);
 - a result you will look at, such as a page or a design, is shown to you.
 
 A path is made of these parts, used only when the task needs them:
 
 1. **Understand.** It reads everything you sent, attached files too, then looks at what exists, including what already does part of what you asked, so it builds on that. It works out what you want to end up with, what done looks like to you, what must keep working, and what you didn't say that changes the result. It never invents a name, a path, or a behavior.
 2. **Clarify.** It looks up what looking would answer. It decides an ordinary detail that is easy to change, and tells you what it chose. It asks you, before any work, about what only you can decide, all its questions in one round, together in one reply, with its recommended option first. When what you asked for works against your goal, or a clearly better way exists, it says so and offers both.
+
+   **Tests you chose.** The first time work would add tests to a project, it asks how you want it checked: run the existing tests only, add unit tests, add end-to-end or browser tests, or you test it yourself and it leaves the app running for you. It records your answer as a `Testing:` line in the project's `AGENTS.md` and follows it from then on; edit or remove the line to change it. With **Decide for me** it asks nothing: it runs the existing tests and leaves the app running.
 3. **Plan.** When the work needs a map, it draws it, only after it understood and has your answers.
 4. **Confirm the plan.** It says back in a few lines the goal, what done looks like, what stays as it is, and the choices it made, then asks whether to start. You can write what to change, and it plans again.
-5. **Execute.** It follows the map, marks each step as it starts it, and marks it done only with evidence: what it ran and what that showed.
+5. **Execute.** It follows the map, marks each step as it starts it, and marks it done only with evidence: what it ran and what that showed. It checks in proportion: the tests that cover each change, the whole suite once at the end, and no stress, load, or benchmark test unless you asked for one.
 6. **Stay on the task.** A problem your task doesn't need isn't looked into. It goes on the map's **Noted for later** list and is reported at the end.
 7. **Delegate.** It hands a step to a worker when the worker does it better or faster (below).
 8. **Show what you will look at.** A screen, a page, or a style is shown in an artifact, and a page is tried before you see it.
-9. **Finish.** It cleans up what it left behind, stops what is no longer needed, and leaves running what you will try yourself, with its address. Its last answer says, in plain words, what was done, what was checked, what wasn't, what still runs, and what it noted for later. When it learned how your project is built, tested, or run and your `AGENTS.md` doesn't say it, it offers to add a short Commands section there.
+9. **Finish.** It cleans up what it left behind, stops what is no longer needed, and leaves running what you will try yourself, with its address. Its last answer says, in plain words, what was done, what was checked, what wasn't, what still runs, and what it noted for later. When it learned how your project is built, tested, or run and your `AGENTS.md` doesn't say it, it offers to add a short Commands section there: command lines only, at most 15.
 
 It talks to you as it works, like a colleague thinking aloud: between calls, a sentence or two on what it found and what it does next, in plain words with the point first. When you use kvman's own words (extension, preset, setting), it uses them too.
 
@@ -33,7 +35,7 @@ These are instructions to a model, not guarantees: read the map and the call car
 The map is the agent's plan for a larger task, drawn in the panel beside the chat. It is the path the agent found, after looking at your project, to be the best and fastest way to do what you asked.
 
 - **Steps.** Each step is one concrete stage: what changes, who does it, and how it will be checked. A map has 1 to 40 steps.
-- **Who does a step.** The agent itself, with a connector, for an ordinary change, or a specialist worker when the step needs that skill: a designer, an architect, a tester, or a reviewer.
+- **Who does a step.** The agent itself, with a connector, for an ordinary change, or a specialist worker when the step needs that skill: whichever worker's description fits, such as a designer, an architect, a tester, or a reviewer.
 - **The shape.** The agent's own steps are one line, in the order it does them. Steps side by side are branches: each one is done by a worker at the same time.
 - **A step's details.** The agent draws the steps first, then writes each step's details: what it changes and how, as formatted text that can hold lists, tables, diagrams, and charts. It asks you to approve the plan once every step has its details, and a step can't start without them. Press a step to open a dialog with its details, what it comes after and uses, its check, its evidence, and its note. The dialog follows the step while the agent works.
 - **Progress.** Each step shows as to do, doing, done, failed, or skipped. If the agent changes files or runs a command while steps are left and none is marked as doing, kvman reminds it to mark one or update the map. Nothing is blocked.
@@ -83,7 +85,7 @@ For a dev server or anything else that must keep running, the agent starts the l
 
 ## Workers
 
-A worker is another agent that does one step in a hidden helper chat. You see its steps stream in its card, and its approvals show up in your chat, also for a worker running in the background, under "A background helper needs your decision." While such a worker waits for you, the **Running** chip shows it as "Waiting for you". The agent can send a worker that has finished a follow-up, and it goes on with what it already did. A worker asks you nothing and writes no artifact: its answer, with any question it has, goes to the chat's agent, the only one that talks to you. It does the one task it was given, checks it, and returns what it did, the evidence, and what is left.
+A worker is another agent that does one step in a hidden helper chat. You see its steps stream in its card, and its approvals show up in your chat, also for a worker running in the background, under "A background helper needs your decision." While such a worker waits for you, the **Running** chip shows it as "Waiting for you". The agent can send a worker that has finished a follow-up, and it goes on with what it already did. A worker thinks at **Helpers' thinking** (`kvcoder.delegate.thinking`, Medium by default) unless its own setting names a level, so helpers stay quick. If the agent writes to a worker that is still busy, the message waits for the worker's next step. A worker asks you nothing and writes no artifact: its answer, with any question it has, goes to the chat's agent, the only one that talks to you. It does the one task it was given, checks it, and returns what it did, the evidence, and what is left.
 
 kvman comes with five workers:
 

@@ -3,7 +3,7 @@ import { BellRing, Info, NotebookText, ScrollText } from '@lucide/vue';
 import { computed } from 'vue';
 import type { Message } from '../../src/index.ts';
 import { failureReason, fields, isolateValue, problemKey, stringValues, useKvman } from './kvman.ts';
-import { answeredQuestion, artifactOf, backgroundName, backgroundRef, extensionCardOf, isBackground, isKvcoderHint, resultCard, shownUserText, stagingRunOf, textOf, thinkingOf, typedText } from './message-parts.ts';
+import { answeredQuestion, artifactOf, backgroundName, backgroundRef, extensionCardOf, isBackground, isKvcoderHint, exitedOnly, resultCard, shownUserText, stagingRunOf, textOf, thinkingOf, typedText } from './message-parts.ts';
 import RememberThis from './RememberThis.vue';
 import AnsweredCard from './AnsweredCard.vue';
 import ArtifactCard from './ArtifactCard.vue';
@@ -85,7 +85,7 @@ const markdown = (body: string) => ({ type: 'markdown' as const, text: 'kvcoder.
   <AnsweredCard v-else-if="answered !== undefined" :answered="answered" />
   <div v-else-if="extensionCard !== undefined" data-test="extension-card"><component :is="kvman.View" :view="{ type: 'custom', component: extensionCard.component, props: extensionCard.props }" /></div>
   <template v-else-if="props.message.kind === 'toolResult'">
-    <CallCard :view="card" :failed="card.failed" :duration-ms="card.durationMs" :output="card.output" />
+    <CallCard :view="card" :failed="card.failed" :duration-ms="card.durationMs" :output="card.output" :exited="exitedOnly(card) ? card.exitCode : undefined" />
     <StagingNote v-if="stagingRunId !== undefined" :session-id="props.message.sessionId" :run-id="stagingRunId" />
   </template>
   <div v-else-if="props.message.kind === 'notice'" class="kvc-notice" data-test="notice">{{ notice }}</div>

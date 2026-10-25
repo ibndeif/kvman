@@ -102,26 +102,36 @@ async function continueOutcome(env: CallEnv, toolCallId: string, call: RunCall, 
   const { worker } = await continuableHelper(ctx, session.id, request.id);
   const guard = await creationGuard(ctx, env.lease, worker);
   if (held) return heldBackRun(toolCallId, call);
-  if (!(await messageHelper(ctx, env.lease, request, guard))) return refused(toolCallId, 'The originating step is no longer current.');
+  const messaged = await messageHelper(ctx, env.lease, request, guard);
+  if (messaged === 'stale') return refused(toolCallId, 'The originating step is no longer current.');
+  if (messaged === 'queued') return result(toolCallId, textResult(call, `queued for ${request.id}: it reads this at its next step, and its answer comes as a background message\n\n(helper ${request.id})`));
   if (request.background !== true) return { kind: 'subagent', childSessionId: request.id };
   await startChild(ctx, request.id, await creationGuard(ctx, env.lease, worker));
   return result(toolCallId, textResult(call, `started ${request.id}`));
 }
 
+// The connectors that run a line: the shell and the binary ones (ADR 0102, 5).
+const lineConnectors = (env: CallEnv): ReadonlySet<string> => new Set(['shell', ...env.tools.connectors.filter((connector) => connector.kind === 'binary').map((connector) => connector.name)]);
+
+const runArgs = (env: CallEnv, toolCall: ToolCall): RunCall | undefined => {
+  const args = toolCall.name === 'run' ? parseRunArgs(toolCall.arguments, lineConnectors(env)) : undefined;
+  return args?.success === true ? args.data : undefined;
+};
+
 function evaluateCall(env: CallEnv, toolCall: ToolCall, held: boolean): Promise<CallOutcome> {
   if (toolCall.name !== 'run') return Promise.resolve(refused(toolCall.id, `The call's arguments are invalid: the tool is run, not ${toolCall.name}.`));
-  const args = parseRunArgs(toolCall.arguments);
+  const args = parseRunArgs(toolCall.arguments, lineConnectors(env));
   if (!args.success) return Promise.resolve(refused(toolCall.id, `The call's arguments are invalid: ${args.problems}. Call run again with the arguments fixed.`));
   return orderedCall(env.ctx, env.session, args.data, () => evaluateCurrentCall(env, toolCall, args.data, held));
 }
 
 // A call that could change something (ADR 0046, amendment 2): a built-in command that can ask for approval, a helper
 // run, or anything that isn't a known built-in command. Help, reads, and `ask` are not.
-function changesThings(toolCall: ToolCall): boolean {
-  const args = toolCall.name === 'run' ? parseRunArgs(toolCall.arguments) : undefined;
-  if (args?.success !== true || args.data.command === 'help') return false;
-  const builtin = targetOf([], args.data)?.builtin;
-  return builtin === undefined || builtin.asks === true || isHelperRun(args.data);
+function changesThings(env: CallEnv, toolCall: ToolCall): boolean {
+  const call = runArgs(env, toolCall);
+  if (call === undefined || call.command === 'help') return false;
+  const builtin = targetOf([], call)?.builtin;
+  return builtin === undefined || builtin.asks === true || isHelperRun(call);
 }
 
 const isHelperRun = (call: RunCall): boolean => call.connector === 'delegate' && (call.command === 'run' || call.command === 'continue');
@@ -134,11 +144,11 @@ const heldBackRun = (toolCallId: string, call: RunCall): CallOutcome => result(t
  * each told whether an earlier one still waits for the person's decision; the others at once, in parallel.
  */
 export async function evaluateCalls(env: CallEnv, calls: readonly ToolCall[]): Promise<CallOutcome[]> {
-  const free = calls.map((toolCall) => (changesThings(toolCall) ? undefined : evaluateCall(env, toolCall, false)));
+  const free = calls.map((toolCall) => (changesThings(env, toolCall) ? undefined : evaluateCall(env, toolCall, false)));
   const ordered = (async () => {
     const done = new Map<ToolCall, CallOutcome>();
     let held = false;
-    for (const toolCall of calls.filter(changesThings)) {
+    for (const toolCall of calls.filter((toolCall) => changesThings(env, toolCall))) {
       const outcome = await evaluateCall(env, toolCall, held);
       held ||= waitsForDecision(outcome);
       done.set(toolCall, outcome);
@@ -157,10 +167,7 @@ export async function evaluateCalls(env: CallEnv, calls: readonly ToolCall[]): P
 // The person's check runs after the reply's last file change that ran at once and succeeded (ADR 0094, 3).
 async function checked(env: CallEnv, calls: readonly ToolCall[], outcomes: CallOutcome[]): Promise<CallOutcome[]> {
   if (env.check === null) return outcomes;
-  const parsed = calls.map((toolCall) => {
-    const args = toolCall.name === 'run' ? parseRunArgs(toolCall.arguments) : undefined;
-    return args?.success === true ? args.data : undefined;
-  });
+  const parsed = calls.map((toolCall) => runArgs(env, toolCall));
   const index = lastFileChange(parsed, outcomes.map((outcome) => outcome.kind === 'result' && !outcome.held.isError));
   const outcome = index === undefined ? undefined : outcomes[index];
   if (index === undefined || outcome?.kind !== 'result') return outcomes;
@@ -171,10 +178,7 @@ async function checked(env: CallEnv, calls: readonly ToolCall[], outcomes: CallO
 // The lead's reply that changed something while its map says no task is being done is told so once (ADR 0074, 6).
 async function reminded(env: CallEnv, calls: readonly ToolCall[], outcomes: CallOutcome[]): Promise<CallOutcome[]> {
   if (env.session.parentId !== null) return outcomes;
-  const parsed = calls.map((toolCall) => {
-    const args = toolCall.name === 'run' ? parseRunArgs(toolCall.arguments) : undefined;
-    return args?.success === true ? args.data : undefined;
-  });
+  const parsed = calls.map((toolCall) => runArgs(env, toolCall));
   const index = lastChange(parsed, outcomes.map((outcome) => outcome.kind === 'result' && !outcome.held.isError));
   const outcome = index === undefined ? undefined : outcomes[index];
   if (index === undefined || outcome?.kind !== 'result') return outcomes;

@@ -30,7 +30,9 @@ describe('the conversation shows its messages (08 §8.7)', () => {
     expect(wrapper.findAll('[data-test="markdown"]').map((node) => node.text())).toContain('Running the tests.');
     const shell = wrapper.find('[data-test="call-card"]');
     expect(shell.text()).toContain('Test.');
-    expect(shell.classes()).toContain('kvc-failed');
+    // A line that exited with another code reads calmly (ADR 0102, 15).
+    expect(shell.classes()).not.toContain('kvc-failed');
+    expect(shell.find('[data-test="call-exit"]').text()).toBe('exit 1');
     expect(shell.find('[data-test="exit-code"]').exists()).toBe(false);
     await shell.find('button').trigger('click');
     expect(shell.find('[data-test="call-output"]').text()).toBe('FAIL 1');

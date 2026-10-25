@@ -42,7 +42,8 @@ const callArguments = (fake: Parameters<typeof requestMessages>[0], index: numbe
   });
 
 describe('old tool results cleared (ADR 0094, 1)', { timeout: 60_000 }, () => {
-  it('QA62-H1 and QA62-E2 after an hour the oldest results are sent cleared, the newest kept, and a read again returns the text', async () => {
+  // QA67-E16: a clear keeps the newest 24,000 tokens of results (ADR 0102, 6).
+  it('QA62-H1 QA62-E2 QA67-E16 after an hour the oldest results are sent cleared, the newest kept, and a read again returns the text', async () => {
     const { kernel, fake } = await kvcoder.start();
     bigFiles(7)(kernel.homeFolder);
     const sessionId = await newSession(kernel);
@@ -52,9 +53,9 @@ describe('old tool results cleared (ADR 0094, 1)', { timeout: 60_000 }, () => {
     fake.reply(runs(fsCall('read', { path: 'big-0.txt' })), says('done'));
     await send(kernel, sessionId);
     const sent = toolTexts(fake, 2);
-    // Numbered reads are a little longer than their JSON was (ADR 0097, 2), so the two oldest pass the 40,000 kept.
-    expect(sent.slice(0, 2)).toEqual([stub('big-0.txt'), stub('big-1.txt')]);
-    expect(sent.slice(2, 7).every((text) => text.startsWith('big-'))).toBe(true);
+    // Each read holds about 8,000 tokens, so the newest three fill the 24,000 kept and the four before them are cleared.
+    expect(sent.slice(0, 4)).toEqual([0, 1, 2, 3].map((index) => stub(`big-${String(index)}.txt`)));
+    expect(sent.slice(4, 7).every((text) => text.startsWith('big-'))).toBe(true);
     expect(toolResults(fake).at(-1)).toMatch(/^big-0.txt · lines 1–/);
     const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });
     const stored = messages.find((message) => message.kind === 'toolResult');
@@ -99,5 +100,41 @@ describe('old tool results cleared (ADR 0094, 1)', { timeout: 60_000 }, () => {
     expect(toolTexts(fake, 1).slice(0, 4)).toEqual([0, 1, 2, 3].map((index) => stub(`big-${String(index)}.txt`)));
     const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });
     expect(messages.some((message) => message.kind === 'summary')).toBe(false);
+  });
+
+  // A model with a window as large as the owner's (272K), so only the fixed 80,000 tokens can start a clear (ADR 0102, 6).
+  async function wideChat() {
+    const { kernel, fake } = await kvcoder.start();
+    await kernel.exec('kvai.model.add', { provider: 'fake', id: 'wide', name: 'Wide', input: ['text'], reasoning: true, contextWindow: 272_000, maxTokens: 8192 });
+    const sessionId = await newSession(kernel);
+    await kernel.exec('kvcoder.session.configure', { sessionId, model: 'fake/wide' });
+    return { kernel, fake, sessionId };
+  }
+
+  it('QA67-H12 a prompt past 80,000 tokens with much to clear is cleared, keeping the newest 24,000 tokens of results', async () => {
+    const { kernel, fake, sessionId } = await wideChat();
+    bigFiles(12)(kernel.homeFolder);
+    fake.reply(reads(12), says('read them'));
+    await send(kernel, sessionId);
+    const sent = toolTexts(fake, 1);
+    expect(sent.slice(0, 9)).toEqual(Array.from({ length: 9 }, (_read, index) => stub(`big-${String(index)}.txt`)));
+    expect(sent.slice(9).every((text) => text.startsWith('big-'))).toBe(true);
+  });
+
+  it('QA67-E14 a prompt under 80,000 tokens is not cleared in a turn, whatever the window', async () => {
+    const { kernel, fake, sessionId } = await wideChat();
+    bigFiles(8)(kernel.homeFolder);
+    fake.reply(reads(8), says('read them'));
+    await send(kernel, sessionId);
+    expect(toolTexts(fake, 1).some((text) => text.startsWith('[cleared'))).toBe(false);
+  });
+
+  it('QA67-E15 a large prompt with little to clear is not cleared', async () => {
+    const { kernel, fake, sessionId } = await wideChat();
+    bigFiles(4)(kernel.homeFolder);
+    fake.reply(reads(4), says('read them'));
+    await kernel.exec('kvcoder.message.send', { sessionId, text: 'y'.repeat(260_000) });
+    await kernel.clock.advance(0);
+    expect(toolTexts(fake, 1).some((text) => text.startsWith('[cleared'))).toBe(false);
   });
 });

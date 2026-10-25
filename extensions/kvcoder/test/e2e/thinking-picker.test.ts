@@ -32,7 +32,8 @@ describe('the thinking level of the send box in Chromium (08 §8.7, ADR 0071, 5)
     await button.click();
     const top = (await button.boundingBox())?.y ?? 0;
     const options = page.locator('[data-test="thinking-picker-list"] [role="option"]');
-    expect(await options.allTextContents()).toEqual(['Off', 'Minimal', 'Low', 'Medium', 'High']);
+    // QA67-H8: High says it is slower and costlier (ADR 0102, 3).
+    expect(await options.allTextContents()).toEqual(['Off', 'Minimal', 'Low', 'Medium', 'High · Slower and costlier']);
     expect(await options.evaluateAll((found) => found.map((option) => option.getAttribute('aria-selected')))).toEqual(['false', 'false', 'false', 'true', 'false']);
     for (const level of levels) {
       const box = await page.locator(`[data-test="thinking-picker-${level}"]`).boundingBox();

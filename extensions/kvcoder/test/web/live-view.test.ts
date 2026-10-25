@@ -149,16 +149,53 @@ describe('the live view of a running step (08 §8.7, ADR 0009, 142, 143)', () =>
     world.turns = [turn({ steps: 18, usage: { input: 9000, output: 400, cacheRead: 0, cacheWrite: 0, cost: 0.84 } })];
     serve(fake, world);
     const wrapper = await mounted(ConversationView, fake, { sessionId: 's1' });
-    expect(activity(wrapper).find('[data-test="activity-turn"]').text()).toMatch(/^Turn: 18 steps · about .?\$0\.84.?$/u);
+    // The turn's time follows its steps (ADR 0102, 1).
+    expect(activity(wrapper).find('[data-test="activity-turn"]').text()).toMatch(/^Turn: 18 steps · .+ · about .?\$0\.84.?$/u);
     wrapper.unmount();
 
-    for (const [steps, text] of [[4, 'Turn: 4 steps'], [0, undefined]] as const) {
+    for (const [steps, text] of [[4, /^Turn: 4 steps · [^·]+$/u], [0, undefined]] as const) {
       const free = createFakeKvman();
       serve(free, { ...running(), turns: [turn({ steps, usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0 } })] });
       const shown = await mounted(ConversationView, free, { sessionId: 's1' });
       const line = activity(shown).find('[data-test="activity-turn"]');
-      expect(line.exists() ? line.text() : undefined).toBe(text);
+      if (text === undefined) expect(line.exists()).toBe(false);
+      else expect(line.text()).toMatch(text);
       shown.unmount();
     }
+  });
+});
+
+describe('what the running turn is doing (08 §8.7, ADR 0102, 1)', () => {
+  afterEach(() => vi.useRealTimers());
+  const doing = { goal: 'Fix it', steps: [{ id: 'fix', title: 'Fix the importer', details: 'How.', after: [], uses: null, check: 'npm test', status: 'doing' as const, evidence: null, note: null }], notes: [], version: 1, updatedAt: '2026-10-01T09:00:00.000Z' };
+
+  it('QA67-H3 and QA67-E4 the line shows the newest headline of the thinking, and Thinking… with none', async () => {
+    const fake = createFakeKvman();
+    serve(fake, running());
+    const wrapper = await mounted(ConversationView, fake, { sessionId: 's1' });
+    fake.emit('j1', kvai({ type: 'thinking', delta: 'I look at it.' }));
+    await flushPromises();
+    expect(activity(wrapper).find('[data-test="activity-title"]').text()).toBe('Thinking…');
+    fake.emit('j1', kvai({ type: 'thinking', delta: '\n\n**Checking tests**\n\nI look…\n\n**Writing the fix**' }));
+    await flushPromises();
+    expect(activity(wrapper).find('[data-test="activity-title"]').text()).toBe('Writing the fix');
+    wrapper.unmount();
+  });
+
+  it("QA67-H4 and QA67-E5 the line adds the turn's time and the map's step in progress, and neither cost nor step when there is none", async () => {
+    vi.useFakeTimers({ toFake: ['Date'], now: Date.parse('2026-10-01T09:12:00.000Z') });
+    const fake = createFakeKvman();
+    serve(fake, { ...running(), turns: [turn({ steps: 18, usage: { input: 9000, output: 400, cacheRead: 0, cacheWrite: 0, cost: 0.84 } })], map: doing });
+    const wrapper = await mounted(ConversationView, fake, { sessionId: 's1' });
+    await flushPromises();
+    expect(activity(wrapper).find('[data-test="activity-turn"]').text()).toMatch(/^Turn: 18 steps · 12 min 0 s · about .?\$0\.84.?$/u);
+    expect(activity(wrapper).find('[data-test="activity-step"]').text()).toBe('Step: Fix the importer');
+    wrapper.unmount();
+    const free = createFakeKvman();
+    serve(free, { ...running(), turns: [turn({ steps: 3, usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0 } })] });
+    const plain = await mounted(ConversationView, free, { sessionId: 's1' });
+    expect(activity(plain).find('[data-test="activity-turn"]').text()).toBe('Turn: 3 steps · 12 min 0 s');
+    expect(activity(plain).find('[data-test="activity-step"]').exists()).toBe(false);
+    plain.unmount();
   });
 });

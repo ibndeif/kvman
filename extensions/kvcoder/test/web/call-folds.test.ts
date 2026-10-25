@@ -7,12 +7,13 @@ import { answer, message, mounted, serve, session, turn, user } from './support/
 
 // A turn as a story (08 §8.7, ADR 0093, 1): calls in a row fold into one row; the final answer is marked.
 let ids = 0;
-function called(connector: string, command: string, payload: Message['content'], result: { text: string; isError?: boolean; durationMs?: number }, turnId = 't1'): Message[] {
+function called(connector: string, command: string, payload: Message['content'], result: { text: string; isError?: boolean; durationMs?: number; details?: Record<string, unknown> }, turnId = 't1', thinking?: string): Message[] {
   ids += 1;
   const id = `c${ids}`;
+  const said = thinking === undefined ? [] : [{ type: 'thinking', thinking }];
   return [
-    message('assistant', { role: 'assistant', content: [{ type: 'toolCall', id, name: 'run', arguments: { connector, command, payload } }] }, { turnId, durationMs: 1000 }),
-    message('toolResult', { role: 'toolResult', toolCallId: id, toolName: 'run', content: [{ type: 'text', text: result.text }], isError: result.isError === true, details: { connector, command, durationMs: result.durationMs ?? 500 } }, { turnId }),
+    message('assistant', { role: 'assistant', content: [...said, { type: 'toolCall', id, name: 'run', arguments: { connector, command, payload } }] }, { turnId, durationMs: 1000 }),
+    message('toolResult', { role: 'toolResult', toolCallId: id, toolName: 'run', content: [{ type: 'text', text: result.text }], isError: result.isError === true, details: { connector, command, durationMs: result.durationMs ?? 500, ...result.details } }, { turnId }),
   ];
 }
 const read = (path: string) => called('fs', 'read', { path }, { text: JSON.stringify({ path, fromLine: 1, totalLines: 1, content: 'a\n' }) });
@@ -20,6 +21,9 @@ const search = () => called('fs', 'search', { pattern: 'x' }, { text: JSON.strin
 const readFiles = (...paths: string[]) => called('fs', 'read-files', { files: paths.map((path) => ({ path })) }, { text: 'read' });
 const edit = (path: string) => called('fs', 'edit', { path, edits: [{ oldText: 'a', newText: 'b' }], risky: false }, { text: JSON.stringify({ path, replacements: 1, firstChangedLine: 1, fromLine: 1, content: 'b' }) });
 const ran = (line: string, exit = 0) => called('shell', 'exec', { line, risky: false }, { text: `out\n[exit code ${exit}]`, isError: exit !== 0 });
+// A line that couldn't finish keeps its failure look; one that exited with another code reads calmly (ADR 0102, 15).
+const timedOut = (line: string) => called('shell', 'exec', { line, risky: false }, { text: 'out\n[timed out after 120 s; the process tree was killed]\n[exit code 124]', isError: true, details: { exitCode: 124, timedOut: true } });
+const thought = (headline: string | undefined, path: string, rest = 'Looking at it.') => called('fs', 'read', { path }, { text: JSON.stringify({ path, fromLine: 1, totalLines: 1, content: 'a\n' }) }, 't1', headline === undefined ? rest : `**${headline}**\n\n${rest}`);
 
 async function shown(messages: Message[], fields: { status?: 'idle' | 'running'; outcome?: boolean; language?: 'en' | 'ar' } = {}) {
   const fake = createFakeKvman();
@@ -55,7 +59,7 @@ describe('calls folded between the agent\'s text (ADR 0093, 1)', () => {
   });
 
   it('QA61-E2 a fold with a failure starts open, one with only an invalid request does not, and the running turn\'s is open', async () => {
-    const failed = await shown([user('go', { turnId: 't1' }), ...read('a.ts'), ...ran('pnpm test', 1)]);
+    const failed = await shown([user('go', { turnId: 't1' }), ...read('a.ts'), ...timedOut('pnpm test')]);
     expect(failed.find('[data-test="call-fold-body"]').exists()).toBe(true);
     expect(failed.find('[data-test="call-fold-words"]').text()).toBe('Read 1 file, ran 1 command');
     expect(failed.find('[data-test="call-fold-failed"]').text()).toBe('· 1 failed');
@@ -79,7 +83,7 @@ describe('calls folded between the agent\'s text (ADR 0093, 1)', () => {
   });
 
   it('QA66-H6 failures follow the words in the danger color, and the words start at the inline start', async () => {
-    const view = await shown([user('go', { turnId: 't1' }), ...edit('a.ts'), ...ran('pnpm test', 1)]);
+    const view = await shown([user('go', { turnId: 't1' }), ...edit('a.ts'), ...timedOut('pnpm test')]);
     expect(view.find('[data-test="call-fold-words"]').text()).toBe('Changed 1 file, ran 1 command');
     expect(view.find('[data-test="call-fold-failed"]').text()).toBe('· 1 failed');
     expect(view.find('[data-test="call-fold-failed"]').classes()).toContain('kvc-fold-failed');
@@ -87,15 +91,45 @@ describe('calls folded between the agent\'s text (ADR 0093, 1)', () => {
   });
 
   it('QA66-H7 an Arabic fold reads as an Arabic sentence', async () => {
-    const view = await shown([user('go', { turnId: 't1' }), ...read('a.ts'), ...read('b.ts'), ...search(), ...ran('pnpm test', 1)], { language: 'ar' });
+    const view = await shown([user('go', { turnId: 't1' }), ...read('a.ts'), ...read('b.ts'), ...search(), ...timedOut('pnpm test')], { language: 'ar' });
     expect(view.find('[data-test="call-fold-words"]').text()).toBe('قراءة ملفين، بحث مرة واحدة، تشغيل أمر واحد');
     expect(view.find('[data-test="call-fold-failed"]').text()).toBe('· فشلت خطوة واحدة');
   });
 
-  it("QA66-E4 a fold of failures counts each, and the agent's own invalid request isn't one", async () => {
+  // QA67-H25: lines that exited with another code aren't failures (ADR 0102, 15).
+  it("QA66-E4 QA67-H25 a fold of failures counts each; the agent's own invalid request and a line that exited aren't one", async () => {
     const invalidEdit = called('fs', 'edit', { path: 'a.ts' }, { text: 'error VALIDATION_FAILED: edits: Required.', isError: true });
-    const view = await shown([user('go', { turnId: 't1' }), ...ran('pnpm test', 1), ...ran('pnpm lint', 2), ...invalidEdit]);
-    expect(view.find('[data-test="call-fold-words"]').text()).toBe('Changed 1 file, ran 2 commands');
+    const calm = await shown([user('go', { turnId: 't1' }), ...ran('pnpm test', 1), ...ran('pnpm lint', 2), ...invalidEdit]);
+    expect(calm.find('[data-test="call-fold-words"]').text()).toBe('Changed 1 file, ran 2 commands');
+    expect(calm.find('[data-test="call-fold-failed"]').exists()).toBe(false);
+    const view = await shown([user('go', { turnId: 't1' }), ...timedOut('pnpm test'), ...timedOut('pnpm lint'), ...invalidEdit]);
     expect(view.find('[data-test="call-fold-failed"]').text()).toBe('· 2 failed');
+  });
+});
+
+describe('step headlines (08 §8.7, ADR 0102, 1)', () => {
+  const rows = (view: Awaited<ReturnType<typeof mounted>>) => view.findAll('[data-test="headline-text"], [data-test="call-fold"], [data-test="call-card"], [data-test="assistant-message"]').map((row) => row.attributes('data-test') === 'headline-text' ? `headline:${row.text()}` : row.attributes('data-test') ?? '');
+
+  it('QA67-H1 a headline is a line, the calls under it fold, and replies that share it join', async () => {
+    const view = await shown([user('go', { turnId: 't1' }), ...thought('Reading the importer', 'a.ts'), ...thought('Reading the importer', 'b.ts'), ...thought('Fixing the path check', 'c.ts')]);
+    expect(rows(view)).toEqual(['headline:Reading the importer', 'call-fold', 'headline:Fixing the path check', 'call-card']);
+    expect(view.find('[data-test="call-fold-words"]').text()).toBe('Read 2 files');
+    expect(view.find('[data-test="headline-thinking"]').text()).toBe('**Reading the importer**\n\nLooking at it.\n\n**Reading the importer**\n\nLooking at it.');
+  });
+
+  it('QA67-H2 replies whose thinking has no headline no longer break a fold', async () => {
+    const view = await shown([user('go', { turnId: 't1' }), ...thought(undefined, 'a.ts'), ...thought(undefined, 'b.ts'), ...thought(undefined, 'c.ts'), ...thought(undefined, 'd.ts')]);
+    expect(rows(view)).toEqual(['call-fold']);
+    expect(view.find('[data-test="call-fold-words"]').text()).toBe('Read 4 files');
+  });
+
+  it('QA67-E1 a bold word inside a line is no headline', async () => {
+    const view = await shown([user('go', { turnId: 't1' }), ...thought(undefined, 'a.ts', 'I think **this** matters'), ...thought(undefined, 'b.ts')]);
+    expect(view.find('[data-test="headline"]').exists()).toBe(false);
+  });
+
+  it('QA67-E2 and QA67-E3 a reply with text ends the group, and a first group may have no headline', async () => {
+    const view = await shown([user('go', { turnId: 't1' }), ...thought(undefined, 'a.ts'), ...thought(undefined, 'b.ts'), answer('Found it.', { turnId: 't1' }), ...thought('Fixing it', 'c.ts'), ...thought('Fixing it', 'd.ts')]);
+    expect(rows(view)).toEqual(['call-fold', 'assistant-message', 'headline:Fixing it', 'call-fold']);
   });
 });

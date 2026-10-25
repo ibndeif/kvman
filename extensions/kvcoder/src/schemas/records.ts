@@ -181,7 +181,8 @@ export const answerReceiptDocSchema = z.object({
 // What a chat last saw of a file, and a file's content before one of the chat's changes (ADR 0053, 2 and 4).
 export const fileViewDocSchema = z.object({ sessionId: z.string(), path: z.string(), fingerprint: z.string().regex(/^[0-9a-f]{64}$/), updatedAt: z.iso.datetime() });
 // A file a chat changed with `fs`, under the chat at the root, for its Changes view (ADR 0093, 2).
-export const fileChangeDocSchema = z.object({ sessionId: z.string(), path: z.string(), firstAt: z.iso.datetime(), lastAt: z.iso.datetime() });
+// `turnId` is the root chat's turn of the latest change (ADR 0102, 9); records from before it read `null`.
+export const fileChangeDocSchema = z.object({ sessionId: z.string(), path: z.string(), firstAt: z.iso.datetime(), lastAt: z.iso.datetime(), turnId: z.string().nullable().default(null) });
 export const fileBackupDocSchema = z.object({ sessionId: z.string(), path: z.string(), previous: z.string().nullable(), written: z.string().regex(/^[0-9a-f]{64}$/), createdAt: z.iso.datetime() });
 
 // One numbered piece of a long file a chat is writing, held until `fs assemble` (ADR 0054, 2).

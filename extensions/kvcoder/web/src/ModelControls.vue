@@ -13,7 +13,9 @@ const props = defineProps<{ groups: ModelGroup[]; model: string | null; thinking
 const emit = defineEmits<{ model: [modelId: string]; thinking: [level: Thinking]; decides: [on: boolean] }>();
 const kvman = useKvman();
 const modelLevels = computed(() => levelsOf(props.groups, props.model));
-const levels = computed(() => modelLevels.value.map((level) => ({ id: level, label: kvman.t(`kvcoder.ui.thinkingLevels.${level}`) })));
+// The high levels take longer and cost more on every step (ADR 0102, 3).
+const slower: ReadonlySet<Thinking> = new Set(['high', 'xhigh', 'max']);
+const levels = computed(() => modelLevels.value.map((level) => ({ id: level, label: kvman.t(`kvcoder.ui.thinkingLevels.${level}`), ...(slower.has(level) ? { note: kvman.t('kvcoder.ui.thinkingSlower') } : {}) })));
 const shown = computed(() => nearestLevel(modelLevels.value, props.thinking));
 const thinks = computed(() => modelLevels.value.some((level) => level !== 'off'));
 

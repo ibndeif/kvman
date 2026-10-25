@@ -20,11 +20,28 @@ export async function listTools({ client, request }: Connection): Promise<McpToo
   return tools;
 }
 
-/** The server's tool by name, or `NOT_FOUND` naming the tools it has. */
+const nearLimit = 5;
+
+/** The tools whose names start with, contain, or are contained in the asked name, the closest first (ADR 0102, 8). */
+export function nearNames(names: readonly string[], asked: string): string[] {
+  const wanted = asked.toLowerCase();
+  const rank = (name: string): number => {
+    const lower = name.toLowerCase();
+    if (lower.startsWith(wanted)) return 0;
+    if (lower.includes(wanted)) return 1;
+    return wanted.includes(lower) ? 2 : 3;
+  };
+  return names.filter((name) => rank(name) < 3).sort((first, second) => rank(first) - rank(second)).slice(0, nearLimit);
+}
+
+/** The server's tool by name, or `NOT_FOUND` naming first the near ones, then the tools it has. */
 export function toolNamed(server: string, tools: readonly McpTool[], name: string): McpTool {
   const found = tools.find((tool) => tool.name === name);
   if (found !== undefined) return found;
-  throw notFound(`${server} has no tool ${name}. Its tools are: ${tools.map((tool) => tool.name).join(', ')}.`, { server, tool: name });
+  const names = tools.map((tool) => tool.name);
+  const near = nearNames(names, name);
+  const guess = near.length === 0 ? '' : ` Did you mean ${near.join(', ')}?`;
+  throw notFound(`${server} has no tool ${name}.${guess} Its tools are: ${names.join(', ')}.`, { server, tool: name });
 }
 
 const blockSchema = z.looseObject({ type: z.string(), text: z.string().optional() });

@@ -3,7 +3,7 @@ import type {} from '@kvman/kvai';
 import type { JsonValue } from '../connector-call.ts';
 import { runBinaryChecks } from '../calls/binary-checks.ts';
 import { workerChecks } from '../delegate/register-worker-run.ts';
-import { runTool } from '../calls/run-tool.ts';
+import { repairedArguments, runTool } from '../calls/run-tool.ts';
 import { shellFor } from '../calls/shell-program.ts';
 import { sessionTools, type SessionTools } from '../prompt/session-prompt.ts';
 import { ownerName } from '../jobs/process-records.ts';
@@ -30,7 +30,7 @@ import { liveStep } from './step-intents.ts';
 import { advanceStep, dispatchNext, type StepNext } from './step-next.ts';
 
 /** The step job's existing retry/timeout policy (ADR0008). */
-export const stepOptions = { retries: 0, timeoutMs: 1_200_000 };
+export const stepOptions = { retries: 0, timeoutMs: 3_600_000 };
 
 async function beginStep(ctx: Ctx, lease: StepLease, maxSteps: number | null): Promise<Stored<SessionDoc> | undefined> {
   const found = await currentStep(ctx, lease);
@@ -91,7 +91,10 @@ async function callModel(ctx: Ctx, session: Stored<SessionDoc>, lease: StepLease
   try {
     const answer = await completeWithRetries(ctx, { ...(session.model === null ? {} : { model: session.model }), sessionId: session.id, ...cacheRetentionOf(session), systemPrompt: tools.built.prompt, messages, tools: [runTool(tools.listed.map(listed => listed.name))], thinking: session.thinking }, lease);
     const durationMs = Date.now() - started;
-    const { blocks, broken } = repairedCalls(answer.message.content);
+    const { blocks: received, broken } = repairedCalls(answer.message.content);
+    // A call sent in a shape the model often uses is stored as the call it meant, so its card and the history show that (ADR 0102, 5).
+    const lines = new Set(['shell', ...tools.connectors.filter((connector) => connector.kind === 'binary').map((connector) => connector.name)]);
+    const blocks = received.map((block) => (block.type === 'toolCall' && block.name === 'run' ? { ...block, arguments: repairedArguments(block.arguments, lines) } : block));
     const message = { ...answer.message, content: blocks };
     const seq = await ctx.store.transaction(tx => {
       ctx.job.signal.throwIfAborted();

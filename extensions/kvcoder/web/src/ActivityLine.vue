@@ -1,24 +1,31 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { durationText } from './durations.ts';
 import { formatCost, useKvman } from './kvman.ts';
 import { phaseOf, type Live } from './live-step.ts';
 import { useNow } from './use-now.ts';
 
 // What the running step is doing (plan 08 §8.7, ADR 0009, 142): waiting for the model, thinking, writing, or the tool
 // calls with the description and the connector command the model gave each, preparing or running. The seconds come from the page's clock.
-// The turn's steps and estimated cost so far follow it, as its last finished step left them (ADR 0060, 3).
-const props = defineProps<{ live: Live; turn?: { steps: number; usage: { cost: number } } | undefined }>();
+// The turn's steps, its time, and estimated cost so far follow it, as its last finished step left them (ADR 0060, 3),
+// and the map's step in progress. Before the calls run, the newest headline of the agent's thinking says what it is
+// doing (ADR 0102, 1).
+const props = defineProps<{ live: Live; turn?: { steps: number; usage: { cost: number }; startedAt?: string } | undefined; headline?: string | undefined; step?: string | undefined }>();
 const kvman = useKvman();
 const now = useNow();
 
 const phase = computed(() => phaseOf(props.live));
 const soFar = computed(() => {
   if (props.turn === undefined || props.turn.steps === 0) return undefined;
-  if (props.turn.usage.cost === 0) return kvman.t('kvcoder.ui.turnSteps', { steps: props.turn.steps });
-  return kvman.t('kvcoder.ui.turnSoFar', { steps: props.turn.steps, cost: formatCost(props.turn.usage.cost) });
+  const time = props.turn.startedAt === undefined ? '' : durationText(kvman.t, Math.max(0, now.value - Date.parse(props.turn.startedAt)));
+  if (props.turn.usage.cost === 0) return kvman.t('kvcoder.ui.turnSteps', { steps: props.turn.steps, time });
+  return kvman.t('kvcoder.ui.turnSoFar', { steps: props.turn.steps, time, cost: formatCost(props.turn.usage.cost) });
 });
 // A retry's line says why and after how long (ADR 0087, 6).
-const title = computed(() => (props.live.retry !== null && phase.value === 'retrying' ? kvman.t(props.live.retry.reason === 'rateLimited' ? 'kvcoder.ui.activity.retryingRateLimited' : 'kvcoder.ui.activity.retryingUnavailable', props.live.retry) : kvman.t(`kvcoder.ui.activity.${phase.value}`)));
+const title = computed(() => {
+  if (props.live.retry !== null && phase.value === 'retrying') return kvman.t(props.live.retry.reason === 'rateLimited' ? 'kvcoder.ui.activity.retryingRateLimited' : 'kvcoder.ui.activity.retryingUnavailable', props.live.retry);
+  return props.headline ?? kvman.t(`kvcoder.ui.activity.${phase.value}`);
+});
 const seconds = computed(() => Math.max(0, Math.floor((now.value - props.live.startedAt) / 1000)));
 </script>
 
@@ -32,10 +39,11 @@ const seconds = computed(() => Math.max(0, Math.floor((now.value - props.live.st
           <span v-if="call.label" class="kvc-muted" dir="ltr" data-test="activity-label">{{ call.label }}</span>
         </span>
       </template>
-      <span v-else style="font-weight: 500" data-test="activity-title">{{ title }}</span>
+      <span v-else style="font-weight: 500" dir="auto" data-test="activity-title">{{ title }}</span>
     </span>
     <span v-if="props.live.calls.length > 0" class="kvc-muted" data-test="activity-phase">{{ kvman.t(`kvcoder.ui.activity.${phase}`) }}</span>
     <span v-if="soFar" class="kvc-muted" data-test="activity-turn">{{ soFar }}</span>
+    <span v-if="props.step" class="kvc-muted kvc-oneline" dir="auto" data-test="activity-step">{{ kvman.t('kvcoder.ui.mapStepNow', { title: props.step }) }}</span>
     <span class="kvc-muted" data-test="activity-seconds">{{ kvman.t('kvcoder.ui.seconds', { count: seconds }) }}</span>
   </div>
 </template>

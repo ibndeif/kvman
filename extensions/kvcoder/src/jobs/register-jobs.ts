@@ -1,8 +1,13 @@
 import { z, type Ctx } from '@kvman/sdk';
+import { shellFor } from '../calls/shell-program.ts';
+import { invalid } from '../problems.ts';
 import { findSession, userOnly } from '../sessions/session-lookup.ts';
 import { cancelJob, isActive, jobDetail, jobRows, linksOf, type JobRow } from './job-rows.ts';
+import { sessionProcess } from './process-records.ts';
+import { startProcess, stopProcess } from './process-run.ts';
 
-// The person's view of a session's background jobs (ADR 0009, 152): list, read, and cancel, for the Running chip.
+// The person's view of a session's background jobs (ADR 0009, 152): list, read, cancel, and start a process again
+// (ADR 0102, 7), for the Running chip.
 
 const sessionJobSchema = z.object({ sessionId: z.string(), id: z.string() });
 const rowSchema = z.object({
@@ -58,6 +63,25 @@ export function registerJobs(ctx: Ctx): void {
       if (found === undefined) throw ctx.problem('kvcoder/JOB_NOT_FOUND', { sessionId, id });
       await cancelJob(ctx, sessionId, found.row, 'person');
       return {};
+    },
+  });
+  ctx.registerCommand('kvcoder.job.restart', {
+    description: "Starts a chat's background process again with its line, stopping it first when it runs; starts no turn.",
+    input: sessionJobSchema,
+    output: z.object({ id: z.string() }),
+    public: true,
+    retries: 0,
+    handle: async ({ sessionId, id }) => {
+      userOnly(ctx, 'kvcoder.job.restart');
+      await findSession(ctx, sessionId);
+      const found = await jobDetail(ctx, sessionId, id);
+      if (found === undefined) throw ctx.problem('kvcoder/JOB_NOT_FOUND', { sessionId, id });
+      const doc = found.row.kind === 'process' ? await sessionProcess(ctx, sessionId, id) : undefined;
+      if (doc === undefined) throw invalid('Only a background process can be started again; a helper or a worker\'s run can\'t.', { id });
+      // Stopped as the agent stops one, so no background message tells the chat; the new process reports its own end.
+      if (doc.end === undefined) await stopProcess(ctx, doc, 'agent');
+      const started = await startProcess(ctx, sessionId, await shellFor(ctx), doc.call);
+      return { id: started.jobId };
     },
   });
 }

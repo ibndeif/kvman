@@ -2,7 +2,9 @@ import { ref, shallowRef, watch, type Ref } from 'vue';
 import type { Kvman } from '@kvman/sdk/web';
 
 // One open chat's changes (plan 08 §8.7, ADR 0093, 2): their count after each step, for the header's button, and the
-// files with their diffs while the panel shows them.
+// files with their diffs while the panel shows them: this turn's first, or the whole chat's (ADR 0102, 9).
+
+export type ChangeScope = 'turn' | 'chat';
 
 export type ChangedFile = { path: string; added: number; removed: number; diff: string; state: 'changed' | 'created' | 'deleted' };
 export type ChangeList = { files: ChangedFile[]; diffs: boolean };
@@ -10,6 +12,7 @@ export type ChangeList = { files: ChangedFile[]; diffs: boolean };
 export function useChanges(kvman: Kvman, sessionId: () => string | undefined, stamp: () => string | undefined, failed: (error: unknown) => void) {
   const count = ref(0);
   const shown = ref(false);
+  const scope = ref<ChangeScope>('turn');
   const list = shallowRef<ChangeList | undefined>(undefined);
   let ticket = 0;
 
@@ -18,10 +21,11 @@ export function useChanges(kvman: Kvman, sessionId: () => string | undefined, st
     const mine = (ticket += 1);
     if (session === undefined) return;
     try {
-      const found = await kvman.exec('kvcoder.change.list', shown.value ? { sessionId: session } : { sessionId: session, withDiffs: false });
+      // The header's count is the whole chat's, whatever the panel shows.
+      const [counted, found] = await Promise.all([kvman.exec('kvcoder.change.list', { sessionId: session, withDiffs: false }), shown.value ? kvman.exec('kvcoder.change.list', { sessionId: session, scope: scope.value }) : undefined]);
       if (mine !== ticket || sessionId() !== session) return;
-      count.value = found.files.length;
-      if (shown.value) list.value = found;
+      count.value = counted.files.length;
+      if (found !== undefined) list.value = found;
     } catch (error) {
       if (mine === ticket) failed(error);
     }
@@ -29,11 +33,12 @@ export function useChanges(kvman: Kvman, sessionId: () => string | undefined, st
 
   watch(sessionId, () => {
     shown.value = false;
+    scope.value = 'turn';
     list.value = undefined;
     count.value = 0;
   });
-  watch([sessionId, stamp, shown], () => void load(), { immediate: true });
-  return { count, shown, list, reload: load };
+  watch([sessionId, stamp, shown, scope], () => void load(), { immediate: true });
+  return { count, shown, scope, list, reload: load };
 }
 
 type Panel = { shown: Ref<boolean>; close(): void };

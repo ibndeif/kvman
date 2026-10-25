@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
+import { placeholderTitle } from '../src/sessions/placeholder-title.ts';
 import { says } from './support/model-script.ts';
 
 const kvcoder = useKvcoder();
@@ -31,5 +32,23 @@ describe('titles (08 §8.1)', { timeout: 30_000 }, () => {
     await kernel.exec('kvcoder.message.send', { sessionId: failing, text: long });
     await kernel.clock.advance(0);
     expect((await kernel.exec('kvcoder.session.get', { sessionId: failing })).title).toBe(long.slice(0, 60));
+  });
+
+  it('QA67-H24 the placeholder is the first line of prose, without code, JSON, or log lines, cut at a word', async () => {
+    const report = 'we have this issue on production:\n```\n{\n  "err": { "code": "OUTSIDE_HOURS" }\n}\n```\nthe server is UTC';
+    expect(placeholderTitle(report)).toBe('we have this issue on production');
+    expect(placeholderTitle('{ "err": 1 }\n    at handler (a.ts:3)\nWhy does the handler throw here?')).toBe('Why does the handler throw here?');
+    expect(placeholderTitle('Please make every page of the research app load its sources faster and show progress')).toBe('Please make every page of the research app load its sources');
+    const { kernel, fake } = await kvcoder.start();
+    const sessionId = (await kernel.exec('kvcoder.session.create', {})).id;
+    fake.reply({ status: 400, body: { error: { message: 'no', type: 'invalid_request_error' } } });
+    await kernel.exec('kvcoder.message.send', { sessionId, text: report });
+    await kernel.clock.advance(0);
+    expect((await kernel.exec('kvcoder.session.get', { sessionId })).title).toBe('we have this issue on production');
+  });
+
+  it('QA67-E24 a message with no prose keeps its first 60 characters', () => {
+    expect(placeholderTitle('```\nconst a = 1;\n```')).toBe('```\nconst a = 1;\n```');
+    expect(placeholderTitle('{ "a": ' + '1'.repeat(80) + ' }')).toBe(('{ "a": ' + '1'.repeat(80)).slice(0, 60));
   });
 });

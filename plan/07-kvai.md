@@ -6,7 +6,7 @@ It depends on `@earendil-works/pi-ai` (1.2.0), pinned exactly (ADR 0009, 51; ADR
 
 ## 7.1 The call: `kvai.complete`
 
-A public command. It is registered with `retries: 0` and `maxInputBytes` of 32 MiB.
+A public command. It is registered with `retries: 0`, `timeoutMs` 1 800 000 (a reply may take long to write; a stream silent for 300 s is aborted as below, ADR 0102, 10), and `maxInputBytes` of 32 MiB.
 
 ```ts
 kvai.complete {

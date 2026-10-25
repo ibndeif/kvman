@@ -41,15 +41,22 @@ async function fileView(ctx: Ctx, git: Git, tracked: boolean, sessions: readonly
   return { path: shown, state, ...(found ?? { added: 0, removed: 0, diff: '' }), ran: found !== undefined };
 }
 
+// The chat's latest turn, whose changes are this turn's (ADR 0102, 9); ids are ordered by when they were made.
+async function latestTurn(ctx: Ctx, chatId: string): Promise<string | undefined> {
+  const turns = await records(ctx.store).turns.find({ sessionId: chatId }, { limit: 1000 });
+  return turns.map((turn) => turn.id).sort().at(-1);
+}
+
 export function registerChanges(ctx: Ctx): void {
   ctx.registerQuery('kvcoder.change.list', {
     description: "Lists the files a chat changed with fs, newest first, each with its diff.",
-    input: z.object({ sessionId: z.string(), withDiffs: z.boolean().exactOptional() }),
+    input: z.object({ sessionId: z.string(), withDiffs: z.boolean().exactOptional(), scope: z.enum(['turn', 'chat']).exactOptional() }),
     output: z.object({ files: z.array(fileSchema), diffs: z.boolean() }),
     public: true,
-    handle: async ({ sessionId, withDiffs }) => {
+    handle: async ({ sessionId, withDiffs, scope }) => {
       const tree = await chatTree(ctx, await findSession(ctx, sessionId));
-      const changes = (await records(ctx.store).fileChanges.find({ sessionId: tree.root }, { limit: 1000 })).sort((first, second) => second.lastAt.localeCompare(first.lastAt)).slice(0, changesLimit);
+      const turnId = scope === 'turn' ? await latestTurn(ctx, tree.root) : undefined;
+      const changes = (await records(ctx.store).fileChanges.find({ sessionId: tree.root }, { limit: 1000 })).filter((change) => turnId === undefined || change.turnId === turnId).sort((first, second) => second.lastAt.localeCompare(first.lastAt)).slice(0, changesLimit);
       const base = await realpath(ctx.job.workspace.path);
       // The header's count needs the files only: no Git runs (ADR 0093, 2).
       if (withDiffs === false) return { files: await Promise.all(changes.map(async (change) => ({ path: path.relative(base, change.path).split(path.sep).join('/'), added: 0, removed: 0, diff: '', state: (await exists(change.path)) ? ('changed' as const) : ('deleted' as const) }))), diffs: false };

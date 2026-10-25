@@ -8,7 +8,7 @@ import { useDismiss } from './use-dismiss.ts';
 // artifact panel shows. The button holds the current choice on one line; Up and Down move through the open list, Enter
 // picks, Escape and a press outside close. The list is kvcoder's own, so its place is the stylesheet's: under its
 // button, and above it in the send box; it opens toward the inline start when the end has no room (ADR 0101, 15).
-const props = defineProps<{ options: { id: string; label: string }[]; current: string | undefined; label: string; test: string; disabled?: boolean; icon?: Component | undefined }>();
+const props = defineProps<{ options: { id: string; label: string; note?: string }[]; current: string | undefined; label: string; test: string; disabled?: boolean; icon?: Component | undefined }>();
 const emit = defineEmits<{ pick: [id: string] }>();
 const open = ref(false);
 const towardStart = ref(false);
@@ -58,7 +58,7 @@ useDismiss(() => open.value, () => root.value, close);
     </button>
     <div v-if="open" ref="list" class="kvc-popover kvc-choices" :class="{ 'kvc-popover-start': towardStart }" role="listbox" :aria-label="props.label" :data-test="`${props.test}-list`">
       <div v-for="(option, index) in props.options" :key="option.id" class="kvc-model" role="option" :aria-selected="option.id === props.current" :data-active="index === highlight" :title="option.label" :data-test="`${props.test}-${option.id}`" @click="pick(option.id)" @mousemove="highlight = index">
-        <span class="kvc-model-name">{{ option.label }}</span><Check v-if="option.id === props.current" :size="16" aria-hidden="true" />
+        <span class="kvc-model-name">{{ option.label }}<span v-if="option.note" class="kvc-muted kvc-choice-note" :data-test="`${props.test}-${option.id}-note`"> · {{ option.note }}</span></span><Check v-if="option.id === props.current" :size="16" aria-hidden="true" />
       </div>
     </div>
   </div>

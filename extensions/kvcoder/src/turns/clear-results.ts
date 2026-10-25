@@ -9,11 +9,14 @@ import { sentCharacters } from './sent-size.ts';
 import type { StepLease } from './step-claim.ts';
 import { liveStep } from './step-intents.ts';
 
-// When old tool results are cleared (plan 08 §8.1, ADR 0094, 1): at the start of a step, over the results older than
-// the newest 40,000 tokens of results; at a turn's first step after an hour without a model call, when the provider's
-// cache has expired anyway, or at any step when there is much to clear and the prompt is half full.
+// When old tool results are cleared (plan 08 §8.1, ADR 0094, 1; ADR 0102, 6): at the start of a step, over the results
+// older than the newest 24,000 tokens of results; at a turn's first step after an hour without a model call, when the
+// provider's cache has expired anyway, or at any step when there is much to clear and the prompt passes 80,000 tokens
+// (half the window for a smaller model). A clear keeps few results, so the next one is many steps away and every step
+// between reads the provider's cache.
 
-const keptTokens = 40_000;
+const keptTokens = 24_000;
+const largeTokens = 80_000;
 const worthTokens = 20_000;
 const cacheExpiredMs = 60 * 60 * 1000;
 
@@ -48,7 +51,8 @@ export async function clearOldResults(ctx: Ctx, session: Stored<SessionDoc>, lea
   const last = lastCallAt(history);
   const expired = firstStep && last !== undefined && Date.now() - last > cacheExpiredMs;
   const window = (await modelInfo(ctx, session.model))?.contextWindow;
-  const full = candidate.tokens > worthTokens && window !== undefined && promptTokens(measured.prompt, history, measured).tokens > window / 2;
+  const large = window === undefined ? largeTokens : Math.min(largeTokens, window / 2);
+  const full = candidate.tokens > worthTokens && promptTokens(measured.prompt, history, measured).tokens > large;
   if (!expired && !full) return false;
   return ctx.store.transaction((tx) => {
     ctx.job.signal.throwIfAborted();

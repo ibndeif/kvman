@@ -55,7 +55,8 @@ describe("a summary's minimum, and what a summary by hand answers (08 §8.1, ADR
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
     await history(kernel, fake, sessionId, (index) => padded(`message ${index}`));
-    fake.reply({ status: 500, body: { error: { message: 'down', type: 'server_error' } } });
+    // A failure no try mends: a temporary one is tried again first (ADR 0102, 12).
+    fake.reply({ status: 400, body: { error: { message: 'down', type: 'invalid_request_error' } } });
     expect(await kernel.exec('kvcoder.session.compact', { sessionId })).toEqual({ summarized: false });
     expect((await stored(kernel, sessionId, 'notice')).map((message) => message.content)).toEqual([{ code: 'SUMMARY_FAILED', params: { code: 'kvai/PROVIDER_ERROR' } }]);
     expect(await stored(kernel, sessionId, 'summary')).toEqual([]);

@@ -24,14 +24,15 @@ function fakeWith(): FakeKvman {
 }
 
 describe('the thinking pickers (ADR 0087, 11)', () => {
-  it("QA55-H13 the send box lists the model's levels, and a model that doesn't think shows Off, disabled", async () => {
+  it("QA55-H13 QA67-H8 the send box lists the model's levels, the high ones marked slower, and a model that doesn't think shows Off, disabled", async () => {
     const fake = fakeWith();
     const big = await mounted(SessionModel, fake, { session: session({ model: 'fake/big', thinking: 'xhigh' }) });
     const picker = big.find('[data-test="thinking-picker"]');
     expect(picker.text()).toBe('Extra high');
     await picker.trigger('click');
     const listed = big.findAll('[data-test="thinking-picker-list"] [role="option"]').map((option) => option.text());
-    expect(listed).toEqual(['Off', 'Minimal', 'Low', 'Medium', 'High', 'Extra high', 'Max']);
+    // QA67-H8: the high levels say they are slower and costlier (ADR 0102, 3).
+    expect(listed).toEqual(['Off', 'Minimal', 'Low', 'Medium', 'High · Slower and costlier', 'Extra high · Slower and costlier', 'Max · Slower and costlier']);
     big.unmount();
 
     const plain = await mounted(SessionModel, fake, { session: session({ model: 'fake/plain', thinking: 'off' }) });

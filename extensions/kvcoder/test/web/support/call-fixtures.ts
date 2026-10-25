@@ -12,10 +12,10 @@ type Json = Parameters<typeof message>[1][string];
 export type Call = { description?: string; connector: string; command: string; payload?: Record<string, Json> };
 
 /** The card of a finished call: `output` is what the call returned, an object as its JSON on one line. */
-export async function ranCard(call: Call, output: Json, options: { failed?: boolean; fake?: FakeKvman } = {}): Promise<VueWrapper> {
+export async function ranCard(call: Call, output: Json, options: { failed?: boolean; fake?: FakeKvman; timedOut?: boolean; exitCode?: number } = {}): Promise<VueWrapper> {
   const text = typeof output === 'string' ? output : JSON.stringify(output);
   const assistant = message('assistant', { role: 'assistant', content: [{ type: 'toolCall', id: 'c1', name: 'run', arguments: call }] });
-  const result = message('toolResult', { role: 'toolResult', toolCallId: 'c1', toolName: 'run', content: [{ type: 'text', text }], isError: options.failed === true, details: { ...(call.description === undefined ? {} : { description: call.description }), connector: call.connector, command: call.command, durationMs: 200 } });
+  const result = message('toolResult', { role: 'toolResult', toolCallId: 'c1', toolName: 'run', content: [{ type: 'text', text }], isError: options.failed === true, details: { ...(call.description === undefined ? {} : { description: call.description }), connector: call.connector, command: call.command, durationMs: 200, ...(options.timedOut === true ? { timedOut: true } : {}), ...(options.exitCode === undefined ? {} : { exitCode: options.exitCode }) } });
   return mounted(MessageItem, options.fake ?? createFakeKvman(), { message: result, calls: callViews([assistant, result]) });
 }
 

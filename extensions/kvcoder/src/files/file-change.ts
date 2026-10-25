@@ -66,10 +66,12 @@ function requireSeen(store: TxRecords, file: ChangedFile, bytes: Buffer): void {
 
 // The chat at the root records each file its tree changed, once, with when it last did (ADR 0093, 2).
 function noteChange(store: TxRecords, file: ChangedFile): void {
-  const sessionId = executionRootInTx(store, file.sessionId)?.id ?? file.sessionId;
+  const root = executionRootInTx(store, file.sessionId);
+  const sessionId = root?.id ?? file.sessionId;
+  const turnId = root?.turnId ?? null;
   const [noted] = store.fileChanges.find({ sessionId, path: file.real }, { limit: 1 });
-  if (noted === undefined) store.fileChanges.insert({ sessionId, path: file.real, firstAt: now(), lastAt: now() });
-  else store.fileChanges.update(noted.id, { lastAt: now() });
+  if (noted === undefined) store.fileChanges.insert({ sessionId, path: file.real, firstAt: now(), lastAt: now(), turnId });
+  else store.fileChanges.update(noted.id, { lastAt: now(), turnId });
 }
 
 function saveCopy(store: TxRecords, file: ChangedFile, previous: Buffer | undefined, written: string): void {

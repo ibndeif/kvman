@@ -14,7 +14,8 @@ describe("a worker's prompt (08 §8.2 and §8.5, ADR 0022, 3)", () => {
     const steps = prompt.split('\n').filter((line) => /^\d\. /.test(line));
     expect(steps.map((line) => line.split('.').slice(0, 2).join('.'))).toEqual(['1. Understand', '2. Do it', '3. Return']);
     expect(steps[0]).toContain("when you can't find a fact, say so in your answer.");
-    expect(steps[1]).toContain("Make the smallest change that does the task, check it with the project's own check or tests, and fix a failure at its cause.");
+    // Superseded by QA67-H5: the smallest design, and only the tests the project's Testing line names (ADR 0102, 2).
+    expect(steps[1]).toContain("Make the smallest change, and propose the smallest design, that does the task; check it with the project's own check or tests, and fix a failure at its cause.");
     expect(steps[2]).toBe('3. Return. Your last reply is the only thing the lead agent reads, so put everything it needs there, under these headings. Result: what you did or found. Evidence: what you ran or read that shows it, with paths and lines. Files changed: each path and what changed, or none. Unchecked: what you could not verify or left undone. Questions: what the lead must decide or ask the person, or none. Keep it as short as the facts allow.');
   });
 

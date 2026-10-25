@@ -201,6 +201,9 @@ a.kvc-button { text-decoration: none; color: inherit; }
 .kvc-remember { display: block; margin-block-start: 4px; }
 .kvc-fold-body { display: flex; flex-direction: column; gap: 6px; padding: 6px 8px 8px; border-block-start: 1px solid var(--kv-color-border); }
 .kvc-final { border-inline-start: 3px solid var(--kv-color-primary); padding-inline-start: 12px; }
+/* A step's headline reads as the agent's own line, a little quieter than its text (ADR 0102, 1). */
+.kvc-headline > summary { cursor: pointer; font-weight: 600; list-style-position: inside; padding-block: 2px; }
+.kvc-headline > p { margin-block: 4px 0; }
 .kvc-changes { display: flex; flex-direction: column; gap: 8px; }
 .kvc-change-head { flex: 1 1 auto; min-inline-size: 0; display: flex; align-items: center; gap: 8px; text-align: start; }
 .kvc-diff > [data-kind='added'] { color: var(--kv-color-success, inherit); background: color-mix(in srgb, var(--kv-color-success, green) 12%, transparent); }
@@ -215,7 +218,8 @@ a.kvc-button { text-decoration: none; color: inherit; }
   .kvc-composer-row .kvc-picker-icon { display: block; }
   .kvc-composer-row .kvc-picker-label { display: none; }
 }
-/* Below 60 rem of page the chat list is a drawer the conversation opens (ADR 0093, 3). */
+/* Below 60 rem of page, and while the artifact panel is open, the chat list is a drawer the conversation opens, so the
+   chat keeps its room (ADR 0093, 3; ADR 0102, 16). */
 .kvc-chats-bar { display: none; }
 @media (max-width: 60rem) {
   .kvc-sessions { display: none; }
@@ -226,6 +230,24 @@ a.kvc-button { text-decoration: none; color: inherit; }
   .kvc-new-chat { padding-inline-end: var(--kv-space-sm); }
   .kvc-topline > .kvc-header { padding-inline: var(--kv-space-sm); border-block-end: 0; }
 }
+:root:has(.kvc-artifact-panel) .kvc-sessions { display: none; }
+:root:has(.kvc-artifact-panel) .kvc-drawer .kvc-sessions { display: flex; inline-size: 100%; border-inline-end: 0; }
+:root:has(.kvc-artifact-panel) .kvc-topline { background: var(--kv-color-surface); border-block-end: 1px solid var(--kv-color-border); }
+:root:has(.kvc-artifact-panel) .kvc-chats-bar, :root:has(.kvc-artifact-panel) .kvc-new-chat { display: flex; align-items: center; }
+:root:has(.kvc-artifact-panel) .kvc-chats-bar { padding-inline-start: var(--kv-space-sm); }
+:root:has(.kvc-artifact-panel) .kvc-new-chat { padding-inline-end: var(--kv-space-sm); }
+:root:has(.kvc-artifact-panel) .kvc-topline > .kvc-header { padding-inline: var(--kv-space-sm); border-block-end: 0; }
+/* A narrow send box shows its pickers as icons, whatever the conversation's width (ADR 0102, 16). */
+.kvc-composer { container: kvc-composer / inline-size; }
+@container kvc-composer (max-inline-size: 36rem) {
+  .kvc-composer-row .kvc-picker-icon { display: block; }
+  .kvc-composer-row .kvc-picker-label { display: none; }
+  .kvc-composer-row .kvc-picker-chevron { display: none; }
+  .kvc-composer-hint { visibility: hidden; }
+}
+.kvc-segments { display: flex; gap: 4px; }
+.kvc-segments > .kvc-button[aria-pressed='true'] { background: var(--kv-color-primary); color: var(--kv-color-on-primary); border-color: var(--kv-color-primary); }
+.kvc-choice-note { font-size: 12px; }
 .kvc-drawer-backdrop { position: fixed; inset: 0; z-index: 40; background: rgb(0 0 0 / 0.35); }
 .kvc-drawer { position: absolute; inset-block: 0; inset-inline-start: 0; inline-size: min(85vw, 20rem); background: var(--kv-color-surface); box-shadow: 0 12px 32px rgb(0 0 0 / 0.2); overflow-y: auto; }
 .kvc-rules { display: flex; flex-direction: column; gap: 6px; margin-block-start: 8px; }

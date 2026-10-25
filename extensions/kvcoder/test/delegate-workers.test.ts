@@ -70,7 +70,8 @@ describe('the delegate connector and its workers (08 §8.5, ADR 0021)', { timeou
     expect(toolResults(fake, 2)).toEqual(["error VALIDATION_FAILED: shell isn't available in this subagent."]);
   });
 
-  it("QA31-H6 a worker's model and thinking are its child's, and the parent's when they are null", async () => {
+  // QA67-H7: a worker that names no level gets kvcoder.delegate.thinking, medium by default (ADR 0102, 3).
+  it("QA31-H6 a worker's model and thinking are its child's, the parent's model and the helpers' level when they are null", async () => {
     const settings = workers(worker('own', { model: 'fake/m2', thinking: 'high' }), worker('same'));
     const { kernel, fake, sessionId } = await turn(settings, runs(delegate('own'), delegate('same')), runs(shell('true', { risky: true })), runs(shell('true', { risky: true })));
     const pending = (await turnState(kernel, sessionId)).turn?.pending ?? [];

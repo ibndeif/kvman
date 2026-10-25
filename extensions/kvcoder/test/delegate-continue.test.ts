@@ -43,7 +43,8 @@ async function answeredHelper(fake: FakeOpenAI, kernel: TestKernel) {
 }
 
 describe('delegate continue (ADR 0085, 4)', { timeout: 60_000 }, () => {
-  it('QA53-H12 a helper is continued with its history', async () => {
+  // QA67-E20: an ended helper is still waited for.
+  it('QA53-H12 QA67-E20 a helper is continued with its history', async () => {
     const { kernel, fake } = await kvcoder.start({ settings: workers(worker('helper')) });
     const { sessionId, first, id } = await answeredHelper(fake, kernel);
     expect(first).toBe(`first answer\n\n(helper ${id})`);
@@ -65,7 +66,8 @@ describe('delegate continue (ADR 0085, 4)', { timeout: 60_000 }, () => {
     }, wait);
   });
 
-  it("QA53-E11 continue refuses what it can't continue", async () => {
+  // QA67-E21: a program worker's run is still refused.
+  it("QA53-E11 QA67-E21 continue refuses what it can't continue", async () => {
     const { kernel, fake } = await kvcoder.start({ settings: workers(worker('helper')) });
     const { sessionId, id } = await answeredHelper(fake, kernel);
     const other = await newSession(kernel);
@@ -80,7 +82,8 @@ describe('delegate continue (ADR 0085, 4)', { timeout: 60_000 }, () => {
     fake.reply(runs(proceed(busy), proceed('nope'), proceed(otherHelper), command('delegate', 'continue', { id })), says('ok'));
     await sendBeside(kernel, fake, sessionId, fake.requests().length + 2);
     const [stillBusy, unknown, foreign, noMessage] = toolResults(fake).slice(-4);
-    expect(stillBusy).toMatch(/^error VALIDATION_FAILED: The helper .* is still working/);
+    // Superseded by QA67-H20: a helper still working gets the message queued (ADR 0102, 11).
+    expect(stillBusy).toBe(`queued for ${busy}: it reads this at its next step, and its answer comes as a background message\n\n(helper ${busy})`);
     expect(unknown).toMatch(/^error kvcoder\/JOB_NOT_FOUND: /);
     expect(foreign).toMatch(/^error kvcoder\/JOB_NOT_FOUND: /);
     expect(noMessage).toMatch(/^error VALIDATION_FAILED: /);
@@ -98,6 +101,28 @@ describe('delegate continue (ADR 0085, 4)', { timeout: 60_000 }, () => {
     programWorld.fake.reply(runs(proceed(runner)), says('ok'));
     await send(programWorld.kernel, programChat);
     expect(toolResults(programWorld.fake).at(-1)).toMatch(/^error VALIDATION_FAILED: .*program worker's run/);
+  });
+
+  it("QA67-H20 continue to a helper still working queues the message, and the helper's next step reads it", async () => {
+    const { kernel, fake } = await kvcoder.start({ settings: workers(worker('helper')) });
+    const sessionId = await newSession(kernel);
+    const held = heldReply({ text: 'first pass' });
+    fake.reply(runs(run({ background: true })), held.reply, says('ok'));
+    await sendBeside(kernel, fake, sessionId, 3);
+    const busy = /^started (\S+)/.exec(toolResults(fake).at(-1) ?? '')?.[1] ?? '';
+    fake.reply(runs(proceed(busy)), says('ok'));
+    await sendBeside(kernel, fake, sessionId, fake.requests().length + 2);
+    expect(toolResults(fake).at(-1)).toBe(`queued for ${busy}: it reads this at its next step, and its answer comes as a background message\n\n(helper ${busy})`);
+    const before = fake.requests().length;
+    fake.reply(says('with the test'), says('noted'));
+    held.release();
+    await vi.waitFor(() => expect(fake.requests().length).toBeGreaterThan(before), wait);
+    const helperRequest = requestMessages(fake, before).map((message) => `${message.role}:${textOf(message)}`);
+    expect(helperRequest.at(-1)).toMatch(/^user:.*Now add the test\./s);
+    await vi.waitFor(async () => {
+      const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });
+      expect(JSON.stringify(messages)).toContain(`with the test\\n\\n(helper ${busy})`);
+    }, wait);
   });
 
   it('QA53-E12 continue rechecks the grants', async () => {

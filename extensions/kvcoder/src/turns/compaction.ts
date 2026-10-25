@@ -7,6 +7,7 @@ import { runTool } from '../calls/run-tool.ts';
 import { txRecords } from '../store/collections.ts';
 import { currentStep, type StepLease } from './step-claim.ts';
 import { liveStep } from './step-intents.ts';
+import { completeWithRetries } from './model-retry.ts';
 import { cacheRetentionOf } from './cache-retention.ts';
 import { olderCount } from './call-groups.ts';
 import { appendMessage, appendNotice } from './history.ts';
@@ -77,7 +78,7 @@ export async function compact(ctx: Ctx, session: Stored<SessionDoc>, options: Co
   try {
     const messages = [...(await modelMessages(ctx, { summary: history.summary, messages: older, cleared: history.cleared })), { role: 'user' as const, content: summaryInstruction, timestamp: Date.now() }];
     if (options.lease !== undefined && await currentStep(ctx, options.lease) === undefined) return false;
-    const answer = await ctx.exec('kvai.complete', { ...(session.model === null ? {} : { model: session.model }), sessionId: session.id, ...cacheRetentionOf(session), systemPrompt: options.prompt, messages, tools: [runTool(options.tools)], thinking: session.thinking });
+    const answer = await completeWithRetries(ctx, { ...(session.model === null ? {} : { model: session.model }), sessionId: session.id, ...cacheRetentionOf(session), systemPrompt: options.prompt, messages, tools: [runTool(options.tools)], thinking: session.thinking }, options.lease);
     const text = textOf(answer.message.content);
     if (text.trim() === '') return await summaryFailed(ctx, session, 'kvcoder/SUMMARY_EMPTY', options);
     const person = personMessages(storedPerson(history.summary), older);

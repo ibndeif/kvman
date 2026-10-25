@@ -1,3 +1,4 @@
+import { placeholderTitle } from '../sessions/placeholder-title.ts';
 import type { Ctx, File, Stored } from '@kvman/sdk';
 import { dismissedText } from '../connectors/ask.ts';
 import { reportInterrupted } from '../jobs/process-report.ts';
@@ -51,7 +52,7 @@ export async function receiveMessage(ctx: Ctx, session: Stored<SessionDoc>, inco
       store.sendReceipts.insert({ ...sent, createdAt: now() });
     }
     if (fresh.status === 'idle') {
-      if (fresh.autoTitle && fresh.title === '') store.sessions.update(fresh.id, { title: incoming.text.slice(0, 60) });
+      if (fresh.autoTitle && fresh.title === '') store.sessions.update(fresh.id, { title: placeholderTitle(incoming.text) });
       appendMessage(store, fresh, { kind: 'user', content: userContent(text, running), source: incoming.source, ...files });
       return incoming.mayStart ? { start: openTurn(store, fresh) } : {};
     }

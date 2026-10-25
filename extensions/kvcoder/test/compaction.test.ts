@@ -40,12 +40,13 @@ describe('compaction (08 §8.1)', { timeout: 30_000 }, () => {
     expect(stream.chunks.slice(started + 1).find((chunk) => chunk.source === '@kvman/kvai')?.data).toEqual({ type: 'text', delta: 'SUMMARY' });
   });
 
-  it('M2.4-E48 a failed summary adds a notice and the step goes on; CONTEXT_TOO_LONG with a summary that fails again ends the turn; compact runs by hand', async () => {
+  // QA67-E22: a summary that fails for good, with a failure no try mends, adds its notice (ADR 0102, 12).
+  it('M2.4-E48 QA67-E22 a failed summary adds a notice and the step goes on; CONTEXT_TOO_LONG with a summary that fails again ends the turn; compact runs by hand', async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
     await history(kernel, fake, sessionId);
     const tooLong = "This model's maximum context length is 128000 tokens. However, your messages resulted in 200000 tokens.";
-    const down = { status: 500, body: { error: { message: 'down', type: 'server_error' } } };
+    const down = { status: 400, body: { error: { message: 'down', type: 'invalid_request_error' } } };
     fake.reply(down, { status: 400, body: { error: { message: tooLong, type: 'invalid_request_error' } } }, down);
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'message 8' });
     await kernel.clock.advance(0);
@@ -60,6 +61,19 @@ describe('compaction (08 §8.1)', { timeout: 30_000 }, () => {
     await kernel.exec('kvcoder.session.compact', { sessionId });
     const after = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });
     expect(after.messages.at(-1)).toMatchObject({ kind: 'summary', content: { text: 'BY HAND' } });
+  });
+
+  it('QA67-H21 a summary that fails for a temporary reason is tried again and stored', async () => {
+    const { kernel, fake } = await kvcoder.start();
+    const sessionId = await newSession(kernel);
+    await history(kernel, fake, sessionId);
+    fake.reply({ status: 503, body: { error: { message: 'busy', type: 'server_error' } } }, says('SUMMARY'), says('answer 8'));
+    await kernel.exec('kvcoder.message.send', { sessionId, text: 'message 8' });
+    await vi.waitFor(async () => {
+      const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });
+      expect(messages.find((message) => message.kind === 'summary')?.content).toMatchObject({ text: 'SUMMARY' });
+      expect(messages.some((message) => message.kind === 'notice')).toBe(false);
+    }, wait);
   });
 
   it('M2.4-E3 compacting while a step runs fails SESSION_BUSY', async () => {

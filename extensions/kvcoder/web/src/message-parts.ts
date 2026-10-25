@@ -23,6 +23,29 @@ export function textOf(content: unknown): string {
   return blocks(content).flatMap((block) => (block['type'] === 'text' && typeof block['text'] === 'string' ? [block['text']] : [])).join('\n');
 }
 
+/** A reply's headlines: the lines of its thinking that are wholly bold, as GPT's summaries begin each part (ADR 0102, 1). */
+export function headlinesOf(thinking: string): string[] {
+  return thinking.split('\n').flatMap((line) => {
+    const found = /^\*\*([^*]+)\*\*$/.exec(line.trim());
+    return found?.[1] === undefined || found[1].trim() === '' ? [] : [found[1].trim()];
+  });
+}
+
+/** The newest headline of a running turn: the streaming thinking's, else its last reply's that had one. */
+export function latestHeadline(streaming: string, messages: readonly Message[], turnId: string | undefined): string | undefined {
+  const live = headlinesOf(streaming).at(-1);
+  if (live !== undefined || turnId === undefined) return live;
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message === undefined || message.turnId !== turnId) return undefined;
+    if (message.kind === 'assistant') {
+      const said = headlinesOf(thinkingOf(message)).at(-1);
+      if (said !== undefined) return said;
+    }
+  }
+  return undefined;
+}
+
 export function thinkingOf(message: Message): string {
   return blocks(message.content['content']).flatMap((block) => (block['type'] === 'thinking' && typeof block['thinking'] === 'string' ? [block['thinking']] : [])).join('\n');
 }
@@ -41,7 +64,8 @@ export function callViews(messages: readonly Message[]): Map<string, CallView> {
   return views;
 }
 
-export type ResultCard = CallView & { output: string; failed: boolean; durationMs?: number };
+/** `exitCode` and `timedOut` are a line's, so a line that exited with another code reads calmly (ADR 0102, 15). */
+export type ResultCard = CallView & { output: string; failed: boolean; durationMs?: number; exitCode?: number; timedOut?: true };
 
 // A result's own words: the `run` tool's details name the call, whose payload the call itself holds; an old shell
 // result's details hold its title and command.
@@ -69,8 +93,13 @@ export function resultCard(message: Message, calls: ReadonlyMap<string, CallView
     output: typeof details?.['output'] === 'string' ? details['output'] : details === undefined ? text.replace(/\n?\[exit code \d+\]$/, '') : text,
     failed: message.content['isError'] === true || (exitCode !== undefined && exitCode !== 0),
     ...(typeof details?.['durationMs'] === 'number' ? { durationMs: details['durationMs'] } : {}),
+    ...(exitCode === undefined ? {} : { exitCode }),
+    ...(details?.['timedOut'] === true ? { timedOut: true as const } : {}),
   };
 }
+
+/** Whether a failed card is a line that ran to its end and exited with another code than 0 (ADR 0102, 15). */
+export const exitedOnly = (card: Pick<ResultCard, 'failed' | 'line' | 'exitCode' | 'timedOut'>): boolean => card.failed && card.line !== undefined && card.exitCode !== undefined && card.exitCode !== 0 && card.timedOut !== true;
 
 export type AnsweredQuestion = { kind: AskKind; question: Record<string, unknown>; answer: Record<string, unknown> };
 

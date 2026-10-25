@@ -17,13 +17,14 @@ import LinkedText from './LinkedText.vue';
 // the whole wait: the model writing the call, then the call running (ADR 0017, 1). Opened, it shows the two parts, then
 // the call by its kind. A failed call starts closed with a short reason; one the agent got wrong is quiet, and one that
 // isn't a line keeps its error and request behind "Show details" (ADR 0079).
-const props = defineProps<{ view: CallView; failed?: boolean | undefined; durationMs?: number | undefined; output?: string | undefined; running?: boolean | undefined }>();
+// `exited` is the code of a line that ran to its end and exited with another code: it reads calmly (ADR 0102, 15).
+const props = defineProps<{ view: CallView; failed?: boolean | undefined; durationMs?: number | undefined; output?: string | undefined; running?: boolean | undefined; exited?: number | undefined }>();
 const kvman = useKvman();
 const kind = computed(() => callKind(props.view));
 // Every card starts closed, a change's too, so a turn reads as the agent's text (ADR 0093, 1).
 const open = ref(false);
 const details = ref(false);
-const failure = computed(() => (props.failed === true && props.output !== undefined ? callFailure(props.output) : undefined));
+const failure = computed(() => (props.failed === true && props.exited === undefined && props.output !== undefined ? callFailure(props.output) : undefined));
 const quiet = computed(() => failure.value?.kind === 'invalid');
 const reason = computed(() => {
   const found = failure.value;
@@ -42,7 +43,7 @@ const timeParts = computed(() => {
 </script>
 
 <template>
-  <div class="kvc-card" :class="{ 'kvc-failed': props.failed && !quiet }" data-test="call-card">
+  <div class="kvc-card" :class="{ 'kvc-failed': props.failed && !quiet && props.exited === undefined }" data-test="call-card">
     <button type="button" class="kvc-card-row kvc-ghost kvc-button" style="inline-size: 100%; border-radius: 0" :aria-expanded="open" :disabled="props.output === undefined" @click="open = !open">
       <span v-if="props.running" class="kvc-spin" :aria-label="kvman.t('kvcoder.ui.running')" />
       <component :is="open ? ChevronDown : ChevronRight" v-else :size="16" aria-hidden="true" />
@@ -55,6 +56,7 @@ const timeParts = computed(() => {
       <span v-if="props.view.risky" class="kvc-chip kvc-warn" data-test="call-risky">{{ kvman.t('kvcoder.ui.call.risky') }}</span>
       <span v-if="props.view.background" class="kvc-chip" data-test="call-background">{{ kvman.t('kvcoder.ui.jobs.background') }}</span>
       <span v-if="quiet" class="kvc-chip" data-test="call-not-run">{{ kvman.t('kvcoder.ui.callNotRun') }}</span>
+      <span v-else-if="props.exited !== undefined" class="kvc-muted" data-test="call-exit">{{ kvman.t('kvcoder.ui.call.exit', { code: props.exited }) }}</span>
       <span v-else-if="props.failed" class="kvc-chip kvc-danger" data-test="call-failed">{{ kvman.t('kvcoder.ui.callFailed') }}</span>
       <span class="kvc-muted" data-test="call-time">{{ time }}</span>
     </button>

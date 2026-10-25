@@ -95,7 +95,7 @@ describe("kvcoder's catalogs (02 §2.11)", { timeout: 30_000 }, () => {
   });
 
   it("QA20-E9 every choice of kvcoder's settings has a name in both languages", () => {
-    const keys = [...['off', 'minimal', 'low', 'medium', 'high'].map((level) => `kvcoder.thinking.options.${level}`), ...['auto', 'ask', 'never'].map((mode) => `kvcoder.approval.options.${mode}`), 'kvcoder.ui.approvalNote.never', 'kvcoder.config.approval.never.title', 'kvcoder.config.approval.never.text', 'kvcoder.config.approval.never.confirm'];
+    const keys = [...['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'].flatMap((level) => [`kvcoder.thinking.options.${level}`, `kvcoder.delegate.thinking.options.${level}`]), ...['auto', 'ask', 'never'].map((mode) => `kvcoder.approval.options.${mode}`), 'kvcoder.ui.approvalNote.never', 'kvcoder.config.approval.never.title', 'kvcoder.config.approval.never.text', 'kvcoder.config.approval.never.confirm'];
     for (const language of ['en', 'ar'] as const) expect(keys.filter((key) => catalog(language)[key] === undefined), language).toEqual([]);
   });
 
@@ -103,7 +103,8 @@ describe("kvcoder's catalogs (02 §2.11)", { timeout: 30_000 }, () => {
     const en = catalog('en');
     const ar = catalog('ar');
     const added = Object.keys(en).filter((key) => key.startsWith('kvcoder.config.workers.') || key.startsWith('kvcoder.delegate.'));
-    expect(added).toHaveLength(70);
+    // ADR 0102, 3 adds kvcoder.delegate.thinking's title, description, and its seven levels.
+    expect(added).toHaveLength(79);
     for (const key of [...added, 'kvcoder.config.connector.delegate', 'kvcoder.errors.WORKER_NOT_FOUND']) {
       expect(ar[key], key).toBeTruthy();
       expect(placeholders(ar[key] ?? ''), key).toEqual(placeholders(en[key] ?? ''));

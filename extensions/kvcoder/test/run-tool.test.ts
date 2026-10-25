@@ -72,9 +72,13 @@ describe('the run tool (08 §8.2 and §8.3, ADR 0011)', { timeout: 30_000 }, () 
     expect(command.results[0]).toBe('error NOT_FOUND: todo has no command remove. Its commands are: add, wait, fail, list, help.');
   });
 
-  it('QA19-E15 a shell line sent as the command is cut, and the error names the commands', async () => {
+  // Superseded by QA67-E11: with no line in the payload, the line sent as the command becomes exec's (ADR 0102, 5); with
+  // one, the command still fails as one shell doesn't have.
+  it('QA19-E15 QA67-E11 a shell line sent as the command becomes exec, or with a line already given is cut and names the commands', async () => {
     const line = 'node -e "console.log(1)" && echo a long line that is not a command name';
-    const { results } = await call({ connector: 'shell', command: line });
+    const repaired = await call({ connector: 'shell', command: line });
+    expect(repaired.results[0]).toMatch(/^error VALIDATION_FAILED: .*risky.*The payload of shell exec is\n\{ line, background\?, timeoutMs\?, risky \}$/s);
+    const { results } = await call({ connector: 'shell', command: line, payload: { line: 'ls', risky: false } });
     expect(results[0]).toBe(`error NOT_FOUND: shell has no command ${line.slice(0, 40)}…. Its commands are: exec { line, background?, timeoutMs?, risky }, help. The command is exec, and what to run goes in its payload.`);
   });
 

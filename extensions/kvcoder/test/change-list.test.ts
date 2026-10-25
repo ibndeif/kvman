@@ -111,4 +111,17 @@ describe("a chat's changes (ADR 0093, 2)", { timeout: 60_000 }, () => {
     await expect(kernel.exec('kvcoder.change.undo', { sessionId: helperId, path: 'a.txt' })).rejects.toMatchObject({ problem: expect.objectContaining({ code: 'VALIDATION_FAILED' }) as unknown });
     expect(existsSync(path.join(kernel.homeFolder, 'a.txt'))).toBe(true);
   });
+
+  it("QA67-H17 and QA67-E19 the turn's scope lists the files of the chat's latest turn only, and all of a chat with one turn", async () => {
+    const { kernel, fake } = await kvcoder.start();
+    const sessionId = await chat(kernel, fake, runs(fsCall('write', { path: 'a.ts', content: 'a\n' })), says('done'));
+    const paths = async (scope?: 'turn' | 'chat') => (await kernel.exec('kvcoder.change.list', { sessionId, withDiffs: false, ...(scope === undefined ? {} : { scope }) })).files.map((file) => file.path);
+    expect(await paths('turn')).toEqual(['a.ts']);
+    fake.reply(runs(fsCall('write', { path: 'b.ts', content: 'b\n' })), says('done'));
+    await kernel.exec('kvcoder.message.send', { sessionId, text: 'more' });
+    await kernel.clock.advance(0);
+    expect(await paths('turn')).toEqual(['b.ts']);
+    expect((await paths()).sort()).toEqual(['a.ts', 'b.ts']);
+    expect((await paths('chat')).sort()).toEqual(['a.ts', 'b.ts']);
+  });
 });

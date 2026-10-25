@@ -29,10 +29,12 @@ describe("the map's rules in its entry (08 §8.2 and §8.5, ADR 0097, 5 and 8)",
     const lead = lines(workingMethod('lead'));
     const plan = lead.find((line) => line.startsWith('Plan.')) ?? '';
     const execute = lead.find((line) => line.startsWith('Execute.')) ?? '';
-    expect(plan).toContain('the `execution-map` entry below says how to set it, detail its steps, and keep it true.');
+    // Superseded by QA67-H9 (ADR 0102, 4).
+    expect(plan).toContain("the `execution-map` entry below says how to set it with its steps' details in one call, and keep it true.");
     expect(execute).toContain('work through it as its entry says');
-    expect(plan.length + execute.length).toBeLessThan(1600);
-    for (const rule of ['Its uses names who does it', 'a branch means delegation', 'Set the skeleton first, then write each step\'s details with detail, one call per step', 'Setting the map again keeps the details and the status of each step whose id stays', 'Mark a step doing in the same reply as your first call on it', 'failed with a note']) expect(executionMapDescription).toContain(rule);
+    // ADR 0102, 2 adds the checks in proportion to Execute.
+    expect(plan.length + execute.length).toBeLessThan(1900);
+    for (const rule of ['Its uses names who does it', 'a branch means delegation', 'Give each step its details in the same set call', 'Setting the map again keeps the status of each step whose id stays', 'Mark a step doing in the same reply as your first call on it', 'failed with a note']) expect(executionMapDescription).toContain(rule);
   });
 
   it('QA65-H13 the entry gives every limit as the schemas have them', () => {
@@ -59,5 +61,10 @@ describe('Decide for me asks nothing (08 §8.2, ADR 0097, 7)', () => {
     expect(lead).toContain('call `ask choice` with other set to true');
     expect(lead).toContain('To put a question to the person (a choice, a yes or no, a free answer), call `ask`.');
     expect(workingMethod('lead', 'general')).toContain('ask it in one round with `ask`');
+  });
+
+  it('QA67-H10 the map entry names no worker, and says a small change gets no map', () => {
+    for (const name of ['designer', 'architect', 'tester', 'reviewer']) expect(executionMapDescription, name).not.toContain(name);
+    expect(executionMapDescription).toContain('A bug fix, or a change to one or two files, never gets a map.');
   });
 });

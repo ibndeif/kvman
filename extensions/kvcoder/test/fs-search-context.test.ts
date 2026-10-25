@@ -55,9 +55,10 @@ describe('fs search context and filesOnly (08 §8.5, ADR 0090, 3)', { timeout: 3
     expect(many.truncated).toBe(true);
   });
 
-  it('QA58-E10 context and filesOnly together are refused', async () => {
-    const { results } = await looked((folder) => write(folder, 'a.txt', 'hit\n'), [fsCall('search', { pattern: 'hit', context: 1, filesOnly: true })]);
-    expect(results[0]).toBe("error VALIDATION_FAILED: context and filesOnly can't be used together: filesOnly gives no lines to show context around.");
+  // Superseded by QA67-H23: filesOnly ignores context (ADR 0102, 13).
+  it('QA58-E10 QA67-H23 filesOnly with context gives the counts', async () => {
+    const { results } = await looked((folder) => write(folder, 'a.txt', 'hit\n'), [fsCall('search', { pattern: 'hit', context: 2, filesOnly: true })]);
+    expect(json(results[0])).toEqual({ files: [{ path: 'a.txt', count: 1 }], truncated: false });
   });
 
   it('QA58-E11 filesOnly stops at 200 files', async () => {

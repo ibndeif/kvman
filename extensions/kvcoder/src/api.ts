@@ -42,6 +42,7 @@ declare module '@kvman/sdk' {
     'kvcoder.turn.retry': { input: SessionId; output: Empty };
     'kvcoder.turn.cancel': { input: SessionId & { turnId?: string }; output: Empty };
     'kvcoder.job.cancel': { input: { sessionId: string; id: string }; output: Empty };
+    'kvcoder.job.restart': { input: { sessionId: string; id: string }; output: { id: string } };
     'kvcoder.delegate.staging.restore': { input: { sessionId: string; runId: string }; output: Empty };
     'kvcoder.question.answer': { input: { questionId: string; answer: Json; remember?: { kind: 'line'; prefix: string } | { kind: 'files' }; reason?: string }; output: { jobId: string | null } };
     'kvcoder.connector.register': { input: Connector | { connectors: Connector[] }; output: Empty };
@@ -57,7 +58,7 @@ declare module '@kvman/sdk' {
   interface Queries {
     'kvcoder.session.list': { input: { limit: number }; output: Session[] };
     'kvcoder.session.get': { input: SessionId; output: Session };
-    'kvcoder.change.list': { input: { sessionId: string; withDiffs?: boolean }; output: { files: { path: string; added: number; removed: number; diff: string; state: 'changed' | 'created' | 'deleted' }[]; diffs: boolean } };
+    'kvcoder.change.list': { input: { sessionId: string; withDiffs?: boolean; scope?: 'turn' | 'chat' }; output: { files: { path: string; added: number; removed: number; diff: string; state: 'changed' | 'created' | 'deleted' }[]; diffs: boolean } };
     'kvcoder.change.undo': { input: { sessionId: string; path: string }; output: Empty };
     'kvcoder.file.preview.get': { input: { path: string; edits: { oldText: string; newText: string; replaceAll?: boolean }[] } | { path: string; content: string }; output: { path: string; after: string } };
     'kvcoder.session.count': { input: { status?: Status; waitingOn?: 'person' }; output: { count: number } };

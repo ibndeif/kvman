@@ -46,9 +46,20 @@ describe('fs search (08 §8.5, ADR 0011, 8)', { timeout: 30_000 }, () => {
     expect(many.truncated).toBe(true);
     const wide = json(results[1]) as { files: { matches: { text: string }[] }[] };
     expect(wide.files[0]?.matches[0]?.text).toBe(`needle${'w'.repeat(494)}`);
-    expect(results[2]).toMatch(/^error VALIDATION_FAILED: The pattern isn't a regular expression: /);
+    // Superseded by QA67-H22: a pattern that isn't an expression is searched as plain text (ADR 0102, 13).
+    expect(json(results[2])).toMatchObject({ files: [], truncated: false, note: expect.stringMatching(/^The pattern isn't a regular expression \(.+\), so it was searched as plain text\.$/) as unknown });
     expect(results[3]).toBe("error NOT_FOUND: missing doesn't exist.");
     expect(results[4]).toBe('error VALIDATION_FAILED: .. is outside the workspace folder.');
     expect(json(results[5])).toEqual({ files: [], truncated: false });
+  });
+
+  it('QA67-H22 a pattern that is no expression is searched as plain text, and says so', async () => {
+    const { results } = await looked((folder) => write(folder, 'a.ts', 'start\nterminate(1);\n'), [fsCall('search', { pattern: 'terminate(' })]);
+    expect(json(results[0])).toEqual({ files: [{ path: 'a.ts', matches: [{ line: 2, text: 'terminate(1);' }] }], truncated: false, note: expect.stringMatching(/^The pattern isn't a regular expression \(.+\), so it was searched as plain text\.$/) as unknown });
+  });
+
+  it('QA67-E23 a literal search adds no note', async () => {
+    const { results } = await looked((folder) => write(folder, 'a.ts', 'terminate(1);\n'), [fsCall('search', { pattern: 'terminate(', literal: true })]);
+    expect(json(results[0])).toEqual({ files: [{ path: 'a.ts', matches: [{ line: 1, text: 'terminate(1);' }] }], truncated: false });
   });
 });

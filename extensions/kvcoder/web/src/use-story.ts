@@ -23,11 +23,9 @@ export function useStory(t: Translate, messages: Ref<Message[]>, calls: Ref<Read
     return shown;
   });
 
-  const rowKey = (row: Row): string => {
-    const first = row.kind === 'fold' ? row.messages[0] : row.message;
-    return first === undefined ? 'fold' : first.id;
-  };
-  const rowTotals = (row: Row) => (row.kind === 'fold' ? row.messages.map((message) => turnTotals.value.get(message.id)).findLast((found) => found !== undefined) : turnTotals.value.get(row.message.id));
+  const idsOf = (row: Row): string[] => (row.kind === 'fold' ? row.messages.map((message) => message.id) : row.kind === 'headline' ? row.ids : [row.message.id]);
+  const rowKey = (row: Row): string => `${row.kind}:${idsOf(row)[0] ?? ''}`;
+  const rowTotals = (row: Row) => idsOf(row).map((id) => turnTotals.value.get(id)).findLast((found) => found !== undefined);
   const runningTurnId = computed(() => (session.value?.status === 'idle' ? undefined : turns.value[0]?.outcome === undefined ? turns.value[0]?.id : undefined));
   // An ended turn's last text is its final answer.
   const finalAnswers = computed(() => {

@@ -11,7 +11,7 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
     const lead = workingMethod('lead');
     expect(steps(lead)).toEqual([]);
     expect(steps(workingMethod('worker'))).toEqual(['1. Understand', '2. Do it', '3. Return']);
-    expect(lead.split('\n').slice(5, 14).map((line) => line.slice(0, line.indexOf('. ')))).toEqual(['Understand', 'Clarify', 'Plan', 'Confirm the plan', 'Execute', 'Stay on the task', 'Delegate', 'Show what the person will look at', 'Finish']);
+    expect(lead.split('\n').slice(5, 15).map((line) => line.slice(0, line.indexOf('. ')))).toEqual(['Understand', 'Clarify', 'Tests the person chose', 'Plan', 'Confirm the plan', 'Execute', 'Stay on the task', 'Delegate', 'Show what the person will look at', 'Finish']);
     for (const phrase of [
       'No path is fixed: you choose it for each task from what the task is, and you change it when what you find changes it.',
       'Size up the task first. Read the request and look at what it touches, then judge four things: how clear it is (can you say what done looks like?), how much it changes (one place, or several parts that depend on each other), what could go wrong and how hard that is to take back, and whether the person will look at the result (a screen, a page, a report).',
@@ -19,7 +19,7 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
       'A task that turns out larger than it looked gets its map then, and one that turns out simple drops what it does not need.',
       'These are the parts of a path. Use only the ones your path has.',
       // ADR 0097, 5: the map's own rules are in its entry; Execute keeps how each step is done.
-      'For each step, or with no map for all of what was asked, make the smallest change that does it, check it, and fix a failure at its cause. A step is not done because you wrote it.',
+      'For each step, or with no map for all of what was asked, make the smallest change that does it, check it, and fix a failure at its cause.', 'A step is not done because you wrote it.',
       'do not look into it: record it with `execution-map note`, or keep it for your final answer when there is no map, and go on.',
       'separate work that runs beside yours, or a fresh review of a change you finished',
       'show it in an artifact: the design as an HTML page before you build it when the layout is a real choice, and the running app as a url artifact once it runs',
@@ -63,7 +63,8 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
       'Mark a step doing in the same reply as your first call on it, and when several are ready, mark each and start them all in one reply, one delegate run per branch.',
       "Mark a step done with your evidence, what you ran and what it showed, as soon as its check passed and before you start the next; failed with a note when you can't finish it, and skipped with a note when it turned out unneeded.",
       'When the plan itself changes, set the map again before you go on',
-      'Setting the map again keeps the details and the status of each step whose id stays',
+      // Superseded by QA67-H9: details are given with the map (ADR 0102, 4).
+      'Setting the map again keeps the status of each step whose id stays, and its details when you give none',
     ]) expect(executionMapDescription, phrase).toContain(phrase);
   });
 
@@ -90,14 +91,15 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
       'Delegate. A step goes to a worker of the `delegate` connector when the worker does it better or faster than you would: a specialist whose skill the step needs, separate work that runs beside yours, or a fresh review of a change you finished; its entry lists the workers and what each is for.',
       "Don't delegate what a few calls of your own would do, and ask for one review of a piece of work, not several.",
     ]) expect(lead, phrase).toContain(phrase);
-    expect(executionMapDescription).toContain('delegate designer for a screen or flow whose design is a real choice, delegate architect for a structure decision across several parts, delegate tester for tests that are a piece of work of their own, and delegate reviewer for a finished change that is risky or wide.');
+    // Superseded by QA67-H10: the entry names no worker (ADR 0102, 4).
+    expect(executionMapDescription).toContain('such as a design that is a real choice, a structure decision across several parts, or a review of a finished change that is risky or wide.');
     expect(lead).not.toContain('only when it is separate work');
   });
 
   it('M2.4-E281 a step that names a worker goes to it, and the map entry says who does a step', () => {
     expect(workingMethod('lead')).toContain('hand a step whose uses names a worker to that worker with `delegate run` and check its answer');
-    expect(executionMapDescription).toContain('Its uses names who does it: you, with a connector such as fs, or a worker such as');
-    expect(JSON.stringify(payloadJsonSchema(executionMapCommands.set.payload))).toContain('Who does the step: a connector such as fs, or a worker such as delegate architect; several as a list.');
+    expect(executionMapDescription).toContain('Its uses names who does it: you, with a connector such as fs, or a worker of delegate whose description in the delegate entry fits the step');
+    expect(JSON.stringify(payloadJsonSchema(executionMapCommands.set.payload))).toContain('Who does the step: a connector such as fs, or a worker as delegate and its name; several as a list.');
   });
 
   it('M2.4-E228 both roles spend context with care and add nothing unasked, and the artifact connector names no plan', () => {
@@ -180,12 +182,13 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
     expect(worker).not.toContain('Read everything they sent');
   });
 
-  it('QA54-H10 the lead sets the skeleton first, details each step in Markdown, and asks once every step has details', () => {
+  // Superseded by QA67-H9: the map is set with each step's details in one call (ADR 0102, 4).
+  it('QA54-H10 QA67-H9 the lead sets the map with each step detailed in Markdown, and asks once every step has details', () => {
     expect(workingMethod('lead')).toContain('has details on every step (its undetailed list is empty), and before you start any step');
     for (const phrase of [
-      "Set the skeleton first, then write each step's details with detail, one call per step, all in the reply after the set: what it changes and how, naming the files or parts and the approach in words the person understands without the code, in Markdown, with lists, tables, and Mermaid diagrams or charts in fenced mermaid blocks, never SVG.",
+      "Give each step its details in the same set call: what it changes and how, naming the files or parts and the approach in words the person understands without the code, in Markdown, with lists, tables, and Mermaid diagrams or charts in fenced mermaid blocks, never SVG.",
       "The person opens them with a press, and a step can't be doing until it has them.",
-      'Setting the map again keeps the details and the status of each step whose id stays: detail again only a step whose approach changed, and each new step.',
+      'Setting the map again keeps the status of each step whose id stays, and its details when you give none: give details again only for a step whose approach changed, and for each new step. Use detail to change one step\'s details on their own.',
       'Its check is the exact command you will run or the thing you will look at.',
     ]) expect(executionMapDescription, phrase).toContain(phrase);
     expect(workingMethod('lead')).not.toContain("A step's description");
@@ -198,5 +201,29 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
       expect(lines.at(-2), `${role} ${method}`).toBe(rule);
       expect(lines.at(-1), `${role} ${method}`).toMatch(/^A reply with no tool call is your final answer/);
     }
+  });
+
+});
+
+describe('tests the person chose, and checks in proportion (08 §8.2, ADR 0102, 2)', () => {
+  it('QA67-H5 the lead asks once how to test and records it; it checks in proportion; Commands holds commands only; a worker follows the line', () => {
+    const lead = workingMethod('lead');
+    for (const phrase of [
+      "Tests the person chose. Before you write or change a test, look for a line starting `Testing:` in the project's AGENTS.md, and follow it.",
+      '`ask choice` with multiple set to true and the options "Run the existing tests only", "Add unit tests", "Add end-to-end or browser tests", and "I\'ll test it myself: run the app for me", in that order.',
+      'record the answer as one line, `Testing: <their choices in plain words>`, in AGENTS.md (create it when it is missing), with risky set to false, since they just chose it.',
+      "Check in proportion: after each change, run the tests that cover it; run the whole suite once, at the end; and run no stress, load, performance, or benchmark test unless the person asked for one.",
+      'It holds only command lines, each with a few words of what it does, at most 15 lines: never notes, designs, or history.',
+      'A bug fix, or a change to one or two files, never gets a map.',
+    ]) expect(lead, phrase).toContain(phrase);
+    const worker = workingMethod('worker');
+    expect(worker).toContain("Write only the kinds of tests the `Testing:` line of the project's AGENTS.md names, run the tests that cover your change, and run no stress, load, performance, or benchmark test unless the task asks for one.");
+    expect(worker).toContain('propose the smallest design');
+  });
+
+  it('QA67-H6 with Decide for me the lead asks nothing about tests, runs the existing ones, and records nothing', () => {
+    const lead = workingMethod('lead', 'engineering', true);
+    expect(lead).toContain("When it has none, don't ask and don't write new tests: run the existing tests that cover your change, leave the app running with its address, and record nothing.");
+    expect(lead).not.toContain('Add unit tests');
   });
 });

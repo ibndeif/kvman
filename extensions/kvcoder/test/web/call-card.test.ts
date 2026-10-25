@@ -72,25 +72,29 @@ describe("a call's card says what the call does (08 §8.7, ADR 0011, 13)", () =>
     wrapper.unmount();
   });
 
-  it('QA10-H8 a card has no exit chip, whatever the exit code, and still shows the time', async () => {
+  // Superseded by QA67-H25: a line that exited with another code says so, muted, in place of "Failed" (ADR 0102, 15).
+  it('QA10-H8 QA67-H25 a card has no exit chip; a line that exited with another code ends with exit N, and still shows the time', async () => {
     const wrapper = await card({ description: 'Running the tests.', connector: 'shell', command: 'exec', payload: { line: 'npm test' } }, 'FAIL 1\n[exit code 1]', { exitCode: 1 }, true);
     expect(found(wrapper, 'exit-code').exists()).toBe(false);
-    expect(found(wrapper, 'call-card').text()).not.toContain('exit');
+    expect(found(wrapper, 'call-exit').text()).toBe('exit 1');
+    expect(found(wrapper, 'call-exit').classes()).toContain('kvc-muted');
+    expect(found(wrapper, 'call-failed').exists()).toBe(false);
     expect(found(wrapper, 'call-time').text()).toBe('200 ms');
     await opened(wrapper);
     expect(found(wrapper, 'call-output').text()).toBe('FAIL 1');
     wrapper.unmount();
   });
 
-  it('QA10-H9 a failed call has a danger border: a shell line that exits 1, a connector command that returns an error, and an old result ending [exit code 1]', async () => {
+  // Superseded by QA67-H25: a line that exited with another code, new or old, has no danger border (ADR 0102, 15).
+  it('QA10-H9 QA67-H25 a connector command that returns an error has a danger border; a shell line that exits 1, new or old, has none', async () => {
     const exited = await card({ description: 'Running the tests.', connector: 'shell', command: 'exec', payload: { line: 'npm test' } }, 'FAIL 1\n[exit code 1]', { exitCode: 1 }, true);
-    expect(found(exited, 'call-card').classes()).toContain('kvc-failed');
+    expect(found(exited, 'call-card').classes()).not.toContain('kvc-failed');
     exited.unmount();
     const errored = await card({ description: 'Editing a file.', connector: 'fs', command: 'edit', payload: { path: 'missing.txt' } }, "error NOT_FOUND: missing.txt doesn't exist.", {}, true);
     expect(found(errored, 'call-card').classes()).toContain('kvc-failed');
     errored.unmount();
     const old = await oldCard({ command: 'npm test' }, 'FAIL 1\n[exit code 1]');
-    expect(found(old, 'call-card').classes()).toContain('kvc-failed');
+    expect(found(old, 'call-card').classes()).not.toContain('kvc-failed');
     old.unmount();
     const ok = await card({ description: 'Running the tests.', connector: 'shell', command: 'exec', payload: { line: 'npm test' } }, 'ok\n[exit code 0]', { exitCode: 0 });
     expect(found(ok, 'call-card').classes()).not.toContain('kvc-failed');

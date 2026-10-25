@@ -12,8 +12,9 @@ import ConversationHeader from './ConversationHeader.vue';
 import { fields, problemKey, problemOf, toastProblem, useKvman } from './kvman.ts';
 import ActivityLine from './ActivityLine.vue';
 import { messageDraft, sendDraft, type Outgoing } from './message-drafts.ts';
-import { callViews, lastTyped } from './message-parts.ts';
+import { callViews, lastTyped, latestHeadline } from './message-parts.ts';
 import CallFold from './CallFold.vue';
+import HeadlineLine from './HeadlineLine.vue';
 import MessageItem from './MessageItem.vue';
 import PendingCards from './PendingCards.vue';
 import RecoveryActions from './RecoveryActions.vue';
@@ -57,6 +58,9 @@ const stepsLeft = computed(() => (session.value?.status === 'idle' ? executionMa
 const calls = computed(() => callViews(messages.value));
 const lastSent = computed(() => lastTyped(messages.value));
 const { rows, rowKey, rowTotals, runningTurnId, finalAnswers } = useStory(kvman.t, messages, calls, turns, session);
+// What the running turn is doing, in the agent's own words, and the map's step in progress (ADR 0102, 1).
+const headlineNow = computed(() => latestHeadline(live.thinking, messages.value, runningTurnId.value));
+const mapStepNow = computed(() => executionMap.map.value?.steps.find((step) => step.status === 'doing')?.title);
 const finishedRuns = useFinishedRuns(kvman, () => sessionId.value, messages, readFailed);
 const recoverableNotices = new Set(['STEP_FAILED', 'REPLY_LOST', 'REPLY_INCOMPLETE', 'INTERRUPTED']);
 const running = computed(() => session.value?.status === 'running');
@@ -245,7 +249,8 @@ async function registered(entry: RegisteredSlash, argument: string): Promise<voi
                 <button type="button" class="kvc-button" data-test="earlier" @click="exportEarlier">{{ kvman.t('kvcoder.ui.earlierMessages', { count: omitted }) }}</button>
               </div>
               <template v-for="row in rows" :key="rowKey(row)">
-                <CallFold v-if="row.kind === 'fold'" :messages="row.messages" :calls="calls" :finished-runs="finishedRuns" :running="row.messages.some((message) => message.turnId !== undefined && message.turnId === runningTurnId)" />
+                <HeadlineLine v-if="row.kind === 'headline'" :headline="row.headline" :thinking="row.thinking" />
+                <CallFold v-else-if="row.kind === 'fold'" :messages="row.messages" :calls="calls" :finished-runs="finishedRuns" :running="row.messages.some((message) => message.turnId !== undefined && message.turnId === runningTurnId)" />
                 <MessageItem v-else :message="row.message" :calls="calls" :finished-runs="finishedRuns" :final="finalAnswers.has(row.message.id)" @open-artifact="executionMap.selectArtifact($event)" />
                 <span v-if="rowTotals(row) !== undefined" class="kvc-muted" :title="rowTotals(row)?.tokens" data-test="turn-totals">{{ rowTotals(row)?.text }}</span>
               </template>
@@ -257,7 +262,7 @@ async function registered(entry: RegisteredSlash, argument: string): Promise<voi
                 <details v-if="live.thinking !== ''" :open="live.text === '' && live.calls.length === 0" data-test="live-thinking"><summary class="kvc-muted">{{ kvman.t('kvcoder.ui.thinkingNow') }}</summary><p class="kvc-muted" style="white-space: pre-wrap">{{ live.thinking }}</p></details>
                 <component :is="kvman.View" v-if="live.text !== ''" :view="{ type: 'markdown', text: 'kvcoder.markdown', params: { text: live.text } }" />
               </div>
-              <ActivityLine v-if="running" :live="live" :turn="turns[0]" />
+              <ActivityLine v-if="running" :live="live" :turn="turns[0]" :headline="headlineNow" :step="mapStepNow" />
               <CommandProgress v-if="actions.working.value" :working="actions.working.value" />
               <SubagentCard v-for="[id, child] in children" :key="id" :child="child" :task="tasks.get(id)" :hidden="answers.hidden.value" @answer="answers.answer" @decide="answers.decide" />
               <WorkerCard v-for="run in runs" :key="run" :session-id="session.id" :run-id="run" />
@@ -276,7 +281,7 @@ async function registered(entry: RegisteredSlash, argument: string): Promise<voi
         </MessageComposer>
       </template>
     </section>
-    <ArtifactPanel v-if="panelShown" :list="artifacts.list.value" :shown="artifacts.shown.value" :content="artifacts.content.value" :map="executionMap.map.value" :map-shown="executionMap.shown.value" :session-id="sessionId" :changes="changes.list.value" :changes-count="changes.count.value" :changes-shown="changes.shown.value" @select="changes.shown.value = false; executionMap.selectArtifact($event)" @select-map="changes.shown.value = false; executionMap.shown.value = true" @select-changes="toggleChanges" @close="closePanel" @changed="changes.reload()" @commit="send({ text: kvman.t('kvcoder.ui.changes.commitMessage'), fileIds: [] })" />
+    <ArtifactPanel v-if="panelShown" :list="artifacts.list.value" :shown="artifacts.shown.value" :content="artifacts.content.value" :map="executionMap.map.value" :map-shown="executionMap.shown.value" :session-id="sessionId" :changes="changes.list.value" :changes-count="changes.count.value" :changes-shown="changes.shown.value" :changes-scope="changes.scope.value" @changes-scope="changes.scope.value = $event" @select="changes.shown.value = false; executionMap.selectArtifact($event)" @select-map="changes.shown.value = false; executionMap.shown.value = true" @select-changes="toggleChanges" @close="closePanel" @changed="changes.reload()" @commit="send({ text: kvman.t('kvcoder.ui.changes.commitMessage'), fileIds: [] })" />
     </div>
   </div>
 </template>

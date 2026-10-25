@@ -10,6 +10,9 @@ import { addUsage } from './usage/usage-totals.ts';
 
 const maxContextBytes = 32 * 1024 * 1024;
 
+/** How long one model call may run (plan 07 §7.1, ADR 0102, 10). */
+export const completeTimeoutMs = 1_800_000;
+
 /** A full model id, `<provider>/<model>`. */
 export const modelIdSchema = z.string().regex(/^[^/\s]+\/.+$/, 'A model id is "<provider>/<model>".');
 
@@ -26,6 +29,8 @@ export function registerComplete(ctx: Ctx, catalog: CustomCatalog): void {
     output: completeOutputSchema,
     public: true,
     retries: 0,
+    // A long reply may take a while to write; a silent stream is aborted after 300 s (ADR 0096; ADR 0102, 10).
+    timeoutMs: completeTimeoutMs,
     maxInputBytes: maxContextBytes,
     handle: async (input) => {
       const fullId = input.model ?? (await ctx.settings.get('kvai.defaultModel'));
