@@ -193,7 +193,7 @@
   "kvcoder.session.fork.description": "Copies a session's messages, and its summary, through a seq into a new session.",
   "kvcoder.session.export.description": "Writes a session, its turns and messages, and its subagent sessions to a JSON file.",
   "kvcoder.session.title.description": "Writes a session's title from its first turn.",
-  "kvcoder.session.prune.description": "Deletes the oldest idle top-level sessions beyond kvcoder.sessions.keep.",
+  "kvcoder.session.prune.description": "Deletes the oldest idle top-level sessions beyond kvcoder.sessions.keep, then the artifacts older than kvcoder.artifacts.keepDays.",
   "kvcoder.message.send.description": "Sends the person's message: it starts a turn, steers the running one, or answers a waiting one. A repeat with the same sendId is acknowledged and adds nothing.",
   "kvcoder.message.inject.description": "Adds an extension's message to a session, as the person's message would be, marked as the extension's.",
   "kvcoder.context.get.description": "Gives the size of a session's prompt in tokens, its model's context window, and the share at which older messages are summarized.",
@@ -651,5 +651,10 @@
   "kvcoder.ui.changes.scopeLabel": "Which changes",
   "kvcoder.ui.jobs.restart": "Restart",
   "kvcoder.ui.jobs.runAgain": "Run again",
-  "kvcoder.ui.jobs.ended": "Background ({count})"
+  "kvcoder.ui.jobs.ended": "Background ({count})",
+  "kvcoder.artifact.delete.description": "Deletes an artifact that is superseded or no longer true.",
+  "kvcoder.artifacts.keepDays.title": "Days to keep artifacts",
+  "kvcoder.artifacts.keepDays.description": "How many days an idle chat's artifact is kept after its last change. 0 keeps them all.",
+  "kvcoder.ui.artifacts.delete": "Delete",
+  "kvcoder.ui.artifacts.deleteConfirm": "Delete this artifact?"
 }

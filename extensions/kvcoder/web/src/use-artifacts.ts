@@ -151,5 +151,5 @@ export function useArtifacts(kvman: Kvman, sessionId: () => string | undefined, 
     stopped = true;
   });
 
-  return { list, shown, content, open, surfaced, select, openArtifact, toggle, close };
+  return { list, shown, content, open, surfaced, select, openArtifact, toggle, close, reload: load };
 }

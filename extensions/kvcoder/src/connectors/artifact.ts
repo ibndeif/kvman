@@ -1,6 +1,7 @@
 import { z, type Ctx } from '@kvman/sdk';
 import { artifactFormats, contentFor, detectFormat } from '../artifacts/artifact-format.ts';
 import { artifactCountLimit, assertWithinLimit, chatIdOf } from '../artifacts/artifact-records.ts';
+import { deleteArtifact } from '../artifacts/delete-artifact.ts';
 import { applyEdits } from '../files/edit-text.ts';
 import { notFound, tooLarge } from '../problems.ts';
 import { kebab } from '../schemas/registry.ts';
@@ -10,12 +11,13 @@ import { callInput, type ConnectorCommand } from './connector-command.ts';
 import { edits } from './payload-fields.ts';
 
 // The `artifact` connector (plan 08 §8.5, ADR 0009, 173 to 176): `write` creates or replaces the chat's document,
-// `edit` replaces text in one, `get` reads one. No approval is asked, and the step runs the calls on one artifact one
-// after another. `write` and `edit` are public too, so an extension can show a chat something (ADR 0082, 13).
+// `edit` replaces text in one, `get` reads one, and `delete` deletes one (ADR 0105). No approval is asked, and the step
+// runs the calls on one artifact one after another. `write`, `edit`, and `delete` are public too, so an extension can
+// show a chat something (ADR 0082, 13) and the person can delete one (ADR 0105, 1).
 
 /** What the prompt's index says the connector is for. */
 export const artifactDescription =
-  'Show the person something to read or see: a report, a design, an HTML page, or the localhost address of an app you are running (format url). Use it for anything longer than a few lines instead of pasting it into a reply. To change part of an existing artifact, use edit; write it again only when most of it changes. For a diagram, write Mermaid code in a fenced mermaid block of a Markdown artifact or reply: kvman draws it. Don\'t write SVG for a diagram. The panel runs the page of an HTML artifact in a sandbox where localStorage, sessionStorage, cookies, and indexedDB throw, so a page you show that way must work without them, keeping its state in memory or wrapping each use in try/catch. A form can\'t be submitted there either: make a button act on its click and a field on the Enter key, in JavaScript, and never rely on a form\'s submit. You can\'t press the page\'s buttons yourself, so say that its interaction is unchecked unless you tested it another way. A url artifact is a normal page on its own address and has none of these limits.';
+  'Show the person something to read or see: a report, a design, an HTML page, or the localhost address of an app you are running (format url). Use it for anything longer than a few lines instead of pasting it into a reply. To change part of an existing artifact, use edit; write it again only when most of it changes. Delete an artifact that is superseded or no longer true with delete; never empty one to clear it. For a diagram, write Mermaid code in a fenced mermaid block of a Markdown artifact or reply: kvman draws it. Don\'t write SVG for a diagram. The panel runs the page of an HTML artifact in a sandbox where localStorage, sessionStorage, cookies, and indexedDB throw, so a page you show that way must work without them, keeping its state in memory or wrapping each use in try/catch. A form can\'t be submitted there either: make a button act on its click and a field on the Enter key, in JavaScript, and never rely on a form\'s submit. You can\'t press the page\'s buttons yourself, so say that its interaction is unchecked unless you tested it another way. A url artifact is a normal page on its own address and has none of these limits.';
 
 const idMessage = 'An artifact id is lowercase kebab case, such as report or login-design, up to 50 characters.';
 
@@ -30,6 +32,7 @@ const payloads = {
   }),
   edit: z.strictObject({ id: artifactId, edits }),
   get: z.strictObject({ id: artifactId }),
+  delete: z.strictObject({ id: artifactId }),
 };
 
 const writeNotes =
@@ -39,6 +42,7 @@ export const artifactCommands = {
   write: { registration: 'kvcoder.artifact.write', description: 'Creates an artifact, or replaces its title, format, and content.', payload: payloads.write, asks: false, notes: writeNotes },
   edit: { registration: 'kvcoder.artifact.edit', description: 'Replaces exact pieces of text in an existing artifact; if one replacement fails, nothing changes.', payload: payloads.edit, asks: false },
   get: { registration: 'kvcoder.artifact.content.get', description: 'Reads an artifact with its content.', payload: payloads.get, asks: false },
+  delete: { registration: 'kvcoder.artifact.delete', description: 'Deletes an artifact that is superseded or no longer true.', payload: payloads.delete, asks: false },
 } satisfies Record<string, ConnectorCommand>;
 
 type WriteInput = z.output<typeof payloads.write>;
@@ -104,6 +108,14 @@ export function registerArtifactConnector(ctx: Ctx): void {
     public: true,
     retries: 0,
     handle: async ({ sessionId, payload }) => editArtifact(ctx, await chatOf(ctx, sessionId), payload),
+  });
+  ctx.registerCommand('kvcoder.artifact.delete', {
+    description: commands.delete.description,
+    input: callInput(payloads.delete),
+    output: z.object({ id: z.string(), deleted: z.literal(true) }),
+    public: true,
+    retries: 0,
+    handle: async ({ sessionId, payload }) => deleteArtifact(ctx, await chatOf(ctx, sessionId), payload.id),
   });
   ctx.registerQuery('kvcoder.artifact.content.get', {
     description: commands.get.description,

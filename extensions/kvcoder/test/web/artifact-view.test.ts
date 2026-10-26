@@ -32,6 +32,7 @@ describe("the artifact panel's header (08 §8.7, ADR 0017, 4)", () => {
     expect(head.findAll('.kvc-icon-button').map((button) => [button.attributes('data-test'), button.attributes('aria-label'), button.attributes('title'), button.text()])).toEqual([
       ['artifact-open-url', 'Open in a new tab', 'Open in a new tab', ''],
       ['artifact-copy', 'Copy', 'Copy', ''],
+      ['artifact-delete', 'Delete', 'Delete', ''],
       ['artifact-close', 'Close', 'Close', ''],
     ]);
     wrapper.unmount();

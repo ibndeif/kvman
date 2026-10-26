@@ -281,7 +281,7 @@ async function registered(entry: RegisteredSlash, argument: string): Promise<voi
         </MessageComposer>
       </template>
     </section>
-    <ArtifactPanel v-if="panelShown" :list="artifacts.list.value" :shown="artifacts.shown.value" :content="artifacts.content.value" :map="executionMap.map.value" :map-shown="executionMap.shown.value" :session-id="sessionId" :changes="changes.list.value" :changes-count="changes.count.value" :changes-shown="changes.shown.value" :changes-scope="changes.scope.value" @changes-scope="changes.scope.value = $event" @select="changes.shown.value = false; executionMap.selectArtifact($event)" @select-map="changes.shown.value = false; executionMap.shown.value = true" @select-changes="toggleChanges" @close="closePanel" @changed="changes.reload()" @commit="send({ text: kvman.t('kvcoder.ui.changes.commitMessage'), fileIds: [] })" />
+    <ArtifactPanel v-if="panelShown" :list="artifacts.list.value" :shown="artifacts.shown.value" :content="artifacts.content.value" :map="executionMap.map.value" :map-shown="executionMap.shown.value" :session-id="sessionId" :changes="changes.list.value" :changes-count="changes.count.value" :changes-shown="changes.shown.value" :changes-scope="changes.scope.value" @changes-scope="changes.scope.value = $event" @select="changes.shown.value = false; executionMap.selectArtifact($event)" @select-map="changes.shown.value = false; executionMap.shown.value = true" @select-changes="toggleChanges" @close="closePanel" @changed="changes.reload()" @deleted="artifacts.reload()" @commit="send({ text: kvman.t('kvcoder.ui.changes.commitMessage'), fileIds: [] })" />
     </div>
   </div>
 </template>

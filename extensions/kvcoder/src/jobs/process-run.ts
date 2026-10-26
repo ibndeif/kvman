@@ -5,7 +5,7 @@ import type { ShellCommand } from '../calls/shell-command.ts';
 import { now } from '../sessions/session-lookup.ts';
 import { records, txRecords } from '../store/collections.ts';
 import { markEnd, processName } from './process-records.ts';
-import { outputTail, reportEnd } from './process-report.ts';
+import { deleteEndedArtifacts, outputTail, reportEnd } from './process-report.ts';
 import type { ProcessDoc } from '../schemas/records.ts';
 
 // A background shell line (ADR 0009, 149): it runs in the kernel's process service, and the call returns its id and the
@@ -48,18 +48,25 @@ export async function startProcess(ctx: Ctx, sessionId: string, shell: ShellComm
   return { output, jobId: doc.id, ...startedOutcome(settled ?? doc) };
 }
 
-/** Stops a running process for `by`; `false` when it had ended already. The person's stop is reported to the session. */
-export async function stopProcess(ctx: Ctx, doc: Stored<ProcessDoc>, by: 'agent' | 'person'): Promise<boolean> {
+/** What a stop did: whether it stopped the run, and the url artifacts of a stopped process it deleted (ADR 0104). */
+export type Stopped = { stopped: boolean; deletedArtifacts: string[] };
+
+/**
+ * Stops a running process for `by`, deleting the url artifacts it served unless it starts again (the person's Restart);
+ * `stopped` is `false` when it had ended already. The person's stop is reported to the session.
+ */
+export async function stopProcess(ctx: Ctx, doc: Stored<ProcessDoc>, by: 'agent' | 'person', restarting = false): Promise<Stopped> {
   // Reported at once for the person; the agent's stop result already says so, so it is never reported later (ADR 0085, 5).
   const ended = await markEnd(ctx, doc.id, { end: by, reported: true });
-  if (ended === undefined) return false;
+  if (ended === undefined) return { stopped: false, deletedArtifacts: [] };
   try {
     await ctx.processes.stop(processName(doc.id));
   } catch (error) {
     if (!(error instanceof ProblemError) || error.problem.code !== 'NOT_FOUND') throw error;
   }
-  if (by === 'person') await reportEnd(ctx, ended);
-  return true;
+  const deletedArtifacts = restarting ? [] : await deleteEndedArtifacts(ctx, ended);
+  if (by === 'person') await reportEnd(ctx, ended, deletedArtifacts);
+  return { stopped: true, deletedArtifacts };
 }
 
 /** Stops every process a session still runs, and forgets all of them (the chat is deleted). */

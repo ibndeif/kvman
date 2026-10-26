@@ -79,7 +79,8 @@ export function registerJobs(ctx: Ctx): void {
       const doc = found.row.kind === 'process' ? await sessionProcess(ctx, sessionId, id) : undefined;
       if (doc === undefined) throw invalid('Only a background process can be started again; a helper or a worker\'s run can\'t.', { id });
       // Stopped as the agent stops one, so no background message tells the chat; the new process reports its own end.
-      if (doc.end === undefined) await stopProcess(ctx, doc, 'agent');
+      // It serves its address again, so its url artifacts stay (ADR 0104, 3).
+      if (doc.end === undefined) await stopProcess(ctx, doc, 'agent', true);
       const started = await startProcess(ctx, sessionId, await shellFor(ctx), doc.call);
       return { id: started.jobId };
     },

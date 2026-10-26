@@ -3,8 +3,9 @@ import type { ProcessDoc } from '../schemas/records.ts';
 import { appendBackground, backgroundText } from '../turns/background.ts';
 import { plainText } from '../result-text.ts';
 import { records } from '../store/collections.ts';
+import { deleteServedArtifacts, deletedArtifactsText } from '../artifacts/served-artifacts.ts';
 import { processName } from './process-records.ts';
-import { lastLines } from './process-text.ts';
+import { lastLines, outputLines } from './process-text.ts';
 
 // Telling a session how a background process ended (ADR 0009, 150): one background message with the outcome and the
 // last 20 lines of output. It never starts a turn, since a handler's jobs carry the `fromHandler` mark.
@@ -28,15 +29,25 @@ function outcome(doc: ProcessDoc): string {
   return `was killed by ${doc.signal ?? 'a signal'}.`;
 }
 
-export async function reportEnd(ctx: Ctx, doc: Stored<ProcessDoc>): Promise<void> {
+/** Deletes the url artifacts an ended process served (ADR 0104); one still in its startup second served none. */
+export async function deleteEndedArtifacts(ctx: Ctx, doc: Stored<ProcessDoc>): Promise<string[]> {
+  if (doc.starting === true) return [];
+  return deleteServedArtifacts(ctx, doc.sessionId, await outputTail(ctx, doc.id, outputLines));
+}
+
+export async function reportEnd(ctx: Ctx, doc: Stored<ProcessDoc>, deleted: readonly string[]): Promise<void> {
   const tail = await outputTail(ctx, doc.id, reportLines);
-  const text = `The process ${outcome(doc)}${tail === '' ? '' : `\nIts last output:\n${tail}`}`;
+  const artifacts = deletedArtifactsText(deleted);
+  const text = `The process ${outcome(doc)}${artifacts === '' ? '' : `\n${artifacts}`}${tail === '' ? '' : `\nIts last output:\n${tail}`}`;
   await appendBackground(ctx, doc.sessionId, { kind: 'job', jobId: doc.id }, backgroundText(doc.call, doc.id, text), false);
 }
 
+type Ended = { doc: Stored<ProcessDoc>; deleted: readonly string[] };
+
 /** The message that reports the runs that ended while kvman was stopped: one line per run, with no output (ADR 0085, 5). */
-function interruptedText(docs: readonly Stored<ProcessDoc>[]): string {
-  return ['While kvman was stopped, these background calls ended:', ...docs.map((doc) => `- \`${doc.call}\` (job ${doc.id}): ${outcome(doc).replace(/^was /, '')}`)].join('\n');
+function interruptedText(ended: readonly Ended[]): string {
+  const line = ({ doc, deleted }: Ended): string => [`- \`${doc.call}\` (job ${doc.id}): ${outcome(doc).replace(/^was /, '')}`, deletedArtifactsText(deleted)].filter((part) => part !== '').join(' ');
+  return ['While kvman was stopped, these background calls ended:', ...ended.map(line)].join('\n');
 }
 
 /** Reports the endings no handler could write into this session (kvman stopped or died), once, in one message. */
@@ -44,7 +55,11 @@ export async function reportInterrupted(ctx: Ctx, sessionId: string): Promise<vo
   const store = records(ctx.store);
   const ended = (await store.processes.find({ sessionId, reported: false }, { limit: 1000 })).filter((doc) => doc.end !== undefined);
   if (ended.length === 0) return;
-  for (const doc of ended) await store.processes.update(doc.id, { reported: true });
+  const told: Ended[] = [];
+  for (const doc of ended) {
+    await store.processes.update(doc.id, { reported: true });
+    told.push({ doc, deleted: await deleteEndedArtifacts(ctx, doc) });
+  }
   // The message's source names the first run; the text names them all.
-  await appendBackground(ctx, sessionId, { kind: 'job', jobId: ended[0]?.id ?? '' }, interruptedText(ended), false);
+  await appendBackground(ctx, sessionId, { kind: 'job', jobId: ended[0]?.id ?? '' }, interruptedText(told), false);
 }

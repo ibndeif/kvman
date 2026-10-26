@@ -99,8 +99,11 @@ export function registerBackgroundConnector(ctx: Ctx): void {
   ctx.registerCommand('kvcoder.background.stop', {
     description: commands.stop.description,
     input: callInput(payloads.stop),
-    output: z.object({ stopped: z.boolean() }),
+    output: z.object({ stopped: z.boolean(), deletedArtifacts: z.array(z.string()).exactOptional() }),
     retries: 0,
-    handle: async ({ sessionId, payload }) => ({ stopped: await cancelJob(ctx, sessionId, (await startedBy(ctx, sessionId, payload.id)).row, 'agent') }),
+    handle: async ({ sessionId, payload }) => {
+      const { stopped, deletedArtifacts } = await cancelJob(ctx, sessionId, (await startedBy(ctx, sessionId, payload.id)).row, 'agent');
+      return deletedArtifacts.length === 0 ? { stopped } : { stopped, deletedArtifacts };
+    },
   });
 }

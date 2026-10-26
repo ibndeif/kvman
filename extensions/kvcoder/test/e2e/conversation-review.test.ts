@@ -62,12 +62,12 @@ describe('the conversation view in Chromium (08 §8.7, ADR 0017)', { timeout: 12
 
     await page.locator('[data-test="artifact-open"]').first().click();
     await page.locator('[data-test="artifact-panel"]').waitFor();
-    const tops = await page.locator('[data-test="artifact-title"], [data-test="artifact-view-preview"], [data-test="artifact-copy"], [data-test="artifact-close"]').evaluateAll((parts) => parts.map((part) => Math.round(part.getBoundingClientRect().bottom)));
+    const tops = await page.locator('[data-test="artifact-title"], [data-test="artifact-view-preview"], [data-test="artifact-copy"], [data-test="artifact-delete"], [data-test="artifact-close"]').evaluateAll((parts) => parts.map((part) => Math.round(part.getBoundingClientRect().bottom)));
     const head = await rectOf(page, '.kvc-artifact-head');
     expect(Math.max(...tops) - Math.min(...tops)).toBeLessThan(head.height / 2);
     expect(head.height).toBeLessThan(80);
     const icons = await page.locator('.kvc-icon-button svg').evaluateAll((found) => found.map((icon) => Math.round(icon.getBoundingClientRect().width)));
-    expect(icons).toEqual([16, 16]);
+    expect(icons).toEqual([16, 16, 16]);
     await page.locator('[data-test="artifact-close"]').click();
 
     await page.locator('[data-test="composer-text"]').fill('/pro');

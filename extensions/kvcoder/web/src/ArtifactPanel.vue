@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Code, Copy, ExternalLink, Eye, X } from '@lucide/vue';
+import { Code, Copy, ExternalLink, Eye, Trash2, X } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import ArtifactFrame from './ArtifactFrame.vue';
 import ArtifactUrlFrame from './ArtifactUrlFrame.vue';
@@ -15,13 +15,13 @@ import { toastProblem, useKvman } from './kvman.ts';
 import type { ArtifactContent, ArtifactSummary } from './use-artifacts.ts';
 
 // One artifact beside the conversation (plan 08 §8.7, ADR 0009, 177, 214; ADR 0017, 4): its title over its kind and
-// version, a Preview and Source switch, and icon buttons to open, copy, and close; Markdown goes through the sanitized
+// version, a Preview and Source switch, and icon buttons to open, copy, delete (ADR 0105, 3), and close; Markdown goes through the sanitized
 // view, HTML only through the isolated frame, and Source shows the text as stored. With more than one thing to show, the
 // title is a button that opens the list of them (ADR 0071, 1): the chat's execution map first, which has no source,
 // link, or copy (ADR 0064), then its artifacts. The person drags the panel's width, which the browser keeps; one
 // outside the limits is shown at the nearest (ADR 0071, 4). The chat's changes are an entry after the map (ADR 0093, 2).
 const props = defineProps<{ list: ArtifactSummary[]; shown: string | undefined; content: ArtifactContent | undefined; map?: ExecutionMapView | null | undefined; mapShown?: boolean | undefined; sessionId?: string | undefined; changes?: ChangeList | undefined; changesCount?: number | undefined; changesShown?: boolean | undefined; changesScope?: ChangeScope | undefined }>();
-const emit = defineEmits<{ select: [id: string]; selectMap: []; selectChanges: []; close: []; changed: []; commit: []; changesScope: [scope: ChangeScope] }>();
+const emit = defineEmits<{ select: [id: string]; selectMap: []; selectChanges: []; close: []; changed: []; commit: []; changesScope: [scope: ChangeScope]; deleted: [] }>();
 const kvman = useKvman();
 const summary = computed(() => props.list.find((item) => item.id === props.shown));
 // The content of the artifact shown: while another one is being read, the old one's must not stay under the new title.
@@ -50,7 +50,24 @@ function resetWidth(): void {
 }
 
 const mode = ref<'preview' | 'source'>('preview');
-watch(() => props.shown, () => (mode.value = 'preview'));
+// The person's Delete asks first, in the panel; showing another artifact drops the question (ADR 0105, 3).
+const confirmingDelete = ref(false);
+watch(() => props.shown, () => {
+  mode.value = 'preview';
+  confirmingDelete.value = false;
+});
+
+async function remove(): Promise<void> {
+  const id = props.shown;
+  confirmingDelete.value = false;
+  if (props.sessionId === undefined || id === undefined) return;
+  try {
+    await kvman.exec('kvcoder.artifact.delete', { sessionId: props.sessionId, payload: { id } });
+    emit('deleted');
+  } catch (error) {
+    toastProblem(kvman, error);
+  }
+}
 // An artifact's entry carries a prefix, so one whose id is `map` is never taken for the map.
 const artifactPrefix = 'artifact:';
 const choices = computed(() => [
@@ -94,7 +111,15 @@ const markdownView = computed(() => ({ type: 'markdown' as const, text: 'kvcoder
         </div>
         <a v-if="openable !== undefined && !onOwn" :href="openable" target="_blank" rel="noopener noreferrer" class="kvc-button kvc-icon-button" :aria-label="kvman.t('kvcoder.ui.artifacts.openUrl')" :title="kvman.t('kvcoder.ui.artifacts.openUrl')" data-test="artifact-open-url"><ExternalLink :size="16" aria-hidden="true" /></a>
         <button v-if="!onOwn" type="button" class="kvc-button kvc-icon-button" :disabled="current === undefined" :aria-label="kvman.t('kvcoder.ui.copy')" :title="kvman.t('kvcoder.ui.copy')" data-test="artifact-copy" @click="copy"><Copy :size="16" aria-hidden="true" /></button>
+        <button v-if="!onOwn" type="button" class="kvc-button kvc-icon-button" :disabled="summary === undefined" :aria-label="kvman.t('kvcoder.ui.artifacts.delete')" :title="kvman.t('kvcoder.ui.artifacts.delete')" :aria-expanded="confirmingDelete" data-test="artifact-delete" @click="confirmingDelete = !confirmingDelete"><Trash2 :size="16" aria-hidden="true" /></button>
         <button type="button" class="kvc-button kvc-icon-button" :aria-label="kvman.t('kvcoder.ui.artifacts.close')" :title="kvman.t('kvcoder.ui.artifacts.close')" data-test="artifact-close" @click="emit('close')"><X :size="16" aria-hidden="true" /></button>
+      </div>
+    </div>
+    <div v-if="confirmingDelete && !onOwn" class="kvc-artifact-confirm" role="alertdialog" :aria-label="kvman.t('kvcoder.ui.artifacts.deleteConfirm')" data-test="artifact-delete-confirm">
+      <span>{{ kvman.t('kvcoder.ui.artifacts.deleteConfirm') }}</span>
+      <div class="kvc-actions">
+        <button type="button" class="kvc-button" data-test="artifact-delete-cancel" @click="confirmingDelete = false">{{ kvman.t('kvcoder.ui.cancel') }}</button>
+        <button type="button" class="kvc-button kvc-primary kvc-danger" data-test="artifact-confirm-delete" @click="remove">{{ kvman.t('kvcoder.ui.artifacts.delete') }}</button>
       </div>
     </div>
     <div class="kvc-artifact-body" data-test="artifact-body">

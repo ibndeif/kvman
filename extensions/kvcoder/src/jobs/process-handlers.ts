@@ -3,7 +3,7 @@ import type { ProcessDoc } from '../schemas/records.ts';
 import { allDocs } from '../store/all-docs.ts';
 import { records } from '../store/collections.ts';
 import { markEnd, ownerName, processId, processName } from './process-records.ts';
-import { reportEnd } from './process-report.ts';
+import { deleteEndedArtifacts, reportEnd } from './process-report.ts';
 
 // How kvcoder learns that a background process ended without its own doing (ADR 0009, 150): `kernel.process.exited` for
 // an exit by itself, `kernel.stopping` as kvman stops, and `kernel.started` for a kvman that died. The last two run in
@@ -39,7 +39,7 @@ export function registerProcessHandlers(ctx: Ctx): void {
       const id = processId(name);
       if (extension !== ownerName || id === undefined) return;
       const ended = await markEnd(ctx, id, { end: 'exited', exitCode, signal, reported: true });
-      if (ended !== undefined && exitIsReported(ended)) await reportEnd(ctx, ended);
+      if (ended !== undefined && exitIsReported(ended)) await reportEnd(ctx, ended, await deleteEndedArtifacts(ctx, ended));
     },
   });
   // The records live in the global store, so a deleted workspace's go here (ADR 0061, 4).

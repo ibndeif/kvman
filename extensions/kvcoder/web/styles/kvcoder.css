@@ -12,6 +12,7 @@
 .kvc-artifact-panel[data-sized='true'] { flex-basis: clamp(20rem, var(--kvc-panel-width), 70%); }
 .kvc-panel-resizer { position: absolute; inset-block: 0; inset-inline-start: -4px; inline-size: 8px; z-index: 6; cursor: col-resize; touch-action: none; }
 .kvc-panel-resizer:hover, .kvc-panel-resizer:focus-visible, .kvc-panel-resizer[data-dragging='true'] { background: color-mix(in srgb, var(--kv-color-primary) 35%, transparent); outline: none; }
+.kvc-artifact-confirm { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--kv-space-sm); padding-block: var(--kv-space-sm); padding-inline: var(--kv-space-lg); border-block-end: 1px solid var(--kv-color-border); }
 .kvc-artifact-head { display: flex; align-items: center; gap: var(--kv-space-sm); padding-block: 12px; padding-inline: var(--kv-space-lg); border-block-end: 1px solid var(--kv-color-border); }
 .kvc-artifact-name .kvc-picker { min-inline-size: 0; }
 .kvc-artifact-name .kvc-picker > .kvc-button { max-inline-size: 100%; justify-content: space-between; }

@@ -1,6 +1,7 @@
 import { ProblemError, z, type Ctx } from '@kvman/sdk';
 import type {} from '@kvman/kvai';
 import { settingSchemas } from '../register-settings.ts';
+import { expireArtifacts } from '../artifacts/delete-artifact.ts';
 import { allDocs } from '../store/all-docs.ts';
 import { records, txRecords } from '../store/collections.ts';
 import { addCallUsage } from '../turns/usage.ts';
@@ -34,12 +35,19 @@ async function writeTitle(ctx: Ctx, sessionId: string): Promise<void> {
   }
 }
 
-async function prune(ctx: Ctx): Promise<void> {
+async function pruneSessions(ctx: Ctx): Promise<void> {
   const keep = settingSchemas.keep.parse(await ctx.settings.get('kvcoder.sessions.keep'));
   if (keep === 0) return;
   // Every top-level session is looked at, so one run finishes the policy (ADR 0057, 4).
   const sessions = await allDocs((options) => records(ctx.store).sessions.find({ parentId: null }, options), 'desc');
   for (const session of sessions.slice(keep)) if (session.status === 'idle') await deleteSessionTree(ctx, session.id);
+}
+
+// The sessions go first, so the age limit looks only at the chats that stay (ADR 0105, 5).
+async function prune(ctx: Ctx): Promise<void> {
+  await pruneSessions(ctx);
+  const days = settingSchemas.keep.parse(await ctx.settings.get('kvcoder.artifacts.keepDays'));
+  if (days > 0) await expireArtifacts(ctx, days);
 }
 
 export function registerLifecycle(ctx: Ctx): void {
@@ -54,7 +62,7 @@ export function registerLifecycle(ctx: Ctx): void {
     },
   });
   ctx.registerCommand('kvcoder.session.prune', {
-    description: 'Deletes the oldest idle top-level sessions beyond kvcoder.sessions.keep.',
+    description: 'Deletes the oldest idle top-level sessions beyond kvcoder.sessions.keep, then the artifacts older than kvcoder.artifacts.keepDays.',
     input: z.object({}),
     output: z.object({}),
     handle: async () => {

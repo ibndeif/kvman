@@ -54,6 +54,7 @@ export function registerSettings(ctx: Ctx): void {
   ctx.registerSetting('kvcoder.mcp.servers', { description: "The MCP servers the mcp connector reaches: a command or an address each, with the names of its secret variables or headers.", schema: settingSchemas.mcpServers, default: [] });
   ctx.registerSetting('kvcoder.delegate.workers', { description: 'The workers the delegate connector hands tasks to: each with its instructions, connectors, model, and whether it is turned on.', schema: settingSchemas.workers, default: shippedWorkers });
   ctx.registerSetting('kvcoder.sessions.keep', { description: 'How many top-level sessions to keep per workspace; 0 keeps every session.', schema: settingSchemas.keep, default: 0 });
+  ctx.registerSetting('kvcoder.artifacts.keepDays', { description: "How many days an idle chat's artifact is kept after its last change; 0 keeps every artifact.", schema: settingSchemas.keep, default: 0 });
   ctx.registerSetting('kvcoder.profile', { description: "A product's agent: who it is, how it works (engineering or general), and the Chat page's heading and placeholder as translation keys.", schema: settingSchemas.profile, default: {}, scopes: [] });
 }
 

@@ -8,8 +8,8 @@ import { helperProgress, waitingFor } from './helper-progress.ts';
 import { cancelTurn, childResult } from '../turns/end-turn.ts';
 import { processStatus, sessionProcess } from './process-records.ts';
 import { outputTail } from './process-report.ts';
-import { stopProcess } from './process-run.ts';
-import { localLinks } from './process-text.ts';
+import { stopProcess, type Stopped } from './process-run.ts';
+import { localLinks, outputLines } from './process-text.ts';
 
 // A session's background runs (ADR 0009, 88, 150, and 152; ADR 0011, 6): the processes and subagents it started with
 // `background: true`, as the `background` connector and `kvcoder.job.*` show them.
@@ -19,9 +19,6 @@ export type JobDetail = { row: JobRow; detail: Record<string, Json> };
 
 /** Whether a run still goes on: running, or a helper waiting on the person (ADR 0085, 2). */
 export const isActive = (status: string): boolean => status === 'running' || status === 'waiting';
-
-/** How many of a process's last lines a read returns when it names no number. */
-export const outputLines = 100;
 
 type Subagent = { row: JobRow; turn: Stored<TurnDoc> | undefined; waits: string[] };
 
@@ -111,19 +108,19 @@ export async function linksOf(ctx: Ctx, sessionId: string, row: JobRow): Promise
   return doc === undefined ? [] : localLinks(await outputTail(ctx, doc.id, outputLines));
 }
 
-/** Stops a process or a run, or cancels a subagent; only the person's stop tells the session (ADR 0085, 5). `false` for a process or a run that had ended already. */
-export async function cancelJob(ctx: Ctx, sessionId: string, row: JobRow, by: 'agent' | 'person'): Promise<boolean> {
+/** Stops a process or a run, or cancels a subagent; only the person's stop tells the session (ADR 0085, 5). `stopped` is `false` for a process or a run that had ended already. */
+export async function cancelJob(ctx: Ctx, sessionId: string, row: JobRow, by: 'agent' | 'person'): Promise<Stopped> {
   if (row.kind === 'worker') {
     const run = await records(ctx.store).runs.get(row.id);
-    return run !== undefined && stopRun(ctx, run, by);
+    return { stopped: run !== undefined && (await stopRun(ctx, run, by)), deletedArtifacts: [] };
   }
   if (row.kind === 'process') {
     const doc = await sessionProcess(ctx, sessionId, row.id);
-    return doc !== undefined && stopProcess(ctx, doc, by);
+    return doc === undefined ? { stopped: false, deletedArtifacts: [] } : stopProcess(ctx, doc, by);
   }
   if ((await cancelTurn(ctx, row.id, false)) && by === 'person') {
     const result = await childResult(ctx, row.id, 'cancelled');
     await appendBackground(ctx, sessionId, { kind: 'subagent', sessionId: row.id }, backgroundText(row.call, row.id, result.text), false);
   }
-  return true;
+  return { stopped: true, deletedArtifacts: [] };
 }
