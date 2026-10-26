@@ -1,5 +1,14 @@
 # @kvman/testkit
 
+## 0.1.9
+
+### Patch Changes
+
+- Updated dependencies [486d037]
+- Updated dependencies [cc5845f]
+  - @kvman/sdk@0.1.5
+  - @kvman/kernel@0.4.7
+
 ## 0.1.8
 
 ### Patch Changes

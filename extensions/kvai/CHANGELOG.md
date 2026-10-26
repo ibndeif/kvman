@@ -1,5 +1,14 @@
 # @kvman/kvai
 
+## 0.1.7
+
+### Patch Changes
+
+- 65805a4: A chat you can follow, tests you chose, and fewer slow steps (ADR 0102). kvcoder shows each step's headline from the agent's thinking as a line that opens to show it, folds the calls under it, and shows the newest headline, the turn's time, and the map's step in progress on the running line. A line that exited with another code than 0 reads `exit N` instead of "Failed". The agent asks once how to test a project and records a `Testing:` line in `AGENTS.md`, checks in proportion, keeps `AGENTS.md`'s Commands section to command lines, and never maps a bug fix or a change to one or two files; `execution-map set` takes each step's `details`. Helpers think at `kvcoder.delegate.thinking` (`medium`) when their worker names no level, and the thinking picker marks the high levels slower. Call arguments sent in common wrong shapes are repaired, `fs search` searches an invalid expression as text and ignores `context` with `filesOnly`, an MCP tool not found suggests near names, `delegate continue` queues a message for a helper still working, a summary is retried, and old tool results are cleared past 80,000 tokens in large batches. `kvcoder.job.restart` starts a background process again (Restart and Run again in the Running popover, which stays as `Background (N)`), `kvcoder.change.list` takes `scope: 'turn'` (the Changes view's "This turn"), a chat's placeholder title is its first line of prose, a step may run an hour, and `kvai.complete` may run 30 minutes.
+- Updated dependencies [486d037]
+- Updated dependencies [cc5845f]
+  - @kvman/sdk@0.1.5
+
 ## 0.1.6
 
 ### Patch Changes
