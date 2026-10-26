@@ -1,5 +1,14 @@
 # kvman
 
+## 0.4.8
+
+### Patch Changes
+
+- Updated dependencies [78d568a]
+  - @kvman/kvwebui@0.1.8
+  - @kvman/kvcoder@0.1.15
+  - @kvman/kvbuilder@0.3.6
+
 ## 0.4.7
 
 ### Patch Changes
