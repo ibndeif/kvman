@@ -38,13 +38,14 @@ describe("the view's page (15 §15.4, ADR 0099, 22)", () => {
     expect(page(failed('INTERNAL')).textContent).toContain('Details are in /home/p/.kvman/logs/kvman.log.');
   });
 
-  it("M4.2-H4 M4.2-H5 M4.2-H6 M4.2-H14 each state's text and buttons", () => {
+  it("M4.2-H4 M4.2-H5 M4.2-H6 M4.2-H14 M4.8-H6 each state's text and buttons", () => {
     const cases: [View, string, (string | undefined)[][]][] = [
       [{ kind: 'missing' }, "kvman isn't installed.", [['install', 'Install kvman']]],
       [{ kind: 'installing' }, 'Installing kvman… The terminal shows its progress.', []],
       [{ kind: 'npmMissing', update: false }, "npm wasn't found. Install Node.js 24, then try again.", [['nodejs', 'Get Node.js'], ['install', 'Try again']]],
       [{ kind: 'installFailed', update: true }, "kvman couldn't be installed. The terminal shows why.", [['update', 'Try again']]],
       [{ kind: 'tooOld', version: '0.3.9', minimum: '0.4.7' }, 'kvman 0.3.9 is older than this extension needs (0.4.7).', [['update', 'Update kvman']]],
+      [{ kind: 'oldRunning', version: '0.4.6', minimum: '0.4.8' }, 'kvman 0.4.6 is already running, and this extension needs 0.4.8. Quit it, then start again.', [['start', 'Start again'], ['openAnyway', 'Open anyway']]],
       [{ kind: 'stopped' }, 'kvman stopped unexpectedly.', [['start', 'Start again'], ['showLog', 'Show the log']]],
       [{ kind: 'remote' }, 'kvman works on local folders only for now.', []],
       [{ kind: 'starting' }, 'Starting kvman…', []],
@@ -60,6 +61,7 @@ describe("the view's page (15 §15.4, ADR 0099, 22)", () => {
   it('M4.2-H17 Arabic pages are right to left, English ones left to right', () => {
     expect(opening({ kind: 'stopped' }, 'html', 'ar')).toBe(' lang="ar" dir="rtl"');
     expect(page({ kind: 'stopped' }, 'ar').textContent).toContain('توقف kvman على نحو غير متوقع.');
+    expect(page({ kind: 'oldRunning', version: '0.4.6', minimum: '0.4.8' }, 'ar').textContent).toContain('يعمل الإصدار 0.4.6 من kvman بالفعل، وتحتاج هذه الإضافة إلى 0.4.8.');
     expect(opening({ kind: 'stopped' }, 'html')).toBe(' lang="en" dir="ltr"');
   });
 

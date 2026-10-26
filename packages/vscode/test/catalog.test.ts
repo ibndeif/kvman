@@ -12,7 +12,8 @@ describe("the extension's text (15 §15.7, ADR 0099, 30)", () => {
     expect(translator('en')('vscode.tooOld', { version: '0.3.9', minimum: '0.4.7' })).toBe('kvman 0.3.9 is older than this extension needs (0.4.7).');
   });
 
-  it('M4.2-H17 M4.6-H7 en and ar have the same keys and placeholders, and so do the manifest texts', () => {
+  it('M4.2-H17 M4.6-H7 M4.8-E8 en and ar have the same keys and placeholders, and so do the manifest texts', () => {
+    expect(Object.keys(read('locales/ar.json'))).toEqual(expect.arrayContaining(['vscode.oldRunning', 'vscode.openAnyway']));
     for (const [english, arabic] of [['locales/en.json', 'locales/ar.json'], ['static/package.nls.json', 'static/package.nls.ar.json']] as const) {
       const [en, ar] = [read(english), read(arabic)];
       expect(Object.keys(ar).sort()).toEqual(Object.keys(en).sort());

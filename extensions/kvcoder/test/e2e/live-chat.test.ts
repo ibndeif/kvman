@@ -73,8 +73,8 @@ describe('what a person sees while a step runs, in Chromium (08 §8.7, ADR 0009,
     expect(await page.locator('[data-test="status-workspace"]').textContent()).toContain('~');
     expect(await bar.locator('> *').first().getAttribute('data-test')).toBe('status-workspace');
     await page.locator('[data-test="nav-kvwebui.settings"]').click();
-    await page.locator('[data-test="status-kvcoder.waiting"]').waitFor();
-    expect(await page.locator('[data-test="status-kvcoder.chat"]').count()).toBe(0);
+    await page.waitForURL(/\/kvwebui\/settings/);
+    await page.locator('[data-test="status-kvcoder.chat"]').waitFor({ state: 'detached' });
     await page.close();
   });
 });

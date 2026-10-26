@@ -21,10 +21,13 @@ async function pickArabicInMenu(app: Mounted): Promise<void> {
 }
 
 describe('the embedded status line (06 §6.2, ADR 0101, 2 and 3)', () => {
-  it('M4.7-H10 the status line shows the contributed items, without the workspace folder', async () => {
+  it('M4.7-H10 M4.8-H10 the status line is one line of the contributed items, each with its tooltip, without the workspace folder', async () => {
     const app = await mountApp(notesApi(), '/notes/list?embed=parent');
     const line = app.find('[data-test="status-line"]');
     expect(line?.textContent).toBe('3 notes');
+    expect(line?.className.split(' ')).toEqual(expect.arrayContaining(['flex-nowrap', 'overflow-hidden', 'whitespace-nowrap', 'bg-surface']));
+    expect(app.find('[data-test="status-notes.count"]')?.getAttribute('title')).toBe('3 notes');
+    expect(app.find('[data-test="embedded"]')?.classList.contains('bg-surface')).toBe(true);
     expect(app.find('[data-test="status-workspace"]')).toBeNull();
     expect(app.find('[data-test="status-bar"]')).toBeNull();
   });
@@ -66,5 +69,20 @@ describe('the embedded status line (06 §6.2, ADR 0101, 2 and 3)', () => {
     const api = notesApi({ ui: notesUi({ status: [] }) });
     const app = await mountApp(api, '/notes/list?embed=parent');
     expect(app.find('[data-test="status-line"]')).toBeNull();
+  });
+
+  it('M4.8-E6 a status line whose only item is at 0 is hidden, and shows the reconnecting text when kvman stops answering', async () => {
+    vi.spyOn(window.parent, 'postMessage').mockImplementation(() => undefined);
+    const counted = { id: 'count', query: 'notes.count.get', input: {}, text: 'notes.status.count', params: { count: { $output: 'count' } }, order: 1, titleCount: 'count' };
+    const api = notesApi({ ui: notesUi({ status: [counted] }) });
+    api.handlers.set('notes.count.get', () => ({ count: 0 }));
+    const app = await mountApp(api, '/notes/list?embed=parent');
+    const line = () => app.find<HTMLElement>('[data-test="status-line"]');
+    expect(line()?.style.display).toBe('none');
+    api.offline = true;
+    await call(app);
+    await app.settle();
+    expect(line()?.style.display).toBe('');
+    expect(app.find('[data-test="reconnecting"]')).not.toBeNull();
   });
 });

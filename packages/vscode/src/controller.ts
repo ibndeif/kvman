@@ -13,6 +13,7 @@ export type Host = {
   startKvman(handlers: ProcessHandlers): KvmanProcess;
   askTrust(versions: TrustVersion[]): Promise<boolean>;
   isAlive(port: number): Promise<boolean>;
+  runningVersion(port: number): Promise<string | undefined>;
   openExternal(url: string): void;
   openLog(): void;
   openSettings(url: string): void;
@@ -74,6 +75,8 @@ export class Controller {
         return this.#process?.closeInput();
       case 'checkHealth':
         return this.#later(this.#host.isAlive(effect.port), (alive) => ({ kind: 'healthAnswered', alive }));
+      case 'checkJoined':
+        return this.#later(this.#host.runningVersion(effect.port), (version) => ({ kind: 'joinedAnswered', start: effect.start, version }));
       case 'openExternal':
         return this.#host.openExternal(effect.url);
       case 'openLog':

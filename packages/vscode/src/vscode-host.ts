@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import type { Translate } from './catalog.ts';
 import type { Host } from './controller.ts';
-import { isKvmanAlive } from './health.ts';
+import { askKvman, isKvmanAlive } from './health.ts';
 import { installArguments } from './install-task.ts';
 import { runVersion, startKvman, type ProgramPlace } from './kvman-process.ts';
 import type { TrustVersion } from './lines.ts';
@@ -56,6 +56,10 @@ export function vscodeHost({ folder, view, settings, translate, logFile }: HostP
     startKvman: (handlers) => startKvman(programPlace(folder), handlers),
     askTrust: (versions) => askTrust(versions, translate),
     isAlive: isKvmanAlive,
+    runningVersion: async (port) => {
+      const answer = await askKvman(port);
+      return answer.answered ? answer.version : undefined;
+    },
     openExternal: openWeb,
     openLog: () => void vscode.window.showTextDocument(vscode.Uri.file(logFile)).then(undefined, (error: unknown) => reportProblem(error, translate)),
     openSettings: (url) => settings.open(url),

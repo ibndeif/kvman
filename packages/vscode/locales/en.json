@@ -6,6 +6,8 @@
   "vscode.installing": "Installing kvman… The terminal shows its progress.",
   "vscode.tooOld": "kvman {version} is older than this extension needs ({minimum}).",
   "vscode.update": "Update kvman",
+  "vscode.oldRunning": "kvman {version} is already running, and this extension needs {minimum}. Quit it, then start again.",
+  "vscode.openAnyway": "Open anyway",
   "vscode.npmMissing": "npm wasn't found. Install Node.js 24, then try again.",
   "vscode.nodejs": "Get Node.js",
   "vscode.installFailed": "kvman couldn't be installed. The terminal shows why.",

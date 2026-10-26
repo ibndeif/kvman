@@ -56,7 +56,7 @@ watchEffect(() => {
 </script>
 
 <template>
-  <div v-if="state.host.embedded.value" class="flex h-full flex-col bg-ground font-sans text-sm/relaxed text-ink" data-test="embedded">
+  <div v-if="state.host.embedded.value" class="flex h-full flex-col bg-surface font-sans text-sm/relaxed text-ink" data-test="embedded">
     <div class="relative flex min-h-0 grow flex-col">
       <main class="relative flex min-h-0 min-w-0 grow flex-col gap-3 overflow-auto p-2">
         <LoadFailures />

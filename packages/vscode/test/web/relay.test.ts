@@ -14,6 +14,7 @@ afterEach(() => {
   vi.resetModules();
   document.body.replaceChildren();
   delete document.body.dataset['origin'];
+  delete document.body.dataset['place'];
   document.body.className = '';
   document.documentElement.removeAttribute('style');
 });
@@ -29,6 +30,23 @@ const frameWindow = (): Window => {
   const shown = document.querySelector('iframe')?.contentWindow;
   if (shown === null || shown === undefined) throw new Error('The page has no frame.');
   return shown;
+};
+
+// VS Code's own variables, as a dark theme gives them.
+const variables: Record<string, string> = {
+  '--vscode-sideBar-background': '#252526',
+  '--vscode-editor-background': '#1e1e1e',
+  '--vscode-foreground': '#cccccc',
+  '--vscode-descriptionForeground': '#9d9d9d',
+  '--vscode-panel-border': '#3c3c3c',
+  '--vscode-button-background': '#0e639c',
+  '--vscode-button-foreground': '#ffffff',
+  '--vscode-errorForeground': '#f48771',
+  '--vscode-editorWarning-foreground': '#cca700',
+  '--vscode-testing-iconPassed': '#73c991',
+  '--vscode-font-family': 'Ubuntu',
+  '--vscode-editor-font-family': 'Fira Code',
+  '--vscode-font-size': '13px',
 };
 
 describe("the view's relay (15 §15.4, ADR 0099, 23)", () => {
@@ -53,22 +71,7 @@ describe("the view's relay (15 §15.4, ADR 0099, 23)", () => {
     expect(posted).toEqual([{ from: 'page', action: 'install' }]);
   });
 
-  it("M4.6-H3 the frame's kvman.state gets VS Code's theme, again when VS Code's theme changes, and is passed on", async () => {
-    const variables: Record<string, string> = {
-      '--vscode-sideBar-background': '#252526',
-      '--vscode-editor-background': '#1e1e1e',
-      '--vscode-foreground': '#cccccc',
-      '--vscode-descriptionForeground': '#9d9d9d',
-      '--vscode-panel-border': '#3c3c3c',
-      '--vscode-button-background': '#0e639c',
-      '--vscode-button-foreground': '#ffffff',
-      '--vscode-errorForeground': '#f48771',
-      '--vscode-editorWarning-foreground': '#cca700',
-      '--vscode-testing-iconPassed': '#73c991',
-      '--vscode-font-family': 'Ubuntu',
-      '--vscode-editor-font-family': 'Fira Code',
-      '--vscode-font-size': '13px',
-    };
+  it("M4.6-H3 M4.8-H7 the frame's kvman.state gets VS Code's theme, with a soft background, again when VS Code's theme changes, and is passed on", async () => {
     for (const [name, value] of Object.entries(variables)) document.documentElement.style.setProperty(name, value);
     document.body.className = 'vscode-dark';
     document.body.dataset['place'] = 'view';
@@ -78,7 +81,7 @@ describe("the view's relay (15 §15.4, ADR 0099, 23)", () => {
     const theme = {
       kind: 'kvman.theme',
       dark: true,
-      colors: { background: '#252526', surface: '#252526', text: '#cccccc', muted: '#9d9d9d', border: '#3c3c3c', primary: '#0e639c', onPrimary: '#ffffff', danger: '#f48771', warning: '#cca700', success: '#73c991' },
+      colors: { background: 'color-mix(in srgb, #cccccc 6%, #252526)', surface: '#252526', text: '#cccccc', muted: '#9d9d9d', border: '#3c3c3c', primary: '#0e639c', onPrimary: '#ffffff', danger: '#f48771', warning: '#cca700', success: '#73c991' },
       fonts: { sans: 'Ubuntu', mono: 'Fira Code', size: '13px' },
     };
     expect(toFrame.mock.calls).toEqual([[theme, 'http://127.0.0.1:3737']]);
@@ -127,5 +130,14 @@ describe("the view's relay (15 §15.4, ADR 0099, 23)", () => {
     send(injected, 'http://127.0.0.1:5173', window.parent);
     expect(toFrame).not.toHaveBeenCalled();
     expect(posted).toEqual([]);
+  });
+
+  it("M4.8-E7 the Settings tab's theme has the editor's color as its surface, with the foreground mixed into it", async () => {
+    for (const [name, value] of Object.entries(variables)) document.documentElement.style.setProperty(name, value);
+    document.body.dataset['place'] = 'panel';
+    await loadPage('<iframe src="about:blank"></iframe>', 'http://127.0.0.1:3737');
+    const toFrame = vi.spyOn(frameWindow(), 'postMessage').mockImplementation(() => undefined);
+    send({ kind: 'kvman.state', workspaceId: 'w1' }, 'http://127.0.0.1:3737', frameWindow());
+    expect(toFrame.mock.calls[0]?.[0]).toMatchObject({ colors: { background: 'color-mix(in srgb, #cccccc 6%, #1e1e1e)', surface: '#1e1e1e' } });
   });
 });

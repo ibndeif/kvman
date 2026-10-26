@@ -1,6 +1,6 @@
 # 15 — The VS Code extension
 
-Every decision here is in ADR 0099, ADR 0100, and ADR 0101.
+Every decision here is in ADR 0099, ADR 0100, ADR 0101, and ADR 0106.
 
 ## 15.1 What it is
 
@@ -49,14 +49,14 @@ The extension starts when the view is first shown or one of its commands runs, n
 1. **The folder.** The first folder of the window, when its URI's scheme is `file`. A window with no folder uses the user's home folder, so the start workspace is Home (§1.2). A first folder of any other scheme (a remote or virtual folder) shows "kvman works on local folders only for now." and runs nothing.
 2. **The version.** Before the first start in a window, the extension runs `<kvman.path> --version`.
    - A program that can't be started shows "kvman isn't installed." with "Install kvman".
-   - A version older than `MINIMUM_KVMAN_VERSION` (`0.4.7`, the first release with M4.1), and older than the extension itself, shows "kvman `<version>` is older than this extension needs (`<minimum>`)." with "Update kvman".
+   - A version older than the extension's own (they are released together at the root version) shows "kvman `<version>` is older than this extension needs (`<extension version>`)." with "Update kvman" (ADR 0106, 4).
 3. **Installing.** "Install kvman" runs `npm i -g kvman --no-fund --loglevel=error` as a VS Code task named "Install kvman", whose output shows in a terminal; "Update kvman" runs the same with `kvman@latest`. Exit code 0 continues at step 4. A code of 127, or no `npm`, shows "npm wasn't found. Install Node.js 24, then try again." with a link to `https://nodejs.org`; any other code shows "kvman couldn't be installed. The terminal shows why." with "Try again".
 4. **kvman starts**: `<kvman.path> --pipe --no-open` in the folder of step 1, with VS Code's environment. On Windows it is started through `cmd.exe /d /s /c`, since npm installs it as a `.cmd` file; on Linux and macOS it is started directly. The view shows "Starting kvman…" with a progress mark.
 5. **The lines** (§14.2) are each read into a typed shape with zod.
    - **`trust`** opens a modal message in the extension's language: "These extensions are not part of kvman and can do anything you can:", each `name@version (source)`, and "Run them?", with the button "Run them". "Run them" answers `{ "trust": true }`; closing the message answers `{ "trust": false }`.
    - **`failed`** shows in the view "kvman could not start", the Problem's `code` and `message`, and the hint for its code (the desktop app's four, §14.4; otherwise `<home>/logs/kvman.log`), with "Try again" and "Show the log", which opens that log in an editor.
    - **`running`** shows the view's frame (§15.4) at the line's `url`. This window owns that kvman.
-   - **`joined`** does the same, and this window doesn't own that kvman.
+   - **`joined`**: the extension first calls `kernel.health.get` on the line's port, which has 2 seconds to answer. When it answers with a version older than the extension's, the view shows "kvman `<version>` is already running, and this extension needs `<extension version>`. Quit it, then start again." with "Start again", which starts kvman again (step 4), and "Open anyway", which frames that kvman. Otherwise (a new enough version, no version, or no answer) the line does as `running` does, and this window doesn't own that kvman (ADR 0106, 5).
    - **`restarting`** changes nothing: kvwebui waits for kvman as it does in a browser. A later `running` line of the same start at the same address keeps the frame and whether it is ready; one with another port moves the frame to its `url`. Each start (step 4) loads its frame afresh, even at the same address (ADR 0101, 8).
    - **A line that can't be read** closes kvman's input, and the view shows §15.5's "stopped" state.
 
@@ -74,7 +74,7 @@ The extension starts when the view is first shown or one of its commands runs, n
   - `kvman.openDiff` opens VS Code's diff editor: the file on disk (an empty document when it doesn't exist) against a read-only document of `after`, titled with the message's title;
   - `kvman.openChange` runs VS Code's Git command `git.openChange` for the file; when it fails, VS Code shows "There's no Git change to show for this file."
   An `openFile`, `openDiff`, or `openChange` path must be absolute. Any other message, address, or path is dropped.
-- **The theme** (ADR 0100, 24). The page reads VS Code's own CSS variables (`--vscode-sideBar-background`, `--vscode-editor-background`, `--vscode-foreground`, `--vscode-descriptionForeground`, `--vscode-panel-border`, `--vscode-button-background`, `--vscode-button-foreground`, `--vscode-errorForeground`, `--vscode-editorWarning-foreground`, `--vscode-testing-iconPassed`, `--vscode-font-family`, `--vscode-editor-font-family`, `--vscode-font-size`) and VS Code's theme class on `body`, and posts them to the frame as `kvman.theme` (§6.2) on each `kvman.state` and again when VS Code's theme changes.
+- **The theme** (ADR 0100, 24). The page reads VS Code's own CSS variables (`--vscode-sideBar-background`, `--vscode-editor-background`, `--vscode-foreground`, `--vscode-descriptionForeground`, `--vscode-panel-border`, `--vscode-button-background`, `--vscode-button-foreground`, `--vscode-errorForeground`, `--vscode-editorWarning-foreground`, `--vscode-testing-iconPassed`, `--vscode-font-family`, `--vscode-editor-font-family`, `--vscode-font-size`) and VS Code's theme class on `body`, and posts them to the frame as `kvman.theme` (§6.2) on each `kvman.state` and again when VS Code's theme changes. `surface` is the side bar's color in the view and the editor's in the Settings tab; `background` is `color-mix(in srgb, <foreground> 6%, <surface>)`, so bubbles, cards, and selected tabs show in every theme (ADR 0106, 3).
 - **The extension's messages.** The page passes on to the frame only `kvman.pages`, `kvman.new`, and `kvman.insert` with a text, and only when the message's `origin` is the page's own, which is how VS Code delivers the extension's messages. No frame can claim that origin: kvman's frame and any frame inside it, such as an artifact, are at other origins (ADR 0101, 6).
 - **Downloads** are VS Code's own behaviour for a webview.
 - **Width.** The embedded kvwebui has no frame (§6.2), and kvcoder below 60 rem is one column with its compact header (§8.7). kvwebui keeps its own language; the extension's own states (§15.3, §15.5) use VS Code's theme variables.

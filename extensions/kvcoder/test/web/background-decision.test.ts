@@ -61,7 +61,7 @@ describe("a background helper's decision in the chat (ADR 0085, 1)", () => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'], now: Date.parse('2026-10-01T09:01:12.000Z') });
     const fake = world([running, waitingJob]);
     const header = await mounted(ConversationHeader, fake, { session: session(), tab: 'chat', turns: 1 });
-    expect(header.find('[data-test="jobs-chip"]').text()).toBe('2 running');
+    expect(header.find('[data-test="jobs-words"]').text()).toBe('2 running');
     await header.find('[data-test="jobs-chip"]').trigger('click');
     expect(header.find('[data-test="job-h1"] [data-test="job-status"]').text()).toBe('Waiting for you');
     expect(header.find('[data-test="job-stop-h1"]').exists()).toBe(true);

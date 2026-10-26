@@ -43,6 +43,8 @@ function messageOf(view: Exclude<View, { kind: 'frame' }>, context: PageContext)
       return { lines: text('vscode.missing'), buttons: [{ action: 'install', label: 'vscode.install' }], busy: false };
     case 'tooOld':
       return { lines: text('vscode.tooOld', { version: view.version, minimum: view.minimum }), buttons: [{ action: 'update', label: 'vscode.update' }], busy: false };
+    case 'oldRunning':
+      return { lines: text('vscode.oldRunning', { version: view.version, minimum: view.minimum }), buttons: [{ action: 'start', label: 'vscode.startAgain' }, { action: 'openAnyway', label: 'vscode.openAnyway', link: true }], busy: false };
     case 'npmMissing':
       return { lines: text('vscode.npmMissing'), buttons: [{ action: 'nodejs', label: 'vscode.nodejs', link: true }, install(view.update)], busy: false };
     case 'installFailed':

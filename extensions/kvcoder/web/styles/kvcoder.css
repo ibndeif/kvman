@@ -1,4 +1,5 @@
 /* kvcoder's components (plan 06 §6.4): styled with kvwebui's theme variables and logical properties only. */
+@import './side-bar.css';
 .kvc-workspace { display: flex; flex-direction: column; flex: 1 1 0; align-self: stretch; block-size: 100%; min-inline-size: min(100%, 30rem); min-block-size: 24rem; position: relative; container-type: inline-size; container-name: kvc-workspace; }
 /* The header is above the stage, which holds the conversation and the artifact panel (ADR 0018, 8). */
 .kvc-stage { display: flex; flex: 1 1 0; min-block-size: 0; position: relative; }

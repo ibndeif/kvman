@@ -1,0 +1,27 @@
+/* kvcoder at side-bar width (plan 08 §8.7, ADR 0106, 2, 6, 9, and 10). Each rule names its container's class too, so it
+   outweighs kvcoder.css, which imports this file first. */
+
+/* A chat's title reads in its own direction with the page's alignment. */
+.kvc-header .kvc-title strong, .kvc-session .kvc-session-title { text-align: match-parent; }
+
+/* The Background chip's icon and count show at side-bar width only; its words are its label and tooltip there. */
+.kvc-jobs .kvc-jobs-icon, .kvc-jobs .kvc-jobs-count { display: none; }
+
+@container kvc-workspace (max-inline-size: 30rem) {
+  /* One row: the title and its totals share the free width, one over the other, so the menu is at the inline end. */
+  .kvc-workspace .kvc-header { flex-wrap: nowrap; }
+  .kvc-workspace .kvc-title { flex: 1 1 0; flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
+  .kvc-workspace .kvc-header { gap: 4px; }
+  .kvc-workspace .kvc-chats-bar > .kvc-button, .kvc-workspace .kvc-header > .kvc-button, .kvc-workspace .kvc-jobs > .kvc-button, .kvc-workspace .kvc-header [data-test='chat-menu'] { padding-inline: 8px; }
+  .kvc-jobs .kvc-jobs-words, .kvc-jobs .kvc-jobs-chevron { display: none; }
+  .kvc-jobs .kvc-jobs-icon, .kvc-jobs .kvc-jobs-count { display: inline-block; }
+  .kvc-workspace .kvc-start h1 { font-size: 20px; }
+}
+
+/* At side-bar width the artifact panel's head is two rows: the name at full width, then the switch and the buttons at the
+   inline end; a long word in the artifact wraps instead of making the panel scroll sideways. */
+@container kvc-workspace (max-inline-size: 30rem) {
+  .kvc-artifact-panel .kvc-artifact-head { flex-wrap: wrap; row-gap: 8px; }
+  .kvc-artifact-panel .kvc-artifact-name { flex: 1 0 100%; }
+  .kvc-artifact-panel .kvc-artifact-body { overflow-wrap: anywhere; }
+}

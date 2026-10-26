@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
-import { healthMilliseconds, isKvmanAlive } from '../src/health.ts';
+import { askKvman, healthMilliseconds, isKvmanAlive } from '../src/health.ts';
 
 const servers: Server[] = [];
 
@@ -53,5 +53,14 @@ describe('whether kvman answers (15 §15.5, ADR 0099, 26)', () => {
     expect(await isKvmanAlive((server.address() as AddressInfo).port, 50)).toBe(false);
     expect(healthMilliseconds).toBe(2000);
     server.closeAllConnections();
+  });
+
+  it("M4.8-H5 M4.8-E1 a running kvman's version is read from its answer; one without a version, or no answer, has none", async () => {
+    const older = await fakeKvman('{"ok":true,"output":{"version":"0.4.6","preset":"coder"},"jobId":"j"}');
+    expect(await askKvman(older.port)).toEqual({ answered: true, version: '0.4.6' });
+    const bare = await fakeKvman('{"ok":true,"output":{}}');
+    expect(await askKvman(bare.port)).toEqual({ answered: true, version: undefined });
+    const other = await fakeKvman('<html>');
+    expect(await askKvman(other.port)).toEqual({ answered: false });
   });
 });

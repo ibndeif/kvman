@@ -48,7 +48,7 @@ watch([() => props.sessionId, () => kvman.workspace.value.id], () => void load()
     <template v-for="group in groups" :key="group.key">
       <span class="kvc-group">{{ kvman.t(`kvcoder.ui.${group.key}`) }}</span>
       <button v-for="session in group.items" :key="session.id" type="button" class="kvc-session" :aria-current="session.id === props.sessionId ? 'page' : undefined" :data-test="`session-${session.id}`" @click="kvman.navigate('kvcoder.session', { sessionId: session.id })">
-        <span>{{ titleText(kvman.t, session.title) }}</span>
+        <span dir="auto" class="kvc-session-title" data-test="session-list-title">{{ titleText(kvman.t, session.title) }}</span>
         <span v-if="session.waitingOn === 'person'" class="kvc-chip kvc-warn" data-test="needs-you">{{ kvman.t('kvcoder.ui.needsYou') }}</span>
         <span v-else-if="session.status === 'running' || session.waitingOn === 'helpers'" class="kvc-spin" :aria-label="kvman.t('kvcoder.ui.status.running')" data-test="running" />
         <span v-else class="kvc-muted">{{ when(session) }}</span>

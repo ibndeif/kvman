@@ -57,7 +57,8 @@ function themeVariables({ colors, fonts }: HostTheme): Record<string, string> {
 export function applyHostTheme(state: Kvwebui, theme: HostTheme): void {
   const root = document.documentElement;
   for (const [name, value] of Object.entries(themeVariables(theme))) root.style.setProperty(name, value);
-  root.style.fontSize = theme.fonts.size;
+  // The host's size is the size of body text, which is 0.875rem (ADR 0106, 1).
+  root.style.fontSize = `calc(${theme.fonts.size} * 8 / 7)`;
   root.classList.toggle('dark', theme.dark);
   state.host.theme.value = theme;
 }

@@ -42,5 +42,14 @@ describe('the compact header (08 §8.7, ADR 0100, 15)', () => {
     view.unmount();
     expect(fake.host.newOffers()).toBe(0);
   });
-});
 
+  it("M4.8-H14 the header's title reads in its own direction", async () => {
+    const fake = createFakeKvman();
+    serve(fake, { found: session({ status: 'idle', title: 'مراجعة kvcoder' }), messages: [], omitted: 0, turns: [] });
+    fake.handle('kvcoder.session.list', () => []);
+    const view = await mounted(ConversationView, fake, { sessionId: 's1' });
+    const title = view.find('[data-test="session-title"]');
+    expect([title.attributes('dir'), title.text()]).toEqual(['auto', 'مراجعة kvcoder']);
+    view.unmount();
+  });
+});

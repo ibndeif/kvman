@@ -421,7 +421,7 @@ ADR 0099.
   - A window whose first folder isn't a `file:` folder shows "kvman works on local folders only for now." and runs nothing.
   - With no program at `kvman.path`, the view shows "kvman isn't installed."; "Install kvman" runs the npm task, and an exit code of 0 starts kvman.
   - A task that exits 127 shows the npm message with the link to `https://nodejs.org`, and any other failing code shows "kvman couldn't be installed." with "Try again".
-  - A kvman older than `MINIMUM_KVMAN_VERSION` shows its version, the minimum, and "Update kvman", and isn't started.
+  - A kvman older than the extension (ADR 0106, 4) shows its version, the extension's, and "Update kvman", and isn't started.
   - On Windows the program is started through `cmd.exe /d /s /c`, and on Linux and macOS directly.
   - A `trust` line opens the modal message with each version; "Run them" answers `{ "trust": true }`, and closing it answers `{ "trust": false }`.
   - A `failed` line shows the code, the message, and the hint for its code, or the log's path for another code; "Show the log" opens it, and "Try again" starts kvman again.
@@ -523,3 +523,21 @@ ADR 0099.
   - The embedded status line shows the contributed status items and, while kvman doesn't answer, the reconnecting text; an OFFLINE Problem posts `kvman.lost` once and shows no toast while embedded.
   - An identical toast that is open isn't added again.
   - While embedded, kvcoder's conversation offers New, which opens the Chat page with no chat, and its compact header has no New chat button.
+
+### M4.8 The VS Code view, sized to read and kept current
+
+- **Read:** `15` §15.3, §15.4; `06` §6.2 (the host's theme, the status line, status items); `08` §8.7 (in a narrow host, the artifact panel, the Running chip); ADR 0106.
+- **Build:**
+  - in `packages/vscode`: kvman at least the extension's own version, the joined kvman's version and its view with Start again and Open anyway, and the theme's soft `background`;
+  - in kvwebui: the root font size from the host's size, a status item at 0 hidden, and the one-line status line;
+  - in kvcoder: the narrow header in one row with the Background chip as an icon and its count, the artifact head's two rows, chat titles in their own direction, and the narrow new-chat heading;
+  - the `en` and `ar` texts and the changesets;
+  - last, the by-hand check in a real VS Code, as in M4.2.
+- **Done when:**
+  - A `kvman --version` older than the extension's own shows the Update view; one as new starts kvman.
+  - A `joined` line whose kvman answers an older version shows the older-kvman view; Start again starts kvman again, and Open anyway frames it; a new enough version, or no answer, frames it at once.
+  - The view's theme has `background` mixed from the foreground into `surface`.
+  - An embedded page with the host's `13px` has a root font size of `13px × 8 / 7`.
+  - A status item whose `titleCount` field is 0 isn't shown, and shows again when the count rises; the embedded status line doesn't wrap, and is hidden while it shows nothing.
+  - Below 30 rem the conversation header is one row with the chat's menu at its inline end, and the Background chip shows an icon and its count with its words as label; the artifact head is two rows below 30 rem of the workspace's width.
+  - A chat title has `dir="auto"` in the header and the chat list.

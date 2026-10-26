@@ -92,7 +92,8 @@ describe('the chat page in Chromium (08 §8.7, ADR 0009, 130–137)', { timeout:
     await page.close();
   });
 
-  it('QA1-H2 and QA2-H1 the waiting count follows the steps with no reload, even when the step ends at once', async () => {
+  // At 0 the count isn't shown (ADR 0106, 7).
+  it('QA1-H2 and QA2-H1 M4.8-H9 the waiting count follows the steps with no reload, even when the step ends at once', async () => {
     world = await kvmanWorld();
     const kvman = await world.start();
     world.fake.reply(runs(command('ask', 'confirm', {"prompt":"Go on?"})), says('Done.'));
@@ -100,7 +101,8 @@ describe('the chat page in Chromium (08 §8.7, ADR 0009, 130–137)', { timeout:
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
     await page.goto(`${kvman.origin}/kvcoder/session/${sessionId}`);
     await page.locator('[data-test="conversation"]').waitFor();
-    const counted = (count: number) => page.waitForFunction(`document.querySelector('[data-test="status-bar"]')?.textContent?.includes(${JSON.stringify(`Waiting for you: ${String(count)}`)}) === true`, undefined, { timeout: 10_000 });
+    const barText = `(document.querySelector('[data-test="status-bar"]')?.textContent ?? '')`;
+    const counted = (count: number) => page.waitForFunction(count > 0 ? `${barText}.includes('Waiting for you: ${String(count)}')` : `!${barText}.includes('Waiting for you')`, undefined, { timeout: 10_000 });
     await page.locator('[data-test="composer-text"]').fill('Run it');
     await page.locator('[data-test="send"]').click();
     await page.locator('[data-test="question-card"]').waitFor();

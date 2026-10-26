@@ -7,7 +7,7 @@ import type { Action } from './session.ts';
 // the extension's buttons. Only an `http:` or `https:`
 // address, and only an absolute path, is ever opened (ADR 0099, 23).
 
-const actionSchema = z.enum(['install', 'update', 'start', 'showLog', 'nodejs']);
+const actionSchema = z.enum(['install', 'update', 'start', 'showLog', 'nodejs', 'openAnyway']);
 const absolutePath = z.string().min(1).refine((given) => path.isAbsolute(given), 'an absolute path');
 
 const frameSchema = z.discriminatedUnion('kind', [

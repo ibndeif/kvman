@@ -55,7 +55,7 @@ function rename(): void {
   <header class="kvc-header">
     <div class="kvc-title">
       <form v-if="renaming !== null" @submit.prevent="rename"><input v-model="renaming" class="kvc-field" :aria-label="kvman.t('kvcoder.ui.rename')" data-test="rename-input" @blur="rename" /></form>
-      <strong v-else data-test="session-title">{{ titleText(kvman.t, props.session.title) }}</strong>
+      <strong v-else dir="auto" data-test="session-title">{{ titleText(kvman.t, props.session.title) }}</strong>
       <span class="kvc-muted kvc-header-stats">
         <span :title="summaryHint" data-test="session-totals">{{ summary }}</span>
         <template v-if="filled !== undefined"> · <span :title="filled.full" :aria-label="filled.full" data-test="session-context">{{ filled.short }}</span></template>

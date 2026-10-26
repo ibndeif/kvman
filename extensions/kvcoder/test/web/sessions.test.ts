@@ -41,4 +41,13 @@ describe('the session list (ADR 0009, 104)', () => {
     expect(['p', 'i', 'h', 'r'].map(mark)).toEqual(['needs-you', 'needs-you', 'running', 'running']);
     wrapper.unmount();
   });
+
+  it('M4.8-H14 a title in the list reads in its own direction', async () => {
+    const fake = createFakeKvman();
+    fake.handle('kvcoder.session.list', () => [session({ id: 'r', title: 'مراجعة kvcoder وتحسين الأداء' })]);
+    const wrapper = await mounted(SessionList, fake, {});
+    const title = wrapper.find('[data-test="session-r"] [data-test="session-list-title"]');
+    expect([title.attributes('dir'), title.text()]).toEqual(['auto', 'مراجعة kvcoder وتحسين الأداء']);
+    wrapper.unmount();
+  });
 });

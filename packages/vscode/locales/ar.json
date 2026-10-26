@@ -6,6 +6,8 @@
   "vscode.installing": "جارٍ تثبيت kvman… تعرض الطرفية تقدّمه.",
   "vscode.tooOld": "الإصدار {version} من kvman أقدم مما تحتاجه هذه الإضافة ({minimum}).",
   "vscode.update": "حدّث kvman",
+  "vscode.oldRunning": "يعمل الإصدار {version} من kvman بالفعل، وتحتاج هذه الإضافة إلى {minimum}. أغلقه، ثم ابدأ من جديد.",
+  "vscode.openAnyway": "افتحه على أي حال",
   "vscode.npmMissing": "لم يُعثر على npm. ثبّت Node.js 24، ثم حاول مرة أخرى.",
   "vscode.nodejs": "احصل على Node.js",
   "vscode.installFailed": "تعذّر تثبيت kvman. تعرض الطرفية السبب.",

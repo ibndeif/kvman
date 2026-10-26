@@ -2,14 +2,14 @@
 
 This page is for people who use VS Code, Cursor, or VSCodium and want kvman beside their files. When you finish, you will know how to install the extension, where kvman shows, and how it shares kvman with your other windows.
 
-The extension shows kvman in VS Code's side bar, under its own **KV** icon in the activity bar, and looks like part of VS Code: VS Code's colors and fonts, one column of chat, buttons in the view's title bar, and edits and files opened in VS Code's editor. It is the same kvman you start with `kvman` in a terminal, with the same pages ([web-app.md](web-app.md)). VS Code 1.95 or newer is needed. You can drag the view to the secondary side bar, on the right.
+The extension shows kvman in VS Code's side bar, under its own **KV** icon in the activity bar, and looks like part of VS Code: VS Code's colors, fonts, and text size, one column of chat, buttons in the view's title bar, and edits and files opened in VS Code's editor. It is the same kvman you start with `kvman` in a terminal, with the same pages ([web-app.md](web-app.md)). VS Code 1.95 or newer is needed. You can drag the view to the secondary side bar, on the right.
 
 ## Installing
 
 1. Install **kvman** from the Extensions view: search for `kvman` (publisher `ibndeif`). VS Code takes it from the Visual Studio Marketplace; Cursor, VSCodium, and Windsurf take it from Open VSX. Each release's `kvman.vsix` is also on its GitHub Release, for **Install from VSIX…**. Until the first release that carries the extension, build it from kvman's repository with `pnpm vscode:package`, and install `packages/vscode/dist/kvman.vsix` that way.
 2. Open the kvman view: click the **KV** icon in the activity bar, or run **kvman: Open** from the Command Palette.
 
-The extension runs the `kvman` program it finds on your PATH. If there is none, the view says **kvman isn't installed.** with an **Install kvman** button, which runs `npm i -g kvman --no-fund --loglevel=error` in a terminal and starts kvman when it has finished. That needs Node.js 24 ([installing.md](installing.md)); without npm, the view says so and links to nodejs.org. A kvman that is too old for the extension shows **Update kvman**.
+The extension runs the `kvman` program it finds on your PATH. If there is none, the view says **kvman isn't installed.** with an **Install kvman** button, which runs `npm i -g kvman --no-fund --loglevel=error` in a terminal and starts kvman when it has finished. That needs Node.js 24 ([installing.md](installing.md)); without npm, the view says so and links to nodejs.org. kvman must be at least as new as the extension: an older one shows **Update kvman**, which installs the latest kvman. When you update the extension, update kvman too.
 
 ## Using it
 
@@ -17,7 +17,7 @@ The extension runs the `kvman` program it finds on your PATH. If there is none, 
 - **Starting.** kvman starts the first time you open the view, not when VS Code starts. If some extensions aren't part of kvman, VS Code asks first, listing each one, with **Run them**.
 - **The title bar.** **New** (**+**) starts a new chat; it shows while the page you're on offers it. **Pages** lists kvman's pages (Chat, Models, Settings, Extensions, and those your extensions add) and any panels your extensions add, and ends with **Language**, which switches kvman's language for every window and the browser. **Settings** opens kvman's settings in an editor tab. **Open in browser** opens the same workspace in your browser.
 - **The chat.** The chat's header holds **History**, which lists your chats.
-- **The status line.** A slim line at the bottom of the view shows what your extensions report, such as the chats waiting for you and the chat's tokens and cost.
+- **The status line.** A slim line at the bottom of the view shows what your extensions report, such as the chats waiting for you (only when some are) and the chat's tokens and cost.
 - **Edits.** An edit the agent asks to make has **Open diff**, which shows the whole file with the change in VS Code's diff editor before you allow it; after it ran, **Open diff** shows the file's Git diff.
 - **Files.** A file path in the chat opens the file in the editor, at the line the agent read or changed.
 - **Add to kvman chat.** Right-click a selection in the editor, or a file in the explorer, and choose **Add to kvman chat**, or press **Ctrl+Alt+K** (**Cmd+Alt+K** on macOS) in the editor: the path and lines, and the selected code, go into the send box. With nothing selected, the open file's path goes in.
@@ -28,7 +28,7 @@ The extension runs the `kvman` program it finds on your PATH. If there is none, 
 
 All VS Code windows share one running kvman, with the terminal and the desktop app: they use the same home folder, `~/.kvman`, with the same chats, keys, and workspaces ([desktop-app.md](desktop-app.md)).
 
-The window that started kvman stops it when it closes. Another window notices at once, starts kvman again by itself, and reloads its view; meanwhile its status line says it's reconnecting. If kvman was already running, for example in a terminal, the extension uses it and leaves it running.
+The window that started kvman stops it when it closes. Another window notices at once, starts kvman again by itself, and reloads its view; meanwhile its status line says it's reconnecting. If kvman was already running, for example in a terminal, the extension uses it and leaves it running. If that kvman is older than the extension, the view says so: quit it (Ctrl+C in its terminal, or close the app that started it), then press **Start again**; **Open anyway** uses it as it is.
 
 If kvman can't start, the view shows why, with **Try again** and **Show the log**, which opens `logs/kvman.log` from kvman's home. If kvman stops unexpectedly, the view says so, with **Start again**.
 

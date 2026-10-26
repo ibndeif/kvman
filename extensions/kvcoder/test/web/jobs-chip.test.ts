@@ -27,7 +27,7 @@ describe("the Running chip in the conversation's header (08 §8.7, ADR 0009, 153
   it('QA3-H18 QA67-H15 the chip counts running jobs, its list shows links, logs, and Stop, and once none runs it reads Background (N)', async () => {
     const { world, fake, mount } = setup([job({ links: ['http://localhost:8000'] })]);
     const wrapper = await mount();
-    expect(wrapper.find('[data-test="jobs-chip"]').text()).toBe('1 running');
+    expect(wrapper.find('[data-test="jobs-words"]').text()).toBe('1 running');
     await wrapper.find('[data-test="jobs-chip"]').trigger('click');
     expect(wrapper.find('[data-test="job-title"]').text()).toBe('Start the dev server');
     expect(wrapper.find('[data-test="job-time"]').text()).toBe('1 min 12 s');
@@ -43,11 +43,11 @@ describe("the Running chip in the conversation's header (08 §8.7, ADR 0009, 153
     expect(fake.calls).toContainEqual({ name: 'kvcoder.job.cancel', input: { sessionId: 's1', id: 'j1' } });
     expect(wrapper.find('[data-test="job-status"]').text()).toBe('Stopped');
     expect(wrapper.find('[data-test="job-stop-j1"]').exists()).toBe(false);
-    expect(wrapper.find('[data-test="jobs-chip"]').text()).toBe('Background (1)');
+    expect(wrapper.find('[data-test="jobs-words"]').text()).toBe('Background (1)');
 
     await wrapper.find('[data-test="jobs-popover"]').trigger('keydown', { key: 'Escape' });
     expect(wrapper.find('[data-test="jobs-popover"]').exists()).toBe(false);
-    expect(wrapper.find('[data-test="jobs-chip"]').text()).toBe('Background (1)');
+    expect(wrapper.find('[data-test="jobs-words"]').text()).toBe('Background (1)');
     expect(world.jobs[0]?.status).toBe('cancelled');
   });
 
@@ -61,7 +61,7 @@ describe("the Running chip in the conversation's header (08 §8.7, ADR 0009, 153
     world.jobs = [job({ status: 'failed', exitCode: 1 })];
     await vi.advanceTimersByTimeAsync(5_000);
     await flushPromises();
-    expect(wrapper.find('[data-test="jobs-chip"]').text()).toBe('Background (1)');
+    expect(wrapper.find('[data-test="jobs-words"]').text()).toBe('Background (1)');
     await vi.advanceTimersByTimeAsync(10_000);
     expect(reads()).toBe(3);
   });
@@ -69,7 +69,7 @@ describe("the Running chip in the conversation's header (08 §8.7, ADR 0009, 153
   it("QA32-H16 a program worker's run is a row: its worker and time, Stop while it runs, and its output under Logs", async () => {
     const { world, fake, mount } = setup([job({ id: 'r1', kind: 'worker', title: 'opencode', call: 'Writing the retry test.' })]);
     const wrapper = await mount();
-    expect(wrapper.find('[data-test="jobs-chip"]').text()).toBe('1 running');
+    expect(wrapper.find('[data-test="jobs-words"]').text()).toBe('1 running');
     await wrapper.find('[data-test="jobs-chip"]').trigger('click');
     expect(wrapper.find('[data-test="job-title"]').text()).toBe('opencode');
     expect(wrapper.find('[data-test="job-time"]').text()).toBe('1 min 12 s');
@@ -104,5 +104,19 @@ describe("the Running chip in the conversation's header (08 §8.7, ADR 0009, 153
     await flushPromises();
     expect(fake.calls).toContainEqual({ name: 'kvcoder.job.restart', input: { sessionId: 's1', id: 'j2' } });
     expect(wrapper.find('[data-test="job-restart-j3"]').exists()).toBe(true);
+  });
+
+  it('M4.8-H13 the chip has its words as label and tooltip, and its count and an icon apart, for ended and running jobs', async () => {
+    const ended = setup([job({ status: 'exited', endedAt: '2026-10-01T09:01:00.000Z' })]);
+    const quiet = await ended.mount();
+    const chip = quiet.find('[data-test="jobs-chip"]');
+    expect([chip.attributes('aria-label'), chip.attributes('title'), quiet.find('[data-test="jobs-words"]').text(), quiet.find('[data-test="jobs-count"]').text()]).toEqual(['Background (1)', 'Background (1)', 'Background (1)', '1']);
+    expect(chip.find('.kvc-jobs-icon').exists()).toBe(true);
+    quiet.unmount();
+    const running = setup([job()]);
+    const busy = await running.mount();
+    expect([busy.find('[data-test="jobs-chip"]').attributes('aria-label'), busy.find('[data-test="jobs-count"]').text()]).toEqual(['1 running', '1']);
+    expect(busy.find('[data-test="jobs-chip"] .kvc-dot').exists()).toBe(true);
+    busy.unmount();
   });
 });

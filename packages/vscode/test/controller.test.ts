@@ -21,6 +21,7 @@ function world() {
     },
     askTrust: () => Promise.resolve(trust.answer),
     isAlive: () => Promise.resolve(false),
+    runningVersion: (): Promise<string | undefined> => Promise.resolve('0.4.7'),
     openExternal: vi.fn(),
     openLog: vi.fn(),
     openSettings: vi.fn(),
@@ -99,6 +100,7 @@ describe('the controller (15 §15.3 to §15.5, ADR 0099)', () => {
     await vi.waitFor(() => run(0));
     run(0).handlers.line(JSON.stringify({ kind: 'joined', url: 'http://127.0.0.1:3737/?workspace=w1', port: 3737 }));
     run(0).handlers.exited();
+    await vi.waitFor(() => expect(views.at(-1)?.kind).toBe('frame'));
     controller.happen({ kind: 'needed' });
     await vi.waitFor(() => expect(runs).toHaveLength(2));
     run(1).handlers.line(runningLine());
@@ -128,5 +130,21 @@ describe('the controller (15 §15.3 to §15.5, ADR 0099)', () => {
     controller.happen({ kind: 'needed', request: 'settings' });
     expect(vi.mocked(host.sendToFrame).mock.calls).toEqual([[{ kind: 'kvman.insert', text: 'x' }], [{ kind: 'kvman.pages' }]]);
     expect(vi.mocked(host.openSettings).mock.calls).toEqual([['http://127.0.0.1:3737/kvwebui/settings?workspace=w2&embed=parent']]);
+  });
+
+  it("M4.8-H5 a joined kvman's version comes from the host, and an older one waits for Open anyway", async () => {
+    const { controller, host, views, run } = world();
+    const asked: number[] = [];
+    host.runningVersion = (port) => {
+      asked.push(port);
+      return Promise.resolve('0.4.6');
+    };
+    controller.happen({ kind: 'needed' });
+    await vi.waitFor(() => run(0));
+    run(0).handlers.line(JSON.stringify({ kind: 'joined', url: 'http://127.0.0.1:3738/?workspace=w1', port: 3738 }));
+    await vi.waitFor(() => expect(views.at(-1)).toEqual({ kind: 'oldRunning', version: '0.4.6', minimum: '0.4.7' }));
+    expect(asked).toEqual([3738]);
+    controller.happen({ kind: 'pressed', action: 'openAnyway' });
+    expect(views.at(-1)).toEqual({ kind: 'frame', url: 'http://127.0.0.1:3738/?workspace=w1&embed=parent', port: 3738, start: 1 });
   });
 });

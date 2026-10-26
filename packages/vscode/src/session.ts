@@ -1,18 +1,20 @@
 import { FrameRequests, type FrameEffect, type PageRequest } from './frame-requests.ts';
 import { trustAnswer, type Line, type LineProblem, type TrustVersion } from './lines.ts';
-import { isNewEnough, requiredVersion, versionIn } from './version.ts';
+import { isNewEnough, versionIn } from './version.ts';
 
 // What the extension decides (plan 15 §15.3 to §15.5): each happening gives the view to show and the effects to carry
 // out. Nothing here touches VS Code or a process, so every decision is tested on its own. A frame view carries the
-// number of the start that made it, so each start's frame is loaded afresh (ADR 0101, 8).
+// number of the start that made it, so each start's frame is loaded afresh (ADR 0101, 8). A joined kvman is framed once
+// its version is known to be new enough, or unknown (ADR 0106, 5).
 
-export type Action = 'install' | 'update' | 'start' | 'showLog' | 'nodejs';
+export type Action = 'install' | 'update' | 'start' | 'showLog' | 'nodejs' | 'openAnyway';
 
 export type View =
   | { kind: 'remote' }
   | { kind: 'starting' }
   | { kind: 'missing' }
   | { kind: 'tooOld'; version: string; minimum: string }
+  | { kind: 'oldRunning'; version: string; minimum: string }
   | { kind: 'installing' }
   | { kind: 'npmMissing'; update: boolean }
   | { kind: 'installFailed'; update: boolean }
@@ -28,6 +30,7 @@ export type Effect =
   | { kind: 'write'; text: string }
   | { kind: 'closeInput' }
   | { kind: 'checkHealth'; port: number }
+  | { kind: 'checkJoined'; port: number; start: number }
   | { kind: 'openLog' }
   | FrameEffect;
 
@@ -45,6 +48,7 @@ export type Happening =
   | { kind: 'unreadable' }
   | { kind: 'exited' }
   | { kind: 'healthAnswered'; alive: boolean }
+  | { kind: 'joinedAnswered'; start: number; version: string | undefined }
   | { kind: 'trustAnswered'; accepted: boolean }
   | { kind: 'pressed'; action: Action }
   | { kind: 'closing' };
@@ -52,6 +56,8 @@ export type Happening =
 export type SessionOptions = { remote: boolean; extensionVersion: string; windows: boolean };
 
 const nodejsAddress = 'https://nodejs.org';
+
+type Joining = { url: string; port: number; start: number };
 
 /** The frame's address: kvman's URL with `embed=parent`, so kvwebui runs embedded in the view (plan 06 §6.2). */
 export function frameAddress(url: string): string {
@@ -66,6 +72,7 @@ export class Session {
   #versionChecked = false;
   #lastInstallUpdate = false;
   #starts = 0;
+  #joining: Joining | undefined;
   readonly #frame = new FrameRequests();
   readonly #options: SessionOptions;
 
@@ -108,9 +115,11 @@ export class Session {
       case 'unreadable':
         return this.#stopped([{ kind: 'closeInput' }]);
       case 'exited':
-        return this.#owner || this.#view.kind === 'starting' ? this.#stopped([]) : [];
+        return this.#owner || (this.#view.kind === 'starting' && this.#joining === undefined) ? this.#stopped([]) : [];
       case 'healthAnswered':
         return happening.alive ? this.#frame.flush() : this.#start();
+      case 'joinedAnswered':
+        return this.#joinedAnswered(happening.start, happening.version);
       case 'trustAnswered':
         return [{ kind: 'write', text: trustAnswer(happening.accepted) }];
       case 'pressed':
@@ -141,7 +150,8 @@ export class Session {
   #versionAnswered(output: string | undefined): Effect[] {
     const version = output === undefined ? undefined : versionIn(output);
     if (version === undefined) return this.#show({ kind: 'missing' });
-    if (!isNewEnough(version, this.#options.extensionVersion)) return this.#show({ kind: 'tooOld', version, minimum: requiredVersion(this.#options.extensionVersion) });
+    const minimum = this.#options.extensionVersion;
+    if (!isNewEnough(version, minimum)) return this.#show({ kind: 'tooOld', version, minimum });
     return this.#start();
   }
 
@@ -157,14 +167,31 @@ export class Session {
       case 'trust':
         return [{ kind: 'askTrust', versions: line.versions }];
       case 'running':
+        return this.#framed(true, line.url, line.port);
       case 'joined':
-        return this.#framed(line.kind === 'running', line.url, line.port);
+        this.#joining = { url: line.url, port: line.port, start: this.#starts };
+        return [{ kind: 'checkJoined', port: line.port, start: this.#starts }];
       case 'restarting':
         return [];
       case 'failed':
         this.#owner = false;
         return [...this.#frame.lost(), ...this.#show({ kind: 'failed', problem: line.problem })];
     }
+  }
+
+  // The joined kvman's version, unless a later start made the question moot. One older than the extension waits for
+  // the person: Start again, or Open anyway.
+  #joinedAnswered(start: number, version: string | undefined): Effect[] {
+    const joining = this.#joining;
+    if (joining === undefined || joining.start !== start) return [];
+    const minimum = this.#options.extensionVersion;
+    if (version !== undefined && !isNewEnough(version, minimum)) return this.#show({ kind: 'oldRunning', version, minimum });
+    return this.#openJoined(joining);
+  }
+
+  #openJoined(joining: Joining): Effect[] {
+    this.#joining = undefined;
+    return this.#framed(false, joining.url, joining.port);
   }
 
   // A line of the start that made the frame, at its address, keeps the frame and whether it is ready (ADR 0101, 8).
@@ -191,12 +218,15 @@ export class Session {
         return [{ kind: 'openLog' }];
       case 'nodejs':
         return [{ kind: 'openExternal', url: nodejsAddress }];
+      case 'openAnyway':
+        return this.#view.kind === 'oldRunning' && this.#joining !== undefined ? this.#openJoined(this.#joining) : [];
     }
   }
 
   #start(): Effect[] {
     this.#versionChecked = true;
     this.#owner = false;
+    this.#joining = undefined;
     this.#starts += 1;
     this.#view = { kind: 'starting' };
     return [...this.#frame.lost(), { kind: 'start' }];

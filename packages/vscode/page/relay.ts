@@ -23,14 +23,16 @@ function reader(): (fallback: string, ...names: string[]) => string {
 function theme(): unknown {
   const read = reader();
   const classes = document.body.classList;
-  const background = place === 'panel' ? read('Canvas', '--vscode-editor-background', '--vscode-sideBar-background') : read('Canvas', '--vscode-sideBar-background', '--vscode-editor-background');
+  const surface = place === 'panel' ? read('Canvas', '--vscode-editor-background', '--vscode-sideBar-background') : read('Canvas', '--vscode-sideBar-background', '--vscode-editor-background');
+  const text = read('CanvasText', '--vscode-foreground');
   return {
     kind: 'kvman.theme',
     dark: classes.contains('vscode-dark') || (classes.contains('vscode-high-contrast') && !classes.contains('vscode-high-contrast-light')),
     colors: {
-      background,
-      surface: background,
-      text: read('CanvasText', '--vscode-foreground'),
+      // A soft fill for bubbles, cards, and selected tabs, which show on the surface in every theme (ADR 0106, 3).
+      background: `color-mix(in srgb, ${text} 6%, ${surface})`,
+      surface,
+      text,
       muted: read('GrayText', '--vscode-descriptionForeground', '--vscode-foreground'),
       border: read('GrayText', '--vscode-panel-border', '--vscode-widget-border', '--vscode-contrastBorder'),
       primary: read('Highlight', '--vscode-button-background', '--vscode-focusBorder'),

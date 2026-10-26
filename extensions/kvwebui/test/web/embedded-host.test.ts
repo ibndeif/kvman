@@ -86,13 +86,13 @@ describe("an embedded page and its host (06 §6.2 and §6.4, ADR 0100, 11 to 14)
     ]);
   });
 
-  it("M4.4-H4 the host's theme sets kvwebui's colors, dark, fonts, and size, and kvwebui's own theme doesn't undo it", async () => {
+  it("M4.4-H4 M4.8-H8 the host's theme sets kvwebui's colors, dark, fonts, and size (body text at the host's size), and kvwebui's own theme doesn't undo it", async () => {
     const app = await mountHostUser('/notes/custom?embed=parent');
     await fromHost(app, theme);
     expect(document.documentElement.classList.contains('dark')).toBe(true);
     expect([rootVariable('--kvwebui-ground'), rootVariable('--kvwebui-surface'), rootVariable('--kvwebui-ink'), rootVariable('--kvwebui-primary')]).toEqual(['#1e1e1e', '#252526', '#cccccc', '#0e639c']);
     expect(rootVariable('--kvwebui-accent-soft')).toBe('color-mix(in srgb, #0e639c 18%, #252526)');
-    expect([rootVariable('--kvwebui-font-sans'), rootVariable('--kvwebui-font-mono'), document.documentElement.style.fontSize]).toEqual(['Ubuntu', 'Fira Code', '13px']);
+    expect([rootVariable('--kvwebui-font-sans'), rootVariable('--kvwebui-font-mono'), document.documentElement.style.fontSize]).toEqual(['Ubuntu', 'Fira Code', 'calc(13px * 8 / 7)']);
     window.matchMedia('(prefers-color-scheme: dark)').dispatchEvent(new Event('change'));
     await fromHost(app, { ...theme, dark: false });
     expect(document.documentElement.classList.contains('dark')).toBe(false);
