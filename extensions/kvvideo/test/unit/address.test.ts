@@ -24,7 +24,11 @@ describe('the addresses a recording may open (16 §16.5, ADR 0107, 18)', () => {
     expect(failure('http://localhost:3737/x', 3737)).toBe('VALIDATION_FAILED');
     expect(failure('http://localhost:3738/', 3737)).toBeUndefined();
     expect(failure('http://localhost/', 80)).toBe('VALIDATION_FAILED');
+  });
+
+  it("M5.2-E3 a request to kvman's port is kvman's own on any name of this computer, and none is without a port", () => {
     expect(isOwnAddress(new URL('http://localhost:3737/api'), null)).toBe(false);
-    expect(isOwnAddress(new URL('http://example.com:3737/'), 3737)).toBe(false);
+    for (const alias of ['http://0.0.0.0:3737/', 'http://127.0.0.2:3737/', 'http://[::ffff:127.0.0.1]:3737/', 'http://LOCALHOST.:3737/', 'http://app.localhost:3737/']) expect(isOwnAddress(new URL(alias), 3737)).toBe(true);
+    expect(isOwnAddress(new URL('http://127.0.0.1:3738/'), 3737)).toBe(false);
   });
 });

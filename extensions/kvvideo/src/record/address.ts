@@ -1,7 +1,8 @@
 import { invalid } from '../problems.ts';
 
 // The addresses a recording may open (plan 16 §16.5, ADR 0107, 18): http or https on this computer, without
-// credentials, and never kvman's own.
+// credentials, and never kvman's own. The recorded page's requests to kvman's port are aborted whatever their host,
+// since `0.0.0.0`, `127.0.0.2`, or `[::ffff:127.0.0.1]` reach kvman too.
 
 const localHosts = new Set(['localhost', '127.0.0.1', '[::1]']);
 
@@ -10,9 +11,9 @@ function portOf(url: URL): number {
   return url.protocol === 'https:' ? 443 : 80;
 }
 
-/** Whether an address is kvman's own: a local host on kvman's port. */
+/** Whether a request goes to kvman's port, on any host. */
 export function isOwnAddress(url: URL, ownPort: number | null): boolean {
-  return ownPort !== null && localHosts.has(url.hostname) && portOf(url) === ownPort;
+  return ownPort !== null && portOf(url) === ownPort;
 }
 
 /** The address, when it is one a recording may open. */

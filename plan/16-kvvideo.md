@@ -58,7 +58,7 @@ kvvideo makes videos from the person's own app: tutorials that show how to use i
 
 `kvvideo.clip.record { url, steps?, file, width?, height?, replace? }` → `{ file, durationMs, steps: [{ do, atMs }] }`. It needs ffmpeg as `compose` does.
 
-- **Addresses** (ADR 0107, 18). `url`, and the `url` of each `goto`, is http or https on `localhost`, `127.0.0.1`, or `[::1]`, with no user name or password; anything else fails `VALIDATION_FAILED`. kvman's own address, the port in `<KVMAN_HOME>/kvman.lock` on those hosts, fails `VALIDATION_FAILED` too, and the recorded page's requests to it are aborted.
+- **Addresses** (ADR 0107, 18). `url`, and the `url` of each `goto`, is http or https on `localhost`, `127.0.0.1`, or `[::1]`, with no user name or password; anything else fails `VALIDATION_FAILED`. kvman's own address, the port in `<KVMAN_HOME>/kvman.lock` on those hosts, fails `VALIDATION_FAILED` too, and the recorded page's requests to that port are aborted whatever their host, since other names of this computer (`0.0.0.0`, `127.0.0.2`, `[::ffff:127.0.0.1]`) reach kvman too.
 - **Steps** (0 to 200), each an object with `do`:
 
   | Step | Does |
