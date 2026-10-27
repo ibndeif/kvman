@@ -17,6 +17,7 @@ describe('kvvideo in kvcoder (16 §16.1, §16.3)', { timeout: 60_000 }, () => {
         { name: 'check', command: 'kvvideo.setup.get', query: true, examples: 1 },
         { name: 'fonts', command: 'kvvideo.font.list', query: true, examples: 1 },
         { name: 'record', command: 'kvvideo.clip.record', query: false, examples: 1 },
+        { name: 'narrate', command: 'kvvideo.narration.make', query: false, examples: 1 },
       ]);
       expect((await kernel.exec('kvcoder.slash.list', {})).filter((command) => command.owner === '@kvman/kvvideo')).toEqual([
         { name: 'video', description: 'kvvideo.slash.video', command: 'kvvideo.video.start', message: 'kvvideo.slash.video.message', owner: '@kvman/kvvideo' },
