@@ -1,5 +1,6 @@
 import type { Ctx } from '@kvman/sdk';
 import { registerFonts } from './fonts/register-fonts.ts';
+import { registerRecord } from './record/register-record.ts';
 import { registerWithKvcoder } from './register-with-kvcoder.ts';
 import { registerSettings } from './settings.ts';
 import { registerSetup } from './setup/register-setup.ts';
@@ -16,6 +17,7 @@ export default (ctx: Ctx): void => {
   registerUi(ctx);
   registerSetup(ctx);
   registerFonts(ctx);
+  registerRecord(ctx);
   registerVideoStart(ctx);
   registerWithKvcoder(ctx);
 };

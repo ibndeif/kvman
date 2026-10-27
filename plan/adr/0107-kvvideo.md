@@ -38,6 +38,10 @@ Decisions 1 to 14 were asked with alternatives. Decisions 15 to 24 are the small
 23. **Each scene is rendered on its own**, to the same size, frame rate, and codecs, then the scenes are joined without encoding again: one short ffmpeg command per scene, in place of one large filter graph.
 24. **The bundled fonts** are Poppins and Lato (English), and IBM Plex Sans Arabic, Tajawal, and Amiri (Arabic, each with Latin letters), each in its bold weight under the SIL Open Font License. Captions with Arabic letters use IBM Plex Sans Arabic unless a font is named; others use Poppins.
 
+### Asked while building
+
+25. **kvvideo captures the page itself** (asked at M5.2; chosen over downloading Playwright's own ffmpeg build). Playwright's recording needs a separate ffmpeg build that a fresh computer lacks. kvvideo instead takes the browser's screen frames (Chrome's screencast, which Playwright's recording also uses) and encodes them with the ffmpeg kvvideo already needs, as H.264 at 30 frames a second. Nothing is downloaded, there is one ffmpeg, text is sharper than Playwright's 1 Mbit VP8, and `record` writes an `.mp4`.
+
 ## Plan changes
 
 - `16-kvvideo.md`: new.

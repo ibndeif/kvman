@@ -37,3 +37,21 @@ export function ffmpegListings(options: { encoders: readonly string[]; filters: 
 
 /** A body that prints a version and exits 0. */
 export const answersVersion = `console.log('version 7.1'); process.exit(0);`;
+
+/**
+ * A body for an ffmpeg that encodes a recording: it reads JPEG frames from stdin and writes, as JSON at its last
+ * argument, how many came, the first one's size, and its arguments. Its pid goes to `<its own file>.pid` at start.
+ */
+export const countsFrames = [
+  "const output = args[args.length - 1];",
+  "fs.writeFileSync(__filename + '.pid', String(process.pid));",
+  'const chunks = [];',
+  "process.stdin.on('data', (chunk) => chunks.push(chunk));",
+  "process.stdin.on('end', () => {",
+  '  const data = Buffer.concat(chunks);',
+  '  let frames = 0; let width = 0; let height = 0;',
+  '  for (let at = 0; at + 2 < data.length; at += 1) if (data[at] === 0xff && data[at + 1] === 0xd8 && data[at + 2] === 0xff) frames += 1;',
+  '  for (let at = 0; at + 8 < data.length; at += 1) if (data[at] === 0xff && (data[at + 1] === 0xc0 || data[at + 1] === 0xc2)) { height = data.readUInt16BE(at + 5); width = data.readUInt16BE(at + 7); break; }',
+  '  fs.writeFileSync(output, JSON.stringify({ frames, width, height, args }));',
+  '});',
+].join('\n');

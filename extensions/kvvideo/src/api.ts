@@ -1,3 +1,5 @@
+import type { z } from '@kvman/sdk';
+import type { recordInputSchema, recordOutputSchema } from './record/steps.ts';
 import type { BrowserChoice, NarrationService } from './settings.ts';
 
 // kvvideo's public names and settings for typed calls (plan 03 §3.2): a caller gets them after
@@ -9,6 +11,7 @@ type Channel = 'chrome' | 'msedge';
 declare module '@kvman/sdk' {
   interface Commands {
     'kvvideo.video.start': { input: { sessionId: string; argument: string }; output: Empty };
+    'kvvideo.clip.record': { input: z.input<typeof recordInputSchema>; output: z.output<typeof recordOutputSchema> };
   }
   interface Queries {
     'kvvideo.setup.get': {

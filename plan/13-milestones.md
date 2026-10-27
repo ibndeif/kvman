@@ -565,14 +565,14 @@ ADR 0107.
 
 ### M5.2 Recording a page
 
-- **Read:** `16` §16.3, §16.5; ADR 0107, 18 and 19.
-- **Build:** `kvvideo.clip.record` and the connector's `record`: the address rules and kvman's own address blocked, the steps, the cursor, the timings, and the output rules.
+- **Read:** `16` §16.3, §16.5; ADR 0107, 18, 19, and 25.
+- **Build:** `kvvideo.clip.record` and the connector's `record`: the address rules and kvman's own address blocked, the steps, the cursor, the capture through ffmpeg (ADR 0107, 25), the timings, and the output rules.
 - **Done when:**
-  - Recording a local page with each kind of step writes a `.webm` of the asked size, and answers its length and each step's start.
+  - Recording a local page with each kind of step writes an H.264 `.mp4` of the asked size at 30 frames a second, and answers its length and each step's start.
   - An address that isn't local, has credentials, or is kvman's own fails `VALIDATION_FAILED`; a request to kvman's own address from the page is aborted.
   - A step whose target doesn't appear fails `kvvideo/STEP_FAILED` with its number, and a page that doesn't load with step 0; nothing is written.
   - An existing output without `replace`, a wrong extension, or a path outside the workspace fails `VALIDATION_FAILED`.
-  - No browser fails `kvvideo/BROWSER_MISSING` with the channels tried.
+  - No browser fails `kvvideo/BROWSER_MISSING` with the channels tried; an ffmpeg failure fails `kvvideo/RENDER_FAILED`.
 
 ### M5.3 Narration
 

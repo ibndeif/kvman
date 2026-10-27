@@ -40,7 +40,7 @@ kvvideo makes videos from the person's own app: tutorials that show how to use i
 - None asks the person (ADR 0107, 17). A read-only worker's helper has `check` and `fonts`, the queries (plan 08 §8.5).
 - Each command has an example in its connector entry.
 
-**Paths.** Every `file`, `clip`, `narration`, and `font` resolves against the workspace folder and must stay inside it, through `..` or a symlink (`VALIDATION_FAILED`). An input that doesn't exist fails `NOT_FOUND`. An output whose extension isn't its command's (`.webm` for `record`, `.mp3` for `narrate`, `.mp4` for `compose`, in any case) fails `VALIDATION_FAILED`, and so does one that exists when `replace` isn't `true`. An output's parent folders are created; it is written beside its path under a temporary name and renamed over it, so a failed call leaves no file and the old one in place.
+**Paths.** Every `file`, `clip`, `narration`, and `font` resolves against the workspace folder and must stay inside it, through `..` or a symlink (`VALIDATION_FAILED`). An input that doesn't exist fails `NOT_FOUND`. An output whose extension isn't its command's (`.mp4` for `record` and `compose`, `.mp3` for `narrate`, in any case) fails `VALIDATION_FAILED`, and so does one that exists when `replace` isn't `true`. An output's parent folders are created; it is written beside its path under a temporary name and renamed over it, so a failed call leaves no file and the old one in place.
 
 **Programs.** A program runs with an empty stdin, in its own process group on Linux and macOS, and its tree is killed when the job is cancelled or times out: the group on Linux and macOS, `taskkill /PID <pid> /T /F` on Windows. A program that can't be started fails `kvvideo/PROGRAM_MISSING { program, setting }`, where `program` is `ffmpeg`, `ffprobe`, or `piper` and `setting` its key.
 
@@ -56,7 +56,7 @@ kvvideo makes videos from the person's own app: tutorials that show how to use i
 
 ## 16.5 `record`
 
-`kvvideo.clip.record { url, steps?, file, width?, height?, replace? }` → `{ file, durationMs, steps: [{ do, atMs }] }`.
+`kvvideo.clip.record { url, steps?, file, width?, height?, replace? }` → `{ file, durationMs, steps: [{ do, atMs }] }`. It needs ffmpeg as `compose` does.
 
 - **Addresses** (ADR 0107, 18). `url`, and the `url` of each `goto`, is http or https on `localhost`, `127.0.0.1`, or `[::1]`, with no user name or password; anything else fails `VALIDATION_FAILED`. kvman's own address, the port in `<KVMAN_HOME>/kvman.lock` on those hosts, fails `VALIDATION_FAILED` too, and the recorded page's requests to it are aborted.
 - **Steps** (0 to 200), each an object with `do`:
@@ -73,10 +73,11 @@ kvvideo makes videos from the person's own app: tutorials that show how to use i
   | `{ do: 'waitFor', target }` | waits until the target is visible |
 
   A `target` is a Playwright selector (CSS, `text=Save`, or `role=button[name="Save"]`, 1 to 500 characters), and its first match is used once visible, within 10 s.
-- **The picture.** The viewport and the recording are `width` × `height` (320 to 1920 each, 1280 × 720 by default). The page is shown 500 ms after it loads before the first step, 400 ms after each step but `wait` and `waitFor`, and 1000 ms after the last. Before it acts on a target, the mouse moves to the target's center over 600 ms. A dot follows the mouse, and a click shows a ring around it (ADR 0107, 19).
+- **The picture.** The viewport and the recording are `width` × `height` (each even, 320 to 1920, 1280 × 720 by default). The page is shown 500 ms after it loads before the first step, 400 ms after each step but `wait` and `waitFor`, and 1000 ms after the last. Before it acts on a target, the mouse moves to the target's center over 600 ms. A dot follows the mouse, and a click shows a ring around it (ADR 0107, 19).
 - **The answer.** `durationMs` is the recording's length; each step's `atMs` is when it started, from the recording's start, so a narration can be matched to it.
 - **Failures.** A page that doesn't load fails `kvvideo/STEP_FAILED { step: 0, reason }`, and a step that fails, `{ step: <its number from 1>, reason }`, where `reason` is the first line of the browser's message. No browser fails `kvvideo/BROWSER_MISSING { channels }`, the channels it tried. Nothing is written when it fails.
-- The browser is started headless for the call and closed when it ends, fails, or is cancelled.
+- **The capture** (ADR 0107, 25). Once the page has loaded, kvvideo starts the page's screencast (JPEG frames at quality 90, at most `width` × `height`) and pipes the frames to `<ffmpeg> -f image2pipe -framerate 30 -c:v mjpeg -i -`, which writes the file as H.264 (`libx264 -preset veryfast -crf 18`, `yuv420p`, scaled and padded to the size, no sound, `+faststart`). The screencast sends a frame only when the picture changes, so each frame is written again until the next one comes, one copy every 1/30 s; the last is written until the recording ends. The recording's start, its length, and each step's `atMs` are all on the same clock. An ffmpeg exit other than 0 fails `kvvideo/RENDER_FAILED { reason }` with the last 20 lines of its output.
+- The browser is started headless for the call and closed when it ends, fails, or is cancelled, and ffmpeg is stopped with it.
 
 ## 16.6 `narrate`
 
@@ -126,6 +127,6 @@ The component is `kvvideo/web/components/player.vue`, built as kvcoder's are (pl
 - Pure parts (captions, the ASS file, each scene's ffmpeg arguments, addresses, the font name table, the kill per OS) are unit tests.
 - The commands run with `createTestKernel` and kvcoder's `runConnector`, with stand-in `ffmpeg`, `ffprobe`, and `piper` programs named by the `kvvideo.programs.*` settings, which record their arguments and write their outputs.
 - The two services are tested with a stand-in `fetch`; no test reaches the network.
-- `record` runs end to end with the installed Chrome against a local page, in the e2e project.
+- `record` runs end to end with the installed Chrome and the ffmpeg on the PATH against a local page, in the e2e project.
 - The card is mounted in `happy-dom`.
 - By hand: a real ffmpeg (with libass) composes a recorded, narrated video with English and Arabic captions, and each service narrates once with the owner's keys.

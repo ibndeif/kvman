@@ -9,5 +9,15 @@ export const videoConnector = {
   commands: [
     { name: 'check', command: 'kvvideo.setup.get', examples: [{ description: 'See what is ready before making a video', input: {} }] },
     { name: 'fonts', command: 'kvvideo.font.list', examples: [{ description: 'List the bundled caption fonts', input: {} }] },
+    {
+      name: 'record',
+      command: 'kvvideo.clip.record',
+      examples: [
+        {
+          description: 'Record signing in to the app on its dev server',
+          input: { url: 'http://localhost:5173/', file: 'videos/tour/01-sign-in.mp4', steps: [{ do: 'type', target: 'role=textbox[name="Email"]', text: 'sam@example.com' }, { do: 'click', target: 'role=button[name="Sign in"]' }, { do: 'wait', ms: 1500 }] },
+        },
+      ],
+    },
   ],
 };
