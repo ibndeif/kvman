@@ -53,6 +53,10 @@ code --extensionDevelopmentPath=$PWD/packages/vscode/dist/extension   # try it a
 
 The setting `kvman.path` names the `kvman` to run, such as a script that runs `node packages/cli/dist/main.js`.
 
+## Videos
+
+kvvideo (`extensions/kvvideo`, bundled in `coder`) makes videos of the app you build. Type `/video` in a chat to give it the `video` connector and its guide. So far the agent can run `video check`, which says whether ffmpeg (with libass), Chrome or Edge, and a narration service are ready, and `video fonts`, the bundled caption fonts (Amiri, IBM Plex Sans Arabic, Lato, Poppins, Tajawal). Choose the narration service (ElevenLabs, OpenAI, or Piper) on kvvideo's extension page, and add its key there as the secret `elevenlabs.apiKey` or `openai.apiKey`. Recording, narration, and composing come next. It is specified in [plan/16-kvvideo.md](plan/16-kvvideo.md) (ADR 0107).
+
 ## Documentation
 
 | For | Start at |

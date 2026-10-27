@@ -22,6 +22,7 @@ export default defineConfig({
       'extensions/kvcoder/vitest.web.config.ts',
       'extensions/kvcoder/vitest.e2e.config.ts',
       'extensions/kvbuilder/vitest.e2e.config.ts',
+      'extensions/kvvideo/vitest.e2e.config.ts',
       'packages/testkit/vitest.e2e.config.ts',
       'packages/desktop/vitest.web.config.ts',
       'packages/vscode/vitest.config.ts',

@@ -34,9 +34,9 @@ describe('the bundled presets (11)', () => {
     expect(defaultPreset).toBe('coder');
   });
 
-  it('QA17-H18 coder loads kvai, kvwebui, kvcoder, and kvbuilder, and there is no dev preset', () => {
+  it('QA17-H18 and M5.1-H8 coder loads kvai, kvwebui, kvcoder, kvbuilder, and kvvideo, and there is no dev preset', () => {
     const { preset } = findPreset('coder', { bundled: bundledPresetsFolder, home: path.join(bundledPresetsFolder, 'no-home'), start: bundledPresetsFolder });
-    expect(Object.keys(preset.extensions)).toEqual(['@kvman/kvai', '@kvman/kvwebui', '@kvman/kvcoder', '@kvman/kvbuilder']);
+    expect(Object.keys(preset.extensions)).toEqual(['@kvman/kvai', '@kvman/kvwebui', '@kvman/kvcoder', '@kvman/kvbuilder', '@kvman/kvvideo']);
     expect(existsSync(path.join(bundledPresetsFolder, 'dev.json'))).toBe(false);
   });
 });

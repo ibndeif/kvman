@@ -45,7 +45,7 @@ async function approvedCall(kvman: Kvman, model: FakeOpenAI, command: string, pa
 }
 
 describe('the bundled presets (11)', () => {
-  it('M2.5-H3, QA4-H13 and QA17-H18 kvman with no preset flag starts the coder preset, with kvbuilder, and its shell approval is the default auto', async () => {
+  it('M2.5-H3, QA4-H13 and QA17-H18 kvman with no preset flag starts the coder preset, with kvbuilder and kvvideo (ADR 0107, 11), and its shell approval is the default auto', async () => {
     world = kvmanWorld();
     const kvman = await world.start([]);
     expect(healthSchema.parse(await kvman.call('queries', 'kernel.health.get', {})).preset).toBe('coder');
@@ -54,6 +54,7 @@ describe('the bundled presets (11)', () => {
       ['@kvman/kvwebui', 'bundled'],
       ['@kvman/kvcoder', 'bundled'],
       ['@kvman/kvbuilder', 'bundled'],
+      ['@kvman/kvvideo', 'bundled'],
     ]);
     expect(await presetSettings(kvman.call, ['kvwebui.title', 'kvwebui.home', 'kvai.defaultModel', 'kvcoder.approval'])).toEqual({
       'kvwebui.title': expect.objectContaining({ value: 'kvcoder.app.title', source: 'preset' }),

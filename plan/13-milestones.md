@@ -541,3 +541,61 @@ ADR 0099.
   - A status item whose `titleCount` field is 0 isn't shown, and shows again when the count rises; the embedded status line doesn't wrap, and is hidden while it shows nothing.
   - Below 30 rem the conversation header is one row with the chat's menu at its inline end, and the Background chip shows an icon and its count with its words as label; the artifact head is two rows below 30 rem of the workspace's width.
   - A chat title has `dir="auto"` in the header and the chat list.
+
+## M5 — Video
+
+ADR 0107.
+
+### M5.1 kvvideo set up
+
+- **Read:** `16` §16.1 to §16.4, §16.9; `08` §8.4; `06` §6.3, §6.6; ADR 0107.
+- **Build:**
+  - the `extensions/kvvideo` package (`@kvman/kvvideo`, namespace `kvvideo`, depending on kvcoder and kvwebui), with `playwright-core` 1.63.0, in the `coder` preset and among the `kvman` package's dependencies;
+  - the settings and `kvvideo.ui.get` with its configuration;
+  - `kvvideo.video.start`, the `optIn` `video` connector with `check` and `fonts` (and `record`, `narrate`, and `compose` as their milestones add them), the slash command, and the guide;
+  - `kvvideo.setup.get` and `kvvideo.font.list`, with the five bundled fonts and their licences;
+  - running a program and killing its tree per OS; the error codes;
+  - the `en` and `ar` texts and the changeset.
+- **Done when:**
+  - At `kernel.started` kvcoder has the `video` connector, `optIn`, and `/video`; a chat has the connector only after `/video`, which also sets the guide section, and adds the note once.
+  - kvvideo's extension page shows the three configuration cards.
+  - `check` reports what is missing, in order, for ffmpeg, the browser, and narration, and is ready when nothing is; a program that can't start is reported missing.
+  - `fonts` lists the five fonts with their scripts, and each font file is in the package.
+  - A tree kill is a group kill on Linux and macOS and `taskkill /T /F` on Windows.
+
+### M5.2 Recording a page
+
+- **Read:** `16` §16.3, §16.5; ADR 0107, 18 and 19.
+- **Build:** `kvvideo.clip.record` and the connector's `record`: the address rules and kvman's own address blocked, the steps, the cursor, the timings, and the output rules.
+- **Done when:**
+  - Recording a local page with each kind of step writes a `.webm` of the asked size, and answers its length and each step's start.
+  - An address that isn't local, has credentials, or is kvman's own fails `VALIDATION_FAILED`; a request to kvman's own address from the page is aborted.
+  - A step whose target doesn't appear fails `kvvideo/STEP_FAILED` with its number, and a page that doesn't load with step 0; nothing is written.
+  - An existing output without `replace`, a wrong extension, or a path outside the workspace fails `VALIDATION_FAILED`.
+  - No browser fails `kvvideo/BROWSER_MISSING` with the channels tried.
+
+### M5.3 Narration
+
+- **Read:** `16` §16.2, §16.6; ADR 0107, 4, 5, 7, 21, and 22.
+- **Build:** `kvvideo.narration.make` and the connector's `narrate`: the three services, the length from ffprobe, and the captions.
+- **Done when:**
+  - Each service is asked with its request (address, headers, body, default voice and model), and its audio is written as the `.mp3`; Piper's `.wav` is turned into it with ffmpeg.
+  - No service fails `kvvideo/NARRATION_NOT_SET`; a missing key `kvvideo/NARRATION_KEY_MISSING`; an answer that isn't 2xx, or a failed request, `kvvideo/NARRATION_FAILED`; nothing is written.
+  - Captions are cut into sentences and lines of at most 42 characters, timed in proportion, and the last ends at the length.
+  - No key appears in a log, an answer, or a Problem.
+
+### M5.4 Composing and the player
+
+- **Read:** `16` §16.7, §16.8; `04` §4.1; ADR 0107, 6, 8, 12 to 14, 23, and 24.
+- **Build:**
+  - `kvvideo.video.compose` and the connector's `compose`, with its card: each scene's part, the captions' ASS file and font, the join, and the player's copies;
+  - byte ranges on `GET /api/files/:id`;
+  - the `kvvideo.player` component;
+  - last, the by-hand check with a real ffmpeg.
+- **Done when:**
+  - Each scene's ffmpeg arguments follow its length rule, the size, the codecs, and its captions; the parts are joined without encoding again, and the temporary folder is gone after success, failure, and cancel.
+  - The ASS file has the style, the position, the size, the font (bundled, a workspace file's family, or by the text's script), and the captions without `{`, `}`, and `\`.
+  - An ffmpeg failure fails `kvvideo/RENDER_FAILED` with the scene; nothing is written.
+  - A copy is made, a new copy of a path replaces the old one, and the 11th removes the oldest; a file over 512 MiB has no copy.
+  - The file route answers one range with 206 and its `Content-Range`, a range past the end with 416, and anything else with the whole file.
+  - The card plays the copy, and says to open the file when there is no copy or it can't load.

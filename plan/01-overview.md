@@ -64,7 +64,7 @@ A pnpm monorepo, Node 24, TypeScript 6.0 strict (ADR 0009). The tools are ESLint
 | `packages/desktop` | The desktop app's shell (§14): Tauri, with the home screen's page. Private, at the root version; it runs `kvman` as a program. | Nothing: no kvman package, no third-party package, no Node built-in (ADR 0038, 46) |
 | `packages/vscode` | The VS Code extension (§15): the view in the primary side bar and its page. Private for npm, at the root version, published to the VS Code Marketplace and Open VSX as `ibndeif.kvman`; it runs `kvman` as a program. | `vscode` (types only), `zod`, and Node built-ins; no kvman package (ADR 0099, 11) |
 | `packages/testkit` | `createTestKernel` for tests, and the bins that build and check extensions for any harness: `kvman-check`, `kvman-new`, `kvman-preset`, `kvman-preview` (§10). Published as `@kvman/testkit`. | `kernel`, `sdk` |
-| `extensions/*` | kvai, kvwebui, kvcoder, kvbuilder. Published as `@kvman/kvai`, `@kvman/kvwebui`, `@kvman/kvcoder`, and `@kvman/kvbuilder` (ADR 0026, 1). | `sdk`, their own npm dependencies; never `kernel`; another extension only when it is a `kvman.dependencies` entry: `import type`, or a runtime import of a subpath it exports (such a subpath may import only `sdk` and holds no state) |
+| `extensions/*` | kvai, kvwebui, kvcoder, kvbuilder, kvvideo. Published as `@kvman/kvai`, `@kvman/kvwebui`, `@kvman/kvcoder`, `@kvman/kvbuilder`, and `@kvman/kvvideo` (ADR 0026, 1; ADR 0107, 1). | `sdk`, their own npm dependencies; never `kernel`; another extension only when it is a `kvman.dependencies` entry: `import type`, or a runtime import of a subpath it exports (such a subpath may import only `sdk` and holds no state) |
 
 Extensions list `@kvman/sdk` as a peerDependency, and every extension shares the kernel's own copy (§2.9). At runtime, extensions talk to each other only through `ctx.exec` and the other job calls (§3). Type-only imports exist for typed calls (§3.2). An extension may export subpaths that its dependents import (ADR 0001, 89); a dependent that imports one at runtime also lists that extension in its npm `dependencies` (ADR 0026, 5). To let others register things with it, an extension exposes public commands and keeps what it receives in its own store (ADR 0001, 91).
 
@@ -76,6 +76,7 @@ Each is designed in its own round, after the kernel.
 - **kvwebui**: the Vue web app, plus a `kvwebui.*` API other extensions use to shape the UI.
 - **kvcoder**: the app-building harness on kvai and kvwebui. Its agent has one tool, `run`, which runs a command of a connector (the built-in `shell`, `fs`, `artifact`, `background`, `ask`, `delegate`, and `mcp`, and those other extensions register); connectors and sections extend it (ADR 0011; ADR 0021). Its conversation UI is its own (§8).
 - **kvbuilder** ("kvman builder"): the kvcoder extension for building kvman: the person's `/build-kvman` gives a chat its connectors and its guide for developing extensions and presets, and for managing the running app (§9, ADR 0010, ADR 0027).
+- **kvvideo**: the kvcoder extension for making videos of the person's app: the person's `/video` gives a chat its `video` connector, which records pages in the installed browser, narrates a script, and joins them with captions into an MP4 (§16, ADR 0107).
 
 ## 1.6 Principles for this phase
 

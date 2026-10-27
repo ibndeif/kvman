@@ -302,6 +302,28 @@ importers:
         specifier: 3.3.11
         version: 3.3.11(typescript@6.0.3)
 
+  extensions/kvvideo:
+    dependencies:
+      playwright-core:
+        specifier: 1.63.0
+        version: 1.63.0
+    devDependencies:
+      '@kvman/kvai':
+        specifier: workspace:*
+        version: link:../kvai
+      '@kvman/kvcoder':
+        specifier: workspace:*
+        version: link:../kvcoder
+      '@kvman/kvwebui':
+        specifier: workspace:*
+        version: link:../kvwebui
+      '@kvman/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+      '@kvman/testkit':
+        specifier: workspace:*
+        version: link:../../packages/testkit
+
   extensions/kvwebui:
     dependencies:
       '@fontsource/ibm-plex-mono':
@@ -383,6 +405,9 @@ importers:
       '@kvman/kvcoder':
         specifier: workspace:*
         version: link:../../extensions/kvcoder
+      '@kvman/kvvideo':
+        specifier: workspace:*
+        version: link:../../extensions/kvvideo
       '@kvman/kvwebui':
         specifier: workspace:*
         version: link:../../extensions/kvwebui

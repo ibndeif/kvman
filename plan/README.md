@@ -16,9 +16,10 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `10-testkit.md` | `createTestKernel` |
 | `11-presets.md` | The bundled `coder` preset |
 | `12-testing.md` | Test layers, crash invariants, benchmarks |
-| `13-milestones.md` | The 22 milestones: Read, Build, Done when |
+| `13-milestones.md` | The milestones: Read, Build, Done when |
 | `14-desktop.md` | The desktop app: `kvman --pipe`, what the app holds, starting, the home screen, the window, updates, installers |
 | `15-vscode.md` | The VS Code extension: the view in the activity bar, starting and joining kvman, the embedded frame and its messages, VS Code's theme, files and diffs in the editor, "Add to kvman chat", closing, publishing |
+| `16-kvvideo.md` | kvvideo: `/video`, the `video` connector (check, fonts, record, narrate, compose), its settings and secrets, the player card |
 | `adr/0001-kernel.md` | Every kernel decision, with the product owner's answers |
 | `adr/0002-kvwebui.md` | Every kvwebui decision |
 | `adr/0003-kvai.md` | Every kvai decision |
@@ -86,6 +87,7 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `adr/0102-a-chat-you-can-follow-tests-you-chose-and-fewer-slow-steps.md` | A chat you can follow and fewer slow steps: step headlines shown and calls folded under them, tests the person chose (a `Testing:` line in `AGENTS.md`) and checks in proportion, helpers at medium thinking, map details set with the map, repaired calls, clearing that keeps the cache, Run again and Restart, this turn's changes, longer time limits, a message queued for a working helper |
 | `adr/0103-the-council-worker.md` | The shipped `council` worker (read-only, thinking at `high`): the owner's operations-room debate of an engineer, a devil's advocate, a dumb customer, and the field's top expert, then the Maestro's final answer; the lead's Deliberate part, chosen apart from the map |
 | `adr/0104-url-artifacts-end-with-their-server.md` | A `url` artifact is deleted when the background process that printed its port ends (not on Restart or a startup exit), and the agent is told in the ending's message or `background stop`'s `deletedArtifacts` |
+| `adr/0107-kvvideo.md` | kvvideo: composed videos of the person's app with narration (ElevenLabs, OpenAI, or Piper) and burned-in captions, the installed Chrome or Edge, ffmpeg on the PATH, renders inside the call, a player card on byte ranges, the newest 10 copies |
 | `adr/0105-deleting-artifacts.md` | `kvcoder.artifact.delete` for the agent (`artifact delete`), the panel's Delete with its confirmation and a message telling the agent, and `kvcoder.artifacts.keepDays` for the daily prune |
 
 The plan is complete. Implementation starts with M1.1.

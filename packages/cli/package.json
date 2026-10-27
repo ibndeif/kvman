@@ -29,6 +29,7 @@
     "@kvman/kvai": "workspace:*",
     "@kvman/kvcoder": "workspace:*",
     "@kvman/kvbuilder": "workspace:*",
+    "@kvman/kvvideo": "workspace:*",
     "@kvman/kvwebui": "workspace:*",
     "@kvman/sdk": "workspace:*"
   }

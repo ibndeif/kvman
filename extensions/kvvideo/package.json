@@ -1,0 +1,63 @@
+{
+  "name": "@kvman/kvvideo",
+  "version": "0.0.0",
+  "description": "kvvideo: the kvcoder extension that makes videos of the person's app, recorded, narrated, and captioned.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ibndeif/kvman.git",
+    "directory": "extensions/kvvideo"
+  },
+  "homepage": "https://github.com/ibndeif/kvman#readme",
+  "bugs": {
+    "url": "https://github.com/ibndeif/kvman/issues"
+  },
+  "type": "module",
+  "main": "dist/index.js",
+  "exports": {
+    ".": {
+      "@kvman/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "docs",
+    "fonts",
+    "locales"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "@kvman/sdk": "^0.1.5"
+  },
+  "dependencies": {
+    "playwright-core": "1.63.0"
+  },
+  "devDependencies": {
+    "@kvman/kvai": "workspace:*",
+    "@kvman/kvcoder": "workspace:*",
+    "@kvman/kvwebui": "workspace:*",
+    "@kvman/sdk": "workspace:*",
+    "@kvman/testkit": "workspace:*"
+  },
+  "kvman": {
+    "namespace": "kvvideo",
+    "source": "src/index.ts",
+    "dependencies": {
+      "@kvman/kvcoder": "^0.1.2",
+      "@kvman/kvwebui": "^0.1.0"
+    },
+    "indexes": {
+      "players": [
+        [
+          "path"
+        ]
+      ]
+    }
+  }
+}

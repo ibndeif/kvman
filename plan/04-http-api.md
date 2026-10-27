@@ -12,13 +12,14 @@ The kernel serves the API with Hono (`hono` and `@hono/node-server`) on `127.0.0
 | `GET /api/jobs/:id/stream` | Server-Sent Events (§4.4) |
 | `POST /api/jobs/:id/cancel` | → `{ ok: true }` |
 | `POST /api/files?name=…&workspaceId=…` | The raw file as the body, with `Content-Type` as its media type (`application/octet-stream` when absent) → `{ ok: true, file }` |
-| `GET /api/files/:id?workspaceId=…` | → the raw content, with its `Content-Type`, as an attachment |
+| `GET /api/files/:id?workspaceId=…` | → the raw content, with its `Content-Type`, as an attachment; one byte range when asked (below) |
 | `GET /api/locales/:lang` | → `{ ok: true, catalog }` (§2.11) |
 
 - `workspaceId` defaults to Home for commands and queries; the file routes require it (`VALIDATION_FAILED` without it), and a file of another workspace is `NOT_FOUND` (ADR 0009, 37). A closed or unknown workspace fails `NOT_FOUND`.
 - A query name on the commands route, or a command name on the queries route, fails `NOT_FOUND`.
 - The target is resolved before the body is read (`NOT_FOUND`, `NOT_PUBLIC`). A raw body over the target's `maxInputBytes` fails `TOO_LARGE`, and is read no further. A JSON body of the wrong shape (strict `{ input, workspaceId?, async? }`; the queries route has no `async`) fails `VALIDATION_FAILED`. A failure before a job starts carries no `jobId` (ADR 0009, 40).
 - **Files.** A download is served with `Content-Disposition: attachment` and `X-Content-Type-Options: nosniff`, so it's never rendered on kvman's origin (ADR 0009, 38). An upload's `name` is required (`VALIDATION_FAILED`), and one over 1 GiB fails `TOO_LARGE`, with the partial file removed (ADR 0009, 39).
+- **Byte ranges** (ADR 0107, 13), so a video can seek. A download says `Accept-Ranges: bytes`. A `Range` header of one range, `bytes=<first>-<last>`, `bytes=<first>-`, or `bytes=-<suffix length>`, gets status 206 with that part and `Content-Range: bytes <first>-<last>/<size>`, the last byte cut to the file's end. A range that starts past the end, or a suffix of 0, gets 416 with `Content-Range: bytes */<size>` and no body. A header that isn't one such range gets the whole file with 200.
 - A sync call whose client disconnects is cancelled (§2.3).
 - **The envelope.** Every JSON answer is `{ ok: true, …data }` or `{ ok: false, problem, jobId? }`, with status 200. A command or query failure also carries its `jobId`: `{ ok: false, problem, jobId }`. The two exceptions: a file download returns raw content, and a body that isn't valid JSON gets 400.
 
