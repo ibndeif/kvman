@@ -11,7 +11,6 @@ export const bundledFonts: readonly BundledFont[] = [
   { name: 'IBM Plex Sans Arabic', file: 'IBMPlexSansArabic-Bold.ttf', scripts: ['arabic', 'latin'] },
   { name: 'Lato', file: 'Lato-Bold.ttf', scripts: ['latin'] },
   { name: 'Poppins', file: 'Poppins-Bold.ttf', scripts: ['latin'] },
-  { name: 'Tajawal', file: 'Tajawal-Bold.ttf', scripts: ['arabic', 'latin'] },
 ];
 
 /** The folder that holds the bundled fonts, from the source and the build alike. */

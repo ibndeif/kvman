@@ -8,7 +8,7 @@ import { useKvvideo } from './support/kvvideo-kernel.ts';
 const kvvideo = useKvvideo();
 
 describe('video fonts (16 §16.4, ADR 0107, 24)', { timeout: 60_000 }, () => {
-  it('M5.1-H7 fonts lists the five bundled fonts with their scripts, each in the package with its licence', async () => {
+  it('M5.1-H7 fonts lists the four bundled fonts with their scripts, each in the package with its licence', async () => {
     const { kernel } = await kvvideo.start();
     const result = await runConnector(kernel, { connector: 'video', command: 'fonts', payload: {} });
     expect(result.exitCode).toBe(0);
@@ -17,7 +17,6 @@ describe('video fonts (16 §16.4, ADR 0107, 24)', { timeout: 60_000 }, () => {
       { name: 'IBM Plex Sans Arabic', scripts: ['arabic', 'latin'] },
       { name: 'Lato', scripts: ['latin'] },
       { name: 'Poppins', scripts: ['latin'] },
-      { name: 'Tajawal', scripts: ['arabic', 'latin'] },
     ]);
     for (const font of bundledFonts) {
       expect(existsSync(new URL(`../fonts/${font.file}`, import.meta.url))).toBe(true);

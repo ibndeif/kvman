@@ -6,11 +6,13 @@ import { z } from '@kvman/sdk';
 import type { Kernel } from '../kernel.ts';
 import { fileLimitBytes } from '../limits.ts';
 import { validationFailed } from '../store/json-values.ts';
+import { rangeOf } from './byte-range.ts';
 import { answer } from './envelope.ts';
 import { writeCapped } from './request-body.ts';
 
 // Uploads and downloads (plan 04 §4.1, ADR 0009, 37–39): both name their workspace; an upload is the raw body; a
-// download is always an attachment, so a browser never renders a file on kvman's origin.
+// download is always an attachment, so a browser never renders a file on kvman's origin. A download answers one byte
+// range, so a video can seek (ADR 0107, 13).
 
 const uploadSchema = z.object({ name: z.string().min(1), workspaceId: z.string().min(1) });
 const downloadSchema = z.object({ workspaceId: z.string().min(1) });
@@ -44,8 +46,12 @@ export function registerFileRoutes(app: Hono, kernel: Kernel): void {
   app.get('/api/files/:id', (c) => {
     const { workspaceId } = parsedQuery(downloadSchema, c.req.query());
     const file = kernel.web.file(c.req.param('id'), workspaceId);
-    const headers = { 'Content-Type': file.type, 'Content-Length': String(file.size), 'Content-Disposition': attachment(file.name), 'X-Content-Type-Options': 'nosniff' };
-    return new Response(Readable.toWeb(createReadStream(kernel.web.filePath(file.id))), { headers });
+    const headers = { 'Content-Type': file.type, 'Content-Disposition': attachment(file.name), 'X-Content-Type-Options': 'nosniff', 'Accept-Ranges': 'bytes' };
+    const range = rangeOf(c.req.header('range'), file.size);
+    if (range.kind === 'unsatisfiable') return new Response(null, { status: 416, headers: { ...headers, 'Content-Range': `bytes */${String(file.size)}` } });
+    if (range.kind === 'whole') return new Response(Readable.toWeb(createReadStream(kernel.web.filePath(file.id))), { headers: { ...headers, 'Content-Length': String(file.size) } });
+    const part = { 'Content-Length': String(range.last - range.first + 1), 'Content-Range': `bytes ${String(range.first)}-${String(range.last)}/${String(file.size)}` };
+    return new Response(Readable.toWeb(createReadStream(kernel.web.filePath(file.id), { start: range.first, end: range.last })), { status: 206, headers: { ...headers, ...part } });
   });
   app.get('/api/locales/:lang', (c) => answer({ catalog: kernel.catalog(c.req.param('lang')) }));
 }

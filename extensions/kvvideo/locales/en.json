@@ -32,5 +32,6 @@
   "kvvideo.errors.NARRATION_NOT_SET": "Narration isn't set up: choose it in kvvideo's configuration ({setting}).",
   "kvvideo.errors.NARRATION_KEY_MISSING": "The {service} key is missing: add the secret {secret} on kvvideo's extension page.",
   "kvvideo.errors.NARRATION_FAILED": "{service} couldn't narrate: {reason}",
-  "kvvideo.errors.RENDER_FAILED": "ffmpeg couldn't make the video: {reason}"
+  "kvvideo.errors.RENDER_FAILED": "ffmpeg couldn't make the video: {reason}",
+  "kvvideo.player.unavailable": "This video can't play here. Open {file} in the workspace."
 }

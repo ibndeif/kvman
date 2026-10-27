@@ -1,4 +1,5 @@
 import type { z } from '@kvman/sdk';
+import type { composeInputSchema, composeOutputSchema } from './compose/compose-input.ts';
 import type { narrateInputSchema, narrateOutputSchema } from './narration/register-narration.ts';
 import type { recordInputSchema, recordOutputSchema } from './record/steps.ts';
 import type { BrowserChoice, NarrationService } from './settings.ts';
@@ -12,6 +13,7 @@ type Channel = 'chrome' | 'msedge';
 declare module '@kvman/sdk' {
   interface Commands {
     'kvvideo.video.start': { input: { sessionId: string; argument: string }; output: Empty };
+    'kvvideo.video.compose': { input: z.input<typeof composeInputSchema>; output: z.output<typeof composeOutputSchema> };
     'kvvideo.narration.make': { input: z.input<typeof narrateInputSchema>; output: z.output<typeof narrateOutputSchema> };
     'kvvideo.clip.record': { input: z.input<typeof recordInputSchema>; output: z.output<typeof recordOutputSchema> };
   }

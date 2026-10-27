@@ -32,5 +32,6 @@
   "kvvideo.errors.NARRATION_NOT_SET": "التعليق الصوتي غير مُعدّ: اختره في إعدادات kvvideo ({setting}).",
   "kvvideo.errors.NARRATION_KEY_MISSING": "مفتاح {service} مفقود: أضف السر {secret} في صفحة إضافة kvvideo.",
   "kvvideo.errors.NARRATION_FAILED": "تعذّر على {service} التعليق الصوتي: {reason}",
-  "kvvideo.errors.RENDER_FAILED": "تعذّر على ffmpeg صنع الفيديو: {reason}"
+  "kvvideo.errors.RENDER_FAILED": "تعذّر على ffmpeg صنع الفيديو: {reason}",
+  "kvvideo.player.unavailable": "لا يمكن تشغيل هذا الفيديو هنا. افتح {file} في مساحة العمل."
 }

@@ -24,5 +24,22 @@ export const videoConnector = {
       command: 'kvvideo.narration.make',
       examples: [{ description: "Narrate the first scene's script", input: { text: 'This is Notes. Sign in with your email to see your notes.', file: 'videos/tour/01-sign-in.mp3' } }],
     },
+    {
+      name: 'compose',
+      command: 'kvvideo.video.compose',
+      card: 'kvvideo.player',
+      examples: [
+        {
+          description: 'Join a title image and a narrated recording, with captions',
+          input: {
+            file: 'videos/tour.mp4',
+            scenes: [
+              { clip: 'videos/tour/00-title.png', durationMs: 2000 },
+              { clip: 'videos/tour/01-sign-in.mp4', narration: 'videos/tour/01-sign-in.mp3', captions: [{ text: 'This is Notes.', startMs: 0, endMs: 1200 }] },
+            ],
+          },
+        },
+      ],
+    },
   ],
 };

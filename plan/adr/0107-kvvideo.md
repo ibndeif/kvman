@@ -36,7 +36,7 @@ Decisions 1 to 14 were asked with alternatives. Decisions 15 to 24 are the small
 21. **The services' keys are kvvideo's secrets** `elevenlabs.apiKey` and `openai.apiKey`, set on kvvideo's extension page. A key is never logged, stored elsewhere, or returned.
 22. **Piper 1.3 or later** (`pip install piper-tts`), with the voice a path to its `.onnx` file.
 23. **Each scene is rendered on its own**, to the same size, frame rate, and codecs, then the scenes are joined without encoding again: one short ffmpeg command per scene, in place of one large filter graph.
-24. **The bundled fonts** are Poppins and Lato (English), and IBM Plex Sans Arabic, Tajawal, and Amiri (Arabic, each with Latin letters), each in its bold weight under the SIL Open Font License. Captions with Arabic letters use IBM Plex Sans Arabic unless a font is named; others use Poppins.
+24. **The bundled fonts** are Poppins and Lato (English), and IBM Plex Sans Arabic and Amiri (Arabic, each with Latin letters), each in its bold weight under the SIL Open Font License. Tajawal was bundled at first and taken out at M5.4: libass drew its bold alef as a missing glyph. Almarai, tried in its place, has no Latin letters. Captions take each line's direction from its text, so an Arabic line reads right to left. Captions with Arabic letters use IBM Plex Sans Arabic unless a font is named; others use Poppins.
 
 ### Asked while building
 

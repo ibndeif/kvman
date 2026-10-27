@@ -4,7 +4,7 @@ The [kvman](https://github.com/ibndeif/kvman) extension that makes videos of the
 
 ## Fonts
 
-`fonts/` holds Amiri, IBM Plex Sans Arabic, Lato, Poppins, and Tajawal in their bold weights, each under the SIL Open Font License beside it.
+`fonts/` holds Amiri, IBM Plex Sans Arabic, Lato, and Poppins in their bold weights, each under the SIL Open Font License beside it.
 
 ## License
 

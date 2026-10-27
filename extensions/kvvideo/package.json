@@ -29,25 +29,32 @@
     "locales"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.build.json && node web-build.config.ts",
+    "typecheck": "tsc -p tsconfig.json && vue-tsc -p tsconfig.web.json"
   },
   "peerDependencies": {
     "@kvman/sdk": "^0.1.5"
   },
   "dependencies": {
-    "playwright-core": "1.63.0"
+    "playwright-core": "1.63.0",
+    "vue": "3.5.43"
   },
   "devDependencies": {
     "@kvman/kvai": "workspace:*",
     "@kvman/kvcoder": "workspace:*",
     "@kvman/kvwebui": "workspace:*",
     "@kvman/sdk": "workspace:*",
-    "@kvman/testkit": "workspace:*"
+    "@kvman/testkit": "workspace:*",
+    "@vitejs/plugin-vue": "6.0.9",
+    "@vue/test-utils": "2.5.1",
+    "happy-dom": "20.14.5",
+    "vite": "8.3.1",
+    "vue-tsc": "3.3.11"
   },
   "kvman": {
     "namespace": "kvvideo",
     "source": "src/index.ts",
+    "web": "dist/web",
     "dependencies": {
       "@kvman/kvcoder": "^0.1.2",
       "@kvman/kvwebui": "^0.1.0"
