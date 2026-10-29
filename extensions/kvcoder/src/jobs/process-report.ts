@@ -1,6 +1,6 @@
 import { ProblemError, type Ctx, type Stored } from '@kvman/sdk';
 import type { ProcessDoc } from '../schemas/records.ts';
-import { appendBackground, backgroundText } from '../turns/background.ts';
+import { appendBackground, appendEnding, backgroundText } from '../turns/background.ts';
 import { plainText } from '../result-text.ts';
 import { records } from '../store/collections.ts';
 import { deleteServedArtifacts, deletedArtifactsText } from '../artifacts/served-artifacts.ts';
@@ -8,7 +8,8 @@ import { processName } from './process-records.ts';
 import { lastLines, outputLines } from './process-text.ts';
 
 // Telling a session how a background process ended (ADR 0009, 150): one background message with the outcome and the
-// last 20 lines of output. It never starts a turn, since a handler's jobs carry the `fromHandler` mark.
+// last 20 lines of output. It starts a turn only for a notify line, from its watcher; a handler's jobs carry the
+// `fromHandler` mark and start none.
 
 const reportLines = 20;
 
@@ -35,11 +36,12 @@ export async function deleteEndedArtifacts(ctx: Ctx, doc: Stored<ProcessDoc>): P
   return deleteServedArtifacts(ctx, doc.sessionId, await outputTail(ctx, doc.id, outputLines));
 }
 
-export async function reportEnd(ctx: Ctx, doc: Stored<ProcessDoc>, deleted: readonly string[]): Promise<void> {
+/** Tells the chat how `doc` ended; `startTurn` only for a notify line's watcher, which is no handler's job (ADR 0108, 16). */
+export async function reportEnd(ctx: Ctx, doc: Stored<ProcessDoc>, deleted: readonly string[], startTurn = false): Promise<void> {
   const tail = await outputTail(ctx, doc.id, reportLines);
   const artifacts = deletedArtifactsText(deleted);
   const text = `The process ${outcome(doc)}${artifacts === '' ? '' : `\n${artifacts}`}${tail === '' ? '' : `\nIts last output:\n${tail}`}`;
-  await appendBackground(ctx, doc.sessionId, { kind: 'job', jobId: doc.id }, backgroundText(doc.call, doc.id, text), false);
+  await appendEnding(ctx, doc.sessionId, { kind: 'job', jobId: doc.id }, backgroundText(doc.call, doc.id, text), startTurn);
 }
 
 type Ended = { doc: Stored<ProcessDoc>; deleted: readonly string[] };
@@ -53,7 +55,8 @@ function interruptedText(ended: readonly Ended[]): string {
 /** Reports the endings no handler could write into this session (kvman stopped or died), once, in one message. */
 export async function reportInterrupted(ctx: Ctx, sessionId: string): Promise<void> {
   const store = records(ctx.store);
-  const ended = (await store.processes.find({ sessionId, reported: false }, { limit: 1000 })).filter((doc) => doc.end !== undefined);
+  // A notify line's exit is its watcher's to report (ADR 0108, 16).
+  const ended = (await store.processes.find({ sessionId, reported: false }, { limit: 1000 })).filter((doc) => doc.end !== undefined && !(doc.notify === true && doc.end === 'exited'));
   if (ended.length === 0) return;
   const told: Ended[] = [];
   for (const doc of ended) {

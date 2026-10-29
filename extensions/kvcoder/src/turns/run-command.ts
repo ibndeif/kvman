@@ -105,6 +105,7 @@ async function runJob(ctx: Ctx, sessionId: string, call: RunCall, target: Comman
     payloadPath: builtin === undefined ? '' : 'payload',
     exec: async () => { await guard(); ctx.job.signal.throwIfAborted(); return ctx.exec(target.registration, jobInput(sessionId, call, target)); },
     payloadSchema: async () => (builtin === undefined ? (await callInfos(ctx)).find((info) => info.name === target.registration)?.input : payloadJsonSchema(builtin.payload)),
+    help: () => commandHelpText(ctx, call),
     cancelled: () => ctx.job.signal.aborted,
   });
   if (!done.ok) return failedCall(call, done.result.output, Date.now() - started);
@@ -131,6 +132,11 @@ async function runJob(ctx: Ctx, sessionId: string, call: RunCall, target: Comman
 
 const helpSchema = z.object({ text: z.string() });
 
+/** A command's help text, for an invalid payload's error (ADR 0108, 14). */
+export async function commandHelpText(ctx: Ctx, call: Pick<RunCall, 'connector' | 'command'>): Promise<string> {
+  return helpSchema.parse(await ctx.exec('kvcoder.connector.help.get', { connector: call.connector, command: call.command })).text;
+}
+
 /** A connector's `help`, or one command's with `{ command }` (plan 08 §8.3). It never asks. */
 export async function runHelp(ctx: Ctx, call: RunCall, guard: () => Promise<void>): Promise<CallDone> {
   const { command, ...rest } = call.payload;
@@ -142,6 +148,7 @@ export async function runHelp(ctx: Ctx, call: RunCall, guard: () => Promise<void
     payloadPath: '',
     exec: async () => { await guard(); ctx.job.signal.throwIfAborted(); return ctx.exec('kvcoder.connector.help.get', { connector: call.connector, ...(command === undefined ? {} : { command }) }); },
     payloadSchema: () => Promise.resolve(undefined),
+    help: () => Promise.resolve(undefined),
     cancelled: () => ctx.job.signal.aborted,
   });
   return done.ok ? textResult(call, helpSchema.parse(done.value).text, Date.now() - started) : failedCall(call, done.result.output, Date.now() - started);

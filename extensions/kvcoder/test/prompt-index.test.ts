@@ -17,7 +17,8 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
     const index = (prompt.split('## Connectors\n')[1] ?? '').split('\n');
     const headers = index.filter((line) => line.startsWith('- '));
     expect(headers.map((line) => /^- ([\w-]+): /.exec(line)?.[1])).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'web', 'todo', 'node']);
-    expect(headers.at(-2)).toBe('- todo: Keep a todo list. Commands: add, wait, fail, list, help.');
+    // Superseded by QA71-H26: a registered connector's commands have their signatures (ADR 0108, 14).
+    expect(headers.at(-2)).toBe('- todo: Keep a todo list.');
     expect(headers.at(-1)).toBe('- node: Node.js. Commands: exec, help.');
     expect(prompt).toContain('Your one tool is run: it runs one command of a connector, as { connector, command, payload }.');
   });
@@ -29,11 +30,12 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
     const headers = index.filter((line) => line.startsWith('- '));
     expect(headers.map((line) => /^- ([\w-]+): /.exec(line)?.[1])).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'web', 'todo', 'node']);
     expect(headers.slice(0, 8).every((line) => /^- [\w-]+: \S.*[.!?]$/.test(line) && !line.includes('Commands:'))).toBe(true);
-    expect(headers.at(-2)).toBe('- todo: Keep a todo list. Commands: add, wait, fail, list, help.');
+    // Superseded by QA71-H26: a registered connector's commands have their signatures (ADR 0108, 14).
+    expect(headers.at(-2)).toBe('- todo: Keep a todo list.');
     expect(headers.at(-1)).toBe('- node: Node.js. Commands: exec, help.');
     const lines = index.filter((line) => line.startsWith('  '));
     expect(lines).toEqual([
-      '  exec { line, background?, timeoutMs?, risky }',
+      '  exec { line, background?, notify?, timeoutMs?, risky }',
       '  help { command? }',
       '  read       { path, fromLine?, fromColumn?, lines? }',
       '  read-files { files: [{ path, fromLine?, lines? }] }',
@@ -71,7 +73,19 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
       '  help     { command? }',
       '  fetch { url }',
       '  help  { command? }',
+      '  add  { text }',
+      '  wait { gate, text }',
+      '  fail {}',
+      '  list {}',
+      '  help { command? }',
     ]);
+  });
+
+  it('QA71-H26 a registered connector lists each command with its payload, help last', async () => {
+    const { fake } = await looked(() => undefined, [command('todo', 'list')], settings);
+    const index = (systemPrompt(fake).split('## Connectors\n')[1] ?? '').split('\n');
+    const start = index.indexOf('- todo: Keep a todo list.');
+    expect(index.slice(start, start + 6)).toEqual(['- todo: Keep a todo list.', '  add  { text }', '  wait { gate, text }', '  fail {}', '  list {}', '  help { command? }']);
   });
 
   it('QA52-H8 the execution map states its limits in the index', async () => {

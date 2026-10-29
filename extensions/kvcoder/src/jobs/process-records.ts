@@ -23,12 +23,16 @@ export function processStatus(doc: ProcessDoc): ProcessStatus {
 
 export type EndPatch = Pick<ProcessDoc, 'end' | 'reported'> & Partial<Pick<ProcessDoc, 'exitCode' | 'signal'>>;
 
-/** Records how a process ended, once: the record when this call set the end, `undefined` when it had ended already. */
+/**
+ * Records how a process ended, once: the record when this call set the end, `undefined` when it had ended already. A
+ * notify line's exit by itself past its startup second stays unreported, for its watcher to report (ADR 0108, 16).
+ */
 export async function markEnd(ctx: Ctx, id: string, patch: EndPatch): Promise<Stored<ProcessDoc> | undefined> {
   return ctx.store.transaction((tx) => {
     const doc = txRecords(tx).processes.get(id);
     if (doc === undefined || doc.end !== undefined) return undefined;
-    return txRecords(tx).processes.update(id, { ...patch, endedAt: now() });
+    const watched = doc.notify === true && doc.starting !== true && patch.end === 'exited';
+    return txRecords(tx).processes.update(id, { ...patch, ...(watched ? { reported: false } : {}), endedAt: now() });
   });
 }
 

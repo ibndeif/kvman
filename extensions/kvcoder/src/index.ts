@@ -19,6 +19,7 @@ import { registerWorkerRun } from './delegate/register-worker-run.ts';
 import { registerDocs } from './docs.ts';
 import { registerProcessHandlers, interruptLeftovers } from './jobs/process-handlers.ts';
 import { registerJobs } from './jobs/register-jobs.ts';
+import { registerNotifyWatch } from './jobs/notify-watch.ts';
 import { registerMcp } from './mcp/register-mcp.ts';
 import { registerMessages } from './messages/register-messages.ts';
 import { registerPrompt } from './prompt/register-prompt.ts';
@@ -68,6 +69,7 @@ export default (ctx: Ctx): void => {
   registerConnectorHelp(ctx);
   registerInterruptions(ctx);
   registerJobs(ctx);
+  registerNotifyWatch(ctx);
   registerArtifacts(ctx);
   registerProcessHandlers(ctx);
   registerConnectors(ctx);

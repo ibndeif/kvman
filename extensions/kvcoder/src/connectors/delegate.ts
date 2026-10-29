@@ -9,7 +9,7 @@ import { now } from '../sessions/session-lookup.ts';
 import { records, txRecords, type TxRecords } from '../store/collections.ts';
 import { appendMessage, noUsage, userContent } from '../turns/history.ts';
 import { modelInfo } from '../turns/model-info.ts';
-import { nearestLevel } from '../thinking-levels.ts';
+import { cappedLevel, nearestLevel } from '../thinking-levels.ts';
 import { beginTurn, openTurn } from '../turns/start-turn.ts';
 import { callInput, type ConnectorCommand } from './connector-command.ts';
 
@@ -77,6 +77,8 @@ export async function createChild(ctx: Ctx, parent: Stored<SessionDoc>, worker: 
   const helperModel = settingSchemas.model.parse(await ctx.settings.get('kvcoder.delegate.model'));
   // A worker that names no level uses the one set for helpers, medium by default, so helpers stay quick (ADR 0102, 3).
   const helperThinking = settingSchemas.thinking.parse(await ctx.settings.get('kvcoder.delegate.thinking'));
+  // Every helper's level is capped, so no worker runs at the slowest levels (ADR 0108, 3).
+  const thinkingLimit = settingSchemas.thinking.parse(await ctx.settings.get('kvcoder.delegate.thinkingLimit'));
   // The helper's level is one its model has (ADR 0087, 11); the levels are looked up before the transaction, for the
   // model the parent has now, and used only when the canonical parent still has it.
   const expected = worker.model ?? helperModel ?? parent.model;
@@ -87,7 +89,7 @@ export async function createChild(ctx: Ctx, parent: Stored<SessionDoc>, worker: 
     if (canonical.id !== parent.id) throw invalid('Delegation requires its originating session.');
     const stamp = now();
     const model = worker.model ?? helperModel ?? canonical.model;
-    const wanted = worker.thinking ?? helperThinking;
+    const wanted = cappedLevel(worker.thinking ?? helperThinking, thinkingLimit);
     const child = store.sessions.insert({
       title: shownTitle(run.title),
       autoTitle: false,
@@ -113,6 +115,8 @@ export async function createChild(ctx: Ctx, parent: Stored<SessionDoc>, worker: 
       checks: canonical.checks === null ? null : canonical.checks.filter((check) => !check.name.startsWith(workerCheckName(''))),
       connectors: worker.connectors,
       optedIn: [],
+      // A helper keeps its parent's rule files (ADR 0108, 6).
+      ...(canonical.rules === undefined ? {} : { rules: canonical.rules }),
       createdAt: stamp,
       updatedAt: stamp,
     });

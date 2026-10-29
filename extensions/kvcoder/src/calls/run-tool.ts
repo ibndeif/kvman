@@ -14,6 +14,8 @@ export function runTool(connectors: readonly string[]) {
       '',
       'Make every independent call in the same reply, as several run calls: reads and searches run at the same time, and each reply is a step that sends the whole conversation again.',
       '',
+      'Several calls can also go in one run as { "calls": [{ connector, command, payload }, …] }, 1 to 20 of them, handled as that many run calls.',
+      '',
       `For example, ${exampleCall}. Every connector has the command help: call it with an empty payload to see the connector's commands, or with { "command": "<name>" } to see one command's payload, before the first time you use a command whose payload the system prompt doesn't list.`,
     ].join('\n'),
     parameters: {
@@ -22,12 +24,21 @@ export function runTool(connectors: readonly string[]) {
         connector: { type: 'string', enum: [...connectors], description: 'The connector to use.' },
         command: { type: 'string', description: "One of the connector's commands, or help." },
         payload: { type: 'object', description: "The command's input, as the system prompt or the connector's help gives it. Leave it out for a command that takes none." },
+        calls: {
+          type: 'array',
+          minItems: 1,
+          maxItems: batchLimit,
+          description: 'Several calls in place of connector, command, and payload, each handled as a run call of its own, in this order.',
+          items: { type: 'object', properties: { connector: { type: 'string', enum: [...connectors] }, command: { type: 'string' }, payload: { type: 'object' } }, required: ['connector', 'command'], additionalProperties: false },
+        },
       },
-      required: ['connector', 'command'],
       additionalProperties: false,
     },
   };
 }
+
+/** The calls one `run` may carry in `calls` (ADR 0108, 19). */
+export const batchLimit = 20;
 
 const payloadSchema = z.record(z.string(), z.json());
 
@@ -86,6 +97,8 @@ function repaired(raw: Record<string, JsonValue>, lineConnectors: ReadonlySet<st
 
 /** A `run` call's arguments as they are stored and sent again: repaired when the repair makes a valid call, else as they came. */
 export function repairedArguments(raw: Record<string, JsonValue>, lineConnectors: ReadonlySet<string>): Record<string, JsonValue> {
+  // A `calls` list is repaired entry by entry when it is expanded.
+  if ('calls' in raw) return raw;
   const fixed = repaired(withParsedPayload(raw), lineConnectors);
   return argsSchema.safeParse(fixed).success ? fixed : raw;
 }
@@ -95,6 +108,7 @@ export function repairedArguments(raw: Record<string, JsonValue>, lineConnectors
  * that run a line (`shell` and the binary ones), whose command may come as the line itself.
  */
 export function parseRunArgs(raw: Record<string, JsonValue>, lineConnectors: ReadonlySet<string> = new Set(['shell'])): ParsedRunArgs {
+  if ('calls' in raw) return { success: false, problems: batchProblems(raw, lineConnectors) };
   const parsed = argsSchema.safeParse(repaired(withParsedPayload(raw), lineConnectors));
   if (parsed.success) return { success: true, data: parsed.data };
   const problems = parsed.error.issues.map((issue) => {
@@ -104,4 +118,34 @@ export function parseRunArgs(raw: Record<string, JsonValue>, lineConnectors: Rea
     return `${issue.path.join('.') || 'arguments'}: ${message}${needed === undefined ? '' : ` (it must be ${needed})`}`;
   });
   return { success: false, problems: problems.join('; ') };
+}
+
+type ToolCallBlock = { type: 'toolCall'; id: string; name: string; arguments: Record<string, JsonValue> };
+
+const batchSchema = z.strictObject({ calls: z.array(z.record(z.string(), z.json())).min(1).max(batchLimit) });
+
+/**
+ * A `run` with a `calls` list, as the reply stores it: one `run` call per entry, ids `<id>-1`, `<id>-2`, …, so each has
+ * its card, approval, and result as several calls in one reply do (ADR 0108, 19). A list with an invalid entry stays
+ * as it came, and its parse names the entry.
+ */
+export function expandedCalls(block: ToolCallBlock, lineConnectors: ReadonlySet<string>): ToolCallBlock[] {
+  if (block.name !== 'run') return [block];
+  const batch = batchSchema.safeParse(block.arguments);
+  if (!batch.success) return [block];
+  const entries = batch.data.calls.map((entry) => repairedArguments(entry, lineConnectors));
+  if (!entries.every((entry) => argsSchema.safeParse(entry).success)) return [block];
+  return entries.map((entry, index) => ({ type: 'toolCall', id: `${block.id}-${String(index + 1)}`, name: 'run', arguments: entry }));
+}
+
+// What is wrong with a `calls` list that wasn't made into calls.
+function batchProblems(raw: Record<string, JsonValue>, lineConnectors: ReadonlySet<string>): string {
+  if ('connector' in raw || 'command' in raw || 'payload' in raw) return 'calls: send either connector, command, and payload, or calls, not both';
+  const batch = batchSchema.safeParse(raw);
+  if (!batch.success) return `calls: a list of 1 to ${String(batchLimit)} calls, each { connector, command, payload? }`;
+  const failed = batch.data.calls.findIndex((entry) => !argsSchema.safeParse(repairedArguments(entry, lineConnectors)).success);
+  const entry = batch.data.calls[failed] ?? {};
+  const parsed = argsSchema.safeParse(repaired(withParsedPayload(entry), lineConnectors));
+  const why = parsed.success ? 'invalid' : parsed.error.issues.map((issue) => `${issue.path.join('.') || 'arguments'}: ${issue.message}`).join('; ');
+  return `calls[${String(failed + 1)}]: ${why}; none of the calls ran`;
 }

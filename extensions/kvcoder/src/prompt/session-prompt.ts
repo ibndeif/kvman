@@ -2,11 +2,12 @@ import { z, type Ctx, type Stored } from '@kvman/sdk';
 import { builtinDescriptions, builtinSignatures, commandsOf } from '../connectors/builtin-connectors.ts';
 import type { ShellCommand } from '../calls/shell-command.ts';
 import { shellFor } from '../calls/shell-program.ts';
-import { builtinConnectors } from '../connector-call.ts';
+import { builtinConnectors, payloadSignature } from '../connector-call.ts';
+import { callInfos } from '../registry/loaded.ts';
 import { delegateIndexDescription } from '../connectors/delegate.ts';
 import { mcpIndexDescription } from '../connectors/mcp.ts';
 import { preferencesSection } from './person-preferences.ts';
-import { projectRules } from './project-rules.ts';
+import { readRules, ruleSections } from './project-rules.ts';
 import type { ConnectorRow } from '../registry/register-connectors.ts';
 import { helperAllows } from '../turns/helper-calls.ts';
 import { readOnlyAllows } from '../turns/read-only.ts';
@@ -18,7 +19,7 @@ import { buildPrompt, type BuiltPrompt } from './build-prompt.ts';
 import { sessionGrants } from './session-grants.ts';
 
 /** A connector the session's agent can call: its entry in the prompt's index and in the `run` tool's enum. */
-export type ListedConnector = { name: string; description: string; commands: string[]; signatures?: readonly string[] };
+export type ListedConnector = { name: string; description: string; commands: string[]; signatures?: readonly (string | undefined)[] };
 
 export type SessionTools = {
   built: BuiltPrompt;
@@ -36,7 +37,8 @@ export async function sessionTools(ctx: Ctx, session: Stored<SessionDoc>): Promi
   // The settings and files the prompt needs are read together: each read waits on the kernel, so one after another
   // they add up (the person's preferences among them, ADR 0092, 3).
   const [rules, preferences, shell, profile, language, grants] = await Promise.all([
-    projectRules(ctx.job.workspace.path),
+    // A chat's kept rule files; before its first step keeps them, the files as they are (ADR 0108, 6).
+    session.rules ?? readRules(ctx.job.workspace.path),
     preferencesSection(ctx),
     shellFor(ctx),
     agentProfile(ctx),
@@ -55,11 +57,14 @@ export async function sessionTools(ctx: Ctx, session: Stored<SessionDoc>): Promi
     return { name, description: descriptions[name], commands: shown.map(row => row.command), signatures: shown.map(row => row.signature) };
   });
   // A read-only helper sees a registered connector only with its commands that run a query (ADR 0082, 3).
-  const registered = connectors.filter(connector => names.includes(connector.name)).map(connector => ({
-    name: connector.name,
-    description: connector.description,
-    commands: connector.commands?.filter(command => !readOnly || readOnlyAllows(command.name, undefined, command)).map(command => command.name) ?? (readOnly ? [] : ['exec']),
-  }));
+  // A registered command's payload signature, from its registration's input, so its payload needs no help call (ADR 0108, 14).
+  const shownRegistered = connectors.filter(connector => names.includes(connector.name));
+  const infos = shownRegistered.some(connector => connector.commands !== null && connector.commands !== undefined) ? await callInfos(ctx) : [];
+  const registered = shownRegistered.map(connector => {
+    if (connector.commands === null || connector.commands === undefined) return { name: connector.name, description: connector.description, commands: readOnly ? [] : ['exec'] };
+    const shown = connector.commands.filter(command => !readOnly || readOnlyAllows(command.name, undefined, command));
+    return { name: connector.name, description: connector.description, commands: shown.map(command => command.name), signatures: shown.map(command => payloadSignature(infos.find(info => info.name === command.command)?.input)) };
+  });
   const listed = [...builtins.filter(connector => connector.commands.length > 0), ...registered.filter(connector => connector.commands.length > 0)];
   const built = buildPrompt({
     role: current.parentId === null ? 'lead' : 'worker',
@@ -68,7 +73,7 @@ export async function sessionTools(ctx: Ctx, session: Stored<SessionDoc>): Promi
     platform: process.platform,
     shell: shell.kind,
     language: z.string().parse(language),
-    sections: [...preferences, ...(await sectionsFor(ctx, current.id)), ...rules],
+    sections: [...preferences, ...(await sectionsFor(ctx, current.id)), ...ruleSections(rules)],
     ...(current.worker === null ? {} : { worker: current.worker }),
     decides: current.decides,
     connectors: listed,

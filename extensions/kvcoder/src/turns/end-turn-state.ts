@@ -3,7 +3,7 @@ import type { JsonValue } from '../connector-call.ts';
 import type { Outcome, SessionDoc, Usage } from '../schemas/records.ts';
 import { now } from '../sessions/session-lookup.ts';
 import type { TxRecords } from '../store/collections.ts';
-import { appendBackgroundInTx, backgroundText } from './background.ts';
+import { appendEndingInTx, backgroundText } from './background.ts';
 import { childResultInTx } from './child-result.ts';
 import { appendEndedCalls } from './ended-calls.ts';
 import { appendNotice, appendQueued } from './history.ts';
@@ -39,7 +39,7 @@ function deliverChild(store: TxRecords, child: Stored<SessionDoc>, outcome: Outc
   }
   const [entry] = store.background.find({ sessionId: parent.id, ref: child.id }, { limit: 1 });
   if (entry === undefined) return undefined;
-  const turnId = appendBackgroundInTx(store, parent.id, { kind: 'subagent', sessionId: child.id }, backgroundText(entry.call, child.id, childResultInTx(store, child.id, outcome).text), by === 'step');
+  const turnId = appendEndingInTx(store, parent.id, { kind: 'subagent', sessionId: child.id }, backgroundText(entry.call, child.id, childResultInTx(store, child.id, outcome).text), by === 'step');
   return turnId === undefined ? undefined : { turn: { sessionId: parent.id, turnId } };
 }
 

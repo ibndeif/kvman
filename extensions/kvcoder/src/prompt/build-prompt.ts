@@ -19,7 +19,7 @@ export type PromptInput = {
   decides?: boolean;
   /** The worker a subagent runs for: its instructions follow the sections (ADR 0021, 8). */
   worker?: { name: string; instructions: string; readOnly?: boolean };
-  connectors: readonly { name: string; description: string; commands: readonly string[]; signatures?: readonly string[] }[];
+  connectors: readonly { name: string; description: string; commands: readonly string[]; signatures?: readonly (string | undefined)[] }[];
 };
 
 export type BuiltPrompt = { prompt: string; included: ReadonlySet<Section>; left: readonly Section[] };
@@ -57,10 +57,10 @@ function connectorLine(connector: PromptInput['connectors'][number]): string {
   const signatures = connector.signatures;
   const names = [...connector.commands, 'help'];
   const width = Math.max(...names.map((name) => name.length));
+  // A command whose payload has no signature (one that isn't an object with properties) is its name alone.
   const rows = connector.commands.map((name, index) => {
     const signature = signatures[index];
-    if (signature === undefined) throw new Error(`The connector ${connector.name} has no signature for the command ${name}.`);
-    return `  ${name.padEnd(width)} ${signature}`;
+    return signature === undefined ? `  ${name}` : `  ${name.padEnd(width)} ${signature}`;
   });
   rows.push(`  ${'help'.padEnd(width)} { command? }`);
   return [`- ${connector.name}: ${description}`, ...rows].join('\n');

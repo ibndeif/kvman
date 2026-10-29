@@ -656,5 +656,15 @@
   "kvcoder.artifacts.keepDays.title": "Days to keep artifacts",
   "kvcoder.artifacts.keepDays.description": "How many days an idle chat's artifact is kept after its last change. 0 keeps them all.",
   "kvcoder.ui.artifacts.delete": "Delete",
-  "kvcoder.ui.artifacts.deleteConfirm": "Delete this artifact?"
+  "kvcoder.ui.artifacts.deleteConfirm": "Delete this artifact?",
+  "kvcoder.delegate.thinkingLimit.title": "Helpers' highest thinking",
+  "kvcoder.delegate.thinkingLimit.description": "The most any helper thinks, whatever its worker or the chat sets. High keeps helpers from the slowest levels.",
+  "kvcoder.delegate.thinkingLimit.options.off": "Off",
+  "kvcoder.delegate.thinkingLimit.options.minimal": "Minimal",
+  "kvcoder.delegate.thinkingLimit.options.low": "Low",
+  "kvcoder.delegate.thinkingLimit.options.medium": "Medium",
+  "kvcoder.delegate.thinkingLimit.options.high": "High",
+  "kvcoder.delegate.thinkingLimit.options.xhigh": "Extra high",
+  "kvcoder.delegate.thinkingLimit.options.max": "Max",
+  "kvcoder.background.notify.watch.description": "Waits for a background line started with notify to end, then tells its chat, starting a turn when the chat is idle."
 }

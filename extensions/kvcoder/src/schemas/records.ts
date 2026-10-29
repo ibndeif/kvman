@@ -2,6 +2,7 @@ import { z } from '@kvman/sdk';
 import { artifactFormats } from '../artifacts/artifact-format.ts';
 import type { JsonValue } from '../connector-call.ts';
 import { thinkingLevels } from '../thinking-levels.ts';
+import { keptRuleSchema } from './kept-rule.ts';
 
 export type { JsonValue };
 
@@ -72,6 +73,8 @@ export const sessionDocSchema = z.object({
   connectors: z.array(z.string()).nullable(),
   // The `optIn` connectors enabled for this chat (ADR 0027, 10).
   optedIn: z.array(z.string()).default([]),
+  // The rule files kept for the chat's life; none yet before its first step (ADR 0108, 6).
+  rules: z.array(keptRuleSchema).exactOptional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -249,6 +252,8 @@ export const processDocSchema = z.object({
   signal: z.string().nullable().exactOptional(),
   reported: z.boolean(),
   starting: z.boolean().exactOptional(),
+  /** Started with `notify: true`: its watcher, not the exit handler, reports its end (ADR 0108, 16). */
+  notify: z.boolean().exactOptional(),
 });
 
 // A document shown beside the chat (plan 08 §8.5, ADR 0009, 175): `sessionId` is the chat's own id, `artifactId`

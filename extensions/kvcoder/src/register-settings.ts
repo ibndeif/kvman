@@ -40,6 +40,7 @@ export function registerSettings(ctx: Ctx): void {
   ctx.registerSetting('kvcoder.delegate.model', { description: "The model a helper uses when its worker names none; null uses the chat's own.", schema: settingSchemas.model, default: null });
   ctx.registerSetting('kvcoder.thinking', { description: 'How hard the model thinks in a new session.', schema: settingSchemas.thinking, default: 'medium' });
   ctx.registerSetting('kvcoder.delegate.thinking', { description: "How hard a helper thinks when its worker names no level (ADR 0102, 3).", schema: settingSchemas.thinking, default: 'medium' });
+  ctx.registerSetting('kvcoder.delegate.thinkingLimit', { description: 'The highest level any helper thinks at, whatever its worker or the chat names (ADR 0108, 3).', schema: settingSchemas.thinking, default: 'high' });
   ctx.registerSetting('kvcoder.maxSteps', { description: 'The most steps a turn takes before it stops; null sets no limit.', schema: settingSchemas.maxSteps, default: null });
   ctx.registerSetting('kvcoder.approval', { description: 'When a call asks the person first: only the ones the model marks risky (auto), every one that can ask (ask), or none at all (never).', schema: settingSchemas.approval, default: 'auto' });
   ctx.registerSetting('kvcoder.approval.allowed', { description: 'The approval rules: a line whose every command starts with one of these prefixes, or a file change, runs without asking.', schema: settingSchemas.allowed, default: [] });

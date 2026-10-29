@@ -19,6 +19,7 @@ const planned = {
   'file-parts': [['sessionId', 'path'], ['sessionId', 'path', 'part']],
   artifacts: [['sessionId'], ['sessionId', 'artifactId']],
   background: [['sessionId'], ['sessionId', 'ref']],
+  'read-endings': [['sessionId', 'ref']],
   runs: [['sessionId'], ['jobId']],
   processes: [['sessionId'], ['sessionId', 'reported'], ['workspaceId']],
 };

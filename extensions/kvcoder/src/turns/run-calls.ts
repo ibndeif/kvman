@@ -19,7 +19,7 @@ import { txRecords } from '../store/collections.ts';
 import { hostOf } from '../web-fetch/web-hosts.ts';
 import { currentStep, type StepLease } from './step-claim.ts';
 import { liveStep } from './step-intents.ts';
-import { failedCall, orderedCall, runHelp, runTarget, targetOf, textResult, type CallDone, type CommandTarget } from './run-command.ts';
+import { commandHelpText, failedCall, orderedCall, runHelp, runTarget, targetOf, textResult, type CallDone, type CommandTarget } from './run-command.ts';
 import { callPermission, dispatchGuard } from './call-permission.ts';
 import { helperAllows, helperRefusal } from './helper-calls.ts';
 import { readOnlyAllows, readOnlyRefusal } from './read-only.ts';
@@ -54,12 +54,12 @@ const result = (toolCallId: string, done: CallDone): CallOutcome => ({ kind: 're
 const refused = (toolCallId: string, message: string): CallOutcome => result(toolCallId, { text: errorOutput({ code: 'VALIDATION_FAILED', message }).output, details: null, isError: true });
 
 // The payload of a call that asks, checked before the person is asked about it.
-function invalidPayload(call: RunCall, target: CommandTarget): string | undefined {
+async function invalidPayload(ctx: Ctx, call: RunCall, target: CommandTarget): Promise<string | undefined> {
   if (target.builtin === undefined) return undefined;
   const parsed = target.builtin.payload.safeParse(call.payload);
   if (parsed.success) return undefined;
   const issues = parsed.error.issues.map((issue) => ({ path: issue.path.map(String).join('.'), message: issue.message }));
-  return invalidPayloadOutput(call, issues, payloadJsonSchema(target.builtin.payload)).output;
+  return invalidPayloadOutput(call, issues, payloadJsonSchema(target.builtin.payload), await commandHelpText(ctx, call)).output;
 }
 
 // A checked `delegate run` (ADR 0021): a subagent worker's child session, or a program worker's run, either of which
@@ -204,7 +204,7 @@ async function evaluateCurrentCall(env: CallEnv, toolCall: ToolCall, call: RunCa
     if (env.approval !== 'never') return { kind: 'question', questionKind: 'approval', question: call };
   }
   if (target.builtin?.asks === true) {
-    const invalid = invalidPayload(call, target);
+    const invalid = await invalidPayload(ctx, call, target);
     if (invalid !== undefined) return result(toolCall.id, failedCall(call, invalid));
     const asks = env.approval === 'ask' || (env.approval === 'auto' && call.payload['risky'] !== false);
     // A call the person's rules cover runs without asking, with `ask` too (ADR 0091, 2).

@@ -119,7 +119,7 @@ describe('the delegate connector and its workers (08 §8.5, ADR 0021)', { timeou
     expect(refused).toMatch(/^error VALIDATION_FAILED: /);
     expect(refused).toContain('worker: ');
     expect(refused).toContain('Unrecognized key: "mode"');
-    expect(refused?.endsWith('The payload of delegate run is\n{ worker, title (≤200), task, background? }')).toBe(true);
+    expect(refused?.includes('The payload of delegate run is\n{ worker, title (≤200), task, background? }\n\n')).toBe(true);
   });
 
   it.each([

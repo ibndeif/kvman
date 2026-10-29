@@ -77,16 +77,16 @@ describe('the run tool (08 §8.2 and §8.3, ADR 0011)', { timeout: 30_000 }, () 
   it('QA19-E15 QA67-E11 a shell line sent as the command becomes exec, or with a line already given is cut and names the commands', async () => {
     const line = 'node -e "console.log(1)" && echo a long line that is not a command name';
     const repaired = await call({ connector: 'shell', command: line });
-    expect(repaired.results[0]).toMatch(/^error VALIDATION_FAILED: .*risky.*The payload of shell exec is\n\{ line, background\?, timeoutMs\?, risky \}$/s);
+    expect(repaired.results[0]).toMatch(/^error VALIDATION_FAILED: .*risky.*The payload of shell exec is\n\{ line, background\?, notify\?, timeoutMs\?, risky \}\n\n\S+ \S+: .*$/s);
     const { results } = await call({ connector: 'shell', command: line, payload: { line: 'ls', risky: false } });
-    expect(results[0]).toBe(`error NOT_FOUND: shell has no command ${line.slice(0, 40)}…. Its commands are: exec { line, background?, timeoutMs?, risky }, help. The command is exec, and what to run goes in its payload.`);
+    expect(results[0]).toBe(`error NOT_FOUND: shell has no command ${line.slice(0, 40)}…. Its commands are: exec { line, background?, notify?, timeoutMs?, risky }, help. The command is exec, and what to run goes in its payload.`);
   });
 
   it('QA18-E5 an invalid payload returns each problem and the payload signature', async () => {
     const builtin = await call({ connector: 'fs', command: 'edit', payload: { file: 'a' } });
-    expect(builtin.results[0]).toMatch(/^error VALIDATION_FAILED: .*path: .*The payload of fs edit is\n\{ path, edits: \[\{ oldText, newText, replaceAll\? \}\], risky \}$/s);
+    expect(builtin.results[0]).toMatch(/^error VALIDATION_FAILED: .*path: .*The payload of fs edit is\n\{ path, edits: \[\{ oldText, newText, replaceAll\? \}\], risky \}\n\n\S+ \S+: .*$/s);
     const registered = await call({ connector: 'todo', command: 'add', payload: { text: 7 } });
-    expect(registered.results[0]).toMatch(/^error VALIDATION_FAILED: text: .*The payload of todo add is\n\{ text \}$/s);
+    expect(registered.results[0]).toMatch(/^error VALIDATION_FAILED: text: .*The payload of todo add is\n\{ text \}\n\n\S+ \S+: .*$/s);
   });
 
   it('QA18-E6 a call with no payload runs with an empty one', async () => {

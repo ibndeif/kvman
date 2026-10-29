@@ -20,13 +20,13 @@ describe("a built-in connector's invalid payload says what the command takes (08
     expect(artifact).toContain('id: ');
     expect(artifact).toContain('title: ');
     expect(artifact).toContain('payload: Unrecognized key: "name"');
-    expect(artifact.endsWith('The payload of artifact write is\n{ id (≤50), title (≤100), format?: "markdown" | "html" | "url", content }')).toBe(true);
+    expect(artifact.includes('The payload of artifact write is\n{ id (≤50), title (≤100), format?: "markdown" | "html" | "url", content }\n\n')).toBe(true);
     const choice = await resultOf(command('ask', 'choice', { question: 'Which?', choices: ['a', 'b'] }));
-    expect(choice.endsWith('The payload of ask choice is\n{ prompt, multiple, options: [{ id, label, description? }], other? }')).toBe(true);
+    expect(choice.includes('The payload of ask choice is\n{ prompt, multiple, options: [{ id, label, description? }], other? }\n\n')).toBe(true);
     const file = await resultOf(fsCall('write', { content: 'x' }));
-    expect(file.endsWith('The payload of fs write is\n{ path, content, risky }')).toBe(true);
+    expect(file.includes('The payload of fs write is\n{ path, content, risky }\n\n')).toBe(true);
     const helper = await resultOf(command('delegate', 'run', { worker: 'general',  prompt: 'x' }));
-    expect(helper.endsWith('The payload of delegate run is\n{ worker, title (≤200), task, background? }')).toBe(true);
+    expect(helper.includes('The payload of delegate run is\n{ worker, title (≤200), task, background? }\n\n')).toBe(true);
   });
 
   it('QA11-E6 a valid call gets no signature', async () => {

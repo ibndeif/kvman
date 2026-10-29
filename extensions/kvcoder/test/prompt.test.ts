@@ -61,7 +61,7 @@ describe('the prompt (08 §8.2, §8.4)', { timeout: 30_000 }, () => {
     expect(prompt).toContain('Your one tool is run: it runs one command of a connector, as { connector, command, payload }.');
     expect(prompt).toContain(`Each \`shell exec\` starts in the workspace folder, so cd doesn't carry over to the next call; the shell is ${process.platform === 'win32' ? 'PowerShell' : 'bash'}.`);
     expect(prompt).toContain('- shell: Run a line in the real shell');
-    expect(prompt).toContain('Set background to true for a server or any command that keeps running; to show the person an app you started, give its address to artifact write with the format url.\n  exec { line, background?, timeoutMs?, risky }\n  help { command? }');
+    expect(prompt).toContain('Set background to true for a server or any command that keeps running; to show the person an app you started, give its address to artifact write with the format url.\n  exec { line, background?, notify?, timeoutMs?, risky }\n  help { command? }');
     expect(prompt).toContain('- fs: Read, list, search, create, and change files in the workspace folder.');
     expect(prompt).toContain('and edit for exact text replacements in an existing file.\n  read       { path, fromLine?, fromColumn?, lines? }\n  read-files { files: [{ path, fromLine?, lines? }] }\n  list       { path? }\n  find       { pattern, path? }\n  search     { pattern, path?, literal?, glob?, context?, filesOnly? }\n  write      { path, content, risky }\n  edit       { path, edits: [{ oldText, newText, replaceAll? }], risky }\n  undo       { path, risky }\n  part       { path, part, content }\n  assemble   { path, risky }\n  help       { command? }');
     expect(prompt).toContain('- artifact: Show the person something to read or see: a report, a design, an HTML page, or the localhost address of an app you are running (format url).');
@@ -75,7 +75,8 @@ describe('the prompt (08 §8.2, §8.4)', { timeout: 30_000 }, () => {
     expect(prompt).toContain('Connectors are the only way you act.');
     expect(prompt).toContain('the `execution-map` entry below says how to set it');
     expect(prompt).toContain('Several new files are several `fs write` calls in one reply');
-    expect(prompt.endsWith('- todo: Keep a todo list. Commands: add, wait, fail, list, help.')).toBe(true);
+    // A registered connector's commands have their signatures (ADR 0108, 14).
+    expect(prompt.endsWith('- todo: Keep a todo list.\n  add  { text }\n  wait { gate, text }\n  fail {}\n  list {}\n  help { command? }')).toBe(true);
     const order = ['## Mine', '## Everywhere', '## Later', '## Connectors', '- shell: ', '- fs: ', '- artifact: ', '- execution-map: ', '- background: ', '- ask: ', '- delegate: ', '- todo: Keep a todo list.'].map((part) => prompt.indexOf(part));
     expect(order.every((index) => index > 0)).toBe(true);
     expect([...order].sort((first, second) => first - second)).toEqual(order);

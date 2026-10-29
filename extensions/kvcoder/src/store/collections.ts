@@ -2,6 +2,7 @@ import type { Store, Transaction } from '@kvman/sdk';
 import { answerReceiptDocSchema, artifactDocSchema, backgroundDocSchema, fileBackupDocSchema, fileChangeDocSchema, filePartDocSchema, fileViewDocSchema, messageDocSchema, processDocSchema, questionDocSchema, queuedDocSchema, runDocSchema, sendReceiptDocSchema, sessionDocSchema, stepIntentDocSchema, turnDocSchema } from '../schemas/records.ts';
 import { mapDocSchema } from '../maps/map-schema.ts';
 import { signInDocSchema } from '../mcp/sign-in-record.ts';
+import { readEndingDocSchema } from '../schemas/read-ending.ts';
 import { connectorDocSchema, handlerDocSchema, handlerJobDocSchema, sectionDocSchema, slashDocSchema } from '../schemas/registry.ts';
 
 // kvcoder's collections (plan 08 §8.4 "Where entries live"): sessions and their records, and workspace sections, in
@@ -26,6 +27,7 @@ export function records(store: Store) {
     artifacts: store.collection('artifacts', artifactDocSchema),
     maps: store.collection('maps', mapDocSchema),
     background: store.collection('background', backgroundDocSchema),
+    readEndings: store.collection('read-endings', readEndingDocSchema),
     runs: store.collection('runs', runDocSchema),
     sections: store.collection('sections', sectionDocSchema),
     globalSections: store.global.collection('sections', sectionDocSchema),
@@ -56,6 +58,7 @@ export function txRecords(tx: Transaction) {
     artifacts: tx.collection('artifacts', artifactDocSchema),
     maps: tx.collection('maps', mapDocSchema),
     background: tx.collection('background', backgroundDocSchema),
+    readEndings: tx.collection('read-endings', readEndingDocSchema),
     runs: tx.collection('runs', runDocSchema),
     sections: tx.collection('sections', sectionDocSchema),
     globalSections: tx.global.collection('sections', sectionDocSchema),

@@ -55,3 +55,41 @@ describe("the person's message ends a wait (ADR 0085, 3)", { timeout: 60_000 }, 
     expect(noticeOf(3)).toBe(true);
   });
 });
+
+describe('an ending the agent already read is not told again (ADR 0108, 7)', { timeout: 60_000 }, () => {
+  const finishedIn = (fake: Awaited<ReturnType<typeof kvcoder.start>>['fake'], index: number, id: string) => requestMessages(fake, index).some((message) => message.role === 'user' && textOf(message).includes(`(job ${id}) finished`));
+
+  it('QA71-H19 a process waited for until it ended gets no finished message', async () => {
+    const { kernel, fake } = await kvcoder.start();
+    const sessionId = await newSession(kernel);
+    fake.reply(runs(lasting(1500)), says('ok'));
+    await kernel.exec('kvcoder.message.send', { sessionId, text: 'start it' });
+    await kernel.clock.advance(0);
+    const id = idOf(toolResults(fake)[0]);
+    fake.reply(runs(command('background', 'wait', { id, timeoutMs: 30_000 })), says('ok'));
+    await kernel.exec('kvcoder.message.send', { sessionId, text: 'wait for it' });
+    await vi.waitFor(() => expect(fake.requests().length).toBe(4), { timeout: 30_000, interval: 100 });
+    expect(parsed(toolResults(fake, 3).at(-1))).toMatchObject({ id, status: 'succeeded' });
+    expect(finishedIn(fake, 3, id)).toBe(false);
+    await vi.waitFor(async () => expect((await kernel.exec('kvcoder.session.get', { sessionId })).status).toBe('idle'), wait);
+    const listed = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });
+    expect(listed.messages.some((message) => message.kind === 'user' && JSON.stringify(message.content).includes(`(job ${id}) finished`))).toBe(false);
+  });
+
+  it('QA71-E20 output read while the process still ran leaves its finished message', async () => {
+    const { kernel, fake } = await kvcoder.start();
+    const sessionId = await newSession(kernel);
+    fake.reply(runs(lasting(2500)), says('ok'));
+    await kernel.exec('kvcoder.message.send', { sessionId, text: 'start it' });
+    await kernel.clock.advance(0);
+    const id = idOf(toolResults(fake)[0]);
+    fake.reply(runs(command('background', 'output', { id })), says('ok'));
+    await kernel.exec('kvcoder.message.send', { sessionId, text: 'look at it' });
+    await vi.waitFor(() => expect(fake.requests().length).toBe(4), wait);
+    expect(parsed(toolResults(fake, 3).at(-1))).toMatchObject({ id, status: 'running' });
+    await vi.waitFor(async () => {
+      const listed = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });
+      expect(listed.messages.some((message) => message.kind === 'user' && JSON.stringify(message.content).includes(`(job ${id}) finished`))).toBe(true);
+    }, { timeout: 30_000, interval: 100 });
+  });
+});

@@ -3,7 +3,8 @@ import type {} from '@kvman/kvai';
 import type { JsonValue } from '../connector-call.ts';
 import { runBinaryChecks } from '../calls/binary-checks.ts';
 import { workerChecks } from '../delegate/register-worker-run.ts';
-import { repairedArguments, runTool } from '../calls/run-tool.ts';
+import { keepRules } from '../prompt/kept-rules.ts';
+import { expandedCalls, repairedArguments, runTool } from '../calls/run-tool.ts';
 import { shellFor } from '../calls/shell-program.ts';
 import { sessionTools, type SessionTools } from '../prompt/session-prompt.ts';
 import { ownerName } from '../jobs/process-records.ts';
@@ -28,6 +29,9 @@ import { addCallUsage } from './usage.ts';
 import { claimStepInput, currentStep, stepInputSchema, type StepLease } from './step-claim.ts';
 import { liveStep } from './step-intents.ts';
 import { advanceStep, dispatchNext, type StepNext } from './step-next.ts';
+
+const checkInEvery = 60;
+const checkInText = (step: number): string => `[kvman: step ${String(step)} of this turn. Say in one line where you are and what is left, then go on.]`;
 
 /** The step job's existing retry/timeout policy (ADR0008). */
 export const stepOptions = { retries: 0, timeoutMs: 3_600_000 };
@@ -58,6 +62,9 @@ async function beginStep(ctx: Ctx, lease: StepLease, maxSteps: number | null): P
       return { next: ended === undefined ? undefined : { kind: 'end' as const, ended } };
     }
     store.turns.update(lease.turnId, { steps: live.turn.steps + 1 });
+    const step = live.turn.steps + 1;
+    // A lead's long turn says where it is every 60 steps; a message keeps the cache, and nothing stops (ADR 0108, 11).
+    if (live.session.parentId === null && step % checkInEvery === 0) appendMessage(store, store.sessions.get(lease.sessionId) ?? live.session, { kind: 'user', content: userContent(checkInText(step)), turnId: lease.turnId, source: { kind: 'extension', name: ownerName } });
     return { session: store.sessions.get(lease.sessionId) };
   });
   if (begun === undefined) return undefined;
@@ -94,7 +101,8 @@ async function callModel(ctx: Ctx, session: Stored<SessionDoc>, lease: StepLease
     const { blocks: received, broken } = repairedCalls(answer.message.content);
     // A call sent in a shape the model often uses is stored as the call it meant, so its card and the history show that (ADR 0102, 5).
     const lines = new Set(['shell', ...tools.connectors.filter((connector) => connector.kind === 'binary').map((connector) => connector.name)]);
-    const blocks = received.map((block) => (block.type === 'toolCall' && block.name === 'run' ? { ...block, arguments: repairedArguments(block.arguments, lines) } : block));
+    // A `run` with a `calls` list is stored as that many calls (ADR 0108, 19).
+    const blocks = received.flatMap((block) => (block.type === 'toolCall' && block.name === 'run' ? expandedCalls({ ...block, arguments: repairedArguments(block.arguments, lines) }, lines) : [block]));
     const message = { ...answer.message, content: blocks };
     const seq = await ctx.store.transaction(tx => {
       ctx.job.signal.throwIfAborted();
@@ -195,7 +203,10 @@ async function runStep(ctx: Ctx, lease: StepLease): Promise<void> {
   const settings = await readSettings(ctx);
   const begun = await beginStep(ctx, lease, settings.maxSteps);
   if (begun === undefined) return;
-  const checked = await withChecks(ctx, begun, lease);
+  const ruled = await withChecks(ctx, begun, lease);
+  if (ruled === undefined) return;
+  await keepRules(ctx, ruled, lease);
+  const checked = (await currentStep(ctx, lease))?.session;
   if (checked === undefined) return;
   const tools = await sessionTools(ctx, checked);
   const started = await currentStep(ctx, lease);

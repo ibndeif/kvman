@@ -191,6 +191,12 @@
           "ref"
         ]
       ],
+      "read-endings": [
+        [
+          "sessionId",
+          "ref"
+        ]
+      ],
       "runs": [
         [
           "sessionId"

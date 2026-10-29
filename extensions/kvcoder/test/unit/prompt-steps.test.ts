@@ -65,6 +65,6 @@ describe('Decide for me asks nothing (08 §8.2, ADR 0097, 7)', () => {
 
   it('QA67-H10 the map entry names no worker, and says a small change gets no map', () => {
     for (const name of ['designer', 'architect', 'tester', 'reviewer']) expect(executionMapDescription, name).not.toContain(name);
-    expect(executionMapDescription).toContain('A bug fix, or a change to one or two files, never gets a map.');
+    expect(executionMapDescription).toContain('A bug fix, a change to one or two files, or a fix the person described never gets a map.');
   });
 });

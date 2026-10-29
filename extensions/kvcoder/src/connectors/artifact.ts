@@ -1,6 +1,7 @@
 import { z, type Ctx } from '@kvman/sdk';
 import { artifactFormats, contentFor, detectFormat } from '../artifacts/artifact-format.ts';
 import { artifactCountLimit, assertWithinLimit, chatIdOf } from '../artifacts/artifact-records.ts';
+import { endedUrlArtifact } from '../artifacts/ended-url.ts';
 import { deleteArtifact } from '../artifacts/delete-artifact.ts';
 import { applyEdits } from '../files/edit-text.ts';
 import { notFound, tooLarge } from '../problems.ts';
@@ -53,8 +54,9 @@ const missing = (id: string) => notFound(`The artifact ${id} doesn't exist.`, { 
 // An artifact belongs to its chat, so a subagent's belongs to the chat at its root.
 const chatOf = async (ctx: Ctx, sessionId: string): Promise<string> => chatIdOf(await findSession(ctx, sessionId));
 
-function writeArtifact(ctx: Ctx, chatId: string, input: WriteInput) {
+async function writeArtifact(ctx: Ctx, chatId: string, input: WriteInput) {
   const format = input.format ?? detectFormat(input.content);
+  const replaced = format === 'url' ? await endedUrlArtifact(ctx, chatId, input.id) : undefined;
   return ctx.store.transaction((tx) => {
     const content = contentFor(format, input.content);
     assertWithinLimit(input.id, content);
@@ -62,6 +64,12 @@ function writeArtifact(ctx: Ctx, chatId: string, input: WriteInput) {
     const existing = artifacts.find({ sessionId: chatId, artifactId: input.id }, { limit: 1 })[0];
     const stamp = now();
     if (existing === undefined) {
+      const ended = replaced === undefined ? undefined : artifacts.find({ sessionId: chatId, artifactId: replaced }, { limit: 1 })[0];
+      if (ended !== undefined && artifacts.count({ sessionId: chatId }) >= artifactCountLimit) {
+        artifacts.delete(ended.id);
+        artifacts.insert({ sessionId: chatId, artifactId: input.id, title: input.title, format, content, version: 1, createdAt: stamp, updatedAt: stamp });
+        return { id: input.id, version: 1, created: true, bytes: Buffer.byteLength(content), replaced: ended.artifactId };
+      }
       if (artifacts.count({ sessionId: chatId }) >= artifactCountLimit) throw tooLarge(`This chat already has ${artifactCountLimit} artifacts. Update one that exists (artifact list names them), or delete one.`, artifactCountLimit);
       artifacts.insert({ sessionId: chatId, artifactId: input.id, title: input.title, format, content, version: 1, createdAt: stamp, updatedAt: stamp });
       return { id: input.id, version: 1, created: true, bytes: Buffer.byteLength(content) };
@@ -96,7 +104,7 @@ export function registerArtifactConnector(ctx: Ctx): void {
   ctx.registerCommand('kvcoder.artifact.write', {
     description: commands.write.description,
     input: callInput(payloads.write),
-    output: z.object({ id: z.string(), version: z.number().int(), created: z.boolean(), bytes: z.number().int() }),
+    output: z.object({ id: z.string(), version: z.number().int(), created: z.boolean(), bytes: z.number().int(), replaced: z.string().exactOptional() }),
     public: true,
     retries: 0,
     handle: async ({ sessionId, payload }) => writeArtifact(ctx, await chatOf(ctx, sessionId), payload),

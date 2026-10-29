@@ -215,7 +215,7 @@ describe('tests the person chose, and checks in proportion (08 §8.2, ADR 0102, 
       'record the answer as one line, `Testing: <their choices in plain words>`, in AGENTS.md (create it when it is missing), with risky set to false, since they just chose it.',
       "Check in proportion: after each change, run the tests that cover it; run the whole suite once, at the end; and run no stress, load, performance, or benchmark test unless the person asked for one.",
       'It holds only command lines, each with a few words of what it does, at most 15 lines: never notes, designs, or history.',
-      'A bug fix, or a change to one or two files, never gets a map.',
+      'A bug fix, a change to one or two files, or a fix the person described never gets a map.',
     ]) expect(lead, phrase).toContain(phrase);
     const worker = workingMethod('worker');
     expect(worker).toContain("Write only the kinds of tests the `Testing:` line of the project's AGENTS.md names, run the tests that cover your change, and run no stress, load, performance, or benchmark test unless the task asks for one.");
@@ -232,18 +232,19 @@ describe('tests the person chose, and checks in proportion (08 §8.2, ADR 0102, 
 describe('deliberating before a map, chosen apart from it (08 §8.2, ADR 0103, 6)', () => {
   const part = (method: string): string => method.split('\n').find((line) => line.startsWith('Deliberate. ')) ?? '';
 
-  it('QA68-H6 the lead has Deliberate before Plan, with its four choices, and Size up names it; Decide for me has the same', () => {
+  // Superseded in part by QA71-H22: deliberating runs only when the person asks (ADR 0108, 10).
+  it('QA68-H6 and QA71-H22 the lead has Deliberate before Plan, only when the person asks, and Size up names it; Decide for me has the same', () => {
     for (const decides of [false, true]) {
       const lead = workingMethod('lead', 'engineering', decides);
       const names = lead.split('\n').map((line) => line.slice(0, line.indexOf('. ')));
       expect(names[names.indexOf('Deliberate') - 1]).toBe(decides ? 'Tests' : 'Tests the person chose');
       expect(names.indexOf('Plan')).toBe(names.indexOf('Deliberate') + 1);
-      expect(lead).toContain('A complex request whose approach is open needs deliberating first, with a map or without one, as Deliberate says.');
+      expect(lead).toContain('A request the person asks to have debated is deliberated first, with a map or without one, as Deliberate says.');
       for (const phrase of [
-        'Only for a complex request whose approach is open: there are several real ways to do it, the choice is costly or hard to take back, or its risks are not yet clear to you.',
+        'Only when the person asks for the approaches to be debated.',
         "before any map or change, hand it in one `delegate run` to the worker of the `delegate` connector that debates approaches, when its entry lists one",
         'the map\'s steps and details when your path has a map, or the work itself when it doesn\'t.',
-        'a hard decision with a small change gets the debate and no map; a large change whose approach is clear gets a map and no debate; complex work whose approach is open gets both, the debate first; and most work gets neither.',
+        'Deliberating and mapping are separate choices, and deliberate once per request, not per step.',
       ]) expect(part(lead), phrase).toContain(phrase);
     }
   });
@@ -253,8 +254,16 @@ describe('deliberating before a map, chosen apart from it (08 §8.2, ADR 0103, 6
     expect(executionMapDescription).not.toContain('council');
   });
 
-  it('QA68-E2 never for small work, and once per request', () => {
-    expect(part(workingMethod('lead'))).toContain('Never deliberate a question, a bug fix, or a clear or small change, and deliberate once per request, not per step.');
+  it('QA68-E2 once per request, and no longer on its own for complex work (QA71-H22)', () => {
+    expect(part(workingMethod('lead'))).toContain('deliberate once per request, not per step.');
+    expect(part(workingMethod('lead'))).not.toContain('complex request whose approach is open');
+  });
+
+  it('QA71-H22 the lead tests nothing in the browser when the person tests it themselves, and sends map updates with the next work', () => {
+    const lead = workingMethod('lead');
+    expect(lead).toContain('When the person says they will test it themselves, start it, request its address once, give it to them, and stop, with no browser checks.');
+    expect(lead).toContain("never spend a reply only on `execution-map update` but send it in the reply that makes the next piece of work's calls");
+    expect(workingMethod('worker')).not.toContain('test it themselves');
   });
 
   it("QA68-E3 a worker's method and the general lead method have no Deliberate", () => {

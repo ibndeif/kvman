@@ -53,7 +53,7 @@ describe('approval of the calls that can ask (08 §8.3, ADR 0011, 7)', { timeout
     const { kernel, sessionId, results } = await looked((folder) => looked.write(folder, 'seed.txt', 'old'), asking({}), settings('auto'));
     expect((await turnState(kernel, sessionId)).turn).toMatchObject({ outcome: 'done', pending: [] });
     expect(results).toHaveLength(4);
-    for (const result of results) expect(result).toMatch(/^error VALIDATION_FAILED: risky: Invalid input: expected boolean, received undefined\. The payload of \S+ \S+ is\n\{ .*risky \}$/);
+    for (const result of results) expect(result).toMatch(/^error VALIDATION_FAILED: risky: Invalid input: expected boolean, received undefined\. The payload of \S+ \S+ is\n\{ .*risky \}\n\n\S+ \S+: .*$/s);
     expect(made.map((file) => exists(kernel, file))).toEqual([false, false, false]);
   });
 

@@ -34,6 +34,6 @@ describe('the shell per OS (08 §8.3, ADR 0008, 6 and 7)', () => {
     expect(shellCommand('darwin', null, () => true).args(line)).toEqual(['-lc', line]);
     const windows = shellCommand('win32', null, () => true);
     expect([windows.program, ...windows.args(line)]).toEqual(['pwsh', '-NoProfile', '-Command', line]);
-    expect(runTool(['shell', 'fs'])).toMatchObject({ name: 'run', parameters: { properties: { connector: { enum: ['shell', 'fs'] } }, required: ['connector', 'command'] } });
+    expect(runTool(['shell', 'fs'])).toMatchObject({ name: 'run', parameters: { properties: { connector: { enum: ['shell', 'fs'] } } } });
   });
 });

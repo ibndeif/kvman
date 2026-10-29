@@ -47,14 +47,14 @@ describe('an mcp call asks as a shell call does (08 §8.3 and §8.5, ADR 0020, 7
   });
 
   it('QA29-E9 a payload that does not fit fails VALIDATION_FAILED with the signature, and nobody is asked', async () => {
-    const signature = 'The payload of mcp call is\n{ server, tool, arguments?, timeoutMs?, risky }';
+    const signature = 'The payload of mcp call is\n{ server, tool, arguments?, timeoutMs?, risky }\n\n';
     const { kernel, fake, sessionId } = await started('ask', call('x', {}), call('x', { risky: false, extra: 1 }), command('mcp', 'call', { server: 'demo', tool: 'echo', arguments: 'text', risky: false }));
     expect((await turnState(kernel, sessionId)).session.status).toBe('idle');
     const results = toolResults(fake);
     expect(results).toHaveLength(3);
     for (const result of results) {
       expect(result).toMatch(/^error VALIDATION_FAILED: /);
-      expect(result.endsWith(signature)).toBe(true);
+      expect(result).toContain(signature);
     }
     expect(results[0]).toContain('risky');
     expect(results[1]).toContain('Unrecognized key: "extra"');

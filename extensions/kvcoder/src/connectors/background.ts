@@ -1,7 +1,8 @@
 import { z, type Ctx } from '@kvman/sdk';
 import { delay } from '../delay.ts';
-import { cancelJob, jobDetail, jobRows, type JobRow } from '../jobs/job-rows.ts';
+import { cancelJob, isActive, jobDetail, jobRows, type JobRow } from '../jobs/job-rows.ts';
 import { records } from '../store/collections.ts';
+import { markEndingRead } from '../turns/read-endings.ts';
 import { callInput, type ConnectorCommand } from './connector-command.ts';
 import { cutInto } from './payload-fields.ts';
 
@@ -93,6 +94,7 @@ export function registerBackgroundConnector(ctx: Ctx): void {
         ctx.job.signal.throwIfAborted();
         found = await startedBy(ctx, sessionId, payload.id);
       }
+      if (!isActive(found.row.status)) await markEndingRead(ctx, sessionId, payload.id);
       return { ...forAgent(found.row), ...found.detail };
     },
   });

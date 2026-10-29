@@ -5,6 +5,7 @@ import type { ShellCommand } from '../calls/shell-command.ts';
 import { now } from '../sessions/session-lookup.ts';
 import { records, txRecords } from '../store/collections.ts';
 import { markEnd, processName } from './process-records.ts';
+import { watchNotified } from './notify-watch.ts';
 import { deleteEndedArtifacts, outputTail, reportEnd } from './process-report.ts';
 import type { ProcessDoc } from '../schemas/records.ts';
 
@@ -28,9 +29,9 @@ export function startedOutcome(doc: Pick<ProcessDoc, 'end' | 'exitCode' | 'signa
 }
 
 /** Starts `line` in the real shell for a session, titled by the line (ADR 0089, 1); a line that can't start fails `VALIDATION_FAILED` and leaves no record. */
-export async function startProcess(ctx: Ctx, sessionId: string, shell: ShellCommand, line: string): Promise<StartedProcess> {
+export async function startProcess(ctx: Ctx, sessionId: string, shell: ShellCommand, line: string, notify = false): Promise<StartedProcess> {
   const store = records(ctx.store);
-  const doc = await store.processes.insert({ workspaceId: ctx.job.workspace.id, sessionId, title: line, call: line, startedAt: now(), reported: false, starting: true });
+  const doc = await store.processes.insert({ workspaceId: ctx.job.workspace.id, sessionId, title: line, call: line, startedAt: now(), reported: false, starting: true, ...(notify ? { notify: true } : {}) });
   try {
     await ctx.processes.start(processName(doc.id), { command: shell.program, args: shell.args(line), env: plainEnvironment(process.env) });
   } catch (error) {
@@ -45,7 +46,9 @@ export async function startProcess(ctx: Ctx, sessionId: string, shell: ShellComm
     if (current === undefined) return undefined;
     return current.end === undefined ? txRecords(tx).processes.update(doc.id, { starting: false }) : current;
   });
-  return { output, jobId: doc.id, ...startedOutcome(settled ?? doc) };
+  const outcome = startedOutcome(settled ?? doc);
+  if (notify && !outcome.ended) await watchNotified(ctx, doc.id);
+  return { output, jobId: doc.id, ...outcome };
 }
 
 /** What a stop did: whether it stopped the run, and the url artifacts of a stopped process it deleted (ADR 0104). */

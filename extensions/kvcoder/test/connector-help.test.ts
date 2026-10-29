@@ -49,3 +49,11 @@ describe("a connector's help (08 §8.3, ADR 0011, 4)", { timeout: 30_000 }, () =
     expect(results[2]).toBe('error VALIDATION_FAILED: help takes { "command"? }.');
   });
 });
+
+describe("an invalid payload's error carries the command's help (08 §8.3, ADR 0108, 14)", { timeout: 30_000 }, () => {
+  it("QA71-H27 the error ends with the command's help, for a registered and a built-in command", async () => {
+    const { results } = await looked(nothing, [command('todo', 'add', { text: 1 }), command('todo', 'help', { command: 'add' }), command('fs', 'read', { file: 'a' }), command('fs', 'help', { command: 'read' })]);
+    expect(results[0]?.endsWith(`The payload of todo add is\n{ text }\n\n${results[1] ?? 'none'}`)).toBe(true);
+    expect(results[2]?.endsWith(`The payload of fs read is\n{ path, fromLine?, fromColumn?, lines? }\n\n${results[3] ?? 'none'}`)).toBe(true);
+  });
+});

@@ -16,21 +16,23 @@ describe("an invalid payload returns its problems and the command's payload (08 
     expect(results[0]).toContain('id: ');
     expect(results[0]).toContain('title: ');
     expect(results[0]).toContain('payload: Unrecognized key: "name"');
-    expect(results[0]?.endsWith('The payload of artifact write is\n{ id (≤50), title (≤100), format?: "markdown" | "html" | "url", content }')).toBe(true);
-    expect(results[0]).not.toContain('$schema');
-    expect(results[0]).not.toContain('"properties"');
+    expect(results[0]?.includes('The payload of artifact write is\n{ id (≤50), title (≤100), format?: "markdown" | "html" | "url", content }\n\n')).toBe(true);
+    // The help that follows holds the JSON Schema (ADR 0108, 14); the problems and the signature don't.
+    const [head = ''] = results[0]?.split('\n\n') ?? [];
+    expect(head).not.toContain('$schema');
+    expect(head).not.toContain('"properties"');
   });
 
   it('QA19-H4 a registered connector\'s invalid payload returns its signature too', async () => {
     const { kernel, results } = await looked(nothing, [command('todo', 'add', {})]);
-    expect(results[0]?.endsWith('The payload of todo add is\n{ text }')).toBe(true);
-    expect(results[0]).not.toContain('"properties"');
+    expect(results[0]?.includes('The payload of todo add is\n{ text }\n\n')).toBe(true);
+    expect(results[0]?.split('\n\n')[0]).not.toContain('"properties"');
     expect(await runConnector(kernel, { connector: 'todo', command: 'add', payload: {} })).toEqual({ exitCode: 1, output: results[0] });
   });
 
   it('QA19-E6 a call that asks is checked the same way', async () => {
     const { kernel, sessionId, results } = await looked(nothing, [fsCall('write', { file: 'a.txt', content: 'x' })]);
-    expect(results[0]?.endsWith('The payload of fs write is\n{ path, content, risky }')).toBe(true);
+    expect(results[0]?.includes('The payload of fs write is\n{ path, content, risky }\n\n')).toBe(true);
     expect((await turnState(kernel, sessionId)).session.status).toBe('idle');
     expect(existsSync(path.join(kernel.homeFolder, 'a.txt'))).toBe(false);
   });

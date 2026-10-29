@@ -89,9 +89,9 @@ Paths are relative to `extensions/kvcoder/` unless they start with `extensions/`
   shows the headline, `step 12 of 60`, `3 min`, and the call's closed line. `test/web/subagent-card.test.ts`
 - **QA71-H31 a url artifact replaces an ended one.** *Given* 20 artifacts, the oldest `url` one served by a stopped
   process, *when* the agent writes a new `url` artifact, *then* it replaces that one. `test/artifact-connector.test.ts`
-- **QA71-H32 run with a calls list.** *Given* `run { calls: [fs read a, fs read b, fs edit c] }`, *then* the reads run
-  at once, the edit after them, each has its own card and stored result, and the model reads one result with
-  `## 1. fs read`, `## 2. fs read`, and `## 3. fs edit`. `test/run-calls-list.test.ts`
+- **QA71-H32 run with a calls list.** *Given* `run { calls: [fs read a, fs read b, fs edit c] }`, *then* the reply is
+  stored as three `run` calls with ids `<id>-1` to `<id>-3`, each with its own result, and the history sends them so.
+  `test/run-calls-list.test.ts`, `test/unit/run-tool-arguments.test.ts`
 
 ## Edge cases
 
@@ -133,7 +133,7 @@ Paths are relative to `extensions/kvcoder/` unless they start with `extensions/`
   `test/project-rules.test.ts`
 - **QA71-E19 a helper keeps its parent's rules.** *Given* a parent's kept rules and a later edit, *when* a helper is
   created, *then* its prompt holds the parent's kept text. `test/project-rules.test.ts`
-- **QA71-E20 output read before the end.** *Given* `background output` while the process still ran, *when* it ends,
+- **QA71-E20 output records nothing.** *Given* `background output` while the process still ran, *when* it ends,
   *then* its finished message is appended. `test/background-wait-message.test.ts`
 - **QA71-E21 a person's message during the wait.** *Given* `CONNECTION_WAITING`, *when* the person sends a message,
   *then* the step runs at once with it. `test/connection-waiting.test.ts`

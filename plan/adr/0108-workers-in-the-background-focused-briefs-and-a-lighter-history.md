@@ -89,8 +89,9 @@ on the research app, gpt-6.1-sol for the lead and gpt-6-luna for helpers, throug
    text later differs, the next step sends one message that it changed, with its current text; the system prompt
    doesn't change. A helper keeps its parent's text.
 7. **Trims that change nothing sent** (asked: all three).
-   - A background message whose run's ended result `background wait` or `background output` already returned is not
-     appended.
+   - A background message whose run's ended result `background wait` already returned is not appended, and one
+     already queued is dropped. Not after `background output` (asked while building; recommended over making it a
+     command): it is a query, which writes nothing, and read-only helpers run it.
    - `fs read`'s unchanged answer (ADR 0034, 7; ADR 0097, 3) stays as it is, counting only results sent in full: it
      already does what was asked, and most re-reads followed a clear.
    - `mcp tools` results are never cleared or collapsed, so a server's tools are looked up once a chat.
@@ -130,9 +131,10 @@ on the research app, gpt-6.1-sol for the lead and gpt-6-luna for helpers, throug
     replaces the oldest `url` artifact whose server has stopped; with none, the call fails as today.
 19. **`run` takes several calls** (asked: keep `run` and allow batch calls; then the `calls` list, recommended over a
     second tool and over the prompt only). `run` takes `{ connector, command, payload? }` or `{ calls: [{ connector,
-    command, payload? }] }` with 1 to 20 calls. Each call of the list is handled as a call of its own in that order,
-    with ADR 0046's ordering, its own card, and its own result; the model reads one result that lists each call's
-    result under `## <n>. <connector> <command>`.
+    command, payload? }] }` with 1 to 20 calls. The reply is stored with the list as that many `run` calls (ids
+    `<id>-1`, `<id>-2`, …), so each has ADR 0046's ordering, its own card, approval, and result, as several calls of
+    one reply do (asked while building; recommended over one combined result, which would need new handling of
+    approvals and held-back calls inside a batch).
 
 ## Details
 
@@ -144,8 +146,7 @@ Written while specifying the decisions above and accepted by the owner.
   "Continue." chain stays whole; the session gains `collapsedThroughSeq` (`null` in old records).
 - D5: a collapsed turn's background and job messages are dropped with its calls.
 - D6: folders whose names start with a dot and `node_modules` are skipped; each file keeps today's 32 KB; the kept
-  text is stored on the session as `rules: [{ path, content }]` (`null` in old records reads the files at each step as
-  today).
+  text is stored on the session as `rules: [{ path, content, told }]`, `told` the SHA-256 of the text last told.
 - D8: the assistant message gains `sent: { promptHash, messagesHash, messageCount, prefixKept }`.
 - D15: waits of 1, 4, 15, 60, 120, 120, 120, and 120 s, then the schedule; the new notice code is
   `CONNECTION_WAITING { model, code }` (en: "The connection to {model} failed; kvman tries again every 2 minutes."),
@@ -156,6 +157,9 @@ Written while specifying the decisions above and accepted by the owner.
 - D12: a connection that fails mid-turn is started again at the next call; a server over HTTP keeps its session id
   for the turn.
 - D19: a `calls` list with an invalid entry runs none of them and fails `VALIDATION_FAILED` naming the entry.
+- D18 (written while building): the result of a write that replaced one adds `"replaced": "<id>"`, and "stopped"
+  means nothing accepts a connection at its port within 1 s.
+- D6 (written while building): a chat made before ADR 0108 keeps its rule files from its next step.
 
 ## Not done
 

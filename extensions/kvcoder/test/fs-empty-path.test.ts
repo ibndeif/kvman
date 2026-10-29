@@ -20,9 +20,9 @@ describe('an empty path means the workspace folder (08 §8.5, ADR 0012, 12)', { 
 
   it('QA19-E11 an empty path elsewhere', async () => {
     const { results, kernel } = await looked(() => undefined, [fsCall('read', { path: '' }), fsCall('write', { path: '', content: 'x' }), fsCall('edit', { path: '', edits: [{ oldText: 'a', newText: 'b' }] })]);
-    expect(results[0]).toBe('error VALIDATION_FAILED: path: Too small: expected string to have >=1 characters. The payload of fs read is\n{ path, fromLine?, fromColumn?, lines? }');
-    expect(results[1]).toBe('error VALIDATION_FAILED: path: Too small: expected string to have >=1 characters. The payload of fs write is\n{ path, content, risky }');
-    expect(results[2]).toBe('error VALIDATION_FAILED: path: Too small: expected string to have >=1 characters. The payload of fs edit is\n{ path, edits: [{ oldText, newText, replaceAll? }], risky }');
+    expect(results[0]).toContain('error VALIDATION_FAILED: path: Too small: expected string to have >=1 characters. The payload of fs read is\n{ path, fromLine?, fromColumn?, lines? }\n\n');
+    expect(results[1]).toContain('error VALIDATION_FAILED: path: Too small: expected string to have >=1 characters. The payload of fs write is\n{ path, content, risky }\n\n');
+    expect(results[2]).toContain('error VALIDATION_FAILED: path: Too small: expected string to have >=1 characters. The payload of fs edit is\n{ path, edits: [{ oldText, newText, replaceAll? }], risky }\n\n');
     expect(readdirSync(kernel.homeFolder)).toEqual([]);
   });
 });

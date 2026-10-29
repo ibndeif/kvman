@@ -101,7 +101,7 @@ describe('risky calls ask, the others run (08 §8.3, ADR 0009, 161)', { timeout:
     const { session, turn } = await turnState(kernel, sessionId);
     expect(session.status).toBe('idle');
     expect(turn?.pending).toEqual([]);
-    expect(toolResults(fake)).toEqual(['error VALIDATION_FAILED: risky: Invalid input: expected boolean, received undefined. The payload of shell exec is\n{ line, background?, timeoutMs?, risky }', '[exit code 0]']);
+    expect(toolResults(fake)).toEqual([expect.stringContaining('error VALIDATION_FAILED: risky: Invalid input: expected boolean, received undefined. The payload of shell exec is\n{ line, background?, notify?, timeoutMs?, risky }\n\n'), '[exit code 0]']);
     expect(existsSync(home(kernel, 'marked.txt'))).toBe(true);
     expect(existsSync(home(kernel, 'unmarked.txt'))).toBe(false);
 

@@ -15,9 +15,24 @@ export type Row =
   /** A step's headline; `ids` are the replies that share it, and `thinking` theirs. */
   | { kind: 'headline'; ids: string[]; headline: string; thinking: string[] };
 
+// The agent's own housekeeping, which the conversation doesn't show (ADR 0108, 13): any `help`, and these commands.
+const housekeeping: Readonly<Record<string, ReadonlySet<string>>> = {
+  mcp: new Set(['tools']),
+  background: new Set(['list', 'output', 'wait']),
+  'execution-map': new Set(['get', 'update']),
+};
+
+/** A result of the agent's housekeeping: no card, and nothing a fold counts. */
+export function isHousekeeping(message: Message, calls: ReadonlyMap<string, CallView>): boolean {
+  if (message.kind !== 'toolResult') return false;
+  const call = calls.get(String(message.content['toolCallId']));
+  if (call?.connector === undefined || call.command === undefined) return false;
+  return call.command === 'help' || housekeeping[call.connector]?.has(call.command) === true;
+}
+
 /** A result the conversation shows as a call card. */
 export function isCallCard(message: Message, calls: ReadonlyMap<string, CallView>): boolean {
-  return message.kind === 'toolResult' && artifactOf(message) === undefined && answeredQuestion(message, calls) === undefined && extensionCardOf(message) === undefined;
+  return message.kind === 'toolResult' && !isHousekeeping(message, calls) && artifactOf(message) === undefined && answeredQuestion(message, calls) === undefined && extensionCardOf(message) === undefined;
 }
 
 // A reply with no text: its calls, with or without thinking.
@@ -34,6 +49,7 @@ export function foldedRows(messages: readonly Message[], calls: ReadonlyMap<stri
     run = [];
   };
   for (const message of messages) {
+    if (isHousekeeping(message, calls)) continue;
     if (isCallCard(message, calls)) {
       run.push(message);
       continue;

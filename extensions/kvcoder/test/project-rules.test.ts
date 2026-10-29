@@ -1,9 +1,9 @@
-import { mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { says, systemPrompt } from './support/model-script.ts';
+import { requestMessages, says, systemPrompt, textOf } from './support/model-script.ts';
 import { newSession } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
@@ -51,5 +51,54 @@ describe("the project's rule files (KVC-30, ADR 0058)", { timeout: 30_000 }, () 
       rmSync(outside, { recursive: true, force: true });
     }
     expect((await promptOf(() => undefined)).prompt).not.toContain('Project rules');
+  });
+});
+
+describe('rule files one level down, kept for the chat (ADR 0108, 6)', { timeout: 30_000 }, () => {
+  const changeNotes = (fake: Parameters<typeof systemPrompt>[0], index: number): string[] => requestMessages(fake, index).filter((message) => message.role === 'user' && textOf(message).includes('changed since this chat started')).map(textOf);
+
+  it('QA71-H17 a folder directly inside the workspace gives its rules, and hidden folders and node_modules are not read', async () => {
+    const { prompt } = await promptOf((folder) => {
+      for (const name of ['research', '.hidden', 'node_modules/x']) mkdirSync(path.join(folder, name), { recursive: true });
+      writeFileSync(path.join(folder, 'research', 'AGENTS.md'), 'Testing: Run the existing tests only.\n');
+      writeFileSync(path.join(folder, '.hidden', 'AGENTS.md'), 'HIDDEN RULES');
+      writeFileSync(path.join(folder, 'node_modules', 'AGENTS.md'), 'MODULE RULES');
+      writeFileSync(path.join(folder, 'node_modules', 'x', 'AGENTS.md'), 'DEEP RULES');
+    });
+    expect(prompt).toContain(`${opening('research/AGENTS.md')}Testing: Run the existing tests only.\n`);
+    for (const text of ['HIDDEN RULES', 'MODULE RULES', 'DEEP RULES']) expect(prompt).not.toContain(text);
+  });
+
+  it('QA71-H18 and QA71-E17 an edited rule file keeps the system prompt and is told once; a removed one is told without text', async () => {
+    const { kernel, fake } = await kvcoder.start();
+    const file = path.join(kernel.homeFolder, 'AGENTS.md');
+    writeFileSync(file, 'Use pnpm.\n');
+    const sessionId = await newSession(kernel);
+    const turn = async (text: string): Promise<void> => {
+      fake.reply(says('ok'));
+      await kernel.exec('kvcoder.message.send', { sessionId, text });
+      await kernel.clock.advance(0);
+    };
+    await turn('one');
+    writeFileSync(file, 'Use npm.\n');
+    await turn('two');
+    await turn('three');
+    expect(systemPrompt(fake, 1)).toBe(systemPrompt(fake, 0));
+    expect(systemPrompt(fake, 2)).toBe(systemPrompt(fake, 0));
+    expect(changeNotes(fake, 1)).toEqual(['[kvman: AGENTS.md changed since this chat started. Its current text:]\nUse npm.\n']);
+    expect(changeNotes(fake, 2)).toHaveLength(1);
+    unlinkSync(file);
+    await turn('four');
+    expect(changeNotes(fake, 3).at(-1)).toBe('[kvman: AGENTS.md changed since this chat started. It no longer exists.]');
+    expect(changeNotes(fake, 3)).toHaveLength(2);
+  });
+
+  it('QA71-E18 a long rule file in a folder is cut with its note', async () => {
+    const { prompt } = await promptOf((folder) => {
+      mkdirSync(path.join(folder, 'app'));
+      writeFileSync(path.join(folder, 'app', 'CLAUDE.md'), `${'r'.repeat(32 * 1024)}TAIL`);
+    });
+    expect(prompt).toContain('\n[app/CLAUDE.md is longer than 32768 bytes; the rest was left out. Read the file for all of it.]');
+    expect(prompt).not.toContain('TAIL');
   });
 });

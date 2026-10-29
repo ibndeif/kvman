@@ -93,15 +93,18 @@ function withoutSchemaKey(schema: Json): Json {
   return Object.fromEntries(Object.entries(schema).filter(([key]) => key !== '$schema'));
 }
 
-/** An invalid payload as the model reads it: each problem, then the command's signature so one correction is enough (ADR 0012, 2 to 4). */
-export function invalidPayloadOutput(call: { connector: string; command: string }, issues: readonly PayloadIssue[], schema: Json | undefined): CallResult {
+/**
+ * An invalid payload as the model reads it: each problem, then the command's signature so one correction is enough
+ * (ADR 0012, 2 to 4), then the command's help, so no help call is needed (ADR 0108, 14).
+ */
+export function invalidPayloadOutput(call: { connector: string; command: string }, issues: readonly PayloadIssue[], schema: Json | undefined, help?: string): CallResult {
   const problems = issues.map((issue) => `${issue.path === '' ? 'payload' : issue.path}: ${issue.message}`).join('; ');
   let shape = '';
   if (schema !== undefined) {
     const signature = payloadSignature(schema);
     shape = signature === undefined ? ` The payload of ${call.connector} ${call.command} is (JSON Schema):\n${JSON.stringify(withoutSchemaKey(schema))}` : ` The payload of ${call.connector} ${call.command} is\n${signature}`;
   }
-  return errorOutput({ code: 'VALIDATION_FAILED', message: `${problems}.${shape}` });
+  return errorOutput({ code: 'VALIDATION_FAILED', message: `${problems}.${shape}${help === undefined ? '' : `\n\n${help}`}` });
 }
 
 const kernelIssuesSchema = z.object({ issues: z.array(z.object({ path: z.string(), message: z.string() })).min(1) });
@@ -121,6 +124,8 @@ export type CommandRun = {
   payloadPath: string;
   exec(): Promise<unknown>;
   payloadSchema(): Promise<Json | undefined>;
+  /** The command's help text, added to an invalid payload's error. */
+  help(): Promise<string | undefined>;
   /** Whether the calling job was cancelled, so its Problem is rethrown instead of returned. */
   cancelled(): boolean;
 };
@@ -134,7 +139,7 @@ export async function runCommand(run: CommandRun): Promise<{ ok: true; value: un
     const invalid = error.problem.code === 'VALIDATION_FAILED' ? kernelIssuesSchema.safeParse(error.problem.params) : undefined;
     if (invalid?.success !== true) return { ok: false, result: errorOutput(error.problem) };
     const issues = invalid.data.issues.map((issue) => ({ path: withoutPrefix(issue.path, run.payloadPath), message: issue.message }));
-    return { ok: false, result: invalidPayloadOutput(run, issues, await run.payloadSchema()) };
+    return { ok: false, result: invalidPayloadOutput(run, issues, await run.payloadSchema(), await run.help()) };
   }
 }
 
@@ -177,6 +182,7 @@ export async function runConnector(kernel: ConnectorKernel, call: ConnectorCall,
     payloadPath: '',
     exec: () => kernel.exec(target.command, payload, as),
     payloadSchema: async () => extensionsSchema.parse(await kernel.exec('kernel.extensions.list', {}, as)).flatMap((extension) => [...extension.commands, ...extension.queries]).find((registered) => registered.name === target.command)?.input,
+    help: async () => helpSchema.parse(await kernel.exec('kvcoder.connector.help.get', { connector: call.connector, command: call.command }, as)).text,
     cancelled: () => false,
   });
   return done.ok ? jsonOutput(done.value) : done.result;

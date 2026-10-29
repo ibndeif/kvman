@@ -5,7 +5,7 @@ import { now } from '../sessions/session-lookup.ts';
 import { records, txRecords, type TxRecords } from '../store/collections.ts';
 import { runAuthorityInTx, type CreationGuard } from './permission.ts';
 import { invalid } from '../problems.ts';
-import { appendBackgroundInTx, backgroundText } from '../turns/background.ts';
+import { appendEndingInTx, backgroundText } from '../turns/background.ts';
 import { heldText, resolvePendingInTx } from '../turns/resolve.ts';
 import { beginTurn, dispatchStep } from '../turns/start-turn.ts';
 import { commandLine } from './programs.ts';
@@ -67,7 +67,7 @@ export async function finishRun(ctx: Ctx, runId: string, end: RunEnd, startTurn:
     if (found === undefined || found.status !== 'running') return undefined;
     const authority = runAuthorityInTx(store, found);
     const run = store.runs.update(runId, { status: end.status, endedAt: now(), exitCode: end.exitCode, output: end.text, ...(end.staging === undefined ? {} : { staging: end.staging }) });
-    if (run.toolCallId === null) return { turnId: appendBackgroundInTx(store, run.sessionId, { kind: 'job', jobId: run.id }, backgroundText(run.call, run.id, end.text), startTurn), sessionId: run.sessionId };
+    if (run.toolCallId === null) return { turnId: appendEndingInTx(store, run.sessionId, { kind: 'job', jobId: run.id }, backgroundText(run.call, run.id, end.text), startTurn), sessionId: run.sessionId };
     return { step: authority === undefined ? null : resolvePendingInTx(store, run.sessionId, authority.pending.toolCallId, heldRun(run, run.toolCallId, end)) };
   });
   if (next === undefined) return false;

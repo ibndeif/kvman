@@ -84,7 +84,7 @@ describe('fs read-files (08 §8.5, ADR 0097, 1)', { timeout: 30_000 }, () => {
   it('QA65-E4 no file, 11 files, and an empty path fail the call with its signature', async () => {
     const eleven = Array.from({ length: 11 }, (_, index) => `f${String(index)}.txt`);
     const { results } = await looked(files({}), [fsCall('read-files', { files: [] }), readFiles(...eleven), readFiles('')]);
-    for (const result of results) expect(result).toMatch(/^error VALIDATION_FAILED: .*The payload of fs read-files is\n\{ files: \[\{ path, fromLine\?, lines\? \}\] \}$/s);
+    for (const result of results) expect(result).toMatch(/^error VALIDATION_FAILED: .*The payload of fs read-files is\n\{ files: \[\{ path, fromLine\?, lines\? \}\] \}\n\n\S+ \S+: .*$/s);
   });
 
   it('QA65-E5 a read-only helper may run it, it never asks, and the index lists it after read', async () => {

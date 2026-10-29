@@ -1,5 +1,6 @@
 import { z, type Ctx } from '@kvman/sdk';
 import { startProcess } from '../jobs/process-run.ts';
+import { invalid } from '../problems.ts';
 import { resultLines } from '../result-text.ts';
 import { runShell } from './run-shell.ts';
 import { callTimeout } from './shell-command.ts';
@@ -23,14 +24,15 @@ export const lineRunSchema = z.object({
 /** What a line's run gave: its output and exit code, or for a background run its id and how it stands. */
 export type LineRun = z.output<typeof lineRunSchema>;
 
-type LineOptions = { background?: boolean | undefined; timeoutMs?: number | undefined };
+type LineOptions = { background?: boolean | undefined; notify?: boolean | undefined; timeoutMs?: number | undefined };
 
 export async function runLine(ctx: Ctx, sessionId: string, line: string, options: LineOptions): Promise<LineRun> {
+  if (options.notify === true && options.background !== true) throw invalid('notify works only with background set to true: it wakes the chat when a background line ends.');
   const shell = await shellFor(ctx);
   const timeoutMs = callTimeout(options.timeoutMs);
   if (options.background !== true) return { ...(await runShell(shell, line, ctx.job.workspace.path, timeoutMs, ctx.job.signal)), signal: null, timeoutMs, jobId: null, ended: true };
   const started = Date.now();
-  const run = await startProcess(ctx, sessionId, shell, line);
+  const run = await startProcess(ctx, sessionId, shell, line, options.notify === true);
   return { output: run.output, exitCode: run.exitCode, signal: run.signal, timedOut: false, leftoverStopped: false, durationMs: Date.now() - started, timeoutMs, jobId: run.jobId, ended: run.ended };
 }
 

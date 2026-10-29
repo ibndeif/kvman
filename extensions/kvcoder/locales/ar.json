@@ -656,5 +656,15 @@
   "kvcoder.artifacts.keepDays.title": "أيام الاحتفاظ بالمخرجات",
   "kvcoder.artifacts.keepDays.description": "عدد الأيام التي يُحتفظ فيها بمُخرَج محادثة خاملة بعد آخر تغيير له. 0 يحتفظ بها كلها.",
   "kvcoder.ui.artifacts.delete": "حذف",
-  "kvcoder.ui.artifacts.deleteConfirm": "هل تريد حذف هذا المُخرَج؟"
+  "kvcoder.ui.artifacts.deleteConfirm": "هل تريد حذف هذا المُخرَج؟",
+  "kvcoder.delegate.thinkingLimit.title": "أعلى تفكير للمساعدين",
+  "kvcoder.delegate.thinkingLimit.description": "أقصى مقدار يفكّر به أي مساعد، مهما حدّد عامله أو المحادثة. المرتفع يُبعد المساعدين عن أبطأ المستويات.",
+  "kvcoder.delegate.thinkingLimit.options.off": "بدون",
+  "kvcoder.delegate.thinkingLimit.options.minimal": "أدنى",
+  "kvcoder.delegate.thinkingLimit.options.low": "منخفض",
+  "kvcoder.delegate.thinkingLimit.options.medium": "متوسط",
+  "kvcoder.delegate.thinkingLimit.options.high": "مرتفع",
+  "kvcoder.delegate.thinkingLimit.options.xhigh": "مرتفع جدًا",
+  "kvcoder.delegate.thinkingLimit.options.max": "أقصى",
+  "kvcoder.background.notify.watch.description": "ينتظر انتهاء أمر في الخلفية بُدئ مع notify، ثم يُعلم محادثته، ويبدأ دورًا إن كانت المحادثة خاملة."
 }
