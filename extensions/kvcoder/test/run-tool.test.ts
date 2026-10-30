@@ -19,15 +19,16 @@ async function turn(reply: FakeReply) {
 
 const call = (spec: RunCallSpec) => turn(runs(spec));
 
-const toolSchema = z.object({ function: z.object({ name: z.string(), parameters: z.object({ properties: z.record(z.string(), z.object({ enum: z.array(z.string()).optional() })), required: z.array(z.string()) }) }) });
+const toolSchema = z.object({ function: z.object({ name: z.string(), parameters: z.object({ properties: z.record(z.string(), z.object({ enum: z.array(z.string()).optional() })), required: z.array(z.string()).optional() }) }) });
 
 describe('the run tool (08 §8.2 and §8.3, ADR 0011)', { timeout: 30_000 }, () => {
   it('QA18-H1 the one tool is run, with the session\'s connectors as an enum', async () => {
     const { fake } = await call({ connector: 'todo', command: 'list' });
     const tools = requestTools(fake, 0).map((tool) => toolSchema.parse(tool).function);
     expect(tools.map((tool) => tool.name)).toEqual(['run']);
-    expect(Object.keys(tools[0]?.parameters.properties ?? {})).toEqual(['connector', 'command', 'payload']);
-    expect(tools[0]?.parameters.required).toEqual(['connector', 'command']);
+    // A calls list is the fourth, and none is required (ADR 0108, 19).
+    expect(Object.keys(tools[0]?.parameters.properties ?? {})).toEqual(['connector', 'command', 'payload', 'calls']);
+    expect(tools[0]?.parameters.required).toBeUndefined();
     expect(tools[0]?.parameters.properties['connector']?.enum).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'web', 'todo']);
   });
 

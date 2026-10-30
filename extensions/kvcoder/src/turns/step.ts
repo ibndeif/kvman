@@ -20,9 +20,11 @@ import { appendMessage, appendNotice, appendQueued, userContent } from './histor
 import { levelFor } from './model-info.ts';
 import { incompleteHint, incompleteReply, incompleteRetries, lostHint, lostRetries, lostTokens, repairedCalls, type Incomplete } from './lost-reply.ts';
 import { modelMessages, sentHistory } from './model-context.ts';
-import { completeWithRetries } from './model-retry.ts';
+import { completeWithRetries, transient } from './model-retry.ts';
+import { triesUsed, waitForConnection } from './connection-wait.ts';
 import { evaluateCalls, runApproved, runDeferred, type ToolCall } from './run-calls.ts';
 import { cacheRetentionOf } from './cache-retention.ts';
+import { sentRecord } from './sent-record.ts';
 import { appendResults } from './call-results.ts';
 import { settleCalls } from './settle-calls.ts';
 import { addCallUsage } from './usage.ts';
@@ -92,11 +94,15 @@ type Answer = { calls: ToolCall[]; seq: number; lost: number | undefined; incomp
 const fallbackCodes: ReadonlySet<string> = new Set(['kvai/USAGE_LIMIT', 'kvai/RATE_LIMITED']);
 
 async function callModel(ctx: Ctx, session: Stored<SessionDoc>, lease: StepLease, tools: SessionTools, overflow: 'summarize' | 'end', fallback: string | null = null): Promise<Answer | { tooLong: ProblemError } | { limited: ProblemError } | undefined> {
-  const messages = await modelMessages(ctx, await sentHistory(ctx, session.id, session.nextSeq));
+  const waits = (await currentStep(ctx, lease))?.turn.connectionWaits ?? 0;
+  const history = await sentHistory(ctx, session.id, session.nextSeq);
+  const messages = await modelMessages(ctx, history);
   if (await currentStep(ctx, lease) === undefined) return undefined;
   const started = Date.now();
+  const toolList = [runTool(tools.listed.map(listed => listed.name))];
+  const sent = sentRecord(tools.built.prompt, toolList, messages, history.messages.findLast((message) => message.kind === 'assistant')?.sent);
   try {
-    const answer = await completeWithRetries(ctx, { ...(session.model === null ? {} : { model: session.model }), sessionId: session.id, ...cacheRetentionOf(session), systemPrompt: tools.built.prompt, messages, tools: [runTool(tools.listed.map(listed => listed.name))], thinking: session.thinking }, lease);
+    const answer = await completeWithRetries(ctx, { ...(session.model === null ? {} : { model: session.model }), sessionId: session.id, ...cacheRetentionOf(session), systemPrompt: tools.built.prompt, messages, tools: toolList, thinking: session.thinking }, lease, waits > 0);
     const durationMs = Date.now() - started;
     const { blocks: received, broken } = repairedCalls(answer.message.content);
     // A call sent in a shape the model often uses is stored as the call it meant, so its card and the history show that (ADR 0102, 5).
@@ -109,8 +115,9 @@ async function callModel(ctx: Ctx, session: Stored<SessionDoc>, lease: StepLease
       const store = txRecords(tx);
       const live = liveStep(store, lease, lease.jobId);
       if (live === undefined) return undefined;
-      const stored = appendMessage(store, live.session, { kind: 'assistant', content: message, turnId: lease.turnId, model: message.provider + '/' + message.model, usage: answer.usage, basis: promptBasis(tools.built.prompt, tools.listed.map(listed => listed.name)), durationMs });
+      const stored = appendMessage(store, live.session, { kind: 'assistant', content: message, turnId: lease.turnId, model: message.provider + '/' + message.model, usage: answer.usage, basis: promptBasis(tools.built.prompt, tools.listed.map(listed => listed.name)), sent, durationMs });
       addCallUsage(store, live.session, lease.turnId, answer.usage);
+      if (live.turn.connectionWaits > 0) store.turns.update(lease.turnId, { connectionWaits: 0 });
       return stored.seq;
     });
     if (seq === undefined) return undefined;
@@ -124,7 +131,9 @@ async function callModel(ctx: Ctx, session: Stored<SessionDoc>, lease: StepLease
     if (!(error instanceof ProblemError) || ctx.job.signal.aborted) throw error;
     if (overflow === 'summarize' && error.problem.code === 'kvai/CONTEXT_TOO_LONG') return { tooLong: error };
     if (fallback !== null && fallback !== session.model && fallbackCodes.has(error.problem.code)) return { limited: error };
-    await stepFailed(ctx, session, lease, error);
+    // A failure that may pass waits for the connection, up to its tries (ADR 0108, 15).
+    if (transient(error) && !triesUsed(waits)) await waitForConnection(ctx, session, lease, { model: session.model ?? '', code: error.problem.code });
+    else await stepFailed(ctx, session, lease, error);
     return undefined;
   }
 }

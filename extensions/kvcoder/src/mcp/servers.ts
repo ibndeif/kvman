@@ -5,6 +5,9 @@ import { wordSchema } from '../schemas/registry.ts';
 // is a command that speaks MCP on its standard input and output, or an address reached over Streamable HTTP. `env` and
 // `headers` hold names only: each value is one of kvcoder's secrets.
 
+/** The variable a command server reads the workspace folder from. */
+export const workspaceVariable = 'KVMAN_WORKSPACE';
+
 const text = z.string().min(1);
 const variableName = z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/, 'Use letters, digits, and _, not starting with a digit.');
 const headerName = z.string().regex(/^[A-Za-z0-9!#$%&'*+.^_`|~-]+$/, 'Use the characters of an HTTP header name.');
@@ -13,7 +16,9 @@ function isHttpAddress(value: string): boolean {
   return URL.canParse(value) && ['http:', 'https:'].includes(new URL(value).protocol);
 }
 
-const commandServerSchema = z.strictObject({ name: wordSchema, description: text, command: text, args: z.array(z.string()), env: z.array(variableName) });
+// A command server with `port` serves MCP over HTTP on that port of this machine: kvman runs it for a turn, and the
+// turn's calls share its session (ADR 0108, 12).
+const commandServerSchema = z.strictObject({ name: wordSchema, description: text, command: text, args: z.array(z.string()), env: z.array(variableName), port: z.number().int().min(1024).max(65535).exactOptional() });
 const urlServerSchema = z.strictObject({ name: wordSchema, description: text, url: z.string().refine(isHttpAddress, 'Give an http or https address.'), headers: z.array(headerName) });
 
 /** One MCP server: a command, or an address. */

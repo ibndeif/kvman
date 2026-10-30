@@ -61,9 +61,11 @@ on the research app, gpt-6.1-sol for the lead and gpt-6-luna for helpers, throug
      attached.
    - `budget`: the most steps the run takes, 60 (asked: 60; recommended was 40). At the budget the helper's turn ends
      as a step limit does, and its result is the unfinished one of §8.5 with its last message.
-   - The helper's first message is written by kvcoder from these fields. `find`, `check`, and `review` run read-only,
-     as a `readOnly` worker's helper does (ADR 0056); a `change` run's `fs` changes to a path outside `files` are
-     refused before any approval. A `readOnly` worker refuses `kind: 'change'`. A `shell exec` is not limited to
+   - The helper's first message is written by kvcoder from these fields. `find` and `review` run read-only, as a
+     `readOnly` worker's helper does (ADR 0056); `check` may also run `shell exec` and a binary's `exec`, with their
+     approval as usual, but makes no `fs` change (asked while building, since a read-only helper runs no line;
+     recommended over a read-only `check` and over dropping it); a `change` run's `fs` changes to a path outside
+     `files` are refused before any approval. A `readOnly` worker refuses `kind: 'change'`. A `shell exec` is not limited to
      `files`; the brief says so. A program worker gets the same text as its task, and nothing is enforced.
 3. **A worker's thinking has a ceiling** (asked; recommended). The setting `kvcoder.delegate.thinkingLimit`, `high` by
    default, caps every helper's level (the worker's, the helpers' default, or the chat's), before the nearest level
@@ -108,10 +110,12 @@ on the research app, gpt-6.1-sol for the lead and gpt-6-luna for helpers, throug
 11. **A check-in on long turns** (asked; recommended over 100 steps and a hard stop at 200). At step 60 of a turn,
     and every 60 after, kvcoder adds the message `[kvman: step <n> of this turn. Say in one line where you are and
     what is left, then go on.]`; nothing stops.
-12. **One MCP connection per turn** (asked; recommended over one per chat and over today's one per call). A turn's
-    first `mcp tools`, `call`, or `run` to a server starts its connection, kept under `ctx.processes` for a command
-    server, and the turn's later calls to that server use it; it closes when the turn ends. A page stays open across
-    the turn's steps.
+12. **One MCP session per turn** (asked; recommended over one per chat and over today's one per call; then, since a
+    job can't carry a command's standard input and output to the next job, asked again while building: keep-running
+    HTTP servers, recommended over dropping it and over new kernel piping). A server over HTTP keeps its MCP session
+    for the turn; a command server with a new optional `port` is started once per turn through `ctx.processes` as an
+    HTTP server on that port, and the turn's calls share its session, so a page stays open across the turn's steps.
+    A command server without `port` connects per call as before. The turn's end stops what it kept.
 13. **Housekeeping calls are not shown** (asked: all four). The conversation shows no card, and a fold counts nothing,
     for `help`, `mcp tools`, `background list`, `output`, and `wait`, and `execution-map get` and `update`. They stay
     in the history and the export.
@@ -145,10 +149,16 @@ Written while specifying the decisions above and accepted by the owner.
 - D5: kept whole are the current turn, the newest ended turn, and every ended turn after the newest `done` one, so a
   "Continue." chain stays whole; the session gains `collapsedThroughSeq` (`null` in old records).
 - D5: a collapsed turn's background and job messages are dropped with its calls.
+- D5 (written while building): a trim at 60,000 tokens also needs to take out more than 20,000 tokens, as clearing
+  did, so a long single turn isn't trimmed again at every step; a collapsed turn names its files relative to the
+  workspace folder.
 - D6: folders whose names start with a dot and `node_modules` are skipped; each file keeps today's 32 KB; the kept
   text is stored on the session as `rules: [{ path, content, told }]`, `told` the SHA-256 of the text last told.
 - D8: the assistant message gains `sent: { promptHash, messagesHash, messageCount, prefixKept }`.
-- D15: waits of 1, 4, 15, 60, 120, 120, 120, and 120 s, then the schedule; the new notice code is
+- D15 (changed while building): the step's own waits stay 1, 4, 15, and 60 s, and every later try, every 2 minutes,
+  is the schedule's, 30 at most, counted on the turn as `connectionWaits`; the test kernel's fake clock drives
+  schedules but not the waits inside a job, so ten minutes of waits inside the step couldn't be tested, and the
+  cadence is the same. The new notice code is
   `CONNECTION_WAITING { model, code }` (en: "The connection to {model} failed; kvman tries again every 2 minutes."),
   the waiting turn's `waitingOn` is `null`, and a message from the person resumes it at once; the retry is the private
   scheduled command `kvcoder.turn.resume { sessionId, turnId }` with the key `connection-<sessionId>`.

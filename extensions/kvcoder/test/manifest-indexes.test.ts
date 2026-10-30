@@ -20,6 +20,7 @@ const planned = {
   artifacts: [['sessionId'], ['sessionId', 'artifactId']],
   background: [['sessionId'], ['sessionId', 'ref']],
   'read-endings': [['sessionId', 'ref']],
+  'mcp-sessions': [['turnId'], ['turnId', 'server']],
   runs: [['sessionId'], ['jobId']],
   processes: [['sessionId'], ['sessionId', 'reported'], ['workspaceId']],
 };

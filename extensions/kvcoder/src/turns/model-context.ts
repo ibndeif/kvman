@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { ProblemError, type Ctx, type Json, type Stored } from '@kvman/sdk';
 import { messageSchema } from '@kvman/kvai/messages';
 import type { MessageDoc } from '../schemas/records.ts';
@@ -6,26 +7,45 @@ import { blockSize } from './history.ts';
 import { latestSummary, messagesFrom } from './message-blocks.ts';
 import { messageStamp } from './message-stamp.ts';
 import { callNames, clearedCalls, clearedPayload, clearedText, isCleared } from './cleared-results.ts';
+import { collapsedView, toolsLookups } from './collapse.ts';
+import { allDocs } from '../store/all-docs.ts';
 import { records } from '../store/collections.ts';
 
 // What a step sends the model (plan 08 §8.1): the latest summary, then the messages after it; notices, notes, and
 // older messages stay visible but aren't sent. Images are read from their files at each step (ADR 0009, 103). A summary
 // stored before ADR 0036, 16 may end between a reply's calls and their results: the messages then start at that reply.
 
-/** The summary, the model-visible messages after it, and the last result sent cleared (ADR 0094, 1; -1 for none). */
-export type History = { summary: Stored<MessageDoc> | undefined; messages: Stored<MessageDoc>[]; cleared: number };
+/**
+ * The summary, the model-visible messages after it as they are sent (finished turns collapsed, ADR 0108, 5), the last
+ * result sent cleared (ADR 0094, 1), and the last message of the collapsed turns (-1 for none).
+ */
+export type History = { summary: Stored<MessageDoc> | undefined; messages: Stored<MessageDoc>[]; cleared: number; collapsed?: number };
+
+// The files each turn changed last, in the workspace folder's terms, for a collapsed turn's line (ADR 0108, 5).
+async function changedFiles(ctx: Ctx, sessionId: string): Promise<Map<string, string[]>> {
+  const files = new Map<string, string[]>();
+  const workspace = ctx.job.workspace.path;
+  for (const change of await allDocs((options) => records(ctx.store).fileChanges.find({ sessionId }, options))) {
+    const inside = path.relative(workspace, change.path);
+    const shown = inside === '' || inside.startsWith('..') || path.isAbsolute(inside) ? change.path : inside.split(path.sep).join('/');
+    if (change.turnId !== null) files.set(change.turnId, [...(files.get(change.turnId) ?? []), shown].sort());
+  }
+  return files;
+}
 
 const sent = new Set<MessageDoc['kind']>(['user', 'assistant', 'toolResult']);
 
 /** The summary and the model-visible messages after it. */
 export async function sentHistory(ctx: Ctx, sessionId: string, nextSeq: number): Promise<History> {
   const summary = await latestSummary(ctx, sessionId);
-  const cleared = (await records(ctx.store).sessions.get(sessionId))?.clearedThroughSeq ?? -1;
+  const session = await records(ctx.store).sessions.get(sessionId);
+  const cleared = session?.clearedThroughSeq ?? -1;
+  const collapsed = session?.collapsedThroughSeq ?? -1;
   const from = summary === undefined ? 0 : Number(summary.content['coversThroughSeq'] ?? -1) + 1;
-  const messages = (await messagesFrom(ctx, sessionId, from, nextSeq)).filter((message) => sent.has(message.kind));
-  if (messages[0]?.kind !== 'toolResult') return { summary, messages, cleared };
-  const before = (await messagesFrom(ctx, sessionId, Math.max(from - blockSize, 0), from)).filter((message) => sent.has(message.kind));
-  return { summary, messages: withCallingReply(before, messages), cleared };
+  const read = (await messagesFrom(ctx, sessionId, from, nextSeq)).filter((message) => sent.has(message.kind));
+  const whole = read[0]?.kind !== 'toolResult' ? read : withCallingReply((await messagesFrom(ctx, sessionId, Math.max(from - blockSize, 0), from)).filter((message) => sent.has(message.kind)), read);
+  const messages = collapsed < from ? whole : collapsedView(whole, collapsed, await changedFiles(ctx, sessionId));
+  return { summary, messages, cleared, collapsed };
 }
 
 /** A message's text: a string, or its text blocks joined. */
@@ -111,12 +131,14 @@ export function summaryText(summary: Pick<MessageDoc, 'content'> | undefined): s
 export async function modelMessages(ctx: Ctx, history: History) {
   const lead: Json[] = history.summary === undefined ? [] : [{ role: 'user', content: `${summaryLead}\n${summaryText(history.summary)}`, timestamp: Date.parse(history.summary.createdAt) }];
   const names = callNames(history.messages);
-  const cleared = clearedCalls(history.messages, history.cleared);
+  // An `mcp tools` lookup is never cleared, so a server's tools are looked up once a chat (ADR 0108, 7).
+  const lookups = toolsLookups(history.messages);
+  const cleared = new Set([...clearedCalls(history.messages, history.cleared)].filter((id) => !lookups.has(id)));
   const rest = await Promise.all(history.messages.map((message) => {
     if (message.kind === 'user') return userMessage(ctx, message);
     if (message.kind === 'assistant') return Promise.resolve(assistantMessage(message, cleared));
     // An old result is sent as a line that names its call (ADR 0094, 1).
-    if (isCleared(message, history.cleared)) return Promise.resolve({ ...message.content, content: [{ type: 'text', text: clearedText(names.get(String(message.content['toolCallId'])) ?? 'a call') }] });
+    if (isCleared(message, history.cleared) && !lookups.has(String(message.content['toolCallId']))) return Promise.resolve({ ...message.content, content: [{ type: 'text', text: clearedText(names.get(String(message.content['toolCallId'])) ?? 'a call') }] });
     return Promise.resolve(message.content);
   }));
   return messageSchema.array().parse([...lead, ...rest]);

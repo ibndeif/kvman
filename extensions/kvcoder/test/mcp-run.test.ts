@@ -56,7 +56,7 @@ describe('several tools on one connection (08 §8.5, ADR 0070, 1 and 2)', { time
     const listed = JSON.parse(results[0] ?? '{}') as { tools: { name: string; takes: string }[] };
     expect(listed.tools.filter((tool) => ['echo', 'recall', 'sleep'].includes(tool.name)).map((tool) => [tool.name, tool.takes])).toEqual([['echo', '{ text }'], ['sleep', '{ ms }'], ['recall', '{}']]);
     const prompt = systemPrompt(fake, 0);
-    expect(prompt).toContain('keeps it only inside one run: put the tools that belong together (open the page, fill, click, read) in one run.');
+    expect(prompt).toContain('keeps its state only inside one run: put the tools that belong together (open the page, fill, click, read) in one run.');
     expect(prompt).toMatch(/\n {2}run +\{ server, steps: \[\{ tool, arguments\? \}\], timeoutMs\?, risky \}\n/);
     expect(prompt).toContain('creating, editing, or rewriting a file inside the workspace folder that the task needs, whoever made it');
   });

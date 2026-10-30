@@ -3,6 +3,7 @@ import { artifactFormats } from '../artifacts/artifact-format.ts';
 import type { JsonValue } from '../connector-call.ts';
 import { thinkingLevels } from '../thinking-levels.ts';
 import { keptRuleSchema } from './kept-rule.ts';
+import { sentRecordSchema } from './sent-record.ts';
 
 export type { JsonValue };
 
@@ -58,6 +59,8 @@ export const sessionDocSchema = z.object({
   decides: z.boolean().default(false),
   // The last tool result sent cleared (ADR 0094, 1).
   clearedThroughSeq: z.number().int().nullable().default(null),
+  // The last message of the finished turns sent collapsed (ADR 0108, 5).
+  collapsedThroughSeq: z.number().int().nullable().default(null),
   // The hosts this chat let web fetch reach (ADR 0095, 4).
   webHosts: z.array(z.string()).default([]),
   usageBy: usageBySchema.default({ summary: noTokens, title: noTokens, helpers: noTokens }),
@@ -106,6 +109,8 @@ export const messageDocSchema = z.object({
   usage: usageSchema.nullable(),
   // What a reply's provider count was measured with: the prompt and tools of its call (ADR 0058, 2); none on older messages.
   basis: z.string().nullable().default(null),
+  // What its model call was sent, for a reply (ADR 0108, 8); none on older messages.
+  sent: sentRecordSchema.nullable().default(null),
   durationMs: z.number().nonnegative().nullable(),
   createdAt: z.string(),
 });
@@ -159,6 +164,8 @@ export const turnDocSchema = z.object({
   pending: z.array(pendingSchema),
   results: z.array(heldResultSchema),
   deferredCalls: z.array(z.object({ toolCallId: z.string(), call: runCallSchema })).default([]),
+  // The scheduled tries the turn has waited for the connection; 0 while it doesn't (ADR 0108, 15).
+  connectionWaits: z.number().int().nonnegative().default(0),
 });
 
 export const questionDocSchema = z.object({

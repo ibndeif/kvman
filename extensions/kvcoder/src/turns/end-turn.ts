@@ -3,6 +3,7 @@ import { dropRun } from '../delegate/runs.ts';
 import { firePoint } from '../registry/session-points.ts';
 import type { Outcome } from '../schemas/records.ts';
 import { records, txRecords } from '../store/collections.ts';
+import { closeTurnServers } from '../mcp/turn-servers.ts';
 import { cancelStepJob } from './cancel-step-job.ts';
 import { childResultInTx } from './child-result.ts';
 import { endTurnState, type EndAuthority, type EndedBy, type EndedTurn, type Notice } from './end-turn-state.ts';
@@ -36,6 +37,8 @@ export async function notifyEnded(ctx: Ctx, ended: EndedTurn): Promise<void> {
   await firePoint(ctx, 'kvcoder.turn.ended', { sessionId: session.id, turnId, outcome, usage: ended.usage, durationMs: ended.durationMs });
   if (session.parentId === null && session.autoTitle && session.endedTurns === 1) await ctx.execAsync('kvcoder.session.title', { sessionId: session.id });
   await stopDependents(ctx, ended);
+  // The MCP servers the turn kept end with it (ADR 0108, 12).
+  await closeTurnServers(ctx, turnId);
   if (delivery === undefined) return;
   if ('step' in delivery) await dispatchStep(ctx, delivery.step, false);
   else if ('turn' in delivery) await beginTurn(ctx, delivery.turn.sessionId, delivery.turn.turnId, true);

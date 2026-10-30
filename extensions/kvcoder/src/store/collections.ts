@@ -3,6 +3,7 @@ import { answerReceiptDocSchema, artifactDocSchema, backgroundDocSchema, fileBac
 import { mapDocSchema } from '../maps/map-schema.ts';
 import { signInDocSchema } from '../mcp/sign-in-record.ts';
 import { readEndingDocSchema } from '../schemas/read-ending.ts';
+import { mcpSessionDocSchema } from '../schemas/mcp-session.ts';
 import { connectorDocSchema, handlerDocSchema, handlerJobDocSchema, sectionDocSchema, slashDocSchema } from '../schemas/registry.ts';
 
 // kvcoder's collections (plan 08 §8.4 "Where entries live"): sessions and their records, and workspace sections, in
@@ -28,6 +29,7 @@ export function records(store: Store) {
     maps: store.collection('maps', mapDocSchema),
     background: store.collection('background', backgroundDocSchema),
     readEndings: store.collection('read-endings', readEndingDocSchema),
+    mcpSessions: store.collection('mcp-sessions', mcpSessionDocSchema),
     runs: store.collection('runs', runDocSchema),
     sections: store.collection('sections', sectionDocSchema),
     globalSections: store.global.collection('sections', sectionDocSchema),
@@ -59,6 +61,7 @@ export function txRecords(tx: Transaction) {
     maps: tx.collection('maps', mapDocSchema),
     background: tx.collection('background', backgroundDocSchema),
     readEndings: tx.collection('read-endings', readEndingDocSchema),
+    mcpSessions: tx.collection('mcp-sessions', mcpSessionDocSchema),
     runs: tx.collection('runs', runDocSchema),
     sections: tx.collection('sections', sectionDocSchema),
     globalSections: tx.global.collection('sections', sectionDocSchema),

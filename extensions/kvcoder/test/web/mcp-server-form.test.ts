@@ -132,7 +132,7 @@ describe('adding and editing an MCP server (08 §8.7, ADR 0020, 6 and 15)', () =
   });
 
   it("QA29-E22 the form's rules are the setting's: a draft the form accepts is a list the server accepts", () => {
-    const base: ServerDraft = { name: 'github', description: 'x', kind: 'command', command: 'npx', args: '', url: '', values: [{ name: 'A_1', value: 'v', set: false, replacing: false }] };
+    const base: ServerDraft = { name: 'github', description: 'x', kind: 'command', command: 'npx', args: '', port: '', url: '', values: [{ name: 'A_1', value: 'v', set: false, replacing: false }] };
     const drafts: [ServerDraft, unknown][] = [
       [base, { name: 'github', description: 'x', command: 'npx', args: [], env: ['A_1'] }],
       [{ ...base, name: 'Git' }, { name: 'Git', description: 'x', command: 'npx', args: [], env: [] }],
@@ -140,6 +140,9 @@ describe('adding and editing an MCP server (08 §8.7, ADR 0020, 6 and 15)', () =
       [{ ...base, kind: 'url', url: 'https://a.example/mcp', values: [] }, { name: 'github', description: 'x', url: 'https://a.example/mcp', headers: [] }],
       [{ ...base, kind: 'url', url: 'file:///x', values: [] }, { name: 'github', description: 'x', url: 'file:///x', headers: [] }],
       [{ ...base, kind: 'url', url: 'https://a.example', values: [{ name: 'X Y', value: 'v', set: false, replacing: false }] }, { name: 'github', description: 'x', url: 'https://a.example', headers: ['X Y'] }],
+      // QA71-H33: a port from 1024 to 65535 (ADR 0108, 12).
+      [{ ...base, port: '8931' }, { name: 'github', description: 'x', command: 'npx', args: [], env: ['A_1'], port: 8931 }],
+      [{ ...base, port: '80' }, { name: 'github', description: 'x', command: 'npx', args: [], env: ['A_1'], port: 80 }],
     ];
     for (const [draft, entry] of drafts) expect(Object.keys(draftProblems(draft, [])).length === 0, JSON.stringify(entry)).toBe(mcpServersSchema.safeParse([entry]).success);
   });

@@ -62,7 +62,7 @@ describe('signing in to an MCP server (08 §8.5, ADR 0020, 8, 11, and 16)', { ti
     const state = String(new URL(url).searchParams.get('state'));
     expect(await kernel.exec('kvcoder.mcp.sign-in.finish', { state, code: fixture.approve(url) })).toEqual({ name: 'remote' });
     expect(await secretNames(kernel)).toEqual(['mcp.remote.oauth.client', 'mcp.remote.oauth.tokens']);
-    expect(await kernel.exec('kvcoder.mcp.server.check', { name: 'remote' })).toEqual({ status: 'ready', tools: 10 });
+    expect(await kernel.exec('kvcoder.mcp.server.check', { name: 'remote' })).toEqual({ status: 'ready', tools: 11 });
     expect(await echo(kernel, fake)).toBe('signed in');
     expect(fixture.bearers.at(-1)).toBe('Bearer access-1-SECRET');
   });

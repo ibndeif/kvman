@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { backgroundDocSchema, heldResultSchema, sessionDocSchema } from '../../src/schemas/records.ts';
+import { backgroundDocSchema, heldResultSchema, messageDocSchema, sessionDocSchema } from '../../src/schemas/records.ts';
 import { runApproved } from '../../src/turns/run-calls.ts';
 
 describe('records stored before the run tool (08 §8.3, ADR 0011, 12)', () => {
@@ -18,6 +18,16 @@ describe('records stored before the run tool (08 §8.3, ADR 0011, 12)', () => {
     const usage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0 };
     const stored = { title: 'Old', autoTitle: false, status: 'idle', parentId: null, worker: null, model: 'fake/m1', thinking: 'off', stepJobId: null, turnId: null, endedTurns: 0, nextSeq: 0, usage, durationMs: 0, checks: null, connectors: null, createdAt: '2026-10-01T00:00:00.000Z', updatedAt: '2026-10-01T00:00:00.000Z' };
     // QA60-E4: and before Decide for me, as off.
-    expect(sessionDocSchema.parse(stored)).toEqual({ ...stored, optedIn: [], stepGeneration: 0, stepIntentId: null, deleting: false, decides: false, clearedThroughSeq: null, webHosts: [], usageBy: { summary: usage, title: usage, helpers: usage } });
+    expect(sessionDocSchema.parse(stored)).toEqual({ ...stored, optedIn: [], stepGeneration: 0, stepIntentId: null, deleting: false, decides: false, clearedThroughSeq: null, collapsedThroughSeq: null, webHosts: [], usageBy: { summary: usage, title: usage, helpers: usage } });
+  });
+
+  it('QA71-E16 a session with no collapsed turns or kept rules, and a reply with no sent record, read as before', () => {
+    const usage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0 };
+    const session = sessionDocSchema.parse({ title: 'Old', autoTitle: false, status: 'idle', parentId: null, worker: null, model: 'fake/m1', thinking: 'off', stepJobId: null, turnId: null, endedTurns: 0, nextSeq: 0, usage, durationMs: 0, checks: null, connectors: null, createdAt: '2026-10-01T00:00:00.000Z', updatedAt: '2026-10-01T00:00:00.000Z' });
+    expect(session.collapsedThroughSeq).toBeNull();
+    expect('rules' in session).toBe(false);
+    const reply = messageDocSchema.parse({ sessionId: 's1', turnId: 't1', seq: 3, block: 0, kind: 'assistant', source: null, content: { role: 'assistant', content: [] }, fileIds: null, fileNames: null, model: 'fake/m1', usage, durationMs: 10, createdAt: '2026-10-01T00:00:00.000Z' });
+    expect(reply.sent).toBeNull();
+    expect(reply.basis).toBeNull();
   });
 });

@@ -73,6 +73,12 @@ function runAs(next: 'command' | 'url'): void {
         <textarea v-model="draft.args" dir="ltr" rows="3" class="kvc-field kvc-mono" spellcheck="false" data-test="mcp-args" />
         <span class="kvc-muted">{{ text('argsHint') }}</span>
       </label>
+      <label class="kvc-form-field">
+        <span class="kvc-form-label">{{ text('port') }}</span>
+        <input v-model="draft.port" type="text" inputmode="numeric" dir="ltr" class="kvc-field kvc-mono" autocomplete="off" :aria-invalid="problems.port !== undefined" data-test="mcp-port" />
+        <span v-if="problems.port !== undefined" class="kvc-form-error" role="alert" data-test="mcp-port-error">{{ kvman.t(problems.port) }}</span>
+        <span v-else class="kvc-muted">{{ text('portHint') }}</span>
+      </label>
     </template>
     <label v-else class="kvc-form-field">
       <span class="kvc-form-label">{{ text('url') }}</span>

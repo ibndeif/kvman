@@ -11,15 +11,17 @@ import { currentStep, type StepLease } from './step-claim.ts';
 
 const waitsMs = [1_000, 4_000, 15_000, 60_000] as const;
 
-const transient = (error: ProblemError): boolean => error.problem.code === 'kvai/RATE_LIMITED' || (error.problem.code === 'kvai/PROVIDER_ERROR' && error.problem.params?.['transient'] === true);
+/** A failure that may pass: a rate limit, or a provider error marked temporary. */
+export const transient = (error: ProblemError): boolean => error.problem.code === 'kvai/RATE_LIMITED' || (error.problem.code === 'kvai/PROVIDER_ERROR' && error.problem.params?.['transient'] === true);
 
-export async function completeWithRetries(ctx: Ctx, input: InputOf<'kvai.complete'>, lease: StepLease | undefined): Promise<OutputOf<'kvai.complete'>> {
+/** With `once`, as a turn waiting for the connection does, the call is tried once (ADR 0108, 15). */
+export async function completeWithRetries(ctx: Ctx, input: InputOf<'kvai.complete'>, lease: StepLease | undefined, once = false): Promise<OutputOf<'kvai.complete'>> {
   for (let attempt = 1; ; attempt += 1) {
     if (lease !== undefined && await currentStep(ctx, lease) === undefined) throw invalid('The originating step is no longer current.');
     try {
       return await ctx.exec('kvai.complete', input);
     } catch (error) {
-      const wait = waitsMs[attempt - 1];
+      const wait = once ? undefined : waitsMs[attempt - 1];
       if (!(error instanceof ProblemError) || !transient(error) || wait === undefined || ctx.job.signal.aborted) throw error;
       ctx.log.warn('A model call failed for a temporary reason; trying again.', { code: error.problem.code, attempt });
       ctx.job.progress({ type: 'retry', attempt: attempt + 1, of: waitsMs.length + 1, waitMs: wait, reason: error.problem.code === 'kvai/RATE_LIMITED' ? 'rateLimited' : 'unavailable' });

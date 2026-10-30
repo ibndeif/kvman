@@ -2,6 +2,7 @@ import type { Stored } from '@kvman/sdk';
 import type { JsonValue, MessageDoc, SessionDoc, Source, Usage } from '../schemas/records.ts';
 import type { TxRecords } from '../store/collections.ts';
 import { now } from '../sessions/session-lookup.ts';
+import type { SentRecord } from '../schemas/sent-record.ts';
 
 // Appending to a session's history inside a transaction: each message takes the session's next `seq`.
 
@@ -15,6 +16,7 @@ export type NewMessage = {
   model?: string | null;
   usage?: Usage | null;
   basis?: string | null;
+  sent?: SentRecord | null;
   durationMs?: number | null;
 };
 
@@ -39,6 +41,7 @@ export function appendMessage(tx: TxRecords, session: Stored<SessionDoc>, messag
     model: message.model ?? null,
     usage: message.usage ?? null,
     basis: message.basis ?? null,
+    sent: message.sent ?? null,
     durationMs: message.durationMs ?? null,
     createdAt: now(),
   });

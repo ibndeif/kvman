@@ -8,7 +8,7 @@ import { preparedStep, prepareStep, publishStep, type StepIdentity } from './ste
 
 /** Opens a turn and prepares its first intent in the same transaction (ADR0041). */
 export function openTurn(tx: TxRecords, session: Stored<SessionDoc>): string {
-  const turn = tx.turns.insert({ sessionId: session.id, startedAt: now(), endedAt: null, durationMs: 0, steps: 0, lost: 0, incomplete: 0, usage: noUsage(), outcome: null, calls: [], pending: [], results: [], deferredCalls: [] });
+  const turn = tx.turns.insert({ sessionId: session.id, startedAt: now(), endedAt: null, durationMs: 0, steps: 0, lost: 0, incomplete: 0, usage: noUsage(), outcome: null, calls: [], pending: [], results: [], deferredCalls: [], connectionWaits: 0 });
   tx.sessions.update(session.id, { status: 'running', turnId: turn.id, stepJobId: null, updatedAt: now() });
   prepareStep(tx, session.id, turn.id);
   return turn.id;

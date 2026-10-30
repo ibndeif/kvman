@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 
-// The MCP server the tests talk to: eight tools that each show one thing the `mcp` connector must handle.
+// The MCP server the tests talk to: tools that each show one thing the `mcp` connector must handle.
 
 const text = (value: string) => ({ content: [{ type: 'text' as const, text: value }] });
 const noArguments = { type: 'object' as const, properties: {} };
@@ -18,6 +18,7 @@ const tools = [
   { name: 'cwd', description: 'Returns the folder the server runs in.', inputSchema: noArguments },
   { name: 'remember', description: 'Keeps a text in this server process.', inputSchema: { type: 'object' as const, properties: { text: { type: 'string' } }, required: ['text'] } },
   { name: 'recall', description: 'Returns the text this server process keeps.', inputSchema: noArguments },
+  { name: 'pid', description: 'Returns the id of this server process.', inputSchema: noArguments },
 ];
 
 /** The fixture's tool names, in its order. */
@@ -56,6 +57,8 @@ export function fixtureServer(): Server {
         return text('kept');
       case 'recall':
         return text(kept);
+      case 'pid':
+        return text(String(process.pid));
       default:
         throw new Error(`Unknown tool ${request.params.name}.`);
     }

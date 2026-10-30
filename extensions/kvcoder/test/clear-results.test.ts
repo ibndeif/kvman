@@ -103,7 +103,7 @@ describe('old tool results cleared (ADR 0094, 1)', { timeout: 60_000 }, () => {
     expect(messages.some((message) => message.kind === 'summary')).toBe(false);
   });
 
-  // A model with a window as large as the owner's (272K), so only the fixed 80,000 tokens can start a clear (ADR 0102, 6).
+  // A model with a window as large as the owner's (272K), so only the fixed 60,000 tokens can start a clear (ADR 0108, 5).
   async function wideChat() {
     const { kernel, fake } = await kvcoder.start();
     await kernel.exec('kvai.model.add', { provider: 'fake', id: 'wide', name: 'Wide', input: ['text'], reasoning: true, contextWindow: 272_000, maxTokens: 8192 });
@@ -122,10 +122,11 @@ describe('old tool results cleared (ADR 0094, 1)', { timeout: 60_000 }, () => {
     expect(sent.slice(9).every((text) => text.startsWith('big-'))).toBe(true);
   });
 
-  it('QA67-E14 a prompt under 80,000 tokens is not cleared in a turn, whatever the window', async () => {
+  // Superseded in part by ADR 0108, 5: the trim comes at 60,000 tokens, so six reads stay under it.
+  it('QA67-E14 a prompt under 60,000 tokens is not cleared in a turn, whatever the window', async () => {
     const { kernel, fake, sessionId } = await wideChat();
-    bigFiles(8)(kernel.homeFolder);
-    fake.reply(reads(8), says('read them'));
+    bigFiles(6)(kernel.homeFolder);
+    fake.reply(reads(6), says('read them'));
     await send(kernel, sessionId);
     expect(toolTexts(fake, 1).some((text) => text.startsWith('[cleared'))).toBe(false);
   });

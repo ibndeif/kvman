@@ -28,7 +28,8 @@ describe("a step's model call retried (08 §8.2, ADR 0009, 154, 155, and 203; AD
     expect(messages.map((message) => message.kind)).toEqual(['user', 'assistant']);
   });
 
-  it('QA55-E8 and QA10-H2 five transient failures, the last wait 60 s, end the turn failed with the last Problem', async () => {
+  // Superseded in part by QA71-H28 (ADR 0108, 15): after the fifth failure the turn waits for the connection.
+  it('QA55-E8 and QA10-H2 five transient failures, the last wait 60 s, leave the turn waiting for the connection', async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
     fake.reply(failure(503, 'one'), failure(503, 'two'), failure(503, 'three'), failure(503, 'four'), failure(503, 'five'));
@@ -36,10 +37,11 @@ describe("a step's model call retried (08 §8.2, ADR 0009, 154, 155, and 203; AD
     await kernel.clock.advance(0);
     expect(fake.requests()).toHaveLength(5);
     expect(retries(stream)).toEqual([retry(2, 1000, 'unavailable'), retry(3, 4000, 'unavailable'), retry(4, 15_000, 'unavailable'), retry(5, 60_000, 'unavailable')]);
-    const { turn } = await turnState(kernel, sessionId);
-    expect(turn?.outcome).toBe('failed');
+    const { turn, session } = await turnState(kernel, sessionId);
+    expect(turn?.outcome).toBeUndefined();
+    expect(session.status).toBe('waiting');
     const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 20 });
-    expect(messages.at(-1)).toMatchObject({ kind: 'notice', content: { code: 'STEP_FAILED', params: { code: 'kvai/PROVIDER_ERROR', details: { model: 'fake/m1', transient: true, reason: expect.stringContaining('five') as unknown } } } });
+    expect(messages.at(-1)).toMatchObject({ kind: 'notice', content: { code: 'CONNECTION_WAITING', params: { model: 'fake/m1', code: 'kvai/PROVIDER_ERROR' } } });
   });
 
   it('QA3-E23 a rate limit is retried too', async () => {

@@ -11,22 +11,31 @@ import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { commandTransport, type CommandTransport } from './command-transport.ts';
 import { oauthProvider, registeredRedirect } from './oauth-provider.ts';
 import { serverSecrets, withoutSecrets } from './secrets.ts';
-import type { McpServer } from './servers.ts';
+import { workspaceVariable, type McpServer } from './servers.ts';
 
-// One connection to an MCP server (plan 08 §8.5, ADR 0020, 4): connect, do the work, close. Nothing is kept between
-// calls. The connection ends with the job's signal and at the timeout, and a command's process tree is killed then.
+// One connection to an MCP server (plan 08 §8.5, ADR 0020, 4): connect, do the work, close. A server over HTTP, or a
+// command run with a `port`, is reached through its turn's link (ADR 0108, 12): the call joins the MCP session the turn
+// keeps, and closing ends only this call's stream. Otherwise nothing is kept between calls. The connection ends with
+// the job's signal and at the timeout, and a command's process tree is killed then.
 // A command runs in a folder of its own that is deleted with the connection (ADR 0070, 7), so the logs and snapshots a
 // server writes beside itself never land in the person's project; it finds the project in `KVMAN_WORKSPACE`.
 
-/** The variable a command server reads the workspace folder from. */
-export const workspaceVariable = 'KVMAN_WORKSPACE';
+export { workspaceVariable } from './servers.ts';
 
 /** What the work gets: the connected client, and the options every request of this connection takes. */
 export type Connection = { client: Client; request: RequestOptions };
 
 type Opened = { transport: Transport; command?: CommandTransport; folder?: string };
 
-async function open(ctx: Ctx, server: McpServer, secrets: Record<string, string>): Promise<Opened> {
+/** A turn's hold on a server: the address its calls reach, the MCP session they share, and how to keep a new one. */
+export type TurnLink = { url: string; sessionId: string | null; keep(sessionId: string | null): Promise<void> };
+
+async function open(ctx: Ctx, server: McpServer, secrets: Record<string, string>, link?: TurnLink): Promise<Opened> {
+  if (link !== undefined && 'command' in server) {
+    // The command runs for the turn, with the server's variables; nothing secret goes in a request.
+    const resumed = link.sessionId === null ? {} : { sessionId: link.sessionId };
+    return { transport: new StreamableHTTPClientTransport(new URL(link.url), resumed) as Transport };
+  }
   if ('command' in server) {
     const folder = await mkdtemp(path.join(tmpdir(), 'kvman-mcp-'));
     const command = commandTransport({ command: server.command, args: server.args, cwd: folder, env: { [workspaceVariable]: ctx.job.workspace.path, ...secrets } });
@@ -37,7 +46,8 @@ async function open(ctx: Ctx, server: McpServer, secrets: Record<string, string>
   // A server the person signed in to is called with its tokens, which are refreshed when they have expired.
   const redirectUrl = await registeredRedirect(ctx, server.name, server.url);
   const signedIn = redirectUrl === undefined ? {} : { authProvider: oauthProvider(ctx, server.name, server.url, { redirectUrl, step: 'call' }) };
-  const transport: Transport = new StreamableHTTPClientTransport(new URL(server.url), { requestInit: { headers: secrets }, ...signedIn }) as Transport;
+  const resumed = link === undefined || link.sessionId === null ? {} : { sessionId: link.sessionId };
+  const transport: Transport = new StreamableHTTPClientTransport(new URL(server.url), { requestInit: { headers: secrets }, ...signedIn, ...resumed }) as Transport;
   return { transport };
 }
 
@@ -53,19 +63,22 @@ function failure(server: McpServer, error: unknown, opened: Opened, secrets: Rec
   return new ProblemError({ code: 'kvcoder/MCP_CONNECT_FAILED', message: `The MCP server ${server.name} failed: ${reason}`, params: { server: server.name, reason } });
 }
 
-/** Connects to a server, runs `work`, and closes the connection; a failure is a Problem with the reason. */
-export async function withServer<Result>(ctx: Ctx, server: McpServer, timeoutMs: number, work: (connection: Connection) => Promise<Result>): Promise<Result> {
+/** Connects to a server, through `link` for a kept one, runs `work`, and closes the connection; a failure is a Problem with the reason. */
+export async function withServer<Result>(ctx: Ctx, server: McpServer, timeoutMs: number, work: (connection: Connection) => Promise<Result>, link?: TurnLink): Promise<Result> {
   const secrets = await serverSecrets(ctx, server);
   const { version } = await ctx.exec('kernel.health.get', {});
-  const opened = await open(ctx, server, secrets);
+  const opened = await open(ctx, server, secrets, link);
   const deadline = AbortSignal.timeout(timeoutMs);
   const request: RequestOptions = { signal: AbortSignal.any([ctx.job.signal, deadline]), timeout: timeoutMs, maxTotalTimeout: timeoutMs };
   const client = new Client({ name: 'kvman', version });
   try {
     await client.connect(opened.transport, request);
+    if (link !== undefined && opened.transport.sessionId !== link.sessionId) await link.keep(opened.transport.sessionId ?? null);
     return await work({ client, request });
   } catch (error) {
     if (error instanceof ProblemError || ctx.job.signal.aborted) throw error;
+    // A kept session whose connection failed is made again at the next call.
+    if (link !== undefined) await link.keep(null);
     throw failure(server, error, opened, secrets, deadline.aborted ? timeoutMs : undefined);
   } finally {
     await client.close();

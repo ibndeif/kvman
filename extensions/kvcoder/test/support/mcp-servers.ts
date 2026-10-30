@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { createServer, type IncomingHttpHeaders, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { fileURLToPath } from 'node:url';
@@ -10,12 +11,45 @@ import { fixtureServer } from './mcp-fixture-server.ts';
 
 const fixtureFile = fileURLToPath(new URL('./mcp-fixture.ts', import.meta.url));
 
-export type CommandEntry = { name: string; description: string; command: string; args: string[]; env: string[] };
+export type CommandEntry = { name: string; description: string; command: string; args: string[]; env: string[]; port?: number };
 export type UrlEntry = { name: string; description: string; url: string; headers: string[] };
 
 /** The fixture as a command server's entry. */
 export function commandEntry(name = 'demo', env: string[] = []): CommandEntry {
   return { name, description: 'A demo server.', command: process.execPath, args: [fixtureFile], env };
+}
+
+const httpFixtureFile = fileURLToPath(new URL('./mcp-fixture-http.ts', import.meta.url));
+
+/** The fixture as a command that serves HTTP on `port`, kept for a turn (ADR 0108, 12). */
+export function keptEntry(port: number, name = 'kept'): CommandEntry {
+  return { name, description: 'A demo server kept for the turn.', command: process.execPath, args: [httpFixtureFile, String(port)], env: [], port };
+}
+
+/** The fixture served over Streamable HTTP with sessions, each with its own state. */
+export async function startSessionFixture(): Promise<HttpFixture> {
+  const headers: IncomingHttpHeaders[] = [];
+  const transports = new Map<string, StreamableHTTPServerTransport>();
+  const server = createServer((request, response) => {
+    headers.push(request.headers);
+    const known = transports.get(String(request.headers['mcp-session-id'] ?? ''));
+    if (known !== undefined) {
+      void known.handleRequest(request, response);
+      return;
+    }
+    const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: () => randomUUID(), onsessioninitialized: (id) => { transports.set(id, transport); } });
+    void fixtureServer().connect(transport as Transport).then(() => transport.handleRequest(request, response));
+  });
+  return { url: await listening(server), headers, close: closing(server) };
+}
+
+/** A port nothing listens on now. */
+export async function freePort(): Promise<number> {
+  const server = createServer();
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const { port } = server.address() as AddressInfo;
+  await new Promise((resolve) => server.close(resolve));
+  return port;
 }
 
 /** Sets `kvcoder.mcp.servers`. */

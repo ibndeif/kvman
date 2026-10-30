@@ -1,7 +1,8 @@
 // An MCP server as kvcoder's configuration edits it (plan 08 §8.5 and §8.7, ADR 0020, 6 and 15): an entry of
 // `kvcoder.mcp.servers`, the form's draft of one, and the names of the secrets that hold its values.
 
-export type CommandServer = { name: string; description: string; command: string; args: string[]; env: string[] };
+/** `port`: the command serves MCP over HTTP there, and is kept running for a turn (ADR 0108, 12). */
+export type CommandServer = { name: string; description: string; command: string; args: string[]; env: string[]; port?: number };
 export type UrlServer = { name: string; description: string; url: string; headers: string[] };
 export type McpServerEntry = CommandServer | UrlServer;
 
@@ -13,7 +14,7 @@ const strings = (value: unknown): value is string[] => Array.isArray(value) && v
 function isEntry(value: unknown): value is McpServerEntry {
   if (typeof value !== 'object' || value === null || !('name' in value) || !('description' in value)) return false;
   if (typeof value.name !== 'string' || typeof value.description !== 'string') return false;
-  if ('command' in value) return typeof value.command === 'string' && 'args' in value && strings(value.args) && 'env' in value && strings(value.env);
+  if ('command' in value) return typeof value.command === 'string' && 'args' in value && strings(value.args) && 'env' in value && strings(value.env) && (!('port' in value) || typeof value.port === 'number');
   return 'url' in value && typeof value.url === 'string' && 'headers' in value && strings(value.headers);
 }
 
@@ -31,17 +32,17 @@ export const secretPrefix = (server: string): string => `mcp.${server}.`;
 /** A variable or header in the form: `set` when its secret exists, and `value` what the person typed for a new or replaced one. */
 export type DraftValue = { name: string; value: string; set: boolean; replacing: boolean };
 
-export type ServerDraft = { name: string; description: string; kind: 'command' | 'url'; command: string; args: string; url: string; values: DraftValue[] };
+export type ServerDraft = { name: string; description: string; kind: 'command' | 'url'; command: string; args: string; port: string; url: string; values: DraftValue[] };
 
 export const kindOf = (draft: Pick<ServerDraft, 'kind'>): ValueKind => (draft.kind === 'command' ? 'env' : 'header');
 
 /** The form's draft of a server, or an empty one for a new server. */
 export function draftOf(entry: McpServerEntry | undefined, secrets: readonly string[]): ServerDraft {
-  if (entry === undefined) return { name: '', description: '', kind: 'command', command: '', args: '', url: '', values: [] };
+  if (entry === undefined) return { name: '', description: '', kind: 'command', command: '', args: '', port: '', url: '', values: [] };
   const [kind, names] = 'command' in entry ? (['env', entry.env] as const) : (['header', entry.headers] as const);
   const values = names.map((name) => ({ name, value: '', set: secrets.includes(secretName(entry.name, kind, name)), replacing: false }));
-  if ('command' in entry) return { name: entry.name, description: entry.description, kind: 'command', command: entry.command, args: entry.args.join('\n'), url: '', values };
-  return { name: entry.name, description: entry.description, kind: 'url', command: '', args: '', url: entry.url, values };
+  if ('command' in entry) return { name: entry.name, description: entry.description, kind: 'command', command: entry.command, args: entry.args.join('\n'), port: entry.port === undefined ? '' : String(entry.port), url: '', values };
+  return { name: entry.name, description: entry.description, kind: 'url', command: '', args: '', port: '', url: entry.url, values };
 }
 
 /** The entry a draft stands for. */
@@ -49,7 +50,8 @@ export function entryOf(draft: ServerDraft): McpServerEntry {
   const base = { name: draft.name.trim(), description: draft.description.trim() };
   const names = draft.values.map((value) => value.name.trim());
   if (draft.kind === 'url') return { ...base, url: draft.url.trim(), headers: names };
-  return { ...base, command: draft.command.trim(), args: draft.args.split('\n').filter((line) => line !== ''), env: names };
+  const port = draft.port.trim();
+  return { ...base, command: draft.command.trim(), args: draft.args.split('\n').filter((line) => line !== ''), env: names, ...(port === '' ? {} : { port: Number(port) }) };
 }
 
 // The server's own rules (`src/mcp/servers.ts`), so a mistake shows under its field before anything is written.
@@ -58,7 +60,10 @@ const valueNames: Record<ValueKind, RegExp> = { env: /^[A-Za-z_][A-Za-z0-9_]*$/,
 
 const isHttpAddress = (value: string): boolean => URL.canParse(value) && ['http:', 'https:'].includes(new URL(value).protocol);
 
-export type DraftField = 'name' | 'description' | 'command' | 'url' | 'values';
+export type DraftField = 'name' | 'description' | 'command' | 'port' | 'url' | 'values';
+
+// A port the server may serve on: a whole number from 1024 to 65535, or none.
+const isPort = (value: string): boolean => value === '' || (/^\d+$/.test(value) && Number(value) >= 1024 && Number(value) <= 65535);
 
 function valuesProblem(draft: ServerDraft): string | undefined {
   const kind = kindOf(draft);
@@ -77,6 +82,7 @@ export function draftProblems(draft: ServerDraft, taken: readonly string[]): Par
   else if (taken.includes(name)) problems.name = 'kvcoder.config.mcp.invalid.nameTaken';
   if (draft.description.trim() === '') problems.description = 'kvcoder.config.mcp.invalid.descriptionEmpty';
   if (draft.kind === 'command' && draft.command.trim() === '') problems.command = 'kvcoder.config.mcp.invalid.commandEmpty';
+  if (draft.kind === 'command' && !isPort(draft.port.trim())) problems.port = 'kvcoder.config.mcp.invalid.port';
   if (draft.kind === 'url' && !isHttpAddress(draft.url.trim())) problems.url = 'kvcoder.config.mcp.invalid.url';
   const values = valuesProblem(draft);
   if (values !== undefined) problems.values = values;

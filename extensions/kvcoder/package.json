@@ -197,6 +197,15 @@
           "ref"
         ]
       ],
+      "mcp-sessions": [
+        [
+          "turnId"
+        ],
+        [
+          "turnId",
+          "server"
+        ]
+      ],
       "runs": [
         [
           "sessionId"

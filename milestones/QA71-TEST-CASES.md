@@ -43,7 +43,7 @@ Paths are relative to `extensions/kvcoder/` unless they start with `extensions/`
 - **QA71-H13 a trim at 60K.** *Given* a chat of three ended `done` turns and a running one, whose prompt measures
   62,000 tokens, *when* a step starts, *then* `collapsedThroughSeq` moves to the end of the second turn, the first
   two are sent as their person's messages and one answer each, the third and the running turn whole, and no summary
-  is made. `test/history-trim.test.ts`
+  is made. `test/history-trim.test.ts`, `test/unit/history-collapse.test.ts`
 - **QA71-H14 a collapsed turn names its files.** *Given* a collapsed turn that changed `src/a.ts`, *then* its answer
   ends with `[kvman: files changed in this turn: src/a.ts]`. `test/history-trim.test.ts`
 - **QA71-H15 a trim after an hour.** *Given* a chat at 30,000 tokens whose last model call is 61 minutes old, *when*
@@ -61,15 +61,15 @@ Paths are relative to `extensions/kvcoder/` unless they start with `extensions/`
 - **QA71-H20 tool lists stay.** *Given* an `mcp tools` result older than the newest 24,000 tokens, *when* a trim
   runs, *then* it is sent in full. `test/history-trim.test.ts`
 - **QA71-H21 what was sent is recorded.** *Then* each assistant message has `sent` with `promptHash`,
-  `messagesHash`, `messageCount`, and `prefixKept`, and none of the prompt's text. `test/context-basis.test.ts`
+  `messagesHash`, `messageCount`, and `prefixKept`, and none of the prompt's text. `test/history-trim.test.ts`
 - **QA71-H22 the two new rules.** *Then* the lead's method holds the "test it themselves" rule and the map-update rule,
   and the Deliberate part runs only when the person asks. `test/unit/prompt-method.test.ts`
 - **QA71-H23 a check-in at step 60.** *Given* a turn reaching step 60, *then* the message `[kvman: step 60 of this
   turn. Say in one line where you are and what is left, then go on.]` is appended before the call, and again at
   120. `test/turn-check-in.test.ts`
-- **QA71-H24 one MCP connection a turn.** *Given* a command MCP server, *when* a turn calls `mcp run` twice and
-  `mcp call` once, *then* the server is started once, through `ctx.processes`, and stopped when the turn ends.
-  `test/mcp-turn-connection.test.ts`
+- **QA71-H24 one MCP session a turn.** *Given* a command MCP server with a `port`, *when* a turn calls it three times,
+  *then* it is started once, through `ctx.processes`, the calls share its state, and the turn's end stops it; a server
+  over HTTP keeps its MCP session for the turn the same way. `test/mcp-turn-connection.test.ts`
 - **QA71-H25 housekeeping hidden.** *Given* a turn with `fs read`, `help`, `mcp tools`, `background wait`, and
   `execution-map update` calls, *then* the conversation shows the `fs read` card only, and a fold counts only it.
   `test/web/call-folds.test.ts`
@@ -78,8 +78,8 @@ Paths are relative to `extensions/kvcoder/` unless they start with `extensions/`
   `test/unit/prompt-build.test.ts`
 - **QA71-H27 an invalid payload carries its help.** *When* a call's payload fails its schema, *then* the error ends
   with the command's `help` text. `test/connector-help.test.ts`
-- **QA71-H28 waiting for the connection.** *Given* a model call that fails `kvai/PROVIDER_ERROR` `transient: true` for
-  11 minutes, then succeeds, *then* the turn gets `CONNECTION_WAITING`, waits, and goes on at the schedule's next run,
+- **QA71-H28 waiting for the connection.** *Given* a model call that fails `kvai/PROVIDER_ERROR` `transient: true` five
+  times, then succeeds, *then* the turn gets `CONNECTION_WAITING` once, waits, and goes on at the schedule's next run,
   with a fake clock. `test/connection-waiting.test.ts`
 - **QA71-H29 notify wakes the chat.** *Given* `shell exec` with `background: true, notify: true` and an idle chat,
   *when* the process exits, *then* its message starts a turn; the same line without `notify` starts none.
@@ -89,6 +89,9 @@ Paths are relative to `extensions/kvcoder/` unless they start with `extensions/`
   shows the headline, `step 12 of 60`, `3 min`, and the call's closed line. `test/web/subagent-card.test.ts`
 - **QA71-H31 a url artifact replaces an ended one.** *Given* 20 artifacts, the oldest `url` one served by a stopped
   process, *when* the agent writes a new `url` artifact, *then* it replaces that one. `test/artifact-connector.test.ts`
+- **QA71-H33 the server form takes a port.** *Given* a command server's draft with the port `8931`, *then* the saved entry
+  has `port: 8931`, and a port of `80` is refused under its field, as the setting refuses it.
+  `test/web/mcp-server-form.test.ts`
 - **QA71-H32 run with a calls list.** *Given* `run { calls: [fs read a, fs read b, fs edit c] }`, *then* the reply is
   stored as three `run` calls with ids `<id>-1` to `<id>-3`, each with its own result, and the history sends them so.
   `test/run-calls-list.test.ts`, `test/unit/run-tool-arguments.test.ts`
@@ -124,7 +127,7 @@ Paths are relative to `extensions/kvcoder/` unless they start with `extensions/`
 - **QA71-E14 the window is small.** *Given* a model whose window is 100,000 tokens, *then* the trim runs past 50,000.
   `test/history-trim.test.ts`
 - **QA71-E15 the summary still saves an overflow.** *Given* a trim that leaves the prompt above `kvcoder.compactAt`,
-  *when* the next step starts, *then* it summarizes as before. `test/compaction.test.ts`
+  *when* the next step starts, *then* it summarizes as before. `test/history-trim.test.ts`
 - **QA71-E16 old records.** A session with no `collapsedThroughSeq` or `rules`, and an assistant message with no
   `sent`, read as before. `test/unit/old-records.test.ts`
 - **QA71-E17 a rule file removed.** *Given* a kept `AGENTS.md` that is then deleted, *then* the message says it
@@ -138,11 +141,11 @@ Paths are relative to `extensions/kvcoder/` unless they start with `extensions/`
 - **QA71-E21 a person's message during the wait.** *Given* `CONNECTION_WAITING`, *when* the person sends a message,
   *then* the step runs at once with it. `test/connection-waiting.test.ts`
 - **QA71-E22 Stop during the wait.** *Given* `CONNECTION_WAITING`, *when* the person presses Stop, *then* the turn ends
-  `cancelled` and the schedule is removed. `test/connection-waiting.test.ts`
-- **QA71-E23 the hour passes.** *Given* failures for 71 minutes, *then* the turn ends `failed` with `STEP_FAILED`.
-  `test/connection-waiting.test.ts`
-- **QA71-E24 any other failure ends at once.** `kvai/KEY_MISSING` ends the turn as before, with no wait.
-  `test/connection-waiting.test.ts`
+  `cancelled` and the scheduled try then does nothing. `test/connection-waiting.test.ts`
+- **QA71-E23 the tries run out.** *Given* failures for 30 scheduled tries, *then* the turn ends `failed` with
+  `STEP_FAILED`. `test/connection-waiting-ends.test.ts`
+- **QA71-E24 any other failure ends at once.** A failure that isn't temporary ends the turn as before, with no wait.
+  `test/connection-waiting-ends.test.ts`
 - **QA71-E25 notify needs background.** `notify: true` without `background: true` fails `VALIDATION_FAILED`.
   `test/background-notices.test.ts`
 - **QA71-E26 notify while a turn runs.** *Given* a running turn, *when* a `notify` process ends, *then* its message is

@@ -20,6 +20,7 @@ import { registerDocs } from './docs.ts';
 import { registerProcessHandlers, interruptLeftovers } from './jobs/process-handlers.ts';
 import { registerJobs } from './jobs/register-jobs.ts';
 import { registerNotifyWatch } from './jobs/notify-watch.ts';
+import { registerConnectionResume } from './turns/connection-wait.ts';
 import { registerMcp } from './mcp/register-mcp.ts';
 import { registerMessages } from './messages/register-messages.ts';
 import { registerPrompt } from './prompt/register-prompt.ts';
@@ -68,6 +69,7 @@ export default (ctx: Ctx): void => {
   registerMcp(ctx);
   registerConnectorHelp(ctx);
   registerInterruptions(ctx);
+  registerConnectionResume(ctx);
   registerJobs(ctx);
   registerNotifyWatch(ctx);
   registerArtifacts(ctx);

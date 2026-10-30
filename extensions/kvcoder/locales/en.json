@@ -666,5 +666,10 @@
   "kvcoder.delegate.thinkingLimit.options.high": "High",
   "kvcoder.delegate.thinkingLimit.options.xhigh": "Extra high",
   "kvcoder.delegate.thinkingLimit.options.max": "Max",
-  "kvcoder.background.notify.watch.description": "Waits for a background line started with notify to end, then tells its chat, starting a turn when the chat is idle."
+  "kvcoder.background.notify.watch.description": "Waits for a background line started with notify to end, then tells its chat, starting a turn when the chat is idle.",
+  "kvcoder.notices.CONNECTION_WAITING": "The connection to {model} failed; kvman tries again every 2 minutes. Send a message to try now.",
+  "kvcoder.turn.resume.description": "Runs again the step of a turn that waits for the connection.",
+  "kvcoder.config.mcp.form.port": "Port (optional)",
+  "kvcoder.config.mcp.form.portHint": "When the command serves MCP over HTTP on this port, kvman keeps it running for a whole turn, so a browser keeps its page between calls.",
+  "kvcoder.config.mcp.invalid.port": "Give a whole number from 1024 to 65535, or leave it empty."
 }

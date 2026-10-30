@@ -56,7 +56,7 @@ describe('the prompt builder (08 §8.2)', () => {
         'Brief the worker with the goal, the facts it needs, its limits, and what to return.',
         'You are the one who decides: connectors and workers are how you act, and the result is yours.',
         'in an artifact, not in a reply.',
-        'Work in few steps. Each reply is a step, and every step sends the whole conversation again, so make in one reply every call you can make now: reads and searches run at the same time, and calls that change something (shell lines, writes, edits) run one after another in the order you give them. Read a few files with one `fs read-files`, put independent calls (searches, separate files, separate workers) in the same reply, and leave for a later reply only a call that needs another call\'s result. Several new files are several `fs write` calls in one reply, not one reply each.',
+        'Work in few steps. Each reply is a step, and every step sends the whole conversation again, so make in one reply every call you can make now: reads and searches run at the same time, and calls that change something (shell lines, writes, edits) run one after another in the order you give them. Read a few files with one `fs read-files`, put independent calls (searches, separate files, separate workers) in the same reply, as several run calls or one run with a calls list, and leave for a later reply only a call that needs another call\'s result. Several new files are several `fs write` calls in one reply, not one reply each.',
         'To put a question to the person (a choice, a yes or no, a free answer), call `ask`.',
         'Your final answer says what you did and what is left.',
       ]) expect(prompt, phrase).toContain(phrase);
