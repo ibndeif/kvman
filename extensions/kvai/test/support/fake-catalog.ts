@@ -19,6 +19,10 @@ export type FakeCatalog = {
 export const newer = 'Fri, 30 Oct 2026 13:37:30 GMT';
 export const older = 'Tue, 20 Oct 2026 00:00:00 GMT';
 
+/** The API and address the built-in models of groq and openrouter are called at; openai's is `liveModel`'s default. */
+export const groqRoute = { api: 'openai-completions', baseUrl: 'https://api.groq.com/openai/v1' };
+export const openrouterRoute = { api: 'openai-completions', baseUrl: 'https://openrouter.ai/api/v1' };
+
 /** A live chat model of `provider`, with every field kvai reads. */
 export function liveModel(provider: string, id: string, fields: Record<string, unknown> = {}): Record<string, unknown> {
   const cost = { input: 1, output: 5, cacheRead: 0.05, cacheWrite: 1.25 };

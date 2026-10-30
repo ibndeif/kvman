@@ -25,12 +25,17 @@ function listOf(body: unknown): unknown[] {
   return Array.isArray(models) ? models : Object.values(body);
 }
 
-// The valid chat models of the provider whose `api` its built-in models use, so the installed pi-ai can call them.
-function usableModels(body: unknown, provider: string, apis: ReadonlySet<string>): LiveEntry['models'] {
+// Where a model is called: its wire API at its address.
+export const routeOf = (model: { api: string; baseUrl: string }): string => `${model.api} ${model.baseUrl}`;
+
+// The valid chat models of the provider that are called the way its built-in models are, with the same API at the
+// same address: the installed pi-ai can call them, and the provider's key or sign-in never goes to a host the
+// catalog chose.
+function usableModels(body: unknown, provider: string, routes: ReadonlySet<string>): LiveEntry['models'] {
   const entries = listOf(body);
   return entries.flatMap((value) => {
     const parsed = liveModelSchema.safeParse(value);
-    return parsed.success && parsed.data.provider === provider && apis.has(parsed.data.api) ? [parsed.data] : [];
+    return parsed.success && parsed.data.provider === provider && routes.has(routeOf(parsed.data)) ? [parsed.data] : [];
   });
 }
 
@@ -39,7 +44,7 @@ function lastModifiedOf(response: Response): number {
   return Number.isNaN(time) ? 0 : time;
 }
 
-async function fetchProvider(ctx: Ctx, base: string, provider: string, apis: ReadonlySet<string>, stored: LiveEntry | undefined): Promise<Outcome> {
+async function fetchProvider(ctx: Ctx, base: string, provider: string, routes: ReadonlySet<string>, stored: LiveEntry | undefined): Promise<Outcome> {
   const etag = stored !== undefined && stored.url === base && stored.models.length > 0 ? stored.etag : null;
   const headers: Record<string, string> = { accept: 'application/json', 'user-agent': 'kvman', ...(etag === null ? {} : { 'if-none-match': etag }) };
   try {
@@ -48,7 +53,7 @@ async function fetchProvider(ctx: Ctx, base: string, provider: string, apis: Rea
     if (response.status === 304 && stored !== undefined) return { entry: stored };
     if (response.status === 404 || response.status === 501) return { entry: { provider, url: base, models: [], lastModified: 0, etag: null } };
     if (!response.ok) return { failed: `${response.status} ${response.statusText}`.trim() };
-    const models = usableModels(await response.json(), provider, apis);
+    const models = usableModels(await response.json(), provider, routes);
     return { entry: { provider, url: base, models, lastModified: lastModifiedOf(response), etag: response.headers.get('etag') } };
   } catch (error) {
     if (ctx.job.signal.aborted) throw error;
@@ -62,8 +67,8 @@ export async function refreshCatalog(ctx: Ctx, base: string): Promise<void> {
   const providers = catalog.getProviders().map((provider) => provider.id);
   const outcomes = await Promise.all(
     providers.map(async (provider) => {
-      const apis = new Set(catalog.getModels(provider).map((model) => model.api));
-      return { provider, outcome: await fetchProvider(ctx, base, provider, apis, stored.get(provider)) };
+      const routes = new Set(catalog.getModels(provider).map(routeOf));
+      return { provider, outcome: await fetchProvider(ctx, base, provider, routes, stored.get(provider)) };
     }),
   );
   const entries = outcomes.flatMap(({ outcome }) => ('entry' in outcome ? [outcome.entry] : []));

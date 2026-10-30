@@ -26,7 +26,8 @@ On 2026-10-30 pi.dev's catalogs were dated that day: `openai`, `openai-codex`, a
 
 1. **kvai takes new models from pi.dev's live catalog, automatically** (asked: "Live catalog, auto"), as pi does,
    with no new dependency: kvai fetches the catalog itself rather than taking pi's coding agent for one function.
-2. **One setting, `kvai.catalog.url`** (asked): the catalog's address, a URL or `null`. `null` keeps the built-in
+2. **One setting, `kvai.catalog.url`** (asked): the catalog's address, a URL or `null`. It must be HTTPS, or HTTP
+   to this machine (`127.0.0.1`, `localhost`, `[::1]`), so the lists can't be changed on the way. `null` keeps the built-in
    list alone and makes no network call. It defaults to `null`, and the `coder` preset sets `https://pi.dev`
    (asked: "Off by default, coder on"), as it sets `kvai.defaultModel`, so a test kernel never touches the
    network and an app made with `/build-kvman` turns it on in its own preset.
@@ -54,8 +55,11 @@ On 2026-10-30 pi.dev's catalogs were dated that day: `openai`, `openai-codex`, a
    model replaces the built-in one with the same id, the others are added, and a built-in model missing from the
    live list stays.
    - kvai keeps only the live entries that are chat models (no `type`, or `chat`), that are valid pi-ai models
-     (the fields `kvai.model.list` shows, plus `api` and `baseUrl`), and whose `api` is one that provider's built-in
-     models use, so the installed pi-ai can call them. It drops the rest.
+     (the fields `kvai.model.list` shows, plus `api` and `baseUrl`), and whose `api` and `baseUrl` together are a
+     pair that provider's built-in models use. So the installed pi-ai can call them, and a provider's key or
+     sign-in is only ever sent where its built-in models send it, never to an address the catalog chose. It drops
+     the rest. On 2026-10-30 every chat entry of pi.dev's `openai`, `openai-codex`, `github-copilot`, and
+     `openrouter` lists passed this rule.
    - The rules of §7.2 still apply: a model whose price varies (a negative rate, or a router named there) isn't
      listed.
    - Live models are built-in ones: `builtIn: true` in `kvai.model.list`, counted in the provider's `models`, and
@@ -76,8 +80,8 @@ On 2026-10-30 pi.dev's catalogs were dated that day: `openai`, `openai-codex`, a
 - pi.dev is pi's service, with no published contract. If its answers change shape, kvai drops the entries it can't
   read, and the built-in list stays.
 - A router pi.dev adds later is listed at 0 until it is named in §7.2, as ADR 0109 says for pi-ai.
-- A model pi.dev lists with an `api` that the installed pi-ai doesn't know isn't listed until kvai's pi-ai is
-  upgraded.
+- A model pi.dev lists with an `api` or address that the provider's built-in models don't use isn't listed until
+  kvai's pi-ai is upgraded and its built-in models use them.
 
 ## Verification
 

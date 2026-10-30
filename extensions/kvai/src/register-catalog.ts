@@ -5,10 +5,19 @@ import { z, type Ctx } from '@kvman/sdk';
 
 const empty = z.object({});
 
+// HTTPS, or plain HTTP to this machine only (a local catalog), so the lists can't be changed on the way.
+const loopbackHosts = new Set(['127.0.0.1', 'localhost', '[::1]']);
+function secureOrLocal(url: string): boolean {
+  const parsed = URL.parse(url);
+  return parsed !== null && (parsed.protocol === 'https:' || loopbackHosts.has(parsed.hostname));
+}
+
+const catalogUrlSchema = z.url({ protocol: /^https?$/ }).refine(secureOrLocal, 'The catalog address is HTTPS, or HTTP on this machine.');
+
 export function registerCatalog(ctx: Ctx): void {
   ctx.registerSetting('kvai.catalog.url', {
     description: "The address of the live model catalog new models come from, such as https://pi.dev; null keeps pi-ai's built-in list alone.",
-    schema: z.url({ protocol: /^https?$/ }).nullable(),
+    schema: catalogUrlSchema.nullable(),
     default: null,
   });
 

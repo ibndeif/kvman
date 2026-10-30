@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { liveModel, newer, startFakeCatalog, type FakeCatalog } from './support/fake-catalog.ts';
+import { groqRoute, liveModel, newer, startFakeCatalog, type FakeCatalog } from './support/fake-catalog.ts';
 import { useKvai } from './support/kvai-kernel.ts';
 
 const kvai = useKvai();
@@ -40,12 +40,19 @@ describe('refreshing the live catalog (ADR 0110)', () => {
   it('M2.1-E30 a failing provider keeps its list, the others are saved, and the refresh fails PROVIDER_ERROR', async () => {
     const { kernel, catalog } = await started();
     catalog.answer('openai', { status: 500 });
-    catalog.answer('groq', { status: 200, lastModified: newer, body: [liveModel('groq', 'live-g', { api: 'openai-completions' })] });
+    catalog.answer('groq', { status: 200, lastModified: newer, body: [liveModel('groq', 'live-g', groqRoute)] });
     await expect(kernel.exec('kvai.catalog.refresh', {}, asKvai)).rejects.toMatchObject({
       problem: { code: 'kvai/PROVIDER_ERROR', params: { provider: 'openai', reason: '500 Internal Server Error', transient: true } },
     });
     expect(await openaiIds(kernel)).toContain('openai/gpt-live');
     expect((await kernel.exec('kvai.model.list', { provider: 'groq' })).map((model) => model.id)).toContain('groq/live-g');
+  });
+
+  it('M2.1-E32 the catalog address is HTTPS, or HTTP on this machine', async () => {
+    const { kernel } = await started();
+    const set = (value: string) => kernel.exec('kernel.settings.set', { key: 'kvai.catalog.url', value, scope: 'global' });
+    for (const value of ['http://pi.dev', 'http://192.168.1.5:8080', 'ftp://pi.dev', 'pi.dev']) await expect(set(value), value).rejects.toMatchObject({ problem: { code: 'VALIDATION_FAILED' } });
+    for (const value of ['https://pi.dev', 'http://127.0.0.1:8080', 'http://localhost:8080']) await expect(set(value), value).resolves.toBeDefined();
   });
 
   it('M2.1-E31 live models are built-in, the refresh runs every 4 hours, and null turns them off at once', async () => {
