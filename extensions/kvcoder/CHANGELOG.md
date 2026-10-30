@@ -1,5 +1,12 @@
 # @kvman/kvcoder
 
+## 0.1.18
+
+### Patch Changes
+
+- c69f90b: kvcoder's chat reads like a conversation (ADR 0112): every reply that makes a call starts with a short sentence to the person, the lead's method is shorter (Plan and Confirm the plan are one Map part), the person's go-ahead is never asked again, the final answer gives the result first, a step's headline titles the fold of its calls instead of being a row, and a finished background job is one quiet line with a status mark, its name, and its time.
+- f220b50: kvcoder's prompt no longer tells the agent to run, write, or skip tests: no `Testing:` question, no tests after each change or the whole suite at the end, and done no longer means "tests pass" (ADR 0111).
+
 ## 0.1.17
 
 ### Patch Changes

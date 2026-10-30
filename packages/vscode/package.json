@@ -1,6 +1,6 @@
 {
   "name": "@kvman/vscode",
-  "version": "0.4.10",
+  "version": "0.4.11",
   "description": "The kvman VS Code extension: kvman in VS Code's secondary side bar.",
   "license": "MIT",
   "private": true,
