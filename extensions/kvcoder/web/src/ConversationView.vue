@@ -14,7 +14,6 @@ import ActivityLine from './ActivityLine.vue';
 import { messageDraft, sendDraft, type Outgoing } from './message-drafts.ts';
 import { callViews, lastTyped, latestHeadline } from './message-parts.ts';
 import CallFold from './CallFold.vue';
-import HeadlineLine from './HeadlineLine.vue';
 import MessageItem from './MessageItem.vue';
 import PendingCards from './PendingCards.vue';
 import RecoveryActions from './RecoveryActions.vue';
@@ -249,8 +248,7 @@ async function registered(entry: RegisteredSlash, argument: string): Promise<voi
                 <button type="button" class="kvc-button" data-test="earlier" @click="exportEarlier">{{ kvman.t('kvcoder.ui.earlierMessages', { count: omitted }) }}</button>
               </div>
               <template v-for="row in rows" :key="rowKey(row)">
-                <HeadlineLine v-if="row.kind === 'headline'" :headline="row.headline" :thinking="row.thinking" />
-                <CallFold v-else-if="row.kind === 'fold'" :messages="row.messages" :calls="calls" :finished-runs="finishedRuns" :running="row.messages.some((message) => message.turnId !== undefined && message.turnId === runningTurnId)" />
+                <CallFold v-if="row.kind === 'fold'" :messages="row.messages" :headline="row.headline" :calls="calls" :finished-runs="finishedRuns" :running="row.messages.some((message) => message.turnId !== undefined && message.turnId === runningTurnId)" />
                 <MessageItem v-else :message="row.message" :calls="calls" :finished-runs="finishedRuns" :final="finalAnswers.has(row.message.id)" @open-artifact="executionMap.selectArtifact($event)" />
                 <span v-if="rowTotals(row) !== undefined" class="kvc-muted" :title="rowTotals(row)?.tokens" data-test="turn-totals">{{ rowTotals(row)?.text }}</span>
               </template>

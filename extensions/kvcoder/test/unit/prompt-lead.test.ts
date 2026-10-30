@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { executionMapDescription } from '../../src/connectors/execution-map.ts';
 import { buildPrompt } from '../../src/prompt/build-prompt.ts';
+import { workingMethod } from '../../src/prompt/working-method.ts';
 
 const lead = (platform: NodeJS.Platform = 'linux'): string => buildPrompt({ role: 'lead', workspacePath: '/w', language: 'en', platform, shell: platform === 'win32' ? 'powershell' : 'bash', sections: [], connectors: [] }).prompt;
 
@@ -15,20 +16,24 @@ describe("the lead's prompt (08 §8.2, ADR 0022, 2 to 4)", () => {
     }
   });
 
-  it('QA33-H2 the method says who decides, fixes no path, and names the parts of a path in order', () => {
+  // Superseded in part by QA73-H5: fewer parts (ADR 0112, 3).
+  it('QA33-H2 and QA73-H5 the method says who decides, fixes no path, and names the parts of a path in order', () => {
     const prompt = lead();
     expect(prompt).toContain('How you work. You are the one who decides: connectors and workers are how you act, and the result is yours. No path is fixed: you choose it for each task from what the task is, and you change it when what you find changes it.\n');
     expect(prompt.split('\n').filter((line) => /^\d\. /.test(line))).toEqual([]);
-    const parts = ['Understand', 'Clarify', 'Plan', 'Confirm the plan', 'Execute', 'Stay on the task', 'Delegate', 'Show what the person will look at', 'Finish'];
+    const parts = ['Understand', 'Clarify', 'Deliberate', 'Map', 'Execute', 'Stay on the task', 'Delegate', 'Show what the person will look at', 'Finish'];
     const places = parts.map((part) => prompt.indexOf(`\n${part}. `));
     expect(places.every((place) => place > 0)).toBe(true);
     expect(places).toEqual([...places].sort((first, second) => first - second));
+    for (const gone of ['Size up the task first', '\nPlan. ', '\nConfirm the plan. ', 'These are the parts of a path']) expect(prompt, gone).not.toContain(gone);
+    // The method was 13,723 characters before ADR 0112.
+    expect(workingMethod('lead').length).toBeLessThan(12_500);
   });
 
   it('QA33-H3 the plan uses only what the agent has and names what runs together, and the request is understood past its words', () => {
     const prompt = lead();
-    expect(lineOf(prompt, 'Understand. ')).toContain('Work out what the person needs, not only what they typed:');
-    const plan = lineOf(prompt, 'Plan. ');
+    expect(lineOf(prompt, 'Understand. ')).toContain('Work out what they need, not only what they typed:');
+    const plan = lineOf(prompt, 'Map. ');
     // ADR 0097, 5: what a step holds and what a branch means are in the map's entry.
     expect(plan).toContain('yourself, with a connector, for an ordinary or small change, or a worker of the `delegate` connector whose description fits');
     expect(executionMapDescription).toContain('Its uses names who does it: you, with a connector such as fs, or a worker of delegate whose description in the delegate entry fits the step');
@@ -50,7 +55,8 @@ describe("the lead's prompt (08 §8.2, ADR 0022, 2 to 4)", () => {
   });
 
   it('QA33-H6 both roles decide from evidence', () => {
-    const evidence = "\nDecide from evidence: every decision and every claim rests on something you read, ran, or were told. When you report a result, say what you checked and what you didn't.\n";
+    // The evidence rule no longer words the answer since QA73-H7 (ADR 0112, 4).
+    const evidence = '\nDecide from evidence: every decision and every claim rests on something you read, ran, or were told.\n';
     expect(lead()).toContain(evidence);
     expect(buildPrompt({ role: 'worker', workspacePath: '/w', language: 'en', platform: 'linux', shell: 'bash', sections: [], connectors: [] }).prompt).toContain(evidence);
   });

@@ -1,20 +1,20 @@
 <script setup lang="ts">
-import { BellRing, Info, NotebookText, ScrollText } from '@lucide/vue';
+import { Info, NotebookText, ScrollText } from '@lucide/vue';
 import { computed } from 'vue';
 import type { Message } from '../../src/index.ts';
 import { failureReason, fields, isolateValue, problemKey, stringValues, useKvman } from './kvman.ts';
-import { answeredQuestion, artifactOf, backgroundName, backgroundRef, extensionCardOf, isBackground, isKvcoderHint, exitedOnly, resultCard, shownUserText, stagingRunOf, textOf, thinkingOf, typedText } from './message-parts.ts';
+import { answeredQuestion, artifactOf, extensionCardOf, isBackground, isKvcoderHint, exitedOnly, resultCard, shownUserText, stagingRunOf, textOf, thinkingOf, typedText } from './message-parts.ts';
 import RememberThis from './RememberThis.vue';
 import AnsweredCard from './AnsweredCard.vue';
+import BackgroundLine from './BackgroundLine.vue';
 import ArtifactCard from './ArtifactCard.vue';
 import CallCard from './CallCard.vue';
 import StagingNote from './StagingNote.vue';
 import type { CallView } from './call-view.ts';
-import { durationText } from './durations.ts';
 import type { FinishedRun } from './use-finished-runs.ts';
 
 // One stored message (plan 08 §8.7): the person's text and images, an answer in Markdown with its thinking folded, a
-// tool result's card (an answered question shows its answer), kvcoder's notices and other extensions' notes translated, a summary, and background results with how long they ran.
+// tool result's card (an answered question shows its answer), kvcoder's notices and other extensions' notes translated, a summary, and background results as quiet lines.
 const props = defineProps<{ message: Message; calls: ReadonlyMap<string, CallView>; finishedRuns?: ReadonlyMap<string, FinishedRun> | undefined; final?: boolean | undefined }>();
 const emit = defineEmits<{ openArtifact: [id: string] }>();
 const kvman = useKvman();
@@ -25,19 +25,6 @@ const artifact = computed(() => artifactOf(props.message));
 const extensionCard = computed(() => extensionCardOf(props.message));
 // A program worker's run that changed what is staged in Git names itself in its result's details (ADR 0060, 4).
 const stagingRunId = computed(() => stagingRunOf(props.message));
-// A finished background job's card says which one it was (ADR 0035, 7).
-const finished = computed(() => {
-  const key = props.message.source?.kind === 'subagent' ? 'kvcoder.ui.helperFinished' : 'kvcoder.ui.backgroundFinished';
-  // A helper is named by the title its run was given, while its run is among the chat's newest (ADR 0037, 2).
-  const helper = props.message.source?.kind === 'subagent' ? props.finishedRuns?.get(props.message.source.sessionId)?.title : undefined;
-  const name = helper ?? backgroundName(props.message);
-  return name === undefined ? kvman.t(key) : kvman.t(`${key}Named`, { name: isolateValue(name) });
-});
-// How long the run took, while it is among the chat's newest runs (ADR 0036, 14).
-const ran = computed(() => {
-  const run = props.finishedRuns?.get(backgroundRef(props.message) ?? '');
-  return run === undefined ? undefined : durationText(kvman.t, run.ranMs);
-});
 const answered = computed(() => answeredQuestion(props.message, props.calls));
 const notice = computed(() => {
   const params = fields(props.message.content['params']);
@@ -57,12 +44,7 @@ const markdown = (body: string) => ({ type: 'markdown' as const, text: 'kvcoder.
 </script>
 
 <template>
-  <div v-if="isBackground(props.message)" class="kvc-card" data-test="background-result">
-    <details>
-      <summary class="kvc-card-row"><BellRing :size="16" aria-hidden="true" /><span style="flex: 1 1 auto; min-inline-size: 0" data-test="background-title">{{ finished }}</span><span v-if="ran !== undefined" class="kvc-muted" data-test="background-time">{{ ran }}</span></summary>
-      <pre class="kvc-output">{{ text }}</pre>
-    </details>
-  </div>
+  <BackgroundLine v-if="isBackground(props.message)" :message="props.message" :finished-runs="props.finishedRuns" />
   <div v-else-if="isKvcoderHint(props.message)" class="kvc-card" data-test="kvcoder-hint">
     <details>
       <summary class="kvc-card-row"><Info :size="16" aria-hidden="true" />{{ kvman.t('kvcoder.ui.toModel') }}</summary>

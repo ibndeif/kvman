@@ -10,9 +10,9 @@ import MessageItem from './MessageItem.vue';
 import type { FinishedRun } from './use-finished-runs.ts';
 
 // Call cards in a row, folded into one row that says what they did and how long they took (plan 08 §8.7, ADR 0093, 1;
-// ADR 0098, 2).
+// ADR 0098, 2), titled by its replies' headline when they had one (ADR 0112, 2).
 // It starts open when it holds a failure or belongs to the running turn, and opens again when that becomes true.
-const props = defineProps<{ messages: Message[]; calls: ReadonlyMap<string, CallView>; finishedRuns?: ReadonlyMap<string, FinishedRun> | undefined; running: boolean }>();
+const props = defineProps<{ messages: Message[]; calls: ReadonlyMap<string, CallView>; headline?: string | undefined; finishedRuns?: ReadonlyMap<string, FinishedRun> | undefined; running: boolean }>();
 const kvman = useKvman();
 const summary = computed(() => foldTally(props.messages, props.calls));
 const said = computed(() => foldWords(kvman.t, summary.value.tally));
@@ -28,6 +28,7 @@ watch(startsOpen, (now) => {
     <button type="button" class="kvc-card-row kvc-ghost kvc-button" style="inline-size: 100%; border-radius: 0" :aria-expanded="open" data-test="call-fold-head" @click="open = !open">
       <component :is="open ? ChevronDown : ChevronRight" :size="16" aria-hidden="true" />
       <span class="kvc-oneline kvc-fold-words">
+        <template v-if="props.headline !== undefined"><span class="kvc-muted" dir="auto" data-test="call-fold-headline">{{ props.headline }}</span><span class="kvc-muted"> · </span></template>
         <span data-test="call-fold-words">{{ said.words }}</span>
         <span v-if="said.failed !== undefined" class="kvc-fold-failed" data-test="call-fold-failed"> · {{ said.failed }}</span>
       </span>

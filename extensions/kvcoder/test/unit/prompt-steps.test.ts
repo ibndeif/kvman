@@ -7,12 +7,13 @@ const lines = (text: string): string[] => text.split('\n');
 const starts = (text: string): string[] => lines(text).map((line) => line.slice(0, line.indexOf('. ')));
 
 describe('a turn in few steps (08 §8.2, ADR 0097, 1)', () => {
-  it('QA65-H1 independent calls come first in both methods, the lead talks next with an example, and run says it too', () => {
+  // Superseded in part by QA73-H1 and H2: the lead talks first, and run says so (ADR 0112, 1).
+  it('QA65-H1, QA73-H1, and QA73-H2 the lead talks first with an example, independent calls come next, and run says both', () => {
     const lead = workingMethod('lead');
     const worker = workingMethod('worker');
-    expect(starts(lead).slice(0, 4)).toEqual(['How you work', 'Work in few steps', 'Talk to the person as you work, the way a colleague thinks aloud', 'Size up the task first']);
+    expect(starts(lead).slice(0, 4)).toEqual(['How you work', 'Talk to the person as you work, the way a colleague does', 'Work in few steps', 'Choose the path from the task']);
     expect(starts(worker).slice(0, 3)).toEqual(['How you work', 'Work in few steps', '1']);
-    expect(starts(workingMethod('lead', 'general')).slice(0, 3)).toEqual(['How you work', 'Work in few steps', 'Talk to the person as you work, the way a colleague thinks aloud']);
+    expect(starts(workingMethod('lead', 'general')).slice(0, 3)).toEqual(['How you work', 'Talk to the person as you work, the way a colleague does', 'Work in few steps']);
     for (const method of [lead, worker]) {
       expect(method).toContain('Each reply is a step, and every step sends the whole conversation again, so make in one reply every call you can make now');
       expect(method).toContain('Read a few files with one `fs read-files`');
@@ -21,19 +22,21 @@ describe('a turn in few steps (08 §8.2, ADR 0097, 1)', () => {
     expect(lead).toContain('A good reply reads like this: "The totals are off because two months are missing from the sheet; reading both months\' files now." with, in that same reply, one `fs read-files` call for the two files.');
     expect(worker).not.toContain('Talk to the person as you work');
     expect(runTool(['fs']).description).toContain('Make every independent call in the same reply, as several run calls');
+    expect(runTool(['fs']).description).toContain('Start each reply that makes calls with one short sentence saying what you are doing and why.');
   });
 });
 
 describe("the map's rules in its entry (08 §8.2 and §8.5, ADR 0097, 5 and 8)", () => {
-  it('QA65-H10 Plan and Execute are short and point to the entry, which holds the rules of a map', () => {
+  // Superseded in part by QA73-H5: Plan and Confirm the plan are one part, Map (ADR 0112, 3).
+  it('QA65-H10 Map and Execute are short and point to the entry, which holds the rules of a map', () => {
     const lead = lines(workingMethod('lead'));
-    const plan = lead.find((line) => line.startsWith('Plan.')) ?? '';
+    const plan = lead.find((line) => line.startsWith('Map.')) ?? '';
     const execute = lead.find((line) => line.startsWith('Execute.')) ?? '';
     // Superseded by QA67-H9 (ADR 0102, 4).
     expect(plan).toContain("the `execution-map` entry below says how to set it with its steps' details in one call, and keep it true.");
     expect(execute).toContain('work through it as its entry says');
-    // ADR 0102, 2 adds the checks in proportion to Execute.
-    expect(plan.length + execute.length).toBeLessThan(1900);
+    // Map holds what Plan and Confirm the plan held, shorter than they were with Execute (2,427 characters).
+    expect(plan.length + execute.length).toBeLessThan(2300);
     for (const rule of ['Its uses names who does it', 'a branch means delegation', 'Give each step its details in the same set call', 'Setting the map again keeps the status of each step whose id stays', 'Mark a step doing in the same reply as your first call on it', 'failed with a note']) expect(executionMapDescription).toContain(rule);
   });
 
@@ -44,10 +47,10 @@ describe("the map's rules in its entry (08 §8.2 and §8.5, ADR 0097, 5 and 8)",
 });
 
 describe('Decide for me asks nothing (08 §8.2, ADR 0097, 7)', () => {
-  it('QA65-H12 Clarify decides, Confirm the plan starts, no ask rule, and the general method decides', () => {
+  it('QA65-H12 and QA73-E4 Clarify decides, Map starts, no ask rule, and the general method decides', () => {
     const lead = workingMethod('lead', 'engineering', true);
     expect(lead).toContain('Anything else, decide yourself, since the person asked you to decide: choose what you would recommend, and say in a line what you chose and why.');
-    expect(lead).toContain("Confirm the plan. Once every step of the map has details, say in a few lines what you understood (the goal, what done looks like, what stays as it is, and the choices you made for the person) and start: the person asked you to decide, so don't wait for an answer.");
+    expect(lead).toContain("Once every step of the map has details, say in a few lines what you understood (the goal, what done looks like, what stays as it is, and the choices you made for the person) and start: the person asked you to decide, so don't wait for an answer.");
     expect(lead).not.toContain('call `ask');
     expect(lead).not.toContain('`ask choice`');
     const general = workingMethod('lead', 'general', true);

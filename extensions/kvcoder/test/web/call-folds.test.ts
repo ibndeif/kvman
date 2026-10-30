@@ -107,29 +107,50 @@ describe('calls folded between the agent\'s text (ADR 0093, 1)', () => {
   });
 });
 
-describe('step headlines (08 §8.7, ADR 0102, 1)', () => {
-  const rows = (view: Awaited<ReturnType<typeof mounted>>) => view.findAll('[data-test="headline-text"], [data-test="call-fold"], [data-test="call-card"], [data-test="assistant-message"]').map((row) => row.attributes('data-test') === 'headline-text' ? `headline:${row.text()}` : row.attributes('data-test') ?? '');
-
-  it('QA67-H1 a headline is a line, the calls under it fold, and replies that share it join', async () => {
-    const view = await shown([user('go', { turnId: 't1' }), ...thought('Reading the importer', 'a.ts'), ...thought('Reading the importer', 'b.ts'), ...thought('Fixing the path check', 'c.ts')]);
-    expect(rows(view)).toEqual(['headline:Reading the importer', 'call-fold', 'headline:Fixing the path check', 'call-card']);
-    expect(view.find('[data-test="call-fold-words"]').text()).toBe('Read 2 files');
-    expect(view.find('[data-test="headline-thinking"]').text()).toBe('**Reading the importer**\n\nLooking at it.\n\n**Reading the importer**\n\nLooking at it.');
+// Superseded in part by QA73 (ADR 0112, 2): a headline titles its fold instead of being a row of its own.
+describe('step headlines title their calls (08 §8.7, ADR 0102, 1; ADR 0112, 2)', () => {
+  const rows = (view: Awaited<ReturnType<typeof mounted>>) => view.findAll('[data-test="call-fold"], [data-test="call-card"], [data-test="assistant-message"]').filter((row) => row.element.closest('[data-test="call-fold-body"]') === null).map((row) => {
+    const titled = row.find('[data-test="call-fold-headline"]');
+    return titled.exists() ? `call-fold:${titled.text()}` : row.attributes('data-test') ?? '';
   });
 
-  it('QA67-H2 replies whose thinking has no headline no longer break a fold', async () => {
+  it('QA67-H1, QA73-H3, and QA73-H4 a headline titles the fold of its calls, from one card, and replies that share it join', async () => {
+    const view = await shown([user('go', { turnId: 't1' }), ...thought('Reading the importer', 'a.ts'), ...thought('Reading the importer', 'b.ts'), ...thought('Fixing the path check', 'c.ts')]);
+    expect(rows(view)).toEqual(['call-fold:Reading the importer', 'call-fold:Fixing the path check']);
+    expect(view.find('[data-test="headline"]').exists()).toBe(false);
+    const head = view.find('[data-test="call-fold-head"]');
+    expect(head.text()).toMatch(/^Reading the importer · Read 2 files/);
+    expect(head.find('[data-test="call-fold-headline"]').attributes('dir')).toBe('auto');
+    expect(head.find('[data-test="call-fold-headline"]').classes()).toContain('kvc-muted');
+    await head.trigger('click');
+    const body = view.find('[data-test="call-fold-body"]');
+    expect(body.findAll('[data-test="thinking"]')).toHaveLength(2);
+    expect(body.findAll('[data-test="call-card"]')).toHaveLength(2);
+  });
+
+  it('QA67-H2 and QA73-E2 replies whose thinking has no headline no longer break a fold, and one such card stays a card', async () => {
     const view = await shown([user('go', { turnId: 't1' }), ...thought(undefined, 'a.ts'), ...thought(undefined, 'b.ts'), ...thought(undefined, 'c.ts'), ...thought(undefined, 'd.ts')]);
     expect(rows(view)).toEqual(['call-fold']);
     expect(view.find('[data-test="call-fold-words"]').text()).toBe('Read 4 files');
+    const single = await shown([user('go', { turnId: 't1' }), ...thought(undefined, 'a.ts')]);
+    expect(rows(single)).toEqual(['assistant-message', 'call-card']);
   });
 
   it('QA67-E1 a bold word inside a line is no headline', async () => {
     const view = await shown([user('go', { turnId: 't1' }), ...thought(undefined, 'a.ts', 'I think **this** matters'), ...thought(undefined, 'b.ts')]);
-    expect(view.find('[data-test="headline"]').exists()).toBe(false);
+    expect(view.find('[data-test="call-fold-headline"]').exists()).toBe(false);
   });
 
-  it('QA67-E2 and QA67-E3 a reply with text ends the group, and a first group may have no headline', async () => {
-    const view = await shown([user('go', { turnId: 't1' }), ...thought(undefined, 'a.ts'), ...thought(undefined, 'b.ts'), answer('Found it.', { turnId: 't1' }), ...thought('Fixing it', 'c.ts'), ...thought('Fixing it', 'd.ts')]);
-    expect(rows(view)).toEqual(['call-fold', 'assistant-message', 'headline:Fixing it', 'call-fold']);
+  it('QA67-E2, QA67-E3, and QA73-E3 a reply with text ends the group, and a first group may have no headline', async () => {
+    const view = await shown([user('go', { turnId: 't1' }), ...thought(undefined, 'a.ts'), ...thought(undefined, 'b.ts'), answer('Found it.', { turnId: 't1' }), ...thought('Fixing it', 'c.ts'), ...thought('Fixing it', 'd.ts'), answer('Fixed.', { turnId: 't1' }), ...thought(undefined, 'e.ts')]);
+    expect(rows(view)).toEqual(['call-fold', 'assistant-message', 'call-fold:Fixing it', 'assistant-message', 'assistant-message', 'call-card']);
+  });
+
+  it('QA73-E1 a headline with no call card under it is not shown, and its reply keeps its thought', async () => {
+    const housekeeping = called('background', 'list', {}, { text: '[]' }, 't1', '**Checking on the build**\n\nIs it done?');
+    const view = await shown([user('go', { turnId: 't1' }), ...housekeeping, answer('Still building.', { turnId: 't1' })]);
+    expect(view.find('[data-test="call-fold-headline"]').exists()).toBe(false);
+    expect(rows(view)).toEqual(['assistant-message', 'assistant-message']);
+    expect(view.findAll('[data-test="thinking"]')).toHaveLength(1);
   });
 });

@@ -2,7 +2,7 @@ import { z } from '@kvman/sdk';
 import type { JsonValue } from '../connector-call.ts';
 
 // The agent's one tool (plan 08 §8.2, ADR 0011, 1; ADR 0089, 1): `run { connector, command, payload }` runs one command
-// of a connector. The payload has no schema here: the model learns it from the prompt's connector index or the connector's `help`.
+// of a connector; every reply with calls starts with a sentence (ADR 0112, 1). The payload has no schema here: the model learns it from the prompt's connector index or the connector's `help`.
 
 const exampleCall = '{ "connector": "fs", "command": "list", "payload": { "path": "src" } }';
 
@@ -11,6 +11,8 @@ export function runTool(connectors: readonly string[]) {
     name: 'run',
     description: [
       'Runs one command of a connector and returns its result. Connectors are the only way you act: the system prompt lists each one with its commands.',
+      '',
+      'Start each reply that makes calls with one short sentence saying what you are doing and why.',
       '',
       'Make every independent call in the same reply, as several run calls: reads and searches run at the same time, and each reply is a step that sends the whole conversation again.',
       '',

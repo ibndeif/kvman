@@ -33,8 +33,9 @@ describe('the prompt of a chat and of its subagent (08 §8.2 and §8.5, ADR 0022
     expect(prompt).toMatch(/architect \([^()]*; read-only\)/);
     expect(prompt).toMatch(/reviewer \([^()]*; read-only\)/);
     expect(prompt).toMatch(/general \(Any separate, self-contained task\)/);
-    expect(prompt).toContain('the first map of the request, or a map you set again with a change to what the person gets (the goal, what done looks like, what stays as it is, stored data, or what could go wrong)');
-    expect(prompt).toContain('A change inside the plan, such as who does a step, the order, a step split or retried, or a worker reassigned, needs no confirmation: set the map and say what changed in one line.');
-    expect(prompt).toContain('Never ask the person to confirm a choice they have just made.');
+    // Worded as Map's agreement since QA73-H6 and E5 (ADR 0112, 3).
+    expect(prompt).toContain('A map set again with a change to what the person gets (the goal, what done looks like, what stays as it is, stored data, or what could go wrong) needs their agreement again');
+    expect(prompt).toContain("a change inside the plan (who does a step, the order, a step split or retried, or a worker reassigned) or of a step's status needs none: say what changed in one line.");
+    expect(prompt).toContain('answers what it covers: never ask it again.');
   });
 });

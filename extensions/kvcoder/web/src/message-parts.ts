@@ -197,6 +197,15 @@ export function backgroundRef(message: Message): string | undefined {
 // A background result's text, as kvcoder writes it for the model (`backgroundText`): the call's own words come first.
 const backgroundCall = /^The background call `([\s\S]*?)` \(job [^)\n]+\) finished:\n/;
 
+// The message kvcoder writes for the runs that ended while kvman was stopped (`reportInterrupted`), one line per run.
+const stoppedHeader = 'While kvman was stopped, these background calls ended:\n';
+
+/** How many runs a "while kvman was stopped" message reports; nothing for any other text (ADR 0112, 5). */
+export function stoppedRunsCount(text: string): number | undefined {
+  if (!text.startsWith(stoppedHeader)) return undefined;
+  return text.split('\n').filter((line) => line.startsWith('- `')).length;
+}
+
 /** What a finished background job or helper was called, for its card's title (ADR 0035, 7); nothing for a message with no such first line. */
 export function backgroundName(message: Message): string | undefined {
   const name = backgroundCall.exec(textOf(message.content['content']))?.[1]?.trim();

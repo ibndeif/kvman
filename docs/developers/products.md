@@ -39,7 +39,7 @@ A product is a preset ([presets.md](presets.md)): the extensions it runs and the
 | Field | Is |
 |---|---|
 | `identity` | 1 to 4000 characters: who the agent is, in your users' terms. It replaces "You are kvman Coder, the lead engineer…". A worker's first line starts with it too. |
-| `method` | `engineering` (the default: kvcoder's full method, [the agent](../user-guide/the-agent.md)) or `general`: understand what the person wants, ask in one round what only they can decide, do the task with the connectors and workers, check the result, and answer briefly. `general` has no execution map, no step-by-step plan, and no "ready for production"; the `execution-map` connector isn't offered. |
+| `method` | `engineering` (the default: kvcoder's full method, [the agent](../user-guide/the-agent.md)) or `general`: understand what the person wants, ask in one round what only they can decide, do the task with the connectors and workers, check the result, and give the result first in its answer. `general` has no execution map, no step-by-step plan, and no "ready for production"; the `execution-map` connector isn't offered. |
 | `startHeading` | A translation key of yours: the Chat page's heading. It takes the `{workspace}` parameter. |
 | `placeholder` | A translation key of yours: the new chat's send box text. |
 

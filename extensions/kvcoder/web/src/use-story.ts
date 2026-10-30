@@ -23,7 +23,7 @@ export function useStory(t: Translate, messages: Ref<Message[]>, calls: Ref<Read
     return shown;
   });
 
-  const idsOf = (row: Row): string[] => (row.kind === 'fold' ? row.messages.map((message) => message.id) : row.kind === 'headline' ? row.ids : [row.message.id]);
+  const idsOf = (row: Row): string[] => (row.kind === 'fold' ? row.messages.map((message) => message.id) : [row.message.id]);
   const rowKey = (row: Row): string => `${row.kind}:${idsOf(row)[0] ?? ''}`;
   const rowTotals = (row: Row) => idsOf(row).map((id) => turnTotals.value.get(id)).findLast((found) => found !== undefined);
   const runningTurnId = computed(() => (session.value?.status === 'idle' ? undefined : turns.value[0]?.outcome === undefined ? turns.value[0]?.id : undefined));

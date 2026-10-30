@@ -4,16 +4,13 @@ import type { CallView } from './call-view.ts';
 import { fields, pageLanguage, type Translate } from './kvman.ts';
 import { answeredQuestion, artifactOf, exitedOnly, extensionCardOf, headlinesOf, resultCard, textOf, thinkingOf } from './message-parts.ts';
 
-// A turn as a story (plan 08 §8.7, ADR 0093, 1; ADR 0102, 1): call cards in a row, with nothing the person reads between
-// them, fold into one row that says what they did. A reply with no text doesn't break that row; a reply whose thinking
-// starts a new headline starts a new group under that headline, which opens to show the thinking behind it. The
-// agent's text, notices, questions, and artifacts stay as they are.
+// A turn as a story (plan 08 §8.7, ADR 0093, 1; ADR 0102, 1; ADR 0112, 2): call cards in a row, with nothing the person
+// reads between them, fold into one row that says what they did. A reply with no text doesn't break that row; a reply
+// whose thinking starts a new headline starts a new group, whose fold the headline titles. The agent's text, notices,
+// questions, and artifacts stay as they are.
 
-export type Row =
-  | { kind: 'message'; message: Message }
-  | { kind: 'fold'; messages: Message[] }
-  /** A step's headline; `ids` are the replies that share it, and `thinking` theirs. */
-  | { kind: 'headline'; ids: string[]; headline: string; thinking: string[] };
+/** A row: one message, or a fold of call cards, titled by the headline of the replies that made them when they had one. */
+export type Row = { kind: 'message'; message: Message } | { kind: 'fold'; messages: Message[]; headline?: string };
 
 // The agent's own housekeeping, which the conversation doesn't show (ADR 0108, 13): any `help`, and these commands.
 const housekeeping: Readonly<Record<string, ReadonlySet<string>>> = {
@@ -38,13 +35,15 @@ export function isCallCard(message: Message, calls: ReadonlyMap<string, CallView
 // A reply with no text: its calls, with or without thinking.
 const noText = (message: Message): boolean => message.kind === 'assistant' && textOf(message.content['content']) === '';
 
-/** The conversation's rows: each message, a headline, or a fold of the call cards that come one after another. */
+/** The conversation's rows: each message, or a fold of the call cards that come one after another. */
 export function foldedRows(messages: readonly Message[], calls: ReadonlyMap<string, CallView>): Row[] {
   const rows: Row[] = [];
   let run: Message[] = [];
-  let headline: Extract<Row, { kind: 'headline' }> | undefined;
+  let headline: string | undefined;
+  // A headline needs a row to title, so its group folds from one card; a group without one folds from two.
   const flush = (): void => {
-    if (run.filter((message) => isCallCard(message, calls)).length >= 2) rows.push({ kind: 'fold', messages: run });
+    const cards = run.filter((message) => isCallCard(message, calls)).length;
+    if (cards >= (headline === undefined ? 2 : 1)) rows.push({ kind: 'fold', messages: run, ...(headline === undefined ? {} : { headline }) });
     else for (const message of run) rows.push({ kind: 'message', message });
     run = [];
   };
@@ -60,18 +59,12 @@ export function foldedRows(messages: readonly Message[], calls: ReadonlyMap<stri
       rows.push({ kind: 'message', message });
       continue;
     }
-    const thinking = thinkingOf(message);
-    const said = headlinesOf(thinking).at(-1);
-    if (said === undefined && headline === undefined) run.push(message);
-    else if (said === undefined || said === headline?.headline) {
-      headline?.ids.push(message.id);
-      headline?.thinking.push(thinking);
-    }
-    else {
+    const said = headlinesOf(thinkingOf(message)).at(-1);
+    if (said !== undefined && said !== headline) {
       flush();
-      headline = { kind: 'headline', ids: [message.id], headline: said, thinking: [thinking] };
-      rows.push(headline);
+      headline = said;
     }
+    run.push(message);
   }
   flush();
   return rows;

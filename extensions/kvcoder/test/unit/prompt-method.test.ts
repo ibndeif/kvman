@@ -7,18 +7,17 @@ import { workingMethod } from '../../src/prompt/working-method.ts';
 const steps = (text: string): string[] => text.split('\n').filter((line) => /^\d\. /.test(line)).map((line) => line.slice(0, line.indexOf('. ', 3)));
 
 describe("the lead's working method (08 §8.2, ADR 0065)", () => {
-  it('M2.4-E227 and E262 the lead sizes up each task and chooses its path from the named parts', () => {
+  // Path and parts superseded in part by QA73-H5 (ADR 0112, 3).
+  it('M2.4-E227, E262, and QA73-H5 the lead chooses its path for each task from the named parts', () => {
     const lead = workingMethod('lead');
     expect(steps(lead)).toEqual([]);
     expect(steps(workingMethod('worker'))).toEqual(['1. Understand', '2. Do it', '3. Return']);
     // Superseded by QA68-H6: Deliberate comes before Plan (ADR 0103, 6); and by QA72-H1: no Tests part (ADR 0111).
-    expect(lead.split('\n').slice(5, 15).map((line) => line.slice(0, line.indexOf('. ')))).toEqual(['Understand', 'Clarify', 'Deliberate', 'Plan', 'Confirm the plan', 'Execute', 'Stay on the task', 'Delegate', 'Show what the person will look at', 'Finish']);
+    expect(lead.split('\n').slice(4, 13).map((line) => line.slice(0, line.indexOf('. ')))).toEqual(['Understand', 'Clarify', 'Deliberate', 'Map', 'Execute', 'Stay on the task', 'Delegate', 'Show what the person will look at', 'Finish']);
     for (const phrase of [
       'No path is fixed: you choose it for each task from what the task is, and you change it when what you find changes it.',
-      'Size up the task first. Read the request and look at what it touches, then judge four things: how clear it is (can you say what done looks like?), how much it changes (one place, or several parts that depend on each other), what could go wrong and how hard that is to take back, and whether the person will look at the result (a screen, a page, a report).',
-      'choose the lightest path that delivers the task well. A question needs an answer from what you read, and no change. A small, clear change needs doing and checking, and nothing more. An unclear request needs its questions answered before any work. Work that changes several parts that depend on each other, or that is hard to take back, needs an execution map the person agreed to; other work, even of a few steps, needs no map: do it, and say where you are as you go.',
-      'A task that turns out larger than it looked gets its map then, and one that turns out simple drops what it does not need.',
-      'These are the parts of a path. Use only the ones your path has.',
+      'Choose the path from the task. A question gets an answer from what you read, and no change. A small, clear change is done and checked, and nothing more. An unclear request gets its questions answered before any work. Work that changes several parts that depend on each other, or that is hard to take back, gets a map the person agreed to; other work, even of a few steps, gets none: do it, and say where you are as you go.',
+      'A task that turns out larger than it looked gets its map then. Use only the parts below that your path needs.',
       // ADR 0097, 5: the map's own rules are in its entry; Execute keeps how each step is done.
       'For each step, or with no map for all of what was asked, make the smallest change that does it, check it, and fix a failure at its cause.', 'A step is not done because you wrote it.',
       'do not look into it: record it with `execution-map note`, or keep it for your final answer when there is no map, and go on.',
@@ -29,7 +28,7 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
       'Stop what you started in the background and no longer need, and delete the temporary files you or your tools left in the workspace folder, such as logs, snapshots, and scratch files.',
       'text that stands out clearly from its background, and calm colours; every field and every element that shows text the person typed has dir="auto", so Arabic they type reads right to left on any page.',
       "when the mcp connector gives you a browser, try the page's main actions with one `mcp run`.",
-      'Your final answer, in plain words and as short as the facts allow, says what was done, what you checked and what it showed, what is unchecked, what still runs in the background, and what you noted for later.',
+      'Your final answer starts with the result, in plain words and as short as the facts allow.',
       'An ordinary detail that is easy to change: decide it yourself, and say what you chose.',
     ]) expect(lead, phrase).toContain(phrase);
     for (const gone of ['`plan`', '☐', 'artifact edit', 'checklist', 'Scale the process to the task', 'about five calls', 'skip steps']) expect(lead, gone).not.toContain(gone);
@@ -39,17 +38,19 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
     expect(workingMethod('worker')).not.toContain('Commands section');
   });
 
-  it('M2.4-E256 and E263 the map is the detailed plan, made after looking, and the person agrees to it before any step starts', () => {
+  // Plan and Confirm the plan superseded by Map, QA73-H6 and E5 (ADR 0112, 3).
+  it('M2.4-E256, E263, QA73-H6, and QA73-E5 the map is the detailed plan, made after looking, and the person agrees to it before any step starts', () => {
     const lead = workingMethod('lead');
     for (const phrase of [
-      'Plan. Only when your path needs a map, and only after you understood the request, looked at what exists, and have your answers, and before you change anything: never in your first reply, because a map made before you looked is a guess.',
+      'Map. Only when your path needs one, after you understood the request, looked at what exists, and have your answers, and before you change anything: never in your first reply, because a map made before you looked is a guess.',
       'The map is the implementation plan the person reads and agrees to, so make it detailed, not an outline;',
-      'Confirm the plan. The person agrees to the map before you work on it. Once the first map of the request, or a map you set again with a change to what the person gets (the goal, what done looks like, what stays as it is, stored data, or what could go wrong), has details on every step (its undetailed list is empty), and before you start any step, call `ask choice` with other set to true.',
-      'then it asks whether to start, with the option that starts first and an option that changes the plan, so the person can write what to change.',
-      'When they ask for changes, set the map again with them, detail what changed, and ask again; start only after they chose to start.',
-      'A change of status with `execution-map update` needs no confirmation.',
+      "Once every step has details (its undetailed list is empty), and before you start any step, get the person's agreement.",
+      'When they already told you to go ahead with what the map does, say in a few lines what you understood (the goal, what done looks like, what stays as it is, and the choices you made for the person) and start.',
+      'Otherwise call `ask choice` with other set to true: its question says those few lines, then asks whether to start, the option that starts first and one that changes the plan; when they ask for changes, set the map again, detail what changed, and ask again.',
+      'A map set again with a change to what the person gets (the goal, what done looks like, what stays as it is, stored data, or what could go wrong) needs their agreement again;',
+      "a change inside the plan (who does a step, the order, a step split or retried, or a worker reassigned) or of a step's status needs none: say what changed in one line.",
     ]) expect(lead, phrase).toContain(phrase);
-    for (const gone of ['`ask confirm`', 'Set it in the same reply as your first call', 'For a large, ambiguous, or risky task']) expect(lead, gone).not.toContain(gone);
+    for (const gone of ['`ask confirm`', 'Set it in the same reply as your first call', 'For a large, ambiguous, or risky task', 'Confirm the plan']) expect(lead, gone).not.toContain(gone);
     expect(executionMapDescription).toContain('the implementation plan the person reads, agrees to, and watches as a diagram');
     expect(executionMapDescription).toContain("and end with the project's own checks after everything they cover.");
   });
@@ -76,7 +77,7 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
     // "The task" is the person's request there; a node is never called one.
     expect(said.match(/\btasks\b|\b(?:a|each|one|ready) task\b/gi)).toBeNull();
     const lead = workingMethod('lead');
-    for (const part of ['Plan. ', 'Confirm the plan. ', 'Execute. ']) expect(lead.split('\n').find((line) => line.startsWith(part))?.replaceAll('does the task', '').match(/\btasks?\b/gi), part).toBeNull();
+    for (const part of ['Map. ', 'Execute. ']) expect(lead.split('\n').find((line) => line.startsWith(part))?.replaceAll('does the task', '').match(/\btasks?\b/gi), part).toBeNull();
   });
 
   it('M2.4-E279 the map is the execution path, and a step is one stage of it', () => {
@@ -118,16 +119,19 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
     expect(artifactDescription.startsWith('Show the person something to read or see: a report, a design, an HTML page, or the localhost address')).toBe(true);
   });
 
-  it('M2.4-E301, E302, and QA57-H8 the lead narrates its work briefly, and a worker does not get that rule', () => {
-    const rule = 'Talk to the person as you work, the way a colleague thinks aloud. Between calls, when you learn something that changes what you do next, say so in a sentence or two in the reply that makes the next call: what you found, and what you do now';
+  // Superseded in part by QA73-H1 and E8: every reply with a call starts with a sentence (ADR 0112, 1).
+  it('M2.4-E301, E302, QA57-H8, QA73-H1, and QA73-E8 the lead talks in every reply with a call, and a worker does not get that rule', () => {
+    const rule = 'Talk to the person as you work, the way a colleague does. Every reply that makes a call starts with one short sentence to the person: what you are doing and why, or what you just found and what you do next. Never send a reply that holds only calls.';
     for (const lead of [workingMethod('lead'), workingMethod('lead', 'general')]) {
       for (const phrase of [
         rule,
-        "Don't announce routine calls, and don't repeat what a call's card already shows.",
+        "Say it in your own words, and don't repeat what the call's card already shows.",
         'Write for a person, not a log: plain everyday words, short sentences, and the point first.',
         'Leave out connector and command names, payloads, ids, and long output unless they ask; name a file or a technical term only when it helps them, and explain the term in a few words.',
         'Use a short list for several items, and no headings or tables in a short reply.',
       ]) expect(lead, phrase).toContain(phrase);
+      expect(lead.split('\n')[1]?.startsWith(rule)).toBe(true);
+      expect(lead).not.toContain("Don't announce routine calls");
       expect(lead).not.toContain('Leave out your inner steps');
       expect(lead).not.toContain('Say what you are about to do in the same reply');
     }
@@ -137,36 +141,38 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
     }
   });
 
+  // Shorter since QA73-H5 (ADR 0112, 3).
   it('M2.4-E307 the lead understands the goal behind the request, what exists, and what was left unsaid', () => {
     const understand = workingMethod('lead').split('\n').find((line) => line.startsWith('Understand. ')) ?? '';
     for (const phrase of [
-      'Read everything they sent, attached images and files too,',
+      'Read everything the person sent, attached images and files too,',
       'and what already does part of it, so you build on it and not beside it.',
-      'what done looks like to them, as examples they would check',
-      'what the work changes or must keep working (other callers, stored data, settings, users)',
-      'whether they asked for a goal or for a particular means (a format, a library, a design), and whether that means serves the goal',
-      "what they didn't say that changes the result (who uses it, how much data or load, which platforms and languages, privacy and security, and how good is good enough)",
-      'which of your connectors and workers help, and what is missing.',
+      'what done looks like to them',
+      'what must keep working (other callers, stored data, settings, users)',
+      'whether the means they named (a format, a library, a design) serves their goal',
+      "what they didn't say that changes the result (who uses it, how much data or load, which platforms and languages, privacy and security)",
       'through a connector that reaches it rather than from memory',
     ]) expect(understand, phrase).toContain(phrase);
     expect(workingMethod('lead')).not.toContain('`docs get`');
   });
 
-  it('M2.4-E308 the lead sorts what is open into look, decide, and ask, says when a means works against the goal, and asks in one round', () => {
+  it('M2.4-E308 and QA73-H6 the lead sorts what is open into look, decide, and ask, asks in one round, and never asks again for a go-ahead', () => {
     const clarify = workingMethod('lead').split('\n').find((line) => line.startsWith('Clarify. ')) ?? '';
     for (const phrase of [
       "A fact that looking would answer: look, don't ask.",
       'A decision only the person can make, or a gap that changes the result, the design, or stored data,',
       'or would break what exists: ask before any work.',
       'When the means they asked for works against their goal, or a clearly better way exists, say so and offer both before you build theirs.',
-      'Ask in one round when you can, after you looked and before you plan',
+      'Look first, then ask everything in one round: every question in the same reply',
+      'The person\'s go-ahead ("do it", "yes", or the option that starts, chosen after you said what you would do) answers what it covers: never ask it again.',
       'your recommended one first and each option saying what it leads to.',
     ]) expect(clarify, phrase).toContain(phrase);
   });
 
   it('M2.4-E309 the plan question says back what the lead understood, and the map goal is the outcome in the person\'s terms', () => {
     const lead = workingMethod('lead');
-    expect(lead).toContain('Its question first says in a few lines what you understood: the goal, what done looks like, what stays as it is, and the choices you made for the person; then it asks whether to start');
+    expect(lead).toContain('say in a few lines what you understood (the goal, what done looks like, what stays as it is, and the choices you made for the person)');
+    expect(lead).toContain('its question says those few lines, then asks whether to start');
     expect(executionMapDescription).toContain('Give the goal, the outcome the person wants in their own terms, then the steps.');
   });
 
@@ -187,7 +193,7 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
 
   // Superseded by QA67-H9: the map is set with each step's details in one call (ADR 0102, 4).
   it('QA54-H10 QA67-H9 the lead sets the map with each step detailed in Markdown, and asks once every step has details', () => {
-    expect(workingMethod('lead')).toContain('has details on every step (its undetailed list is empty), and before you start any step');
+    expect(workingMethod('lead')).toContain('Once every step has details (its undetailed list is empty), and before you start any step');
     for (const phrase of [
       "Give each step its details in the same set call: what it changes and how, naming the files or parts and the approach in words the person understands without the code, in Markdown, with lists, tables, and Mermaid diagrams or charts in fenced mermaid blocks, never SVG.",
       "The person opens them with a press, and a step can't be doing until it has them.",
@@ -233,15 +239,15 @@ describe('deliberating before a map, chosen apart from it (08 §8.2, ADR 0103, 6
   const part = (method: string): string => method.split('\n').find((line) => line.startsWith('Deliberate. ')) ?? '';
 
   // Superseded in part by QA71-H22: deliberating runs only when the person asks (ADR 0108, 10).
-  it('QA68-H6 and QA71-H22 the lead has Deliberate before Plan, only when the person asks, and Size up names it; Decide for me has the same', () => {
+  // Plan is Map since QA73-H5 (ADR 0112, 3).
+  it('QA68-H6 and QA71-H22 the lead has Deliberate before Map, only when the person asks; Decide for me has the same', () => {
     for (const decides of [false, true]) {
       const lead = workingMethod('lead', 'engineering', decides);
       const names = lead.split('\n').map((line) => line.slice(0, line.indexOf('. ')));
       expect(names[names.indexOf('Deliberate') - 1]).toBe('Clarify');
-      expect(names.indexOf('Plan')).toBe(names.indexOf('Deliberate') + 1);
-      expect(lead).toContain('A request the person asks to have debated is deliberated first, with a map or without one, as Deliberate says.');
+      expect(names.indexOf('Map')).toBe(names.indexOf('Deliberate') + 1);
       for (const phrase of [
-        'Only when the person asks for the approaches to be debated.',
+        'Only when the person asks for the approaches to be debated:',
         "before any map or change, hand it in one `delegate run` to the worker of the `delegate` connector that debates approaches, when its entry lists one",
         'the map\'s steps and details when your path has a map, or the work itself when it doesn\'t.',
         'Deliberating and mapping are separate choices, and deliberate once per request, not per step.',

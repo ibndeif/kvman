@@ -32,7 +32,8 @@ describe('the prompt builder (08 §8.2)', () => {
     expect(prompt.split('## Connectors\n')[1]?.split('\n')).toEqual(['- ask: Ask the person. Commands: text, help.', '- todo: Keep a todo list. Commands: add, list, help.', '- gh: GitHub CLI! Commands: exec, help.']);
   });
 
-  it('QA5-H1, QA5-H6, QA5-E1, QA6-H22, QA6-E22, and QA8-H5 the base prompt makes connectors the only way to act and gives the expert workflow, in both shells', () => {
+  // Wording of asking, a small change, and the final answer superseded by QA73-H5, H6, and H7 (ADR 0112).
+  it('QA5-H1, QA5-H6, QA5-E1, QA6-H22, QA6-E22, QA8-H5, and QA73-E9 the base prompt makes connectors the only way to act and gives the expert workflow, in both shells', () => {
     const base = { role: 'lead' as const, workspacePath: '/w', language: 'en', sections: [], connectors: [] };
     for (const [platform, shell] of [['linux', 'bash'], ['win32', 'powershell']] as const) {
       const { prompt } = buildPrompt({ ...base, platform, shell });
@@ -47,7 +48,7 @@ describe('the prompt builder (08 §8.2)', () => {
         'No path is fixed: you choose it for each task from what the task is',
         'Never assume or invent names, paths, APIs, or behavior',
         'ask before any work.',
-        'put every question in the same reply, one `ask` call each, never one question per reply, and use `ask choice` whenever you offer options, your recommended one first and each option saying what it leads to.',
+        'every question in the same reply, one `ask` call each, never one question per reply, and `ask choice` whenever you offer options, your recommended one first and each option saying what it leads to.',
         'the `execution-map` entry below says how to set it',
         'call `ask choice` with other set to true',
         'mark the step done with your evidence',
@@ -59,7 +60,7 @@ describe('the prompt builder (08 §8.2)', () => {
         'in an artifact, not in a reply.',
         'Work in few steps. Each reply is a step, and every step sends the whole conversation again, so make in one reply every call you can make now: reads and searches run at the same time, and calls that change something (shell lines, writes, edits) run one after another in the order you give them. Read a few files with one `fs read-files`, put independent calls (searches, separate files, separate workers) in the same reply, as several run calls or one run with a calls list, and leave for a later reply only a call that needs another call\'s result. Several new files are several `fs write` calls in one reply, not one reply each.',
         'To put a question to the person (a choice, a yes or no, a free answer), call `ask`.',
-        'Your final answer says what you did and what is left.',
+        'Your final answer starts with the result, in plain words and as short as the facts allow.',
       ]) expect(prompt, phrase).toContain(phrase);
     }
   });
@@ -70,9 +71,9 @@ describe('the prompt builder (08 §8.2)', () => {
       const { prompt } = buildPrompt({ role: 'lead', workspacePath: '/w', language: 'en', platform, shell, sections: [], connectors: [] });
       for (const sentence of [
         'Every connector has the command help. A command listed below with its payload needs no help call; for any other command, or for what a field means, call the connector\'s help with { "command": "<name>" } before the first use.',
-        'A small, clear change needs doing and checking, and nothing more.',
+        'A small, clear change is done and checked, and nothing more.',
         'ask before any work.',
-        'put every question in the same reply, one `ask` call each, never one question per reply, and use `ask choice` whenever you offer options, your recommended one first and each option saying what it leads to.',
+        'every question in the same reply, one `ask` call each, never one question per reply, and `ask choice` whenever you offer options, your recommended one first and each option saying what it leads to.',
         'Before you say that something runs or works, check it the way the person would: run it or request its address; if you couldn\'t, say what is unchecked.',
       ])
         expect(prompt, sentence).toContain(sentence);
@@ -100,7 +101,7 @@ describe('the prompt builder (08 §8.2)', () => {
     const check = "\nBefore you say that something runs or works, check it the way the person would: run it or request its address; if you couldn't, say what is unchecked. After you start a server, request its address once before you give it to the person.\n";
     expect(prompt).toContain(check);
     expect(prompt.split('\n').find((line) => line.startsWith('Execute. '))).not.toContain('Before you say');
-    expect(prompt).toContain('A small, clear change needs doing and checking, and nothing more.');
+    expect(prompt).toContain('A small, clear change is done and checked, and nothing more.');
   });
 
   it('QA9-H18 and QA10-H1 the base prompt ends its working method with the call-or-final-answer rule, and never makes a call that does nothing', () => {
@@ -120,10 +121,11 @@ describe('the prompt builder (08 §8.2)', () => {
 
   it('QA57-H9 and QA57-H10 a map only for large or risky work, and every question in the same reply', () => {
     const method = workingMethod('lead');
-    expect(method).toContain('Work that changes several parts that depend on each other, or that is hard to take back, needs an execution map the person agreed to; other work, even of a few steps, needs no map: do it, and say where you are as you go.');
-    expect(method).toContain('Plan. Only when your path needs a map, and only after you understood the request');
+    // Superseded by QA73-H5: Plan is part of Map (ADR 0112, 3).
+    expect(method).toContain('Work that changes several parts that depend on each other, or that is hard to take back, gets a map the person agreed to; other work, even of a few steps, gets none: do it, and say where you are as you go.');
+    expect(method).toContain('Map. Only when your path needs one, after you understood the request');
     expect(method).not.toContain('Work in several parts');
-    expect(method).toContain('put every question in the same reply, one `ask` call each, never one question per reply');
+    expect(method).toContain('every question in the same reply, one `ask` call each, never one question per reply');
     expect(workingMethod('lead', 'general')).toContain('one question per call, all the calls in the same reply and never one question per reply');
   });
 

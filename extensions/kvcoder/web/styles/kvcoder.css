@@ -123,6 +123,12 @@ a.kvc-button { text-decoration: none; color: inherit; }
 .kvc-oneline { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .kvc-fold-words { flex: 1 1 auto; text-align: start; }
 .kvc-fold-failed { color: var(--kv-color-danger); }
+.kvc-background-line > summary { display: flex; align-items: center; gap: 6px; min-inline-size: 0; padding-block: 2px; cursor: pointer; list-style: none; }
+.kvc-background-line > summary::-webkit-details-marker { display: none; }
+.kvc-background-line > summary > svg { flex: none; }
+.kvc-background-line .kvc-background-ok { color: var(--kv-color-success); }
+.kvc-background-line .kvc-background-failed { color: var(--kv-color-danger); }
+.kvc-background-line > .kvc-output { margin-block-start: 4px; border-radius: 6px; }
 .kvc-picker { position: relative; }
 .kvc-picker-label { max-inline-size: 16rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .kvc-popover { position: absolute; inset-inline-start: 0; inset-block-start: calc(100% + 6px); z-index: 20; box-sizing: border-box; inline-size: min(26rem, calc(100cqw - 2 * var(--kv-space-lg))); display: flex; flex-direction: column; gap: 6px; padding: 8px; border: 1px solid var(--kv-color-border); border-radius: 12px; background: var(--kv-color-surface); box-shadow: 0 12px 32px rgb(0 0 0 / 0.14); }
@@ -204,8 +210,6 @@ a.kvc-button { text-decoration: none; color: inherit; }
 .kvc-fold-body { display: flex; flex-direction: column; gap: 6px; padding: 6px 8px 8px; border-block-start: 1px solid var(--kv-color-border); }
 .kvc-final { border-inline-start: 3px solid var(--kv-color-primary); padding-inline-start: 12px; }
 /* A step's headline reads as the agent's own line, a little quieter than its text (ADR 0102, 1). */
-.kvc-headline > summary { cursor: pointer; font-weight: 600; list-style-position: inside; padding-block: 2px; }
-.kvc-headline > p { margin-block: 4px 0; }
 .kvc-changes { display: flex; flex-direction: column; gap: 8px; }
 .kvc-change-head { flex: 1 1 auto; min-inline-size: 0; display: flex; align-items: center; gap: 8px; text-align: start; }
 .kvc-diff > [data-kind='added'] { color: var(--kv-color-success, inherit); background: color-mix(in srgb, var(--kv-color-success, green) 12%, transparent); }

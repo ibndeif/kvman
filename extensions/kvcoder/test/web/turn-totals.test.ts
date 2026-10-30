@@ -46,18 +46,20 @@ describe("a turn's totals, a message's attached files, and a background result's
     expect(wrapper.find('[data-test="user-message"] span').element.textContent).toBe(text);
   });
 
-  it("QA47-H7 a finished background job's card and a helper's say which one it was, in the page's language", async () => {
+  // Superseded in part by QA73-H8 and E7: the line shows the run's name alone (ADR 0112, 5).
+  it("QA47-H7 a finished background job's line and a helper's say which one it was, and a nameless one is in the page's language", async () => {
     const fake = createFakeKvman();
     const messages = [
       user('The background call `node test.js` (job j9) finished:\nThe process exited with code 0.', { source: { kind: 'job', jobId: 'j9' } }),
       user('The background call `Review the plan` (job s2) finished:\nLooks right.', { source: { kind: 'subagent', sessionId: 's2' } }),
+      user('Something else finished.', { source: { kind: 'job', jobId: 'j8' } }),
     ];
     serve(fake, { found: session(), messages, omitted: 0, turns: [] });
     const english = await mounted(ConversationView, fake, { sessionId: 's1' });
-    expect(english.findAll('[data-test="background-title"]').map((node) => node.text())).toEqual(['Background job finished: node test.js', 'A helper finished: Review the plan']);
+    expect(english.findAll('[data-test="background-title"]').map((node) => node.text())).toEqual(['node test.js', 'Review the plan', 'Background job finished']);
     fake.language.value = 'ar';
     const arabic = await mounted(ConversationView, fake, { sessionId: 's1' });
-    expect(arabic.findAll('[data-test="background-title"]')[0]?.text()).toMatch(/^انتهت المهمة الخلفية: .?node test\.js.?$/u);
+    expect(arabic.findAll('[data-test="background-title"]').map((node) => node.text())).toEqual(['node test.js', 'Review the plan', 'انتهت مهمة خلفية']);
   });
 
   it('QA47-E5 a background message with no name keeps the plain title', async () => {
