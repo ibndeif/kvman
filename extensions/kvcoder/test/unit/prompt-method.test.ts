@@ -11,8 +11,8 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
     const lead = workingMethod('lead');
     expect(steps(lead)).toEqual([]);
     expect(steps(workingMethod('worker'))).toEqual(['1. Understand', '2. Do it', '3. Return']);
-    // Superseded by QA68-H6: Deliberate comes before Plan (ADR 0103, 6).
-    expect(lead.split('\n').slice(5, 16).map((line) => line.slice(0, line.indexOf('. ')))).toEqual(['Understand', 'Clarify', 'Tests the person chose', 'Deliberate', 'Plan', 'Confirm the plan', 'Execute', 'Stay on the task', 'Delegate', 'Show what the person will look at', 'Finish']);
+    // Superseded by QA68-H6: Deliberate comes before Plan (ADR 0103, 6); and by QA72-H1: no Tests part (ADR 0111).
+    expect(lead.split('\n').slice(5, 15).map((line) => line.slice(0, line.indexOf('. ')))).toEqual(['Understand', 'Clarify', 'Deliberate', 'Plan', 'Confirm the plan', 'Execute', 'Stay on the task', 'Delegate', 'Show what the person will look at', 'Finish']);
     for (const phrase of [
       'No path is fixed: you choose it for each task from what the task is, and you change it when what you find changes it.',
       'Size up the task first. Read the request and look at what it touches, then judge four things: how clear it is (can you say what done looks like?), how much it changes (one place, or several parts that depend on each other), what could go wrong and how hard that is to take back, and whether the person will look at the result (a screen, a page, a report).',
@@ -208,26 +208,24 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
 
 });
 
-describe('tests the person chose, and checks in proportion (08 §8.2, ADR 0102, 2)', () => {
-  it('QA67-H5 the lead asks once how to test and records it; it checks in proportion; Commands holds commands only; a worker follows the line', () => {
-    const lead = workingMethod('lead');
-    for (const phrase of [
-      "Tests the person chose. Before you write or change a test, look for a line starting `Testing:` in the project's AGENTS.md, and follow it.",
-      '`ask choice` with multiple set to true and the options "Run the existing tests only", "Add unit tests", "Add end-to-end or browser tests", and "I\'ll test it myself: run the app for me", in that order.',
-      'record the answer as one line, `Testing: <their choices in plain words>`, in AGENTS.md (create it when it is missing), with risky set to false, since they just chose it.',
-      "Check in proportion: after each change, run the tests that cover it; run the whole suite once, at the end; and run no stress, load, performance, or benchmark test unless the person asked for one.",
-      'It holds only command lines, each with a few words of what it does, at most 15 lines: never notes, designs, or history.',
-      'A bug fix, a change to one or two files, or a fix the person described never gets a map.',
-    ]) expect(lead, phrase).toContain(phrase);
-    const worker = workingMethod('worker');
-    expect(worker).toContain("Write only the kinds of tests the `Testing:` line of the project's AGENTS.md names, run the tests that cover your change, and run no stress, load, performance, or benchmark test unless the task asks for one.");
-    expect(worker).toContain('propose the smallest design');
+describe('no testing instructions in the prompt (08 §8.2, ADR 0111)', () => {
+  const testing = ['Testing:', 'Tests the person chose', 'Add unit tests', 'Check in proportion', 'run the whole suite', 'benchmark test', 'run its test', 'run the tests', 'tests pass'];
+
+  it('QA72-H1 the lead says nothing about running, writing, or skipping tests; Commands holds commands only; a fix gets no map', () => {
+    for (const decides of [false, true]) {
+      const lead = workingMethod('lead', 'engineering', decides);
+      for (const phrase of testing) expect(lead, `${phrase} ${String(decides)}`).not.toContain(phrase);
+      expect(lead).toContain("it follows the project's conventions, and nothing unfinished or temporary is left behind.");
+      expect(lead).toContain('make the smallest change that does it, check it, and fix a failure at its cause. A step is not done because you wrote it.');
+      expect(lead).toContain('It holds only command lines, each with a few words of what it does, at most 15 lines: never notes, designs, or history.');
+      expect(lead).toContain('A bug fix, a change to one or two files, or a fix the person described never gets a map.');
+    }
   });
 
-  it('QA67-H6 with Decide for me the lead asks nothing about tests, runs the existing ones, and records nothing', () => {
-    const lead = workingMethod('lead', 'engineering', true);
-    expect(lead).toContain("When it has none, don't ask and don't write new tests: run the existing tests that cover your change, leave the app running with its address, and record nothing.");
-    expect(lead).not.toContain('Add unit tests');
+  it('QA72-H2 a worker says nothing about tests and proposes the smallest design', () => {
+    const worker = workingMethod('worker');
+    expect(worker).toContain('2. Do it. Make the smallest change, and propose the smallest design, that does the task; check it, and fix a failure at its cause. Write each file in its own call, with `fs write`.\n');
+    for (const phrase of testing) expect(worker, phrase).not.toContain(phrase);
   });
 });
 
@@ -239,7 +237,7 @@ describe('deliberating before a map, chosen apart from it (08 §8.2, ADR 0103, 6
     for (const decides of [false, true]) {
       const lead = workingMethod('lead', 'engineering', decides);
       const names = lead.split('\n').map((line) => line.slice(0, line.indexOf('. ')));
-      expect(names[names.indexOf('Deliberate') - 1]).toBe(decides ? 'Tests' : 'Tests the person chose');
+      expect(names[names.indexOf('Deliberate') - 1]).toBe('Clarify');
       expect(names.indexOf('Plan')).toBe(names.indexOf('Deliberate') + 1);
       expect(lead).toContain('A request the person asks to have debated is deliberated first, with a map or without one, as Deliberate says.');
       for (const phrase of [

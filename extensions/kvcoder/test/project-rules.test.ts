@@ -59,7 +59,7 @@ describe("the project's rule files (KVC-30, ADR 0058)", { timeout: 30_000 }, () 
 describe('rule files one level down, kept for the chat (ADR 0108, 6)', { timeout: 30_000 }, () => {
   const changeNotes = (fake: Parameters<typeof systemPrompt>[0], index: number): string[] => requestMessages(fake, index).filter((message) => message.role === 'user' && textOf(message).includes('changed since this chat started')).map(textOf);
 
-  it('QA71-H17 a folder directly inside the workspace gives its rules, and hidden folders and node_modules are not read', async () => {
+  it('QA71-H17 and QA72-E1 a folder directly inside the workspace gives its rules, and hidden folders and node_modules are not read', async () => {
     const { prompt } = await promptOf((folder) => {
       for (const name of ['research', '.hidden', 'node_modules/x']) mkdirSync(path.join(folder, name), { recursive: true });
       writeFileSync(path.join(folder, 'research', 'AGENTS.md'), 'Testing: Run the existing tests only.\n');

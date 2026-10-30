@@ -64,7 +64,8 @@ describe('the prompt builder (08 §8.2)', () => {
     }
   });
 
-  it('QA19-H5 the prompt\'s new sentences', () => {
+  // The check rule names no test since QA72-H3 (ADR 0111).
+  it('QA19-H5 and QA72-H3 the prompt\'s new sentences', () => {
     for (const [platform, shell] of [['linux', 'bash'], ['win32', 'powershell']] as const) {
       const { prompt } = buildPrompt({ role: 'lead', workspacePath: '/w', language: 'en', platform, shell, sections: [], connectors: [] });
       for (const sentence of [
@@ -72,7 +73,7 @@ describe('the prompt builder (08 §8.2)', () => {
         'A small, clear change needs doing and checking, and nothing more.',
         'ask before any work.',
         'put every question in the same reply, one `ask` call each, never one question per reply, and use `ask choice` whenever you offer options, your recommended one first and each option saying what it leads to.',
-        'Before you say that something runs or works, check it the way the person would: run it, request its address, or run its test; if you couldn\'t, say what is unchecked.',
+        'Before you say that something runs or works, check it the way the person would: run it or request its address; if you couldn\'t, say what is unchecked.',
       ])
         expect(prompt, sentence).toContain(sentence);
       for (const gone of [
@@ -86,7 +87,7 @@ describe('the prompt builder (08 §8.2)', () => {
     }
   });
 
-  it('QA19-H15, M2.4-E264, and QA59-H8 the prompt says how to judge risky, to request a started server, and what a small task needs', () => {
+  it('QA19-H15, M2.4-E264, QA59-H8, QA72-H3, and QA72-E2 the prompt says how to judge risky, to request a started server, and what a small task needs', () => {
     const { prompt } = buildPrompt({ role: 'lead', workspacePath: '/w', language: 'en', platform: 'linux', shell: 'bash', sections: [], connectors: [] });
     const judged = "`shell exec`, `fs write`, `fs edit`, `mcp call`, and `mcp run` take risky, which you always send and judge for each call from what the call does, not from which command it is. It is false for the ordinary work of the task: creating, editing, or rewriting a file inside the workspace folder that the task needs, whoever made it and whether or not the repository has uncommitted changes (`fs undo` takes such a change back, so a change to a file is never risky by itself), running the project's own build, tests, and tools, and a tool that only reads. It is true, and the person is then asked first, only when the call could do what is hard to take back or reaches past the task: anything outside the workspace folder; deleting files, or overwriting them with a shell line; a file that holds secrets, such as .env or a key; rewriting or discarding git history or uncommitted work (push --force, git reset, checkout, restore, stash drop, clean); sudo, or an install outside the project; sending something out (a push, a publish, a deploy, a message, a write to a remote service); and the Commands section of AGENTS.md. When you can't tell whether a call can be taken back, it is true. Each `shell exec` starts in the workspace folder";
     for (const role of ['lead', 'worker'] as const) {
@@ -96,7 +97,7 @@ describe('the prompt builder (08 §8.2)', () => {
     }
     expect(risky.description).toContain('false for the ordinary work of the task: a file inside the workspace folder that the task needs, whoever made it');
     expect(risky.description).not.toContain('own work');
-    const check = "\nBefore you say that something runs or works, check it the way the person would: run it, request its address, or run its test; if you couldn't, say what is unchecked. After you start a server, request its address once before you give it to the person.\n";
+    const check = "\nBefore you say that something runs or works, check it the way the person would: run it or request its address; if you couldn't, say what is unchecked. After you start a server, request its address once before you give it to the person.\n";
     expect(prompt).toContain(check);
     expect(prompt.split('\n').find((line) => line.startsWith('Execute. '))).not.toContain('Before you say');
     expect(prompt).toContain('A small, clear change needs doing and checking, and nothing more.');

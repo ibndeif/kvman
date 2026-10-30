@@ -44,8 +44,9 @@ describe("the lead's prompt (08 §8.2, ADR 0022, 2 to 4)", () => {
     expect(prompt).toContain('\nWork in few steps. Each reply is a step, and every step sends the whole conversation again, so make in one reply every call you can make now: reads and searches run at the same time, and calls that change something (shell lines, writes, edits) run one after another in the order you give them. Read a few files with one `fs read-files`, put independent calls (searches, separate files, separate workers) in the same reply, as several run calls or one run with a calls list, and leave for a later reply only a call that needs another call\'s result. Several new files are several `fs write` calls in one reply, not one reply each.\n');
   });
 
+  // Done no longer names tests since QA72-H1 (ADR 0111).
   it('QA33-H5 the work is done when it is ready for production', () => {
-    expect(lineOf(lead(), 'Finish. ')).toContain("Finish. The work is done when it is ready for production: it does what was asked, it handles the errors and edge cases that will happen, it follows the project's conventions, its checks and tests pass, and nothing unfinished or temporary is left behind.");
+    expect(lineOf(lead(), 'Finish. ')).toContain("Finish. The work is done when it is ready for production: it does what was asked, it handles the errors and edge cases that will happen, it follows the project's conventions, and nothing unfinished or temporary is left behind.");
   });
 
   it('QA33-H6 both roles decide from evidence', () => {
