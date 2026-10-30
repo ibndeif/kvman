@@ -1,6 +1,6 @@
 {
   "name": "@kvman/kvai",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "kvai: LLM calls through providers and models, for every kvman extension.",
   "license": "MIT",
   "repository": {

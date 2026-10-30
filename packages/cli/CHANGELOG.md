@@ -1,5 +1,22 @@
 # kvman
 
+## 0.4.9
+
+### Patch Changes
+
+- Updated dependencies [ec7f55e]
+- Updated dependencies [078976e]
+- Updated dependencies [981b1ba]
+- Updated dependencies [d681deb]
+- Updated dependencies [6b12b34]
+- Updated dependencies [e86935d]
+- Updated dependencies [32c1385]
+  - @kvman/kvai@0.1.8
+  - @kvman/kvcoder@0.1.16
+  - @kvman/kvvideo@0.1.0
+  - @kvman/kvbuilder@0.3.7
+  - @kvman/kvwebui@0.1.8
+
 ## 0.4.8
 
 ### Patch Changes

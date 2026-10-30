@@ -99,7 +99,7 @@ The rules for changing kvman are in `CLAUDE.md` and [contributing](docs/develope
 
 ## Releasing
 
-Eight packages are published to npm under MIT: `kvman`, `@kvman/sdk`, `@kvman/kernel`, `@kvman/testkit`, and the four extensions `@kvman/kvai`, `@kvman/kvwebui`, `@kvman/kvcoder`, and `@kvman/kvbuilder`, which `kvman` depends on ([ADR 0026](plan/adr/0026-npm-publishing.md)).
+Nine packages are published to npm under MIT: `kvman`, `@kvman/sdk`, `@kvman/kernel`, `@kvman/testkit`, and the five extensions `@kvman/kvai`, `@kvman/kvwebui`, `@kvman/kvcoder`, `@kvman/kvbuilder`, and `@kvman/kvvideo`, which `kvman` depends on ([ADR 0026](plan/adr/0026-npm-publishing.md)).
 
 1. `pnpm changeset version` turns the pending changesets into versions and changelogs.
 2. Set the version of the root, `packages/kernel`, `packages/cli`, and `packages/vscode`. Run every gate, then commit. The release workflow runs no tests, so the tests run here are the only ones that count.

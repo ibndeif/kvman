@@ -1,5 +1,11 @@
 # @kvman/testkit
 
+## 0.1.10
+
+### Patch Changes
+
+- 5b1d815: testkit counts kvvideo among the extensions that ship with kvman, as the `kvman` package now depends on it (ADR 0107).
+
 ## 0.1.9
 
 ### Patch Changes
