@@ -8,6 +8,7 @@ import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { command, runs, says, shell, toolResults } from './support/model-script.ts';
 import { newSession } from './support/turns.ts';
 import { wait } from './support/wait.ts';
+import { delegated } from './support/helpers.ts';
 
 // A url artifact ends with the background process that served it (plan 08 §8.5, ADR 0104). The lines are bash, the
 // Linux and macOS branch.
@@ -116,11 +117,11 @@ describe('url artifacts end with their server (08 §8.5, ADR 0104)', { timeout: 
 
   it("QA69-E4 a helper's process deletes the artifact of the chat at its root", async () => {
     posixShell();
-    const { kernel, fake } = await kvcoder.start();
+    const world = await kvcoder.start();
+    const { kernel, fake } = world;
     const sessionId = await newSession(kernel);
     await send(kernel, fake, sessionId, 'go', runs(previewWrite), says('ok'));
-    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Serve it' })), runs(shell(serving, { background: true })), says('child done'), says('parent done'));
-    await send(kernel, fake, sessionId, 'serve');
+    await delegated(world, sessionId, [runs(command('delegate', 'run', { worker: 'general', title: 'Helper', kind: 'check', goal: 'Serve it', done: 'It is done.' })), says('Started.'), says('parent done')], [runs(shell(serving, { background: true })), says('child done')], 'serve');
     writeFileSync(path.join(kernel.homeFolder, 'go'), 'go\n');
     await vi.waitFor(async () => expect(await artifactIds(kernel, sessionId)).toEqual([]), wait);
   });

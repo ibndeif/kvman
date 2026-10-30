@@ -2,14 +2,14 @@ import { z, type Ctx, type Stored } from '@kvman/sdk';
 import { builtinDescriptions, builtinSignatures, commandsOf } from '../connectors/builtin-connectors.ts';
 import type { ShellCommand } from '../calls/shell-command.ts';
 import { shellFor } from '../calls/shell-program.ts';
-import { builtinConnectors, payloadSignature } from '../connector-call.ts';
-import { callInfos } from '../registry/loaded.ts';
+import { builtinConnectors } from '../connector-call.ts';
 import { delegateIndexDescription } from '../connectors/delegate.ts';
 import { mcpIndexDescription } from '../connectors/mcp.ts';
 import { preferencesSection } from './person-preferences.ts';
 import { readRules, ruleSections } from './project-rules.ts';
 import type { ConnectorRow } from '../registry/register-connectors.ts';
 import { helperAllows } from '../turns/helper-calls.ts';
+import { changesFiles } from '../turns/run-scope.ts';
 import { readOnlyAllows } from '../turns/read-only.ts';
 import { sectionsFor } from '../registry/register-sections.ts';
 import { invalid } from '../problems.ts';
@@ -52,18 +52,19 @@ export async function sessionTools(ctx: Ctx, session: Stored<SessionDoc>): Promi
   // A helper is shown only what it may run (ADR 0063, 1), and a read-only worker's helper less (ADR 0056, 4).
   const readOnly = current.worker?.readOnly === true;
   const helper = current.parentId !== null;
+  // A check run runs lines but changes no file through fs, so it isn't shown fs's changes (ADR 0108, 2).
+  const checking = current.run?.kind === 'check';
   const builtins = builtinConnectors.filter(name => names.includes(name)).map(name => {
-    const shown = Object.entries(commandsOf(name)).map(([command, entry], index) => ({ command, signature: builtinSignatures[name][index] ?? '', allowed: (!helper || helperAllows(entry)) && (!readOnly || readOnlyAllows(command, entry)) })).filter(row => row.allowed);
+    const shown = Object.entries(commandsOf(name)).map(([command, entry], index) => ({ command, signature: builtinSignatures[name][index] ?? '', allowed: (!helper || helperAllows(entry)) && (!readOnly || readOnlyAllows(command, entry)) && !(checking && name === 'fs' && changesFiles(command)) })).filter(row => row.allowed);
     return { name, description: descriptions[name], commands: shown.map(row => row.command), signatures: shown.map(row => row.signature) };
   });
   // A read-only helper sees a registered connector only with its commands that run a query (ADR 0082, 3).
   // A registered command's payload signature, from its registration's input, so its payload needs no help call (ADR 0108, 14).
   const shownRegistered = connectors.filter(connector => names.includes(connector.name));
-  const infos = shownRegistered.some(connector => connector.commands !== null && connector.commands !== undefined) ? await callInfos(ctx) : [];
   const registered = shownRegistered.map(connector => {
     if (connector.commands === null || connector.commands === undefined) return { name: connector.name, description: connector.description, commands: readOnly ? [] : ['exec'] };
     const shown = connector.commands.filter(command => !readOnly || readOnlyAllows(command.name, undefined, command));
-    return { name: connector.name, description: connector.description, commands: shown.map(command => command.name), signatures: shown.map(command => payloadSignature(infos.find(info => info.name === command.command)?.input)) };
+    return { name: connector.name, description: connector.description, commands: shown.map(command => command.name), signatures: shown.map(command => command.signature) };
   });
   const listed = [...builtins.filter(connector => connector.commands.length > 0), ...registered.filter(connector => connector.commands.length > 0)];
   const built = buildPrompt({

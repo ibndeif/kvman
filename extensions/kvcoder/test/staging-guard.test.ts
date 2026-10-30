@@ -4,8 +4,8 @@ import { describe, expect, it, vi } from 'vitest';
 import type { TestKernel } from '@kvman/testkit';
 import { git, initRepository, stage, staged } from './support/git-folder.ts';
 import { useKvcoder, type World } from './support/kvcoder-kernel.ts';
-import { command, runs, says, toolResults } from './support/model-script.ts';
-import { newSession, turnState } from './support/turns.ts';
+import { command, runs, says } from './support/model-script.ts';
+import { newSession } from './support/turns.ts';
 import { wait } from './support/wait.ts';
 import { programWorker, useWorkerPrograms } from './support/worker-programs.ts';
 import { workers } from './support/workers.ts';
@@ -16,14 +16,20 @@ const settings = workers(programWorker('pie', 'pi'));
 
 const stagingLine = 'kvman: this run changed what is staged in Git (1 paths differ from before it ran).';
 
-// One turn that delegates `task` to the program worker, to its end; gives the chat, the run's row, and the result the model got.
+// One turn that delegates `task` to the program worker, in the background (ADR 0108, 1); waits for the run's message,
+// and gives the chat, the run's row, and the answer the message carries.
 async function delegated(kernel: TestKernel, fake: World['fake'], task: string) {
   const sessionId = await newSession(kernel);
-  fake.reply(runs(command('delegate', 'run', { worker: 'pie', title: 'Helper', task })), says('done'));
+  fake.reply(runs(command('delegate', 'run', { worker: 'pie', title: 'Helper', kind: 'find', goal: task, done: 'It is done.' })), says('Started.'), says('read it'));
   await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
-  await vi.waitFor(async () => expect((await turnState(kernel, sessionId)).turn).toMatchObject({ outcome: 'done' }), wait);
+  const result = await vi.waitFor(async () => {
+    const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });
+    const content = messages.find((message) => message.source?.kind === 'job')?.content['content'];
+    expect(content).toBeTypeOf('string');
+    return String(content).replace(/^[^\n]*finished:\n/, '');
+  }, wait);
   const [row] = await kernel.exec('kvcoder.job.list', { sessionId });
-  return { sessionId, row, result: toolResults(fake, fake.requests().length - 1).at(-1) };
+  return { sessionId, row, result };
 }
 
 const restore = (kernel: TestKernel, sessionId: string, runId: string) => kernel.exec('kvcoder.delegate.staging.restore', { sessionId, runId });

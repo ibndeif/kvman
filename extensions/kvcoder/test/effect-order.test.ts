@@ -3,7 +3,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { TestKernel } from '@kvman/testkit';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { command, fsCall, runs, says, shell, toolResults, withoutHelperId } from './support/model-script.ts';
+import { command, fsCall, runs, says, shell, toolResults } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 
 const kvcoder = useKvcoder();
@@ -57,7 +57,7 @@ describe("effects run in the model's order (KVC-07, ADR 0046)", { timeout: 30_00
   it('M2.4-E127 a helper run behind a pending approval is not started, and says to call again', async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    fake.reply(runs(risky('first'), command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Go' })), says('done'));
+    fake.reply(runs(risky('first'), command('delegate', 'run', { worker: 'general', title: 'Helper', kind: 'find', goal: 'Go', done: 'It is done.' })), says('done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     const pending = (await turnState(kernel, sessionId)).turn?.pending ?? [];
@@ -84,12 +84,16 @@ describe("effects run in the model's order (KVC-07, ADR 0046)", { timeout: 30_00
   });
 
   it('M2.4-E127 two helpers in one reply still both start', async () => {
-    const { kernel, fake } = await kvcoder.start();
+    const { kernel, fake, helperFake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    const helper = command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Go' });
-    fake.reply(runs(helper, helper), says('one'), says('two'), says('done'));
+    const helper = command('delegate', 'run', { worker: 'general', title: 'Helper', kind: 'find', goal: 'Go', done: 'It is done.' });
+    fake.reply(runs(helper, helper), says('Started.'), says('read'), says('read'));
+    helperFake.reply(says('one'), says('two'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
-    expect(toolResults(fake).map(withoutHelperId).sort()).toEqual(['one', 'two']);
+    expect(toolResults(fake, 1).map((text) => text.replace(/\S+\n\n\(helper \S+\)$/, 'id'))).toEqual(['started id', 'started id']);
+    const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });
+    const answers = messages.filter((message) => message.source?.kind === 'subagent').map((message) => (JSON.stringify(message.content).includes('one') ? 'one' : 'two'));
+    expect(answers.sort()).toEqual(['one', 'two']);
   });
 });

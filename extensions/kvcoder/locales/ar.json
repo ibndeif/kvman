@@ -671,5 +671,6 @@
   "kvcoder.turn.resume.description": "يعيد تشغيل خطوة دور ينتظر عودة الاتصال.",
   "kvcoder.config.mcp.form.port": "المنفذ (اختياري)",
   "kvcoder.config.mcp.form.portHint": "إن كان الأمر يقدّم MCP عبر HTTP على هذا المنفذ، يبقيه kvman عاملًا طوال الدور، فيحتفظ المتصفح بصفحته بين الاستدعاءات.",
-  "kvcoder.config.mcp.invalid.port": "اكتب عددًا صحيحًا من 1024 إلى 65535، أو اتركه فارغًا."
+  "kvcoder.config.mcp.invalid.port": "اكتب عددًا صحيحًا من 1024 إلى 65535، أو اتركه فارغًا.",
+  "kvcoder.ui.helper.step": "الخطوة {step} من {budget}"
 }

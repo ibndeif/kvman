@@ -4,6 +4,7 @@ import { useLooked } from './support/looked.ts';
 import { command, runs, says, systemPrompt } from './support/model-script.ts';
 import { newSession } from './support/turns.ts';
 import { worker, workers } from './support/workers.ts';
+import { delegated } from './support/helpers.ts';
 
 const kvcoder = useKvcoder();
 const looked = useLooked();
@@ -68,8 +69,8 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
       '  choice  { prompt, multiple, options: [{ id, label, description? }], other? }',
       '  confirm { prompt, danger? }',
       '  help    { command? }',
-      '  run      { worker, title (≤200), task, background? }',
-      '  continue { id, message, background? }',
+      '  run      { worker, title (≤200), kind: "find" | "change" | "check" | "review", goal (≤300), done (≤300), files?, context?: [{ path, fromLine?, lines? }], budget? }',
+      '  continue { id, message }',
       '  help     { command? }',
       '  fetch { url }',
       '  help  { command? }',
@@ -103,12 +104,9 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
   });
 
   it("QA19-E12 a subagent's index", async () => {
-    const { kernel, fake } = await kvcoder.start({ settings: workers(worker('files', { connectors: ['fs'] })) });
-    const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', { worker: 'files', title: 'Helper', task: 'List files.' })), runs(command('fs', 'list')), says('child done'), says('parent done'));
-    await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
-    await kernel.clock.advance(0);
-    const prompt = systemPrompt(fake, 1);
+    const world = await kvcoder.start({ settings: workers(worker('files', { connectors: ['fs'] })) });
+    await delegated(world, await newSession(world.kernel), [runs(command('delegate', 'run', { worker: 'files', title: 'Helper', kind: 'change', files: ['a.txt'], goal: 'List files.', done: 'It is done.' })), says('Started.'), says('parent done')], [runs(command('fs', 'list')), says('child done')]);
+    const prompt = systemPrompt(world.helperFake, 0);
     const index = (prompt.split('## Connectors\n')[1] ?? '').split('\n');
     expect(index.filter((line) => line.startsWith('- ')).map((line) => /^- ([\w-]+): /.exec(line)?.[1])).toEqual(['fs']);
     expect(index.filter((line) => line.startsWith('  '))).toEqual([

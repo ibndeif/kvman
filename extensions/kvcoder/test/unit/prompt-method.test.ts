@@ -22,7 +22,8 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
       // ADR 0097, 5: the map's own rules are in its entry; Execute keeps how each step is done.
       'For each step, or with no map for all of what was asked, make the smallest change that does it, check it, and fix a failure at its cause.', 'A step is not done because you wrote it.',
       'do not look into it: record it with `execution-map note`, or keep it for your final answer when there is no map, and go on.',
-      'separate work that runs beside yours, or a fresh review of a change you finished',
+      // ADR 0108, 4: a run is one deliverable, delegated when it pays.
+      "Delegate find, check, and review runs, and change runs only when two or more run at once on files that don't overlap",
       'show it in an artifact: the design as an HTML page before you build it when the layout is a real choice, and the running app as a url artifact once it runs',
       'right to left for Arabic',
       'Stop what you started in the background and no longer need, and delete the temporary files you or your tools left in the workspace folder, such as logs, snapshots, and scratch files.',
@@ -89,8 +90,9 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
     const lead = workingMethod('lead');
     for (const phrase of [
       'Choose for each step whoever does it best and fastest: yourself, with a connector, for an ordinary or small change, or a worker of the `delegate` connector whose description fits when the step needs that skill.',
-      'Delegate. A step goes to a worker of the `delegate` connector when the worker does it better or faster than you would: a specialist whose skill the step needs, separate work that runs beside yours, or a fresh review of a change you finished; its entry lists the workers and what each is for.',
-      "Don't delegate what a few calls of your own would do, and ask for one review of a piece of work, not several.",
+      // Superseded in part by QA71-H12 (ADR 0108, 4).
+      'Delegate. A run is one deliverable of one kind: find (locate or explain), change (one change in the files it names), check (run commands or tests and diagnose), or review (review a finished change).',
+      'never a question, a small change, work you already hold the context for, or work the person asked you to do. Ask for one review of a piece of work, not several.',
     ]) expect(lead, phrase).toContain(phrase);
     // Superseded by QA67-H10: the entry names no worker (ADR 0102, 4).
     expect(executionMapDescription).toContain('such as a design that is a real choice, a structure decision across several parts, or a review of a finished change that is risky or wide.');
@@ -268,5 +270,17 @@ describe('deliberating before a map, chosen apart from it (08 §8.2, ADR 0103, 6
 
   it("QA68-E3 a worker's method and the general lead method have no Deliberate", () => {
     for (const method of [workingMethod('worker'), workingMethod('worker', 'general'), workingMethod('lead', 'general')]) expect(method).not.toContain('Deliberate');
+  });
+});
+
+describe('the lead delegates when it pays, in the background (08 §8.2, ADR 0108, 1 and 4)', () => {
+  it('QA71-H12 the Delegate part names the kinds, when to delegate, the brief, and that the lead never waits on a helper', () => {
+    const lead = workingMethod('lead');
+    for (const phrase of [
+      "Delegate find, check, and review runs, and change runs only when two or more run at once on files that don't overlap; never a question, a small change, work you already hold the context for, or work the person asked you to do.",
+      'goal is one sentence of what the run delivers, done one condition anyone can check, and context the line ranges the worker needs, whose text kvcoder attaches',
+      'Every run goes on in the background: after starting workers, go on with what doesn\'t need them or end your turn; their answers come as messages that wake you, and you never wait for a helper with `background wait`.',
+      'Never wait for a helper: its answer wakes you.',
+    ]) expect(lead, phrase).toContain(phrase);
   });
 });

@@ -26,7 +26,7 @@ describe("a built-in connector's invalid payload says what the command takes (08
     const file = await resultOf(fsCall('write', { content: 'x' }));
     expect(file.includes('The payload of fs write is\n{ path, content, risky }\n\n')).toBe(true);
     const helper = await resultOf(command('delegate', 'run', { worker: 'general',  prompt: 'x' }));
-    expect(helper.includes('The payload of delegate run is\n{ worker, title (≤200), task, background? }\n\n')).toBe(true);
+    expect(helper.includes('The payload of delegate run is\n{ worker, title (≤200), kind: "find" | "change" | "check" | "review", goal (≤300), done (≤300), files?, context?: [{ path, fromLine?, lines? }], budget? }\n\n')).toBe(true);
   });
 
   it('QA11-E6 a valid call gets no signature', async () => {

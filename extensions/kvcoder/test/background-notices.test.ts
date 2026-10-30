@@ -17,7 +17,7 @@ const kvcoder = useKvcoder();
 const programs = useWorkerPrograms();
 const messageSchema = z.object({ source: z.object({ kind: z.string() }).nullish(), content: z.record(z.string(), z.unknown()) });
 const lasting: RunCallSpec = { connector: 'shell', command: 'exec', payload: { line: 'node -e "setTimeout(() => {}, 30000)"', risky: false, background: true } };
-const helper = command('delegate', 'run', { worker: 'helper', title: 'Helper', task: 'Do it', background: true });
+const helper = command('delegate', 'run', { worker: 'helper', title: 'Helper', kind: 'find', goal: 'Do it', done: 'It is done.' });
 const startedIds = (results: readonly string[]): string[] => results.flatMap((text) => /^started (\S+)/.exec(text)?.[1] ?? []);
 
 async function notices(kernel: TestKernel, sessionId: string): Promise<string[]> {
@@ -39,8 +39,9 @@ async function twoRuns() {
   const world = await kvcoder.start({ settings: workers(worker('helper')) });
   const sessionId = await newSession(world.kernel);
   const held = heldReply({ text: 'late' });
-  world.fake.reply(runs(lasting, helper), held.reply, says('ok'));
-  await sendAndIdle(world.kernel, world.fake, sessionId, 3);
+  world.fake.reply(runs(lasting, helper), says('ok'));
+  world.helperFake.reply(held.reply);
+  await sendAndIdle(world.kernel, world.fake, sessionId, 2);
   const [processId = '', helperId = ''] = startedIds(toolResults(world.fake));
   return { ...world, sessionId, held, processId, helperId };
 }
@@ -59,7 +60,7 @@ describe('quieter notices (ADR 0085, 5)', { timeout: 60_000 }, () => {
     const pi = programs.install('pi');
     const programWorld = await kvcoder.start({ settings: workers(programWorker('runner', 'pi')) });
     const programChat = await newSession(programWorld.kernel);
-    programWorld.fake.reply(runs(command('delegate', 'run', { worker: 'runner', title: 'Runner', task: `wait:${pi.gate}`, background: true })), says('ok'));
+    programWorld.fake.reply(runs(command('delegate', 'run', { worker: 'runner', title: 'Runner', kind: 'find', goal: `wait:${pi.gate}`, done: 'It is done.' })), says('ok'));
     await sendAndIdle(programWorld.kernel, programWorld.fake, programChat, 2);
     const [runId = ''] = startedIds(toolResults(programWorld.fake));
     programWorld.fake.reply(runs(command('background', 'stop', { id: runId })), says('ok'), says('ok'));

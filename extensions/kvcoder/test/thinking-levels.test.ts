@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { TestKernel } from '@kvman/testkit';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { command, runs, says, toolResults } from './support/model-script.ts';
+import { command, runs, says } from './support/model-script.ts';
 import { newSession } from './support/turns.ts';
 import { worker, workers } from './support/workers.ts';
+import { delegated, helperIds } from './support/helpers.ts';
 
 // ADR 0087, 11: a session's thinking level is always one its model has. `fake/m1` reasons (`off` to `high`), the
 // built-in `openai-codex/gpt-6-luna` has all seven levels and `openai/gpt-6-luna` no `minimal`, and `fake/plain` doesn't think.
@@ -47,15 +48,13 @@ describe("a session's thinking level (ADR 0087, 11)", { timeout: 30_000 }, () =>
   });
 
   it('QA55-E13 a new session and a helper start on a level their model has', async () => {
-    const { kernel, fake } = await kvcoder.start({ settings: { 'kvcoder.thinking': 'xhigh', ...workers(worker('general', { model: 'fake/plain' })) } });
-    await kernel.exec('kvai.model.add', plain);
-    const sessionId = await newSession(kernel);
-    expect(await levelOf(kernel, sessionId)).toBe('high');
-    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Do it' })), says('helped'), says('done'));
-    await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
-    await kernel.clock.advance(0);
-    const helperId = /\(helper (\S+)\)$/.exec(toolResults(fake).at(-1) ?? '')?.[1] ?? '';
-    expect(await levelOf(kernel, helperId)).toBe('off');
+    const world = await kvcoder.start({ settings: { 'kvcoder.thinking': 'xhigh', 'kvcoder.delegate.thinking': 'high', ...workers(worker('general', { model: 'helper/plain' })) } });
+    await world.kernel.exec('kvai.model.add', { ...plain, provider: 'helper' });
+    const sessionId = await newSession(world.kernel);
+    expect(await levelOf(world.kernel, sessionId)).toBe('high');
+    await delegated(world, sessionId, [runs(command('delegate', 'run', { worker: 'general', title: 'Helper', kind: 'find', goal: 'Do it', done: 'It is done.' })), says('Started.'), says('done')], [says('helped')]);
+    const [helperId = ''] = await helperIds(world.kernel, sessionId);
+    expect(await levelOf(world.kernel, helperId)).toBe('off');
   });
 
   it('QA55-E14 a model kvai does not list leaves the level as it is', async () => {

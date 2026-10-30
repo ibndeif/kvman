@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { command, requestMessages, runs, says, textOf } from './support/model-script.ts';
+import { delegated } from './support/helpers.ts';
 import { newSession } from './support/turns.ts';
+import { brief } from './support/workers.ts';
 
-// A lead's long turn is asked where it is every 60 steps, as a message; nothing stops (plan 08 §8.1, ADR 0108, 11).
+// A lead's long turn is asked where it is every 60 steps, as a message; nothing stops, and a helper is never asked
+// (plan 08 §8.1, ADR 0108, 11).
 
 const kvcoder = useKvcoder();
 const checkIn = (step: number): string => `[kvman: step ${String(step)} of this turn. Say in one line where you are and what is left, then go on.]`;
@@ -22,5 +25,13 @@ describe('the check-in on a long turn (ADR 0108, 11)', { timeout: 120_000 }, () 
     expect(requestMessages(fake, 59).at(-1)).toMatchObject({ role: 'user' });
     expect(notes(119)).toEqual([checkIn(60), checkIn(120)]);
     expect((await kernel.exec('kvcoder.session.get', { sessionId })).status).toBe('idle');
+  });
+
+  it("QA71-E36 a helper's turn gets no check-in, even at step 60 of its budget", async () => {
+    const world = await kvcoder.start();
+    const sessionId = await newSession(world.kernel);
+    await delegated(world, sessionId, [runs(command('delegate', 'run', brief('general', { budget: 60 }))), says('Started.'), says('Read it.')], [...Array.from({ length: 59 }, () => runs(command('fs', 'list', {}))), says('looked')]);
+    expect(world.helperFake.requests()).toHaveLength(60);
+    expect(requestMessages(world.helperFake, 59).filter((message) => message.role === 'user' && textOf(message).startsWith('[kvman: step '))).toEqual([]);
   });
 });

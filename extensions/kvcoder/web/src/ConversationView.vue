@@ -121,7 +121,7 @@ const questionOwner = () => session.value === null || turns.value[0] === undefin
 const answers = useAnswers(kvman, (ran) => conversation.refresh(ran), questionOwner);
 // What each waiting helper was asked, by its session: the task of the call that started it (ADR 0037, 2).
 const tasks = computed(() => new Map(pending.value.flatMap((item) => {
-  const task = calls.value.get(item.toolCallId)?.fields?.['task'];
+  const task = calls.value.get(item.toolCallId)?.fields?.['goal'] ?? calls.value.get(item.toolCallId)?.fields?.['task'];
   return typeof item.childSessionId === 'string' && typeof task === 'string' ? [[item.childSessionId, task] as const] : [];
 })));
 const runs = computed(() => pending.value.flatMap((item) => (item.kind === 'worker' && item.runId !== undefined ? [item.runId] : [])));
@@ -269,8 +269,8 @@ async function registered(entry: RegisteredSlash, argument: string): Promise<voi
               <PendingCards :owner="questionOwner()" :pending="pending" :hidden="answers.hidden.value" @answer="answers.answer" @decide="answers.decide" />
               <p v-if="pending.length > 0" class="kvc-muted" style="text-align: center; margin: 0" data-test="waiting-hint">{{ waitingHint }}</p>
               <template v-if="helpers.size > 0">
-                <p class="kvc-notice" data-test="background-decision">{{ kvman.t('kvcoder.ui.backgroundDecision') }}</p>
-                <SubagentCard v-for="[id, helper] in helpers" :key="id" :child="helper.child" :task="helper.call" :hidden="answers.hidden.value" @answer="answers.answer" @decide="answers.decide" />
+                <p v-if="[...helpers.values()].some((helper) => helper.child.session.status === 'waiting')" class="kvc-notice" data-test="background-decision">{{ kvman.t('kvcoder.ui.backgroundDecision') }}</p>
+                <SubagentCard v-for="[id, helper] in helpers" :key="id" :child="helper.child" :task="helper.child.session.run?.goal ?? helper.call" :hidden="answers.hidden.value" @answer="answers.answer" @decide="answers.decide" />
               </template>
             </div>
           </div>

@@ -5,7 +5,9 @@ import { heldReply } from './support/held-reply.ts';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { freePort, keptEntry, setServers, startSessionFixture, type HttpFixture } from './support/mcp-servers.ts';
 import { command, runs, says, toolResults } from './support/model-script.ts';
+import { delegated } from './support/helpers.ts';
 import { newSession } from './support/turns.ts';
+import { brief } from './support/workers.ts';
 import { wait } from './support/wait.ts';
 
 // A server over HTTP, or a command run with a port, is kept for the turn: its calls share one MCP session, and the
@@ -75,5 +77,17 @@ describe('MCP servers kept for the turn (ADR 0108, 12)', { timeout: 60_000 }, ()
     await kernel.exec('kvcoder.turn.cancel', { sessionId });
     held.release();
     await vi.waitFor(async () => expect(await running(kernel)).toEqual([]), wait);
+  });
+
+  it("QA71-E29 a helper calling its lead's server uses a connection of its own", async () => {
+    const fixture = await startSessionFixture();
+    fixtures.push(fixture);
+    const world = await kvcoder.start();
+    await setServers(world.kernel, [{ name: 'remote', description: 'Over HTTP.', url: fixture.url, headers: [] } as never]);
+    const sessionId = await newSession(world.kernel);
+    const lead = [runs(call('remote', 'remember', { text: 'the lead' })), runs(command('delegate', 'run', brief('general', { kind: 'check' }))), says('Started.'), says('Read it.')];
+    await delegated(world, sessionId, lead, [runs(call('remote', 'recall')), says('nothing kept')]);
+    expect(toolResults(world.fake, 1)).toEqual(['kept']);
+    expect(toolResults(world.helperFake, 1)).toEqual(['(nothing)']);
   });
 });

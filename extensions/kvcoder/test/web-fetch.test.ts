@@ -4,6 +4,7 @@ import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { command, runs, says, systemPrompt, toolResults } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 import { worker, workers } from './support/workers.ts';
+import { delegated } from './support/helpers.ts';
 
 const kvcoder = useKvcoder();
 
@@ -52,25 +53,22 @@ describe('web fetch in a chat (ADR 0095)', { timeout: 30_000 }, () => {
     await never.kernel.exec('kvcoder.message.send', { sessionId: quiet, text: 'go' });
     await never.kernel.clock.advance(0);
     expect(toolResults(never.fake)).toEqual([expect.stringMatching(refusedLocal) as unknown]);
-    const { kernel, fake } = await kvcoder.start({ settings: workers(worker('strict', { readOnly: true })) });
-    const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', { worker: 'strict', title: 'Reader', task: 'Read it' })), runs(fetchLocal('/a')), says('could not'), says('done'));
-    await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
-    await kernel.clock.advance(0);
-    // The helper's own next request holds the refusal.
-    const results = fake.requests().flatMap((_request, index) => toolResults(fake, index));
-    expect(results.some((result) => result.includes("This helper is read-only: its chat hasn't allowed 127.0.0.1"))).toBe(true);
+    const world = await kvcoder.start({ settings: workers(worker('strict', { readOnly: true })) });
+    await delegated(world, await newSession(world.kernel), [runs(command('delegate', 'run', { worker: 'strict', title: 'Reader', kind: 'find', goal: 'Read it', done: 'It is done.' })), says('Started.'), says('done')], [runs(fetchLocal('/a')), says('could not')]);
+    expect(toolResults(world.helperFake, 1)[0]).toContain("This helper is read-only: its chat hasn't allowed 127.0.0.1");
   });
 
   it('QA63-E4 a read-only helper fetches from a host its chat allowed', async () => {
-    const { kernel, fake } = await kvcoder.start({ settings: { 'kvcoder.approval': 'auto', ...workers(worker('strict', { readOnly: true })) } });
+    const world = await kvcoder.start({ settings: { 'kvcoder.approval': 'auto', ...workers(worker('strict', { readOnly: true })) } });
+    const { kernel, fake, helperFake } = world;
     const sessionId = await newSession(kernel);
-    fake.reply(runs(fetchLocal('/a')), runs(command('delegate', 'run', { worker: 'strict', title: 'Reader', task: 'Read it' })), runs(fetchLocal('/b')), says('read'), says('done'));
+    fake.reply(runs(fetchLocal('/a')), runs(command('delegate', 'run', { worker: 'strict', title: 'Reader', kind: 'find', goal: 'Read it', done: 'It is done.' })), says('Started.'), says('done'));
+    helperFake.reply(runs(fetchLocal('/b')), says('read'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     await answerFirst(kernel, sessionId);
     expect((await turnState(kernel, sessionId)).session.status).toBe('idle');
     // The helper's fetch reaches the address check, so the chat's allowed host let it run.
-    expect(toolResults(fake, 3)).toEqual([expect.stringMatching(refusedLocal) as unknown]);
+    expect(toolResults(helperFake, 1)).toEqual([expect.stringMatching(refusedLocal) as unknown]);
   });
 });

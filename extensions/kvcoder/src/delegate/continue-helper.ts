@@ -59,11 +59,10 @@ export async function messageHelper(ctx: Ctx, lease: StepLease, request: Delegat
       store.queued.insert({ sessionId: child.id, source: { kind: 'subagent', sessionId: parent.id }, text: request.message, fileIds: null, fileNames: null, createdAt: now() });
       return 'queued';
     }
-    if (request.background === true) {
-      const [entry] = store.background.find({ sessionId: parent.id, ref: child.id }, { limit: 1 });
-      if (entry === undefined) store.background.insert({ sessionId: parent.id, ref: child.id, kind: 'subagent', call: child.title, startedAt: now() });
-      else store.background.update(entry.id, { startedAt: now() });
-    }
+    // A continued helper goes on in the background, as every run does (ADR 0108, 1).
+    const [entry] = store.background.find({ sessionId: parent.id, ref: child.id }, { limit: 1 });
+    if (entry === undefined) store.background.insert({ sessionId: parent.id, ref: child.id, kind: 'subagent', call: child.title, startedAt: now() });
+    else store.background.update(entry.id, { startedAt: now() });
     appendMessage(store, child, { kind: 'user', content: userContent(request.message), source: { kind: 'subagent', sessionId: parent.id } });
     return 'sent';
   });

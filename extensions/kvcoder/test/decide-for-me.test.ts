@@ -4,6 +4,7 @@ import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { command, requestTools, runs, says, shell, systemPrompt, toolResults } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 import { worker, workers } from './support/workers.ts';
+import { delegated } from './support/helpers.ts';
 
 const kvcoder = useKvcoder();
 
@@ -48,13 +49,11 @@ describe('Decide for me (ADR 0092, 2)', { timeout: 30_000 }, () => {
   });
 
   it("QA60-E3 a deciding chat's helper is unaffected", async () => {
-    const { kernel, fake } = await kvcoder.start({ settings: workers(worker('helper')) });
-    const sessionId = await newSession(kernel);
-    await kernel.exec('kvcoder.session.configure', { sessionId, decides: true });
-    fake.reply(runs(command('delegate', 'run', { worker: 'helper', title: 'Helper', task: 'Do it' })), says('done'), says('ok'));
-    await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
-    await kernel.clock.advance(0);
-    const helper = systemPrompt(fake, 1);
+    const world = await kvcoder.start({ settings: workers(worker('helper')) });
+    const sessionId = await newSession(world.kernel);
+    await world.kernel.exec('kvcoder.session.configure', { sessionId, decides: true });
+    await delegated(world, sessionId, [runs(command('delegate', 'run', { worker: 'helper', title: 'Helper', kind: 'find', goal: 'Do it', done: 'It is done.' })), says('Started.'), says('ok')], [says('done')]);
+    const helper = systemPrompt(world.helperFake, 0);
     expect(helper).toContain('working on one task that the lead agent gave you');
     expect(helper).not.toContain(decideLine);
     expect(helper).not.toContain('\n- ask: ');

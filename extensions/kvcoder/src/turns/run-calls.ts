@@ -3,6 +3,7 @@ import { isAskKind, type QuestionKind } from '../connectors/ask.ts';
 import { payloadJsonSchema } from '../connectors/connector-command.ts';
 import { parseRunArgs, type RunCall } from '../calls/run-tool.ts';
 import { createChild, delegateContinueSchema, delegateRunSchema, startChild } from '../connectors/delegate.ts';
+import { briefOf } from '../delegate/brief.ts';
 import { continuableHelper, messageHelper } from '../delegate/continue-helper.ts';
 import { createRun } from '../delegate/runs.ts';
 import { startBackgroundRun } from '../delegate/start-background.ts';
@@ -23,6 +24,7 @@ import { commandHelpText, failedCall, orderedCall, runHelp, runTarget, targetOf,
 import { callPermission, dispatchGuard } from './call-permission.ts';
 import { helperAllows, helperRefusal } from './helper-calls.ts';
 import { readOnlyAllows, readOnlyRefusal } from './read-only.ts';
+import { runScopeRefusal } from './run-scope.ts';
 import type { ApprovalRule } from '../schemas/approval-rule.ts';
 import { ruleCovers } from './approval-rules.ts';
 import type { Check } from '../schemas/check.ts';
@@ -34,15 +36,14 @@ import { seenFiles } from './file-results.ts';
 // `ask`, or unless the payload says `risky: false` (ADR 0009, 161; ADR 0011, 7), and none that the person's approval
 // rules cover (ADR 0091, 2). A registered command with `asks`
 // asks too (ADR 0022, 5), and so does a program worker set to ask (ADR 0021, 12). With `never` no call asks (ADR 0077).
-// A call either returns its result now, or waits on the person or on a worker's subagent.
+// A call either returns its result now, or waits on the person; a worker's run always goes on in the background
+// (ADR 0108, 1).
 
 export type ToolCall = { id: string; name: string; arguments: Record<string, JsonValue> };
 
 export type CallOutcome =
   | { kind: 'result'; held: HeldResult }
   | { kind: 'question'; questionKind: QuestionKind; question: Record<string, JsonValue> }
-  | { kind: 'subagent'; childSessionId: string }
-  | { kind: 'worker'; runId: string }
   /** An effect held back behind an earlier call's pending approval, to run in the model's order (ADR 0046). */
   | { kind: 'deferred'; call: RunCall };
 
@@ -62,28 +63,26 @@ async function invalidPayload(ctx: Ctx, call: RunCall, target: CommandTarget): P
   return invalidPayloadOutput(call, issues, payloadJsonSchema(target.builtin.payload), await commandHelpText(ctx, call)).output;
 }
 
-// A checked `delegate run` (ADR 0021): a subagent worker's child session, or a program worker's run, either of which
-// the turn waits on or which runs in the background. A program worker may ask the person first (ADR 0021, 12).
+// A checked `delegate run` (ADR 0021; ADR 0108, 1 and 2): a subagent worker's child session, or a program worker's run,
+// which always goes on in the background; a program worker may ask the person first (ADR 0021, 12).
 async function delegateOutcome(env: CallEnv, toolCallId: string, call: RunCall, held: boolean): Promise<CallOutcome> {
   const { ctx, session } = env;
   const run = delegateRunSchema.parse(call.payload);
   const worker = await availableWorker(ctx, session.checks, run.worker);
   const guard = await creationGuard(ctx, env.lease, worker);
+  if (isProgram(worker) && worker.approval === 'ask' && env.approval !== 'never') {
+    await ctx.store.transaction(tx => { guard(txRecords(tx)); });
+    return { kind: 'question', questionKind: 'approval', question: call };
+  }
+  if (held) return heldBackRun(toolCallId, call);
+  const { task, brief } = await briefOf(ctx, run);
   if (isProgram(worker)) {
-    if (worker.approval === 'ask' && env.approval !== 'never') {
-      await ctx.store.transaction(tx => { guard(txRecords(tx)); });
-      return { kind: 'question', questionKind: 'approval', question: call };
-    }
-    if (held) return heldBackRun(toolCallId, call);
-    const started = await createRun(ctx, session.id, worker, run, run.background === true ? null : toolCallId, guard);
-    if (run.background !== true) return { kind: 'worker', runId: started.id };
+    const started = await createRun(ctx, session.id, worker, { title: run.title, task }, null, guard);
     if (await currentStep(ctx, env.lease) === undefined) return refused(toolCallId, 'The originating step is no longer current.');
     await startBackgroundRun(ctx, started, () => creationGuard(ctx, env.lease, worker), store => liveStep(store, env.lease, env.lease.jobId) !== undefined);
     return result(toolCallId, textResult(call, `started ${started.id}`));
   }
-  if (held) return heldBackRun(toolCallId, call);
-  const childId = await createChild(ctx, session, worker, run, guard);
-  if (run.background !== true) return { kind: 'subagent', childSessionId: childId };
+  const childId = await createChild(ctx, session, worker, { title: run.title, task, brief }, guard);
   const current = await ctx.store.transaction(tx => {
     const store = txRecords(tx);
     if (liveStep(store, env.lease, env.lease.jobId) === undefined) return false;
@@ -92,10 +91,10 @@ async function delegateOutcome(env: CallEnv, toolCallId: string, call: RunCall, 
   });
   if (!current || await currentStep(ctx, env.lease) === undefined) return refused(toolCallId, 'The originating step is no longer current.');
   await startChild(ctx, childId, await creationGuard(ctx, env.lease, worker));
-  return result(toolCallId, textResult(call, `started ${childId}`));
+  return result(toolCallId, textResult(call, `started ${childId}\n\n(helper ${childId})`));
 }
 
-// A checked `delegate continue` (ADR 0085, 4): the helper gets its message and goes on, waited for or in the background.
+// A checked `delegate continue` (ADR 0085, 4; ADR 0108, 1): the helper gets its message and goes on in the background.
 async function continueOutcome(env: CallEnv, toolCallId: string, call: RunCall, held: boolean): Promise<CallOutcome> {
   const { ctx, session } = env;
   const request = delegateContinueSchema.parse(call.payload);
@@ -105,9 +104,8 @@ async function continueOutcome(env: CallEnv, toolCallId: string, call: RunCall, 
   const messaged = await messageHelper(ctx, env.lease, request, guard);
   if (messaged === 'stale') return refused(toolCallId, 'The originating step is no longer current.');
   if (messaged === 'queued') return result(toolCallId, textResult(call, `queued for ${request.id}: it reads this at its next step, and its answer comes as a background message\n\n(helper ${request.id})`));
-  if (request.background !== true) return { kind: 'subagent', childSessionId: request.id };
   await startChild(ctx, request.id, await creationGuard(ctx, env.lease, worker));
-  return result(toolCallId, textResult(call, `started ${request.id}`));
+  return result(toolCallId, textResult(call, `started ${request.id}\n\n(helper ${request.id})`));
 }
 
 // The connectors that run a line: the shell and the binary ones (ADR 0102, 5).
@@ -195,8 +193,10 @@ async function evaluateCurrentCall(env: CallEnv, toolCall: ToolCall, call: RunCa
   if (call.command === 'help') return result(toolCall.id, await runHelp(ctx, call, dispatchGuard(ctx, env.lease, call)));
   if (target === undefined) return refused(toolCall.id, 'The connector command is no longer available.');
   if (session.parentId !== null && !helperAllows(target.builtin)) return result(toolCall.id, failedCall(call, errorOutput({ code: 'VALIDATION_FAILED', message: helperRefusal }).output));
-  // A read-only worker's helper is refused before anyone is asked (ADR 0056, 3).
+  // A read-only worker's helper is refused before anyone is asked (ADR 0056, 3), and so is a call past its run (ADR 0108, 2).
   if (session.worker?.readOnly === true && !readOnlyAllows(call.command, target.builtin, target)) return result(toolCall.id, failedCall(call, errorOutput({ code: 'VALIDATION_FAILED', message: readOnlyRefusal(call.connector, call.command) }).output));
+  const outOfScope = await runScopeRefusal(ctx.job.workspace.path, session, call);
+  if (outOfScope !== undefined) return result(toolCall.id, failedCall(call, errorOutput({ code: 'VALIDATION_FAILED', message: outOfScope }).output));
   // The first fetch from a host asks, and a read-only helper fetches only from a host its chat allowed (ADR 0095, 4).
   const host = hostOf(call);
   if (host !== undefined && !permitted.grants.webHosts.includes(host)) {

@@ -19,7 +19,8 @@ const kind = computed(() => callKind(props.view));
 const payload = computed(() => props.view.fields ?? {});
 const diffs = computed(() => editsOf(payload.value).map((edit) => diffLines(edit.oldText, edit.newText)));
 const content = computed(() => (typeof payload.value['content'] === 'string' ? payload.value['content'] : ''));
-const task = computed(() => (typeof payload.value['task'] === 'string' ? payload.value['task'] : ''));
+// A run's goal (ADR 0108, 2), or the task of a run made before it.
+const task = computed(() => (typeof payload.value['goal'] === 'string' ? payload.value['goal'] : typeof payload.value['task'] === 'string' ? payload.value['task'] : ''));
 const steps = computed(() => (kind.value === 'mcp-run' ? mcpSteps(payload.value) : []));
 const shownFields = computed(() => (kind.value === 'mcp-call' ? fields(payload.value['arguments']) : kind.value === 'fields' ? payload.value : {}));
 </script>

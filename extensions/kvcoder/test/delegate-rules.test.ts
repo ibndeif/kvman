@@ -1,31 +1,27 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { command, fsCall, runs, says, shell, systemPrompt, toolResults, withoutHelperId } from './support/model-script.ts';
-import { newSession, turnState } from './support/turns.ts';
-import { worker, workers } from './support/workers.ts';
+import { delegated, helperIds } from './support/helpers.ts';
+import { command, fsCall, runs, says, shell, systemPrompt, toolResults } from './support/model-script.ts';
+import { newSession } from './support/turns.ts';
+import { wait } from './support/wait.ts';
+import { brief, worker, workers } from './support/workers.ts';
 
 const kvcoder = useKvcoder();
+const lead = (run: Record<string, unknown>) => [runs(command('delegate', 'run', run as never)), says('Started.'), says('parent done')];
 
 describe("the rules of a worker's subagent (08 §8.5, ADR 0009, 102; ADR 0021)", { timeout: 30_000 }, () => {
   it("M2.4-E43, QA4-E18, QA5-E7, and QA6-E21 a child's connectors are its worker's among its parent's: never delegate or ask, and the shell only when it is given", async () => {
-    const { kernel, fake } = await kvcoder.start({ settings: workers(worker('general'), worker('limited', { connectors: ['todo'] })) });
-    const sessionId = await newSession(kernel);
-    fake.reply(
-      runs(command('delegate', 'run', { worker: 'limited', title: 'Helper', task: 'Limited' })),
-      runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'deeper' }), shell('echo hi'), command('todo', 'add', {"text":"c"}), command('ask', 'help')),
-      says('child done'),
-      says('parent done'),
-    );
-    await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
-    await kernel.clock.advance(0);
-    const child = toolResults(fake, 2);
+    const world = await kvcoder.start({ settings: workers(worker('general'), worker('limited', { connectors: ['todo'] })) });
+    const sessionId = await newSession(world.kernel);
+    await delegated(world, sessionId, lead(brief('limited', { kind: 'check', goal: 'Limited' })), [runs(command('delegate', 'run', brief('general', { goal: 'deeper' })), shell('echo hi'), command('todo', 'add', { text: 'c' }), command('ask', 'help')), says('child done')]);
+    const child = toolResults(world.helperFake, 1);
     expect(child[0]).toBe("error VALIDATION_FAILED: delegate isn't available in this subagent.");
     expect(child[1]).toBe("error VALIDATION_FAILED: shell isn't available in this subagent.");
     expect(child[2]).toMatch(/^\{"id":".+","text":"c"\}$/);
     expect(child[3]).toBe("error VALIDATION_FAILED: ask isn't available in this subagent.");
-    const prompt = systemPrompt(fake, 1);
+    const prompt = systemPrompt(world.helperFake, 0);
     expect(prompt).toContain('- todo: Keep a todo list.');
     expect(prompt).not.toContain('- ask: ');
     expect(prompt).not.toContain('- delegate: ');
@@ -37,36 +33,32 @@ describe("the rules of a worker's subagent (08 §8.5, ADR 0009, 102; ADR 0021)",
   });
 
   it("QA4-E13 a child that wasn't given files can't use it, and one that was can", async () => {
-    const { kernel, fake } = await kvcoder.start({ settings: workers(worker('limited', { connectors: ['background'] }), worker('full', { connectors: ['fs'] })) });
-    const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', { worker: 'limited', title: 'Helper', task: 'Limited' })), runs(fsCall('write', { path: 'a.txt', content: 'x' })), says('limited done'), says('parent done'));
-    await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
-    await kernel.clock.advance(0);
-    expect(toolResults(fake, 2)).toEqual(["error VALIDATION_FAILED: fs isn't available in this subagent."]);
-    expect(existsSync(path.join(kernel.homeFolder, 'a.txt'))).toBe(false);
-    fake.reply(runs(command('delegate', 'run', { worker: 'full', title: 'Helper', task: 'Full' })), runs(fsCall('write', { path: 'b.txt', content: 'x' })), says('full done'), says('parent done'));
-    await kernel.exec('kvcoder.message.send', { sessionId, text: 'again' });
-    await kernel.clock.advance(0);
-    expect(toolResults(fake, 6)[0]).toMatch(/^\{"path":"b.txt","created":true/);
-    expect(existsSync(path.join(kernel.homeFolder, 'b.txt'))).toBe(true);
+    const world = await kvcoder.start({ settings: workers(worker('limited', { connectors: ['background'] }), worker('full', { connectors: ['fs'] })) });
+    const sessionId = await newSession(world.kernel);
+    await delegated(world, sessionId, lead(brief('limited', { kind: 'change', files: ['a.txt'], goal: 'Limited' })), [runs(fsCall('write', { path: 'a.txt', content: 'x' })), says('limited done')]);
+    expect(toolResults(world.helperFake, 1)).toEqual(["error VALIDATION_FAILED: fs isn't available in this subagent."]);
+    expect(existsSync(path.join(world.kernel.homeFolder, 'a.txt'))).toBe(false);
+    await delegated(world, sessionId, lead(brief('full', { kind: 'change', files: ['b.txt'], goal: 'Full' })), [runs(fsCall('write', { path: 'b.txt', content: 'x' })), says('full done')], 'again');
+    expect(toolResults(world.helperFake, 3)[0]).toMatch(/^\{"path":"b.txt","created":true/);
+    expect(existsSync(path.join(world.kernel.homeFolder, 'b.txt'))).toBe(true);
   });
 
   it('M2.4-E45 a child that ends maxSteps returns "subagent ended maxSteps" as an error', async () => {
-    const { kernel, fake } = await kvcoder.start({ settings: { 'kvcoder.maxSteps': 2 } });
-    const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Loop' })), runs(shell('echo 1')), { chunks: [{ text: 'still going' }, { toolCall: { id: 'x', name: 'run', arguments: { connector: 'shell', command: 'exec', payload: { line: 'echo 2', risky: false } } } }] }, says('parent done'));
-    await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
-    await kernel.clock.advance(0);
-    expect(toolResults(fake, 3).map(withoutHelperId)).toEqual(['subagent ended maxSteps\n\nIts last message before it stopped (unfinished, not a result):\nstill going']);
+    const world = await kvcoder.start({ settings: { 'kvcoder.maxSteps': 2 } });
+    const sessionId = await newSession(world.kernel);
+    await delegated(world, sessionId, lead(brief('general', { kind: 'check', goal: 'Loop' })), [runs(shell('echo 1')), { chunks: [{ text: 'still going' }, { toolCall: { id: 'x', name: 'run', arguments: { connector: 'shell', command: 'exec', payload: { line: 'echo 2', risky: false } } } }] }]);
+    expect(JSON.stringify(world.fake.requests().at(-1)?.body)).toContain('subagent ended maxSteps\\n\\nIts last message before it stopped (unfinished, not a result):\\nstill going');
   });
 
   it('M2.4-E2 every command that names a subagent session fails VALIDATION_FAILED, and reads work', async () => {
-    const { kernel, fake } = await kvcoder.start();
+    const world = await kvcoder.start();
+    const { kernel } = world;
     const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Wait' })), runs(shell('true', { risky: true })));
+    world.fake.reply(...lead(brief('general', { kind: 'check', goal: 'Wait' })));
+    world.helperFake.reply(runs(shell('true', { risky: true })));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
-    const childId = String((await turnState(kernel, sessionId)).turn?.pending[0]?.childSessionId);
+    const [childId = ''] = await helperIds(kernel, sessionId);
     const refused = [
       kernel.exec('kvcoder.session.rename', { sessionId: childId, title: 'x' }),
       kernel.exec('kvcoder.session.configure', { sessionId: childId, thinking: 'off' }),
@@ -87,28 +79,22 @@ describe("the rules of a worker's subagent (08 §8.5, ADR 0009, 102; ADR 0021)",
   });
 
   it("QA6-E10 a child that wasn't given artifact can't use it, and its prompt has no artifact line", async () => {
-    const { kernel, fake } = await kvcoder.start({ settings: workers(worker('limited', { connectors: ['background'] })) });
-    const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', { worker: 'limited', title: 'Helper', task: 'Limited' })), runs(command('artifact', 'write', { id: 'plan', title: 'Plan', content: 'x' })), says('limited done'), says('parent done'));
-    await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
-    await kernel.clock.advance(0);
-    expect(toolResults(fake, 2)).toEqual(["error VALIDATION_FAILED: artifact isn't available in this subagent."]);
-    expect(systemPrompt(fake, 1)).not.toContain('- artifact: ');
-    expect(await kernel.exec('kvcoder.artifact.list', { sessionId })).toEqual([]);
+    const world = await kvcoder.start({ settings: workers(worker('limited', { connectors: ['background'] })) });
+    const sessionId = await newSession(world.kernel);
+    await delegated(world, sessionId, lead(brief('limited', { kind: 'check', goal: 'Limited' })), [runs(command('artifact', 'write', { id: 'plan', title: 'Plan', content: 'x' })), says('limited done')]);
+    expect(toolResults(world.helperFake, 1)).toEqual(["error VALIDATION_FAILED: artifact isn't available in this subagent."]);
+    expect(systemPrompt(world.helperFake, 0)).not.toContain('- artifact: ');
+    expect(await world.kernel.exec('kvcoder.artifact.list', { sessionId })).toEqual([]);
   });
+
   it('M2.4-E155 a title over 60 characters is shortened, and one over 200 fails', async () => {
-    const { kernel, fake } = await kvcoder.start();
-    const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'x'.repeat(61), task: 'Go' })), runs(shell('true', { risky: true })));
-    await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
-    await kernel.clock.advance(0);
-    const [turn] = await kernel.exec('kvcoder.turn.list', { sessionId, limit: 1 });
-    const child = await kernel.exec('kvcoder.session.get', { sessionId: String(turn?.pending[0]?.childSessionId) });
-    expect(child.title).toBe(`${'x'.repeat(59)}…`);
-    await kernel.exec('kvcoder.turn.cancel', { sessionId });
-    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'y'.repeat(201), task: 'Go' })), says('parent done'));
-    await kernel.exec('kvcoder.message.send', { sessionId, text: 'again' });
-    await kernel.clock.advance(0);
-    expect(toolResults(fake).at(-1)).toMatch(/^error VALIDATION_FAILED: title/);
+    const world = await kvcoder.start();
+    const sessionId = await newSession(world.kernel);
+    await delegated(world, sessionId, lead(brief('general', { title: 'x'.repeat(61), goal: 'Go' })), [says('gone')]);
+    const [childId = ''] = await helperIds(world.kernel, sessionId);
+    expect((await world.kernel.exec('kvcoder.session.get', { sessionId: childId })).title).toBe(`${'x'.repeat(59)}…`);
+    world.fake.reply(runs(command('delegate', 'run', brief('general', { title: 'y'.repeat(201), goal: 'Go' }))), says('parent done'));
+    await world.kernel.exec('kvcoder.message.send', { sessionId, text: 'again' });
+    await vi.waitFor(() => expect(toolResults(world.fake).at(-1)).toMatch(/^error VALIDATION_FAILED: title/), wait);
   });
 });

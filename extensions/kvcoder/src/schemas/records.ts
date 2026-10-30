@@ -3,7 +3,9 @@ import { artifactFormats } from '../artifacts/artifact-format.ts';
 import type { JsonValue } from '../connector-call.ts';
 import { thinkingLevels } from '../thinking-levels.ts';
 import { keptRuleSchema } from './kept-rule.ts';
+import { delegateBriefSchema } from './delegate-brief.ts';
 import { sentRecordSchema } from './sent-record.ts';
+export { processDocSchema, type ProcessDoc } from './process-doc.ts';
 
 export type { JsonValue };
 
@@ -76,6 +78,8 @@ export const sessionDocSchema = z.object({
   connectors: z.array(z.string()).nullable(),
   // The `optIn` connectors enabled for this chat (ADR 0027, 10).
   optedIn: z.array(z.string()).default([]),
+  // A helper's run: its kind, the files a change may change, and its step budget; none for a chat (ADR 0108, 2).
+  run: delegateBriefSchema.nullable().default(null),
   // The rule files kept for the chat's life; none yet before its first step (ADR 0108, 6).
   rules: z.array(keptRuleSchema).exactOptional(),
   createdAt: z.string(),
@@ -244,25 +248,6 @@ export const runDocSchema = z.object({
   staging: runStagingSchema.nullable().default(null),
 });
 
-// A background process a session started with `background: true` (ADR 0009, 150). It lives in the global store, since the
-// handlers for kvman stopping and starting run in Home. It is running until `end` is set; `reported` says whether the
-// session has been told how it ended.
-export const processDocSchema = z.object({
-  workspaceId: z.string(),
-  sessionId: z.string(),
-  title: z.string(),
-  call: z.string(),
-  startedAt: z.string(),
-  endedAt: z.string().exactOptional(),
-  end: z.enum(['exited', 'agent', 'person', 'interrupted']).exactOptional(),
-  exitCode: z.number().int().nullable().exactOptional(),
-  signal: z.string().nullable().exactOptional(),
-  reported: z.boolean(),
-  starting: z.boolean().exactOptional(),
-  /** Started with `notify: true`: its watcher, not the exit handler, reports its end (ADR 0108, 16). */
-  notify: z.boolean().exactOptional(),
-});
-
 // A document shown beside the chat (plan 08 §8.5, ADR 0009, 175): `sessionId` is the chat's own id, `artifactId`
 // names it within the chat, and only the latest content is kept.
 export const artifactDocSchema = z.object({
@@ -290,7 +275,6 @@ export type AnswerReceiptDoc = z.output<typeof answerReceiptDocSchema>;
 export type SendReceiptDoc = z.output<typeof sendReceiptDocSchema>;
 export type BackgroundDoc = z.output<typeof backgroundDocSchema>;
 export type ArtifactDoc = z.output<typeof artifactDocSchema>;
-export type ProcessDoc = z.output<typeof processDocSchema>;
 export type RunDoc = z.output<typeof runDocSchema>;
 export type RunStaging = z.output<typeof runStagingSchema>;
 export type Usage = z.output<typeof usageSchema>;

@@ -5,6 +5,7 @@ import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { command, runs, says, systemPrompt } from './support/model-script.ts';
 import { newSession } from './support/turns.ts';
 import { worker, workers } from './support/workers.ts';
+import { delegated } from './support/helpers.ts';
 
 const kvcoder = useKvcoder();
 
@@ -13,14 +14,11 @@ const opening = "## The person's preferences\nThese are the person's own standin
 
 describe("the person's preferences (ADR 0092, 3)", { timeout: 30_000 }, () => {
   it('QA60-H5 the lead and a helper read them right after the base prompt, before the other sections', async () => {
-    const { kernel, fake } = await kvcoder.start({ settings: { ...workers(worker('helper')), 'kvcoder.preferences': 'Build apps in Arabic first.' } });
-    writeFileSync(path.join(kernel.homeFolder, 'AGENTS.md'), '# Rules\nUse pnpm.\n');
-    const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', { worker: 'helper', title: 'Helper', task: 'Do it' })), says('done'), says('ok'));
-    await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
-    await kernel.clock.advance(0);
-    for (const index of [0, 1]) {
-      const prompt = systemPrompt(fake, index);
+    const world = await kvcoder.start({ settings: { ...workers(worker('helper')), 'kvcoder.preferences': 'Build apps in Arabic first.' } });
+    writeFileSync(path.join(world.kernel.homeFolder, 'AGENTS.md'), '# Rules\nUse pnpm.\n');
+    const sessionId = await newSession(world.kernel);
+    await delegated(world, sessionId, [runs(command('delegate', 'run', { worker: 'helper', title: 'Helper', kind: 'find', goal: 'Do it', done: 'It is done.' })), says('Started.'), says('ok')], [says('done')]);
+    for (const prompt of [systemPrompt(world.fake, 0), systemPrompt(world.helperFake, 0)]) {
       expect(prompt).toContain(`${opening}\n\nBuild apps in Arabic first.`);
       expect(prompt.indexOf(opening)).toBeLessThan(prompt.indexOf('## Project rules: AGENTS.md'));
       expect(prompt.indexOf(opening)).toBeGreaterThan(prompt.indexOf('How you work.'));

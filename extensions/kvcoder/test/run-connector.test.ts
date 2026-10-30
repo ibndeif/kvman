@@ -51,8 +51,8 @@ describe('runConnector (08 §8.4, ADR 0009, 96; ADR 0011, 18)', { timeout: 30_00
   it('QA31-E12 delegate help is answered, and a run runs only inside a turn', async () => {
     const { kernel } = await kvcoder.start();
     const help = await runConnector(kernel, { connector: 'delegate', command: 'help' });
-    expect(help).toMatchObject({ exitCode: 0, output: expect.stringMatching(/^delegate: Hand a self-contained task to a worker/) as unknown });
-    expect(await runConnector(kernel, { connector: 'delegate', command: 'run', payload: { worker: 'general', title: 'Helper', task: 'x' } })).toEqual({ exitCode: 1, output: 'delegate runs only inside a turn' });
+    expect(help).toMatchObject({ exitCode: 0, output: expect.stringMatching(/^delegate: Hand one deliverable to a worker/) as unknown });
+    expect(await runConnector(kernel, { connector: 'delegate', command: 'run', payload: { worker: 'general', title: 'Helper', kind: 'find', goal: 'x', done: 'It is done.' } })).toEqual({ exitCode: 1, output: 'delegate runs only inside a turn' });
     expect(await kernel.exec('kvcoder.session.list', { limit: 10 })).toEqual([]);
   });
 

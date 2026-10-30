@@ -4,7 +4,6 @@ import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { command, runs, says, toolResults } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 import { wait } from './support/wait.ts';
-import type { FakeReply } from '@kvman/testkit/fake-openai';
 import { programWorker, useWorkerPrograms, type Programs } from './support/worker-programs.ts';
 import { workers } from './support/workers.ts';
 
@@ -12,7 +11,7 @@ const kvcoder = useKvcoder();
 const programs = useWorkerPrograms();
 
 type World = Awaited<ReturnType<typeof kvcoder.start>>;
-const delegate = (task: string, fields: Record<string, unknown> = {}) => command('delegate', 'run', { worker: 'pie', title: 'Helper', task, ...fields });
+const delegate = (goal: string) => command('delegate', 'run', { worker: 'pie', title: 'Helper', kind: 'find', goal, done: 'It is done.' });
 const requests = (fake: { requests(): readonly unknown[] }, count: number) => vi.waitFor(() => expect(fake.requests()).toHaveLength(count), wait);
 const gone = (pid: number) => vi.waitFor(() => expect(alive(pid)).toBe(false), wait);
 
@@ -21,78 +20,76 @@ async function notices(kernel: World['kernel'], sessionId: string): Promise<unkn
   return messages.filter((message) => message.kind === 'notice').map((message) => message.content);
 }
 
-// A chat whose `pi` worker is running and waits for the gate; `background` lets the turn end meanwhile.
-async function running(background: boolean, ...after: FakeReply[]): Promise<World & { installed: Programs; sessionId: string; pid: number }> {
+// A chat whose `pi` worker is running in the background and waits for the gate, with the turn that started it ended.
+async function running(): Promise<World & { installed: Programs; sessionId: string; pid: number }> {
   const installed = programs.install('pi');
   const world = await kvcoder.start({ settings: workers(programWorker('pie', 'pi')) });
   const sessionId = await newSession(world.kernel);
-  world.fake.reply(runs(delegate(`wait:${installed.gate}`, background ? { background: true } : {})), ...(background ? [says('went on')] : []), ...after);
+  world.fake.reply(runs(delegate(`wait:${installed.gate}`)), says('went on'));
   await world.kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
   await vi.waitFor(() => expect(installed.pid('pi')).toBeTypeOf('number'), wait);
-  if (background) await vi.waitFor(async () => expect((await turnState(world.kernel, sessionId)).turn).toMatchObject({ outcome: 'done' }), wait);
+  await vi.waitFor(async () => expect((await turnState(world.kernel, sessionId)).turn).toMatchObject({ outcome: 'done' }), wait);
   return { ...world, installed, sessionId, pid: Number(installed.pid('pi')) };
 }
 
+const told = async (kernel: World['kernel'], sessionId: string, text: string) => vi.waitFor(async () => {
+  const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });
+  expect(messages.filter((message) => message.source?.kind === 'job' && JSON.stringify(message.content).includes(text))).toHaveLength(1);
+}, wait);
+
 describe("a program worker's run as a job of its chat (08 §8.5 and §8.6, ADR 0021, 15 and 33 to 35)", { timeout: 30_000 }, () => {
   it('QA32-H8 the run is a row for the person and the agent: running, then succeeded with its output', async () => {
-    const { kernel, fake, installed, sessionId } = await running(false);
+    const { kernel, fake, installed, sessionId } = await running();
     const [row] = await kernel.exec('kvcoder.job.list', { sessionId });
     fake.reply(runs(command('background', 'list'), command('background', 'output', { id: String(row?.id) })), says('done'));
     expect(row).toEqual({ id: expect.any(String) as unknown, kind: 'worker', title: 'pie', call: 'Helper', status: 'running', startedAt: expect.any(String) as unknown, links: [] });
     expect('output' in (await kernel.exec('kvcoder.job.get', { sessionId, id: String(row?.id) }))).toBe(false);
     installed.release();
-    await requests(fake, 3);
+    await requests(fake, 4);
     expect(await kernel.exec('kvcoder.job.get', { sessionId, id: String(row?.id) })).toMatchObject({ kind: 'worker', status: 'succeeded', exitCode: 0, endedAt: expect.any(String) as unknown, output: 'released' });
-    const [listed, output] = toolResults(fake, 2).slice(-2).map((text) => JSON.parse(text) as unknown);
+    const [listed, output] = toolResults(fake, 3).slice(-2).map((text) => JSON.parse(text) as unknown);
     expect(listed).toMatchObject([{ id: row?.id, kind: 'worker', title: 'pie', status: 'succeeded', exitCode: 0 }]);
     expect(output).toMatchObject({ id: row?.id, kind: 'worker', status: 'succeeded', output: 'released' });
   });
 
-  it("QA32-H9 the person's Stop kills the program, and the call returns that the worker was stopped", async () => {
-    const { kernel, fake, sessionId, pid } = await running(false, says('next'));
+  it("QA32-H9 the person's Stop kills the program, and the chat is told the worker was stopped", async () => {
+    const { kernel, fake, sessionId, pid } = await running();
+    fake.reply(says('noted'));
     const [row] = await kernel.exec('kvcoder.job.list', { sessionId });
     expect(await kernel.exec('kvcoder.job.cancel', { sessionId, id: String(row?.id) })).toEqual({});
     await gone(pid);
-    await requests(fake, 2);
-    expect(toolResults(fake, 1)).toEqual(['pie was stopped']);
+    await told(kernel, sessionId, 'pie was stopped');
     expect(await kernel.exec('kvcoder.job.get', { sessionId, id: String(row?.id) })).toMatchObject({ status: 'cancelled', output: 'pie was stopped' });
   });
 
-  it('QA32-E9 cancelling the turn kills the program, and its call says it was stopped while it ran', async () => {
-    const { kernel, fake, sessionId, pid } = await running(false);
+  // ADR 0108, 1: Stop ends the lead's turn and leaves its runs running.
+  it('QA32-E9 cancelling the turn leaves the run running, and its answer still arrives', async () => {
+    const installed = programs.install('pi');
+    const { kernel, fake } = await kvcoder.start({ settings: workers(programWorker('pie', 'pi')) });
+    const sessionId = await newSession(kernel);
+    fake.reply(runs(delegate(`wait:${installed.gate}`)), { chunks: [{ wait: new Promise<void>(() => undefined) }, { text: 'never' }] }, says('read it'));
+    await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
+    await vi.waitFor(() => expect(installed.pid('pi')).toBeTypeOf('number'), wait);
+    await requests(fake, 2);
     await kernel.exec('kvcoder.turn.cancel', { sessionId });
-    await gone(pid);
-    const state = await turnState(kernel, sessionId);
-    expect(state.session.status).toBe('idle');
-    expect(state.turn).toMatchObject({ outcome: 'cancelled', pending: [] });
+    await vi.waitFor(async () => expect((await turnState(kernel, sessionId)).turn).toMatchObject({ outcome: 'cancelled', pending: [] }), wait);
     expect(await notices(kernel, sessionId)).toEqual([{ code: 'CANCELLED', params: {} }]);
-    expect((await kernel.exec('kvcoder.job.list', { sessionId })).map((row) => row.status)).toEqual(['cancelled']);
-    expect(fake.requests()).toHaveLength(1);
-    const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });
-    expect(messages.filter((message) => message.kind === 'toolResult').map((message) => message.content['content'])).toEqual([[{ type: 'text', text: 'stopped while it ran (the person stopped the turn): what it changed is unknown, so check before you run it again' }]]);
+    expect(alive(Number(installed.pid('pi')))).toBe(true);
+    expect((await kernel.exec('kvcoder.job.list', { sessionId })).map((row) => row.status)).toEqual(['running']);
+    installed.release();
+    await told(kernel, sessionId, 'released');
   });
 
   it('QA32-E10 deleting the chat kills its background run and forgets it', async () => {
-    const { kernel, sessionId, pid } = await running(true);
+    const { kernel, sessionId, pid } = await running();
     await kernel.exec('kvcoder.session.delete', { sessionId });
     await gone(pid);
     await expect(kernel.exec('kvcoder.job.list', { sessionId })).rejects.toMatchObject({ problem: { code: 'kvcoder/SESSION_NOT_FOUND' } });
   });
 
-  it('QA32-E13 a run whose job is interrupted ends interrupted, and so does the turn that waits on it', async () => {
-    const { kernel, fake, sessionId, pid } = await running(false);
-    await kernel.restart();
-    await kernel.clock.advance(0);
-    await gone(pid);
-    await vi.waitFor(async () => expect((await turnState(kernel, sessionId)).turn).toMatchObject({ outcome: 'interrupted', pending: [] }), wait);
-    expect((await turnState(kernel, sessionId)).session.status).toBe('idle');
-    expect(await notices(kernel, sessionId)).toEqual([{ code: 'INTERRUPTED', params: { code: 'INTERRUPTED' } }]);
-    expect(await kernel.exec('kvcoder.job.list', { sessionId })).toMatchObject([{ kind: 'worker', status: 'interrupted' }]);
-    expect(fake.requests()).toHaveLength(1);
-  });
-
+  // ADR 0108, 1: no turn waits on a run, so an interrupted run only tells the chat.
   it('QA32-E13 a background run whose job is interrupted tells the chat, and starts no turn', async () => {
-    const { kernel, fake, sessionId } = await running(true);
+    const { kernel, fake, sessionId } = await running();
     const sent = fake.requests().length;
     await kernel.restart();
     await kernel.clock.advance(0);
@@ -104,7 +101,7 @@ describe("a program worker's run as a job of its chat (08 §8.5 and §8.6, ADR 0
   });
 
   it('QA32-E14 the agent stops a background run once: no message follows and no turn starts (ADR 0085, 5)', async () => {
-    const { kernel, fake, sessionId, pid } = await running(true);
+    const { kernel, fake, sessionId, pid } = await running();
     const [row] = await kernel.exec('kvcoder.job.list', { sessionId });
     const stop = command('background', 'stop', { id: String(row?.id) });
     fake.reply(runs(stop), runs(stop), says('done'));

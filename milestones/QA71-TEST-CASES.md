@@ -101,7 +101,7 @@ Paths are relative to `extensions/kvcoder/` unless they start with `extensions/`
 - **QA71-E1 `background` is refused.** `delegate run { …, background: true }` fails `VALIDATION_FAILED` for the
   unknown key. `test/delegate-brief.test.ts`
 - **QA71-E2 an old foreground wait settles.** *Given* a turn saved before ADR 0108 waiting on a pending `subagent`
-  call, *when* the helper ends, *then* its answer resolves the call as before. `test/unit/old-records.test.ts`
+  call, *when* the helper ends, *then* its answer resolves the call as before. `test/old-foreground-wait.test.ts`
 - **QA71-E3 files for a non-change kind.** `kind: 'review'` with `files` fails `VALIDATION_FAILED`.
   `test/delegate-brief.test.ts`
 - **QA71-E4 change without files.** `kind: 'change'` without `files` fails `VALIDATION_FAILED`. `test/delegate-brief.test.ts`
@@ -167,7 +167,11 @@ Paths are relative to `extensions/kvcoder/` unless they start with `extensions/`
 - **QA71-E35 hidden calls that fail.** A failed `help` or `background wait` is hidden too, and a fold doesn't count its
   failure. `test/web/call-folds.test.ts`
 - **QA71-E36 the check-in in a helper.** A helper's turn gets no check-in message. `test/turn-check-in.test.ts`
-- **QA71-E37 a worker card after the budget.** A helper that ended at its budget shows `step 60 of 60` and its
-  outcome. `test/web/subagent-card.test.ts`
+- **QA71-E37 a worker card at the budget.** A helper at its last step shows `step 60 of 60`; once it ends, its card
+  shows no progress line (it shows only while the helper runs, plan 08 §8.7), and its answer's message carries the
+  outcome, `subagent ended maxSteps` (QA71-H10). `test/web/subagent-card.test.ts`
 - **QA71-E38 the shipped workers.** *Then* the six shipped workers' levels are unchanged by ADR 0108; only the ceiling
   caps them. `test/unit/shipped-workers.test.ts`
+- **QA71-E39 a signature read at registration.** *Given* a registered connector, *then* building a prompt reads no
+  command's schema, and its index lines carry the signatures read when it registered; a connector record stored
+  before ADR 0108 reads with no signature, and its line shows the command's name only. `test/unit/old-records.test.ts`

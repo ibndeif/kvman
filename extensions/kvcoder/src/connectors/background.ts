@@ -11,7 +11,7 @@ import { cutInto } from './payload-fields.ts';
 
 /** What the prompt's index says the connector is for. */
 export const backgroundDescription =
-  'Follow up on what you started with background set to true: a server or other long-running shell line, or a background subagent. Use it to see its status or output, to wait for it to end, or to stop it. When you need a run\'s result before you can go on, call wait once: asking for its output again and again fills the conversation, and a run that ends tells you in a message anyway.';
+  'Follow up on what runs in the background: a server or other long-running shell line you started with background set to true, or a helper. Use it to see its status or output, to wait for a process to end, or to stop a run. When you need a process\'s result before you can go on, call wait once: asking for its output again and again fills the conversation, and a run that ends tells you in a message anyway. Never wait for a helper: its answer wakes you.';
 
 const id = z.string().min(1).describe('The id that the call which started the work returned.');
 const started = z.strictObject({ id });

@@ -5,6 +5,7 @@ import { commandEntry, setServers } from './support/mcp-servers.ts';
 import { command, requestTools, runs, says, systemPrompt, toolResults } from './support/model-script.ts';
 import { newSession } from './support/turns.ts';
 import { worker, workers } from './support/workers.ts';
+import { delegated } from './support/helpers.ts';
 
 const kvcoder = useKvcoder();
 
@@ -69,11 +70,14 @@ describe('the mcp connector in the prompt and the run tool (08 §8.2, ADR 0020, 
   });
 
   it('QA29-E3 a subagent calls mcp when it was given it, and not otherwise', async () => {
-    const helper = runs(command('delegate', 'run', { worker: 'helper', title: 'Helper', task: 'Use the tool' }));
-    const given = await turn({ 'kvcoder.mcp.servers': [commandEntry()], ...workers(worker('helper', { connectors: ['mcp'] })) }, helper, runs(echo), says('child done'), says('parent done'));
-    expect(connectorsOf(requestTools(given.fake, 1)[0])).toEqual(['mcp']);
-    expect(toolResults(given.fake, 2)).toEqual(['hi']);
-    const withheld = await turn({ 'kvcoder.mcp.servers': [commandEntry()], ...workers(worker('helper', { connectors: ['fs'] })) }, helper, runs(echo), says('child done'), says('parent done'));
-    expect(toolResults(withheld.fake, 2)).toEqual(["error VALIDATION_FAILED: mcp isn't available in this subagent."]);
+    const helper = runs(command('delegate', 'run', { worker: 'helper', title: 'Helper', kind: 'check', goal: 'Use the tool', done: 'It is done.' }));
+    const lead = [helper, says('Started.'), says('parent done')];
+    const given = await kvcoder.start({ settings: { 'kvcoder.mcp.servers': [commandEntry()], ...workers(worker('helper', { connectors: ['mcp'] })) } as never });
+    await delegated(given, await newSession(given.kernel), lead, [runs(echo), says('child done')]);
+    expect(connectorsOf(requestTools(given.helperFake, 0)[0])).toEqual(['mcp']);
+    expect(toolResults(given.helperFake, 1)).toEqual(['hi']);
+    const withheld = await kvcoder.start({ settings: { 'kvcoder.mcp.servers': [commandEntry()], ...workers(worker('helper', { connectors: ['fs'] })) } as never });
+    await delegated(withheld, await newSession(withheld.kernel), lead, [runs(echo), says('child done')]);
+    expect(toolResults(withheld.helperFake, 1)).toEqual(["error VALIDATION_FAILED: mcp isn't available in this subagent."]);
   });
 });

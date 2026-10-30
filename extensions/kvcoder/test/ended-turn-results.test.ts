@@ -4,6 +4,7 @@ import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { command, runs, says, shell, toolResults } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 import { endedProbe } from './support/ended-probe.ts';
+import { helperIds } from './support/helpers.ts';
 
 // ADR 0087, 1: the turn that ends stores a result for every call of its last reply.
 
@@ -36,18 +37,23 @@ describe('the calls of an ended turn (ADR 0087, 1)', { timeout: 30_000 }, () => 
     expect(sent.join('\n')).not.toContain('No result provided');
   });
 
-  it('QA55-H2 a helper that was running when the turn stopped is marked unknown', async () => {
-    const { kernel, fake } = await kvcoder.start();
+  // ADR 0108, 1: a helper's call returns `started` at once, so a stopped turn keeps that result, and the helper goes on.
+  it('QA55-H2 a helper started in a stopped turn keeps its started result, and goes on', async () => {
+    const { kernel, fake, helperFake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Ask them' })), runs(shell('true', { risky: true })));
+    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', kind: 'check', goal: 'Ask them', done: 'It is done.' })), runs(command('ask', 'confirm', { prompt: 'Go on?' })));
+    helperFake.reply(runs(shell('true', { risky: true })));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
-    await vi.waitFor(async () => {
-      const childId = String((await turnState(kernel, sessionId)).turn?.pending[0]?.childSessionId);
-      expect((await turnState(kernel, childId)).session.status).toBe('waiting');
+    const childId = await vi.waitFor(async () => {
+      const [id = ''] = await helperIds(kernel, sessionId);
+      expect((await turnState(kernel, id)).session.status).toBe('waiting');
+      expect((await turnState(kernel, sessionId)).session.status).toBe('waiting');
+      return id;
     }, wait);
     await kernel.exec('kvcoder.turn.cancel', { sessionId });
     const results = await storedResults(kernel, sessionId);
-    expect(results).toEqual([{ id: expect.any(String), text: JSON.stringify([{ type: 'text', text: stopped('the person stopped the turn') }]), isError: true }]);
+    expect(results.map((result) => result.text)).toEqual([JSON.stringify([{ type: 'text', text: `started ${childId}\n\n(helper ${childId})` }]), JSON.stringify([{ type: 'text', text: 'not run: the person stopped the turn' }])]);
+    expect((await turnState(kernel, childId)).session.status).toBe('waiting');
   });
 
   it('QA55-E3 a turn that fails at its model call adds no result', async () => {

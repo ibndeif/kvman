@@ -100,7 +100,7 @@ describe("an opened card shows the call by its kind (08 §8.7, ADR 0036, 3 and 5
   });
 
   it('QA48-H9 a delegate run shows its task as text and the answer in Markdown', async () => {
-    const card = await ranCard(call('delegate', 'run', { worker: 'reviewer', title: 'Helper', task: 'Review the plan.\nSay what is missing.' }), '**Nothing** is missing.');
+    const card = await ranCard(call('delegate', 'run', { worker: 'reviewer', title: 'Helper', kind: 'find', goal: 'Review the plan.\nSay what is missing.', done: 'It is done.' }), '**Nothing** is missing.');
     await pressed(card);
     expect(shownLines(card, 'call-task')).toEqual(['Review the plan.', 'Say what is missing.']);
     expect(part(card, 'call-answer').find('[data-test="markdown"]').text()).toBe('**Nothing** is missing.');

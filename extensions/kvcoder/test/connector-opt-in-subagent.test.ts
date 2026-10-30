@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { delegated } from './support/helpers.ts';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { command, runs, says, systemPrompt } from './support/model-script.ts';
 import { newSession } from './support/turns.ts';
@@ -14,21 +15,16 @@ function indexed(prompt: string): (string | undefined)[] {
 
 describe("a subagent and its chat's optIn connectors (08 §8.4, ADR 0027, 10)", { timeout: 30_000 }, () => {
   it('QA39-E17 a subagent has an optIn connector its worker lists only when its top-level session enabled it', async () => {
-    const { kernel, fake } = await kvcoder.start({ settings: workers(worker('helper', { connectors: ['todo', 'notes'] })) });
+    const world = await kvcoder.start({ settings: workers(worker('helper', { connectors: ['todo', 'notes'] })) });
+    const { kernel, helperFake } = world;
     await kernel.exec('kvcoder.connector.register', { name: 'notes', description: 'Notes.', optIn: true, commands: [{ name: 'add', command: 'todo.item.add' }] }, { as: '@test/todo' });
-    const delegated = () => fake.reply(runs(command('delegate', 'run', { worker: 'helper', title: 'Helper', task: 'Review' })), says('child done'), says('parent done'));
-
+    const lead = [runs(command('delegate', 'run', { worker: 'helper', title: 'Helper', kind: 'check', goal: 'Review', done: 'It is done.' })), says('Started.'), says('parent done')];
     const without = await newSession(kernel);
-    delegated();
-    await kernel.exec('kvcoder.message.send', { sessionId: without, text: 'go' });
-    await kernel.clock.advance(0);
-    expect(indexed(systemPrompt(fake, 1))).toEqual(['todo']);
-
+    await delegated(world, without, lead, [says('child done')]);
+    expect(indexed(systemPrompt(helperFake, 0))).toEqual(['todo']);
     const enabled = await newSession(kernel);
     await kernel.exec('kvcoder.connector.enable', { sessionId: enabled, names: ['notes'] }, { as: '@test/todo' });
-    delegated();
-    await kernel.exec('kvcoder.message.send', { sessionId: enabled, text: 'go' });
-    await kernel.clock.advance(0);
-    expect(indexed(systemPrompt(fake, 4))).toEqual(['todo', 'notes']);
+    await delegated(world, enabled, lead, [says('child done')]);
+    expect(indexed(systemPrompt(helperFake, 1))).toEqual(['todo', 'notes']);
   });
 });

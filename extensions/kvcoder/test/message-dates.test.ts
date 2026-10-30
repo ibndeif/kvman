@@ -1,11 +1,11 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { z } from '@kvman/sdk';
 import type { TestKernel } from '@kvman/testkit';
 import { messageStamp } from '../src/turns/message-stamp.ts';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { command, requestMessages, runs, says, shell, systemPrompt, textOf } from './support/model-script.ts';
 import { newSession } from './support/turns.ts';
-import { wait } from './support/wait.ts';
+import { delegated } from './support/helpers.ts';
 
 const kvcoder = useKvcoder();
 
@@ -62,14 +62,12 @@ describe("the date on a person's message (08 §8.2, ADR 0032, 1, 5, and 6)", { t
   });
 
   it("QA44-E1 a subagent's task, which isn't the person's message, has no stamp", async () => {
-    const { kernel, fake } = await kvcoder.start();
-    const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Check it' })), says('child done'), says('parent done'));
-    await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
-    await vi.waitFor(() => expect(fake.requests()).toHaveLength(3), wait);
-    const [stored] = await personMessages(kernel, sessionId);
-    expect(userTexts(requestMessages(fake, 0))).toEqual([`${stampOf(stored?.createdAt ?? '')}\ngo`]);
-    expect(userTexts(requestMessages(fake, 1))).toEqual(['Check it']);
+    const world = await kvcoder.start();
+    const sessionId = await newSession(world.kernel);
+    await delegated(world, sessionId, [runs(command('delegate', 'run', { worker: 'general', title: 'Helper', kind: 'find', goal: 'Check it', done: 'It is done.' })), says('Started.'), says('parent done')], [says('child done')]);
+    const [stored] = await personMessages(world.kernel, sessionId);
+    expect(userTexts(requestMessages(world.fake, 0))).toEqual([`${stampOf(stored?.createdAt ?? '')}\ngo`]);
+    expect(userTexts(requestMessages(world.helperFake, 0))).toEqual(['Kind: find\nGoal: Check it\nDone when: It is done.']);
   });
 
   it('QA44-E2 a message with an image has the stamp in its text, then the image', async () => {

@@ -4,6 +4,7 @@ import { command, runs, says, shell } from './support/model-script.ts';
 import { newSession } from './support/turns.ts';
 import { wait } from './support/wait.ts';
 import { worker, workers } from './support/workers.ts';
+import { delegated } from './support/helpers.ts';
 
 const kvcoder = useKvcoder();
 
@@ -54,9 +55,7 @@ describe('a background process started again by the person (ADR 0102, 7)', { tim
   it('QA67-E17 a helper, an unknown id, and an extension are refused', async () => {
     posixShell();
     const world = await chatWith('echo once');
-    world.fake.reply(runs(command('delegate', 'run', { worker: 'helper', title: 'Helper', task: 'Look', background: true })), says('looked'), says('ok'), says('noted'));
-    await world.kernel.exec('kvcoder.message.send', { sessionId: world.sessionId, text: 'more' });
-    await world.kernel.clock.advance(0);
+    await delegated(world, world.sessionId, [runs(command('delegate', 'run', { worker: 'helper', title: 'Helper', kind: 'find', goal: 'Look', done: 'It is done.' })), says('ok'), says('noted')], [says('looked')], 'more');
     const helper = await vi.waitFor(async () => {
       const found = (await world.kernel.exec('kvcoder.job.list', { sessionId: world.sessionId })).find((row) => row.kind === 'subagent');
       expect(found).toBeDefined();

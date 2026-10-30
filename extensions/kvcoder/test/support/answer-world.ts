@@ -1,12 +1,7 @@
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
 import { z, type Json } from '@kvman/sdk';
-import { createTestKernel, type TestKernel } from '@kvman/testkit';
-import { startFakeOpenAI, type FakeOpenAI } from '@kvman/testkit/fake-openai';
+import type { TestKernel } from '@kvman/testkit';
 import { answerReceiptDocSchema, messageDocSchema, questionDocSchema, runDocSchema, sessionDocSchema, stepIntentDocSchema, turnDocSchema } from '../../src/schemas/records.ts';
-import { kvcoderFolder } from './kvcoder-kernel.ts';
-import { newSession } from './turns.ts';
+import { withFixtureWorld, type FixtureCheck } from './fixture-world.ts';
 
 const source = (file: string) => JSON.stringify(new URL(`../../src/${file}`, import.meta.url).href);
 const stored = { id: z.string() };
@@ -116,20 +111,7 @@ export default (ctx: Ctx): void => {
   });
 };`;
 
-export async function withAnswerWorld(check: (kernel: TestKernel, fake: FakeOpenAI, sessionId: string) => Promise<void>, settings: Record<string, Json> = {}): Promise<void> {
-  const root = mkdtempSync(path.join(tmpdir(), 'kvcoder-answers-'));
-  let fake: FakeOpenAI | undefined, kernel: TestKernel | undefined;
-  try {
-    fake = await startFakeOpenAI();
-    const manifest = z.object({ name: z.string(), version: z.string(), peerDependencies: z.record(z.string(), z.string()), kvman: z.object({ namespace: z.string(), dependencies: z.record(z.string(), z.string()) }) }).parse(JSON.parse(readFileSync(path.join(kvcoderFolder, 'package.json'), 'utf8')));
-    writeFileSync(path.join(root, 'package.json'), JSON.stringify({ ...manifest, type: 'module', main: 'index.js', kvman: { ...manifest.kvman, source: 'index.ts' } }));
-    writeFileSync(path.join(root, 'index.ts'), entry); cpSync(path.join(kvcoderFolder, 'locales'), path.join(root, 'locales'), { recursive: true });
-    kernel = await createTestKernel({ extensions: [path.join(kvcoderFolder, '../kvai'), path.join(kvcoderFolder, '../kvwebui'), root], settings: { 'kernel.workers': 2, 'kvwebui.home': 'kvcoder.chat', 'kvai.defaultModel': 'fake/m1', ...settings } });
-    await kernel.exec('kvai.provider.add', { id: 'fake', title: 'Fake', api: 'openai-completions', baseUrl: fake.baseUrl });
-    await kernel.exec('kvai.model.add', { provider: 'fake', id: 'm1', name: 'M1', input: ['text'], reasoning: true, contextWindow: 128_000, maxTokens: 8192 });
-    await check(kernel, fake, await newSession(kernel));
-  } finally { try { await kernel?.close(); } finally { try { await fake?.close(); } finally { rmSync(root, { recursive: true, force: true }); } } }
-}
+export const withAnswerWorld = (check: FixtureCheck, settings: Record<string, Json> = {}): Promise<void> => withFixtureWorld('kvcoder-answers-', entry, check, settings);
 
 export const answerSnapshot = async (kernel: TestKernel, sessionId: string, workspaceId?: string) => answerStateSchema.parse(await kernel.exec('kvcoder.answer-fixture.snapshot', { sessionId }, { ...answerOwner, ...(workspaceId === undefined ? {} : { workspaceId }) }));
 export const answerControl = (kernel: TestKernel, mode: 'none' | 'rollback' | 'enqueue-fail' | 'enqueue-gate' | 'metadata-gate', gate = '') => kernel.exec('kvcoder.answer-fixture.control', { mode, gate }, answerOwner);

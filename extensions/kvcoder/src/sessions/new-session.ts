@@ -42,6 +42,7 @@ export async function newSession(ctx: Ctx, title: Title | undefined): Promise<St
     checks: null,
     connectors: null,
     optedIn: [],
+    run: null,
     createdAt: stamp,
     updatedAt: stamp,
   });

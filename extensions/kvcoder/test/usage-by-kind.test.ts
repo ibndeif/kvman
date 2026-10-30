@@ -4,6 +4,7 @@ import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { padded } from './support/long-messages.ts';
 import { command, runs } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
+import { delegated } from './support/helpers.ts';
 
 const kvcoder = useKvcoder();
 const costing = (text: string, input: number, output: number): FakeReply => ({ chunks: [{ text }], usage: { input, output } });
@@ -54,13 +55,11 @@ describe("what a chat's helper calls cost (KVC-16, ADR 0058)", { timeout: 30_000
   });
 
   it("M2.4-E183 a helper's usage is in its parent once, and in usageBy.helpers", async () => {
-    const { kernel, fake } = await kvcoder.start();
-    const sessionId = await newSession(kernel);
-    fake.reply({ ...runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Go' })), usage: { input: 100, output: 10 } }, costing('child done', 300, 30), costing('parent done', 100, 10));
-    await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
-    await kernel.clock.advance(0);
-    const session = await kernel.exec('kvcoder.session.get', { sessionId });
-    expect(tokens(session.usage)).toEqual([500, 50]);
+    const world = await kvcoder.start();
+    const sessionId = await newSession(world.kernel);
+    await delegated(world, sessionId, [{ ...runs(command('delegate', 'run', { worker: 'general', title: 'Helper', kind: 'find', goal: 'Go', done: 'It is done.' })), usage: { input: 100, output: 10 } }, costing('Started.', 100, 10), costing('parent done', 100, 10)], [costing('child done', 300, 30)]);
+    const session = await world.kernel.exec('kvcoder.session.get', { sessionId });
+    expect(tokens(session.usage)).toEqual([600, 60]);
     expect(tokens(session.usageBy?.helpers)).toEqual([300, 30]);
   });
 });

@@ -13,3 +13,8 @@ export function worker(name: string, fields: WorkerFields = {}): Record<string, 
 export function workers(...entries: readonly Record<string, Json>[]): Record<string, Json> {
   return { 'kvcoder.delegate.workers': [...entries] };
 }
+
+/** A `delegate run` payload of one deliverable (ADR 0108, 2): a find run unless `fields` say otherwise. */
+export function brief(name: string, fields: Record<string, Json> = {}): Record<string, Json> {
+  return { worker: name, title: 'Helper', kind: 'find', goal: 'Look at it.', done: 'It is looked at.', ...fields };
+}

@@ -121,7 +121,10 @@ on the research app, gpt-6.1-sol for the lead and gpt-6-luna for helpers, throug
     in the history and the export.
 14. **Payloads without a help call** (asked; recommended). The connector index gives a registered connector's
     commands one line each with its payload's signature, as kvcoder's own have, and an invalid payload's error ends
-    with that command's help.
+    with that command's help. The signature is read once, when the connector is registered, and kept on its stored
+    record (asked while building: reading every schema at each step made the prompt build ~13 ms instead of ~5 ms;
+    recommended over re-recording the benchmark and over a new kernel query); a record stored before has none until
+    its owner registers again at its start.
 15. **Network failures pause the turn** (asked; recommended). A step's model call that fails `kvai/PROVIDER_ERROR`
     with `transient: true` or `kvai/RATE_LIMITED` is tried for up to 10 minutes, with growing waits; still failing,
     the turn waits with the notice `CONNECTION_WAITING`, and a schedule tries again every 2 minutes for up to an hour,

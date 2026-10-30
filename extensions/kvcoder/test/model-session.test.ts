@@ -1,11 +1,10 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type { FixtureExtension } from './support/kvcoder-kernel.ts';
-import { heldReply } from './support/held-reply.ts';
-import { wait } from './support/wait.ts';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { longAlone, padded } from './support/long-messages.ts';
 import { command, runs, says } from './support/model-script.ts';
-import { newSession, turnState } from './support/turns.ts';
+import { newSession } from './support/turns.ts';
+import { helperIds } from './support/helpers.ts';
 
 const kvcoder = useKvcoder();
 
@@ -57,19 +56,16 @@ describe('model session id (ADR 0012, 6)', { timeout: 30_000 }, () => {
   });
 
   it("QA19-E3 A subagent's calls carry the child's id", async () => {
-    const { kernel, fake } = await relaySession();
+    const world = await relaySession();
+    const { kernel, fake } = world;
+    await kernel.exec('kernel.settings.set', { key: 'kvcoder.delegate.model', value: null, scope: 'global' });
     const sessionId = await newSession(kernel);
-    const child = heldReply({ text: 'child done' });
-    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Check it' })), child.reply, says('parent done'));
+    // The lead and its helper share the relay, so every reply after the first is the same.
+    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', kind: 'find', goal: 'Check it', done: 'It is done.' })), ...Array.from({ length: 4 }, () => says('done')));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
-    await vi.waitFor(() => expect(fake.requests()).toHaveLength(2), wait);
-    const parent = await turnState(kernel, sessionId);
-    const childId = String(parent.turn?.pending[0]?.childSessionId);
-    expect(childId).not.toBe(sessionId);
-    const during = (await kernel.exec('relay.calls.list', {})) as { sessionId: string | null; systemPrompt: string | null }[];
-    expect(during.map((call) => call.sessionId)).toEqual([sessionId, childId]);
-    child.release();
     await kernel.clock.advance(0);
+    const [childId = ''] = await helperIds(kernel, sessionId);
+    expect(childId).not.toBe(sessionId);
     const calls = (await kernel.exec('relay.calls.list', {})) as { sessionId: string | null; systemPrompt: string | null }[];
     expect(new Set(calls.map((call) => call.sessionId))).toEqual(new Set([sessionId, childId]));
     expect(calls.filter((call) => call.sessionId === childId)).toHaveLength(1);

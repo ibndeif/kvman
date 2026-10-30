@@ -8,6 +8,7 @@ import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { command, fsCall, runs, says } from './support/model-script.ts';
 import { newSession } from './support/turns.ts';
 import { worker, workers } from './support/workers.ts';
+import { delegated } from './support/helpers.ts';
 
 const kvcoder = useKvcoder();
 
@@ -40,21 +41,14 @@ afterEach(() => {
 
 describe("a chat's changes (ADR 0093, 2)", { timeout: 60_000 }, () => {
   it("QA61-H4 and QA61-H5 a tracked edit, a new file, and a helper's file are listed newest first with diffs, and undo takes the edit back", async () => {
-    const { kernel, fake } = await kvcoder.start({ settings: workers(worker('helper')) });
+    const world = await kvcoder.start({ settings: workers(worker('helper')) });
+    const { kernel } = world;
     const folder = kernel.homeFolder;
     initRepository(folder);
     stage(folder, 'app.ts', 'one\n');
     git(folder, '-c', 'user.name=P', '-c', 'user.email=p@example.test', '-c', 'commit.gpgsign=false', 'commit', '-q', '-m', 'app');
-    const sessionId = await chat(
-      kernel,
-      fake,
-      runs(fsCall('read', { path: 'app.ts' })),
-      runs(fsCall('edit', { path: 'app.ts', edits: [{ oldText: 'one', newText: 'two' }] }), fsCall('write', { path: 'new.ts', content: 'fresh\n' })),
-      runs(command('delegate', 'run', { worker: 'helper', title: 'Helper', task: 'Write it' })),
-      runs(fsCall('write', { path: 'helper.ts', content: 'from the helper\n' })),
-      says('written'),
-      says('done'),
-    );
+    const sessionId = await newSession(kernel);
+    await delegated(world, sessionId, [runs(fsCall('read', { path: 'app.ts' })), runs(fsCall('edit', { path: 'app.ts', edits: [{ oldText: 'one', newText: 'two' }] }), fsCall('write', { path: 'new.ts', content: 'fresh\n' })), runs(command('delegate', 'run', { worker: 'helper', title: 'Helper', kind: 'change', files: ['helper.ts'], goal: 'Write it', done: 'It is done.' })), says('Started.'), says('done')], [runs(fsCall('write', { path: 'helper.ts', content: 'from the helper\n' })), says('written')]);
     const { files, diffs } = await listed(kernel, sessionId);
     expect(diffs).toBe(true);
     expect(files.map((file) => [file.path, file.state, file.added, file.removed])).toEqual([['helper.ts', 'created', 1, 0], ['new.ts', 'created', 1, 0], ['app.ts', 'changed', 1, 1]]);
@@ -101,8 +95,10 @@ describe("a chat's changes (ADR 0093, 2)", { timeout: 60_000 }, () => {
   });
 
   it("QA61-E6 undo is refused for a file changed since, a file with no kept change, and a helper's chat", async () => {
-    const { kernel, fake } = await kvcoder.start({ settings: workers(worker('helper')) });
-    const sessionId = await chat(kernel, fake, runs(fsCall('write', { path: 'a.txt', content: 'mine\n' })), runs(command('delegate', 'run', { worker: 'helper', title: 'Helper', task: 'Look' })), says('looked'), says('done'));
+    const world = await kvcoder.start({ settings: workers(worker('helper')) });
+    const { kernel } = world;
+    const sessionId = await newSession(kernel);
+    await delegated(world, sessionId, [runs(fsCall('write', { path: 'a.txt', content: 'mine\n' })), runs(command('delegate', 'run', { worker: 'helper', title: 'Helper', kind: 'find', goal: 'Look', done: 'It is done.' })), says('Started.'), says('done')], [says('looked')]);
     writeFileSync(path.join(kernel.homeFolder, 'a.txt'), 'changed by hand\n');
     await expect(kernel.exec('kvcoder.change.undo', { sessionId, path: 'a.txt' })).rejects.toMatchObject({ problem: expect.objectContaining({ code: 'VALIDATION_FAILED' }) as unknown });
     await expect(kernel.exec('kvcoder.change.undo', { sessionId, path: 'never.txt' })).rejects.toMatchObject({ problem: expect.objectContaining({ code: 'NOT_FOUND' }) as unknown });

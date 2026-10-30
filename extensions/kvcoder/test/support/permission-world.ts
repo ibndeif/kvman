@@ -1,12 +1,8 @@
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
 import { z, type Json } from '@kvman/sdk';
-import { createTestKernel, type TestKernel } from '@kvman/testkit';
-import { startFakeOpenAI, type FakeOpenAI, type FakeReply } from '@kvman/testkit/fake-openai';
+import type { TestKernel } from '@kvman/testkit';
+import type { FakeReply } from '@kvman/testkit/fake-openai';
 import { answerOwner, answerStateSchema } from './answer-world.ts';
-import { kvcoderFolder } from './kvcoder-kernel.ts';
-import { newSession } from './turns.ts';
+import { withFixtureWorld, type FixtureCheck } from './fixture-world.ts';
 
 const source = (file: string) => JSON.stringify(new URL(`../../src/${file}`, import.meta.url).href);
 const entry = `
@@ -130,16 +126,19 @@ export default (ctx: Ctx): void => {
   });
   ctx.registerCommand('kvcoder.permission-fixture.delegation', {
     description: 'Alter existing delegation bindings only in an isolated native fixture.',
-    input: z.object({ sessionId: z.string(), mode: z.enum(['duplicate', 'foreign-turn', 'held', 'check', 'job-null', 'job-foreign', 'new-turn', 'run-change']) }), output: z.object({ jobId: z.string().nullable() }),
+    input: z.object({ sessionId: z.string(), mode: z.enum(['duplicate', 'check', 'job-null', 'job-foreign', 'new-turn', 'run-change', 'legacy-subagent']) }), output: z.object({ jobId: z.string().nullable() }),
     handle: async ({ sessionId, mode }) => {
       const identity = await ctx.store.transaction(tx => {
-        const s = txRecords(tx), session = s.sessions.get(sessionId), turn = session?.turnId === null || session === undefined ? undefined : s.turns.get(session.turnId);
-        if (session === undefined || turn === undefined) throw new Error('Missing delegation fixture');
-        if (mode === 'run-change') {
+        const s = txRecords(tx), session = s.sessions.get(sessionId);
+        if (session === undefined) throw new Error('Missing delegation fixture');
+        if (mode === 'check') { s.sessions.update(sessionId, { checks: (session.checks ?? []).map(check => ({ ...check, passed: false })) }); return null; }
+        if (mode === 'run-change' || mode === 'job-null' || mode === 'job-foreign') {
           const [run] = s.runs.find({ sessionId, status: 'running' }, { limit: 1 });
           if (run === undefined) throw new Error('Missing changed run fixture');
-          s.runs.update(run.id, { call: 'A schema-valid changed run.' }); return null;
+          s.runs.update(run.id, mode === 'run-change' ? { call: 'A schema-valid changed run.' } : { jobId: mode === 'job-null' ? null : 'foreign-job' }); return null;
         }
+        const turn = session.turnId === null ? undefined : s.turns.get(session.turnId);
+        if (turn === undefined) throw new Error('Missing delegation fixture turn');
         if (mode === 'new-turn') {
           if (endTurnState(s, sessionId, turn.id, 'cancelled', 'cancel') === undefined) throw new Error('Missing old fixture turn');
           const idle = s.sessions.get(sessionId); if (idle === undefined) throw new Error('Missing fixture session');
@@ -149,11 +148,13 @@ export default (ctx: Ctx): void => {
         }
         const pending = turn.pending[0];
         if (pending === undefined) throw new Error('Missing pending fixture');
-        if (mode === 'duplicate') s.turns.update(turn.id, { pending: [...turn.pending, { ...pending, toolCallId: 'duplicate-resource' }] });
-        if (mode === 'foreign-turn') s.turns.update(turn.id, { sessionId: 'foreign-owner' });
-        if (mode === 'held') s.turns.update(turn.id, { results: [...turn.results, { toolCallId: pending.toolCallId, text: 'already held', isError: false, details: null, run: null }] });
-        if (mode === 'check') s.sessions.update(sessionId, { checks: (session.checks ?? []).map(check => ({ ...check, passed: false })) });
-        if ((mode === 'job-null' || mode === 'job-foreign') && pending.runId !== null) s.runs.update(pending.runId, { jobId: mode === 'job-null' ? null : 'foreign-job' });
+        if (mode === 'duplicate') { s.turns.update(turn.id, { pending: [...turn.pending, { ...pending, toolCallId: 'duplicate-resource' }] }); return null; }
+        // A turn saved before ADR 0108: its waiting call is a helper's, which no background row tracks.
+        const [child] = s.sessions.find({ parentId: sessionId }, { limit: 1 });
+        if (child === undefined) throw new Error('Missing legacy helper fixture');
+        for (const question of s.questions.find({ sessionId }, { limit: 1000 })) s.questions.delete(question.id);
+        for (const row of s.background.find({ sessionId, ref: child.id }, { limit: 10 })) s.background.delete(row.id);
+        s.turns.update(turn.id, { pending: [{ toolCallId: pending.toolCallId, kind: 'subagent', questionId: null, question: null, childSessionId: child.id, runId: null }] });
         return null;
       });
       return { jobId: identity === null ? null : await dispatchStep(ctx, identity, false) };
@@ -166,20 +167,7 @@ export default (ctx: Ctx): void => {
   });
 };`;
 
-export async function withPermissionWorld(check: (kernel: TestKernel, fake: FakeOpenAI, sessionId: string) => Promise<void>, settings: Record<string, Json> = {}): Promise<void> {
-  const root = mkdtempSync(path.join(tmpdir(), 'kvcoder-permissions-'));
-  let fake: FakeOpenAI | undefined, kernel: TestKernel | undefined;
-  try {
-    fake = await startFakeOpenAI();
-    const manifest = z.object({ name: z.string(), version: z.string(), peerDependencies: z.record(z.string(), z.string()), kvman: z.object({ namespace: z.string(), dependencies: z.record(z.string(), z.string()) }) }).parse(JSON.parse(readFileSync(path.join(kvcoderFolder, 'package.json'), 'utf8')));
-    writeFileSync(path.join(root, 'package.json'), JSON.stringify({ ...manifest, type: 'module', main: 'index.js', kvman: { ...manifest.kvman, source: 'index.ts' } }));
-    writeFileSync(path.join(root, 'index.ts'), entry); cpSync(path.join(kvcoderFolder, 'locales'), path.join(root, 'locales'), { recursive: true });
-    kernel = await createTestKernel({ extensions: [path.join(kvcoderFolder, '../kvai'), path.join(kvcoderFolder, '../kvwebui'), root], settings: { 'kernel.workers': 2, 'kvwebui.home': 'kvcoder.chat', 'kvai.defaultModel': 'fake/m1', ...settings } });
-    await kernel.exec('kvai.provider.add', { id: 'fake', title: 'Fake', api: 'openai-completions', baseUrl: fake.baseUrl });
-    await kernel.exec('kvai.model.add', { provider: 'fake', id: 'm1', name: 'M1', input: ['text'], reasoning: true, contextWindow: 128_000, maxTokens: 8192 });
-    await check(kernel, fake, await newSession(kernel));
-  } finally { try { await kernel?.close(); } finally { try { await fake?.close(); } finally { rmSync(root, { recursive: true, force: true }); } } }
-}
+export const withPermissionWorld = (check: FixtureCheck, settings: Record<string, Json> = {}): Promise<void> => withFixtureWorld('kvcoder-permissions-', entry, check, settings);
 
 const stateSchema = answerStateSchema.extend({ dispatches: z.array(z.object({ name: z.string() })), effects: z.array(z.object({ target: z.string(), text: z.string() })) });
 export const permissionSnapshot = async (kernel: TestKernel, sessionId: string) => stateSchema.parse(await kernel.exec('kvcoder.permission-fixture.snapshot', { sessionId }, answerOwner));

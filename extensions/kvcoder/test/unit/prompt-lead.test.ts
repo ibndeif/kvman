@@ -39,7 +39,7 @@ describe("the lead's prompt (08 §8.2, ADR 0022, 2 to 4)", () => {
     const prompt = lead();
     expect(executionMapDescription).toContain('when several are ready, mark each and start them all in one reply, one delegate run per branch.');
     const delegate = lineOf(prompt, 'Delegate. ');
-    expect(delegate).toContain('Several `delegate run` calls in one reply run in parallel.');
+    expect(delegate).toContain('several `delegate run` calls in one reply run in parallel.');
     expect(delegate).toContain('Read what a worker returns and check it before you rely on it: its work is your responsibility.');
     expect(prompt).toContain('\nWork in few steps. Each reply is a step, and every step sends the whole conversation again, so make in one reply every call you can make now: reads and searches run at the same time, and calls that change something (shell lines, writes, edits) run one after another in the order you give them. Read a few files with one `fs read-files`, put independent calls (searches, separate files, separate workers) in the same reply, as several run calls or one run with a calls list, and leave for a later reply only a call that needs another call\'s result. Several new files are several `fs write` calls in one reply, not one reply each.\n');
   });

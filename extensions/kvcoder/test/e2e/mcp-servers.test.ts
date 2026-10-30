@@ -47,7 +47,7 @@ describe('adding an MCP server in Chromium (08 §8.7, ADR 0020, 6, 9, 14, and 15
 
     const state = page.locator('[data-test="mcp-server-demo"] [data-test="mcp-server-state"]');
     await page.locator('[data-test="mcp-server-demo"] [data-test="mcp-server-state"][data-status="ready"]').waitFor();
-    expect(await state.textContent()).toContain('Ready · 10 tools');
+    expect(await state.textContent()).toContain('Ready · 11 tools');
     const settings = settingsSchema.parse(await kvman.call('queries', 'kernel.settings.list', {}));
     expect(settings.find((setting) => setting.key === 'kvcoder.mcp.servers')).toMatchObject({ value: [{ name: 'demo', description: 'A demo server.', command: process.execPath, args: [fixtureFile], env: ['TOKEN'] }], source: 'global' });
     expect(JSON.stringify(settings)).not.toContain(token);

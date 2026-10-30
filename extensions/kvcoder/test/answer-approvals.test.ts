@@ -13,7 +13,7 @@ import { workers } from './support/workers.ts';
 const programs = useWorkerPrograms();
 const answer = (kernel: TestKernel, questionId: string, value: Json) => kernel.exec('kvcoder.question.answer', { questionId, answer: value });
 const text = () => command('ask', 'text', { prompt: 'Name?' });
-const delegate = (background = false) => command('delegate', 'run', { worker: 'pie', title: 'Helper', task: 'say:hello', background });
+const delegate = () => command('delegate', 'run', { worker: 'pie', title: 'Helper', kind: 'find', goal: 'say:hello', done: 'It is done.' });
 async function ask(kernel: TestKernel, fake: FakeOpenAI, sessionId: string, ...calls: RunCallSpec[]) {
   fake.reply(runs(...calls), says('ok'), says('background done'));
   await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
@@ -107,10 +107,10 @@ describe('ordinary decisions and legacy delegate grants (ADR0042)', { timeout: 3
     }, workers(programWorker('pie', 'pi', { approval: 'ask' })));
   });
 
-  it.each([false, true])('preserves legacy positive delegate launch, background=%s, without falsely proving it by receipt', async background => {
+  it('preserves legacy positive delegate launch without falsely proving it by receipt', async () => {
     const installed = programs.install('pi');
     await withAnswerWorld(async (kernel, fake, sessionId) => {
-      const q = first((await ask(kernel, fake, sessionId, delegate(background))).questions);
+      const q = first((await ask(kernel, fake, sessionId, delegate())).questions);
       await answer(kernel, q.id, { confirmed: true });
       const launched = await answerSnapshot(kernel, sessionId), run = first(launched.runs);
       expect(launched.receipts).toEqual([]);

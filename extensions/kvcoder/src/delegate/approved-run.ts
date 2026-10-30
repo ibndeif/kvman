@@ -1,10 +1,10 @@
 import { isDeepStrictEqual } from 'node:util';
 import { ProblemError, type Ctx, type Stored } from '@kvman/sdk';
 import { delegateRunSchema } from '../connectors/delegate.ts';
+import { briefOf } from './brief.ts';
 import { errorOutput } from '../connector-call.ts';
 import { invalid } from '../problems.ts';
 import { prepareGrants } from '../prompt/session-grants.ts';
-import { firePoint } from '../registry/session-points.ts';
 import type { QuestionDoc, RunCallDoc } from '../schemas/records.ts';
 import { records, txRecords, type TxRecords } from '../store/collections.ts';
 import { heldText, resolvePendingInTx } from '../turns/resolve.ts';
@@ -12,7 +12,6 @@ import { dispatchStep } from '../turns/start-turn.ts';
 import { delegationInTx, refusePending, waitingInTx, type PendingAuthority } from './permission.ts';
 import { recordRun } from './runs.ts';
 import { startBackgroundRun } from './start-background.ts';
-import { startPending } from './start-pending.ts';
 import { availableWorker, isProgram } from './workers.ts';
 
 // Positive delegate approval remains legacy/receipt-free: existing fields do not prove durable launch (ADR0044).
@@ -44,30 +43,25 @@ async function refuseApproval(ctx: Ctx, approved: Approved, authority: PendingAu
 export async function startApprovedRun(ctx: Ctx, approved: Approved): Promise<string | null> {
   const { question, call } = approved, { sessionId, toolCallId } = question;
   const payload = delegateRunSchema.parse(call.payload), authority = approvalAuthority(question);
-  const background = payload.background === true;
   let run;
   try {
     const session = await records(ctx.store).sessions.get(sessionId);
     const worker = await availableWorker(ctx, session?.checks ?? null, payload.worker);
     if (!isProgram(worker)) throw invalid(`The worker ${worker.name} changed while the call waited. Make the call again.`);
     const prepared = await prepareGrants(ctx);
+    const { task } = await briefOf(ctx, payload);
+    // An approved run goes on in the background, as every run does (ADR 0108, 1).
     run = await ctx.store.transaction(tx => {
       ctx.job.signal.throwIfAborted();
       const store = txRecords(tx), found = currentApproval(store, approved, authority);
       if (found === undefined) return undefined;
       delegationInTx(store, sessionId, prepared, worker.name, worker.kind);
-      const saved = recordRun(store, sessionId, worker, payload, background ? null : toolCallId);
+      const saved = recordRun(store, sessionId, worker, { title: payload.title, task }, null);
       store.questions.delete(question.id);
-      if (!background) store.turns.update(question.turnId, { pending: found.turn.pending.map(item => item.toolCallId === toolCallId ? { toolCallId, kind: 'worker' as const, questionId: null, question: null, childSessionId: null, runId: saved.id } : item) });
       return saved;
     });
   } catch (error) { return refuseApproval(ctx, approved, authority, error); }
   if (run === undefined) return null;
-  if (!background) {
-    await startPending(ctx, { sessionId, turnId: question.turnId, pending: { toolCallId, kind: 'worker', questionId: null, question: null, childSessionId: null, runId: run.id } });
-    await firePoint(ctx, 'kvcoder.session.waiting', { sessionId, kind: 'worker' });
-    return null;
-  }
   try {
     await startBackgroundRun(ctx, run, async () => {
       const prepared = await prepareGrants(ctx);

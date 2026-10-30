@@ -45,7 +45,7 @@ describe('signing in to an MCP server in Chromium (08 §8.7, ADR 0020, 8 and 11)
     // A headless page isn't given the focus back when another tab closes, so the event is sent as the browser would.
     await page.evaluate("window.dispatchEvent(new Event('focus'))");
     await page.locator('[data-test="mcp-server-remote"] [data-test="mcp-server-state"][data-status="ready"]').waitFor();
-    expect(await state.textContent()).toContain('Ready · 10 tools');
+    expect(await state.textContent()).toContain('Ready · 11 tools');
     expect(await page.locator('[data-test="mcp-server-sign-out"]').count()).toBe(1);
     expect(fixture.bearers.at(-1)).toBe('Bearer access-1-SECRET');
     await context.close();

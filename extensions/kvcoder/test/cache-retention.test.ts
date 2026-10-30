@@ -16,7 +16,7 @@ const relay: FixtureExtension = {
   entry: `import { z, type Ctx } from '@kvman/sdk';
 const usage = { input: 1, output: 1, cacheRead: 0, cacheWrite: 0, totalTokens: 2, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } };
 const reply = (content, stopReason) => ({ message: { role: 'assistant', content, api: 'relay', provider: 'relay', model: 'r1', usage, stopReason, timestamp: 1 }, stopReason, usage: { input: 1, output: 1, cacheRead: 0, cacheWrite: 0, cost: 0 } });
-const delegate = { type: 'toolCall', id: 'c1', name: 'run', arguments: { connector: 'delegate', command: 'run', payload: { worker: 'general', title: 'Helper', task: 'Do it' } } };
+const delegate = { type: 'toolCall', id: 'c1', name: 'run', arguments: { connector: 'delegate', command: 'run', payload: { worker: 'general', title: 'Helper', kind: 'find', goal: 'Do it', done: 'It is done.' } } };
 const kindOf = (input) => {
   const last = JSON.stringify(input.messages.at(-1) ?? {});
   if (input.maxTokens === 30) return 'title';
@@ -43,7 +43,7 @@ const seenSchema = z.array(z.object({ kind: z.string(), retention: z.string().nu
 
 describe('the long prompt cache for the lead (ADR 0087, 4)', { timeout: 30_000 }, () => {
   it('QA55-H6 a chat step and its summary send long; a helper step and a title send none', async () => {
-    const { kernel } = await kvcoder.start({ extensions: [relay], settings: { 'kvcoder.compactKeep': 1 } });
+    const { kernel } = await kvcoder.start({ extensions: [relay], settings: { 'kvcoder.compactKeep': 1, 'kvcoder.delegate.model': null } });
     await kernel.exec('kvai.provider.add', { id: 'relay', title: 'Relay', delegate: 'relay.complete' });
     await kernel.exec('kvai.model.add', { provider: 'relay', id: 'r1', name: 'R1', reasoning: false, input: ['text'], contextWindow: 1000, maxTokens: 100 });
     // A chat with no title gets one written after its first turn.

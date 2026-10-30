@@ -43,11 +43,12 @@ describe('the background connector (08 §8.5, ADR 0011, 6)', { timeout: 60_000 }
   });
 
   it('QA18-H10, QA31-E13, and QA57-H5 a background run of a worker returns its id, is listed as a subagent named by its title, and answers later as a message', async () => {
-    const { kernel, fake } = await kvcoder.start();
+    const { kernel, fake, helperFake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
     let release = (): void => undefined;
     const held = new Promise<void>((resolve) => (release = resolve));
-    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Look around', background: true })), { chunks: [{ wait: held }, { text: 'found it' }] }, says('parent went on'), says('after the answer'));
+    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', kind: 'find', goal: 'Look around', done: 'It is done.' })), says('parent went on'), says('after the answer'));
+    helperFake.reply({ chunks: [{ wait: held }, { text: 'found it' }] });
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await vi.waitFor(async () => expect((await turnState(kernel, sessionId)).turn).toMatchObject({ outcome: 'done' }), wait);
     const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });

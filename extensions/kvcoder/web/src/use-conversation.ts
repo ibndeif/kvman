@@ -103,7 +103,7 @@ export function useConversation(kvman: Kvman, sessionId: () => string | undefine
     const ids = active?.sessionId === expected.sessionId && active.outcome === undefined && active.endedAt === undefined
       ? [...new Set(active.pending.flatMap(item => item.childSessionId === null ? [] : [item.childSessionId]))] : [];
     for (const id of children.keys()) if (!ids.includes(id)) children.delete(id);
-    streams.retain(new Set([live, ...[...children.values()].map(child => child.live)]));
+    streams.retain(new Set([live, ...[...children.values()].map(child => child.live), ...[...helpers.values()].map(helper => helper.child.live)]));
     for (const id of ids) {
       if (!owns()) return;
       const [found, [recent]] = await Promise.all([
@@ -113,7 +113,7 @@ export function useConversation(kvman: Kvman, sessionId: () => string | undefine
       if (!owns()) return;
       if (found.id !== id || found.parentId !== expected.sessionId) {
         children.delete(id);
-        streams.retain(new Set([live, ...[...children.values()].map(child => child.live)]));
+        streams.retain(new Set([live, ...[...children.values()].map(child => child.live), ...[...helpers.values()].map(helper => helper.child.live)]));
         continue;
       }
       const child = { session: found, turn: recent?.sessionId === id ? recent : undefined, live: children.get(id)?.live ?? reactive(idleLive()) };
@@ -124,13 +124,16 @@ export function useConversation(kvman: Kvman, sessionId: () => string | undefine
   }
 
   async function loadHelpers(expected: Scope, owns: () => boolean): Promise<void> {
-    const found = await loadWaitingHelpers(kvman, expected.sessionId);
+    const found = await loadWaitingHelpers(kvman, expected.sessionId, helpers);
     if (!owns()) return;
     helpers.clear();
     for (const [id, helper] of found) {
       reconcileQuestionDrafts(expected.workspaceId, id, helper.child.turn === undefined ? [] : [helper.child.turn]);
       helpers.set(id, helper);
     }
+    // A running helper's steps stream into its card (ADR 0108, 17).
+    streams.retain(new Set([live, ...[...children.values()].map(child => child.live), ...[...helpers.values()].map(helper => helper.child.live)]));
+    for (const helper of helpers.values()) streams.update(helper.child.live, helper.child.session.status === 'running' ? helper.child.session.stepJobId : undefined, () => current(expected));
   }
 
   async function reload(ran: readonly LiveCall[] = [], hinted?: string): Promise<void> {

@@ -6,7 +6,7 @@ import type { Json } from '@kvman/sdk';
 
 // Fixture programs for program workers (plan 08 §8.5, ADR 0021): scripts named `opencode`, `pi`, and `claude` on the
 // test's PATH, which is set before the kernel starts so its workers have it. A fixture records its arguments and folder,
-// then does what the last line of its last argument says: `say:<text>`, `fail:<code>:<text>`, `silent`, or `wait:<file>`
+// then does what its brief's `Goal:` line says (ADR 0108, 2), or else the last line of its last argument: `say:<text>`, `fail:<code>:<text>`, `silent`, or `wait:<file>`
 // (print "released" once the file exists), `stage:<file>` (write the file and `git add` it), or `commit:<file>` (that, then commit). `opencode` prints JSON events, as the real one does.
 
 export type ProgramKind = 'opencode' | 'pi' | 'claude';
@@ -21,7 +21,9 @@ const args = process.argv.slice(2);
 if (args[0] === '--version') { appendFileSync(path.join(folder, name + '.versions'), 'x\\n'); console.log('1.0.0'); process.exit(0); }
 appendFileSync(path.join(folder, name + '.calls'), JSON.stringify({ args, cwd: process.cwd() }) + '\\n');
 const say = (text) => console.log(name === 'opencode' ? JSON.stringify({ type: 'text', part: { text } }) : text);
-const [verb, ...rest] = (args.at(-1) ?? '').split('\\n').at(-1).split(':');
+const lines = (args.at(-1) ?? '').split('\\n');
+const order = lines.find((line) => line.startsWith('Goal: '))?.slice('Goal: '.length) ?? lines.at(-1);
+const [verb, ...rest] = order.split(':');
 if (verb === 'say') say(rest.join(':'));
 if (verb === 'stage' || verb === 'commit') {
   writeFileSync(rest[0], 'from the program\\n');

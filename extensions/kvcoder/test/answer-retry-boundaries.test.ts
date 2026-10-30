@@ -151,7 +151,7 @@ describe('answer receipt retry boundaries (ADR0042)', { timeout: 30_000 }, () =>
   it('unknown and consumed legacy positive delegate approvals have no receipt and fail without repair', async () => {
     programs.install('claude');
     await withAnswerWorld(async (kernel, fake, sessionId) => {
-      const waiting = await ask(kernel, fake, sessionId, command('delegate', 'run', { worker: 'cc', title: 'Helper', task: 'say:legacy result' }), text());
+      const waiting = await ask(kernel, fake, sessionId, command('delegate', 'run', { worker: 'cc', title: 'Helper', kind: 'find', goal: 'say:legacy result', done: 'It is done.' }), text());
       const q = first(waiting.questions.filter(item => item.kind === 'approval'));
       expect(q.question).toMatchObject({ connector: 'delegate', command: 'run' });
       expect(await answer(kernel, q.id, { confirmed: true })).toEqual({ jobId: null });

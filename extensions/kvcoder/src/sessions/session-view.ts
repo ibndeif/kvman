@@ -10,6 +10,8 @@ export const sessionSchema = z.object({
   status: statusSchema,
   parentId: z.string().exactOptional(),
   worker: z.string().exactOptional(),
+  // A helper's run: its kind and step budget (ADR 0108, 2 and 17).
+  run: z.object({ kind: z.string(), goal: z.string(), budget: z.number().int() }).exactOptional(),
   model: z.string().nullable(),
   thinking: thinkingSchema,
   decides: z.boolean(),
@@ -66,6 +68,7 @@ export function sessionView(doc: Stored<SessionDoc>, waitingOn: WaitingOn = null
     status: doc.status,
     ...(doc.parentId === null ? {} : { parentId: doc.parentId }),
     ...(doc.worker === null ? {} : { worker: doc.worker.name }),
+    ...(doc.run === null ? {} : { run: { kind: doc.run.kind, goal: doc.run.goal, budget: doc.run.budget } }),
     model: doc.model,
     thinking: doc.thinking,
     decides: doc.decides,

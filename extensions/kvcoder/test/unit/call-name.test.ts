@@ -9,7 +9,7 @@ describe('a call named from itself (08 §8.5, ADR 0089, 1)', () => {
     expect(callName('node', 'exec', { risky: false })).toBe('node exec node');
     expect(callName('fs', 'read', { path: 'src/app.ts' })).toBe('fs read src/app.ts');
     expect(callName('fs', 'search', { pattern: 'TODO', path: 'src' })).toBe('fs search TODO');
-    expect(callName('delegate', 'run', { worker: 'general', title: 'Node.js expert', task: 'Find the leak.' })).toBe('delegate run general · Node.js expert');
+    expect(callName('delegate', 'run', { worker: 'general', title: 'Node.js expert', kind: 'find', goal: 'Find the leak.', done: 'It is done.' })).toBe('delegate run general · Node.js expert');
     expect(callName('mcp', 'run', { server: 'browser', steps: [{ tool: 'open' }, { tool: 'click' }], risky: false })).toBe('mcp run browser · open, click');
     expect(callName('mcp', 'call', { server: 'docs', tool: 'search', risky: false })).toBe('mcp call docs · search');
     expect(callName('fs', 'help', { command: 'edit' })).toBe('fs help edit');

@@ -41,8 +41,9 @@ export const connectorDocSchema = z.object({
   name: z.string(),
   description: z.string(),
   kind: z.enum(['commands', 'binary']),
-  // `query` and `card` came with ADR 0082 (3 and 13); a command stored before reads as no query and no card.
-  commands: z.array(z.object({ name: z.string(), command: z.string(), examples: z.array(exampleSchema), asks: z.boolean().default(false), query: z.boolean().default(false), card: z.string().nullable().default(null) })).nullable(),
+  // `query` and `card` came with ADR 0082 (3 and 13); a command stored before reads as no query and no card. The
+  // payload's signature, read once at registration, came with ADR 0108 (14); one stored before reads as none.
+  commands: z.array(z.object({ name: z.string(), command: z.string(), examples: z.array(exampleSchema), asks: z.boolean().default(false), query: z.boolean().default(false), card: z.string().nullable().default(null), signature: z.string().nullable().default(null) })).nullable(),
   binary: z.object({ check: z.string(), install: z.string().nullable(), help: z.string().nullable().default(null) }).nullable(),
   optIn: z.boolean().default(false),
 });

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { command, runs, says, shell, systemPrompt, toolResults, type RunCallSpec } from './support/model-script.ts';
-import { newSession, turnState } from './support/turns.ts';
+import { command, runs, says, systemPrompt, toolResults, type RunCallSpec } from './support/model-script.ts';
+import { newSession } from './support/turns.ts';
+import { delegated, helperIds } from './support/helpers.ts';
 
 const kvcoder = useKvcoder();
 const step = (id: string, after: string[] = []) => ({ id, title: `Do ${id}`, ...(after.length === 0 ? {} : { after }), check: `check ${id}` });
@@ -77,18 +78,15 @@ describe('the execution map (08 §8.5, ADR 0064)', { timeout: 30_000 }, () => {
   });
 
   it("M2.4-E225 a helper has no execution-map, and its session reads the chat's map", async () => {
-    const { kernel, fake, sessionId } = await chat(
-      runs(set(step('a'))),
-      runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Look' })),
-      runs(update({ id: 'a', status: 'doing' })),
-      runs(shell('true', { risky: true })),
-    );
-    expect(systemPrompt(fake, 2)).not.toContain('- execution-map: ');
-    expect(toolResults(fake, 3)).toEqual(["error VALIDATION_FAILED: execution-map isn't available in this subagent."]);
-    const helperId = String((await turnState(kernel, sessionId)).turn?.pending[0]?.childSessionId);
-    const map = await kernel.exec('kvcoder.map.get', { sessionId });
+    const world = await kvcoder.start();
+    const sessionId = await newSession(world.kernel);
+    await delegated(world, sessionId, [runs(set(step('a'))), runs(command('delegate', 'run', { worker: 'general', title: 'Helper', kind: 'find', goal: 'Look', done: 'It is done.' })), says('Started.'), says('Read it.')], [runs(update({ id: 'a', status: 'doing' })), says('looked')]);
+    expect(systemPrompt(world.helperFake, 0)).not.toContain('- execution-map: ');
+    expect(toolResults(world.helperFake, 1)).toEqual(["error VALIDATION_FAILED: execution-map isn't available in this subagent."]);
+    const [helperId = ''] = await helperIds(world.kernel, sessionId);
+    const map = await world.kernel.exec('kvcoder.map.get', { sessionId });
     expect(map?.steps[0]?.status).toBe('todo');
-    expect(await kernel.exec('kvcoder.map.get', { sessionId: helperId })).toEqual(map);
+    expect(await world.kernel.exec('kvcoder.map.get', { sessionId: helperId })).toEqual(map);
   });
 
   it('M2.4-E226 a chat with no map answers null, and deleting a chat deletes its map', async () => {

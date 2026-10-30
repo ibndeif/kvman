@@ -28,15 +28,16 @@ async function say(kernel: TestKernel, fake: FakeOpenAI, sessionId: string, ...c
 
 // A background helper whose first step waits on the approval of its shell line.
 async function waitingHelper() {
-  const { kernel, fake } = await kvcoder.start({ settings: workers(worker('helper')) });
+  const { kernel, fake, helperFake } = await kvcoder.start({ settings: workers(worker('helper')) });
   const sessionId = await newSession(kernel);
-  fake.reply(runs(command('delegate', 'run', { worker: 'helper', title: 'Helper', task: 'Do it', background: true })), helperReply, says('started it'));
+  fake.reply(runs(command('delegate', 'run', { worker: 'helper', title: 'Helper', kind: 'check', goal: 'Do it', done: 'It is done.' })), says('started it'));
+  helperFake.reply(helperReply);
   await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
   await kernel.clock.advance(0);
-  const helperId = /^started (\S+)/.exec(toolResults(fake, 2)[0] ?? '')?.[1] ?? '';
+  const helperId = /^started (\S+)/.exec(toolResults(fake, 1)[0] ?? '')?.[1] ?? '';
   await vi.waitFor(async () => expect(await kernel.exec('kvcoder.job.get', { sessionId, id: helperId })).toMatchObject({ status: 'waiting' }), wait);
   await vi.waitFor(async () => expect((await kernel.exec('kvcoder.session.get', { sessionId })).status).toBe('idle'), wait);
-  return { kernel, fake, sessionId, helperId };
+  return { kernel, fake, helperFake, sessionId, helperId };
 }
 
 describe('a background helper that waits on the person (ADR 0085, 2)', { timeout: 60_000 }, () => {
@@ -63,7 +64,7 @@ describe('a background helper that waits on the person (ADR 0085, 2)', { timeout
   });
 
   it('QA53-E9 a process has no progress, and an ended helper waits on nothing', async () => {
-    const { kernel, fake, sessionId, helperId } = await waitingHelper();
+    const { kernel, fake, helperFake, sessionId, helperId } = await waitingHelper();
     const [started = ''] = await say(kernel, fake, sessionId, { connector: 'shell', command: 'exec', payload: { line: 'node -e "setTimeout(() => {}, 30000)"', risky: false, background: true } });
     const processId = /^started (\S+)/.exec(started)?.[1] ?? '';
     const [processOutput] = await say(kernel, fake, sessionId, command('background', 'output', { id: processId }));
@@ -71,7 +72,8 @@ describe('a background helper that waits on the person (ADR 0085, 2)', { timeout
     expect(parsed(processOutput)).not.toHaveProperty('waitingFor');
     const [turn] = await kernel.exec('kvcoder.turn.list', { sessionId: helperId, limit: 1 });
     const questionId = turnSchema.parse(turn).pending[0]?.questionId ?? '';
-    fake.reply(says('helper done'), says('noted'));
+    helperFake.reply(says('helper done'));
+    fake.reply(says('noted'));
     await kernel.exec('kvcoder.question.answer', { questionId, answer: { confirmed: false } });
     await kernel.clock.advance(0);
     await vi.waitFor(async () => expect(await kernel.exec('kvcoder.job.get', { sessionId, id: helperId })).toMatchObject({ status: 'succeeded' }), wait);
@@ -83,9 +85,10 @@ describe('a background helper that waits on the person (ADR 0085, 2)', { timeout
   });
 
   it("QA56-H1 a job list's row is the job's row without its output and progress (ADR 0088, 1)", async () => {
-    const { kernel, fake, sessionId, helperId } = await waitingHelper();
+    const { kernel, fake, helperFake, sessionId, helperId } = await waitingHelper();
     const [turn] = await kernel.exec('kvcoder.turn.list', { sessionId: helperId, limit: 1 });
-    fake.reply(says('helper done'), says('noted'));
+    helperFake.reply(says('helper done'));
+    fake.reply(says('noted'));
     await kernel.exec('kvcoder.question.answer', { questionId: turnSchema.parse(turn).pending[0]?.questionId ?? '', answer: { confirmed: false } });
     await kernel.clock.advance(0);
     await vi.waitFor(async () => expect(await kernel.exec('kvcoder.job.get', { sessionId, id: helperId })).toMatchObject({ status: 'succeeded' }), wait);

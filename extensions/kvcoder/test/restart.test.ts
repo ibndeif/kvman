@@ -3,6 +3,7 @@ import { wait } from './support/wait.ts';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { answered, command, runs, says, toolResults } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
+import { helperIds } from './support/helpers.ts';
 
 const kvcoder = useKvcoder();
 
@@ -50,20 +51,26 @@ describe('restarts (08 §8.1, 12 §12.2)', { timeout: 30_000 }, () => {
     expect(await notices(kernel, sessionId)).toEqual([{ code: 'INTERRUPTED', params: { code: 'INTERRUPTED' } }]);
   });
 
-  it("M2.4-E47 a child's step interrupted by a restart ends the child's turn and the parent's", async () => {
-    const { kernel, fake } = await kvcoder.start();
+  // ADR 0108, 1: the helper runs in the background, so its interrupted step ends its own turn, and its idle lead gets
+  // the ending as a message that starts no turn (plan 08 §8.1).
+  it("M2.4-E47 a helper's step interrupted by a restart ends its turn, and its lead gets a message and starts no turn", async () => {
+    const { kernel, fake, helperFake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Look around' })), held);
+    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', kind: 'find', goal: 'Look around', done: 'It is done.' })), says('Started.'));
+    helperFake.reply(held);
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
-    await vi.waitFor(() => expect(fake.requests()).toHaveLength(2), wait);
-    const parent = await turnState(kernel, sessionId);
-    const childId = String(parent.turn?.pending[0]?.childSessionId);
+    await vi.waitFor(async () => {
+      expect(helperFake.requests()).toHaveLength(1);
+      expect((await turnState(kernel, sessionId)).session.status).toBe('idle');
+    }, wait);
+    const [childId = ''] = await helperIds(kernel, sessionId);
     await kernel.restart();
     await kernel.clock.advance(0);
     expect((await turnState(kernel, childId)).turn).toMatchObject({ outcome: 'interrupted' });
-    const after = await turnState(kernel, sessionId);
-    expect(after.session.status).toBe('idle');
-    expect(after.turn).toMatchObject({ outcome: 'interrupted' });
-    expect(await notices(kernel, sessionId)).toEqual([{ code: 'INTERRUPTED', params: { code: 'INTERRUPTED' } }]);
+    expect((await turnState(kernel, sessionId)).session.status).toBe('idle');
+    expect(await kernel.exec('kvcoder.turn.list', { sessionId, limit: 10 })).toHaveLength(1);
+    const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });
+    expect(messages.filter((message) => message.source?.kind === 'subagent')).toHaveLength(1);
+    expect(fake.requests()).toHaveLength(2);
   });
 });

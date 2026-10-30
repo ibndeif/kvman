@@ -8,7 +8,7 @@ import { wait } from './support/wait.ts';
 import { workers } from './support/workers.ts';
 
 const programs = useWorkerPrograms();
-const delegate = (task = 'say:answer') => command('delegate', 'run', { worker: 'helper', title: 'Helper', task, background: true });
+const delegate = (task = 'say:answer') => command('delegate', 'run', { worker: 'helper', title: 'Helper', kind: 'find', goal: task, done: 'It is done.' });
 
 describe('local background pre-enqueue proof, not durable origin authority (ADR0044)', { timeout: 30_000 }, () => {
   it('revoked approved background creation settles its exact consumed question and records a failed unqueued run', async () => {

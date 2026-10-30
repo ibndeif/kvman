@@ -41,17 +41,22 @@ describe('steering (08 §8.1, ADR 0009, 90 and 102)', { timeout: 30_000 }, () =>
     expect((await turnState(kernel, sessionId)).turn).toMatchObject({ outcome: 'done', steps: 2 });
   });
 
-  it('M2.4-E17 while waiting only on subagents, a message is queued and read after their results', async () => {
-    const { kernel, fake } = await kvcoder.start();
+  // Superseded by ADR 0108, 1: a lead never waits on its helpers, so a message sent while one works starts a turn at
+  // once, and the helper's answer comes after it as a background message.
+  it('M2.4-E17 while a helper works, a message starts a turn at once, and the answer comes after it', async () => {
+    const { kernel, fake, helperFake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
     const child = heldReply({ text: 'child answer' });
-    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Help' })), child.reply, says('parent done'));
+    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', kind: 'find', goal: 'Help', done: 'It is done.' })), says('Started.'), says('noted'), says('read it'));
+    helperFake.reply(child.reply);
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
-    await vi.waitFor(() => expect(fake.requests()).toHaveLength(2), wait);
+    await vi.waitFor(async () => expect((await turnState(kernel, sessionId)).session.status).toBe('idle'), wait);
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'meanwhile' });
-    expect((await turnState(kernel, sessionId)).session.status).toBe('waiting');
+    await vi.waitFor(async () => expect((await turnState(kernel, sessionId)).turn).toMatchObject({ outcome: 'done' }), wait);
+    expect(roles(requestMessages(fake)).at(-1)).toMatch(/^user:meanwhile\n/);
     child.release();
     await kernel.clock.advance(0);
-    expect(roles(requestMessages(fake)).slice(-2).map(withoutHelperId)).toEqual(['tool:child answer', 'user:meanwhile']);
+    await vi.waitFor(() => expect(fake.requests()).toHaveLength(4), wait);
+    expect(withoutHelperId(roles(requestMessages(fake)).at(-1) ?? '')).toMatch(/^user:.*finished:\nchild answer$/s);
   });
 });

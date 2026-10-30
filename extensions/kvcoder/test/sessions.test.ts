@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { command, runs, says, shell } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
+import { delegated, helperIds } from './support/helpers.ts';
 
 const kvcoder = useKvcoder();
 
@@ -36,7 +37,7 @@ describe('sessions (08 §8.6)', { timeout: 30_000 }, () => {
     const { kernel, fake } = await kvcoder.start();
     const first = await newSession(kernel);
     const second = await newSession(kernel);
-    fake.reply(runs(command('ask', 'text', {"prompt":"?"})), runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 't' })), says('child'));
+    fake.reply(runs(command('ask', 'text', {"prompt":"?"})), runs(command('delegate', 'run', { worker: 'general', title: 'Helper', kind: 'find', goal: 't', done: 'It is done.' })), says('child'));
     await kernel.exec('kvcoder.message.send', { sessionId: first, text: 'go' });
     await kernel.clock.advance(0);
     expect((await kernel.exec('kvcoder.session.list', { limit: 10 })).map((session) => session.id)).toEqual([second, first]);
@@ -63,14 +64,13 @@ describe('sessions (08 §8.6)', { timeout: 30_000 }, () => {
   });
 
   it('M2.4-E9 delete cancels the turn and deletes its subagent sessions and per-session sections, then fires the point', async () => {
-    const { kernel, fake } = await kvcoder.start();
+    const world = await kvcoder.start();
+    const { kernel } = world;
     await kernel.exec('kvcoder.handler.register', { point: 'kvcoder.session.deleted', command: 'todo.seen' }, { as: '@test/todo' });
     const sessionId = await newSession(kernel);
     await kernel.exec('kvcoder.section.set', { id: 'mine', title: 'Mine', order: 1, content: 'x', sessionId }, { as: '@test/todo' });
-    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 't' })), runs(shell('true', { risky: true })));
-    await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
-    await kernel.clock.advance(0);
-    const childId = String((await turnState(kernel, sessionId)).turn?.pending[0]?.childSessionId);
+    await delegated(world, sessionId, [runs(command('delegate', 'run', { worker: 'general', title: 'Helper', kind: 'check', goal: 't', done: 'It is done.' })), says('Started.')], [runs(shell('true', { risky: true }))]);
+    const [childId = ''] = await helperIds(kernel, sessionId);
     await kernel.exec('kvcoder.session.delete', { sessionId });
     await kernel.clock.advance(0);
     for (const id of [sessionId, childId]) await expect(kernel.exec('kvcoder.session.get', { sessionId: id })).rejects.toMatchObject({ problem: { code: 'kvcoder/SESSION_NOT_FOUND' } });

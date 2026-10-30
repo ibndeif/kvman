@@ -6,6 +6,7 @@ import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { command, fsCall, runs, says, systemPrompt, toolResults } from './support/model-script.ts';
 import { newSession } from './support/turns.ts';
 import { worker, workers } from './support/workers.ts';
+import { delegated } from './support/helpers.ts';
 
 const kvcoder = useKvcoder();
 
@@ -37,19 +38,17 @@ describe('connectors that are turned off (08 §8.4, ADR 0014, 7)', { timeout: 30
   });
 
   it("QA21-E7 a subagent gets no connector that is off, not even ask, and its worker can't give it one", async () => {
-    const { kernel, fake } = await kvcoder.start({ settings: { ...off('ask', 'fs'), ...workers(worker('limited', { connectors: ['fs', 'todo'] })) } });
-    const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', { worker: 'limited', title: 'Helper', task: 'Review' })), runs(command('ask', 'text', { prompt: 'Name?' })), says('child done'), says('parent done'));
-    await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
-    await kernel.clock.advance(0);
-    expect(indexed(systemPrompt(fake, 1))).toEqual(['todo']);
-    expect(toolResults(fake, 2)).toEqual(['error VALIDATION_FAILED: There is no connector ask. The connectors are: todo.']);
+    const world = await kvcoder.start({ settings: { ...off('ask', 'fs'), ...workers(worker('limited', { connectors: ['fs', 'todo'] })) } });
+    const sessionId = await newSession(world.kernel);
+    await delegated(world, sessionId, [runs(command('delegate', 'run', { worker: 'limited', title: 'Helper', kind: 'find', goal: 'Review', done: 'It is done.' })), says('Started.'), says('parent done')], [runs(command('ask', 'text', { prompt: 'Name?' })), says('child done')]);
+    expect(indexed(systemPrompt(world.helperFake, 0))).toEqual(['todo']);
+    expect(toolResults(world.helperFake, 1)).toEqual(['error VALIDATION_FAILED: There is no connector ask. The connectors are: todo.']);
   });
 
   it('QA31-E6 delegate can be turned off, and a subagent entry names no connector', async () => {
     const { kernel, fake } = await kvcoder.start({ settings: off('delegate') });
     const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Review' })), says('done'));
+    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', kind: 'find', goal: 'Review', done: 'It is done.' })), says('done'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);
     expect(indexed(systemPrompt(fake, 0))).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'web', 'todo']);

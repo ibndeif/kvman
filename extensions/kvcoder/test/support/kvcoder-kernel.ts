@@ -11,7 +11,10 @@ import type {} from '../../src/index.ts';
 import { todoEntry } from './todo-extension.ts';
 
 // kvcoder in a test kernel with kvai and kvwebui, the `todo` fixture, and the fake OpenAI server as the custom provider
-// `fake`: `fake/m1` takes text and images, `fake/m2` text only. Everything is closed and removed after each test.
+// `fake`: `fake/m1` takes text and images, `fake/m2` text only. Helpers run in the background beside their lead
+// (ADR 0108, 1), so they get a fake server of their own, the provider `helper` with `helper/m1`, set as
+// `kvcoder.delegate.model`, so the lead's and the helpers' replies come in their own order. Everything is closed and
+// removed after each test.
 
 const extensionsFolder = fileURLToPath(new URL('../../..', import.meta.url));
 
@@ -21,7 +24,7 @@ export type FixtureExtension = { name: string; namespace: string; entry: string;
 
 export const todo: FixtureExtension = { name: '@test/todo', namespace: 'todo', entry: todoEntry, dependencies: { '@kvman/kvcoder': '^0.1.0' } };
 
-export type World = { kernel: TestKernel; fake: FakeOpenAI; root: string };
+export type World = { kernel: TestKernel; fake: FakeOpenAI; helperFake: FakeOpenAI; root: string };
 
 export type StartOptions = { settings?: Record<string, Json>; extensions?: readonly FixtureExtension[] };
 
@@ -47,14 +50,18 @@ export function useKvcoder(): { start(options?: StartOptions): Promise<World> } 
       closers.push(() => Promise.resolve(rmSync(root, { recursive: true, force: true })));
       const fake = await startFakeOpenAI();
       closers.push(() => fake.close());
+      const helperFake = await startFakeOpenAI();
+      closers.push(() => helperFake.close());
       const extensions = [path.join(extensionsFolder, 'kvai'), path.join(extensionsFolder, 'kvwebui'), kvcoderFolder, ...(options.extensions ?? [todo]).map((extension) => writeExtension(root, extension))];
-      const settings = { 'kvwebui.home': 'kvcoder.chat', 'kvai.defaultModel': 'fake/m1', 'kvcoder.approval': 'auto', ...options.settings };
+      const settings = { 'kvwebui.home': 'kvcoder.chat', 'kvai.defaultModel': 'fake/m1', 'kvcoder.approval': 'auto', 'kvcoder.delegate.model': 'helper/m1', ...options.settings };
       const kernel = await createTestKernel({ extensions, settings });
       closers.push(() => kernel.close());
       await kernel.exec('kvai.provider.add', { id: 'fake', title: 'Fake', api: 'openai-completions', baseUrl: fake.baseUrl });
       await kernel.exec('kvai.model.add', { provider: 'fake', id: 'm1', name: 'M1', input: ['text', 'image'], ...fakeModel });
       await kernel.exec('kvai.model.add', { provider: 'fake', id: 'm2', name: 'M2', input: ['text'], ...fakeModel });
-      return { kernel, fake, root };
+      await kernel.exec('kvai.provider.add', { id: 'helper', title: 'Helper', api: 'openai-completions', baseUrl: helperFake.baseUrl });
+      await kernel.exec('kvai.model.add', { provider: 'helper', id: 'm1', name: 'Helper M1', input: ['text', 'image'], ...fakeModel });
+      return { kernel, fake, helperFake, root };
     },
   };
 }

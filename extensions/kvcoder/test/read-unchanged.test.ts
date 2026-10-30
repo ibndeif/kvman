@@ -1,20 +1,21 @@
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type { FakeReply } from '@kvman/testkit/fake-openai';
 import { readText } from '../src/files/read-text.ts';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { longAlone, padded } from './support/long-messages.ts';
 import { command, fsCall, runs, says, systemPrompt, toolResults } from './support/model-script.ts';
 import { newSession } from './support/turns.ts';
-import { wait } from './support/wait.ts';
+import { delegated } from './support/helpers.ts';
 
 const kvcoder = useKvcoder();
 
 const unchanged = 'notes.txt is unchanged since you read these lines earlier in this conversation; that result is above.';
 const whole = (content: string, totalLines: number, fromLine = 1): string => readText({ path: 'notes.txt', fromLine, totalLines, content, truncated: false });
-const briefing = "A worker sees none of this conversation and reads again every file it needs, so put in the brief the paths, the exact lines it needs quoted when they are short, and what you already found, so it doesn't read again what you hold.";
+// ADR 0108, 2: the brief names line ranges whose text kvcoder attaches.
+const briefing = 'context the line ranges the worker needs, whose text kvcoder attaches, so it reads nothing again that you hold.';
 
 // A chat in a workspace with `notes.txt`, whose model answers one message with `replies`, a step each.
 async function chat(replies: readonly FakeReply[], text = 'go') {
@@ -36,13 +37,10 @@ describe('fs read says when nothing changed (08 §8.5, ADR 0034, 2 and 3)', { ti
   });
 
   it('QA46-H3 the lead is told what a worker costs, and a subagent is not', async () => {
-    const { kernel, fake } = await kvcoder.start();
-    const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Check it' })), says('child done'), says('parent done'));
-    await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
-    await vi.waitFor(() => expect(fake.requests()).toHaveLength(3), wait);
-    expect(systemPrompt(fake, 0)).toContain(`what to return. ${briefing} Read what a worker returns`);
-    expect(systemPrompt(fake, 1)).not.toContain(briefing);
+    const world = await kvcoder.start();
+    await delegated(world, await newSession(world.kernel), [runs(command('delegate', 'run', { worker: 'general', title: 'Helper', kind: 'find', goal: 'Check it', done: 'It is done.' })), says('Started.'), says('parent done')], [says('child done')]);
+    expect(systemPrompt(world.fake, 0)).toContain(briefing);
+    expect(systemPrompt(world.helperFake, 0)).not.toContain(briefing);
   });
 
   it('QA46-E1 a changed file, and other lines of an unchanged one, are read in full', async () => {

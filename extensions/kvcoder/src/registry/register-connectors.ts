@@ -1,27 +1,30 @@
 import { z, type Ctx } from '@kvman/sdk';
-import { builtinConnectors } from '../connector-call.ts';
+import { builtinConnectors, payloadSignature } from '../connector-call.ts';
 import { invalid } from '../problems.ts';
 import { disabledConnectors, settingSchemas } from '../register-settings.ts';
 import { connectorRegisterSchema, connectorSchema, exampleSchema, type ConnectorDoc } from '../schemas/registry.ts';
 import { records, txRecords, type TxRecords } from '../store/collections.ts';
 import { ownSession } from '../sessions/session-lookup.ts';
-import { callerExtension, loadedOwners, ownsPublicCall, registrations, type Registrations } from './loaded.ts';
+import { callerExtension, callInfos, loadedOwners, ownsPublicCall, registrations, type CallInfo, type Registrations } from './loaded.ts';
 
 // Connectors (plan 08 §8.4): named sets of commands the agent runs with `run`, registered by other extensions, kept in
 // kvcoder's global store for one run, and owned by their registering extension. One registered with `optIn: true` is
 // off in every chat until the owner enables it for that chat (ADR 0027, 10).
+
+const commandRowSchema = z.object({ name: z.string(), command: z.string(), examples: z.array(exampleSchema), asks: z.boolean(), query: z.boolean(), card: z.string().exactOptional() });
 
 const connectorRowSchema = z.object({
   name: z.string(),
   description: z.string(),
   owner: z.string(),
   kind: z.enum(['commands', 'binary']),
-  commands: z.array(z.object({ name: z.string(), command: z.string(), examples: z.array(exampleSchema), asks: z.boolean(), query: z.boolean(), card: z.string().exactOptional() })).exactOptional(),
+  commands: z.array(commandRowSchema).exactOptional(),
   binary: z.object({ check: z.string(), install: z.string().exactOptional(), help: z.string().exactOptional() }).exactOptional(),
   optIn: z.boolean(),
 });
 
-export type ConnectorRow = z.output<typeof connectorRowSchema>;
+/** A connector as kvcoder uses it; a command also carries its payload's signature for the prompt (ADR 0108, 14), which `kvcoder.connector.list` doesn't answer. */
+export type ConnectorRow = Omit<z.output<typeof connectorRowSchema>, 'commands'> & { commands?: (z.output<typeof commandRowSchema> & { signature?: string })[] };
 
 function rowOf(doc: ConnectorDoc): ConnectorRow {
   return {
@@ -30,7 +33,7 @@ function rowOf(doc: ConnectorDoc): ConnectorRow {
     owner: doc.owner,
     kind: doc.kind,
     optIn: doc.optIn,
-    ...(doc.commands === null ? {} : { commands: doc.commands.map(({ card, ...command }) => (card === null ? command : { ...command, card })) }),
+    ...(doc.commands === null ? {} : { commands: doc.commands.map(({ card, signature, ...command }) => ({ ...command, ...(card === null ? {} : { card }), ...(signature === null ? {} : { signature }) })) }),
     ...(doc.binary === null ? {} : { binary: { check: doc.binary.check, ...(doc.binary.install === null ? {} : { install: doc.binary.install }), ...(doc.binary.help === null ? {} : { help: doc.binary.help }) } }),
   };
 }
@@ -68,9 +71,12 @@ type Connector = z.output<typeof connectorSchema>;
 // Whether a command's target is a query is kept, so a read-only worker's helper may run it (ADR 0082, 3).
 const isQuery = (rows: Registrations, name: string): boolean => rows.some((row) => row.name === name && row.kind === 'query');
 
-const docOf = (input: Connector, rows: Registrations): Omit<ConnectorDoc, 'owner'> =>
+// A command's payload signature is read once here, so building a prompt reads no schema (ADR 0108, 14).
+const signatureOf = (infos: readonly CallInfo[], name: string): string | null => payloadSignature(infos.find((info) => info.name === name)?.input) ?? null;
+
+const docOf = (input: Connector, rows: Registrations, infos: readonly CallInfo[]): Omit<ConnectorDoc, 'owner'> =>
   'commands' in input
-    ? { name: input.name, description: input.description, kind: 'commands', commands: input.commands.map((command) => ({ name: command.name, command: command.command, examples: command.examples ?? [], asks: command.asks === true, query: isQuery(rows, command.command), card: command.card ?? null })), binary: null, optIn: input.optIn === true }
+    ? { name: input.name, description: input.description, kind: 'commands', commands: input.commands.map((command) => ({ name: command.name, command: command.command, examples: command.examples ?? [], asks: command.asks === true, query: isQuery(rows, command.command), card: command.card ?? null, signature: signatureOf(infos, command.command) })), binary: null, optIn: input.optIn === true }
     : { name: input.name, description: input.description, kind: 'binary', commands: null, binary: { check: input.binary.check, install: input.binary.install ?? null, help: input.binary.help ?? null }, optIn: input.optIn === true };
 
 // Every connector of a call is checked before any is stored, and they are stored in one transaction, so a call
@@ -88,13 +94,14 @@ async function register(ctx: Ctx, connectors: readonly Connector[]): Promise<voi
   // A card is a component of the same extension as its command (ADR 0082, 13).
   const strayCard = commands.find((command) => command.card !== undefined && !command.card.startsWith(`${command.command.split('.')[0] ?? ''}.`));
   if (strayCard !== undefined) throw invalid(`The card ${strayCard.card ?? ''} isn't a component of ${strayCard.command}'s extension.`, { card: strayCard.card ?? '' });
+  const infos = commands.length > 0 ? await callInfos(ctx) : [];
   const taken = await ctx.store.transaction((tx) => {
     const stored = txRecords(tx).connectors;
     const existing = connectors.map((connector) => stored.find({ name: connector.name }, { limit: 1 })[0]);
     const other = existing.find((doc) => doc !== undefined && doc.owner !== owner);
     if (other !== undefined) return { name: other.name, owner: other.owner };
     for (const doc of existing) if (doc !== undefined) stored.delete(doc.id);
-    for (const connector of connectors) stored.insert({ ...docOf(connector, rows), owner });
+    for (const connector of connectors) stored.insert({ ...docOf(connector, rows, infos), owner });
     return undefined;
   });
   if (taken !== undefined) throw ctx.problem('kvcoder/NAME_TAKEN', taken);

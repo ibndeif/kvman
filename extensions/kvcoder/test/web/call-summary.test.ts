@@ -21,7 +21,7 @@ describe("a closed card's line (08 §8.7, ADR 0036, 2)", () => {
       [call('mcp', 'call', { server: 'github', tool: 'list_issues', risky: false }), 'none'],
       [call('mcp', 'run', { server: 'playwright', steps: [{ tool: 'browser_navigate', arguments: { url: 'http://127.0.0.1:8000' } }, { tool: 'browser_snapshot' }], risky: false }), '## 1. browser_navigate\nok'],
       [call('mcp', 'tools', { server: 'github' }), { server: 'github', tools: Array.from({ length: 12 }, (_tool, index) => ({ name: `t${index}`, description: '' })) }],
-      [call('delegate', 'run', { worker: 'reviewer', title: 'Security reviewer', task: 'Review the plan.' }), 'Fine.'],
+      [call('delegate', 'run', { worker: 'reviewer', title: 'Security reviewer', kind: 'find', goal: 'Review the plan.', done: 'It is done.' }), 'Fine.'],
       [call('background', 'list'), [{ id: 'j1', kind: 'process', call: 'npm run dev', status: 'running', startedAt: 'x' }, { id: 'j2', kind: 'process', call: 'npm test', status: 'exited', startedAt: 'x' }]],
       [call('background', 'output', { id: 'j1' }), { id: 'j1', status: 'running', output: 'ready' }],
       [call('background', 'stop', { id: 'j1' }), { stopped: true }],

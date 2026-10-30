@@ -4,6 +4,7 @@ import type { TestKernel } from '@kvman/testkit';
 import { heldReply } from './support/held-reply.ts';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { command, runs, says, systemPrompt, toolResults } from './support/model-script.ts';
+import { delegated } from './support/helpers.ts';
 import { newSession } from './support/turns.ts';
 import { wait } from './support/wait.ts';
 import { worker, workers } from './support/workers.ts';
@@ -73,14 +74,12 @@ describe('deleting an artifact (08 §8.5, ADR 0105)', { timeout: 30_000 }, () =>
   });
 
   it('QA70-E2 a helper is refused, and its prompt has no delete', async () => {
-    const { kernel, fake } = await kvcoder.start({ settings: workers(worker('free')) });
-    const sessionId = await newSession(kernel);
-    fake.reply(runs(writeOld), runs(command('delegate', 'run', { worker: 'free', title: 'Helper', task: 'Clean' })), runs(command('artifact', 'delete', { id: 'old-report' })), says('found'), says('done'));
-    await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
-    await kernel.clock.advance(0);
-    expect(toolResults(fake, 3)[0]).toMatch(/^error VALIDATION_FAILED: A helper writes no artifact/);
-    expect(systemPrompt(fake, 2)).not.toMatch(/\n {2}delete +\{ id/);
-    expect(await ids(kernel, sessionId)).toEqual(['old-report']);
+    const world = await kvcoder.start({ settings: workers(worker('free')) });
+    const sessionId = await newSession(world.kernel);
+    await delegated(world, sessionId, [runs(writeOld), runs(command('delegate', 'run', { worker: 'free', title: 'Helper', kind: 'check', goal: 'Clean', done: 'It is done.' })), says('Started.'), says('done')], [runs(command('artifact', 'delete', { id: 'old-report' })), says('found')]);
+    expect(toolResults(world.helperFake, 1)[0]).toMatch(/^error VALIDATION_FAILED: A helper writes no artifact/);
+    expect(systemPrompt(world.helperFake, 0)).not.toMatch(/\n {2}delete +\{ id/);
+    expect(await ids(world.kernel, sessionId)).toEqual(['old-report']);
   });
 
   it("QA70-E3 the person's delete while a turn runs is queued, and starts no turn", async () => {

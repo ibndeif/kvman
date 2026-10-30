@@ -5,6 +5,7 @@ import { answerOwner, first } from './support/answer-world.ts';
 import { openGate } from './support/gates.ts';
 import { command, fsCall, runs, says, toolResults } from './support/model-script.ts';
 import { disable, permissionControl, permissionScope, permissionSnapshot, readyReply, registerEffect, withPermissionWorld } from './support/permission-world.ts';
+import { helperIds } from './support/helpers.ts';
 import { worker, workers } from './support/workers.ts';
 
 describe('permission checks after actual native awaits (ADR0044)', { timeout: 30_000 }, () => {
@@ -53,15 +54,16 @@ describe('permission checks after actual native awaits (ADR0044)', { timeout: 30
   });
 
   it.each(['scope', 'opt-in', 'ask-disabled'] as const)('rechecks a child in-flight reply against current stored %s, not live edited worker instructions', async change => {
-    await withPermissionWorld(async (kernel, fake, sessionId) => {
+    await withPermissionWorld(async (kernel, fake, sessionId, helperFake) => {
       await registerEffect(kernel, 'old', { optIn: true });
       await kernel.exec('kvcoder.connector.enable', { sessionId, names: ['effect'] }, answerOwner);
       const held = readyReply(runs(change === 'ask-disabled' ? command('ask', 'text', { prompt: '?' }) : command('effect', 'add', { text: 'one' })));
-      fake.reply(runs(command('delegate', 'run', { worker: 'helper', title: 'Helper', task: 'Do it' })), held.reply, says('child done'), says('parent done'));
+      fake.reply(runs(command('delegate', 'run', { worker: 'helper', title: 'Helper', kind: 'check', goal: 'Do it', done: 'It is done.' })), says('Started.'), says('parent done'));
+      helperFake.reply(held.reply, says('child done'));
       try {
         await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' }); await held.waiting;
-        const parent = await permissionSnapshot(kernel, sessionId), childId = first(first(parent.turns).pending).childSessionId;
-        if (childId === null) throw new Error('Expected published child pending binding');
+        const [childId] = await helperIds(kernel, sessionId);
+        if (childId === undefined) throw new Error('Expected a started helper');
         if (change === 'scope') await permissionScope(kernel, childId, { connectors: [] });
         if (change === 'opt-in') await permissionScope(kernel, sessionId, { optedIn: [] });
         if (change === 'ask-disabled') await disable(kernel, ['ask']);
@@ -69,10 +71,10 @@ describe('permission checks after actual native awaits (ADR0044)', { timeout: 30
         const child = await permissionSnapshot(kernel, childId);
         expect(child.effects).toEqual([]); expect(child.dispatches).toEqual([]); expect(child.questions).toEqual([]);
         expect(child.session.status).toBe('idle'); expect(first(child.turns).outcome).toBe('done');
-        const rejection = first(toolResults(fake, 2));
+        const rejection = first(toolResults(helperFake, 1));
         if (change === 'scope') expect(rejection).toBe("error VALIDATION_FAILED: effect isn't available in this subagent.");
-        else expect(rejection).toMatch(/^error VALIDATION_FAILED: There is no connector (effect|ask)\./);
-        expect((await permissionSnapshot(kernel, sessionId)).session.status).toBe('idle'); expect(fake.requests()).toHaveLength(4);
+        else expect(rejection).toMatch(/^error VALIDATION_FAILED: (There is no connector (effect|ask)\.|ask isn't available in this subagent\.)/);
+        expect((await permissionSnapshot(kernel, sessionId)).session.status).toBe('idle'); expect(fake.requests()).toHaveLength(3);
       } finally { held.release(); }
     }, workers(worker('helper', { connectors: ['effect'] })));
   });

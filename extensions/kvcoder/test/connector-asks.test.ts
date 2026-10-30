@@ -1,6 +1,7 @@
 import type { Json } from '@kvman/sdk';
 import type { TestKernel } from '@kvman/testkit';
 import { describe, expect, it } from 'vitest';
+import { delegated, helperIds } from './support/helpers.ts';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { command, runs, says, toolResults } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
@@ -91,15 +92,15 @@ describe('a registered command that asks the person first (08 §8.3 and §8.4, A
 
   it("QA34-E4 a subagent's call of it waits on the person, and runs when allowed", async () => {
     const world = await started(workers(worker('helper', { connectors: ['guarded'] })) as Record<string, string>);
-    const sessionId = await sent(world, runs(command('delegate', 'run', { worker: 'helper', title: 'Helper', task: 'Add milk.' })), runs(command('guarded', 'add', { text: 'milk' })), says('child done'), says('parent done'));
-    const parent = await turnState(world.kernel, sessionId);
-    const childId = String(parent.turn?.pending[0]?.childSessionId);
+    const sessionId = await newSession(world.kernel);
+    await delegated(world, sessionId, [runs(command('delegate', 'run', { worker: 'helper', title: 'Helper', kind: 'check', goal: 'Add milk.', done: 'It is done.' })), says('Started.'), says('parent done')], [runs(command('guarded', 'add', { text: 'milk' })), says('child done')]);
+    const [childId = ''] = await helperIds(world.kernel, sessionId);
     const child = await turnState(world.kernel, childId);
     expect(child.session.status).toBe('waiting');
     expect(child.turn?.pending[0]).toMatchObject({ kind: 'approval', question: { connector: 'guarded', command: 'add', payload: { text: 'milk' } } });
     expect(await items(world.kernel)).toEqual([]);
     await answer(world.kernel, childId, true);
     expect(await items(world.kernel)).toEqual([{ text: 'milk' }]);
-    expect((await turnState(world.kernel, sessionId)).turn).toMatchObject({ outcome: 'done' });
+    expect((await turnState(world.kernel, childId)).turn).toMatchObject({ outcome: 'done' });
   });
 });

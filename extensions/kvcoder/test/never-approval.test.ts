@@ -3,7 +3,8 @@ import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import type { TestKernel } from '@kvman/testkit';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { command, fsCall, runs, says, shell, toolResults, type RunCallSpec, withoutHelperId } from './support/model-script.ts';
+import { command, fsCall, requestMessages, runs, says, shell, textOf, toolResults, type RunCallSpec, withoutHelperId } from './support/model-script.ts';
+import { delegated } from './support/helpers.ts';
 import { newSession, turnState } from './support/turns.ts';
 import { wait } from './support/wait.ts';
 import { programWorker, useWorkerPrograms } from './support/worker-programs.ts';
@@ -52,21 +53,26 @@ describe('with never no call asks the person (08 §8.3, ADR 0077)', { timeout: 3
     expect(toolResults(fake)[0]).toContain('"text":"milk"');
   });
 
-  it('M2.4-E292 a program worker set to ask before a run starts at once', async () => {
+  it('M2.4-E292 a program worker set to ask before a run starts at once, in the background', async () => {
     const installed = programs.install('claude');
-    const { kernel, fake, sessionId } = await started({ ...never, ...workers(programWorker('cc', 'claude', { approval: 'ask' })) }, ...calls(command('delegate', 'run', { worker: 'cc', title: 'Helper', task: `wait:${installed.gate}` })));
+    const { kernel, fake, sessionId } = await started({ ...never, ...workers(programWorker('cc', 'claude', { approval: 'ask' })) }, runs(command('delegate', 'run', { worker: 'cc', title: 'Helper', kind: 'find', goal: `wait:${installed.gate}`, done: 'It is done.' })), says('Started.'), says('read it'));
     await vi.waitFor(() => expect(installed.calls('claude')).toHaveLength(1), wait);
-    expect((await turnState(kernel, sessionId)).turn?.pending.map((item) => item.kind)).toEqual(['worker']);
-    installed.release();
     await done(kernel, sessionId);
-    expect(toolResults(fake, 1)).toEqual(['released']);
+    expect(toolResults(fake, 1)).toEqual([expect.stringMatching(/^started \S+$/) as unknown]);
+    installed.release();
+    await vi.waitFor(async () => {
+      const { messages } = await kernel.exec('kvcoder.message.list', { sessionId, limit: 100 });
+      expect(messages.some((message) => message.source?.kind === 'job' && JSON.stringify(message.content).includes('released'))).toBe(true);
+    }, wait);
   });
 
   it("M2.4-E293 a helper's risky call runs at once too", async () => {
-    const { kernel, fake, sessionId } = await started(never, runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Check' })), runs(shell('touch child.txt', { risky: true })), says('child done'), says('parent done'));
-    await done(kernel, sessionId);
-    expect(home(kernel, 'child.txt')).toBe(true);
-    expect(toolResults(fake, 3).map(withoutHelperId)).toEqual(['child done']);
+    const world = await kvcoder.start({ settings: never });
+    const sessionId = await newSession(world.kernel);
+    await delegated(world, sessionId, [runs(command('delegate', 'run', { worker: 'general', title: 'Helper', kind: 'check', goal: 'Check', done: 'It is done.' })), says('Started.'), says('parent done')], [runs(shell('touch child.txt', { risky: true })), says('child done')]);
+    expect(home(world.kernel, 'child.txt')).toBe(true);
+    expect(toolResults(world.helperFake, 1)).toEqual(['[exit code 0]']);
+    expect(withoutHelperId(textOf(requestMessages(world.fake).at(-1)))).toMatch(/finished:\nchild done$/);
   });
 
   it("M2.4-E294 the agent's own question still waits for the person", async () => {

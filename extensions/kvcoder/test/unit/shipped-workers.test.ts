@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { shippedWorkers, type SubagentWorker } from '../../src/delegate/workers.ts';
+import { cappedLevel } from '../../src/thinking-levels.ts';
 
 function worker(name: string): SubagentWorker {
   const found = shippedWorkers.find((entry) => entry.name === name);
@@ -110,5 +111,12 @@ describe("the shipped specialists' descriptions and instructions (ADR 0076)", ()
   it('QA68-H3 the council is read-only and thinks at high; the other shipped workers take the helpers\' level', () => {
     expect(worker('council')).toMatchObject({ readOnly: true, thinking: 'high', enabled: true, kind: 'subagent', connectors: null, model: null });
     expect(shippedWorkers.filter((entry) => entry.name !== 'council').every((entry) => entry.thinking === null)).toBe(true);
+  });
+
+  it('QA71-E38 ADR 0108 leaves the shipped levels as they were, and only the ceiling caps them', () => {
+    expect(shippedWorkers.map((entry) => [entry.name, entry.thinking])).toEqual([['general', null], ['ui-ux', null], ['architect', null], ['tester', null], ['reviewer', null], ['council', 'high']]);
+    expect(cappedLevel('high', 'medium')).toBe('medium');
+    expect(cappedLevel('low', 'high')).toBe('low');
+    expect(cappedLevel('max', 'high')).toBe('high');
   });
 });

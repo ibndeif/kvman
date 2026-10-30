@@ -52,8 +52,9 @@ describe('the prompt builder (08 §8.2)', () => {
         'call `ask choice` with other set to true',
         'mark the step done with your evidence',
         'Leave running what the person will try themselves',
-        'A step goes to a worker of the `delegate` connector when the worker does it better or faster than you would: a specialist whose skill the step needs, separate work that runs beside yours, or a fresh review of a change you finished; its entry lists the workers and what each is for.',
-        'Brief the worker with the goal, the facts it needs, its limits, and what to return.',
+        // ADR 0108, 2 and 4: the Delegate rule names the run kinds and the brief's fields.
+        "Delegate find, check, and review runs, and change runs only when two or more run at once on files that don't overlap;",
+        'Write the brief in plain full sentences: goal is one sentence of what the run delivers, done one condition anyone can check,',
         'You are the one who decides: connectors and workers are how you act, and the result is yours.',
         'in an artifact, not in a reply.',
         'Work in few steps. Each reply is a step, and every step sends the whole conversation again, so make in one reply every call you can make now: reads and searches run at the same time, and calls that change something (shell lines, writes, edits) run one after another in the order you give them. Read a few files with one `fs read-files`, put independent calls (searches, separate files, separate workers) in the same reply, as several run calls or one run with a calls list, and leave for a later reply only a call that needs another call\'s result. Several new files are several `fs write` calls in one reply, not one reply each.',

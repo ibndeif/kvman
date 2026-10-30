@@ -4,7 +4,7 @@ import type { JsonValue } from '../connector-call.ts';
 import { runBinaryChecks } from '../calls/binary-checks.ts';
 import { workerChecks } from '../delegate/register-worker-run.ts';
 import { keepRules } from '../prompt/kept-rules.ts';
-import { expandedCalls, repairedArguments, runTool } from '../calls/run-tool.ts';
+import { expandedCalls, repairedArguments, runTool, type ToolCallBlock } from '../calls/run-tool.ts';
 import { shellFor } from '../calls/shell-program.ts';
 import { sessionTools, type SessionTools } from '../prompt/session-prompt.ts';
 import { ownerName } from '../jobs/process-records.ts';
@@ -108,7 +108,7 @@ async function callModel(ctx: Ctx, session: Stored<SessionDoc>, lease: StepLease
     // A call sent in a shape the model often uses is stored as the call it meant, so its card and the history show that (ADR 0102, 5).
     const lines = new Set(['shell', ...tools.connectors.filter((connector) => connector.kind === 'binary').map((connector) => connector.name)]);
     // A `run` with a `calls` list is stored as that many calls (ADR 0108, 19).
-    const blocks = received.flatMap((block) => (block.type === 'toolCall' && block.name === 'run' ? expandedCalls({ ...block, arguments: repairedArguments(block.arguments, lines) }, lines) : [block]));
+    const blocks = received.flatMap<(typeof received)[number] | ToolCallBlock>((block) => (block.type === 'toolCall' && block.name === 'run' ? expandedCalls({ ...block, arguments: repairedArguments(block.arguments, lines) }, lines) : [block]));
     const message = { ...answer.message, content: blocks };
     const seq = await ctx.store.transaction(tx => {
       ctx.job.signal.throwIfAborted();
@@ -209,7 +209,10 @@ async function finishWithoutCalls(ctx: Ctx, lease: StepLease, maxSteps: number |
 }
 
 async function runStep(ctx: Ctx, lease: StepLease): Promise<void> {
-  const settings = await readSettings(ctx);
+  const read = await readSettings(ctx);
+  // A helper's turn also ends at its run's budget (ADR 0108, 2).
+  const budget = (await currentStep(ctx, lease))?.session.run?.budget;
+  const settings = budget === undefined ? read : { ...read, maxSteps: read.maxSteps === null ? budget : Math.min(read.maxSteps, budget) };
   const begun = await beginStep(ctx, lease, settings.maxSteps);
   if (begun === undefined) return;
   const ruled = await withChecks(ctx, begun, lease);

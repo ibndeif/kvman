@@ -7,7 +7,7 @@ import { programWorker, useWorkerPrograms } from './support/worker-programs.ts';
 import { worker, workers } from './support/workers.ts';
 
 const programs = useWorkerPrograms();
-const delegate = (background = false) => command('delegate', 'run', { worker: 'helper', title: 'Helper', task: 'say:answer', ...(background ? { background: true } : {}) });
+const delegate = () => command('delegate', 'run', { worker: 'helper', title: 'Helper', kind: 'find', goal: 'say:answer', done: 'It is done.' });
 const setWorkers = (kernel: Parameters<typeof permissionControl>[0], value: ReturnType<typeof worker>[]) => kernel.exec('kernel.settings.set', { key: 'kvcoder.delegate.workers', value, scope: 'workspace' });
 
 // Original entry, native SQLite, actual settings and process argv observations; gates hold real awaited boundaries.
@@ -30,11 +30,11 @@ describe('delegation execution permissions (ADR0044, E114–E118)', { timeout: 3
     }, workers(worker('helper')));
   });
 
-  it.each([false, true])('rechecks a created child before foreground/background start (%s)', async background => {
+  it('rechecks a created child before its start', async () => {
     await withPermissionWorld(async (kernel, fake, sessionId) => {
       const name = `delegate-created-${sessionId}`, gate = openGate(name);
       await permissionControl(kernel, 'child-created', name);
-      fake.reply(runs(delegate(background)), says('done'), says('extra parent reply'), says('extra background reply'));
+      fake.reply(runs(delegate()), says('done'), says('extra parent reply'));
       try {
         await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' }); await gate.waiting;
         await disable(kernel, ['delegate']); gate.release(); await kernel.clock.advance(0);
@@ -46,11 +46,11 @@ describe('delegation execution permissions (ADR0044, E114–E118)', { timeout: 3
     }, workers(worker('helper')));
   });
 
-  it.each([false, true])('a recorded foreground/background program cannot enqueue after revocation (%s)', async background => {
+  it('a recorded program cannot enqueue after revocation', async () => {
     const installed = programs.install('pi');
     await withPermissionWorld(async (kernel, fake, sessionId) => {
       const name = `run-created-${sessionId}`, gate = openGate(name);
-      await permissionControl(kernel, 'run-created', name); fake.reply(runs(delegate(background)), says('done'));
+      await permissionControl(kernel, 'run-created', name); fake.reply(runs(delegate()), says('done'));
       try {
         await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' }); await gate.waiting;
         const recorded = first((await permissionSnapshot(kernel, sessionId)).runs);
@@ -91,26 +91,26 @@ describe('delegation execution permissions (ADR0044, E114–E118)', { timeout: 3
     await withPermissionWorld(async (kernel, fake, sessionId) => {
       const name = `delegate-program-${sessionId}`, gate = openGate(name);
       await permissionControl(kernel, 'program-entry', name);
-      fake.reply(runs(delegate()), says('done'));
+      fake.reply(runs(delegate()), says('done'), says('read it'));
       try {
         await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' }); await gate.waiting;
         expect(installed.calls('pi')).toEqual([]);
-        const during = await permissionSnapshot(kernel, sessionId), run = first(during.runs);
-        expect(first(first(during.turns).pending)).toMatchObject({ kind: 'worker', runId: run.id });
+        const run = first((await permissionSnapshot(kernel, sessionId)).runs);
+        expect(run).toMatchObject({ status: 'running', toolCallId: null });
         if (change === 'disable') await disable(kernel, ['delegate']);
         if (change === 'remove') await setWorkers(kernel, []);
         if (change === 'stop') await kernel.exec('kvcoder.job.cancel', { sessionId, id: run.id });
         if (change === 'captured') await setWorkers(kernel, [programWorker('helper', 'pi', { instructions: 'Changed.', model: 'new-model' })]);
         gate.release(); await kernel.clock.advance(0);
         const state = await permissionSnapshot(kernel, sessionId);
-        expect(state.session.status).toBe('idle'); expect(first(state.turns).outcome).toBe('done');
+        expect(state.session.status).toBe('idle');
         if (change === 'enabled' || change === 'captured') {
-          expect(installed.calls('pi')).toEqual([{ cwd: kernel.homeFolder, args: ['-p', '--', 'say:answer'] }]);
-          expect(toolResults(fake, 1)).toEqual(['answer']); expect(first(state.runs).status).toBe('succeeded');
+          expect(installed.calls('pi')).toEqual([{ cwd: kernel.homeFolder, args: ['-p', '--', 'Kind: find\nGoal: say:answer\nDone when: It is done.'] }]);
+          expect(first(state.runs)).toMatchObject({ status: 'succeeded', output: 'answer' });
         } else {
           expect(installed.calls('pi')).toEqual([]);
           expect(first(state.runs).status).toBe(change === 'stop' ? 'cancelled' : 'failed');
-          expect(first(toolResults(fake, 1))).toMatch(change === 'stop' ? /^helper was stopped$/ : /^error (VALIDATION_FAILED|kvcoder\/WORKER_NOT_FOUND):/);
+          expect(first(state.runs).output).toMatch(change === 'stop' ? /^helper was stopped$/ : /^error (VALIDATION_FAILED|kvcoder\/WORKER_NOT_FOUND):/);
         }
       } finally { gate.release(); }
     }, workers(programWorker('helper', 'pi')));

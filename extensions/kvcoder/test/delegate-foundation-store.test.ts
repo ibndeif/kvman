@@ -30,7 +30,7 @@ export default (ctx: Ctx): void => {
       const store = records(ctx.store);
       const parent = await store.sessions.get(sessionId);
       if (parent === undefined) throw new Error('Parent missing');
-      const childId = await createChild(ctx, parent, { name: 'helper', kind: 'subagent', description: 'Helper', enabled: true, instructions: 'Help', connectors: [], model: null, thinking: null }, { title: 'Child', task: 'Test' }, current => {
+      const childId = await createChild(ctx, parent, { name: 'helper', kind: 'subagent', description: 'Helper', enabled: true, readOnly: false, instructions: 'Help', connectors: [], model: null, thinking: null }, { title: 'Child', task: 'Test', brief: { kind: 'find', goal: 'Test', files: null, budget: 60 } }, current => {
         const session = current.sessions.get(sessionId);
         if (session === undefined) throw new Error('Parent missing');
         return session;

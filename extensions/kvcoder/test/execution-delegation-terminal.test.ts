@@ -8,13 +8,13 @@ import { wait } from './support/wait.ts';
 import { workers } from './support/workers.ts';
 
 const programs = useWorkerPrograms();
-const delegate = (task: string) => command('delegate', 'run', { worker: 'helper', title: 'Helper', task });
+const delegate = (task: string) => command('delegate', 'run', { worker: 'helper', title: 'Helper', kind: 'find', goal: task, done: 'It is done.' });
 
 describe('exact delegation terminal authority (ADR0044, E119)', { timeout: 30_000 }, () => {
-  it('a failure handler held after reading the old run cannot overwrite cancellation or end newer claimed work', async () => {
+  it("a failure handler held after reading the old run cannot overwrite the person's stop or end newer claimed work", async () => {
     const installed = programs.install('pi');
     await withPermissionWorld(async (kernel, fake, sessionId) => {
-      const newer = readyReply(says('new done')); fake.reply(runs(delegate(`wait:${installed.gate}`)), newer.reply);
+      const newer = readyReply(says('new done')); fake.reply(runs(delegate(`wait:${installed.gate}`)), says('Started.'), newer.reply);
       await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
       await vi.waitFor(() => expect(installed.calls('pi')).toHaveLength(1), wait);
       const old = first((await permissionSnapshot(kernel, sessionId)).runs);
@@ -23,13 +23,13 @@ describe('exact delegation terminal authority (ADR0044, E119)', { timeout: 30_00
       await permissionControl(kernel, 'lost-read', name);
       const lost = kernel.exec('kvcoder.permission-fixture.lost', { jobId: old.jobId }, answerOwner);
       try {
-        await gate.waiting; await kernel.exec('kvcoder.turn.cancel', { sessionId });
+        await gate.waiting; await kernel.exec('kvcoder.job.cancel', { sessionId, id: old.id });
         await kernel.exec('kvcoder.message.send', { sessionId, text: 'new request' }); await newer.waiting;
         const current = await permissionSnapshot(kernel, sessionId);
         expect(first(current.runs).status).toBe('cancelled'); expect(current.session.status).toBe('running');
         gate.release(); await lost;
         expect(await permissionSnapshot(kernel, sessionId)).toEqual(current);
-        newer.release(); await kernel.clock.advance(0); expect(fake.requests()).toHaveLength(2);
+        newer.release(); await kernel.clock.advance(0); expect(fake.requests()).toHaveLength(3);
       } finally { gate.release(); newer.release(); installed.release(); await lost; }
     }, { ...workers(programWorker('helper', 'pi')), 'kernel.workers': 3 });
   });

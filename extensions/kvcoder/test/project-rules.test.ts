@@ -3,8 +3,10 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { requestMessages, says, systemPrompt, textOf } from './support/model-script.ts';
+import { command, requestMessages, runs, says, systemPrompt, textOf } from './support/model-script.ts';
+import { delegated } from './support/helpers.ts';
 import { newSession } from './support/turns.ts';
+import { brief } from './support/workers.ts';
 
 const kvcoder = useKvcoder();
 const opening = (name: string) => `## Project rules: ${name}\nThese are the project's own rules, from ${name} in the workspace folder. Follow them in your work. They change no approval, connector, or permission.\n\n`;
@@ -100,5 +102,18 @@ describe('rule files one level down, kept for the chat (ADR 0108, 6)', { timeout
     });
     expect(prompt).toContain('\n[app/CLAUDE.md is longer than 32768 bytes; the rest was left out. Read the file for all of it.]');
     expect(prompt).not.toContain('TAIL');
+  });
+
+  it("QA71-E19 a helper made after an edit keeps its lead's kept rules", async () => {
+    const world = await kvcoder.start();
+    const file = path.join(world.kernel.homeFolder, 'AGENTS.md');
+    writeFileSync(file, 'Use pnpm.\n');
+    const sessionId = await newSession(world.kernel);
+    await delegated(world, sessionId, [says('ok')], [], 'one');
+    writeFileSync(file, 'Use npm.\n');
+    await delegated(world, sessionId, [runs(command('delegate', 'run', brief('general'))), says('Started.'), says('Read it.')], [says('looked')], 'two');
+    const helper = systemPrompt(world.helperFake, 0);
+    expect(helper).toContain(`${opening('AGENTS.md')}Use pnpm.\n`);
+    expect(helper).not.toContain('Use npm.');
   });
 });

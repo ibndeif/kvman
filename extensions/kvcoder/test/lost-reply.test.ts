@@ -3,9 +3,10 @@ import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import type { FakeReply } from '@kvman/testkit/fake-openai';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
-import { command, requestMessages, runs, says, shell, textOf, toolResults } from './support/model-script.ts';
+import { command, requestMessages, runs, says, shell, textOf } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
 import { wait } from './support/wait.ts';
+import { delegated } from './support/helpers.ts';
 
 const kvcoder = useKvcoder();
 
@@ -91,11 +92,10 @@ describe('a reply lost on the way is not the end of the turn (08 §8.2, ADR 0009
   });
 
   it("QA8-E11 a subagent's lost reply is retried too, and its answer reaches the parent", async () => {
-    const { fake, sessionId, kernel, send } = await started();
-    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Do it' })), lost(3400), says('child done'), says('parent done'));
-    await send('go');
-    expect((await turnState(kernel, sessionId)).turn).toMatchObject({ outcome: 'done' });
-    expect(textOf(requestMessages(fake, 2).at(-1))).toContain('Your last reply was lost on the way');
-    expect(toolResults(fake).join('\n')).toContain('child done');
+    const world = await kvcoder.start();
+    const sessionId = await newSession(world.kernel);
+    await delegated(world, sessionId, [runs(command('delegate', 'run', { worker: 'general', title: 'Helper', kind: 'find', goal: 'Do it', done: 'It is done.' })), says('Started.'), says('parent done')], [lost(3400), says('child done')]);
+    expect(textOf(requestMessages(world.helperFake, 1).at(-1))).toContain('Your last reply was lost on the way');
+    expect(JSON.stringify(world.fake.requests().at(-1)?.body)).toContain('child done');
   });
 });

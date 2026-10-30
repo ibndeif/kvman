@@ -16,7 +16,8 @@ describe('the documentation after the chat review (QA19-H14, ADR 0012)', () => {
   it('QA19-H14 the docs follow', () => {
     const connectors = read('extensions', 'kvcoder', 'docs', 'connectors.md');
     expect(connectors).toContain("returns each problem and then the payload's signature, such as `{ text (≤200), done? }`");
-    expect(connectors).toContain("The prompt lists the payloads of kvcoder's own connectors (`shell`, `fs`, `artifact`, `background`, `ask`, `delegate`); the agent learns a registered connector's payloads from `help`");
+    // ADR 0108, 14: a registered connector's commands are listed with their payloads' signatures too.
+    expect(connectors).toContain("kvcoder adds each command after it, one line each with its payload's signature, such as `add { text (≤200), done? }`, then `help`");
     expect(read('extensions', 'kvai', 'docs', 'models.md')).toContain('`sessionId?: string`');
     for (const page of pages) expect(read(page), page).not.toContain("returns each problem and then the payload's JSON Schema");
   });

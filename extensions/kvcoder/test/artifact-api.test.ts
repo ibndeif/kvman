@@ -5,6 +5,7 @@ import type { FakeOpenAI, FakeReply } from '@kvman/testkit/fake-openai';
 import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { command, runs, says, shell } from './support/model-script.ts';
 import { newSession, turnState } from './support/turns.ts';
+import { delegated, helperIds } from './support/helpers.ts';
 
 const kvcoder = useKvcoder();
 
@@ -29,23 +30,17 @@ const exportSchema = z.object({ artifacts: z.array(z.object({ id: z.string(), ti
 // The public artifact queries, deletion, export, and restarts (08 §8.6, ADR 0009, 175 and 176).
 describe('the artifact queries (08 §8.6, ADR 0009, 175 and 176)', { timeout: 30_000 }, () => {
   it("QA6-H8 a subagent reads the artifacts of the chat at its root", async () => {
-    const world = await started();
-    world.fake.reply(
-      runs(command('artifact', 'write', { id: 'review', title: 'Review', content: 'looks good' })),
-      runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Review' })),
-      runs(shell('true', { risky: true })),
-      says('child done'),
-      says('parent done'),
-    );
-    await world.kernel.exec('kvcoder.message.send', { sessionId: world.sessionId, text: 'go' });
-    await world.kernel.clock.advance(0);
-    const childId = String((await turnState(world.kernel, world.sessionId)).turn?.pending[0]?.childSessionId);
-    expect(await list(world, world.sessionId)).toMatchObject([{ id: 'review', title: 'Review', format: 'markdown', version: 1, size: 10 }]);
-    expect(await list(world, childId)).toEqual(await list(world, world.sessionId));
+    const world = await kvcoder.start();
+    const sessionId = await newSession(world.kernel);
+    const scoped = { ...world, sessionId };
+    await delegated(world, sessionId, [runs(command('artifact', 'write', { id: 'review', title: 'Review', content: 'looks good' })), runs(command('delegate', 'run', { worker: 'general', title: 'Helper', kind: 'check', goal: 'Review', done: 'It is done.' })), says('Started.'), says('parent done')], [runs(shell('true', { risky: true })), says('child done')]);
+    const [childId = ''] = await helperIds(world.kernel, sessionId);
+    expect(await list(scoped, sessionId)).toMatchObject([{ id: 'review', title: 'Review', format: 'markdown', version: 1, size: 10 }]);
+    expect(await list(scoped, childId)).toEqual(await list(scoped, sessionId));
     const { turn: child } = await turnState(world.kernel, childId);
     await world.kernel.exec('kvcoder.question.answer', { questionId: String(child?.pending[0]?.questionId), answer: { confirmed: true } });
     await world.kernel.clock.advance(0);
-    expect((await turnState(world.kernel, world.sessionId)).turn).toMatchObject({ outcome: 'done' });
+    expect((await turnState(world.kernel, childId)).turn).toMatchObject({ outcome: 'done' });
   });
 
   it('QA6-H9 the public queries list and get, and an extension may call both', async () => {

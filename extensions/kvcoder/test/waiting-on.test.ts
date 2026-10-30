@@ -12,7 +12,7 @@ const kvcoder = useKvcoder();
 const waitingOn = async (kernel: TestKernel, sessionId: string) => (await kernel.exec('kvcoder.session.get', { sessionId })).waitingOn;
 const listed = async (kernel: TestKernel) => Object.fromEntries((await kernel.exec('kvcoder.session.list', { limit: 10 })).map((session) => [session.id, session.waitingOn]));
 const counted = async (kernel: TestKernel) => (await kernel.exec('kvcoder.session.count', { waitingOn: 'person' })).count;
-const delegated = (background: boolean) => command('delegate', 'run', { worker: 'helper', title: 'Helper', task: 'Do it', ...(background ? { background: true } : {}) });
+const delegated = () => command('delegate', 'run', { worker: 'helper', title: 'Helper', kind: 'check', goal: 'Do it', done: 'It is done.' });
 
 async function send(kernel: TestKernel, sessionId: string): Promise<void> {
   await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
@@ -35,31 +35,33 @@ describe('waitingOn (ADR 0091, 6)', { timeout: 60_000 }, () => {
   });
 
   it('QA59-H9 an idle chat whose background helper waits on an approval needs the person', async () => {
-    const { kernel, fake } = await kvcoder.start({ settings: workers(worker('helper')) });
+    const { kernel, fake, helperFake } = await kvcoder.start({ settings: workers(worker('helper')) });
     const sessionId = await newSession(kernel);
-    fake.reply(runs(delegated(true)), runs(shell('echo hi', { risky: true })), says('started it'));
+    fake.reply(runs(delegated()), says('started it'));
+    helperFake.reply(runs(shell('echo hi', { risky: true })));
     await send(kernel, sessionId);
     await vi.waitFor(async () => expect(await waitingOn(kernel, sessionId)).toBe('person'), wait);
     expect((await kernel.exec('kvcoder.session.get', { sessionId })).status).toBe('idle');
     expect(await counted(kernel)).toBe(1);
   });
 
-  it('QA59-H9 a chat waiting on a working helper is helpers, and on a helper that asks is person', async () => {
-    const { kernel, fake } = await kvcoder.start({ settings: workers(worker('helper')) });
+  // Superseded by ADR 0108, 1: helpers run in the background, so a chat whose helper works is idle, not helpers.
+  it('QA59-H9 a chat whose helper works is null, and one whose helper asks is person', async () => {
+    const { kernel, fake, helperFake } = await kvcoder.start({ settings: workers(worker('helper')) });
     const sessionId = await newSession(kernel);
     let release = (): void => undefined;
     const held = new Promise<void>((resolve) => (release = resolve));
     const asks = runs(shell('echo hi', { risky: true }));
-    fake.reply(runs(delegated(false)), { chunks: [{ wait: held }, ...('chunks' in asks ? asks.chunks : [])] });
+    fake.reply(runs(delegated()), says('started it'));
+    helperFake.reply({ chunks: [{ wait: held }, ...('chunks' in asks ? asks.chunks : [])] });
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
-    await vi.waitFor(() => expect(fake.requests()).toHaveLength(2), wait);
-    await vi.waitFor(async () => expect(await waitingOn(kernel, sessionId)).toBe('helpers'), wait);
+    await vi.waitFor(() => expect(helperFake.requests()).toHaveLength(1), wait);
+    await vi.waitFor(async () => expect((await kernel.exec('kvcoder.session.get', { sessionId })).status).toBe('idle'), wait);
+    expect(await waitingOn(kernel, sessionId)).toBeNull();
     expect(await counted(kernel)).toBe(0);
     release();
-    await kernel.clock.advance(0);
     await vi.waitFor(async () => expect(await waitingOn(kernel, sessionId)).toBe('person'), wait);
     expect(await counted(kernel)).toBe(1);
-    await kernel.exec('kvcoder.turn.cancel', { sessionId });
   });
 
 });

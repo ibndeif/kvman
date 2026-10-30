@@ -3,24 +3,21 @@ import { useKvcoder } from './support/kvcoder-kernel.ts';
 import { command, runs, says, systemPrompt } from './support/model-script.ts';
 import { newSession } from './support/turns.ts';
 import { worker, workers } from './support/workers.ts';
+import { delegated } from './support/helpers.ts';
 
 const kvcoder = useKvcoder();
 
 describe('the prompt of a chat and of its subagent (08 §8.2 and §8.5, ADR 0022, 3)', { timeout: 30_000 }, () => {
   it("QA33-H9 a chat's prompt is the lead's, and a subagent's is the worker's, followed by its worker's instructions", async () => {
-    const { kernel, fake } = await kvcoder.start({ settings: workers(worker('reader', { instructions: 'Read only.' })) });
-    const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', { worker: 'reader', title: 'Helper', task: 'Read the notes.' })), says('child done'), says('parent done'));
-    await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
-    await kernel.clock.advance(0);
-
-    const lead = systemPrompt(fake, 0);
+    const world = await kvcoder.start({ settings: workers(worker('reader', { instructions: 'Read only.' })) });
+    const sessionId = await newSession(world.kernel);
+    await delegated(world, sessionId, [runs(command('delegate', 'run', { worker: 'reader', title: 'Helper', kind: 'find', goal: 'Read the notes.', done: 'It is done.' })), says('Started.'), says('parent done')], [says('child done')]);
+    const lead = systemPrompt(world.fake, 0);
     expect(lead).toContain('the lead engineer on this work');
     expect(lead).toContain('\nFinish. The work is done when it is ready for production');
     expect(lead).not.toContain('that the lead agent gave you');
-    expect(lead).toBe((await kernel.exec('kvcoder.prompt.get', { sessionId })).prompt);
-
-    const child = systemPrompt(fake, 1);
+    expect(lead).toBe((await world.kernel.exec('kvcoder.prompt.get', { sessionId })).prompt);
+    const child = systemPrompt(world.helperFake, 0);
     expect(child).toContain('working on one task that the lead agent gave you');
     expect(child).toContain('3. Return.');
     expect(child).not.toContain('the lead engineer on this work');

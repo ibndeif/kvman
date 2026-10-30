@@ -120,7 +120,8 @@ export function parseRunArgs(raw: Record<string, JsonValue>, lineConnectors: Rea
   return { success: false, problems: problems.join('; ') };
 }
 
-type ToolCallBlock = { type: 'toolCall'; id: string; name: string; arguments: Record<string, JsonValue> };
+/** A reply's tool call block, as `expandedCalls` takes and gives it. */
+export type ToolCallBlock = { type: 'toolCall'; id: string; name: string; arguments: Record<string, JsonValue> };
 
 const batchSchema = z.strictObject({ calls: z.array(z.record(z.string(), z.json())).min(1).max(batchLimit) });
 

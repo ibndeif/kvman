@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { z, type Json } from '@kvman/sdk';
 import type { TestKernel } from '@kvman/testkit';
 import { todo, useKvcoder } from './support/kvcoder-kernel.ts';
-import { command, requestTools, runs, says, shell, systemPrompt, toolResults } from './support/model-script.ts';
+import { command, requestTools, runs, says, systemPrompt, toolResults } from './support/model-script.ts';
 import { optInFixture } from './support/registry-fixtures.ts';
-import { newSession, turnState } from './support/turns.ts';
+import { newSession } from './support/turns.ts';
+import { delegated, helperIds } from './support/helpers.ts';
 
 const kvcoder = useKvcoder();
 
@@ -62,14 +63,13 @@ describe('connectors that are off until their owner enables them for a chat (08 
   });
 
   it("QA39-E11 the session must exist and be a top-level one", async () => {
-    const { kernel, fake } = await kvcoder.start();
-    await registerNotes(kernel);
-    await expect(enable(kernel, 'nope', ['notes'])).rejects.toMatchObject(failed('kvcoder/SESSION_NOT_FOUND'));
-    const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', { worker: 'general', title: 'Helper', task: 'Wait' })), runs(shell('true', { risky: true })));
-    await send(kernel, sessionId);
-    const childId = String((await turnState(kernel, sessionId)).turn?.pending[0]?.childSessionId);
-    await expect(enable(kernel, childId, ['notes'])).rejects.toMatchObject(failed('VALIDATION_FAILED', { sessionId: childId }));
+    const world = await kvcoder.start();
+    await registerNotes(world.kernel);
+    await expect(enable(world.kernel, 'nope', ['notes'])).rejects.toMatchObject(failed('kvcoder/SESSION_NOT_FOUND'));
+    const sessionId = await newSession(world.kernel);
+    await delegated(world, sessionId, [runs(command('delegate', 'run', { worker: 'general', title: 'Helper', kind: 'find', goal: 'Wait', done: 'It is done.' })), says('Started.'), says('Read it.')], [says('done')]);
+    const [childId = ''] = await helperIds(world.kernel, sessionId);
+    await expect(enable(world.kernel, childId, ['notes'])).rejects.toMatchObject(failed('VALIDATION_FAILED', { sessionId: childId }));
   });
 
   it('QA39-E12 a call to an optIn connector the chat did not enable finds no connector, and nothing runs', async () => {
