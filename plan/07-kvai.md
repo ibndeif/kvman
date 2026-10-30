@@ -2,7 +2,7 @@
 
 kvai gives every extension LLM calls through providers and models. It exposes nothing else. Agents, tools, context, harnesses, and loops belong to the extensions that need them.
 
-It depends on `@earendil-works/pi-ai` (1.2.0), pinned exactly (ADR 0009, 51; ADR 0083, 1).
+It depends on `@earendil-works/pi-ai` (1.4.0), pinned exactly (ADR 0009, 51; ADR 0109, 1).
 
 ## 7.1 The call: `kvai.complete`
 
@@ -57,7 +57,7 @@ kvai.complete {
 
 ## 7.2 Providers and models
 
-- **Built-ins.** pi-ai's built-in providers and their chat models are always there, all of them (ADR 0009, 52), except models whose price varies: those with a negative rate, and OpenRouter's `openrouter/auto`, `openrouter/auto-beta`, and `typesafe/jev-router`, which pi-ai prices at 0 (ADR 0009, 65; ADR 0083, 3).
+- **Built-ins.** pi-ai's built-in providers and their chat models are always there, all of them (ADR 0009, 52), except models whose price varies: those with a negative rate, and OpenRouter's routers `openrouter/auto`, `openrouter/auto-beta`, `openrouter/fusion`, `openrouter/pareto-code`, and `typesafe/jev-router`, which pi-ai prices at 0 (ADR 0009, 65; ADR 0083, 3; ADR 0109, 2). OpenRouter's `openrouter/free` stays: it routes only to free models.
 - **Custom providers and models** are kept in kvai's global store. Custom models belong to custom providers: `kvai.model.add` naming a built-in provider fails `kvai/BUILT_IN` (ADR 0009, 55).
 - A model id is `<provider>/<model>`, split at the first `/` (model ids may contain one). `kvai.model.list` and `kvai.model.remove` use the full id; `kvai.model.add { provider, id }` takes the model's own id (ADR 0009, 54).
 

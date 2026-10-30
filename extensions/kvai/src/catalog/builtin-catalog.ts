@@ -2,7 +2,8 @@ import type { Api, AuthContext, CredentialStore, Model, Models } from '@earendil
 
 // pi-ai's built-in providers and models (plan 07 §7.2, ADR 0009, 52). The catalog is large, so each worker loads it at
 // its first use rather than when kvai loads. It never refreshes, so it makes no network calls. A model whose price
-// varies is left out: one with a negative rate, and OpenRouter's routers, which pi-ai prices at 0 (ADR 0009, 65; ADR 0083, 3).
+// varies is left out: one with a negative rate, and OpenRouter's routers, which pi-ai prices at 0 (ADR 0009, 65; ADR 0083, 3;
+// ADR 0109, 2). Its free-models router stays: it costs nothing.
 
 let loading: Promise<Models> | undefined;
 let credentials: CredentialStore | undefined;
@@ -21,7 +22,7 @@ export function builtinCatalog(): Promise<Models> {
   return loading;
 }
 
-const routerModels = new Set(['openrouter/openrouter/auto', 'openrouter/openrouter/auto-beta', 'openrouter/typesafe/jev-router']);
+const routerModels = new Set(['openrouter/openrouter/auto', 'openrouter/openrouter/auto-beta', 'openrouter/openrouter/fusion', 'openrouter/openrouter/pareto-code', 'openrouter/typesafe/jev-router']);
 
 function priced(model: Model<Api>): boolean {
   const { input, output, cacheRead, cacheWrite } = model.cost;

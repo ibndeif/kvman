@@ -70,7 +70,9 @@ describe('providers and models (07 §7.2)', () => {
     expect(all.every((model) => Object.values(model.cost).every((rate) => rate >= 0))).toBe(true);
     const ids = all.map((model) => model.id);
     expect(ids).toContain('openrouter/anthropic/claude-sonnet-5.5');
-    for (const router of ['openrouter/openrouter/auto', 'openrouter/openrouter/auto-beta', 'openrouter/typesafe/jev-router']) {
+    // ADR 0109, 1: pi-ai 1.4.0's new models are listed, and its free-models router, which costs nothing, stays.
+    for (const added of ['google/gemini-4-argon', 'github-copilot/gemini-4-argon', 'google/gemini-pro-latest', 'openrouter/openrouter/free']) expect(ids).toContain(added);
+    for (const router of ['openrouter/openrouter/auto', 'openrouter/openrouter/auto-beta', 'openrouter/openrouter/fusion', 'openrouter/openrouter/pareto-code', 'openrouter/typesafe/jev-router']) {
       expect(ids).not.toContain(router);
       await expect(kernel.exec('kvai.complete', { model: router, messages: [] })).rejects.toMatchObject({ problem: { code: 'kvai/MODEL_UNKNOWN', params: { model: router } } });
     }
