@@ -91,5 +91,6 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `adr/0108-workers-in-the-background-focused-briefs-and-a-lighter-history.md` | Workers in the background with one-deliverable briefs (`kind`, `goal`, `done`, `files`, `context`, `budget`), a ceiling on their thinking, one deep trim of the history at 60K tokens that keeps the cache, rule files one level down kept for the chat, `run` with a `calls` list, an MCP connection per turn, housekeeping calls hidden, waiting for the connection, `notify` on background lines |
 | `adr/0105-deleting-artifacts.md` | `kvcoder.artifact.delete` for the agent (`artifact delete`), the panel's Delete with its confirmation and a message telling the agent, and `kvcoder.artifacts.keepDays` for the daily prune |
 | `adr/0109-pi-ai-1-4.md` | pi-ai 1.4.0 and its new models, and two more OpenRouter routers left out by name |
+| `adr/0110-live-model-catalog.md` | New models from pi.dev's live catalog: `kvai.catalog.url` (off by default, `https://pi.dev` in `coder`), refreshed at start and every 4 hours, merged over the built-in list |
 
 The plan is complete. Implementation starts with M1.1.

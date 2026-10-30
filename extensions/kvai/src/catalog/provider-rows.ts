@@ -44,7 +44,7 @@ export async function providerRows(ctx: Ctx, catalog: CustomCatalog): Promise<Pr
         title: provider.name,
         builtIn: true,
         status: statusOf(connection, true),
-        models: (await builtinModels(provider.id)).length,
+        models: (await builtinModels(ctx, provider.id)).length,
         connection,
         ...flags,
       };
@@ -80,9 +80,9 @@ export async function providerExists(catalog: CustomCatalog, id: string): Promis
 }
 
 // The name of a model by its full id, or `null` when there's no such model.
-export async function modelName(catalog: CustomCatalog, fullId: string): Promise<string | null> {
+export async function modelName(ctx: Ctx, catalog: CustomCatalog, fullId: string): Promise<string | null> {
   const parts = splitModelId(fullId);
   if (parts === undefined) return null;
-  const model = (await builtinModel(parts.provider, parts.model)) ?? (await catalog.model(parts.provider, parts.model));
+  const model = (await builtinModel(ctx, parts.provider, parts.model)) ?? (await catalog.model(parts.provider, parts.model));
   return model?.name ?? null;
 }

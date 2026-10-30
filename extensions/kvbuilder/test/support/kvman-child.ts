@@ -52,13 +52,17 @@ function stopped(child: ChildProcess): Promise<void> {
   return new Promise((resolve) => child.once('exit', () => resolve()));
 }
 
+// The coder preset turns on pi.dev's live model catalog (ADR 0110). Tests make no network call, so the child's own
+// requests go through Node's proxy to a closed local port, and only 127.0.0.1 is reached directly.
+const offline = { NODE_USE_ENV_PROXY: '1', HTTPS_PROXY: 'http://127.0.0.1:9', HTTP_PROXY: 'http://127.0.0.1:9', NO_PROXY: '127.0.0.1,localhost' };
+
 export function kvmanWorld(): KvmanWorld {
   const root = mkdtempSync(path.join(tmpdir(), 'kvbuilder-e2e-'));
   const [home, user, project] = ['home', 'user', 'project'].map((name) => path.join(root, name));
   for (const folder of [user ?? '', project ?? '']) mkdirSync(folder, { recursive: true });
   const children: ChildProcess[] = [];
   const start = async (args: readonly string[], env: Record<string, string> = {}): Promise<Kvman> => {
-    const environment: NodeJS.ProcessEnv = { ...process.env, HOME: user, USERPROFILE: user, ...env };
+    const environment: NodeJS.ProcessEnv = { ...process.env, HOME: user, USERPROFILE: user, ...offline, ...env };
     delete environment['KVMAN_HOME'];
     const child = spawn(process.execPath, ['--conditions=@kvman/source', mainFile, '--home', home ?? '', '--port', '0', '--no-open', '--yes', ...args], { cwd: project, env: environment, stdio: 'pipe' });
     children.push(child);

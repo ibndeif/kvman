@@ -36,7 +36,7 @@ function registerModelCatalog(ctx: Ctx, catalog: CustomCatalog): void {
       const defaultId = await ctx.settings.get('kvai.defaultModel');
       // pi-ai loads with the catalog, at a worker's first use, not when kvai loads (ADR 0009, 52).
       const { getSupportedThinkingLevels } = await import('@earendil-works/pi-ai');
-      const rows = [...(await builtinModels(input.provider)).map((model) => builtinRow(model, getSupportedThinkingLevels)), ...(await catalog.models(input.provider)).map(customRow)];
+      const rows = [...(await builtinModels(ctx, input.provider)).map((model) => builtinRow(model, getSupportedThinkingLevels)), ...(await catalog.models(input.provider)).map(customRow)];
       return rows.map((row) => ({ ...row, isDefault: row.id === defaultId }));
     },
   });
@@ -61,7 +61,7 @@ function registerModelCatalog(ctx: Ctx, catalog: CustomCatalog): void {
     handle: async (input) => {
       const parts = splitModelId(input.id);
       if (parts === undefined) return {};
-      if ((await builtinModel(parts.provider, parts.model)) !== undefined) throw ctx.problem('kvai/BUILT_IN', { id: input.id });
+      if ((await builtinModel(ctx, parts.provider, parts.model)) !== undefined) throw ctx.problem('kvai/BUILT_IN', { id: input.id });
       await catalog.removeModel(parts.provider, parts.model);
       return {};
     },
@@ -72,7 +72,7 @@ function registerModelCatalog(ctx: Ctx, catalog: CustomCatalog): void {
 async function defaultModel(ctx: Ctx, catalog: CustomCatalog): Promise<z.output<typeof defaultModelSchema>> {
   const id = await ctx.settings.get('kvai.defaultModel');
   if (id === null) return { id: null, name: null, ready: false };
-  const name = await modelName(catalog, id);
+  const name = await modelName(ctx, catalog, id);
   const provider = splitModelId(id)?.provider;
   if (name === null || provider === undefined) return { id, name, ready: false };
   const custom = (await catalog.provider(provider)) !== undefined;

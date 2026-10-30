@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isTransient } from '../src/complete/failures.ts';
+import { isTransient } from '../src/complete/transient.ts';
 import { useKvai, userSays } from './support/kvai-kernel.ts';
 
 const kvai = useKvai();

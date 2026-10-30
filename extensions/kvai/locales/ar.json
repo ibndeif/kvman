@@ -158,5 +158,8 @@
   "kvai.config.reset.global": "استعادة الافتراضي",
   "kvai.config.reset.workspace": "استخدام قيمة كل مساحات العمل",
   "kvai.config.ownValue": "لمساحة العمل {name} قيمة خاصة بها. انتقل إلى {name} لتغييرها.",
-  "kvai.ui.picker.count": "{shown} من أصل {count} | {shown} من أصل نموذج واحد | {shown} من أصل نموذجين | {shown} من أصل {count} نماذج | {shown} من أصل {count} نموذجًا | {shown} من أصل {count} نموذج"
+  "kvai.ui.picker.count": "{shown} من أصل {count} | {shown} من أصل نموذج واحد | {shown} من أصل نموذجين | {shown} من أصل {count} نماذج | {shown} من أصل {count} نموذجًا | {shown} من أصل {count} نموذج",
+  "kvai.catalog.url.title": "فهرس النماذج الجديدة",
+  "kvai.catalog.url.description": "المصدر الذي تأتي منه النماذج الجديدة بين إصدارات kvman، مثل https://pi.dev. اتركه فارغًا للاكتفاء بالنماذج المرفقة مع kvman.",
+  "kvai.catalog.refresh.description": "يجلب قوائم النماذج من الفهرس الحي لكل مزوّد مدمج ويحفظها."
 }

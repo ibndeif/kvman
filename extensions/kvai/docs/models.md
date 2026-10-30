@@ -28,7 +28,7 @@ While the call runs, kvai reports `{ type: 'text' | 'thinking', delta }` and `{ 
 
 ## Listing and choosing models
 
-`kvai.model.list { provider? }` answers every built-in and custom model: `[{ id, name, provider, reasoning, thinkingLevels, input, contextWindow, maxTokens, cost, builtIn, isDefault }]`. `thinkingLevels` lists the model's levels in order: a built-in model's from pi-ai, and a custom one's `off` to `high` when it reasons, else `off` alone. The default model is the `kvai.defaultModel` setting (`'<provider>/<model>'`); `kvai.model.default.get` answers `{ id, name, ready }` — whether that model exists and its provider can be called. Set the setting to choose a different default.
+`kvai.model.list { provider? }` answers every built-in and custom model: `[{ id, name, provider, reasoning, thinkingLevels, input, contextWindow, maxTokens, cost, builtIn, isDefault }]`. `thinkingLevels` lists the model's levels in order: a built-in model's from pi-ai, and a custom one's `off` to `high` when it reasons, else `off` alone. The default model is the `kvai.defaultModel` setting (`'<provider>/<model>'`); `kvai.model.default.get` answers `{ id, name, ready }` — whether that model exists and its provider can be called. Set the setting to choose a different default. Built-in models are pi-ai's, plus pi.dev's live catalog when the `kvai.catalog.url` setting names it (the coder preset does): kvai fetches it at start and every 4 hours, and a model released after kvai's pi-ai is listed and called like the others.
 
 ## When no model is connected
 

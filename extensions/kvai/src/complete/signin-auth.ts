@@ -1,6 +1,7 @@
 import { ModelsError } from '@earendil-works/pi-ai';
 import { ProblemError, type Ctx } from '@kvman/sdk';
-import { isTransient, redacted } from './failures.ts';
+import { redacted } from './failures.ts';
+import { isTransient } from './transient.ts';
 import type { Target } from './target.ts';
 
 // A call with a sign-in (plan 07 §7.1, ADR 0009, 235). pi-ai refreshes an expiring token when it resolves the call's

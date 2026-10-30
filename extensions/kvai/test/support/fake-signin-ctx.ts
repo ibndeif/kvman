@@ -33,7 +33,7 @@ export function makeFakeClock(start = 1_000_000): { clock: LeaseClock; current()
 }
 
 export type FakeSigninCtx = {
-  ctx: Pick<Ctx, 'secrets' | 'store' | 'job' | 'problem' | 'cancel' | 'log'>;
+  ctx: Pick<Ctx, 'secrets' | 'store' | 'job' | 'problem' | 'cancel' | 'log' | 'settings'>;
   controller: AbortController;
   chunks: Json[];
 };
@@ -94,6 +94,8 @@ export function makeFakeSigninCtx(jobId: string, shared: SharedSigninMaps): Fake
       secrets,
       store,
       job,
+      // Every setting the target reads is at its default, null: no default model, and no live catalog (ADR 0110).
+      settings: { get: () => Promise.resolve(null) } as unknown as Ctx['settings'],
       // A model call logs its silences (ADR 0094, 2); these tests don't read the log.
       log: { debug: (): void => undefined, info: (): void => undefined, warn: (): void => undefined, error: (): void => undefined },
       problem: (code: string, params?: Readonly<Record<string, Json>>): ProblemError =>

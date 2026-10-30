@@ -1,5 +1,6 @@
 import { isContextOverflow, type Api, type AssistantMessage, type Model } from '@earendil-works/pi-ai';
 import type { Ctx, ProblemError } from '@kvman/sdk';
+import { isTransient } from './transient.ts';
 
 // kvai's failures (plan 07 §7.1, ADR 0009, 63). pi-ai reports a failed request as a message with `stopReason: 'error'`
 // and the provider's text; an HTTP 429 reads `429: …`. A `reason` never carries the key.
@@ -10,13 +11,6 @@ const rateLimitPattern = /^429\b|rate.?limit|too many requests/i;
 const usageLimitPattern = /usage limit|insufficient_quota|exceeded your current quota/i;
 const refusedPattern = /flagged for|content[ _-]?(?:policy|filter)|safety system/i;
 const reasonLimit = 1000;
-// A second try may fix these (ADR 0009, 154 and 203): an HTTP 408, 409, 425, or 5xx (pi-ai's reason starts with the
-// status), overloaded or unavailable providers, timeouts, and dropped or refused connections, a stream that ended before its final event (ADR 0050, 1), and a connection
-// dropped while the answer was read, which reads `terminated` and nothing else (ADR 0069, 1).
-const transientPattern = /^(?:408|409|425|5\d\d)\b|timed? ?out|timeout|connection error|econn(?:reset|refused|aborted)|etimedout|enotfound|eai_again|fetch failed|socket hang up|overloaded|service unavailable|bad gateway|stream ended|^terminated$/i;
-
-/** Whether a provider's failure text is one a second try may fix. */
-export const isTransient = (reason: string): boolean => transientPattern.test(reason);
 
 export function redacted(text: string, secrets: readonly string[]): string {
   const hidden = secrets.filter((secret) => secret !== '').reduce((shown, secret) => shown.replaceAll(secret, '[secret]'), text);

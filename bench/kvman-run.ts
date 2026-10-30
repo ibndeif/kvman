@@ -8,13 +8,17 @@ import { fileURLToPath } from 'node:url';
 
 const mainFile = fileURLToPath(new URL('../packages/cli/dist/main.js', import.meta.url));
 
+// The reference preset is coder's, which turns on pi.dev's live model catalog (ADR 0110). A measurement makes no
+// network call: Node sends the run's own requests through a proxy on a closed local port, and 127.0.0.1 goes direct.
+const offline = { NODE_USE_ENV_PROXY: '1', HTTPS_PROXY: 'http://127.0.0.1:9', HTTP_PROXY: 'http://127.0.0.1:9', NO_PROXY: '127.0.0.1,localhost' };
+
 export type KvmanRun = { msToUrl: number; pid: number; stop(): Promise<void> };
 
 export function runKvman(root: string, args: readonly string[]): Promise<KvmanRun> {
   const home = path.join(root, 'home');
   const project = path.join(root, 'project');
   mkdirSync(project, { recursive: true });
-  const environment: NodeJS.ProcessEnv = { ...process.env, HOME: root, USERPROFILE: root };
+  const environment: NodeJS.ProcessEnv = { ...process.env, HOME: root, USERPROFILE: root, ...offline };
   delete environment['KVMAN_HOME'];
   const started = performance.now();
   const child = spawn(process.execPath, [mainFile, '--home', home, '--port', '0', '--no-open', '--yes', ...args], { cwd: project, env: environment, stdio: ['ignore', 'pipe', 'pipe'] });

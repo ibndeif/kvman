@@ -33,6 +33,7 @@ declare module '@kvman/sdk' {
   }
   interface Settings {
     'kvai.defaultModel': string | null;
+    'kvai.catalog.url': string | null;
   }
 }
 

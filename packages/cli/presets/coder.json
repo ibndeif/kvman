@@ -10,6 +10,7 @@
   "settings": {
     "kvwebui.title": "kvcoder.app.title",
     "kvwebui.home": "kvcoder.chat",
-    "kvai.defaultModel": "anthropic/claude-sonnet-5-5"
+    "kvai.defaultModel": "anthropic/claude-sonnet-5-5",
+    "kvai.catalog.url": "https://pi.dev"
   }
 }

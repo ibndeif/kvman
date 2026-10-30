@@ -29,7 +29,7 @@ export async function resolveTarget(ctx: Ctx, catalog: CustomCatalog, fullId: st
     if ('delegate' in custom) return { kind: 'delegate', command: custom.delegate };
     return { kind: 'model', ...customModels(custom, stored), provider: parts.provider, apiKey: secretKey ?? keylessPlaceholder, signedIn: false, secrets: secretKey === undefined ? [] : [secretKey] };
   }
-  const model = await builtinModel(parts.provider, parts.model);
+  const model = await builtinModel(ctx, parts.provider, parts.model);
   if (model === undefined) throw ctx.problem('kvai/MODEL_UNKNOWN', { model: fullId });
   const models = await builtinCatalog();
   const credential = await readOauthCredential(ctx, parts.provider);

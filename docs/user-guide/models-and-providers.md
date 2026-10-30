@@ -45,6 +45,10 @@ On the provider's page, click **Disconnect**. kvman deletes the key and the sign
 
 The default model is the `kvai.defaultModel` setting; it applies per workspace, falling back to the global value, then the preset, then nothing (unset means no default). The bundled `coder` preset sets it to `anthropic/claude-sonnet-5-5`.
 
+## New models
+
+A model released after your kvman version still shows up in the lists. The bundled `coder` preset takes new models from pi.dev's live catalog, the one pi uses: kvman checks it when it starts and every 4 hours, asking for each provider's list with no key or chat in the request, and adds what's new. Without the network it keeps the models it shipped with. The `kvai.catalog.url` setting is the catalog's address; set it to nothing to use only the models kvman ships with (that takes effect at once; turning it back on takes effect at the next start).
+
 ## Your own server (Ollama, LM Studio, …)
 
 A local server that speaks one of the wire APIs kvman knows can be added as a custom provider:

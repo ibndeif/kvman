@@ -158,5 +158,8 @@
   "kvai.config.changed.workspace": "Changed for {name}",
   "kvai.config.reset.global": "Reset",
   "kvai.config.reset.workspace": "Use the value for all workspaces",
-  "kvai.config.ownValue": "{name} has its own value. Switch to {name} to change it."
+  "kvai.config.ownValue": "{name} has its own value. Switch to {name} to change it.",
+  "kvai.catalog.url.title": "New models catalog",
+  "kvai.catalog.url.description": "Where new models come from between kvman releases, such as https://pi.dev. Empty keeps the models kvman ships with.",
+  "kvai.catalog.refresh.description": "Fetches the live catalog's model lists for every built-in provider and keeps them."
 }
