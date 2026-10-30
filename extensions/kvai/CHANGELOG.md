@@ -1,5 +1,11 @@
 # @kvman/kvai
 
+## 0.1.9
+
+### Patch Changes
+
+- 9512365: New models without a release: with the new `kvai.catalog.url` setting (the coder preset sets `https://pi.dev`), kvai lays pi.dev's live model catalog over pi-ai's built-in list at start and every 4 hours, so models such as GPT-6.1 Terra can be picked and called (ADR 0110).
+
 ## 0.1.8
 
 ### Patch Changes

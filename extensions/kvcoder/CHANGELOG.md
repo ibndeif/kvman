@@ -1,5 +1,12 @@
 # @kvman/kvcoder
 
+## 0.1.17
+
+### Patch Changes
+
+- Updated dependencies [9512365]
+  - @kvman/kvai@0.1.9
+
 ## 0.1.16
 
 ### Patch Changes
