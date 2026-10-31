@@ -68,10 +68,10 @@ describe('background-only delegation (ADR 0108, 1)', { timeout: 30_000 }, () => 
 });
 
 describe("a run's budget (ADR 0108, 2)", { timeout: 30_000 }, () => {
-  it("QA71-H10 and QA71-E10 a helper's turn ends at its budget with its last message, and a continue gets the budget again", async () => {
+  it("QA71-H10, QA71-E10, and QA74-H8 a helper's turn ends at its budget with its last message, and a continue gets the budget again", async () => {
     const { kernel, fake, helperFake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    fake.reply(runs(command('delegate', 'run', brief('general', { budget: 3 }))), says('Started.'), says('It stopped.'));
+    fake.reply(runs(command('delegate', 'run', brief('general', { maxSteps: 3 }))), says('Started.'), says('It stopped.'));
     helperFake.reply(...Array.from({ length: 3 }, (_, index) => ({ chunks: [{ text: `step ${String(index + 1)}` }, { toolCall: { id: `list-${String(index)}`, name: 'run', arguments: { connector: 'fs', command: 'list', payload: {} } } }] })));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     await kernel.clock.advance(0);

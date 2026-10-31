@@ -30,7 +30,7 @@ describe('the check-in on a long turn (ADR 0108, 11)', { timeout: 120_000 }, () 
   it("QA71-E36 a helper's turn gets no check-in, even at step 60 of its budget", async () => {
     const world = await kvcoder.start();
     const sessionId = await newSession(world.kernel);
-    await delegated(world, sessionId, [runs(command('delegate', 'run', brief('general', { budget: 60 }))), says('Started.'), says('Read it.')], [...Array.from({ length: 59 }, () => runs(command('fs', 'list', {}))), says('looked')]);
+    await delegated(world, sessionId, [runs(command('delegate', 'run', brief('general', { maxSteps: 60 }))), says('Started.'), says('Read it.')], [...Array.from({ length: 59 }, () => runs(command('fs', 'list', {}))), says('looked')]);
     expect(world.helperFake.requests()).toHaveLength(60);
     expect(requestMessages(world.helperFake, 59).filter((message) => message.role === 'user' && textOf(message).startsWith('[kvman: step '))).toEqual([]);
   });

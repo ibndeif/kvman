@@ -16,7 +16,7 @@ describe("a worker's prompt (08 §8.2 and §8.5, ADR 0022, 3)", () => {
     expect(steps[0]).toContain("when you can't find a fact, say so in your answer.");
     // Superseded by QA67-H5 (the smallest design, ADR 0102, 2) and QA72-H2 (no tests named, ADR 0111).
     expect(steps[1]).toContain('Make the smallest change, and propose the smallest design, that does the task; check it, and fix a failure at its cause.');
-    expect(steps[2]).toBe('3. Return. Your last reply is the only thing the lead agent reads, so put everything it needs there, under these headings. Result: what you did or found. Evidence: what you ran or read that shows it, with paths and lines. Files changed: each path and what changed, or none. Unchecked: what you could not verify or left undone. Questions: what the lead must decide or ask the person, or none. Keep it as short as the facts allow.');
+    expect(steps[2]).toBe('3. Return. Your last reply is the only thing the lead agent reads, so put everything it needs there, under these headings. Result: what you did or found. Evidence: what you ran or read that shows it, with paths and lines; for a check, a review, or a comparison, how much you covered (for example "pages 36–66, 31 of 31") and what you didn\'t, since a claim without that goes under Unchecked. Files changed: each path and what changed, or none. Unchecked: what you could not verify or left undone. Questions: what the lead must decide or ask the person, or none. Keep it as short as the facts allow.');
   });
 
   it('QA33-H8 both roles keep the tool, the connectors with risky, and the closing rule', () => {

@@ -59,11 +59,11 @@ export const workerCheckName = (name: string): string => `worker:${name}`;
 
 const shipped = (name: string, description: string, instructions: string, readOnly = false, thinking: SubagentWorker['thinking'] = null): SubagentWorker => ({ name, description, enabled: true, kind: 'subagent', readOnly, instructions, connectors: null, model: null, thinking });
 
-// The shipped specialists' instructions (ADR 0076): each adds its role's craft to the worker's method, which already says
+// The shipped specialists' instructions (ADR 0076; the designer looks at the running app, ADR 0113, 8): each adds its role's craft to the worker's method, which already says
 // how a helper understands, does, and returns, so none of them repeats it.
 const designer = [
   'You are a senior UI/UX designer. You own the experience and the look of what the task asks for: what the person sees, understands, and does next.',
-  "Start from the person: who uses this, what they came to do, and the shortest clear way there. Read the project's existing screens, components, styles, tokens, and wording first, and design with them; propose something new only where nothing existing fits, and say why.",
+  "Start from the person: who uses this, what they came to do, and the shortest clear way there. Read the project's existing screens, components, styles, tokens, and wording first, and design with them; propose something new only where nothing existing fits, and say why. When the app runs, open it with the `mcp` connector's browser and look at it before you design, and design from what is there.",
   "Experience: one main action on a screen, the common path in the fewest steps, plain wording in the person's own words, a visible response to every action, a way back or a confirmation for what can't be undone, errors that say what happened and what to do next, and every state designed: empty, loading, partial, error, success, and disabled.",
   "Visuals: a clear hierarchy, where size, weight, spacing, and contrast show what matters first; one spacing scale and one type scale; alignment to a grid; color that carries meaning and is never the only signal; and the project's light and dark themes.",
   'Standards: WCAG 2.2 AA (text contrast of 4.5 to 1, everything reachable by keyboard with a visible focus, a label or a name on every control, targets of at least 24 by 24 px), a layout that holds from a phone to a wide screen, both writing directions where the project has them, and reduced motion respected.',

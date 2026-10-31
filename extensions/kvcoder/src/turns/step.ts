@@ -20,6 +20,7 @@ import { appendMessage, appendNotice, appendQueued, userContent } from './histor
 import { levelFor } from './model-info.ts';
 import { incompleteHint, incompleteReply, incompleteRetries, lostHint, lostRetries, lostTokens, repairedCalls, type Incomplete } from './lost-reply.ts';
 import { modelMessages, sentHistory } from './model-context.ts';
+import { quietEnding } from './quiet-ending.ts';
 import { completeWithRetries, transient } from './model-retry.ts';
 import { triesUsed, waitForConnection } from './connection-wait.ts';
 import { evaluateCalls, runApproved, runDeferred, type ToolCall } from './run-calls.ts';
@@ -177,12 +178,14 @@ function failureDetails(error: ProblemError): JsonValue {
 }
 
 // Inbox/lost-reply decision and settlement/end/successor now share one canonical transaction.
-async function finishWithoutCalls(ctx: Ctx, lease: StepLease, maxSteps: number | null, lost: number | undefined, incomplete: Incomplete | undefined): Promise<void> {
+async function finishWithoutCalls(ctx: Ctx, lease: StepLease, maxSteps: number | null, lost: number | undefined, replied: Incomplete | undefined): Promise<void> {
   const next = await ctx.store.transaction((tx): StepNext => {
     ctx.job.signal.throwIfAborted();
     const store = txRecords(tx);
     const live = liveStep(store, lease, lease.jobId);
     if (live === undefined) return undefined;
+    // An empty reply to background results alone ends the turn quietly (ADR 0113, 1).
+    const incomplete = replied === 'empty' && quietEnding(store, live.session, lease.turnId) ? undefined : replied;
     if (lost !== undefined && live.turn.lost >= lostRetries) {
       const ended = endTurnState(store, lease.sessionId, lease.turnId, 'failed', 'step', { code: 'REPLY_LOST', params: { tokens: lost } }, lease);
       return ended === undefined ? undefined : { kind: 'end', ended };

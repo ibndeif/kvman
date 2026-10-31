@@ -60,7 +60,7 @@ describe('the prompt builder (08 §8.2)', () => {
         'in an artifact, not in a reply.',
         'Work in few steps. Each reply is a step, and every step sends the whole conversation again, so make in one reply every call you can make now: reads and searches run at the same time, and calls that change something (shell lines, writes, edits) run one after another in the order you give them. Read a few files with one `fs read-files`, put independent calls (searches, separate files, separate workers) in the same reply, as several run calls or one run with a calls list, and leave for a later reply only a call that needs another call\'s result. Several new files are several `fs write` calls in one reply, not one reply each.',
         'To put a question to the person (a choice, a yes or no, a free answer), call `ask`.',
-        'Your final answer starts with the result, in plain words and as short as the facts allow.',
+        'Your final answer starts with the result, in plain words and as short as the facts allow, and answers each thing the person asked for in this request',
       ]) expect(prompt, phrase).toContain(phrase);
     }
   });
@@ -98,7 +98,7 @@ describe('the prompt builder (08 §8.2)', () => {
     }
     expect(risky.description).toContain('false for the ordinary work of the task: a file inside the workspace folder that the task needs, whoever made it');
     expect(risky.description).not.toContain('own work');
-    const check = "\nBefore you say that something runs or works, check it the way the person would: run it or request its address; if you couldn't, say what is unchecked. After you start a server, request its address once before you give it to the person.\n";
+    const check = "\nBefore you say that something runs or works, check it the way the person would: run it or request its address; if you couldn't, say what is unchecked. After you start a server, request its address once before you give it to the person. Read every error the page or program reports while you check it, console errors too, and fix it or say why it doesn't matter.\n";
     expect(prompt).toContain(check);
     expect(prompt.split('\n').find((line) => line.startsWith('Execute. '))).not.toContain('Before you say');
     expect(prompt).toContain('A small, clear change is done and checked, and nothing more.');

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { workingMethod } from '../../src/prompt/working-method.ts';
 
 const talk = 'Talk to the person as you work, the way a colleague does. Every reply that makes a call starts with one short sentence to the person: what you are doing and why, or what you just found and what you do next. Never send a reply that holds only calls.';
-const answer = "Your final answer starts with the result, in plain words and as short as the facts allow. Say what you couldn't check, what still runs, or what you noted for later only when it matters for what the person does next.";
+const answer = "Your final answer starts with the result, in plain words and as short as the facts allow, and answers each thing the person asked for in this request, a short line each, what is still open included. While helpers still work on the request, end with one line or nothing; when the last of them ends, give that whole answer. Say what you couldn't check, what still runs, or what you noted for later only when it matters for what the person does next.";
 const lineOf = (method: string, start: string): string => method.split('\n').find((line) => line.startsWith(start)) ?? '';
 
 describe('a conversation, not a procedure (08 §8.2, ADR 0112)', () => {

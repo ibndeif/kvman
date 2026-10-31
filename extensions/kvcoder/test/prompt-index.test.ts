@@ -69,7 +69,7 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
       '  choice  { prompt, multiple, options: [{ id, label, description? }], other? }',
       '  confirm { prompt, danger? }',
       '  help    { command? }',
-      '  run      { worker, title (≤200), kind: "find" | "change" | "check" | "review", goal (≤300), done (≤300), files?, context?: [{ path, fromLine?, lines? }], budget? }',
+      '  run      { worker, title (≤200), kind: "find" | "change" | "check" | "review", goal (≤300), done (≤300), files?, context?: [{ path, fromLine?, lines? }], maxSteps? }',
       '  continue { id, message }',
       '  help     { command? }',
       '  fetch { url }',

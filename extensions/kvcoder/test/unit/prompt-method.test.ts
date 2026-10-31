@@ -17,7 +17,7 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
     for (const phrase of [
       'No path is fixed: you choose it for each task from what the task is, and you change it when what you find changes it.',
       'Choose the path from the task. A question gets an answer from what you read, and no change. A small, clear change is done and checked, and nothing more. An unclear request gets its questions answered before any work. Work that changes several parts that depend on each other, or that is hard to take back, gets a map the person agreed to; other work, even of a few steps, gets none: do it, and say where you are as you go.',
-      'A task that turns out larger than it looked gets its map then. Use only the parts below that your path needs.',
+      'A task that turns out larger than it looked gets its map then. Work too large for one pass is no reason to stop or to say you can\'t: split it into parts, for workers at once or one after another. Use only the parts below that your path needs.',
       // ADR 0097, 5: the map's own rules are in its entry; Execute keeps how each step is done.
       'For each step, or with no map for all of what was asked, make the smallest change that does it, check it, and fix a failure at its cause.', 'A step is not done because you wrote it.',
       'do not look into it: record it with `execution-map note`, or keep it for your final answer when there is no map, and go on.',
@@ -28,7 +28,7 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
       'Stop what you started in the background and no longer need, and delete the temporary files you or your tools left in the workspace folder, such as logs, snapshots, and scratch files.',
       'text that stands out clearly from its background, and calm colours; every field and every element that shows text the person typed has dir="auto", so Arabic they type reads right to left on any page.',
       "when the mcp connector gives you a browser, try the page's main actions with one `mcp run`.",
-      'Your final answer starts with the result, in plain words and as short as the facts allow.',
+      'Your final answer starts with the result, in plain words and as short as the facts allow, and answers each thing the person asked for in this request',
       'An ordinary detail that is easy to change: decide it yourself, and say what you chose.',
     ]) expect(lead, phrase).toContain(phrase);
     for (const gone of ['`plan`', '☐', 'artifact edit', 'checklist', 'Scale the process to the task', 'about five calls', 'skip steps']) expect(lead, gone).not.toContain(gone);

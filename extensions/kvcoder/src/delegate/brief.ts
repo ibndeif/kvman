@@ -5,8 +5,8 @@ import { resolveInWorkspace } from '../files/workspace-path.ts';
 import { runKinds, type RunBrief } from '../schemas/delegate-brief.ts';
 
 // A delegated run is one deliverable (plan 08 §8.5, ADR 0108, 2): its kind, one goal, one condition that says it is
-// done, the files a `change` run may change, the line ranges whose text kvcoder attaches, and a step budget. kvcoder
-// writes the helper's first message from them.
+// done, the files a `change` run may change, the line ranges whose text kvcoder attaches, and its most steps (`maxSteps`,
+// ADR 0113, 6). kvcoder writes the helper's first message from them.
 
 /** The most steps one turn of a helper takes, and its default. */
 export const budgetLimit = 60;
@@ -29,8 +29,8 @@ export const delegateRunSchema = z
     goal: sentence.describe('One sentence of what the run delivers.'),
     done: sentence.describe('One condition anyone can check that says the run is done.'),
     files: z.array(z.string().min(1).refine(noWildcards, 'Name each file; no wildcards.')).min(1).max(50).describe('For change only: the files, in the workspace folder, the run may change or create. Required for change.').exactOptional(),
-    context: z.array(range).min(1).max(20).describe('The line ranges the worker needs; kvcoder attaches their current text, up to 20 KB in all, so it reads nothing you already hold.').exactOptional(),
-    budget: z.number().int().min(1).max(budgetLimit).describe('The most steps the run takes, 60 by default.').exactOptional(),
+    context: z.array(range).max(20).describe('The line ranges the worker needs; kvcoder attaches their current text, up to 20 KB in all, so it reads nothing you already hold. An empty list is none.').exactOptional(),
+    maxSteps: z.number().int().min(1).max(budgetLimit).describe('The most steps the run takes, a number from 1 to 60; 60 when left out.').exactOptional(),
   })
   .superRefine((run, issues) => {
     if (run.kind === 'change' && run.files === undefined) issues.addIssue({ code: 'custom', path: ['files'], message: 'A change run names the files it may change.' });
@@ -82,5 +82,5 @@ export async function briefOf(ctx: Ctx, run: DelegateRun): Promise<{ task: strin
   if (run.files !== undefined) lines.push(`You may change only: ${run.files.join(', ')}`, "A shell line isn't limited to these files: change nothing else with it.");
   const context = await attached(ctx, run.context ?? []);
   const task = [lines.join('\n'), ...(context.length === 0 ? [] : [`## Context\n\n${context.join('\n\n')}`])].join('\n\n');
-  return { task, brief: { kind: run.kind, goal: run.goal, files, budget: run.budget ?? budgetLimit } };
+  return { task, brief: { kind: run.kind, goal: run.goal, files, budget: run.maxSteps ?? budgetLimit } };
 }

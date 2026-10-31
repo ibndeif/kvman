@@ -58,7 +58,11 @@ describe("a run's brief (ADR 0108, 2)", { timeout: 30_000 }, () => {
     expect(text).toContain("gone.ts · error NOT_FOUND: gone.ts doesn't exist.");
   });
 
-  it('QA71-E1, E3, E4, E5, and E6 what the brief refuses fails VALIDATION_FAILED and starts no helper', async () => {
+  it('QA74-E5 an empty context list is no context, and the run starts', async () => {
+    expect(await firstMessage({ goal: 'Read it.', context: [] })).toBe(['Kind: find', 'Goal: Read it.', 'Done when: It is looked at.'].join('\n'));
+  });
+
+  it('QA71-E1, E3, E4, E5, and E6, and QA74-E4, what the brief refuses fails VALIDATION_FAILED and starts no helper', async () => {
     const refusals: [Record<string, unknown>, RegExp][] = [
       [{ background: true }, /Unrecognized key: "background"/],
       [{ kind: 'review', files: ['a.ts'] }, /files: A review run changes no file, so it takes no files\./],
@@ -68,8 +72,9 @@ describe("a run's brief (ADR 0108, 2)", { timeout: 30_000 }, () => {
       [{ kind: 'change', files: ['src/*.ts'] }, /files\.0: Name each file; no wildcards\./],
       [{ kind: 'change', files: Array.from({ length: 51 }, (_, index) => `f${String(index)}.ts`) }, /files: /],
       [{ context: Array.from({ length: 21 }, () => ({ path: 'a.ts' })) }, /context: /],
-      [{ budget: 0 }, /budget: /],
-      [{ budget: 61 }, /budget: /],
+      [{ maxSteps: 0 }, /maxSteps: /],
+      [{ maxSteps: 61 }, /maxSteps: /],
+      [{ budget: 30 }, /Unrecognized key: "budget"/],
       [{ kind: 'change', files: ['../outside.ts'] }, /outside the workspace folder/],
       [{ context: [{ path: '../outside.ts' }] }, /outside the workspace folder/],
     ];
