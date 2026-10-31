@@ -37,7 +37,7 @@ describe("the map's rules in its entry (08 §8.2 and §8.5, ADR 0097, 5 and 8)",
     expect(execute).toContain('work through it as its entry says');
     // Map holds what Plan and Confirm the plan held, shorter than they were with Execute (2,427 characters).
     expect(plan.length + execute.length).toBeLessThan(2300);
-    for (const rule of ['Its uses names who does it', 'a branch means delegation', 'Give each step its details in the same set call', 'Setting the map again keeps the status of each step whose id stays', 'Mark a step doing in the same reply as your first call on it', 'failed with a note']) expect(executionMapDescription).toContain(rule);
+    for (const rule of ['Its uses names who does it', 'a branch means delegation', 'Give each step its details in the same set call', 'Setting the map again with the same goal keeps the status of each step whose id stays', 'Mark a step doing in the same reply as your first call on it', 'failed with a note']) expect(executionMapDescription).toContain(rule);
   });
 
   it('QA65-H13 the entry gives every limit as the schemas have them', () => {

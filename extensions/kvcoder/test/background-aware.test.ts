@@ -42,8 +42,9 @@ describe('the agent knows what runs in the background (08 §8.5, ADR 0068, 4 and
     const prompt = systemPrompt(fake, 0);
     // ADR 0108, 1: the wait is for a process; a helper's answer wakes the lead.
     expect(prompt).toContain("Use it to see its status or output, to wait for a process to end, or to stop a run. When you need a process's result before you can go on, call wait once");
-    expect(prompt).toContain('Never wait for a helper: its answer wakes you.');
+    // ADR 0114, 2: the Delegate part says it once.
+    expect(prompt).toContain('you never wait for a helper with `background wait`');
     expect(prompt).toMatch(/\n {2}list +\{\}\n {2}output +\{ id, lines\? \}\n {2}wait +\{ id, timeoutMs\? \}\n {2}stop +\{ id \}\n {2}help +\{ command\? \}/);
-    for (const role of ['lead', 'worker'] as const) expect(workingMethod(role), role).toContain("When you need a background process's result before you can go on, call `background wait` once; don't ask for its output again and again, and a run that ends tells you in a message. Never wait for a helper: its answer wakes you.");
+    for (const role of ['lead', 'worker'] as const) expect(workingMethod(role), role).toContain("When you need a background process's result before you can go on, call `background wait` once; don't ask for its output again and again, and a run that ends tells you in a message.");
   });
 });

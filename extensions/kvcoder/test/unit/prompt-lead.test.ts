@@ -56,7 +56,7 @@ describe("the lead's prompt (08 §8.2, ADR 0022, 2 to 4)", () => {
 
   it('QA33-H6 both roles decide from evidence', () => {
     // The evidence rule no longer words the answer since QA73-H7 (ADR 0112, 4).
-    const evidence = '\nDecide from evidence: every decision and every claim rests on something you read, ran, or were told.\n';
+    const evidence = '\nDecide from evidence: every decision and every claim rests on something you read, ran, or were told; what one quick look would answer, look up instead of leaving it open.\n';
     expect(lead()).toContain(evidence);
     expect(buildPrompt({ role: 'worker', workspacePath: '/w', language: 'en', platform: 'linux', shell: 'bash', sections: [], connectors: [] }).prompt).toContain(evidence);
   });

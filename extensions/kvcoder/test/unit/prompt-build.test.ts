@@ -98,7 +98,7 @@ describe('the prompt builder (08 §8.2)', () => {
     }
     expect(risky.description).toContain('false for the ordinary work of the task: a file inside the workspace folder that the task needs, whoever made it');
     expect(risky.description).not.toContain('own work');
-    const check = "\nBefore you say that something runs or works, check it the way the person would: run it or request its address; if you couldn't, say what is unchecked. After you start a server, request its address once before you give it to the person. Read every error the page or program reports while you check it, console errors too, and fix it or say why it doesn't matter.\n";
+    const check = "\nBefore you say that something runs or works, check it the way the person would: run it or request its address; if you couldn't, say what is unchecked. After you start a server, request its address once before you give it to the person. Fix, or explain, every error a page or program reports while you check it, console errors too.\n";
     expect(prompt).toContain(check);
     expect(prompt.split('\n').find((line) => line.startsWith('Execute. '))).not.toContain('Before you say');
     expect(prompt).toContain('A small, clear change is done and checked, and nothing more.');

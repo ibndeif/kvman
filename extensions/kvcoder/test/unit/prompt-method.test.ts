@@ -67,7 +67,7 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
       "Mark a step done with your evidence, what you ran and what it showed, as soon as its check passed and before you start the next; failed with a note when you can't finish it, and skipped with a note when it turned out unneeded.",
       'When the plan itself changes, set the map again before you go on',
       // Superseded by QA67-H9: details are given with the map (ADR 0102, 4).
-      'Setting the map again keeps the status of each step whose id stays, and its details when you give none',
+      'Setting the map again with the same goal keeps the status of each step whose id stays, and its details when you give none',
     ]) expect(executionMapDescription, phrase).toContain(phrase);
   });
 
@@ -197,7 +197,7 @@ describe("the lead's working method (08 §8.2, ADR 0065)", () => {
     for (const phrase of [
       "Give each step its details in the same set call: what it changes and how, naming the files or parts and the approach in words the person understands without the code, in Markdown, with lists, tables, and Mermaid diagrams or charts in fenced mermaid blocks, never SVG.",
       "The person opens them with a press, and a step can't be doing until it has them.",
-      'Setting the map again keeps the status of each step whose id stays, and its details when you give none: give details again only for a step whose approach changed, and for each new step. Use detail to change one step\'s details on their own.',
+      'Setting the map again with the same goal keeps the status of each step whose id stays, and its details when you give none: give details again only for a step whose approach changed, and for each new step. A new request is a new goal, and a new goal starts a new map: every step starts todo, with only the details you give. Use detail to change one step\'s details on their own.',
       'Its check is the exact command you will run or the thing you will look at.',
     ]) expect(executionMapDescription, phrase).toContain(phrase);
     expect(workingMethod('lead')).not.toContain("A step's description");
@@ -283,8 +283,7 @@ describe('the lead delegates when it pays, in the background (08 §8.2, ADR 0108
     for (const phrase of [
       "Delegate find, check, and review runs, and change runs only when two or more run at once on files that don't overlap; never a question, a small change, work you already hold the context for, or work the person asked you to do.",
       'goal is one sentence of what the run delivers, done one condition anyone can check, and context the line ranges the worker needs, whose text kvcoder attaches',
-      'Every run goes on in the background: after starting workers, go on with what doesn\'t need them or end your turn; their answers come as messages that wake you, and you never wait for a helper with `background wait`.',
-      'Never wait for a helper: its answer wakes you.',
+      'Every run goes on in the background: after starting workers, go on with what doesn\'t need them or end your turn, and start what needs a worker\'s answer once it arrives; their answers come as messages that wake you, and you never wait for a helper with `background wait`.',
     ]) expect(lead, phrase).toContain(phrase);
   });
 });

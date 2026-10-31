@@ -19,7 +19,7 @@ describe('helpers that finish, answers that cover the request (08 §8.2, ADR 011
 
   it('QA74-H2 the lead stays quiet on an ending that needs nothing, and continues a helper with all that is left', () => {
     const delegate = lineOf(workingMethod('lead'), 'Delegate. ');
-    expect(delegate).toContain('Continue a worker that stopped with work left with all that is left. When a worker\'s answer needs nothing from you and changes nothing for the person, reply with nothing: that ends your turn quietly.');
+    expect(delegate).toContain('Continue a worker that stopped early with all that is left. When a worker\'s answer needs nothing from you and changes nothing for the person, reply with nothing.');
   });
 
   it('QA74-H4 the final answer answers each thing asked, and is one line or nothing while helpers still work', () => {
@@ -63,7 +63,7 @@ describe('helpers that finish, answers that cover the request (08 §8.2, ADR 011
 
   it('QA74-H11 console errors are read and an artifact is shown again under its id', () => {
     const lead = workingMethod('lead');
-    expect(lead).toContain("Read every error the page or program reports while you check it, console errors too, and fix it or say why it doesn't matter.");
+    expect(lead).toContain('Fix, or explain, every error a page or program reports while you check it, console errors too.');
     expect(lead).toContain('Show a thing again under its artifact id, never as a second artifact.');
   });
 

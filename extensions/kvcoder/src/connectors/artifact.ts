@@ -7,7 +7,7 @@ import { applyEdits } from '../files/edit-text.ts';
 import { notFound, tooLarge } from '../problems.ts';
 import { kebab } from '../schemas/registry.ts';
 import { findSession, now } from '../sessions/session-lookup.ts';
-import { records, txRecords } from '../store/collections.ts';
+import { records, txRecords, type TxRecords } from '../store/collections.ts';
 import { callInput, type ConnectorCommand } from './connector-command.ts';
 import { edits } from './payload-fields.ts';
 
@@ -18,7 +18,7 @@ import { edits } from './payload-fields.ts';
 
 /** What the prompt's index says the connector is for. */
 export const artifactDescription =
-  'Show the person something to read or see: a report, a design, an HTML page, or the localhost address of an app you are running (format url). Use it for anything longer than a few lines instead of pasting it into a reply. To change part of an existing artifact, use edit; write it again only when most of it changes. Delete an artifact that is superseded or no longer true with delete; never empty one to clear it. For a diagram, write Mermaid code in a fenced mermaid block of a Markdown artifact or reply: kvman draws it. Don\'t write SVG for a diagram. The panel runs the page of an HTML artifact in a sandbox where localStorage, sessionStorage, cookies, and indexedDB throw, so a page you show that way must work without them, keeping its state in memory or wrapping each use in try/catch. A form can\'t be submitted there either: make a button act on its click and a field on the Enter key, in JavaScript, and never rely on a form\'s submit. You can\'t press the page\'s buttons yourself, so say that its interaction is unchecked unless you tested it another way. A url artifact is a normal page on its own address and has none of these limits.';
+  'Show the person something to read or see: a report, a design, an HTML page, or the localhost address of an app you are running (format url). Use it for anything longer than a few lines instead of pasting it into a reply. To change part of an existing artifact, use edit; write it again only when most of it changes. Delete an artifact that is superseded or no longer true with delete; never empty one to clear it. For a diagram, write Mermaid code in a fenced mermaid block of a Markdown artifact or reply: kvman draws it. Don\'t write SVG for a diagram. The panel runs the page of an HTML artifact in a sandbox where localStorage, sessionStorage, cookies, and indexedDB throw, so a page you show that way must work without them, keeping its state in memory or wrapping each use in try/catch. A form can\'t be submitted there either: make a button act on its click and a field on the Enter key, in JavaScript, and never rely on a form\'s submit. You can\'t press the page\'s buttons yourself, so say that its interaction is unchecked unless you tested it another way. A url artifact is a normal page on its own address and has none of these limits. A chat shows an address in one url artifact: writing it under another id removes the old one.';
 
 const idMessage = 'An artifact id is lowercase kebab case, such as report or login-design, up to 50 characters.';
 
@@ -54,6 +54,13 @@ const missing = (id: string) => notFound(`The artifact ${id} doesn't exist.`, { 
 // An artifact belongs to its chat, so a subagent's belongs to the chat at its root.
 const chatOf = async (ctx: Ctx, sessionId: string): Promise<string> => chatIdOf(await findSession(ctx, sessionId));
 
+// A chat shows an address in one url artifact: writing one removes the chat's others with that address (ADR 0114, 3).
+function removeSameAddress(artifacts: TxRecords['artifacts'], chatId: string, id: string, address: string): string[] {
+  const same = artifacts.find({ sessionId: chatId, format: 'url' }, { limit: artifactCountLimit }).filter((artifact) => artifact.artifactId !== id && new URL(artifact.content).href === new URL(address).href);
+  for (const artifact of same) artifacts.delete(artifact.id);
+  return same.map((artifact) => artifact.artifactId).sort();
+}
+
 async function writeArtifact(ctx: Ctx, chatId: string, input: WriteInput) {
   const format = input.format ?? detectFormat(input.content);
   const replaced = format === 'url' ? await endedUrlArtifact(ctx, chatId, input.id) : undefined;
@@ -61,6 +68,8 @@ async function writeArtifact(ctx: Ctx, chatId: string, input: WriteInput) {
     const content = contentFor(format, input.content);
     assertWithinLimit(input.id, content);
     const artifacts = txRecords(tx).artifacts;
+    const removed = format === 'url' ? removeSameAddress(artifacts, chatId, input.id, content) : [];
+    const also = removed.length === 0 ? {} : { removed };
     const existing = artifacts.find({ sessionId: chatId, artifactId: input.id }, { limit: 1 })[0];
     const stamp = now();
     if (existing === undefined) {
@@ -68,14 +77,14 @@ async function writeArtifact(ctx: Ctx, chatId: string, input: WriteInput) {
       if (ended !== undefined && artifacts.count({ sessionId: chatId }) >= artifactCountLimit) {
         artifacts.delete(ended.id);
         artifacts.insert({ sessionId: chatId, artifactId: input.id, title: input.title, format, content, version: 1, createdAt: stamp, updatedAt: stamp });
-        return { id: input.id, version: 1, created: true, bytes: Buffer.byteLength(content), replaced: ended.artifactId };
+        return { id: input.id, version: 1, created: true, bytes: Buffer.byteLength(content), replaced: ended.artifactId, ...also };
       }
       if (artifacts.count({ sessionId: chatId }) >= artifactCountLimit) throw tooLarge(`This chat already has ${artifactCountLimit} artifacts. Update one that exists (artifact list names them), or delete one.`, artifactCountLimit);
       artifacts.insert({ sessionId: chatId, artifactId: input.id, title: input.title, format, content, version: 1, createdAt: stamp, updatedAt: stamp });
-      return { id: input.id, version: 1, created: true, bytes: Buffer.byteLength(content) };
+      return { id: input.id, version: 1, created: true, bytes: Buffer.byteLength(content), ...also };
     }
     artifacts.update(existing.id, { title: input.title, format, content, version: existing.version + 1, updatedAt: stamp });
-    return { id: input.id, version: existing.version + 1, created: false, bytes: Buffer.byteLength(content) };
+    return { id: input.id, version: existing.version + 1, created: false, bytes: Buffer.byteLength(content), ...also };
   });
 }
 
@@ -104,7 +113,7 @@ export function registerArtifactConnector(ctx: Ctx): void {
   ctx.registerCommand('kvcoder.artifact.write', {
     description: commands.write.description,
     input: callInput(payloads.write),
-    output: z.object({ id: z.string(), version: z.number().int(), created: z.boolean(), bytes: z.number().int(), replaced: z.string().exactOptional() }),
+    output: z.object({ id: z.string(), version: z.number().int(), created: z.boolean(), bytes: z.number().int(), replaced: z.string().exactOptional(), removed: z.array(z.string()).exactOptional() }),
     public: true,
     retries: 0,
     handle: async ({ sessionId, payload }) => writeArtifact(ctx, await chatOf(ctx, sessionId), payload),

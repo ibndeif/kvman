@@ -22,7 +22,7 @@ describe('a conversation, not a procedure (08 §8.2, ADR 0112)', () => {
     expect(lineOf(workingMethod('lead'), 'Finish. ').endsWith(answer)).toBe(true);
     expect(workingMethod('lead', 'general').split('\n')).toContain(answer);
     for (const role of ['lead', 'worker'] as const) {
-      expect(workingMethod(role)).toContain('Decide from evidence: every decision and every claim rests on something you read, ran, or were told.\n');
+      expect(workingMethod(role)).toContain('Decide from evidence: every decision and every claim rests on something you read, ran, or were told; what one quick look would answer, look up instead of leaving it open.\n');
       expect(workingMethod(role)).not.toContain("say what you checked and what you didn't");
     }
     expect(workingMethod('lead')).not.toContain('what you checked and what it showed');
