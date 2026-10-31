@@ -1,5 +1,12 @@
 # @kvman/kvcoder
 
+## 0.1.19
+
+### Patch Changes
+
+- 6317806: Helpers finish their whole job and say how much they checked; the agent stays quiet when a helper's result needs nothing, and its final answer covers each thing you asked. Text the agent didn't write is copied with a program, never retyped; the brief carries your instructions; `delegate run`'s `budget` is now `maxSteps`, and an empty `context` is accepted (ADR 0113).
+- 684b7c0: A new request's execution map starts fresh even when it reuses step ids; a url artifact replaces the chat's other url artifacts with the same address; the agent starts work that needs a helper's answer only once it arrives, and looks up what one quick look would answer (ADR 0114).
+
 ## 0.1.18
 
 ### Patch Changes

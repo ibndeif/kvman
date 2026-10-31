@@ -1,5 +1,15 @@
 # kvman
 
+## 0.4.12
+
+### Patch Changes
+
+- Updated dependencies [6317806]
+- Updated dependencies [684b7c0]
+  - @kvman/kvcoder@0.1.19
+  - @kvman/kvbuilder@0.3.7
+  - @kvman/kvvideo@0.1.0
+
 ## 0.4.11
 
 ### Patch Changes
