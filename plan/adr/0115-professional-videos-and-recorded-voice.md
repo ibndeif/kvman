@@ -1,6 +1,6 @@
 # ADR 0115 — kvvideo makes professional videos, and the person can record the narration
 
-Status: accepted, 2026-11-02. It changes plan 16 throughout, plan 08 §8.4, §8.5, and §8.7, plan 14 §14.6 and §14.10, plan 15 §15.4, and adds milestones M5.5 to M5.11 to plan 13.
+Status: accepted, 2026-11-02. It changes plan 16 throughout, plan 01 §1.5, plan 08 §8.4, §8.5, and §8.7, plan 14 §14.6 and §14.10, plan 15 §15.4, and adds milestones M5.5 to M5.11 to plan 13.
 
 The product owner asked (2026-11-02) for suggestions so kvvideo can make "professional, rich, clean, qualified" videos, and for a way to record their own voice: "it should show the user the sentence and how to say it and record button in the conversation". They then gave a list of 52 production rules and asked whether kvcoder follows them. It followed the general ones (the person's instructions, no invented facts, their language) and few of the production ones, and about half of them needed tools kvvideo didn't have: compose ran a fixed recipe (scale, pad with black, hold, captions), joined the scenes without encoding again, had one sound input per scene, and `record` answered when each step happened but not where. The owner asked for every question to be resolved one by one; decisions 1 to 30 are their answers. Decisions 31 to 52 are the smallest way to carry them out; the product owner may overrule any of them.
 
@@ -64,9 +64,19 @@ The product owner asked (2026-11-02) for suggestions so kvvideo can make "profes
 51. **The microphone is granted only to kvman's own page.** The desktop app grants it to kvman's origin after the operating system asks the person, and refuses it to every other origin, such as an artifact's frame; the camera is never granted. VS Code's frame adds `microphone` to its `allow` list.
 52. **The guide** has the production rules in seven groups (story, look, motion, text, sound, accuracy and licences, review), then the steps of making a video.
 
+### Asked while building
+
+53. **The pointer shows from its first move** (asked at M5.5; chosen over showing it from the first frame, and over that for the app only). It is hidden until a step moves it, then stays, so a page with no clicks never shows one.
+54. **Progress is a translation key** (asked at M5.5, since decision 46's `{ text }` broke the rule that every text the person sees has `en` and `ar`; chosen over English text only). A chunk is `{ key, params? }` in the sending extension's catalog, and kvcoder shows it translated.
+55. **kvvideo is a generic video maker** (the owner, at M5.5: "the user can make any type of videos based on his needs"). A lesson, an explainer, a tutorial, a promotion, an announcement, a story, or a social clip; a tutorial of the person's app is one kind among them. The plan's purpose, the connector's description, and the guide say so, and nothing assumes an app of the workspace.
+56. **`record` opens any website** (chosen over websites outside the private network, and over this computer only). It changes ADR 0107, 18: any http or https address without credentials, in a fresh browser with no saved sign-ins; kvman's own address stays refused, and the recorded page's requests to kvman's port stay aborted. A recording's sidecar kind is `site`.
+57. **Still no music** (asked again for a generic maker; chosen over the person's or free-licensed music, and over the person's files only). Decision 13 stands.
+58. **The person's media and licensed web media** (chosen over the person's media only, and over decision 5 as it was). Still no generated images; a scene may use the person's images and clips, and images and clips the agent finds on the web under a licence that allows their use, saved in the video's folder and named with their source and licence in the script, with a credit in the end scene when the licence asks. An image scene's camera zooms slowly from 1× to 1.08×.
+
 ## Plan changes
 
-- `16-kvvideo.md`: rewritten for decisions 1 to 52.
+- `16-kvvideo.md`: rewritten for decisions 1 to 58.
+- `01-overview.md`: §1.5 kvvideo makes any kind of video.
 - `08-kvcoder.md`: §8.4 `images` on a command entry and progress on a running call; §8.5 `ask record`; §8.7 the record card and its answered card.
 - `14-desktop.md`: §14.6 the microphone; §14.10 what the shell grants.
 - `15-vscode.md`: §15.4 the frame's `allow`.

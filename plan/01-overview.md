@@ -76,7 +76,7 @@ Each is designed in its own round, after the kernel.
 - **kvwebui**: the Vue web app, plus a `kvwebui.*` API other extensions use to shape the UI.
 - **kvcoder**: the app-building harness on kvai and kvwebui. Its agent has one tool, `run`, which runs a command of a connector (the built-in `shell`, `fs`, `artifact`, `background`, `ask`, `delegate`, and `mcp`, and those other extensions register); connectors and sections extend it (ADR 0011; ADR 0021). Its conversation UI is its own (§8).
 - **kvbuilder** ("kvman builder"): the kvcoder extension for building kvman: the person's `/build-kvman` gives a chat its connectors and its guide for developing extensions and presets, and for managing the running app (§9, ADR 0010, ADR 0027).
-- **kvvideo**: the kvcoder extension for making videos of the person's app: the person's `/video` gives a chat its `video` connector, which records pages in the installed browser, narrates a script, and joins them with captions into an MP4 (§16, ADR 0107).
+- **kvvideo**: the kvcoder extension for making any kind of video (ADR 0115, 55): the person's `/video` gives a chat its `video` connector, which records pages in the installed browser, narrates a script, and joins them with captions into an MP4 (§16, ADR 0107).
 
 ## 1.6 Principles for this phase
 
