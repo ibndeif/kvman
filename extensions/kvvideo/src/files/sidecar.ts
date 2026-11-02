@@ -25,7 +25,16 @@ export const recordingSidecarSchema = z.object({
 
 export const narrationSidecarSchema = z.object({ kind: z.literal('narration'), durationMs: z.number().int().nonnegative(), captions: z.array(sidecarCaptionSchema) });
 
-const sidecarSchema = z.discriminatedUnion('kind', [recordingSidecarSchema, narrationSidecarSchema]);
+export const videoSidecarSchema = z.object({
+  kind: z.literal('video'),
+  durationMs: z.number().int().nonnegative(),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+  scenes: z.array(z.object({ startMs: z.number().int().nonnegative(), endMs: z.number().int().nonnegative() })),
+  captions: z.array(sidecarCaptionSchema),
+});
+
+const sidecarSchema = z.discriminatedUnion('kind', [recordingSidecarSchema, narrationSidecarSchema, videoSidecarSchema]);
 
 /** What a sidecar holds. */
 export type Sidecar = z.output<typeof sidecarSchema>;

@@ -31,13 +31,13 @@ const twoScenes = [
 ];
 
 describe('video compose (16 §16.8)', { timeout: 60_000 }, () => {
-  it('M5.4-H6 one ffmpeg run per scene and one to join, the file placed, the answer summed, the work folder gone', async () => {
+  it('M5.4-H6 M5.8-H8 one ffmpeg run per scene, the measure, the final pass, and the poster; the file placed; the work folder gone', async () => {
     const { kernel, workspace, ffmpeg } = await composing();
     const answer = await kernel.exec('kvvideo.video.compose', { file: 'videos/tour.mp4', scenes: twoScenes });
-    expect(answer).toMatchObject({ file: 'videos/tour.mp4', durationMs: 4500, bytes: 'PART part-1.mp4\nPART part-2.mp4\n'.length, fileId: expect.any(String) });
-    expect(readFileSync(`${workspace}/videos/tour.mp4`, 'utf8')).toBe('PART part-1.mp4\nPART part-2.mp4\n');
+    expect(answer).toMatchObject({ file: 'videos/tour.mp4', durationMs: 2000 + 3100 - 500, bytes: 'PART part-1.mkv\nPART part-2.mkv\n'.length, fileId: expect.any(String), poster: 'videos/tour.jpg', posterFileId: expect.any(String), others: [] });
+    expect(readFileSync(`${workspace}/videos/tour.mp4`, 'utf8')).toBe('PART part-1.mkv\nPART part-2.mkv\n');
     const runs = runsOf(ffmpeg);
-    expect(runs.map((run) => run.args.at(-1))).toEqual(['part-1.mp4', 'part-2.mp4', 'video.mp4']);
+    expect(runs.map((run) => run.args.at(-1))).toEqual(['part-1.mkv', 'part-2.mkv', '-', 'video.mp4', 'poster.jpg']);
     expect(runs[0]?.ass).toBeNull();
     expect(runs[1]?.ass).toContain('Style: Default,IBM Plex Sans Arabic,60,');
     expect(runs[1]?.fonts).toEqual(['IBMPlexSansArabic-Bold.ttf']);
@@ -85,10 +85,10 @@ describe('video compose (16 §16.8)', { timeout: 60_000 }, () => {
   });
 
   it('M5.4-E5 a failed scene or join fails RENDER_FAILED; nothing is written; the work folder is gone', async () => {
-    const scene = await composing('part-2.mp4');
+    const scene = await composing('part-2.mkv');
     expect(await problemOf(scene.kernel.exec('kvvideo.video.compose', { file: 'x.mp4', scenes: twoScenes }))).toMatchObject({ code: 'kvvideo/RENDER_FAILED', params: { scene: 2, reason: 'Conversion failed!' } });
     expect(existsSync(`${scene.workspace}/x.mp4`)).toBe(false);
-    const join = await composing('join');
+    const join = await composing('final');
     expect(await problemOf(join.kernel.exec('kvvideo.video.compose', { file: 'x.mp4', scenes: twoScenes }))).toMatchObject({ code: 'kvvideo/RENDER_FAILED', params: { scene: null, reason: 'Conversion failed!' } });
     expect(existsSync(`${join.workspace}/x.mp4`)).toBe(false);
     expect([...workFoldersLeft(scene.ffmpeg), ...workFoldersLeft(join.ffmpeg)]).toEqual([]);

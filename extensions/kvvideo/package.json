@@ -26,7 +26,8 @@
     "dist",
     "docs",
     "fonts",
-    "locales"
+    "locales",
+    "sounds"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node web-build.config.ts",

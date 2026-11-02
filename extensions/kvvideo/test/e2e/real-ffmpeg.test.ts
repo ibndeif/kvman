@@ -26,7 +26,7 @@ describe('a real recording (16 §16.5, ADR 0107, 25)', () => {
     expect(Math.abs(Number(probed.format.duration) * 1000 - answer.durationMs)).toBeLessThan(200);
   });
 
-  it('M5.4-H10 a recorded clip, an image, a narration, and English and Arabic captions compose into H.264 and AAC', async () => {
+  it('M5.4-H10 M5.8-H13 a recorded clip, an image, a narration, and English and Arabic captions compose into H.264 and AAC', async () => {
     const { kernel, workspace } = await kvvideo.start({ settings: { 'kvvideo.browser': 'chrome' } });
     const app = await pages.app();
     await kernel.exec('kvvideo.clip.record', { url: app.url, file: 'parts/01.mp4', width: 640, height: 360, steps: [{ do: 'wait', ms: 500 }] });
@@ -41,7 +41,7 @@ describe('a real recording (16 §16.5, ADR 0107, 25)', () => {
         { clip: 'parts/01.mp4', narration: 'parts/01.wav', captions: [{ text: 'مرحبا بك في الملاحظات', startMs: 0, endMs: 2000 }] },
       ],
     });
-    expect(answer.durationMs).toBe(3500);
+    expect(answer.durationMs).toBe(1500 + (300 + 2000 + 300) - 500);
     const probed = probe(`${workspace}/tour.mp4`);
     expect(probed.streams).toEqual([
       { codec_type: 'video', codec_name: 'h264', width: 640, height: 360, r_frame_rate: '30/1' },

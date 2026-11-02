@@ -1,9 +1,10 @@
 import path from 'node:path';
 import { invalid } from '../problems.ts';
+import { narrationLeadMs } from '../record/narration-cues.ts';
 import type { Scene } from './compose-input.ts';
 
-// A scene's length (plan 16 §16.8): its `durationMs`, else its narration's, else its video part's. A video part
-// shorter than the scene holds its last frame, and a longer one is cut.
+// A scene's length (plan 16 §16.8; ADR 0115, 41): its `durationMs`, else 300 ms plus its narration's length plus
+// 300 ms, else its video part's. A video part shorter than the scene holds its last frame, and a longer one is cut.
 
 export const videoExtensions = ['.webm', '.mp4', '.mov', '.mkv'];
 export const imageExtensions = ['.png', '.jpg', '.jpeg', '.webp'];
@@ -29,10 +30,11 @@ export function checkScene(number: number, scene: Scene): void {
 export function planScene(number: number, scene: Scene, files: SceneFiles, durations: SceneDurations): PlannedScene {
   checkScene(number, scene);
   const base = { number, clip: files.clip, narration: files.narration };
-  if (isImage(files.clip)) return { ...base, kind: 'image', startMs: 0, partMs: 0, lengthMs: scene.durationMs ?? durations.narrationMs ?? 0 };
+  const narrated = durations.narrationMs === undefined ? undefined : narrationLeadMs + durations.narrationMs + narrationLeadMs;
+  if (isImage(files.clip)) return { ...base, kind: 'image', startMs: 0, partMs: 0, lengthMs: scene.durationMs ?? narrated ?? 0 };
   const clipMs = durations.clipMs ?? 0;
   const startMs = scene.from ?? 0;
   if (startMs >= clipMs) throw invalid(`Scene ${String(number)} starts at ${String(startMs)} ms, past its clip's end.`, { scene: number });
   const partMs = Math.min(scene.to ?? clipMs, clipMs) - startMs;
-  return { ...base, kind: 'video', startMs, partMs, lengthMs: scene.durationMs ?? durations.narrationMs ?? partMs };
+  return { ...base, kind: 'video', startMs, partMs, lengthMs: scene.durationMs ?? narrated ?? partMs };
 }

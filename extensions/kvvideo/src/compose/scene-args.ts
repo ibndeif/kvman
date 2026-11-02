@@ -1,4 +1,5 @@
 import { framesPerSecond } from '../record/frame-writer.ts';
+import { narrationLeadMs } from '../record/narration-cues.ts';
 import { backgroundFit, backgroundInput, type Background } from './background.ts';
 import { perspectiveFilter } from './camera.ts';
 import type { Layout, Size } from './frame-layout.ts';
@@ -6,9 +7,9 @@ import { overlayFilters, type PlacedOverlay } from './overlays.ts';
 import type { SceneLook } from './scene-look.ts';
 import type { PlannedScene } from './scene-plan.ts';
 
-// ffmpeg's arguments for each scene's part and for the join (plan 16 §16.8; ADR 0107, 23; ADR 0115, 36 and 60). The
-// clip holds its last frame, takes its overlays on its own pixels, then the camera, then sits in its frame on the
-// background; the captions go on last. ffmpeg runs in the work folder and reads the graph from a file there, so the
+// ffmpeg's arguments for each scene's part (plan 16 §16.8; ADR 0107, 23; ADR 0115, 36, 37, and 60), a `.mkv` near
+// lossless with PCM sound for the final pass. The clip holds its last frame, takes its overlays on its own pixels, then
+// the camera, then sits in its frame on the background; the captions go on last. ffmpeg runs in the work folder and reads the graph from a file there, so the
 // scene's ASS file, the fonts folder, and the drawn images are named by their relative paths.
 
 export type { Size } from './frame-layout.ts';
@@ -27,6 +28,12 @@ const still = (file: string, lengthMs: number): string[] => ['-loop', '1', '-fra
 function clipInput(scene: PlannedScene): string[] {
   if (scene.kind === 'image') return still(scene.clip, scene.lengthMs);
   return ['-ss', seconds(scene.startMs), '-t', seconds(scene.partMs), '-i', scene.clip];
+}
+
+// The scene's sound: its narration 300 ms in, or silence, as long as the scene, with 20 ms fades at both ends.
+function soundFilter(scene: PlannedScene): string {
+  const delay = scene.narration === undefined ? '' : `adelay=delays=${String(narrationLeadMs)}:all=1,`;
+  return `[1:a]${delay}aformat=sample_rates=48000:channel_layouts=stereo,apad,atrim=0:${seconds(scene.lengthMs)},afade=t=in:d=0.02,afade=t=out:st=${seconds(Math.max(0, scene.lengthMs - 20))}:d=0.02[a]`;
 }
 
 function soundInput(scene: PlannedScene): string[] {
@@ -93,7 +100,7 @@ export function sceneGraph(render: SceneRender, size: Size, inputs: ReturnType<t
   }
   filters.push(...framed(render, size, current, inputs));
   const captions = render.captioned ? `,subtitles=filename=${assName(scene)}:fontsdir=fonts` : '';
-  filters.push(`[pic]format=yuv420p${captions}[v]`, '[1:a]aresample=48000,apad[a]');
+  filters.push(`[pic]format=yuv420p${captions}[v]`, soundFilter(scene));
   return filters.join(';\n');
 }
 
@@ -109,18 +116,10 @@ export function sceneArgs(render: SceneRender, size: Size, output: string): { ar
     ...inputs.args,
     '-filter_complex_script', graphName(scene),
     '-map', '[v]', '-map', '[a]',
-    '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-pix_fmt', 'yuv420p', '-r', String(framesPerSecond),
-    '-c:a', 'aac', '-b:a', '160k', '-ar', '48000', '-ac', '2',
+    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '14', '-pix_fmt', 'yuv420p', '-r', String(framesPerSecond),
+    '-c:a', 'pcm_s16le', '-ar', '48000', '-ac', '2',
     '-t', seconds(scene.lengthMs), '-y', output,
   ];
   return { args, graph: sceneGraph(render, size, inputs) };
 }
 
-/** The concat demuxer's list of the parts, in order. */
-export function joinList(parts: readonly string[]): string {
-  return parts.map((part) => `file '${part.replace(/'/g, "'\\''")}'\n`).join('');
-}
-
-export function joinArgs(list: string, output: string): string[] {
-  return [...quiet, '-f', 'concat', '-safe', '0', '-i', list, '-c', 'copy', '-movflags', '+faststart', '-y', output];
-}

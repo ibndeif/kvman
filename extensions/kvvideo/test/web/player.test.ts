@@ -43,4 +43,11 @@ describe("compose's card (16 §16.9)", () => {
     expect(broken.find('[data-test="video"]').exists()).toBe(false);
     expect(broken.find('[data-test="unavailable"]').text()).toBe('لا يمكن تشغيل هذا الفيديو هنا. افتح videos/tour.mp4 في مساحة العمل.');
   });
+
+  it('M5.8-H12 the poster of the copy, and the other sizes listed', async () => {
+    const wrapper = await mounted({ ...output, posterFileId: 'p1', others: [{ file: 'videos/tour-1080x1920.mp4', bytes: 10 }] });
+    expect(wrapper.find('[data-test="video"]').attributes('poster')).toBe('/api/files/p1?workspaceId=w1');
+    expect(wrapper.findAll('[data-test="others"] li').map((item) => item.text())).toEqual(['videos/tour-1080x1920.mp4']);
+    expect((await mounted(output)).find('[data-test="others"]').exists()).toBe(false);
+  });
 });

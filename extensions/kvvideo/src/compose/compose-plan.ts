@@ -15,7 +15,7 @@ import { imageExtensions, type PlannedScene } from './scene-plan.ts';
 // background, and frame's layout. A clip without a recording is measured with ffprobe only when its frame or its
 // overlays need its size.
 
-export type ScenePicture = { look: SceneLook; background: Background; layout: Layout | undefined; source: Size | undefined; captions: Caption[] };
+export type ScenePicture = { look: SceneLook; background: Background; layout: Layout | undefined; source: Size | undefined; captions: Caption[]; recording: Recording | undefined };
 
 const colourPattern = /^#[0-9a-fA-F]{6}$/;
 
@@ -37,7 +37,8 @@ export function captionsOf(scene: Scene, narration: string | undefined): Caption
   return sidecar?.kind === 'narration' ? sidecar.captions : [];
 }
 
-function recordingOf(clip: string): Recording | undefined {
+/** The recording beside a clip, if it has one. */
+export function recordingOf(clip: string): Recording | undefined {
   const sidecar = readSidecar(clip);
   return sidecar?.kind === 'site' || sidecar?.kind === 'page' ? sidecar : undefined;
 }
@@ -61,5 +62,5 @@ export async function pictureOf(context: PictureContext, input: Scene, scene: Pl
   const look = lookOf(scene.number, input, scene.kind, recording, source, scene.lengthMs);
   const atBottom = context.captionsAtBottom && captions.length > 0;
   const layout = source === undefined || look.frame === 'none' ? undefined : look.frame === 'phone' ? phoneLayout(context.picture, source) : windowLayout(context.picture, source, atBottom);
-  return { look, background, layout, source, captions };
+  return { look, background, layout, source, captions, recording };
 }

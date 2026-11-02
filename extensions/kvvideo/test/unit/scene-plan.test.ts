@@ -9,10 +9,10 @@ const lengths = (scene: Parameters<typeof planScene>[1], files: { clip: string; 
   planScene(1, scene, files, { clipMs, narrationMs });
 
 describe("a scene's length (16 §16.8)", () => {
-  it('M5.4-H1 durationMs, else the narration, else the video part', () => {
-    expect(lengths({ clip: 'a.mp4', narration: 'a.mp3' }, video, 4000, 6000)).toMatchObject({ kind: 'video', startMs: 0, partMs: 4000, lengthMs: 6000 });
-    expect(lengths({ clip: 'a.mp4', narration: 'a.mp3' }, video, 9000, 3000)).toMatchObject({ partMs: 9000, lengthMs: 3000 });
-    expect(lengths({ clip: 'a.png', narration: 'a.mp3' }, image, undefined, 2500)).toMatchObject({ kind: 'image', partMs: 0, lengthMs: 2500 });
+  it('M5.4-H1 M5.8-H1 durationMs, else the narration with 300 ms around it, else the video part', () => {
+    expect(lengths({ clip: 'a.mp4', narration: 'a.mp3' }, video, 4000, 6000)).toMatchObject({ kind: 'video', startMs: 0, partMs: 4000, lengthMs: 6600 });
+    expect(lengths({ clip: 'a.mp4', narration: 'a.mp3' }, video, 9000, 3000)).toMatchObject({ partMs: 9000, lengthMs: 3600 });
+    expect(lengths({ clip: 'a.png', narration: 'a.mp3' }, image, undefined, 2500)).toMatchObject({ kind: 'image', partMs: 0, lengthMs: 3100 });
     expect(lengths({ clip: 'a.png', durationMs: 1500 }, { clip: '/w/a.png', narration: undefined }, undefined, undefined)).toMatchObject({ kind: 'image', lengthMs: 1500 });
     expect(lengths({ clip: 'a.mp4', narration: 'a.mp3', durationMs: 2000 }, video, 4000, 6000)).toMatchObject({ lengthMs: 2000 });
     expect(lengths({ clip: 'a.mp4', from: 1000, to: 3500 }, { clip: '/w/a.mp4', narration: undefined }, 9000, undefined)).toMatchObject({ startMs: 1000, partMs: 2500, lengthMs: 2500 });

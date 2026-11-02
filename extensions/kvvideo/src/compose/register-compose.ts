@@ -1,28 +1,31 @@
 import { statSync } from 'node:fs';
+import path from 'node:path';
 import type { Browser } from 'playwright-core';
 import type { Ctx } from '@kvman/sdk';
-import { launchDrawing } from '../browser/launch.ts';
+import { launchChannel, launchDrawing } from '../browser/launch.ts';
 import { startBrowser } from '../browser/start-browser.ts';
 import { answerPath } from '../files/answer-path.ts';
 import { placeOutput, workFolder } from '../files/place-output.ts';
+import { sidecarOutputPath, writeSidecar } from '../files/sidecar.ts';
 import { inputPath, outputPath } from '../files/workspace-paths.ts';
 import { mediaDuration } from '../programs/media-duration.ts';
 import { programOf } from '../programs/programs.ts';
 import type { Program } from '../programs/run-program.ts';
-import { kvvideoProblem } from '../problems.ts';
-import { captionFont } from './caption-font.ts';
-import { defaultAccent, drawScene, needsDrawing } from './compose-drawing.ts';
+import { invalid, kvvideoProblem } from '../problems.ts';
+import { ownPortOf } from '../record/own-port.ts';
+import { arabicLetter, captionFont } from './caption-font.ts';
+import { defaultAccent } from './compose-drawing.ts';
 import { composeInputSchema, composeOutputSchema, type Scene } from './compose-input.ts';
-import { backgroundInputOf, pictureOf, type ScenePicture } from './compose-plan.ts';
-import { painterOf } from './drawn-images.ts';
+import { backgroundInputOf, captionsOf } from './compose-plan.ts';
+import { composeSize, type Composition } from './compose-size.ts';
+import type { Size } from './frame-layout.ts';
 import { keepCopy } from './player-copies.ts';
-import { render } from './render.ts';
-import type { SceneDrawn, SceneRender } from './scene-args.ts';
 import { audioExtensions, checkScene, imageExtensions, isImage, planScene, videoExtensions, type PlannedScene, type SceneFiles } from './scene-plan.ts';
+import { sceneStarts, transitionsOf } from './transitions.ts';
 
-// `video compose` (plan 16 §16.8): every file is checked before ffmpeg runs; each scene's picture is planned from its
-// clip's and narration's sidecars and the brand, its frame and overlays drawn by the browser when it has any; the render
-// runs inside the call (ADR 0107, 12); the video is placed at its path and copied for the chat's player.
+// `video compose` (plan 16 §16.8): every file and output is checked before ffmpeg runs; each size is composed in its
+// own folder; the render runs inside the call (ADR 0107, 12); the video, its `.srt`, poster, and sidecar, and the other
+// sizes are placed beside its path, and the video is copied for the chat's player.
 
 async function lengthOf(ffprobe: Program, file: string, scene: number, signal: AbortSignal): Promise<number> {
   const duration = await mediaDuration(ffprobe, file, signal);
@@ -41,56 +44,104 @@ async function planAll(scenes: readonly Scene[], files: readonly SceneFiles[], f
   return planned;
 }
 
-const noDrawing = (picture: ScenePicture): SceneDrawn => ({ layout: undefined, chrome: undefined, mask: undefined, overlayImages: picture.look.overlays.map(() => undefined) });
+// The files a size writes, each checked as an output: the video, its `.srt` and poster, and the main one's sidecar.
+function outputsOf(root: string, file: string, size: Size | undefined, replace: boolean): { video: string; srt: string; poster: string; sidecar: string | undefined } {
+  outputPath(root, file, '.mp4', replace);
+  const base = file.slice(0, file.length - path.extname(file).length) + (size === undefined ? '' : `-${String(size.width)}x${String(size.height)}`);
+  const video = outputPath(root, `${base}.mp4`, '.mp4', replace);
+  return { video, srt: outputPath(root, `${base}.srt`, '.srt', replace), poster: outputPath(root, `${base}.jpg`, '.jpg', replace), sidecar: size === undefined ? sidecarOutputPath(video, replace, file) : undefined };
+}
+
+function checkSizes(main: Size, extra: readonly Size[]): void {
+  const key = (size: Size): string => `${String(size.width)}x${String(size.height)}`;
+  const keys = [main, ...extra].map(key);
+  if (new Set(keys).size !== keys.length) throw invalid('Each extra size differs from the main size and from the others.', { sizes: keys });
+}
 
 export function registerCompose(ctx: Ctx): void {
   ctx.registerCommand('kvvideo.video.compose', {
-    description: 'Composes scenes of recorded clips, pages, or images, framed, with camera moves, overlays, narrations, and burned-in captions, into an MP4 file in the workspace.',
+    description: 'Composes scenes of recorded clips, pages, or images, framed, with camera moves, overlays, transitions, sound effects, narrations, and burned-in captions, into an MP4 file in the workspace, levelled, with its .srt and poster.',
     input: composeInputSchema,
     output: composeOutputSchema,
     public: true,
     retries: 0,
-    timeoutMs: 1_800_000,
+    timeoutMs: 3_600_000,
     handle: async (input) => {
       const root = ctx.job.workspace.path;
-      const output = outputPath(root, input.file, '.mp4', input.replace === true);
+      const replace = input.replace === true;
+      const size = { width: input.width ?? 1920, height: input.height ?? 1080 };
+      const extraSizes = input.extraSizes ?? [];
+      checkSizes(size, extraSizes);
+      const outputs = [outputsOf(root, input.file, undefined, replace), ...extraSizes.map((extra) => outputsOf(root, input.file, extra, replace))];
       const files = input.scenes.map((scene) => ({ clip: inputPath(root, scene.clip, [...videoExtensions, ...imageExtensions]), narration: scene.narration === undefined ? undefined : inputPath(root, scene.narration, audioExtensions) }));
       for (const [index, scene] of input.scenes.entries()) {
         checkScene(index + 1, scene);
         backgroundInputOf(root, index + 1, scene.background);
       }
       const brand = await ctx.settings.get('kvvideo.brand');
-      const style = input.captions?.style ?? 'boxed';
-      const size = { width: input.width ?? 1920, height: input.height ?? 1080 };
-      const [ffmpeg, ffprobe] = [await programOf(ctx, 'ffmpeg'), await programOf(ctx, 'ffprobe')];
+      const look = input.captions?.style ?? 'boxed';
+      const texts = look === 'off' ? [] : input.scenes.flatMap((scene, index) => captionsOf(scene, files[index]?.narration).map((caption) => caption.text));
+      const font = texts.length === 0 ? undefined : captionFont(root, input.captions?.font ?? brand?.font ?? undefined, texts);
+      const programs = { ffmpeg: await programOf(ctx, 'ffmpeg'), ffprobe: await programOf(ctx, 'ffprobe') };
+      const planned = await planAll(input.scenes, files, programs.ffprobe, ctx.job.signal);
+      const lengths = planned.map((scene) => scene.lengthMs);
+      const transitions = transitionsOf(input.scenes, lengths);
+      const { starts, durationMs } = sceneStarts(lengths, transitions);
+      const opened: Browser[] = [];
+      const browserOf = (launch: typeof launchChannel): (() => Promise<Browser>) => {
+        let started: Browser | undefined;
+        return async () => {
+          if (started !== undefined) return started;
+          started = await startBrowser(await ctx.settings.get('kvvideo.browser'), launch);
+          opened.push(started);
+          return started;
+        };
+      };
       const work = workFolder();
-      let browser: Browser | undefined;
+      const sizes = [size, ...extraSizes];
+      let scenesDone = 0;
       try {
-        const scenes = await planAll(input.scenes, files, ffprobe, ctx.job.signal);
-        const position = input.captions?.position ?? 'bottom';
-        const context = { root, picture: size, brand, captionsAtBottom: style !== 'off' && position === 'bottom', ffprobe, signal: ctx.job.signal };
-        const pictures: ScenePicture[] = [];
-        for (const [index, scene] of scenes.entries()) pictures.push(await pictureOf(context, input.scenes[index] ?? { clip: '' }, scene));
-        const captions = pictures.map((picture) => (style === 'off' ? [] : picture.captions));
-        const texts = captions.flat().map((caption) => caption.text);
-        const font = texts.length === 0 ? undefined : captionFont(root, input.captions?.font ?? brand?.font ?? undefined, texts);
-        if (pictures.some(needsDrawing)) browser = await startBrowser(await ctx.settings.get('kvvideo.browser'), launchDrawing);
-        const painter = browser === undefined ? undefined : painterOf(browser);
-        const renders: SceneRender[] = [];
-        for (const [index, scene] of scenes.entries()) {
-          const picture = pictures[index];
-          if (picture === undefined) continue;
-          const drawn = painter === undefined || !needsDrawing(picture) ? noDrawing(picture) : await drawScene({ root, folder: work.folder, picture: size, brand, painter }, scene.number, picture);
-          renders.push({ scene, look: picture.look, background: picture.background, drawn, captioned: (captions[index] ?? []).length > 0 });
+        const composition: Composition = {
+          root,
+          scenes: input.scenes,
+          planned,
+          transitions,
+          starts,
+          durationMs,
+          direction: input.direction ?? (texts.some((text) => arabicLetter.test(text)) ? 'rtl' : 'ltr'),
+          sounds: input.sounds !== false,
+          brand,
+          captions: { look, position: input.captions?.position ?? 'bottom', size: input.captions?.size, highlight: brand?.colors.primary ?? defaultAccent, font },
+          programs,
+          ownPort: ownPortOf(process.env['KVMAN_HOME']),
+          signal: ctx.job.signal,
+          browsers: { drawing: browserOf(launchDrawing), recording: browserOf(launchChannel) },
+          progress: {
+            scene: () => ctx.job.progress({ key: 'kvvideo.progress.scene', params: { n: (scenesDone += 1), of: planned.length * sizes.length } }),
+            final: (percent) => ctx.job.progress({ key: 'kvvideo.progress.final', params: { percent } }),
+          },
+        };
+        const results = [];
+        for (const [index, each] of sizes.entries()) results.push(await composeSize(composition, each, path.join(work.folder, `size-${String(index + 1)}`)));
+        const main = results[0];
+        const mainOutputs = outputs[0];
+        if (main === undefined || mainOutputs === undefined) throw invalid('There is no size to compose.');
+        const others = [];
+        for (const [index, result] of results.entries()) {
+          const placed = outputs[index];
+          if (placed === undefined) continue;
+          placeOutput(result.video, placed.video);
+          placeOutput(result.poster, placed.poster);
+          if (result.srt !== undefined) placeOutput(result.srt, placed.srt);
+          if (index > 0) others.push({ file: answerPath(root, placed.video), bytes: statSync(placed.video).size });
         }
-        const look = style === 'off' ? 'boxed' : style;
-        const made = await render({ scenes: renders, captions, size, font, style: { size: input.captions?.size, position, look, highlight: brand?.colors.primary ?? defaultAccent }, folder: work.folder, ffmpeg, signal: ctx.job.signal });
-        placeOutput(made, output);
-        const shown = answerPath(root, output);
-        const bytes = statSync(output).size;
-        return { file: shown, durationMs: scenes.reduce((sum, scene) => sum + scene.lengthMs, 0), bytes, fileId: await keepCopy(ctx, output, shown, bytes) };
+        if (mainOutputs.sidecar !== undefined) placeOutput(writeSidecar(work.folder, { kind: 'video', durationMs, ...size, scenes: starts.map((startMs, index) => ({ startMs, endMs: startMs + (lengths[index] ?? 0) })), captions: main.captions }), mainOutputs.sidecar);
+        const shown = answerPath(root, mainOutputs.video);
+        const bytes = statSync(mainOutputs.video).size;
+        const copy = await keepCopy(ctx, mainOutputs.video, shown, bytes, mainOutputs.poster);
+        return { file: shown, durationMs, bytes, fileId: copy.fileId, poster: answerPath(root, mainOutputs.poster), posterFileId: copy.posterFileId, others };
       } finally {
-        await browser?.close();
+        for (const browser of opened) await browser.close();
         work.remove();
       }
     },

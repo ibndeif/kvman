@@ -79,6 +79,8 @@ The product owner asked (2026-11-02) for suggestions so kvvideo can make "profes
 
 61. **The brand is set globally or per workspace** (asked at M5.7, since the kernel has no workspace-only scope; chosen over adding one). `kvvideo.brand` has the kernel's default scopes: a brand for every workspace and one per workspace over it. `brand-set` sets the workspace's, as decided in 43.
 
+62. **kvvideo makes its own sound effects** (asked at M5.8; chosen over downloading Kenney's packs). The click, key taps, whoosh, and pop are synthesized with ffmpeg from noise and tones, released under CC0, and `SOURCES.md` gives the command that made each.
+
 ## Plan changes
 
 - `16-kvvideo.md`: rewritten for decisions 1 to 58.

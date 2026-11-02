@@ -11,7 +11,8 @@ import { invalid } from '../problems.ts';
 
 export type CaptionFont = { family: string; file: string };
 
-const arabicLetter = /[\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff\ufb50-\ufdff\ufe70-\ufeff]/u;
+/** A letter of the Arabic script. */
+export const arabicLetter = /[\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff\ufb50-\ufdff\ufe70-\ufeff]/u;
 
 function bundled(name: string): CaptionFont | undefined {
   const font = bundledFonts.find((candidate) => candidate.name === name);

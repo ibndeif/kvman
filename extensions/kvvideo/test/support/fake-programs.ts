@@ -69,22 +69,25 @@ export const probesLengths = [
 ].join('\n');
 
 /**
- * A body for an ffmpeg that composes: a scene's part holds its arguments, the join holds the parts' contents in the
- * list's order. Each run adds a JSON line to `<its own file>.log` with its arguments, its working folder's files, its
- * filter graph file, and the scene's ASS file. `fail` is a part name or `join` that exits 1.
+ * A body for an ffmpeg that composes (M5.8): a scene's part holds its output's name; the measure prints loudnorm's JSON;
+ * the final encode holds its parts' contents in input order; the poster holds `POSTER`. Each run adds a JSON line to
+ * `<its own file>.log` with its arguments, its working folder and its files, its filter graph file, and the scene's ASS
+ * file. `fail` is a part name, `measure`, or `final`, which exits 1.
  */
 export function composes(fail = ''): string {
   return [
-    'const path = require("node:path");',
     'const output = args[args.length - 1];',
-    'const joining = args.includes("concat");',
     'const script = args.indexOf("-filter_complex_script");',
     'const graph = script === -1 ? null : fs.readFileSync(args[script + 1], "utf8");',
     'const ass = (graph || "").match(/subtitles=filename=([^:]+):/);',
-    'fs.appendFileSync(__filename + ".log", JSON.stringify({ args, cwd: process.cwd(), files: fs.readdirSync("."), fonts: fs.existsSync("fonts") ? fs.readdirSync("fonts") : [], graph, ass: ass ? fs.readFileSync(ass[1], "utf8") : null }) + "\\n");',
-    `if (${JSON.stringify(fail)} !== '' && (output === ${JSON.stringify(fail)} || (joining && ${JSON.stringify(fail)} === 'join'))) { console.error('Conversion failed!'); process.exit(1); }`,
-    'if (!joining) { fs.writeFileSync(output, "PART " + output + "\\n"); process.exit(0); }',
-    'const list = fs.readFileSync(args[args.indexOf("-i") + 1], "utf8").split("\\n").filter(Boolean).map((line) => line.slice(6, -1));',
-    'fs.writeFileSync(output, list.map((part) => fs.readFileSync(part, "utf8")).join(""));',
+    'const kind = output === "-" ? "measure" : output.endsWith(".jpg") ? "poster" : output === "video.mp4" ? "final" : "part";',
+    'fs.appendFileSync(__filename + ".log", JSON.stringify({ kind, args, cwd: process.cwd(), files: fs.readdirSync("."), fonts: fs.existsSync("fonts") ? fs.readdirSync("fonts") : [], graph, ass: ass ? fs.readFileSync(ass[1], "utf8") : null }) + "\\n");',
+    `const fail = ${JSON.stringify(fail)};`,
+    "if (fail !== '' && (output === fail || kind === fail)) { console.error('Conversion failed!'); process.exit(1); }",
+    'if (kind === "measure") { console.error("[Parsed_loudnorm_0] \\n{\\n\\"input_i\\" : \\"-20.00\\",\\n\\"input_tp\\" : \\"-6.00\\",\\n\\"input_lra\\" : \\"3.00\\",\\n\\"input_thresh\\" : \\"-30.00\\",\\n\\"target_offset\\" : \\"0.10\\"\\n}"); process.exit(0); }',
+    'if (kind === "poster") { fs.writeFileSync(output, "POSTER"); process.exit(0); }',
+    'if (kind === "part") { fs.writeFileSync(output, "PART " + output + "\\n"); process.exit(0); }',
+    'const parts = args.filter((arg, index) => args[index - 1] === "-i" && arg.endsWith(".mkv"));',
+    'fs.writeFileSync(output, parts.map((part) => fs.readFileSync(part, "utf8")).join(""));',
   ].join('\n');
 }

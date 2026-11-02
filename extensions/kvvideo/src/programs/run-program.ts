@@ -13,7 +13,7 @@ export type ProgramRun = { exitCode: number; stdout: string; output: string; tim
 /** How one program runs: the program kvvideo calls it, and where its executable is. */
 export type Program = { name: ProgramName; command: string };
 
-export type RunOptions = { signal: AbortSignal; cwd?: string; timeoutMs?: number };
+export type RunOptions = { signal: AbortSignal; cwd?: string; timeoutMs?: number; onStdout?: (text: string) => void };
 
 const notStarted = new Set(['ENOENT', 'EACCES', 'ENOTDIR']);
 
@@ -30,6 +30,7 @@ export function runProgram(program: Program, args: readonly string[], options: R
     child.stdout.setEncoding('utf8').on('data', (text: string) => {
       stdout += text;
       output += text;
+      options.onStdout?.(text);
     });
     child.stderr.setEncoding('utf8').on('data', (text: string) => (output += text));
     const abort = (): void => killTree(child.pid);

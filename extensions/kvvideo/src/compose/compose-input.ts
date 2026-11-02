@@ -49,6 +49,15 @@ export const sceneSchema = z
     background: z.string().min(1).max(1000).describe("#RRGGBB or an image file of the workspace behind the clip; left out, the brand's.").exactOptional(),
     camera: z.enum(['auto', 'none']).describe('auto by default for a recorded website (zooms to clicks and typing) and an image (a slow zoom).').exactOptional(),
     overlays: z.array(overlaySchema).max(20).describe('Callouts, highlights, and blurs on a recorded page.').exactOptional(),
+    transition: z
+      .strictObject({
+        kind: z.enum(['cut', 'crossfade', 'fade-black', 'slide']).describe('crossfade by default.'),
+        toward: z.enum(['start', 'end', 'up', 'down']).describe("A slide's way: start (the default) is left in an ltr video, right in an rtl one.").exactOptional(),
+        ms: z.number().int().min(0).max(2000).describe('Its length: 500 by default, 0 for a cut; at most half of each scene.').exactOptional(),
+      })
+      .describe('Into the next scene.')
+      .exactOptional(),
+    sounds: z.boolean().describe("false turns the scene's sound effects off.").exactOptional(),
   })
   .refine((scene) => scene.from === undefined || scene.to === undefined || scene.to > scene.from, 'A part ends after it starts.');
 
@@ -65,6 +74,9 @@ export const composeInputSchema = z.strictObject({
   scenes: z.array(sceneSchema).min(1).max(100),
   width: side.describe('The width in pixels, 1920 by default.').exactOptional(),
   height: side.describe('The height in pixels, 1080 by default.').exactOptional(),
+  extraSizes: z.array(z.strictObject({ width: side, height: side })).max(2).describe('Up to 2 more sizes of the same video, as 1080 x 1920 or 1080 x 1080.').exactOptional(),
+  direction: z.enum(['ltr', 'rtl']).describe('The reading direction for slides; rtl by default when a caption has an Arabic letter.').exactOptional(),
+  sounds: z.boolean().describe('false turns all sound effects off.').exactOptional(),
   captions: z
     .strictObject({
       style: z.enum(captionStyles).describe('boxed (the default), outline, highlight (word by word where words are timed), or off.').exactOptional(),
@@ -76,4 +88,4 @@ export const composeInputSchema = z.strictObject({
   replace: z.boolean().describe('Write over an existing file.').exactOptional(),
 });
 
-export const composeOutputSchema = z.object({ file: z.string(), durationMs: z.number().int().nonnegative(), bytes: z.number().int().nonnegative(), fileId: z.string().nullable() });
+export const composeOutputSchema = z.object({ file: z.string(), durationMs: z.number().int().nonnegative(), bytes: z.number().int().nonnegative(), fileId: z.string().nullable(), poster: z.string(), posterFileId: z.string().nullable(), others: z.array(z.object({ file: z.string(), bytes: z.number().int().nonnegative() })) });
