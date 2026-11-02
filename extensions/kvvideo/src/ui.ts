@@ -10,7 +10,7 @@ const configuration = {
   direction: 'vertical',
   gap: 'md',
   children: [
-    { type: 'card', title: 'kvvideo.config.narration', children: settings(['kvvideo.narration.service', 'kvvideo.narration.voice', 'kvvideo.narration.model']) },
+    { type: 'card', title: 'kvvideo.config.narration', children: settings(['kvvideo.narration.service', 'kvvideo.narration.voice', 'kvvideo.narration.model', 'kvvideo.narration.pronunciations']) },
     { type: 'card', title: 'kvvideo.config.recording', children: settings(['kvvideo.browser']) },
     { type: 'card', title: 'kvvideo.config.programs', children: settings(['kvvideo.programs.ffmpeg', 'kvvideo.programs.ffprobe', 'kvvideo.programs.piper']) },
   ],

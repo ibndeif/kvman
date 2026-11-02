@@ -1,22 +1,14 @@
-import path from 'node:path';
 import { lastLines, runProgram, type Program } from '../programs/run-program.ts';
 import { kvvideoProblem } from '../problems.ts';
 
-// Piper on this computer (plan 16 §16.6, ADR 0107, 22): it writes a WAV, which ffmpeg turns into the MP3.
+// Piper on this computer (plan 16 §16.6; ADR 0107, 22): it speaks one sentence into a WAV, slower or faster by its
+// length scale, the inverse of the speed.
 
-export type PiperPrograms = { piper: Program; ffmpeg: Program };
-
-function failed(reason: string): Error {
-  return kvvideoProblem('NARRATION_FAILED', `piper couldn't narrate: ${reason}`, { service: 'piper', reason });
-}
-
-/** Narrates `text` with the voice into `<folder>/narration.mp3`, and answers that file. */
-export async function piperNarration(programs: PiperPrograms, voice: string, text: string, folder: string, signal: AbortSignal): Promise<string> {
-  const wav = path.join(folder, 'narration.wav');
-  const mp3 = path.join(folder, 'narration.mp3');
-  const spoken = await runProgram(programs.piper, ['-m', voice, '-f', wav, '--', text], { signal });
-  if (spoken.exitCode !== 0) throw failed(lastLines(spoken.output));
-  const encoded = await runProgram(programs.ffmpeg, ['-hide_banner', '-loglevel', 'error', '-i', wav, '-codec:a', 'libmp3lame', '-b:a', '128k', '-y', mp3], { signal });
-  if (encoded.exitCode !== 0) throw failed(lastLines(encoded.output));
-  return mp3;
+/** Speaks `sentence` with the voice into the WAV file `wav`. */
+export async function piperSentence(piper: Program, voice: string, sentence: string, wav: string, speed: number, signal: AbortSignal): Promise<void> {
+  const spoken = await runProgram(piper, ['-m', voice, '-f', wav, '--length-scale', String(Math.round((1 / speed) * 1000) / 1000), '--', sentence], { signal });
+  if (spoken.exitCode !== 0) {
+    const reason = lastLines(spoken.output);
+    throw kvvideoProblem('NARRATION_FAILED', `piper couldn't narrate: ${reason}`, { service: 'piper', reason });
+  }
 }

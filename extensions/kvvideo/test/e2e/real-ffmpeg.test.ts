@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
 import { z } from '@kvman/sdk';
+import { joinNarrationArgs } from '../../src/narration/join-args.ts';
 import { useKvvideo } from '../support/kvvideo-kernel.ts';
 import { useTestPages } from '../support/test-page.ts';
 
@@ -47,5 +48,15 @@ describe('a real recording (16 §16.5, ADR 0107, 25)', () => {
       { codec_type: 'audio', codec_name: 'aac', r_frame_rate: '0/0', sample_rate: '48000', channels: 2 },
     ]);
     expect(Math.abs(Number(probed.format.duration) * 1000 - answer.durationMs)).toBeLessThan(100);
+  });
+
+  it('M5.6-H2 the real ffmpeg joins sentences of different sounds with 250 ms between them', async () => {
+    const { workspace } = await kvvideo.start();
+    execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=1:sample_rate=22050', '-y', `${workspace}/s1.wav`]);
+    execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'sine=frequency=660:duration=2:sample_rate=48000', '-ac', '2', '-codec:a', 'libmp3lame', '-y', `${workspace}/s2.mp3`]);
+    execFileSync('ffmpeg', joinNarrationArgs([`${workspace}/s1.wav`, `${workspace}/s2.mp3`], `${workspace}/joined.mp3`));
+    const probed = probe(`${workspace}/joined.mp3`);
+    expect(probed.streams).toEqual([{ codec_type: 'audio', codec_name: 'mp3', r_frame_rate: '0/0', sample_rate: '44100', channels: 1 }]);
+    expect(Math.abs(Number(probed.format.duration) * 1000 - 3250)).toBeLessThan(80);
   });
 });

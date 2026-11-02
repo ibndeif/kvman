@@ -33,6 +33,7 @@ declare module '@kvman/sdk' {
     'kvvideo.narration.service': NarrationService | null;
     'kvvideo.narration.voice': string | null;
     'kvvideo.narration.model': string | null;
+    'kvvideo.narration.pronunciations': { word: string; say: string }[];
     'kvvideo.browser': BrowserChoice;
     'kvvideo.programs.ffmpeg': string;
     'kvvideo.programs.ffprobe': string;

@@ -34,5 +34,8 @@
   "kvvideo.errors.NARRATION_FAILED": "{service} couldn't narrate: {reason}",
   "kvvideo.errors.RENDER_FAILED": "ffmpeg couldn't make the video: {reason}",
   "kvvideo.player.unavailable": "This video can't play here. Open {file} in the workspace.",
-  "kvvideo.progress.step": "Recording step {n} of {of}"
+  "kvvideo.progress.step": "Recording step {n} of {of}",
+  "kvvideo.narration.pronunciations.title": "Pronunciations",
+  "kvvideo.narration.pronunciations.description": "Words the narration says differently, as a list of { \"word\", \"say\" }: \"kvman\" said as \"kay-vee-man\". The captions keep the word as written.",
+  "kvvideo.progress.sentence": "Narrating sentence {n} of {of}"
 }

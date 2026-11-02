@@ -20,4 +20,12 @@ describe("kvvideo's texts (16 §16.11)", () => {
     expect(catalog('en')['kvvideo.progress.step']).toBe('Recording step {n} of {of}');
     expect(catalog('ar')['kvvideo.progress.step']).toBe('تسجيل الخطوة {n} من {of}');
   });
+
+  it('M5.6-H13 the sentence progress and the pronunciations setting have en and ar texts', () => {
+    for (const language of ['en', 'ar']) {
+      const texts = catalog(language);
+      expect(['kvvideo.progress.sentence', 'kvvideo.narration.pronunciations.title', 'kvvideo.narration.pronunciations.description'].filter((key) => texts[key] === undefined)).toEqual([]);
+    }
+    expect(catalog('en')['kvvideo.progress.sentence']).toBe('Narrating sentence {n} of {of}');
+  });
 });
