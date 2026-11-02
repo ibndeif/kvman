@@ -9,6 +9,12 @@ export const videoConnector = {
   commands: [
     { name: 'check', command: 'kvvideo.setup.get', examples: [{ description: 'See what is ready before making a video', input: {} }] },
     { name: 'fonts', command: 'kvvideo.font.list', examples: [{ description: 'List the bundled caption fonts', input: {} }] },
+    { name: 'brand', command: 'kvvideo.brand.get', examples: [{ description: "Read the workspace's brand", input: {} }] },
+    {
+      name: 'brand-set',
+      command: 'kvvideo.brand.set',
+      examples: [{ description: 'Save the brand the person agreed to', input: { logo: 'brand/logo.svg', colors: { primary: '#2563EB', background: '#0F172A', text: '#F8FAFC' }, font: 'Poppins' } }],
+    },
     {
       name: 'record',
       command: 'kvvideo.clip.record',

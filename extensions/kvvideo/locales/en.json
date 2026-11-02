@@ -37,5 +37,8 @@
   "kvvideo.progress.step": "Recording step {n} of {of}",
   "kvvideo.narration.pronunciations.title": "Pronunciations",
   "kvvideo.narration.pronunciations.description": "Words the narration says differently, as a list of { \"word\", \"say\" }: \"kvman\" said as \"kay-vee-man\". The captions keep the word as written.",
-  "kvvideo.progress.sentence": "Narrating sentence {n} of {of}"
+  "kvvideo.progress.sentence": "Narrating sentence {n} of {of}",
+  "kvvideo.config.brand": "Brand",
+  "kvvideo.brand.title": "Brand",
+  "kvvideo.brand.description": "The logo, colours, and font of this workspace's videos, as { \"logo\", \"colors\": { \"primary\", \"background\", \"text\" }, \"font\" }. The agent proposes it in a video's script and saves it once you agree."
 }

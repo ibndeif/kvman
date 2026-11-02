@@ -1,6 +1,5 @@
 import path from 'node:path';
 import { invalid } from '../problems.ts';
-import type { Caption } from '../narration/captions.ts';
 import type { Scene } from './compose-input.ts';
 
 // A scene's length (plan 16 §16.8): its `durationMs`, else its narration's, else its video part's. A video part
@@ -10,7 +9,7 @@ export const videoExtensions = ['.webm', '.mp4', '.mov', '.mkv'];
 export const imageExtensions = ['.png', '.jpg', '.jpeg', '.webp'];
 export const audioExtensions = ['.mp3', '.wav', '.m4a'];
 
-export type PlannedScene = { number: number; kind: 'video' | 'image'; clip: string; startMs: number; partMs: number; lengthMs: number; narration: string | undefined; captions: Caption[] };
+export type PlannedScene = { number: number; kind: 'video' | 'image'; clip: string; startMs: number; partMs: number; lengthMs: number; narration: string | undefined };
 
 export type SceneFiles = { clip: string; narration: string | undefined };
 
@@ -29,7 +28,7 @@ export function checkScene(number: number, scene: Scene): void {
 
 export function planScene(number: number, scene: Scene, files: SceneFiles, durations: SceneDurations): PlannedScene {
   checkScene(number, scene);
-  const base = { number, clip: files.clip, narration: files.narration, captions: scene.captions ?? [] };
+  const base = { number, clip: files.clip, narration: files.narration };
   if (isImage(files.clip)) return { ...base, kind: 'image', startMs: 0, partMs: 0, lengthMs: scene.durationMs ?? durations.narrationMs ?? 0 };
   const clipMs = durations.clipMs ?? 0;
   const startMs = scene.from ?? 0;

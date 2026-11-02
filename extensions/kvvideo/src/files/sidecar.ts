@@ -9,7 +9,7 @@ import { actionSchema, stepSchema } from '../record/steps.ts';
 
 const wordSchema = z.object({ text: z.string(), startMs: z.number().int().nonnegative(), endMs: z.number().int().nonnegative() });
 
-export const sidecarCaptionSchema = z.object({ text: z.string(), startMs: z.number().int().nonnegative(), endMs: z.number().int().nonnegative(), words: z.array(wordSchema).optional() });
+export const sidecarCaptionSchema = z.object({ text: z.string(), startMs: z.number().int().nonnegative(), endMs: z.number().int().nonnegative(), words: z.array(wordSchema).exactOptional() });
 
 export const recordingSidecarSchema = z.object({
   kind: z.enum(['site', 'page']),

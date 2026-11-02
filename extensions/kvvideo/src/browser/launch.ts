@@ -10,3 +10,9 @@ export async function launchChannel(channel: Channel): Promise<Browser> {
   const { chromium } = await import('playwright-core');
   return chromium.launch({ channel, headless: true, args: ['--force-device-scale-factor=2'] });
 }
+
+/** The browser that draws a scene's frames and overlays, at one pixel per CSS pixel (ADR 0115, 36). */
+export async function launchDrawing(channel: Channel): Promise<Browser> {
+  const { chromium } = await import('playwright-core');
+  return chromium.launch({ channel, headless: true });
+}

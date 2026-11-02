@@ -1,7 +1,7 @@
 import type { ProgramName } from '../settings.ts';
 
 // Whether ffmpeg can make kvvideo's videos (plan 16 §16.4): it and ffprobe run, and ffmpeg has the encoders and the
-// libass `subtitles` filter that kvvideo uses. A program that can't run answers `undefined`.
+// filters that kvvideo uses, `subtitles` (libass) first. A program that can't run answers `undefined`.
 
 /** What one program printed with its exit code, or `undefined` when it couldn't run. */
 export type Answer = { exitCode: number; stdout: string } | undefined;
@@ -12,7 +12,7 @@ export type CheckRun = (program: ProgramName, args: readonly string[]) => Promis
 export type FfmpegReadiness = { ready: boolean; version: string | null; missing: string[] };
 
 const encoders = ['libx264', 'aac', 'libmp3lame'] as const;
-const filters = ['subtitles'] as const;
+const filters = ['subtitles', 'xfade', 'loudnorm', 'afftdn', 'gradients', 'perspective', 'alphamerge'] as const;
 
 function succeeded(answer: Answer): answer is { exitCode: number; stdout: string } {
   return answer !== undefined && answer.exitCode === 0;

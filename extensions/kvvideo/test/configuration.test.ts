@@ -7,10 +7,10 @@ const kvvideo = useKvvideo();
 
 const catalog = (language: string) => z.record(z.string(), z.string()).parse(JSON.parse(readFileSync(new URL(`../locales/${language}.json`, import.meta.url), 'utf8')));
 
-const keys = ['kvvideo.narration.service', 'kvvideo.narration.voice', 'kvvideo.narration.model', 'kvvideo.narration.pronunciations', 'kvvideo.browser', 'kvvideo.programs.ffmpeg', 'kvvideo.programs.ffprobe', 'kvvideo.programs.piper'];
+const keys = ['kvvideo.narration.service', 'kvvideo.narration.voice', 'kvvideo.narration.model', 'kvvideo.narration.pronunciations', 'kvvideo.brand', 'kvvideo.browser', 'kvvideo.programs.ffmpeg', 'kvvideo.programs.ffprobe', 'kvvideo.programs.piper'];
 
 describe("kvvideo's configuration (16 §16.2)", { timeout: 60_000 }, () => {
-  it('M5.1-H3 M5.6-H13 the extension page has the three cards of setting rows, with their titles', async () => {
+  it('M5.1-H3 M5.6-H13 M5.7-H12 the extension page has the four cards of setting rows, with their titles', async () => {
     const { kernel } = await kvvideo.start();
     const ui = await kernel.exec('kvvideo.ui.get', {});
     expect({ pages: ui.pages, nav: ui.nav, panels: ui.panels, status: ui.status }).toEqual({ pages: [], nav: [], panels: [], status: [] });
@@ -21,18 +21,20 @@ describe("kvvideo's configuration (16 §16.2)", { timeout: 60_000 }, () => {
       gap: 'md',
       children: [
         { type: 'card', title: 'kvvideo.config.narration', children: keys.slice(0, 4).map(row) },
+        { type: 'card', title: 'kvvideo.config.brand', children: [row('kvvideo.brand')] },
         { type: 'card', title: 'kvvideo.config.recording', children: [row('kvvideo.browser')] },
-        { type: 'card', title: 'kvvideo.config.programs', children: keys.slice(5).map(row) },
+        { type: 'card', title: 'kvvideo.config.programs', children: keys.slice(6).map(row) },
       ],
     });
-    for (const language of ['en', 'ar']) expect(['kvvideo.config.narration', 'kvvideo.config.recording', 'kvvideo.config.programs'].map((key) => catalog(language)[key] !== undefined)).toEqual([true, true, true]);
+    for (const language of ['en', 'ar']) expect(['kvvideo.config.narration', 'kvvideo.config.brand', 'kvvideo.config.recording', 'kvvideo.config.programs'].map((key) => catalog(language)[key] !== undefined)).toEqual([true, true, true, true]);
   });
 
-  it('M5.1-H4 M5.6-H13 the eight settings have their defaults, scopes, and texts', async () => {
+  it('M5.1-H4 M5.6-H13 M5.7-H12 the nine settings have their defaults, scopes, and texts', async () => {
     const { kernel } = await kvvideo.start();
     const listed = (await kernel.exec('kernel.settings.list', {})).filter((setting) => setting.key.startsWith('kvvideo.'));
     expect(listed.map(({ key, value, scopes }) => ({ key, value, scopes })).sort((a, b) => a.key.localeCompare(b.key))).toEqual(
       [
+        { key: 'kvvideo.brand', value: null, scopes: ['global', 'workspace'] },
         { key: 'kvvideo.browser', value: 'auto', scopes: ['global'] },
         { key: 'kvvideo.narration.model', value: null, scopes: ['global', 'workspace'] },
         { key: 'kvvideo.narration.pronunciations', value: [], scopes: ['global', 'workspace'] },

@@ -1,4 +1,5 @@
 import type { Ctx } from '@kvman/sdk';
+import { registerBrand } from './brand/brand.ts';
 import { registerCompose } from './compose/register-compose.ts';
 import { registerFonts } from './fonts/register-fonts.ts';
 import { registerNarration } from './narration/register-narration.ts';
@@ -11,11 +12,12 @@ import { registerVideoStart } from './video-start.ts';
 
 export type {} from './api.ts';
 
-// kvvideo (plan 16): makes videos of the person's app, recorded in the installed browser, narrated, and captioned. It
+// kvvideo (plan 16): makes any kind of video, recorded in the installed browser, narrated, and captioned. It
 // has no loop of its own; it extends kvcoder with the `video` connector and its guide, which a chat has once the
 // person runs `/video` in it (ADR 0107).
 export default (ctx: Ctx): void => {
   registerSettings(ctx);
+  registerBrand(ctx);
   registerUi(ctx);
   registerSetup(ctx);
   registerFonts(ctx);

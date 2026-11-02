@@ -7,7 +7,7 @@ import { useKvvideo, type KvvideoWorld } from './support/kvvideo-kernel.ts';
 const kvvideo = useKvvideo();
 const programs = useFakePrograms();
 
-type Run = { args: string[]; cwd: string; files: string[]; fonts: string[]; ass: string | null };
+type Run = { args: string[]; cwd: string; files: string[]; fonts: string[]; graph: string | null; ass: string | null };
 const runsOf = (ffmpeg: string): Run[] => (existsSync(`${ffmpeg}.log`) ? readFileSync(`${ffmpeg}.log`, 'utf8').trim().split('\n').map((line) => JSON.parse(line) as Run) : []);
 const problemOf = (run: Promise<unknown>): Promise<unknown> =>
   run.then(
@@ -39,7 +39,7 @@ describe('video compose (16 §16.8)', { timeout: 60_000 }, () => {
     const runs = runsOf(ffmpeg);
     expect(runs.map((run) => run.args.at(-1))).toEqual(['part-1.mp4', 'part-2.mp4', 'video.mp4']);
     expect(runs[0]?.ass).toBeNull();
-    expect(runs[1]?.ass).toContain('Style: Default,IBM Plex Sans Arabic,40,');
+    expect(runs[1]?.ass).toContain('Style: Default,IBM Plex Sans Arabic,60,');
     expect(runs[1]?.fonts).toEqual(['IBMPlexSansArabic-Bold.ttf']);
     expect(new Set(runs.map((run) => run.cwd)).size).toBe(1);
     expect(workFoldersLeft(ffmpeg)).toEqual([]);

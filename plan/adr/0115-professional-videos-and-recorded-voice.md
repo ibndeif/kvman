@@ -75,6 +75,10 @@ The product owner asked (2026-11-02) for suggestions so kvvideo can make "profes
 
 59. **A page reaches the internet, not this computer** (found at M5.5). Chrome's local-network protection refuses a recorded page's requests to this computer and the local network, and a granted permission doesn't lift it in a headless browser; kvvideo leaves it so, which also keeps an HTML page away from the person's local servers. The browser is started at a device scale factor of 2, since the screencast sends frames at the CSS size otherwise.
 
+60. **ffmpeg draws the background** (found at M5.7; it narrows decision 36). A gradient (`gradients` with no motion), a colour, or an image is drawn by ffmpeg, and only the window's shadow and corners, the phone's outline, a callout, and a highlight by the browser, so a scene framed `none` with no overlays needs no browser. The camera is ffmpeg's `perspective`, evaluated each frame, which moves the view by fractions of a pixel where `zoompan` moves it by whole ones; `check` also needs `gradients`, `perspective`, and `alphamerge`.
+
+61. **The brand is set globally or per workspace** (asked at M5.7, since the kernel has no workspace-only scope; chosen over adding one). `kvvideo.brand` has the kernel's default scopes: a brand for every workspace and one per workspace over it. `brand-set` sets the workspace's, as decided in 43.
+
 ## Plan changes
 
 - `16-kvvideo.md`: rewritten for decisions 1 to 58.

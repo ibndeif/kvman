@@ -37,5 +37,8 @@
   "kvvideo.progress.step": "تسجيل الخطوة {n} من {of}",
   "kvvideo.narration.pronunciations.title": "النطق",
   "kvvideo.narration.pronunciations.description": "كلمات يُنطق بها الراوي بطريقة مختلفة، في قائمة من { \"word\", \"say\" }: تُقرأ \"kvman\" كـ \"kay-vee-man\". تبقى الكلمة في الترجمة النصية كما كُتبت.",
-  "kvvideo.progress.sentence": "قراءة الجملة {n} من {of}"
+  "kvvideo.progress.sentence": "قراءة الجملة {n} من {of}",
+  "kvvideo.config.brand": "الهوية",
+  "kvvideo.brand.title": "الهوية",
+  "kvvideo.brand.description": "شعار فيديوهات مساحة العمل هذه وألوانها وخطها، بالصيغة { \"logo\", \"colors\": { \"primary\", \"background\", \"text\" }, \"font\" }. يقترحها الوكيل في نص الفيديو ويحفظها حين توافق."
 }

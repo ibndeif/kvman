@@ -1,6 +1,6 @@
 import { z, type Ctx } from '@kvman/sdk';
 
-// kvvideo's configuration on its extension page (plan 16 §16.2): three cards of setting rows, and nothing else. The
+// kvvideo's configuration on its extension page (plan 16 §16.2): four cards of setting rows, and nothing else. The
 // keys' secrets are added in the page's own Secrets section (plan 06 §6.6).
 
 const settings = (keys: readonly string[]) => keys.map((key) => ({ type: 'setting', key }));
@@ -11,6 +11,7 @@ const configuration = {
   gap: 'md',
   children: [
     { type: 'card', title: 'kvvideo.config.narration', children: settings(['kvvideo.narration.service', 'kvvideo.narration.voice', 'kvvideo.narration.model', 'kvvideo.narration.pronunciations']) },
+    { type: 'card', title: 'kvvideo.config.brand', children: settings(['kvvideo.brand']) },
     { type: 'card', title: 'kvvideo.config.recording', children: settings(['kvvideo.browser']) },
     { type: 'card', title: 'kvvideo.config.programs', children: settings(['kvvideo.programs.ffmpeg', 'kvvideo.programs.ffprobe', 'kvvideo.programs.piper']) },
   ],

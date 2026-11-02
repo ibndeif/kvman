@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ProblemError } from '@kvman/sdk';
+import { lookOf } from '../../src/compose/scene-look.ts';
 import { checkScene, planScene } from '../../src/compose/scene-plan.ts';
 
 const video = { clip: '/w/a.mp4', narration: '/w/a.mp3' };
@@ -31,5 +32,22 @@ describe("a scene's length (16 §16.8)", () => {
     expect(codeOf(() => checkScene(2, { clip: 'a.PNG', durationMs: 1000, from: 0 }))).toBe('VALIDATION_FAILED');
     expect(codeOf(() => checkScene(2, { clip: 'a.jpg', narration: 'a.mp3' }))).toBeUndefined();
     expect(codeOf(() => lengths({ clip: 'a.mp4', from: 9000 }, { clip: '/w/a.mp4', narration: undefined }, 9000, undefined))).toBe('VALIDATION_FAILED');
+  });
+
+  it("M5.7-H11 M5.7-E3 a scene's frame and camera by default from what its clip is", () => {
+    const recording = (kind: 'site' | 'page', device: 'desktop' | 'phone') => ({ kind, source: 'x', width: 640, height: 360, device, scale: 2 as const, durationMs: 1000, steps: [], actions: [] });
+    const look = (scene: Parameters<typeof lookOf>[1], kind: 'video' | 'image', sidecar: Parameters<typeof lookOf>[3]) => {
+      const found = lookOf(1, scene, kind, sidecar, undefined, 4000);
+      return [found.frame, found.camera === undefined ? 'none' : found.camera.scale === 'input' ? 'zoom' : 'auto'];
+    };
+    expect(look({ clip: 'a.mp4' }, 'video', recording('site', 'desktop'))).toEqual(['window', 'auto']);
+    expect(look({ clip: 'a.mp4' }, 'video', recording('site', 'phone'))).toEqual(['phone', 'auto']);
+    expect(look({ clip: 'a.mp4' }, 'video', recording('page', 'desktop'))).toEqual(['none', 'none']);
+    expect(look({ clip: 'a.png', durationMs: 4000 }, 'image', undefined)).toEqual(['none', 'zoom']);
+    expect(look({ clip: 'a.mp4' }, 'video', undefined)).toEqual(['none', 'none']);
+    expect(look({ clip: 'a.mp4', camera: 'auto' }, 'video', recording('page', 'desktop'))).toEqual(['none', 'none']);
+    expect(look({ clip: 'a.mp4', camera: 'auto' }, 'video', undefined)).toEqual(['none', 'none']);
+    expect(look({ clip: 'a.mp4', camera: 'none', frame: 'none' }, 'video', recording('site', 'desktop'))).toEqual(['none', 'none']);
+    expect(look({ clip: 'a.png', durationMs: 4000, camera: 'none', frame: 'window' }, 'image', undefined)).toEqual(['window', 'none']);
   });
 });

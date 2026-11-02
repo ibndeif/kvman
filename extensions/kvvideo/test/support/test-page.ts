@@ -3,7 +3,7 @@ import type { AddressInfo } from 'node:net';
 import { afterEach } from 'vitest';
 
 // A local app to record (M5.2): a page with a link, a field, a Save button that posts what was typed, a long list, and
-// a box that appears late, which reports its first touch (M5.5); a second page; a page that fetches from another port when it loads; and a server that
+// a box that appears late, which reports its first touch (M5.5); a second page; a page of given HTML (M5.7); a page that fetches from another port when it loads; and a server that
 // counts the requests it gets. Every server closes after its test.
 
 const home = `<!doctype html><html><body style="font:16px sans-serif">
@@ -31,7 +31,7 @@ async function listen(server: Server, servers: Server[]): Promise<number> {
   return (server.address() as AddressInfo).port;
 }
 
-export function useTestPages(): { app(): Promise<TestServer>; counter(): Promise<TestServer>; closedPort(): Promise<number> } {
+export function useTestPages(): { app(): Promise<TestServer>; counter(): Promise<TestServer>; page(html: string): Promise<TestServer>; closedPort(): Promise<number> } {
   const servers: Server[] = [];
   afterEach(async () => {
     for (const server of servers.splice(0)) await new Promise<void>((resolve) => server.close(() => resolve()));
@@ -60,6 +60,7 @@ export function useTestPages(): { app(): Promise<TestServer>; counter(): Promise
         return home;
       }),
     counter: () => serve(() => 'pong'),
+    page: (html) => serve(() => html),
     closedPort: async () => {
       const server = createServer();
       const port = await listen(server, []);

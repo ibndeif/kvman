@@ -2,6 +2,7 @@ import type { z } from '@kvman/sdk';
 import type { composeInputSchema, composeOutputSchema } from './compose/compose-input.ts';
 import type { narrateInputSchema, narrateOutputSchema } from './narration/register-narration.ts';
 import type { recordInputSchema, recordOutputSchema } from './record/steps.ts';
+import type { Brand } from './brand/brand.ts';
 import type { BrowserChoice, NarrationService } from './settings.ts';
 
 // kvvideo's public names and settings for typed calls (plan 03 §3.2): a caller gets them after
@@ -16,6 +17,7 @@ declare module '@kvman/sdk' {
     'kvvideo.video.compose': { input: z.input<typeof composeInputSchema>; output: z.output<typeof composeOutputSchema> };
     'kvvideo.narration.make': { input: z.input<typeof narrateInputSchema>; output: z.output<typeof narrateOutputSchema> };
     'kvvideo.clip.record': { input: z.input<typeof recordInputSchema>; output: z.output<typeof recordOutputSchema> };
+    'kvvideo.brand.set': { input: Brand; output: Empty };
   }
   interface Queries {
     'kvvideo.setup.get': {
@@ -28,12 +30,14 @@ declare module '@kvman/sdk' {
     };
     'kvvideo.ui.get': { input: Empty; output: { pages: unknown[]; nav: unknown[]; panels: unknown[]; status: unknown[]; configuration: unknown } };
     'kvvideo.font.list': { input: Empty; output: { name: string; scripts: ('latin' | 'arabic')[] }[] };
+    'kvvideo.brand.get': { input: Empty; output: Brand | null };
   }
   interface Settings {
     'kvvideo.narration.service': NarrationService | null;
     'kvvideo.narration.voice': string | null;
     'kvvideo.narration.model': string | null;
     'kvvideo.narration.pronunciations': { word: string; say: string }[];
+    'kvvideo.brand': Brand | null;
     'kvvideo.browser': BrowserChoice;
     'kvvideo.programs.ffmpeg': string;
     'kvvideo.programs.ffprobe': string;

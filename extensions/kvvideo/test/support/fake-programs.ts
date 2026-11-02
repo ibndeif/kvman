@@ -70,16 +70,18 @@ export const probesLengths = [
 
 /**
  * A body for an ffmpeg that composes: a scene's part holds its arguments, the join holds the parts' contents in the
- * list's order. Each run adds a JSON line to `<its own file>.log` with its arguments, its working folder's files, and
- * the scene's ASS file. `fail` is a part name or `join` that exits 1.
+ * list's order. Each run adds a JSON line to `<its own file>.log` with its arguments, its working folder's files, its
+ * filter graph file, and the scene's ASS file. `fail` is a part name or `join` that exits 1.
  */
 export function composes(fail = ''): string {
   return [
     'const path = require("node:path");',
     'const output = args[args.length - 1];',
     'const joining = args.includes("concat");',
-    'const ass = (args.find((arg) => arg.includes("subtitles=")) || "").match(/filename=([^:]+):/);',
-    'fs.appendFileSync(__filename + ".log", JSON.stringify({ args, cwd: process.cwd(), files: fs.readdirSync("."), fonts: fs.existsSync("fonts") ? fs.readdirSync("fonts") : [], ass: ass ? fs.readFileSync(ass[1], "utf8") : null }) + "\\n");',
+    'const script = args.indexOf("-filter_complex_script");',
+    'const graph = script === -1 ? null : fs.readFileSync(args[script + 1], "utf8");',
+    'const ass = (graph || "").match(/subtitles=filename=([^:]+):/);',
+    'fs.appendFileSync(__filename + ".log", JSON.stringify({ args, cwd: process.cwd(), files: fs.readdirSync("."), fonts: fs.existsSync("fonts") ? fs.readdirSync("fonts") : [], graph, ass: ass ? fs.readFileSync(ass[1], "utf8") : null }) + "\\n");',
     `if (${JSON.stringify(fail)} !== '' && (output === ${JSON.stringify(fail)} || (joining && ${JSON.stringify(fail)} === 'join'))) { console.error('Conversion failed!'); process.exit(1); }`,
     'if (!joining) { fs.writeFileSync(output, "PART " + output + "\\n"); process.exit(0); }',
     'const list = fs.readFileSync(args[args.indexOf("-i") + 1], "utf8").split("\\n").filter(Boolean).map((line) => line.slice(6, -1));',

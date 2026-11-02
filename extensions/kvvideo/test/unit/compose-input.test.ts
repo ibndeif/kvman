@@ -26,4 +26,27 @@ describe("compose's input (16 §16.8)", () => {
     expect(accepts({ extra: 1 })).toBe(false);
     expect(withScene({ extra: 1 })).toBe(false);
   });
+
+  it('M5.7-E1 overlays are placed by exactly one of step and box, a callout has text, and each ends after it starts', () => {
+    const overlay = (fields: Record<string, unknown>) => withScene({ overlays: [{ kind: 'blur', fromMs: 0, toMs: 100, ...fields }] });
+    expect(overlay({ step: 1 })).toBe(true);
+    expect(overlay({ box: { x: 0, y: 0, width: 10, height: 10 } })).toBe(true);
+    expect(overlay({ step: 1, box: { x: 0, y: 0, width: 10, height: 10 } })).toBe(false);
+    expect(overlay({})).toBe(false);
+    expect(overlay({ kind: 'callout', step: 1 })).toBe(false);
+    expect(overlay({ kind: 'callout', step: 1, text: 'Save' })).toBe(true);
+    expect(overlay({ step: 1, toMs: 0 })).toBe(false);
+    expect(overlay({ step: 0 })).toBe(false);
+    expect(withScene({ overlays: Array.from({ length: 21 }, () => ({ kind: 'blur', step: 1, fromMs: 0, toMs: 1 })) })).toBe(false);
+  });
+
+  it('M5.7-H9 caption styles, timed words, frames, cameras, and backgrounds', () => {
+    for (const style of ['boxed', 'outline', 'highlight', 'off']) expect(accepts({ captions: { style } })).toBe(true);
+    expect(accepts({ captions: { style: 'shadow' } })).toBe(false);
+    expect(withScene({ captions: [{ text: 'Hi there', startMs: 0, endMs: 900, words: [{ text: 'Hi', startMs: 0, endMs: 300 }] }] })).toBe(true);
+    expect(withScene({ captions: [{ text: 'x', startMs: 0, endMs: 900, words: Array.from({ length: 41 }, () => ({ text: 'x', startMs: 0, endMs: 1 })) }] })).toBe(false);
+    expect(withScene({ frame: 'window', camera: 'auto', background: '#112233' })).toBe(true);
+    expect(withScene({ frame: 'tablet' })).toBe(false);
+    expect(withScene({ camera: 'pan' })).toBe(false);
+  });
 });
