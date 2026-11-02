@@ -87,7 +87,8 @@ label.style.insetInlineStart = left + 'px'; label.style.insetBlockStart = top + 
 tip.style.insetInlineStart = (box.x + box.width / 2 - ${String(arrow)}) + 'px';
 tip.style.insetBlockStart = (above ? top + height : top - ${String(arrow)}) + 'px';
 tip.style.borderBlockStart = above ? '${String(arrow)}px solid ${colour}' : '0'; tip.style.borderBlockEnd = above ? '0' : '${String(arrow)}px solid ${colour}';`;
-  const label = `<div id="label" dir="auto" style="position:absolute;white-space:nowrap;font:700 ${px(fontSize)}/1.2 kvvideo,sans-serif;color:${textOn(colour)};background:${colour};padding:.45em .9em;border-radius:999px;box-shadow:0 ${px(fontSize * 0.15)} ${px(fontSize * 0.5)} rgba(0,0,0,.35)">${escaped(text)}</div>`;
+  // The label's box is placed left to right; its text takes its own direction inside it, so an Arabic label stays put.
+  const label = `<div id="label" dir="ltr" style="position:absolute;white-space:nowrap;font:700 ${px(fontSize)}/1.2 kvvideo,sans-serif;color:${textOn(colour)};background:${colour};padding:.45em .9em;border-radius:999px;box-shadow:0 ${px(fontSize * 0.15)} ${px(fontSize * 0.5)} rgba(0,0,0,.35)"><span dir="auto">${escaped(text)}</span></div>`;
   const tip = `<div id="tip" style="position:absolute;inline-size:0;block-size:0;border-inline:${px(arrow)} solid transparent"></div>`;
   return pageOf(`<style>${fontFace(font)}</style>${label}${tip}<script>document.fonts.ready.then(() => {${script}});</script>`, 'transparent');
 }

@@ -125,7 +125,7 @@ describe('video narrate, sentence by sentence (16 §16.6, ADR 0115)', { timeout:
   it('M5.3-H6 the connector has narrate, a command with an example', async () => {
     const { kernel } = await kvvideo.start();
     const video = (await kernel.exec('kvcoder.connector.list', {})).find((connector) => connector.name === 'video');
-    expect(video?.commands?.find((command) => command.name === 'narrate')).toMatchObject({ command: 'kvvideo.narration.make', query: false, examples: [expect.objectContaining({ description: "Narrate the first scene's script" })] });
+    expect(video?.commands?.find((command) => command.name === 'narrate')).toMatchObject({ command: 'kvvideo.narration.make', query: false, examples: [expect.objectContaining({ description: "Narrate a scene's script, warm and a little slower" })] });
   });
 
   it('M5.3-E1 no service, or Piper without a voice, fails NARRATION_NOT_SET; nothing is written', async () => {

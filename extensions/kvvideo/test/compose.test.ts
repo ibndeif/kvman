@@ -48,7 +48,7 @@ describe('video compose (16 §16.8)', { timeout: 60_000 }, () => {
   it('M5.4-H11 the connector has compose, with an example and its card', async () => {
     const { kernel } = await kvvideo.start();
     const video = (await kernel.exec('kvcoder.connector.list', {})).find((connector) => connector.name === 'video');
-    expect(video?.commands?.find((command) => command.name === 'compose')).toMatchObject({ command: 'kvvideo.video.compose', query: false, card: 'kvvideo.player', examples: [expect.objectContaining({ description: 'Join a title image and a narrated recording, with captions' })] });
+    expect(video?.commands?.find((command) => command.name === 'compose')).toMatchObject({ command: 'kvvideo.video.compose', query: false, card: 'kvvideo.player', examples: [expect.objectContaining({ description: 'Compose a title page and a narrated recording, with a callout, a slide, and a phone version' })] });
   });
 
   it('M5.4-H7 copies: one per path, replaced on a new render, and only the newest 10 kept', async () => {

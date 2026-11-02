@@ -45,7 +45,7 @@ async function withPainter(use: (draw: (name: string, size: { width: number; hei
 }
 
 describe('what the browser draws (16 §16.8, ADR 0115, 36 and 60)', () => {
-  it("M5.7-H8 a window's chrome and mask, a phone, a callout, and a highlight", async () => {
+  it("M5.7-H8 M5.11-H3 a window's chrome and mask, a phone, a callout (an Arabic one centred too), and a highlight", async () => {
     await withPainter(async (draw) => {
       const picture = { width: 640, height: 360 };
       const window = windowLayout(picture, { width: 1280, height: 720 }, true);
@@ -67,6 +67,9 @@ describe('what the browser draws (16 §16.8, ADR 0115, 36 and 60)', () => {
       const callout = await draw('callout.png', { width: 1280, height: 720 }, calloutHtml({ width: 1280, height: 720 }, { x: 300, y: 300, width: 100, height: 40 }, 'Save it', '#2563EB', { family: 'Lato', file: path.join(fontsFolder, lato?.file ?? '') }), true);
       expect(rgba(callout, 350, 300 - 40)).toEqual([0x25, 0x63, 0xeb, 255]);
       expect(rgba(callout, 350, 320)[3]).toBe(0);
+      const arabic = await draw('callout-ar.png', { width: 1280, height: 720 }, calloutHtml({ width: 1280, height: 720 }, { x: 300, y: 300, width: 100, height: 40 }, 'احفظ', '#2563EB', { family: 'Lato', file: path.join(fontsFolder, lato?.file ?? '') }), true);
+      expect(rgba(arabic, 350, 300 - 40)).toEqual([0x25, 0x63, 0xeb, 255]);
+      expect(rgba(arabic, 900, 260)[3]).toBe(0);
       const highlight = await draw('highlight.png', { width: 1280, height: 720 }, highlightHtml({ x: 300, y: 300, width: 100, height: 40 }, 2), true);
       expect(rgba(highlight, 350, 320)[3]).toBe(0);
       expect(Math.abs((rgba(highlight, 20, 20)[3] ?? 0) - 140)).toBeLessThanOrEqual(2);

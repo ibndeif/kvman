@@ -11,7 +11,7 @@ const kvvideo = useKvvideo();
 const size = (file: string): string => execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'stream=width,height', '-of', 'csv=s=x:p=0', file], { encoding: 'utf8' }).trim();
 
 describe('a real review (16 §16.10, ADR 0115)', () => {
-  it('M5.9-H6 the black picture and the silence found, and sheets of the frames the model sees, a frame each 5 s without a sidecar', async () => {
+  it('M5.9-H6 M5.11-H3 the black picture and the silence found, and sheets of the frames the model sees, a frame each 5 s without a sidecar', async () => {
     const { kernel, workspace } = await kvvideo.start();
     const colour = (name: string, seconds: number) => ['-f', 'lavfi', '-i', `color=c=${name}:s=640x360:d=${String(seconds)}:r=30`];
     execFileSync('ffmpeg', ['-v', 'error', ...colour('red', 2), ...colour('black', 1), ...colour('red', 4), '-f', 'lavfi', '-i', 'sine=frequency=440:duration=3', '-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=mono:d=4', '-filter_complex', '[0:v][1:v][2:v]concat=n=3:v=1:a=0[v];[3:a][4:a]concat=n=2:v=0:a=1[a]', '-map', '[v]', '-map', '[a]', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-y', `${workspace}/look.mp4`]);

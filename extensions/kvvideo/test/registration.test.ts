@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import { z } from '@kvman/sdk';
+import { brandSchema } from '../src/brand/brand.ts';
+import { composeInputSchema } from '../src/compose/compose-input.ts';
 import { readGuide } from '../src/guide.ts';
+import { narrateInputSchema } from '../src/narration/register-narration.ts';
+import { voiceInputSchema } from '../src/narration/register-voice.ts';
+import { recordInputSchema } from '../src/record/steps.ts';
 import { useKvvideo, videoSession } from './support/kvvideo-kernel.ts';
 
 const kvvideo = useKvvideo();
@@ -38,7 +44,7 @@ describe('kvvideo in kvcoder (16 §16.1, §16.3)', { timeout: 60_000 }, () => {
     const second = (await kernel.exec('kvcoder.session.create', { title: 'Second' })).id;
     const firstPrompt = await kernel.exec('kvcoder.prompt.get', { sessionId: first });
     const secondPrompt = await kernel.exec('kvcoder.prompt.get', { sessionId: second });
-    expect(firstPrompt.prompt).toContain('- video: Make videos: record pages of an app running on this computer');
+    expect(firstPrompt.prompt).toContain('- video: Make any kind of video: record websites and HTML pages you write');
     expect((await kernel.exec('kvcoder.section.list', { sessionId: first })).filter((section) => section.owner === '@kvman/kvvideo').map(({ id, title, order }) => ({ id, title, order }))).toEqual([{ id: 'guide', title: 'Making videos', order: 30 }]);
     expect(firstPrompt.prompt).toContain(readGuide().trim().split('\n')[0]);
     expect(secondPrompt.prompt).not.toContain('- video: ');
@@ -54,5 +60,27 @@ describe('kvvideo in kvcoder (16 §16.1, §16.3)', { timeout: 60_000 }, () => {
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'Check video' });
     await kernel.clock.advance(0);
     expect(lastToolResult(fake.requests().map((request) => request.body))).toContain('There is no connector video.');
+  });
+
+  it("M5.11-H1 after /video the prompt holds the guide's seven groups, its steps, and its rules", async () => {
+    const { kernel } = await kvvideo.start();
+    const sessionId = await videoSession(kernel);
+    const { prompt } = await kernel.exec('kvcoder.prompt.get', { sessionId });
+    const groups = ['**Story.**', '**Look.**', '**Motion.**', '**Text.**', '**Sound.**', '**Accuracy and licences.**', '**Review.**', 'The steps:', 'Rules:'];
+    const at = groups.map((group) => prompt.indexOf(group));
+    expect(at.every((index, position) => index > 0 && (position === 0 || index > (at[position - 1] ?? 0)))).toBe(true);
+    for (const said of ['There is no music.', 'never generate images', '`video check`', '`ask record`', '`voice`', '`compose`', '`video review`']) expect(prompt).toContain(said);
+  });
+
+  it("M5.11-H2 the connector's description, and each command with one example its command takes", async () => {
+    const { kernel } = await kvvideo.start();
+    const video = (await kernel.exec('kvcoder.connector.list', {})).find((connector) => connector.name === 'video');
+    expect(video?.description).toBe("Make any kind of video: record websites and HTML pages you write, use the person's images and clips and licensed ones from the web, narrate a script or have the person record it, and compose them with camera moves, transitions, captions, and sound into an MP4. Use it when the person asks for a video of any kind.");
+    const schemas: Record<string, { safeParse(value: unknown): { success: boolean } }> = { check: z.strictObject({}), fonts: z.strictObject({}), brand: z.strictObject({}), 'brand-set': brandSchema, record: recordInputSchema, narrate: narrateInputSchema, voice: voiceInputSchema, compose: composeInputSchema, review: z.strictObject({ file: z.string() }) };
+    expect(video?.commands?.map((command) => command.name)).toEqual(Object.keys(schemas));
+    for (const command of video?.commands ?? []) {
+      expect(command.examples, command.name).toHaveLength(1);
+      expect(schemas[command.name]?.safeParse(command.examples[0]?.input).success, command.name).toBe(true);
+    }
   });
 });

@@ -28,7 +28,7 @@ describe('video record checks its input before a browser starts (16 §16.5)', { 
   it('M5.2-E10 the connector has record, a command with an example', async () => {
     const { kernel } = await kvvideo.start();
     const video = (await kernel.exec('kvcoder.connector.list', {})).find((connector) => connector.name === 'video');
-    expect(video?.commands?.find((command) => command.name === 'record')).toMatchObject({ command: 'kvvideo.clip.record', query: false, examples: [expect.objectContaining({ description: 'Record signing in to the app on its dev server' })] });
+    expect(video?.commands?.find((command) => command.name === 'record')).toMatchObject({ command: 'kvvideo.clip.record', query: false, examples: [expect.objectContaining({ description: 'Record signing in to an app, each action as the narration says it' })] });
   });
 
   it("M5.2-E2 kvman's own address, as url or goto, fails before a browser starts", async () => {
