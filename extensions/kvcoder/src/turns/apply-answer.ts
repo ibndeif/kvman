@@ -1,5 +1,6 @@
 import type { Ctx, Json, Stored } from '@kvman/sdk';
 import { checkedAnswer } from '../connectors/ask.ts';
+import type { RecordedTakes } from '../connectors/ask-record.ts';
 import { isDelegateRun } from '../delegate/approved-run.ts';
 import { invalid } from '../problems.ts';
 import { runCallSchema, type AnswerReceiptDoc, type HeldResult, type QuestionDoc, type RunCallDoc } from '../schemas/records.ts';
@@ -17,7 +18,7 @@ export type AnswerApplication =
   | { kind: 'delegate'; question: Stored<QuestionDoc>; call: RunCallDoc };
 
 /** No awaits or effects: the first valid ordinary application and all its records commit together. */
-export function applyAnswer(ctx: Ctx, store: TxRecords, questionId: string, answer: Json, extras: AnswerExtras, expected?: Stored<QuestionDoc>): AnswerApplication {
+export function applyAnswer(ctx: Ctx, store: TxRecords, questionId: string, answer: Json, extras: AnswerExtras, expected?: Stored<QuestionDoc>, recorded?: RecordedTakes): AnswerApplication {
   ctx.job.signal.throwIfAborted();
   const [receipt] = store.answerReceipts.find({ questionId }, { limit: 1 });
   if (receipt !== undefined) {
@@ -33,7 +34,7 @@ export function applyAnswer(ctx: Ctx, store: TxRecords, questionId: string, answ
   const candidates = turn.pending.filter(item => item.toolCallId === question.toolCallId || item.questionId === questionId);
   const pending = candidates[0];
   if (candidates.length !== 1 || pending?.toolCallId !== question.toolCallId || pending.questionId !== questionId || pending.kind !== (question.kind === 'approval' ? 'approval' : 'question') || pending.childSessionId !== null || pending.runId !== null || pending.question === null || turn.results.some(item => item.toolCallId === question.toolCallId)) throw missing();
-  const checked = checkedAnswer(question, answer);
+  const checked = checkedAnswer(question, answer, recorded);
   checkExtras(question, answer, extras);
   const call = checked.kind === 'approval' && checked.approved ? runCallSchema.parse(question.question) : undefined;
   // Existing run records cannot prove durable launch. Keep grants on their existing separate flow, WITHOUT receipts.

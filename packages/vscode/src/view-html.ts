@@ -73,7 +73,7 @@ export function viewHtml(view: PageView, context: PageContext): string {
   const framed = view.kind === 'frame';
   const origin = framed ? ` data-origin="http://127.0.0.1:${String(view.port)}"` : '';
   const place = ` data-place="${context.place}"`;
-  const body = framed ? `<iframe title="kvman" src="${escapeHtml(view.url)}" allow="clipboard-read; clipboard-write"></iframe>` : messageBody(messageOf(view, context), context);
+  const body = framed ? `<iframe title="kvman" src="${escapeHtml(view.url)}" allow="clipboard-read; clipboard-write; microphone"></iframe>` : messageBody(messageOf(view, context), context);
   return [
     `<!doctype html><html lang="${context.language}" dir="${context.language === 'ar' ? 'rtl' : 'ltr'}"><head><meta charset="utf-8">`,
     `<meta http-equiv="Content-Security-Policy" content="${policy(context, framed ? view.port : undefined)}">`,

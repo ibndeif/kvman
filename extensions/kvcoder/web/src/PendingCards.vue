@@ -5,6 +5,7 @@ import ApprovalsCard, { type Approval } from './ApprovalsCard.vue';
 import { callView } from './call-view.ts';
 import { fields } from './kvman.ts';
 import QuestionCard from './QuestionCard.vue';
+import RecordCard from './RecordCard.vue';
 import type { QuestionOwner } from './question-drafts.ts';
 import type { Answer, Decision } from './use-answers.ts';
 
@@ -18,6 +19,9 @@ const approvals = computed<Approval[]>(() => props.pending.filter((item) => item
 </script>
 
 <template>
-  <QuestionCard v-for="item in questions" :key="item.questionId" :question-id="item.questionId" :question="item.question" :owner="props.owner" @answer="(answer) => emit('answer', answer)" />
+  <template v-for="item in questions" :key="item.questionId">
+    <RecordCard v-if="item.question['kind'] === 'record'" :question-id="item.questionId" :question="item.question" :owner="props.owner" @answer="(answer) => emit('answer', answer)" />
+    <QuestionCard v-else :question-id="item.questionId" :question="item.question" :owner="props.owner" @answer="(answer) => emit('answer', answer)" />
+  </template>
   <ApprovalsCard v-if="approvals.length > 0" :approvals="approvals" @decide="(decision) => emit('decide', { ...decision, owner: props.owner })" />
 </template>

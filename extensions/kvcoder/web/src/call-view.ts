@@ -26,7 +26,7 @@ export type CallView = {
   ask?: { kind: AskKind; question: Record<string, unknown> };
 };
 
-const askKinds = ['text', 'choice', 'confirm'] as const;
+const askKinds = ['text', 'choice', 'confirm', 'record'] as const;
 
 export type AskKind = (typeof askKinds)[number];
 

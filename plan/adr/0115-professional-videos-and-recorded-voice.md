@@ -83,6 +83,8 @@ The product owner asked (2026-11-02) for suggestions so kvvideo can make "profes
 
 63. **`check` also needs `drawtext` and `xstack`** (found at M5.9): the contact sheets label each frame with its time and lay the frames out in a grid. `review` answers `loudness: null` for a video without sound.
 
+64. **The desktop app's microphone** (asked at M5.10; chosen over macOS and Windows only, and over leaving it for later). Tauri's `on_permission_request` grants the microphone while the window shows kvman's own origin, on all three OSes; an artifact's frame can't ask, since a cross-origin frame needs `allow="microphone"`, which kvcoder's frames don't give. On Linux, WebKitGTK's media streams are off by default, so the shell turns them on through the `webkit2gtk` crate (`=2.0.2`, Linux only), a new direct dependency already in the lockfile through Tauri.
+
 ## Plan changes
 
 - `16-kvvideo.md`: rewritten for decisions 1 to 58.

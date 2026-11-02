@@ -20,6 +20,7 @@ describe('kvvideo in kvcoder (16 §16.1, §16.3)', { timeout: 60_000 }, () => {
         { name: 'brand-set', command: 'kvvideo.brand.set', query: false, examples: 1 },
         { name: 'record', command: 'kvvideo.clip.record', query: false, examples: 1 },
         { name: 'narrate', command: 'kvvideo.narration.make', query: false, examples: 1 },
+        { name: 'voice', command: 'kvvideo.voice.make', query: false, examples: 1 },
         { name: 'compose', command: 'kvvideo.video.compose', query: false, examples: 1 },
         { name: 'review', command: 'kvvideo.video.review', query: false, examples: 1 },
       ]);

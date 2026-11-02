@@ -3,6 +3,7 @@ import { registerBrand } from './brand/brand.ts';
 import { registerCompose } from './compose/register-compose.ts';
 import { registerFonts } from './fonts/register-fonts.ts';
 import { registerNarration } from './narration/register-narration.ts';
+import { registerVoice } from './narration/register-voice.ts';
 import { registerRecord } from './record/register-record.ts';
 import { registerReview } from './review/register-review.ts';
 import { registerWithKvcoder } from './register-with-kvcoder.ts';
@@ -24,6 +25,7 @@ export default (ctx: Ctx): void => {
   registerFonts(ctx);
   registerRecord(ctx);
   registerNarration(ctx);
+  registerVoice(ctx);
   registerCompose(ctx);
   registerReview(ctx);
   registerVideoStart(ctx);

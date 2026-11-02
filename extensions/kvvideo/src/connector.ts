@@ -31,6 +31,11 @@ export const videoConnector = {
       examples: [{ description: "Narrate the first scene's script", input: { text: 'This is Notes. Sign in with your email to see your notes.', file: 'videos/tour/01-sign-in.mp3' } }],
     },
     {
+      name: 'voice',
+      command: 'kvvideo.voice.make',
+      examples: [{ description: "Make a scene's narration from the person's takes", input: { lines: [{ take: 'videos/tour/voice-1/line-1.webm', text: 'This is Notes.' }, { take: 'videos/tour/voice-1/line-2.webm', text: 'Sign in with your email.' }], file: 'videos/tour/01.mp3' } }],
+    },
+    {
       name: 'compose',
       command: 'kvvideo.video.compose',
       card: 'kvvideo.player',

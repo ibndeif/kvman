@@ -1,4 +1,4 @@
-import { ProblemError, type Ctx, type Stored } from '@kvman/sdk';
+import { ProblemError, z, type Ctx, type Stored } from '@kvman/sdk';
 import { isAskKind, type QuestionKind } from '../connectors/ask.ts';
 import { payloadJsonSchema } from '../connectors/connector-command.ts';
 import { parseRunArgs, type RunCall } from '../calls/run-tool.ts';
@@ -224,7 +224,14 @@ async function evaluateCurrentCall(env: CallEnv, toolCall: ToolCall, call: RunCa
       return result(toolCall.id, failedCall(call, errorOutput(error.problem).output));
     }
   }
-  return isAskKind(call.command) ? { kind: 'question', questionKind: call.command, question: call.payload } : result(toolCall.id, done);
+  if (!isAskKind(call.command)) return result(toolCall.id, done);
+  return { kind: 'question', questionKind: call.command, question: call.command === 'record' ? withExamples(call.payload, done.text) : call.payload };
+}
+
+// A recording question keeps the file ids of its lines' examples, which its check copied for the card (ADR 0115, 49).
+function withExamples(payload: Record<string, JsonValue>, checked: string): Record<string, JsonValue> {
+  const parsed = z.object({ examples: z.array(z.string().nullable()) }).safeParse(JSON.parse(checked));
+  return parsed.success ? { ...payload, exampleFileIds: parsed.data.examples } : payload;
 }
 
 // Whether the chat at the root has let web fetch reach the host.

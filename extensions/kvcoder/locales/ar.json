@@ -672,5 +672,22 @@
   "kvcoder.config.mcp.form.port": "المنفذ (اختياري)",
   "kvcoder.config.mcp.form.portHint": "إن كان الأمر يقدّم MCP عبر HTTP على هذا المنفذ، يبقيه kvman عاملًا طوال الدور، فيحتفظ المتصفح بصفحته بين الاستدعاءات.",
   "kvcoder.config.mcp.invalid.port": "اكتب عددًا صحيحًا من 1024 إلى 65535، أو اتركه فارغًا.",
-  "kvcoder.ui.helper.step": "الخطوة {step} من {budget}"
+  "kvcoder.ui.helper.step": "الخطوة {step} من {budget}",
+  "kvcoder.ui.record.pause": "توقّف هنا",
+  "kvcoder.ui.record.about": "نحو {count} ث",
+  "kvcoder.ui.record.example": "استمع إلى مثال",
+  "kvcoder.ui.record.record": "سجّل",
+  "kvcoder.ui.record.recording": "جارٍ التسجيل {time}",
+  "kvcoder.ui.record.stop": "أوقف",
+  "kvcoder.ui.record.take": "التسجيل {time}",
+  "kvcoder.ui.record.play": "شغّل",
+  "kvcoder.ui.record.again": "أعد",
+  "kvcoder.ui.record.upload": "ارفع ملفًا",
+  "kvcoder.ui.record.notSound": "{name} ليس ملفًا صوتيًا يقبله kvman: WebM أو Ogg أو MP4 أو MP3 أو WAV.",
+  "kvcoder.ui.record.tone": "النبرة: {tone}",
+  "kvcoder.ui.record.pace": "السرعة: {pace}",
+  "kvcoder.ui.record.unavailable": "لا يمكن فتح الميكروفون هنا.",
+  "kvcoder.ui.record.refused": "رُفض الوصول إلى الميكروفون. اسمح به في إعدادات المتصفح أو النظام.",
+  "kvcoder.ui.record.openInBrowser": "افتح هذه المحادثة في متصفح",
+  "kvcoder.ui.record.use": "استخدم هذه التسجيلات"
 }

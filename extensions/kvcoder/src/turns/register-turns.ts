@@ -4,6 +4,7 @@ import { findSession, ownSession, userOnly } from '../sessions/session-lookup.ts
 import { turnSchema, turnView } from '../sessions/session-view.ts';
 import { records, txRecords } from '../store/collections.ts';
 import { cancelTurn } from './end-turn.ts';
+import { writtenTakes } from '../connectors/ask-record.ts';
 import { applyAnswer } from './apply-answer.ts';
 import { answerExtrasShape, checkExtras, rememberRule } from './answer-extras.ts';
 import { receiptJob } from './receipt-job.ts';
@@ -12,6 +13,14 @@ import { retryTurn } from './retry-turn.ts';
 import { dispatchStep } from './start-turn.ts';
 
 // Turns (plan 08 §8.6): retry, cancel, list, and the person's answer to a question or approval.
+
+// The takes of a recording question still pending, written into the workspace; nothing for another question, an
+// answered one (its receipt decides a retry), or a dismissal.
+async function recordedTakes(ctx: Ctx, questionId: string, answer: unknown): Promise<Awaited<ReturnType<typeof writtenTakes>> | undefined> {
+  const question = await records(ctx.store).questions.get(questionId);
+  if (question?.kind !== 'record' || (typeof answer === 'object' && answer !== null && 'dismissed' in answer)) return undefined;
+  return writtenTakes(ctx, question, answer);
+}
 
 export function registerTurns(ctx: Ctx): void {
   ctx.registerCommand('kvcoder.turn.retry', {
@@ -60,7 +69,10 @@ export function registerTurns(ctx: Ctx): void {
       const asked = remember === undefined && reason === undefined ? undefined : await records(ctx.store).questions.get(questionId);
       if (asked !== undefined) checkExtras(asked, answer, extras);
       if (asked !== undefined && remember !== undefined) await rememberRule(ctx, remember);
-      let result = await ctx.store.transaction(tx => applyAnswer(ctx, txRecords(tx), questionId, answer, extras));
+      // A recording's takes are checked and written into the workspace before its answer applies (ADR 0115, 49).
+      const recorded = await recordedTakes(ctx, questionId, answer);
+      let result = await ctx.store.transaction(tx => applyAnswer(ctx, txRecords(tx), questionId, answer, extras, undefined, recorded?.takes));
+      if (result.kind === 'applied' && recorded !== undefined) for (const upload of recorded.uploads) await ctx.files.unlink(upload);
       if (result.kind === 'delegate') {
         // Legacy positive launch has no receipt: recover first, then retain exact approval identity through preparation.
         await recoverWorkspace(ctx);

@@ -14,7 +14,7 @@ describe('answer receipt data contract (M2.4-E99)', () => {
   it('has only approved internal fields and leaves public API/DTO types unchanged', () => {
     expectTypeOf<AnswerReceiptDoc>().toEqualTypeOf<{
       questionId: string; sessionId: string; turnId: string; toolCallId: string;
-      questionKind: 'text' | 'choice' | 'confirm' | 'approval';
+      questionKind: 'text' | 'choice' | 'confirm' | 'record' | 'approval';
       answerFingerprint: string; createdAt: string;
     }>();
     // QA59-H4 and QA59-H5: an approval's answer may carry a rule to remember or a reason (ADR 0091, 3 and 4).

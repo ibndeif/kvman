@@ -9,6 +9,7 @@ pub mod kvman_api;
 pub mod kvman_process;
 pub mod lines;
 pub mod messages;
+pub mod microphone;
 pub mod navigation;
 pub mod runtime;
 pub mod session;

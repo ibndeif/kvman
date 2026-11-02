@@ -363,3 +363,57 @@ a.kvc-button { text-decoration: none; color: inherit; }
   border-radius: 6px;
   border: 1px solid var(--kv-color-border);
 }
+.kvc-record-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding-inline-start: 1.5em;
+}
+.kvc-record-line {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.kvc-record-text {
+  margin: 0;
+  font-size: 1.05em;
+  line-height: 1.6;
+}
+.kvc-record-pause {
+  margin-inline: 0.35em;
+  color: var(--kv-color-muted);
+  font-weight: 700;
+}
+.kvc-record-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.kvc-record-countdown {
+  font-size: 1.4em;
+  font-weight: 700;
+  min-inline-size: 1.5em;
+  text-align: center;
+}
+.kvc-record-meter {
+  display: inline-block;
+  inline-size: 80px;
+  block-size: 6px;
+  border-radius: 3px;
+  background: var(--kv-color-border);
+  overflow: hidden;
+}
+.kvc-record-meter > span {
+  display: block;
+  block-size: 100%;
+  background: var(--kv-color-accent, #2563eb);
+}
+.kvc-record-trouble {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+

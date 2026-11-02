@@ -43,5 +43,6 @@
   "kvvideo.brand.description": "The logo, colours, and font of this workspace's videos, as { \"logo\", \"colors\": { \"primary\", \"background\", \"text\" }, \"font\" }. The agent proposes it in a video's script and saves it once you agree.",
   "kvvideo.progress.scene": "Scene {n} of {of}",
   "kvvideo.progress.final": "Final pass, {percent}%",
-  "kvvideo.progress.sheet": "Sheet {n} of {of}"
+  "kvvideo.progress.sheet": "Sheet {n} of {of}",
+  "kvvideo.progress.take": "Cleaning take {n} of {of}"
 }

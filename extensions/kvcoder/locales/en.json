@@ -672,5 +672,22 @@
   "kvcoder.config.mcp.form.port": "Port (optional)",
   "kvcoder.config.mcp.form.portHint": "When the command serves MCP over HTTP on this port, kvman keeps it running for a whole turn, so a browser keeps its page between calls.",
   "kvcoder.config.mcp.invalid.port": "Give a whole number from 1024 to 65535, or leave it empty.",
-  "kvcoder.ui.helper.step": "step {step} of {budget}"
+  "kvcoder.ui.helper.step": "step {step} of {budget}",
+  "kvcoder.ui.record.pause": "Pause here",
+  "kvcoder.ui.record.about": "about {count} s",
+  "kvcoder.ui.record.example": "Hear an example",
+  "kvcoder.ui.record.record": "Record",
+  "kvcoder.ui.record.recording": "Recording {time}",
+  "kvcoder.ui.record.stop": "Stop",
+  "kvcoder.ui.record.take": "Take {time}",
+  "kvcoder.ui.record.play": "Play",
+  "kvcoder.ui.record.again": "Again",
+  "kvcoder.ui.record.upload": "Upload a file",
+  "kvcoder.ui.record.notSound": "{name} isn't a sound file kvman takes: WebM, Ogg, MP4, MP3, or WAV.",
+  "kvcoder.ui.record.tone": "Tone: {tone}",
+  "kvcoder.ui.record.pace": "Pace: {pace}",
+  "kvcoder.ui.record.unavailable": "The microphone can't be opened here.",
+  "kvcoder.ui.record.refused": "Microphone access was refused. Allow it in your browser or system settings.",
+  "kvcoder.ui.record.openInBrowser": "Open this chat in a browser",
+  "kvcoder.ui.record.use": "Use these takes"
 }

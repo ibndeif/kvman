@@ -2,6 +2,7 @@ import { z, type Ctx } from '@kvman/sdk';
 import { jsonOutput, type JsonValue } from '../connector-call.ts';
 import { invalid } from '../problems.ts';
 import type { QuestionDoc } from '../schemas/records.ts';
+import { recordAnswerSchema, recordPayload, registerRecordCheck, type RecordedTakes } from './ask-record.ts';
 import { callInput, type ConnectorCommand } from './connector-command.ts';
 
 // The `ask` connector (plan 08 §8.5): a question suspends the turn until the person answers; the answer becomes the
@@ -35,22 +36,24 @@ export const askCommands = {
   text: { registration: 'kvcoder.ask.text.check', description: 'Asks the person for a free answer and waits for it.', payload: payloads.text, asks: false, result: `the person's answer: { "text" }${dismissed}` },
   choice: { registration: 'kvcoder.ask.choice.check', description: 'Asks the person to choose among options and waits for the answer.', payload: payloads.choice, asks: false, result: `the person's answer: { "selected": [ids], "other"? }${dismissed}` },
   confirm: { registration: 'kvcoder.ask.confirm.check', description: 'Asks the person yes or no and waits for the answer.', payload: payloads.confirm, asks: false, result: `the person's answer: { "confirmed" }${dismissed}` },
+  record: { registration: 'kvcoder.ask.record.check', description: 'Asks the person to record each line in their own voice, shown how to say it, and waits for the takes.', payload: recordPayload, asks: false, result: `the takes, written in the folder: { "takes": [{ "file", "durationMs" }] }${dismissed}` },
 } satisfies Record<string, ConnectorCommand>;
 
 export type QuestionKind = QuestionDoc['kind'];
 
 /** The kinds of question the agent asks: the `ask` connector's commands. */
-export const askKinds = ['text', 'choice', 'confirm'] as const;
+export const askKinds = ['text', 'choice', 'confirm', 'record'] as const;
 
 export const isAskKind = (command: string): command is (typeof askKinds)[number] => askKinds.some((kind) => kind === command);
 
 const noOutput = z.object({});
 
 export function registerAskConnector(ctx: Ctx): void {
-  for (const kind of askKinds) {
+  for (const kind of ['text', 'choice', 'confirm'] as const) {
     const command = askCommands[kind];
     ctx.registerCommand(command.registration, { description: command.description, input: callInput(command.payload), output: noOutput, retries: 0, handle: () => ({}) });
   }
+  registerRecordCheck(ctx, askCommands.record.registration);
 }
 
 const dismissedSchema = z.strictObject({ dismissed: z.literal(true) });
@@ -59,6 +62,7 @@ const answerSchemas = {
   text: z.strictObject({ text: z.string() }),
   choice: z.strictObject({ selected: z.array(z.string()), other: z.string().exactOptional() }),
   confirm: z.strictObject({ confirmed: z.boolean() }),
+  record: recordAnswerSchema,
   approval: z.strictObject({ confirmed: z.boolean() }),
 };
 
@@ -94,9 +98,14 @@ export function normalizeAnswer(kind: QuestionKind, answer: unknown): Normalized
 export const answeredNote = 'The person answered this question. Go on with the task; do not ask it again.';
 export const skippedNote = 'The person skipped this question. Go on without an answer; do not ask it again.';
 
-export function checkedAnswer(question: QuestionDoc, answer: unknown): { kind: 'result'; text: string } | { kind: 'approval'; approved: boolean } {
+export function checkedAnswer(question: QuestionDoc, answer: unknown, recorded?: RecordedTakes): { kind: 'result'; text: string } | { kind: 'approval'; approved: boolean } {
   const normalized = normalizeAnswer(question.kind, answer);
   if (typeof normalized === 'boolean') return { kind: 'approval', approved: normalized };
+  // A recording's result names the takes as written in the workspace, which the answer prepared (ADR 0115, 49).
+  if ('takes' in normalized) {
+    if (recorded === undefined) throw invalid('The takes were not written.');
+    return { kind: 'result', text: `${jsonOutput({ takes: recorded }).output}\n${answeredNote}` };
+  }
   if ('selected' in normalized) checkChoice(question.question, normalized);
   return { kind: 'result', text: `${jsonOutput(normalized).output}\n${'dismissed' in normalized ? skippedNote : answeredNote}` };
 }

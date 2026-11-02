@@ -14,8 +14,13 @@ fn is_under(url: &str, origin: &str) -> bool {
     url.strip_prefix(origin).is_some_and(|rest| rest.is_empty() || rest.starts_with(['/', '?', '#']))
 }
 
+/// Whether `url` is on kvman's own origin.
+pub fn is_kvman(url: &str, kvman_port: Option<u16>) -> bool {
+    kvman_port.is_some_and(|port| is_under(url, &format!("http://127.0.0.1:{port}")))
+}
+
 pub fn navigation(url: &str, kvman_port: Option<u16>) -> Verdict {
-    let kvman = kvman_port.is_some_and(|port| is_under(url, &format!("http://127.0.0.1:{port}")));
+    let kvman = is_kvman(url, kvman_port);
     if kvman || SHELL_ORIGINS.iter().any(|origin| is_under(url, origin)) {
         Verdict::Stay
     } else {

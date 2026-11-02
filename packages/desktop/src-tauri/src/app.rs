@@ -14,6 +14,7 @@ use tauri_plugin_opener::OpenerExt;
 use crate::commands;
 use crate::downloads::destination;
 use crate::kvman_process::{spawn, start_command, with_brand, KvmanProcess, Platform};
+use crate::microphone::permission;
 use crate::runtime::{brand_home, brand_of, brand_preset, choose_runtime, kvman_home, Brand};
 use crate::session::{Action, Happening, Session};
 use crate::updates::DownloadedUpdate;
@@ -176,8 +177,29 @@ fn start_kvman(app: &AppHandle, shell: &Shell) {
     }
 }
 
+// The port of the kvman the window shows, once it runs.
+fn kvman_port(app: &AppHandle) -> Option<u16> {
+    app.try_state::<Shell>().and_then(|shell| shell.session.lock().ok().and_then(|session| session.port()))
+}
+
+// WebKitGTK's media streams are off by default; the record card needs them (ADR 0115, 64).
+#[cfg(target_os = "linux")]
+fn allow_media_streams(window: &tauri::WebviewWindow) -> tauri::Result<()> {
+    window.with_webview(|webview| {
+        use webkit2gtk::{SettingsExt, WebViewExt};
+        if let Some(settings) = webview.inner().settings() {
+            settings.set_enable_media_stream(true);
+        }
+    })
+}
+
+#[cfg(not(target_os = "linux"))]
+fn allow_media_streams(_window: &tauri::WebviewWindow) -> tauri::Result<()> {
+    Ok(())
+}
+
 fn open_window(app: &AppHandle, title: &str) -> tauri::Result<()> {
-    let (new_windows, pages, downloads) = (app.clone(), app.clone(), app.clone());
+    let (new_windows, pages, downloads, permissions) = (app.clone(), app.clone(), app.clone(), app.clone());
     let window = WebviewWindowBuilder::new(app, WINDOW, WebviewUrl::App("index.html".into()))
         .title(title)
         .inner_size(1280.0, 800.0)
@@ -190,6 +212,10 @@ fn open_window(app: &AppHandle, title: &str) -> tauri::Result<()> {
                 dispatch(&pages, Happening::PageStarted(payload.url().to_string()));
             }
         })
+        .on_permission_request(move |webview, kind| {
+            let page = webview.url().map(|url| url.to_string()).unwrap_or_default();
+            permission(&kind, &page, kvman_port(&permissions))
+        })
         .on_download(move |_webview, event| {
             if let DownloadEvent::Requested { destination: place, .. } = event {
                 let name = place.file_name().map(|name| name.to_string_lossy().into_owned());
@@ -200,6 +226,7 @@ fn open_window(app: &AppHandle, title: &str) -> tauri::Result<()> {
             true
         })
         .build()?;
+    allow_media_streams(&window)?;
     let closing = app.clone();
     window.on_window_event(move |event| {
         if let WindowEvent::CloseRequested { api, .. } = event {

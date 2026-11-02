@@ -12,10 +12,18 @@
     "windows": [],
     "security": {
       "csp": "default-src 'self'; script-src 'self'; style-src 'self'; connect-src ipc: http://ipc.localhost",
-      "capabilities": ["home"]
+      "capabilities": [
+        "home"
+      ]
     }
   },
   "bundle": {
-    "active": false
+    "active": false,
+    "macOS": {
+      "files": {
+        "Resources/en.lproj/InfoPlist.strings": "./en.lproj/InfoPlist.strings",
+        "Resources/ar.lproj/InfoPlist.strings": "./ar.lproj/InfoPlist.strings"
+      }
+    }
   }
 }

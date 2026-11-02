@@ -177,7 +177,7 @@ export const questionDocSchema = z.object({
   rootSessionId: z.string(),
   turnId: z.string(),
   toolCallId: z.string(),
-  kind: z.enum(['text', 'choice', 'confirm', 'approval']),
+  kind: z.enum(['text', 'choice', 'confirm', 'record', 'approval']),
   question: z.record(z.string(), z.json()),
 });
 

@@ -2,7 +2,8 @@
 import { Check, CircleCheck } from '@lucide/vue';
 import { computed } from 'vue';
 import type { AnsweredQuestion } from './message-parts.ts';
-import { useKvman } from './kvman.ts';
+import { fields, useKvman } from './kvman.ts';
+import { clockOf } from './record-parts.ts';
 import { optionsOf } from './question-options.ts';
 
 // An answered `ask` question (plan 08 §8.7, ADR 0013, 1): the question, then what the person answered. A choice shows
@@ -15,6 +16,12 @@ const selected = computed<unknown[]>(() => (Array.isArray(props.answered.answer[
 const options = computed(() => optionsOf(props.answered.question).map((option) => ({ ...option, chosen: selected.value.includes(option.id) })));
 const other = computed(() => (typeof props.answered.answer['other'] === 'string' ? props.answered.answer['other'] : ''));
 const text = computed(() => (typeof props.answered.answer['text'] === 'string' ? props.answered.answer['text'] : ''));
+// A recording shows each line with its take's length (ADR 0115, 24).
+const recorded = computed(() => {
+  const lines = Array.isArray(props.answered.question['lines']) ? props.answered.question['lines'] : [];
+  const takes = Array.isArray(props.answered.answer['takes']) ? props.answered.answer['takes'] : [];
+  return lines.map((line: unknown, index) => ({ text: String(fields(line)['text'] ?? ''), time: clockOf(Number(fields(takes[index])['durationMs'] ?? 0)) }));
+});
 </script>
 
 <template>
@@ -34,6 +41,9 @@ const text = computed(() => (typeof props.answered.answer['text'] === 'string' ?
           <span style="display: flex; flex-direction: column"><span class="kvc-muted">{{ kvman.t('kvcoder.ui.other') }}</span><span dir="auto" style="white-space: pre-wrap">{{ other }}</span></span>
         </div>
       </template>
+      <ol v-else-if="props.answered.kind === 'record'" class="kvc-record-lines" data-test="answered-takes">
+        <li v-for="(line, index) in recorded" :key="index" class="kvc-answered-option"><Check :size="16" aria-hidden="true" class="kvc-ok" /><span dir="auto">{{ line.text }}</span><span class="kvc-muted">{{ line.time }}</span></li>
+      </ol>
       <span v-else-if="props.answered.kind === 'confirm'" class="kvc-chip" style="align-self: flex-start" data-test="answered-confirmed">{{ kvman.t(props.answered.answer['confirmed'] === true ? 'kvcoder.ui.yes' : 'kvcoder.ui.no') }}</span>
       <span v-else dir="auto" style="white-space: pre-wrap" data-test="answered-text">{{ text }}</span>
     </div>

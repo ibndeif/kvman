@@ -16,13 +16,13 @@ const actions = (shown: DocumentFragment) => [...shown.querySelectorAll('button'
 const failed = (code: string, message = 'the message'): View => ({ kind: 'failed', problem: { code, message } });
 
 describe("the view's page (15 §15.4, ADR 0099, 22)", () => {
-  it("M4.2-H16 the frame's policy allows only kvman's origin, and the frame may use the clipboard", () => {
+  it("M4.2-H16 M5.10-H7 the frame's policy allows only kvman's origin, and the frame may use the clipboard and the microphone", () => {
     const frameView: PageView = { kind: 'frame', url: 'http://127.0.0.1:3737/?workspace=w1&open=parent', port: 3737 };
     const shown = page(frameView);
     expect(policyOf(shown)).toBe("default-src 'none'; frame-src http://127.0.0.1:3737; script-src 'nonce-n0nce'; style-src https://web.source");
     const frame = shown.querySelector('iframe');
     expect(frame?.getAttribute('src')).toBe('http://127.0.0.1:3737/?workspace=w1&open=parent');
-    expect(frame?.getAttribute('allow')).toBe('clipboard-read; clipboard-write');
+    expect(frame?.getAttribute('allow')).toBe('clipboard-read; clipboard-write; microphone');
     expect(frame?.hasAttribute('sandbox')).toBe(false);
     expect(opening(frameView, 'body')).toBe(' data-place="view" data-origin="http://127.0.0.1:3737"');
     expect(shown.querySelector('script')?.getAttribute('nonce')).toBe('n0nce');
