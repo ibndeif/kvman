@@ -4,6 +4,8 @@ import path from 'node:path';
 import type { Browser } from 'playwright-core';
 import { placeOutput, workFolder } from '../files/place-output.ts';
 import { readSidecar, sidecarPath, writeSidecar } from '../files/sidecar.ts';
+import { inputPath } from '../files/workspace-paths.ts';
+import { invalid } from '../problems.ts';
 import { cuesOf } from '../record/narration-cues.ts';
 import { record } from '../record/recorder.ts';
 import type { Program } from '../programs/run-program.ts';
@@ -29,17 +31,22 @@ export function pageSizeFor(size: Size): Size {
   return size.width >= size.height ? { width: even((shorterSide * size.width) / size.height), height: shorterSide } : { width: shorterSide, height: even((shorterSide * size.height) / size.width) };
 }
 
-export type PageAgain = { root: string; folder: string; number: number; recording: Recording; narration: string | undefined; size: Size; browser: Browser; ffmpeg: Program; ownPort: number | null; signal: AbortSignal };
+export type PageAgain = { root: string; folder: string; number: number; recording: Recording; narration: string | undefined; size: Size; browser: () => Promise<Browser>; ffmpeg: Program; ownPort: number | null; signal: AbortSignal };
 
-/** Records the page again and answers the new clip's path, with its sidecar beside it. */
+/**
+ * Records the page again and answers the new clip's path, with its sidecar beside it. The sidecar is a file of the
+ * workspace, so its page is checked as `record` checks one: an HTML file inside the workspace, with no `goto`.
+ */
 export async function recordPageAgain(again: PageAgain): Promise<string> {
+  const file = inputPath(again.root, again.recording.source, ['.html', '.htm']);
+  if (again.recording.steps.some((step) => step.do === 'goto')) throw invalid(`Scene ${String(again.number)}'s recorded page has a goto step, which a page can't have.`, { scene: again.number });
   const page = pageSizeFor(again.size);
   const narration = again.narration === undefined ? undefined : readSidecar(again.narration);
   const cues = narration?.kind === 'narration' ? cuesOf(narration) : undefined;
   const work = workFolder();
   try {
-    const plan = { source: { kind: 'page' as const, file: path.resolve(again.root, again.recording.source) }, steps: again.recording.steps, ...page, device: 'desktop' as const, cues, folder: work.folder, ownPort: again.ownPort, ffmpeg: again.ffmpeg, signal: again.signal, now: () => performance.now(), stepStarted: () => undefined };
-    const recording = await record(again.browser, plan);
+    const plan = { source: { kind: 'page' as const, file }, steps: again.recording.steps, ...page, device: 'desktop' as const, cues, folder: work.folder, ownPort: again.ownPort, ffmpeg: again.ffmpeg, signal: again.signal, now: () => performance.now(), stepStarted: () => undefined };
+    const recording = await record(await again.browser(), plan);
     mkdirSync(again.folder, { recursive: true });
     const clip = path.join(again.folder, `page-${String(again.number)}.mp4`);
     copyFileSync(recording.video, clip);

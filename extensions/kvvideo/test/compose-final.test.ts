@@ -91,4 +91,17 @@ describe("compose's final pass (16 §16.8, ADR 0115)", { timeout: 60_000 }, () =
     registerCompose(ctx);
     expect(registered.get('kvvideo.video.compose')?.timeoutMs).toBe(3_600_000);
   });
+
+  it("M5.8-E7 a recorded page's sidecar naming a page outside the workspace, or a goto, fails before anything is recorded", async () => {
+    const { kernel, ffmpeg, write } = await composing();
+    const page = (source: string, steps: unknown[]) => JSON.stringify({ kind: 'page', source, width: 640, height: 360, device: 'desktop', scale: 2, durationMs: 1000, steps, actions: [] });
+    for (const [name, sidecar] of [['out', page('../../../etc/passwd.html', [])], ['away', page('/etc/hosts', [])], ['goto', page('p.html', [{ do: 'goto', url: 'http://localhost:1/' }])]] as const) {
+      write(`v/${name}.mp4`, 'video');
+      write(`v/${name}.mp4.kvvideo.json`, sidecar);
+      write('p.html', '<p>x</p>');
+      const problem = await problemOf(kernel.exec('kvvideo.video.compose', { file: `${name}.mp4`, width: 640, height: 360, extraSizes: [{ width: 360, height: 640 }], scenes: [{ clip: `v/${name}.mp4` }] }));
+      expect(problem).toMatchObject({ code: 'VALIDATION_FAILED' });
+    }
+    expect(runsOf(ffmpeg).filter((run) => run.kind !== 'part' && run.cwd.endsWith('size-2'))).toEqual([]);
+  });
 });

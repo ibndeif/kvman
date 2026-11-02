@@ -53,7 +53,7 @@ async function scenesFor(composition: Composition, size: Size, folder: string): 
       scenes.push(scene);
       continue;
     }
-    const clip = await recordPageAgain({ root: composition.root, folder, number: scene.number, recording, narration: scene.narration, size, browser: await composition.browsers.recording(), ffmpeg: composition.programs.ffmpeg, ownPort: composition.ownPort, signal: composition.signal });
+    const clip = await recordPageAgain({ root: composition.root, folder, number: scene.number, recording, narration: scene.narration, size, browser: composition.browsers.recording, ffmpeg: composition.programs.ffmpeg, ownPort: composition.ownPort, signal: composition.signal });
     scenes.push({ ...scene, clip });
   }
   return scenes;
