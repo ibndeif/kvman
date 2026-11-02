@@ -11,7 +11,7 @@ import { callerExtension, callInfos, loadedOwners, ownsPublicCall, registrations
 // kvcoder's global store for one run, and owned by their registering extension. One registered with `optIn: true` is
 // off in every chat until the owner enables it for that chat (ADR 0027, 10).
 
-const commandRowSchema = z.object({ name: z.string(), command: z.string(), examples: z.array(exampleSchema), asks: z.boolean(), query: z.boolean(), card: z.string().exactOptional() });
+const commandRowSchema = z.object({ name: z.string(), command: z.string(), examples: z.array(exampleSchema), asks: z.boolean(), query: z.boolean(), card: z.string().exactOptional(), images: z.literal(true).exactOptional() });
 
 const connectorRowSchema = z.object({
   name: z.string(),
@@ -33,7 +33,7 @@ function rowOf(doc: ConnectorDoc): ConnectorRow {
     owner: doc.owner,
     kind: doc.kind,
     optIn: doc.optIn,
-    ...(doc.commands === null ? {} : { commands: doc.commands.map(({ card, signature, ...command }) => ({ ...command, ...(card === null ? {} : { card }), ...(signature === null ? {} : { signature }) })) }),
+    ...(doc.commands === null ? {} : { commands: doc.commands.map(({ card, images, signature, ...command }) => ({ ...command, ...(card === null ? {} : { card }), ...(images ? { images: true as const } : {}), ...(signature === null ? {} : { signature }) })) }),
     ...(doc.binary === null ? {} : { binary: { check: doc.binary.check, ...(doc.binary.install === null ? {} : { install: doc.binary.install }), ...(doc.binary.help === null ? {} : { help: doc.binary.help }) } }),
   };
 }
@@ -76,7 +76,7 @@ const signatureOf = (infos: readonly CallInfo[], name: string): string | null =>
 
 const docOf = (input: Connector, rows: Registrations, infos: readonly CallInfo[]): Omit<ConnectorDoc, 'owner'> =>
   'commands' in input
-    ? { name: input.name, description: input.description, kind: 'commands', commands: input.commands.map((command) => ({ name: command.name, command: command.command, examples: command.examples ?? [], asks: command.asks === true, query: isQuery(rows, command.command), card: command.card ?? null, signature: signatureOf(infos, command.command) })), binary: null, optIn: input.optIn === true }
+    ? { name: input.name, description: input.description, kind: 'commands', commands: input.commands.map((command) => ({ name: command.name, command: command.command, examples: command.examples ?? [], asks: command.asks === true, query: isQuery(rows, command.command), card: command.card ?? null, images: command.images === true, signature: signatureOf(infos, command.command) })), binary: null, optIn: input.optIn === true }
     : { name: input.name, description: input.description, kind: 'binary', commands: null, binary: { check: input.binary.check, install: input.binary.install ?? null, help: input.binary.help ?? null }, optIn: input.optIn === true };
 
 // Every connector of a call is checked before any is stored, and they are stored in one transaction, so a call

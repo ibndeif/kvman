@@ -28,4 +28,8 @@ describe("kvvideo's texts (16 §16.11)", () => {
     }
     expect(catalog('en')['kvvideo.progress.sentence']).toBe('Narrating sentence {n} of {of}');
   });
+
+  it('M5.9-H6 the sheet progress has en and ar texts', () => {
+    expect([catalog('en')['kvvideo.progress.sheet'], catalog('ar')['kvvideo.progress.sheet']]).toEqual(['Sheet {n} of {of}', 'الورقة {n} من {of}']);
+  });
 });

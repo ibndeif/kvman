@@ -2,6 +2,7 @@ import type { z } from '@kvman/sdk';
 import type { composeInputSchema, composeOutputSchema } from './compose/compose-input.ts';
 import type { narrateInputSchema, narrateOutputSchema } from './narration/register-narration.ts';
 import type { recordInputSchema, recordOutputSchema } from './record/steps.ts';
+import type { reviewOutputSchema } from './review/register-review.ts';
 import type { Brand } from './brand/brand.ts';
 import type { BrowserChoice, NarrationService } from './settings.ts';
 
@@ -18,6 +19,7 @@ declare module '@kvman/sdk' {
     'kvvideo.narration.make': { input: z.input<typeof narrateInputSchema>; output: z.output<typeof narrateOutputSchema> };
     'kvvideo.clip.record': { input: z.input<typeof recordInputSchema>; output: z.output<typeof recordOutputSchema> };
     'kvvideo.brand.set': { input: Brand; output: Empty };
+    'kvvideo.video.review': { input: { file: string }; output: z.output<typeof reviewOutputSchema> };
   }
   interface Queries {
     'kvvideo.setup.get': {

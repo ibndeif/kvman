@@ -162,6 +162,17 @@ export type ExtensionCard = { component: string; props: { payload: Json; output:
 /** The card a successful call of a registered command with `card` shows instead of the call card. */
 const jsonObject = (value: Json | undefined): JsonObject | undefined => (typeof value === 'object' && value !== null && !Array.isArray(value) ? value : undefined);
 
+/** The images a registered command's result showed the model, by their kernel files (ADR 0115, 47). */
+export function resultImagesOf(message: Message): { fileId: string; name: string }[] {
+  if (message.kind !== 'toolResult') return [];
+  const images = jsonObject(message.content['details'])?.['images'];
+  if (!Array.isArray(images)) return [];
+  return images.flatMap((image) => {
+    const found = jsonObject(image);
+    return typeof found?.['fileId'] === 'string' && typeof found['name'] === 'string' ? [{ fileId: found['fileId'], name: found['name'] }] : [];
+  });
+}
+
 export function extensionCardOf(message: Message): ExtensionCard | undefined {
   if (message.kind !== 'toolResult' || message.content['isError'] === true) return undefined;
   const found = jsonObject(jsonObject(message.content['details'])?.['card']);

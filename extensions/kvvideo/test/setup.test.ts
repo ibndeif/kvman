@@ -6,7 +6,7 @@ const kvvideo = useKvvideo();
 const programs = useFakePrograms();
 
 const allEncoders = ['libx264', 'aac', 'libmp3lame'];
-const allFilters = ['subtitles', 'xfade', 'loudnorm', 'afftdn', 'gradients', 'perspective', 'alphamerge'];
+const allFilters = ['subtitles', 'xfade', 'loudnorm', 'afftdn', 'gradients', 'perspective', 'alphamerge', 'drawtext', 'xstack'];
 
 describe('video check (16 §16.4)', { timeout: 60_000 }, () => {
   it('M5.1-H5 check is ready when ffmpeg has everything and Piper has a voice', async () => {
@@ -49,10 +49,10 @@ describe('video check (16 §16.4)', { timeout: 60_000 }, () => {
     expect((await keyed.kernel.exec('kvvideo.setup.get', {})).narration).toEqual({ service: 'openai', ready: true, missing: null });
   });
 
-  it('M5.7-H15 check needs the filters of the camera, the frames, the final pass, and the voice, after subtitles', async () => {
+  it('M5.7-H15 M5.9-E7 check needs the filters of the camera, the frames, the final pass, the voice, and the review, after subtitles', async () => {
     const { kernel } = await kvvideo.start({
       settings: { 'kvvideo.programs.ffmpeg': programs.program('ffmpeg', ffmpegListings({ encoders: allEncoders, filters: ['subtitles', 'scale'] })), 'kvvideo.programs.ffprobe': programs.program('ffprobe', answersVersion) },
     });
-    expect((await kernel.exec('kvvideo.setup.get', {})).ffmpeg.missing).toEqual(['xfade', 'loudnorm', 'afftdn', 'gradients', 'perspective', 'alphamerge']);
+    expect((await kernel.exec('kvvideo.setup.get', {})).ffmpeg.missing).toEqual(['xfade', 'loudnorm', 'afftdn', 'gradients', 'perspective', 'alphamerge', 'drawtext', 'xstack']);
   });
 });

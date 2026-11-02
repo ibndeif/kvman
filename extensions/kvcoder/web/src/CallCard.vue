@@ -18,7 +18,8 @@ import LinkedText from './LinkedText.vue';
 // the call by its kind. A failed call starts closed with a short reason; one the agent got wrong is quiet, and one that
 // isn't a line keeps its error and request behind "Show details" (ADR 0079).
 // `exited` is the code of a line that ran to its end and exited with another code: it reads calmly (ADR 0102, 15).
-const props = defineProps<{ view: CallView; failed?: boolean | undefined; durationMs?: number | undefined; output?: string | undefined; running?: boolean | undefined; exited?: number | undefined }>();
+// `images` are what a registered command showed the model, as thumbnails that open at full size (ADR 0115, 47).
+const props = defineProps<{ view: CallView; failed?: boolean | undefined; durationMs?: number | undefined; output?: string | undefined; running?: boolean | undefined; exited?: number | undefined; images?: readonly { fileId: string; name: string; url: string }[] | undefined }>();
 const kvman = useKvman();
 const kind = computed(() => callKind(props.view));
 // Every card starts closed, a change's too, so a turn reads as the agent's text (ADR 0093, 1).
@@ -73,6 +74,11 @@ const timeParts = computed(() => {
       <template v-else>
         <CallRequest :view="props.view" />
         <CallResult :view="props.view" :output="props.output" :result="result" />
+        <div v-if="(props.images ?? []).length > 0" class="kvc-result-images" data-test="call-images">
+          <a v-for="image in props.images" :key="image.fileId" :href="image.url" target="_blank" rel="noopener noreferrer" :title="image.name" data-test="call-image">
+            <img :src="image.url" :alt="image.name" loading="lazy" />
+          </a>
+        </div>
       </template>
     </template>
   </div>

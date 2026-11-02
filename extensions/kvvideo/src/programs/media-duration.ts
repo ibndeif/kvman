@@ -21,3 +21,9 @@ export async function mediaSize(ffprobe: Program, file: string, signal: AbortSig
   if (run.exitCode !== 0 || match === null) return { ok: false, reason: lastLines(run.output) || `ffprobe answered ${run.stdout.trim()}` };
   return { ok: true, width: Number(match[1]), height: Number(match[2]) };
 }
+
+/** Whether a file has a sound stream, read with ffprobe. */
+export async function hasSound(ffprobe: Program, file: string, signal: AbortSignal): Promise<boolean> {
+  const run = await runProgram(ffprobe, ['-v', 'error', '-select_streams', 'a', '-show_entries', 'stream=index', '-of', 'csv=p=0', file], { signal });
+  return run.exitCode === 0 && run.stdout.trim() !== '';
+}

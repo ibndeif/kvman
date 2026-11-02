@@ -8,6 +8,7 @@ import { latestSummary, messagesFrom } from './message-blocks.ts';
 import { messageStamp } from './message-stamp.ts';
 import { callNames, clearedCalls, clearedPayload, clearedText, isCleared } from './cleared-results.ts';
 import { collapsedView, toolsLookups } from './collapse.ts';
+import { storedImages } from './result-images.ts';
 import { allDocs } from '../store/all-docs.ts';
 import { records } from '../store/collections.ts';
 
@@ -127,8 +128,18 @@ export function summaryText(summary: Pick<MessageDoc, 'content'> | undefined): s
   return typeof facts === 'string' ? `${String(summary.content['text'] ?? '')}\n\n${facts}` : String(summary.content['text'] ?? '');
 }
 
-/** The messages a step sends, checked as kvai takes them. */
-export async function modelMessages(ctx: Ctx, history: History) {
+// A result whose command answered images (ADR 0115, 47): its text, then each image for a model that takes images, or a
+// line that says they weren't shown for one that doesn't.
+async function resultMessage(ctx: Ctx, message: Stored<MessageDoc>, takesImages: boolean): Promise<Json> {
+  const images = storedImages(message.content['details']);
+  if (images.length === 0) return message.content;
+  const text = textOf(message.content['content']);
+  if (!takesImages) return { ...message.content, content: [{ type: 'text', text: `${text}\n[${String(images.length)} images not shown: this model doesn't take images]` }] };
+  return { ...message.content, content: [{ type: 'text', text }, ...(await Promise.all(images.map((image) => imageBlock(ctx, image.fileId, image.name))))] };
+}
+
+/** The messages a step sends, checked as kvai takes them; `takesImages` says whether the model takes images. */
+export async function modelMessages(ctx: Ctx, history: History, takesImages: boolean) {
   const lead: Json[] = history.summary === undefined ? [] : [{ role: 'user', content: `${summaryLead}\n${summaryText(history.summary)}`, timestamp: Date.parse(history.summary.createdAt) }];
   const names = callNames(history.messages);
   // An `mcp tools` lookup is never cleared, so a server's tools are looked up once a chat (ADR 0108, 7).
@@ -139,7 +150,7 @@ export async function modelMessages(ctx: Ctx, history: History) {
     if (message.kind === 'assistant') return Promise.resolve(assistantMessage(message, cleared));
     // An old result is sent as a line that names its call (ADR 0094, 1).
     if (isCleared(message, history.cleared) && !lookups.has(String(message.content['toolCallId']))) return Promise.resolve({ ...message.content, content: [{ type: 'text', text: clearedText(names.get(String(message.content['toolCallId'])) ?? 'a call') }] });
-    return Promise.resolve(message.content);
+    return resultMessage(ctx, message, takesImages);
   }));
   return messageSchema.array().parse([...lead, ...rest]);
 }

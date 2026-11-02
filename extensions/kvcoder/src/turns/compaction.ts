@@ -76,7 +76,7 @@ export async function compact(ctx: Ctx, session: Stored<SessionDoc>, options: Co
   if (last === undefined || (info !== undefined && sentTokens(older, history.cleared) < info.contextWindow * minimumShare)) return false;
   ctx.job.progress({ type: 'compaction', state: 'started' });
   try {
-    const messages = [...(await modelMessages(ctx, { summary: history.summary, messages: older, cleared: history.cleared })), { role: 'user' as const, content: summaryInstruction, timestamp: Date.now() }];
+    const messages = [...(await modelMessages(ctx, { summary: history.summary, messages: older, cleared: history.cleared }, info?.images === true)), { role: 'user' as const, content: summaryInstruction, timestamp: Date.now() }];
     if (options.lease !== undefined && await currentStep(ctx, options.lease) === undefined) return false;
     const answer = await completeWithRetries(ctx, { ...(session.model === null ? {} : { model: session.model }), sessionId: session.id, ...cacheRetentionOf(session), systemPrompt: options.prompt, messages, tools: [runTool(options.tools)], thinking: session.thinking }, options.lease);
     const text = textOf(answer.message.content);

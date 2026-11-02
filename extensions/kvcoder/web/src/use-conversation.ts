@@ -2,6 +2,7 @@ import { onUnmounted, reactive, shallowReactive, shallowRef, watch, type Shallow
 import type { Kvman } from '@kvman/sdk/web';
 import type { Message, Session, Turn } from '../../src/index.ts';
 import { idleLive, type Live, type LiveCall } from './live-step.ts';
+import { useCommandOwners } from './use-command-owners.ts';
 import { conversationStreams } from './conversation-streams.ts';
 import { reconcileQuestionDrafts } from './question-drafts.ts';
 import { loadWaitingHelpers, type WaitingHelper } from './waiting-helpers.ts';
@@ -52,7 +53,7 @@ export function useConversation(kvman: Kvman, sessionId: () => string | undefine
   let closed = false;
   let extended = false;
   const current = (expected: Scope): boolean => !closed && scope === expected && sessionId() === expected.sessionId && kvman.workspace.value.id === expected.workspaceId;
-  const streams = conversationStreams(kvman, live, streaming, () => refresh(), failed);
+  const streams = conversationStreams(kvman, live, streaming, () => refresh(), failed, useCommandOwners(kvman));
   const stored = (list: readonly Message[]): Message[] => list.filter(message => message.queued !== true);
 
   async function loadAll(id: string, key: string, owns: () => boolean): Promise<void> {

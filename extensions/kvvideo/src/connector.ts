@@ -47,5 +47,11 @@ export const videoConnector = {
         },
       ],
     },
+    {
+      name: 'review',
+      command: 'kvvideo.video.review',
+      images: true as const,
+      examples: [{ description: 'Look over a composed video before telling the person it is ready', input: { file: 'videos/tour.mp4' } }],
+    },
   ],
 };

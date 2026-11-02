@@ -4,6 +4,7 @@ import { registerCompose } from './compose/register-compose.ts';
 import { registerFonts } from './fonts/register-fonts.ts';
 import { registerNarration } from './narration/register-narration.ts';
 import { registerRecord } from './record/register-record.ts';
+import { registerReview } from './review/register-review.ts';
 import { registerWithKvcoder } from './register-with-kvcoder.ts';
 import { registerSettings } from './settings.ts';
 import { registerSetup } from './setup/register-setup.ts';
@@ -24,6 +25,7 @@ export default (ctx: Ctx): void => {
   registerRecord(ctx);
   registerNarration(ctx);
   registerCompose(ctx);
+  registerReview(ctx);
   registerVideoStart(ctx);
   registerWithKvcoder(ctx);
 };

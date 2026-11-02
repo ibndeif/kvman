@@ -7,6 +7,7 @@ import { useNow } from './use-now.ts';
 
 // What the running step is doing (plan 08 §8.7, ADR 0009, 142): waiting for the model, thinking, writing, or the tool
 // calls with the description and the connector command the model gave each, preparing or running. The seconds come from the page's clock.
+// A registered command's call shows its newest progress, translated (ADR 0115, 46).
 // The turn's steps, its time, and estimated cost so far follow it, as its last finished step left them (ADR 0060, 3),
 // and the map's step in progress. Before the calls run, the newest headline of the agent's thinking says what it is
 // doing (ADR 0102, 1).
@@ -37,6 +38,7 @@ const seconds = computed(() => Math.max(0, Math.floor((now.value - props.live.st
         <span v-for="(call, index) in props.live.calls" :key="index" class="kvc-activity-call" data-test="activity-call">
           <span style="font-weight: 600" data-test="activity-title">{{ call.description ?? kvman.t('kvcoder.ui.activity.preparing') }}</span>
           <span v-if="call.label" class="kvc-muted" dir="ltr" data-test="activity-label">{{ call.label }}</span>
+          <span v-if="call.progress" class="kvc-muted" dir="auto" data-test="activity-progress">{{ kvman.t(call.progress.key, call.progress.params) }}</span>
         </span>
       </template>
       <span v-else style="font-weight: 500" dir="auto" data-test="activity-title">{{ title }}</span>

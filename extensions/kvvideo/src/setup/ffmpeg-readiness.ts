@@ -12,7 +12,7 @@ export type CheckRun = (program: ProgramName, args: readonly string[]) => Promis
 export type FfmpegReadiness = { ready: boolean; version: string | null; missing: string[] };
 
 const encoders = ['libx264', 'aac', 'libmp3lame'] as const;
-const filters = ['subtitles', 'xfade', 'loudnorm', 'afftdn', 'gradients', 'perspective', 'alphamerge'] as const;
+const filters = ['subtitles', 'xfade', 'loudnorm', 'afftdn', 'gradients', 'perspective', 'alphamerge', 'drawtext', 'xstack'] as const;
 
 function succeeded(answer: Answer): answer is { exitCode: number; stdout: string } {
   return answer !== undefined && answer.exitCode === 0;

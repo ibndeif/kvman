@@ -1,4 +1,4 @@
-import { z, type Ctx, type Stored } from '@kvman/sdk';
+import { ProblemError, z, type Ctx, type Stored } from '@kvman/sdk';
 import { chatIdOf } from '../artifacts/artifact-records.ts';
 import { lineRunIsError, lineRunSchema, lineRunText } from '../calls/line-run.ts';
 import { artifactCard } from '../connectors/artifact.ts';
@@ -15,6 +15,7 @@ import type { ConnectorRow } from '../registry/register-connectors.ts';
 import { truncate } from '../result-text.ts';
 import type { HeldResult, SessionDoc } from '../schemas/records.ts';
 import { fileResult } from './file-results.ts';
+import { resultImages, type ResultImage } from './result-images.ts';
 
 // Running one connector command for the model (plan 08 §8.3, ADR 0011, 10 and 11): every command, kvcoder's own or a
 // registered one, is a kernel command or query run with `ctx.exec`. The result is what the model reads, and the
@@ -24,7 +25,7 @@ import { fileResult } from './file-results.ts';
 export type CallDone = Pick<HeldResult, 'text' | 'details' | 'isError'>;
 
 /** The kernel job behind a connector command; `builtin` is set for kvcoder's own, and `asks` for a registered command the person approves first. */
-export type CommandTarget = { registration: string; builtin?: ConnectorCommand; asks?: boolean; query?: boolean; card?: string };
+export type CommandTarget = { registration: string; builtin?: ConnectorCommand; asks?: boolean; query?: boolean; card?: string; images?: boolean };
 
 /** The job a call's connector command runs, or `undefined` when the connector has no such command. */
 export function targetOf(connectors: readonly ConnectorRow[], call: Pick<RunCall, 'connector' | 'command'>): CommandTarget | undefined {
@@ -36,7 +37,7 @@ export function targetOf(connectors: readonly ConnectorRow[], call: Pick<RunCall
   const connector = connectors.find((candidate) => candidate.name === call.connector);
   if (connector?.kind === 'binary') return call.command === 'exec' ? { registration: binaryExec.registration, builtin: binaryExec } : undefined;
   const command = connector?.commands?.find((candidate) => candidate.name === call.command);
-  return command === undefined ? undefined : { registration: command.command, asks: command.asks, query: command.query, ...(command.card === undefined ? {} : { card: command.card }) };
+  return command === undefined ? undefined : { registration: command.command, asks: command.asks, query: command.query, ...(command.card === undefined ? {} : { card: command.card }), ...(command.images === true ? { images: true } : {}) };
 }
 
 /** The commands a connector has, besides `help`, as a failed call lists them: one of kvcoder's own with its payload's signature (ADR 0012, 19). */
@@ -127,7 +128,21 @@ async function runJob(ctx: Ctx, sessionId: string, call: RunCall, target: Comman
   const artifact = typeof artifactId === 'string' ? await artifactCard(ctx, sessionId, artifactId) : undefined;
   // A registered command's own card shows the call with what it returned (ADR 0082, 13).
   const card = target.card === undefined ? undefined : { component: target.card, payload: call.payload, output: z.json().parse(done.value ?? null) };
-  return { text, isError: false, details: { ...words(call), output: file?.output ?? text, durationMs: Date.now() - started, ...(artifact === undefined ? {} : { artifact }), ...(card === undefined ? {} : { card }) } };
+  const images = await imagesOf(ctx, call, target, done.value);
+  if (images !== undefined && 'failed' in images) return images.failed;
+  return { text, isError: false, details: { ...words(call), output: file?.output ?? text, durationMs: Date.now() - started, ...(artifact === undefined ? {} : { artifact }), ...(card === undefined ? {} : { card }), ...(images === undefined ? {} : { images: images.images }) } };
+}
+
+// The images a command with `images: true` answers, checked; a wrong one fails the call (ADR 0115, 47).
+async function imagesOf(ctx: Ctx, call: RunCall, target: CommandTarget, value: unknown): Promise<{ images: ResultImage[] } | { failed: CallDone } | undefined> {
+  if (target.images !== true) return undefined;
+  try {
+    const images = await resultImages(ctx, z.json().parse(value ?? null));
+    return images === undefined ? undefined : { images };
+  } catch (error) {
+    if (error instanceof ProblemError) return { failed: failedCall(call, errorOutput(error.problem).output) };
+    throw error;
+  }
 }
 
 const helpSchema = z.object({ text: z.string() });

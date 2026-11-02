@@ -1,11 +1,11 @@
 import type { Kvman } from '@kvman/sdk/web';
 import type { ShallowRef } from 'vue';
-import { applyEvent, idleLive, type Live, type LiveCall } from './live-step.ts';
+import { applyEvent, idleLive, type CommandOwners, type Live, type LiveCall } from './live-step.ts';
 
 type Owner = { jobId: string; target: Live; current: () => boolean };
 
 /** Logical ownership is private: SDK stream has no signal option. Existing transports close on unmount. */
-export function conversationStreams(kvman: Kvman, live: Live, streaming: ShallowRef<boolean>, reconcile: () => Promise<void>, failed: (error: unknown) => void) {
+export function conversationStreams(kvman: Kvman, live: Live, streaming: ShallowRef<boolean>, reconcile: () => Promise<void>, failed: (error: unknown) => void, commandOwners: CommandOwners = () => undefined) {
   const owners = new Map<Live, Owner>();
   let ended = new WeakMap<Live, string>();
   const owns = (owner: Owner): boolean => owner.current() && owners.get(owner.target) === owner;
@@ -27,7 +27,7 @@ export function conversationStreams(kvman: Kvman, live: Live, streaming: Shallow
         if (!owns(owner) && owners.has(owner.target)) break;
         // The SDK yields OFFLINE then exhausts normally; that is transport loss, not job completion.
         if (event.type === 'problem' && event.problem.code === 'kvwebui/OFFLINE') offline = true;
-        const signal = applyEvent(owns(owner) ? owner.target : idleLive(), event);
+        const signal = applyEvent(owns(owner) ? owner.target : idleLive(), event, commandOwners);
         if (signal.kind !== 'none') await reread(owner);
         if (!owner.current() || (!owns(owner) && owners.has(owner.target))) break;
       }

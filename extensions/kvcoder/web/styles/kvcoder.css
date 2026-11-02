@@ -351,3 +351,15 @@ a.kvc-button { text-decoration: none; color: inherit; }
   .kvc-switch { position: relative; }
   .kvc-switch::after { content: ''; position: absolute; inset-block: -10px; inset-inline: -2px; }
 }
+.kvc-result-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 12px;
+}
+.kvc-result-images img {
+  display: block;
+  block-size: 96px;
+  border-radius: 6px;
+  border: 1px solid var(--kv-color-border);
+}

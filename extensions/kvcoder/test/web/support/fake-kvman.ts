@@ -49,7 +49,10 @@ function pluralForm(key: string, text: string, language: string, count: unknown)
 
 export function createFakeKvman(): FakeKvman {
   // No extension registered a slash command, unless a test says so.
-  const handlers = new Map<string, Handler>([['kvcoder.slash.list', () => []]]);
+  const handlers = new Map<string, Handler>([
+    ['kvcoder.slash.list', () => []],
+    ['kvcoder.connector.list', () => []],
+  ]);
   const calls: FakeKvman['calls'] = [];
   const channels = new Map<string, Channel>();
   const language = { value: 'en' };

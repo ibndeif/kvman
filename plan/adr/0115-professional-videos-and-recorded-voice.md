@@ -81,6 +81,8 @@ The product owner asked (2026-11-02) for suggestions so kvvideo can make "profes
 
 62. **kvvideo makes its own sound effects** (asked at M5.8; chosen over downloading Kenney's packs). The click, key taps, whoosh, and pop are synthesized with ffmpeg from noise and tones, released under CC0, and `SOURCES.md` gives the command that made each.
 
+63. **`check` also needs `drawtext` and `xstack`** (found at M5.9): the contact sheets label each frame with its time and lay the frames out in a grid. `review` answers `loudness: null` for a video without sound.
+
 ## Plan changes
 
 - `16-kvvideo.md`: rewritten for decisions 1 to 58.

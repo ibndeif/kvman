@@ -6,8 +6,17 @@ import { callView } from './call-view.ts';
 // chunks tell the conversation to follow the next step, show a subagent, that a summary is being made (whose text
 // isn't the answer), or that a failed model call is being tried again, why, and after how long (ADR 0009, 155; ADR 0087, 6).
 
+/** A registered command's newest progress: a key of its extension's catalog and its params (ADR 0115, 46 and 54). */
+export type CallProgress = { key: string; params: Record<string, string | number> };
+
 /** A tool call being written or run. `carried` marks a call the previous step approved and this one is running. */
-export type LiveCall = { name: string; description?: string; label?: string; complete: boolean; carried?: boolean };
+export type LiveCall = { name: string; description?: string; label?: string; connector?: string; command?: string; progress?: CallProgress; complete: boolean; carried?: boolean };
+
+/** Who registered a connector command: its extension, and the namespace its keys are under. */
+export type CommandOwner = { owner: string; namespace: string };
+
+/** Finds the owner of a connector's command, from `kvcoder.connector.list`. */
+export type CommandOwners = (connector: string, command: string) => CommandOwner | undefined;
 
 /** A failed model call tried again: which try is next, of how many, the wait before it in seconds, and why. */
 export type Retry = { attempt: number; of: number; seconds: number; reason: 'rateLimited' | 'unavailable' };
@@ -43,11 +52,26 @@ function applyToolCall(live: Live, data: Record<string, unknown>, name: string):
   const view = callView(given);
   if (view.description !== undefined) call.description = view.description;
   if (view.label !== undefined) call.label = view.label;
+  if (view.connector !== undefined) call.connector = view.connector;
+  if (view.command !== undefined) call.command = view.command;
   call.complete = 'payload' in given;
 }
 
+// A registered command's progress chunk `{ key, params? }`: shown on the running call of the extension that sent it,
+// when its key is under that extension's namespace; a chunk of another shape is ignored.
+function applyProgress(live: Live, source: string, data: Record<string, unknown>, owners: CommandOwners): void {
+  const params = data['params'] === undefined ? {} : record(data['params']);
+  if (typeof data['key'] !== 'string' || params === undefined || !Object.values(params).every((value) => typeof value === 'string' || typeof value === 'number')) return;
+  const key = data['key'];
+  const call = live.calls.findLast((candidate) => {
+    const found = candidate.complete && candidate.connector !== undefined && candidate.command !== undefined ? owners(candidate.connector, candidate.command) : undefined;
+    return found !== undefined && found.owner === source && key.startsWith(`${found.namespace}.`);
+  });
+  if (call !== undefined) call.progress = { key, params: Object.fromEntries(Object.entries(params).map(([name, value]) => [name, typeof value === 'number' ? value : String(value)])) };
+}
+
 /** Applies one stream event to the live answer and says what kvcoder asked for. */
-export function applyEvent(live: Live, event: StreamEvent): StepSignal {
+export function applyEvent(live: Live, event: StreamEvent, owners: CommandOwners = () => undefined): StepSignal {
   if (event.type !== 'progress') return { kind: 'none' };
   const data = record(event.data);
   if (data === undefined) return { kind: 'none' };
@@ -59,7 +83,10 @@ export function applyEvent(live: Live, event: StreamEvent): StepSignal {
     if (data['type'] === 'toolcall' && typeof data['name'] === 'string') applyToolCall(live, data, data['name']);
     return { kind: 'none' };
   }
-  if (event.source !== '@kvman/kvcoder') return { kind: 'none' };
+  if (event.source !== '@kvman/kvcoder') {
+    applyProgress(live, event.source, data, owners);
+    return { kind: 'none' };
+  }
   if (data['type'] === 'compaction') live.summarizing = data['state'] === 'started';
   if (data['type'] === 'retry' && typeof data['attempt'] === 'number' && typeof data['of'] === 'number') {
     // The failed attempt's partial text, thinking, and unfinished calls aren't the reply: the next attempt starts clean.

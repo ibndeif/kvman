@@ -3,7 +3,7 @@ import { Info, NotebookText, ScrollText } from '@lucide/vue';
 import { computed } from 'vue';
 import type { Message } from '../../src/index.ts';
 import { failureReason, fields, isolateValue, problemKey, stringValues, useKvman } from './kvman.ts';
-import { answeredQuestion, artifactOf, extensionCardOf, isBackground, isKvcoderHint, exitedOnly, resultCard, shownUserText, stagingRunOf, textOf, thinkingOf, typedText } from './message-parts.ts';
+import { answeredQuestion, artifactOf, extensionCardOf, resultImagesOf, isBackground, isKvcoderHint, exitedOnly, resultCard, shownUserText, stagingRunOf, textOf, thinkingOf, typedText } from './message-parts.ts';
 import RememberThis from './RememberThis.vue';
 import AnsweredCard from './AnsweredCard.vue';
 import BackgroundLine from './BackgroundLine.vue';
@@ -23,6 +23,7 @@ const thinking = computed(() => thinkingOf(props.message));
 const card = computed(() => resultCard(props.message, props.calls));
 const artifact = computed(() => artifactOf(props.message));
 const extensionCard = computed(() => extensionCardOf(props.message));
+const images = computed(() => resultImagesOf(props.message).map((image) => ({ ...image, url: imageUrl(image.fileId) })));
 // A program worker's run that changed what is staged in Git names itself in its result's details (ADR 0060, 4).
 const stagingRunId = computed(() => stagingRunOf(props.message));
 const answered = computed(() => answeredQuestion(props.message, props.calls));
@@ -67,7 +68,7 @@ const markdown = (body: string) => ({ type: 'markdown' as const, text: 'kvcoder.
   <AnsweredCard v-else-if="answered !== undefined" :answered="answered" />
   <div v-else-if="extensionCard !== undefined" data-test="extension-card"><component :is="kvman.View" :view="{ type: 'custom', component: extensionCard.component, props: extensionCard.props }" /></div>
   <template v-else-if="props.message.kind === 'toolResult'">
-    <CallCard :view="card" :failed="card.failed" :duration-ms="card.durationMs" :output="card.output" :exited="exitedOnly(card) ? card.exitCode : undefined" />
+    <CallCard :view="card" :failed="card.failed" :duration-ms="card.durationMs" :output="card.output" :exited="exitedOnly(card) ? card.exitCode : undefined" :images="images" />
     <StagingNote v-if="stagingRunId !== undefined" :session-id="props.message.sessionId" :run-id="stagingRunId" />
   </template>
   <div v-else-if="props.message.kind === 'notice'" class="kvc-notice" data-test="notice">{{ notice }}</div>

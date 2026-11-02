@@ -12,9 +12,9 @@ type SessionId = { sessionId: string };
 type Example = { description: string; input: Json };
 type Binary = { check: string; install?: string; help?: string };
 type Connector =
-  | { name: string; description: string; commands: { name: string; command: string; examples?: Example[]; asks?: true; card?: string }[]; optIn?: true }
+  | { name: string; description: string; commands: { name: string; command: string; examples?: Example[]; asks?: true; card?: string; images?: true }[]; optIn?: true }
   | { name: string; description: string; binary: Binary; optIn?: true };
-type ConnectorRow = { name: string; description: string; owner: string; kind: 'commands' | 'binary'; commands?: { name: string; command: string; examples: Example[]; asks: boolean; query: boolean; card?: string }[]; binary?: Binary; optIn: boolean };
+type ConnectorRow = { name: string; description: string; owner: string; kind: 'commands' | 'binary'; commands?: { name: string; command: string; examples: Example[]; asks: boolean; query: boolean; card?: string; images?: true }[]; binary?: Binary; optIn: boolean };
 type SlashCommand = { name: string; description: string; command: string; message?: string };
 type Point = 'kvcoder.session.created' | 'kvcoder.session.deleted' | 'kvcoder.session.forked' | 'kvcoder.turn.started' | 'kvcoder.turn.ended' | 'kvcoder.session.waiting';
 type Place = { global?: boolean; sessionId?: string };

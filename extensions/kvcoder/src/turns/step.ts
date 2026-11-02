@@ -17,7 +17,7 @@ import { clearOldResults } from './clear-results.ts';
 import { endTurn } from './end-turn.ts';
 import { endTurnState } from './end-turn-state.ts';
 import { appendMessage, appendNotice, appendQueued, userContent } from './history.ts';
-import { levelFor } from './model-info.ts';
+import { levelFor, modelInfo } from './model-info.ts';
 import { incompleteHint, incompleteReply, incompleteRetries, lostHint, lostRetries, lostTokens, repairedCalls, type Incomplete } from './lost-reply.ts';
 import { modelMessages, sentHistory } from './model-context.ts';
 import { quietEnding } from './quiet-ending.ts';
@@ -97,7 +97,7 @@ const fallbackCodes: ReadonlySet<string> = new Set(['kvai/USAGE_LIMIT', 'kvai/RA
 async function callModel(ctx: Ctx, session: Stored<SessionDoc>, lease: StepLease, tools: SessionTools, overflow: 'summarize' | 'end', fallback: string | null = null): Promise<Answer | { tooLong: ProblemError } | { limited: ProblemError } | undefined> {
   const waits = (await currentStep(ctx, lease))?.turn.connectionWaits ?? 0;
   const history = await sentHistory(ctx, session.id, session.nextSeq);
-  const messages = await modelMessages(ctx, history);
+  const messages = await modelMessages(ctx, history, (await modelInfo(ctx, session.model))?.images === true);
   if (await currentStep(ctx, lease) === undefined) return undefined;
   const started = Date.now();
   const toolList = [runTool(tools.listed.map(listed => listed.name))];
