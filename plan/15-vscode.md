@@ -63,7 +63,7 @@ The extension starts when the view is first shown or one of its commands runs, n
 ## 15.4 The view
 
 - **The page** has no padding of its own, so the frame fills the view (ADR 0101, 7).
-- **The frame.** The view's page holds one `<iframe>` at the `running` or `joined` line's `url` with `&embed=parent` added (§6.2), with `allow="clipboard-read; clipboard-write"` and no `sandbox` attribute of its own. The page's policy is `default-src 'none'; frame-src http://127.0.0.1:<port>; script-src 'nonce-<nonce>'; style-src <webview source>`.
+- **The frame.** The view's page holds one `<iframe>` at the `running` or `joined` line's `url` with `&embed=parent` added (§6.2), with `allow="clipboard-read; clipboard-write; microphone"` and no `sandbox` attribute of its own. The microphone is for kvcoder's record card (plan 08 §8.7; ADR 0115, 29); where VS Code's webview still refuses it, the card offers to open the chat in a browser and to upload a file. The page's policy is `default-src 'none'; frame-src http://127.0.0.1:<port>; script-src 'nonce-<nonce>'; style-src <webview source>`.
 - **Kept when hidden.** The view keeps its page while the side bar is hidden (`retainContextWhenHidden`), so kvwebui isn't reloaded.
 - **The frame's messages.** The page passes a `message` on to the extension only when its `source` is the frame's window and its `origin` is `http://127.0.0.1:<port>`. The extension reads each with zod (ADR 0100, 29):
   - `kvman.state` keeps the frame's workspace, and answers with the theme;

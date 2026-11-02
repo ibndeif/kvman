@@ -19,7 +19,7 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `13-milestones.md` | The milestones: Read, Build, Done when |
 | `14-desktop.md` | The desktop app: `kvman --pipe`, what the app holds, starting, the home screen, the window, updates, installers |
 | `15-vscode.md` | The VS Code extension: the view in the activity bar, starting and joining kvman, the embedded frame and its messages, VS Code's theme, files and diffs in the editor, "Add to kvman chat", closing, publishing |
-| `16-kvvideo.md` | kvvideo: `/video`, the `video` connector (check, fonts, record, narrate, compose), its settings and secrets, the player card |
+| `16-kvvideo.md` | kvvideo: `/video` and its production guide, the `video` connector (check, fonts, brand, record, narrate, voice, compose, review), its settings and secrets, the player card |
 | `adr/0001-kernel.md` | Every kernel decision, with the product owner's answers |
 | `adr/0002-kvwebui.md` | Every kvwebui decision |
 | `adr/0003-kvai.md` | Every kvai decision |
@@ -88,6 +88,7 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `adr/0103-the-council-worker.md` | The shipped `council` worker (read-only, thinking at `high`): the owner's operations-room debate of an engineer, a devil's advocate, a dumb customer, and the field's top expert, then the Maestro's final answer; the lead's Deliberate part, chosen apart from the map |
 | `adr/0104-url-artifacts-end-with-their-server.md` | A `url` artifact is deleted when the background process that printed its port ends (not on Restart or a startup exit), and the agent is told in the ending's message or `background stop`'s `deletedArtifacts` |
 | `adr/0107-kvvideo.md` | kvvideo: composed videos of the person's app with narration (ElevenLabs, OpenAI, or Piper) and burned-in captions, the installed Chrome or Edge, ffmpeg on the PATH, renders inside the call, a player card on byte ranges, the newest 10 copies |
+| `adr/0115-professional-videos-and-recorded-voice.md` | kvvideo's professional videos: polished by default, HTML pages, the automatic camera, frames, overlays, transitions, sound effects, levelled sound, directed and cached narration line by line, caption styles and `.srt`, a review the model sees, the brand, other sizes; the person's own voice through kvcoder's `ask record` and the microphone in every host |
 | `adr/0108-workers-in-the-background-focused-briefs-and-a-lighter-history.md` | Workers in the background with one-deliverable briefs (`kind`, `goal`, `done`, `files`, `context`, `budget`), a ceiling on their thinking, one deep trim of the history at 60K tokens that keeps the cache, rule files one level down kept for the chat, `run` with a `calls` list, an MCP connection per turn, housekeeping calls hidden, waiting for the connection, `notify` on background lines |
 | `adr/0105-deleting-artifacts.md` | `kvcoder.artifact.delete` for the agent (`artifact delete`), the panel's Delete with its confirmation and a message telling the agent, and `kvcoder.artifacts.keepDays` for the daily prune |
 | `adr/0109-pi-ai-1-4.md` | pi-ai 1.4.0 and its new models, and two more OpenRouter routers left out by name |

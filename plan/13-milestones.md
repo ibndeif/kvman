@@ -544,11 +544,11 @@ ADR 0099.
 
 ## M5 — Video
 
-ADR 0107.
+ADR 0107; M5.5 to M5.11, ADR 0115.
 
 ### M5.1 kvvideo set up
 
-- **Read:** `16` §16.1 to §16.4, §16.9; `08` §8.4; `06` §6.3, §6.6; ADR 0107.
+- **Read:** `16` §16.1 to §16.4, §16.11; `08` §8.4; `06` §6.3, §6.6; ADR 0107.
 - **Build:**
   - the `extensions/kvvideo` package (`@kvman/kvvideo`, namespace `kvvideo`, depending on kvcoder and kvwebui), with `playwright-core` 1.63.0, in the `coder` preset and among the `kvman` package's dependencies;
   - the settings and `kvvideo.ui.get` with its configuration;
@@ -586,7 +586,7 @@ ADR 0107.
 
 ### M5.4 Composing and the player
 
-- **Read:** `16` §16.7, §16.8; `04` §4.1; ADR 0107, 6, 8, 12 to 14, 23, and 24.
+- **Read:** `16` §16.8, §16.9; `04` §4.1; ADR 0107, 6, 8, 12 to 14, 23, and 24.
 - **Build:**
   - `kvvideo.video.compose` and the connector's `compose`, with its card: each scene's part, the captions' ASS file and font, the join, and the player's copies;
   - byte ranges on `GET /api/files/:id`;
@@ -599,3 +599,101 @@ ADR 0107.
   - A copy is made, a new copy of a path replaces the old one, and the 11th removes the oldest; a file over 512 MiB has no copy.
   - The file route answers one range with 206 and its `Content-Range`, a range past the end with 416, and anything else with the whole file.
   - The card plays the copy, and says to open the file when there is no copy or it can't load.
+
+### M5.5 Recordings that look finished
+
+- **Read:** `16` §16.3, §16.5; ADR 0115, 3, 4, 8, 9, 16, 31 to 33, 35, and 46.
+- **Build:**
+  - the plan references in kvvideo's comments follow plan 16's numbers;
+  - `record` with `page`: the `page.kvvideo.invalid` origin answered from the page's folder, the internet allowed, kvman's port blocked;
+  - 2× density, the new defaults, and the wait for fonts and an idle network; hidden scroll bars;
+  - the arrow pointer, the curved and eased moves, the press and ring, the seeded typing pace, and smooth scrolling; `device: 'phone'` with taps and the touch mark;
+  - `narration` and `atLine`; each step's `actMs`, `endMs`, and `box`;
+  - the sidecar, written and read with zod; progress chunks.
+- **Done when:**
+  - A recording of the app is `2 × width` by `2 × height`, and its answer and sidecar have each step's `atMs`, `actMs`, `endMs`, and `box`.
+  - A page in the workspace records with its CSS animation, loads a file beside it, and loads from the internet; a path out of its folder is answered 404; a request to kvman's port is aborted; `url` and `page` together, neither, or a `goto` in a page's steps fail `VALIDATION_FAILED`.
+  - The pointer's moves take 400 to 900 ms by distance and follow an eased curve; typing the same text gives the same pace twice; a phone recording is 780 × 1688 and taps.
+  - With a narration, a step with `atLine` starts no earlier than 300 ms plus its line's start, and the recording lasts at least the narration plus 600 ms; `atLine` past the captions, or without `narration`, and a narration without a sidecar, fail `VALIDATION_FAILED`.
+  - A missing or invalid sidecar is read as absent; `record` sends "Recording step n of m".
+
+### M5.6 A narration that sounds directed and lines up
+
+- **Read:** `16` §16.2, §16.6; ADR 0115, 15, 17, 39 to 41.
+- **Build:** `narrate` sentence by sentence with the 250 ms joins, `tone`, `speed`, the pronunciation setting, ElevenLabs's `with-timestamps` request with the neighbouring sentences, the captions with line and word times, the `narrations` cache and its limit, `reused`, the sidecar, and the Narration card's new row.
+- **Done when:**
+  - A three-sentence text makes three requests, joined with 250 ms between them, and each sentence's first line starts where its audio starts.
+  - With ElevenLabs, each line and word takes its times from the alignment, a pronounced word takes the time of what was said in its place, and the request has `previous_text`, `next_text`, and `voice_settings.speed` only when `speed` isn't 1.
+  - OpenAI's request has `instructions` from `tone` and `speed` when it isn't 1; Piper gets `--length-scale` of 1 ÷ `speed`.
+  - A pronunciation changes what is sent, as a whole word in any case, and not the captions.
+  - Narrating the same text again sends nothing and answers `reused` equal to the sentence count; changing one sentence sends only that one; past 2000 rows the oldest go with their files.
+  - A failed sentence fails the call with its service's error, and nothing is written.
+
+### M5.7 The look: camera, frames, overlays, captions, and the brand
+
+- **Read:** `16` §16.2, §16.4, §16.8 (Scenes, the camera, the frame, overlays, captions); ADR 0115, 7, 10, 11, 18, 21, 34, 36, 42, and 43.
+- **Build:**
+  - `kvvideo.brand`, its configuration card, and `video brand` and `brand-set`;
+  - the scenes' new fields and their defaults from the sidecar;
+  - the automatic camera's stops and its eased crop;
+  - the background, window, phone, and the callouts drawn by the browser, and the highlight and blur;
+  - the caption styles, the brand's font and colour, and captions read from a narration's sidecar;
+  - `compose`'s default size of 1920 × 1080.
+- **Done when:**
+  - A recording of the app gets the camera's stops at its click and type steps: 1.6×, less for a large box, never below 1, kept inside the page; a run's stops pan, and the view eases out 1.5 s after the last; a page and `camera: 'none'` aren't moved.
+  - A window sits inside its margins with the larger bottom margin when captions are at the bottom; a phone is 88% of the height; `none` fits on the background; a brand's colours and an image background are used, and the default gradient without a brand.
+  - A callout, a highlight, and a blur appear from `fromMs` to `toMs` on their step's box or their box; `step` and `box` together, neither, a step without a box, or a callout without text fail `VALIDATION_FAILED`.
+  - Each caption style writes its ASS style; `highlight` colours the spoken words of a line with `words` and boxes one without; `off` writes no captions.
+  - `brand-set` stores the brand in the workspace, refuses a logo or font outside the workspace or of the wrong kind, and `brand` reads it.
+
+### M5.8 The final pass: transitions, sound, and what's beside the video
+
+- **Read:** `16` §16.8 (transitions, sound effects, the render, beside the video, other sizes, the answer, the player's copy), §16.9; ADR 0115, 2, 12, 14, 19, 22, 37, 38, 41, 44, and 45.
+- **Build:**
+  - each scene's part with its narration at 300 ms and its fades, as `.mkv` with PCM sound;
+  - the final pass: `xfade` and `acrossfade` for each transition, the sound effects and their bundled files with `SOURCES.md`, and the two-pass loudness;
+  - the `.srt`, the poster, `extraSizes` with pages recorded again at their shape, `others`, and the poster's copy and the card's poster;
+  - the 60-minute timeout; progress chunks.
+- **Done when:**
+  - Each transition kind gives its `xfade` offset and kind, a slide toward `start` is left in `ltr` and right in `rtl`, and the length is the scenes' less the overlaps; a transition longer than half a scene, or on the last scene, fails `VALIDATION_FAILED`.
+  - A click, typing, a slide, and a callout get their sound at their times; `sounds: false` for a scene or the video removes them.
+  - The final pass measures, then encodes with the measured values; a real render measures −14 ± 1 LUFS with its peak under −1 dBTP.
+  - The `.srt` matches the burned-in captions on the video's time line; the poster is the middle of the first scene; the player shows it.
+  - An extra 1080 × 1920 size frames a recording of the app again and records a page again at 720 × 1280; an extra size equal to another fails `VALIDATION_FAILED`.
+  - A failure in the final pass fails `kvvideo/RENDER_FAILED` with `scene: null`, and nothing is written.
+
+### M5.9 Reviewing a video, and images the model sees
+
+- **Read:** `16` §16.10; `08` §8.4; `07` (a model's `input`); ADR 0115, 20, 46 to 48.
+- **Build:**
+  - kvcoder: `images: true` on a command entry, the images in the tool result or the line that says they weren't shown, their clearing, and the thumbnails in the call card; the newest progress text on a running call's card;
+  - kvvideo: `video review` with its problems, its contact sheets, and `reviewSheets`.
+- **Done when:**
+  - A command with `images: true` that answers two images gives a model that takes images the text and both images; a model that doesn't gets the line; a non-image file, a file over 5 MiB, or more than 8 fail `VALIDATION_FAILED`; a cleared result has no images; a command without `images: true` passes the field as JSON.
+  - A running `compose` call's card shows its newest progress text.
+  - `review` reports a planted 4 s silence, a 1 s black picture, a 7 s frozen picture, and loudness outside the range, each at its time; its sheets hold the scenes' middles, the transitions, and the caption lines, labelled, at most 8; past 24 sheets the oldest go.
+
+### M5.10 Recording your own voice
+
+- **Read:** `08` §8.5 (`ask record`), §8.7 (the record card); `16` §16.7; `14` §14.6, §14.10; `15` §15.4; ADR 0115, 24 to 29, 49 to 51.
+- **Build:**
+  - kvcoder: `ask record`, its check (the examples copied to the kernel's files), its answer (the takes written into the workspace and the uploads deleted), the record card, its answered card, and the microphone's fallback;
+  - kvvideo: `video voice` with its cleanup, `clean: false`, the joins, the captions, and the sidecar;
+  - the desktop app's microphone on Linux, macOS, and Windows, granted to kvman's origin only, and the Info.plist text in `en` and `ar`;
+  - the VS Code frame's `microphone`;
+  - the `en` and `ar` texts and the changesets.
+- **Done when:**
+  - `ask record` with a stress word or pause not in its line, an example that isn't audio or is over 10 MiB, or a folder outside the workspace fails `VALIDATION_FAILED`; a pending one shows the card again after a reload.
+  - The card shows the stressed words in bold, the pause marks, the tone, pace, and target length, and plays an example; Record counts down, shows the level and the time, and stops at 60 s; "Use these takes" is enabled only with a take for every line; Upload a file takes an audio file instead.
+  - The answer writes `line-<n>.<ext>` per line by its type and deletes the uploads; a wrong type, a take over 25 MiB, or the wrong number of takes fails `VALIDATION_FAILED`; a dismissal answers "Skipped".
+  - With no microphone, or one refused, the card says so and offers "Open this chat in a browser" and Upload a file.
+  - `voice` cleans each take with the four filters, leaves the takes unchanged, joins them with 250 ms between, and times each take's captions within it; `clean: false` only converts.
+  - The desktop app grants the microphone to kvman's page and refuses it to an artifact's frame on each OS; `pnpm desktop:check` passes; the VS Code frame's `allow` has `microphone`.
+
+### M5.11 The production guide, and the whole video by hand
+
+- **Read:** `16` §16.1, §16.12; ADR 0115, 1, 5, 6, 13, 23, and 52.
+- **Build:** the guide in `docs/guide.md` (the seven groups of rules and the steps), the connector's new description and entries with an example each, and last, the by-hand check of §16.12.
+- **Done when:**
+  - After `/video` the chat's prompt holds the guide's seven groups and its steps, and the connector index has `video`'s new description and commands.
+  - The by-hand check makes a video of an app with a title page, a window and a phone recording, the camera, overlays, every transition, sound effects, and English and Arabic captions in each style; `review` finds a planted silence and a black picture; each service narrates once with the owner's keys; the owner records a scene with `ask record` in the browser, the desktop app, and VS Code.
