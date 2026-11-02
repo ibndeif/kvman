@@ -9,4 +9,12 @@ describe('kvvideo is bundled (11, ADR 0107, 11)', () => {
     expect(z.object({ extensions: z.record(z.string(), z.string()) }).parse(json('packages/cli/presets/coder.json')).extensions['@kvman/kvvideo']).toBe('bundled');
     expect(z.object({ dependencies: z.record(z.string(), z.string()) }).parse(json('packages/cli/package.json')).dependencies['@kvman/kvvideo']).toBe('workspace:*');
   });
+
+  it('M5.5-H17 kvvideo is described as a maker of any kind of video', () => {
+    const description = z.object({ description: z.string() }).parse(json('extensions/kvvideo/package.json')).description;
+    const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
+    expect(description).toContain('any kind of video');
+    expect(readme).toContain('any kind of video');
+    expect(`${description}\n${readme}`).not.toMatch(/the person's app/);
+  });
 });

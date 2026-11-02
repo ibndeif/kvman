@@ -26,7 +26,7 @@ const problemOf = (run: () => unknown): unknown => {
   }
 };
 
-describe("the captions' font (16 §16.7, ADR 0107, 8 and 24)", () => {
+describe("the captions' font (16 §16.8, ADR 0107, 8 and 24)", () => {
   it('M5.4-H5 by script when none is named, a bundled one by name, and a workspace file by its family', () => {
     const root = workspace();
     expect(captionFont(root, undefined, ['Hello', 'مرحبا'])).toEqual({ family: 'IBM Plex Sans Arabic', file: path.join(fontsFolder, 'IBMPlexSansArabic-Bold.ttf') });

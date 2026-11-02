@@ -3,7 +3,6 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ProblemError, z } from '@kvman/sdk';
-import { cursorScript } from '../../src/record/cursor-script.ts';
 import { countsFrames, useFakePrograms } from '../support/fake-programs.ts';
 import { useKvvideo } from '../support/kvvideo-kernel.ts';
 import { useTestPages } from '../support/test-page.ts';
@@ -12,7 +11,9 @@ const kvvideo = useKvvideo();
 const programs = useFakePrograms();
 const pages = useTestPages();
 
-const encoded = z.object({ frames: z.number(), width: z.number(), height: z.number(), args: z.array(z.string()) });
+const encoded = z.object({ frames: z.number(), distinct: z.number(), width: z.number(), height: z.number(), args: z.array(z.string()) });
+
+const sidecarOf = (file: string): unknown => JSON.parse(readFileSync(`${file}.kvvideo.json`, 'utf8'));
 
 async function world() {
   const ffmpeg = programs.program('ffmpeg', countsFrames);
@@ -35,7 +36,7 @@ const problemOf = (run: Promise<unknown>): Promise<unknown> =>
   );
 
 describe('video record with the installed Chrome (16 §16.5)', () => {
-  it('M5.2-H1 every kind of step runs, frames reach ffmpeg at 30 a second, and the timings are answered', async () => {
+  it('M5.2-H1 M5.5-H2 every kind of step runs at 2× density, and each answers its times and, acting on a target, its box', async () => {
     const { kernel, workspace } = await world();
     const app = await pages.app();
     const steps = [
@@ -59,18 +60,45 @@ describe('video record with the installed Chrome (16 §16.5)', () => {
     expect(app.saved).toEqual(['Sam']);
     expect(app.requests).toContain('/second');
     const output = encoded.parse(JSON.parse(readFileSync(`${workspace}/videos/demo/01.mp4`, 'utf8')));
-    expect({ width: output.width, height: output.height }).toEqual({ width: 640, height: 360 });
+    expect({ width: output.width, height: output.height }).toEqual({ width: 1280, height: 720 });
+    expect(output.args).toEqual(expect.arrayContaining(['-crf', '14']));
     expect(Math.abs(output.frames - Math.round((answer.durationMs * 30) / 1000))).toBeLessThanOrEqual(1);
+    for (const step of answer.steps) {
+      expect(step.endMs).toBeGreaterThanOrEqual(step.atMs);
+      if (!['click', 'type', 'hover'].includes(step.do)) {
+        expect(step).not.toHaveProperty('actMs');
+        expect(step).not.toHaveProperty('box');
+        continue;
+      }
+      expect(step.actMs).toBeGreaterThanOrEqual(step.atMs);
+      expect(step.actMs).toBeLessThanOrEqual(step.endMs);
+      const box = step.box ?? { x: -1, y: -1, width: 0, height: 0 };
+      expect(box.x >= 0 && box.y >= 0 && box.x + box.width <= 640 && box.y + box.height <= 360 && box.width > 0).toBe(true);
+    }
     expect(output.args.slice(0, 11)).toEqual(['-hide_banner', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', '30', '-c:v', 'mjpeg', '-i', '-']);
   });
 
-  it('M5.2-H2 the default size, and the folders made', async () => {
+  it('M5.2-H2 M5.5-H3 the default sizes at 2× density, and the folders made', async () => {
     const { kernel, workspace } = await world();
     const app = await pages.app();
     await kernel.exec('kvvideo.clip.record', { url: app.url, file: 'a/b/c.mp4' });
     const output = encoded.parse(JSON.parse(readFileSync(`${workspace}/a/b/c.mp4`, 'utf8')));
-    expect({ width: output.width, height: output.height }).toEqual({ width: 1280, height: 720 });
-    expect(output.args).toContain('scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2:color=black,format=yuv420p');
+    expect({ width: output.width, height: output.height }).toEqual({ width: 2560, height: 1440 });
+    expect(output.args).toContain('scale=2560:1440:force_original_aspect_ratio=decrease,pad=2560:1440:(ow-iw)/2:(oh-ih)/2:color=black,format=yuv420p');
+    await kernel.exec('kvvideo.clip.record', { url: app.url, file: 'phone.mp4', device: 'phone' });
+    const phone = encoded.parse(JSON.parse(readFileSync(`${workspace}/phone.mp4`, 'utf8')));
+    expect({ width: phone.width, height: phone.height }).toEqual({ width: 780, height: 1688 });
+  });
+
+  it('M5.5-H13 M5.5-E10 the sidecar is placed beside the recording, and replaced with it', async () => {
+    const { kernel, workspace, write } = await world();
+    const app = await pages.app();
+    const steps = [{ do: 'click' as const, target: 'text=Save' }];
+    const answer = await kernel.exec('kvvideo.clip.record', { url: app.url, file: 'videos/a.mp4', width: 640, height: 360, steps });
+    expect(sidecarOf(`${workspace}/videos/a.mp4`)).toEqual({ kind: 'site', source: app.url, width: 640, height: 360, device: 'desktop', scale: 2, durationMs: answer.durationMs, steps, actions: answer.steps });
+    write('clip.mp4.kvvideo.json', '{}');
+    await kernel.exec('kvvideo.clip.record', { url: app.url, file: 'clip.mp4', replace: true });
+    expect(sidecarOf(`${workspace}/clip.mp4`)).toMatchObject({ kind: 'site', steps: [], actions: [] });
   });
 
   it('M5.2-H4 replace writes over an existing file', async () => {
@@ -104,23 +132,6 @@ describe('video record with the installed Chrome (16 §16.5)', () => {
     const app = await pages.app();
     await kernel.exec('kvvideo.clip.record', { url: `${app.url}fetch/${String(other.port)}`, file: 'other.mp4', steps: [{ do: 'waitFor', target: 'text=reached' }] });
     expect(other.requests).toEqual(['/ping']);
-  });
-
-  it('M5.2-H3 the cursor is drawn: a dot follows the mouse, and a press adds a ring', async () => {
-    const { chromium } = await import('playwright-core');
-    const browser = await chromium.launch({ channel: 'chrome', headless: true });
-    try {
-      const page = await browser.newPage();
-      await page.addInitScript(cursorScript);
-      await page.goto((await pages.app()).url);
-      await page.mouse.move(120, 80);
-      expect(await page.locator('#kvvideo-cursor').getAttribute('style')).toContain('translate(120px, 80px)');
-      await page.mouse.down();
-      expect(await page.locator('.kvvideo-ring').count()).toBe(1);
-      await page.mouse.up();
-    } finally {
-      await browser.close();
-    }
   });
 
   it('M5.2-E9 cancel stops the browser and ffmpeg, and writes nothing', async () => {

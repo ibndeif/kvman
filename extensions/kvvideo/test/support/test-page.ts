@@ -3,7 +3,7 @@ import type { AddressInfo } from 'node:net';
 import { afterEach } from 'vitest';
 
 // A local app to record (M5.2): a page with a link, a field, a Save button that posts what was typed, a long list, and
-// a box that appears late; a second page; a page that fetches from another port when it loads; and a server that
+// a box that appears late, which reports its first touch (M5.5); a second page; a page that fetches from another port when it loads; and a server that
 // counts the requests it gets. Every server closes after its test.
 
 const home = `<!doctype html><html><body style="font:16px sans-serif">
@@ -13,7 +13,8 @@ const home = `<!doctype html><html><body style="font:16px sans-serif">
 <p id="status"></p>
 <ul>${Array.from({ length: 80 }, (_, index) => `<li>Row ${String(index + 1)}</li>`).join('')}</ul>
 <div id="late" hidden>Late</div>
-<script>setTimeout(() => { document.getElementById('late').hidden = false; }, 300);</script>
+<script>setTimeout(() => { document.getElementById('late').hidden = false; }, 300);
+addEventListener('touchstart', () => fetch('/touched'), { once: true });</script>
 </body></html>`;
 
 const second = '<!doctype html><html><body><h1>Second</h1></body></html>';

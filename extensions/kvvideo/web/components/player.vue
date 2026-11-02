@@ -2,7 +2,7 @@
 import { computed, inject, ref } from 'vue';
 import type { Kvman } from '@kvman/sdk/web';
 
-// `kvvideo.player { payload, output }` (plan 16 §16.8): compose's card in the chat. It plays the player's copy from
+// `kvvideo.player { payload, output }` (plan 16 §16.9): compose's card in the chat. It plays the player's copy from
 // the kernel's files, and says to open the file when there is no copy or it can't load.
 const props = defineProps<{ payload: Record<string, unknown>; output: Record<string, unknown> }>();
 

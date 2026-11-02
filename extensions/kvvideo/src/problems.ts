@@ -1,6 +1,6 @@
 import { ProblemError, type Json } from '@kvman/sdk';
 
-// kvvideo's Problems (plan 16 §16.9). Each code has `kvvideo.errors.<CODE>` texts in `en` and `ar`.
+// kvvideo's Problems (plan 16 §16.11). Each code has `kvvideo.errors.<CODE>` texts in `en` and `ar`.
 
 export type KvvideoCode = 'PROGRAM_MISSING' | 'BROWSER_MISSING' | 'STEP_FAILED' | 'NARRATION_NOT_SET' | 'NARRATION_KEY_MISSING' | 'NARRATION_FAILED' | 'RENDER_FAILED';
 

@@ -1,6 +1,6 @@
 import { z } from '@kvman/sdk';
 
-// `compose`'s input and answer (plan 16 §16.7).
+// `compose`'s input and answer (plan 16 §16.8).
 
 const workspaceFile = z.string().min(1).max(1000);
 const side = z.number().int().min(320).max(1920).refine((pixels) => pixels % 2 === 0, 'A side is an even number of pixels.');

@@ -5,7 +5,7 @@ const scene = { clip: 'a.mp4' };
 const accepts = (input: Record<string, unknown>): boolean => composeInputSchema.safeParse({ file: 'v.mp4', scenes: [scene], ...input }).success;
 const withScene = (extra: Record<string, unknown>): boolean => accepts({ scenes: [{ ...scene, ...extra }] });
 
-describe("compose's input (16 §16.7)", () => {
+describe("compose's input (16 §16.8)", () => {
   it('M5.4-E2 the limits of scenes, sizes, captions, lengths, and style', () => {
     expect(accepts({ width: 1920, height: 320, captions: { font: 'Lato', size: 200, position: 'top' } })).toBe(true);
     expect(withScene({ from: 0, to: 1, durationMs: 600_000, captions: [{ text: 'x'.repeat(200), startMs: 0, endMs: 1 }] })).toBe(true);

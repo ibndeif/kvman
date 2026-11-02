@@ -7,7 +7,7 @@ const image = { clip: '/w/a.png', narration: '/w/a.mp3' };
 const lengths = (scene: Parameters<typeof planScene>[1], files: { clip: string; narration: string | undefined }, clipMs: number | undefined, narrationMs: number | undefined) =>
   planScene(1, scene, files, { clipMs, narrationMs });
 
-describe("a scene's length (16 §16.7)", () => {
+describe("a scene's length (16 §16.8)", () => {
   it('M5.4-H1 durationMs, else the narration, else the video part', () => {
     expect(lengths({ clip: 'a.mp4', narration: 'a.mp3' }, video, 4000, 6000)).toMatchObject({ kind: 'video', startMs: 0, partMs: 4000, lengthMs: 6000 });
     expect(lengths({ clip: 'a.mp4', narration: 'a.mp3' }, video, 9000, 3000)).toMatchObject({ partMs: 9000, lengthMs: 3000 });

@@ -30,7 +30,7 @@ const twoScenes = [
   { clip: 'v/01.mp4', narration: 'v/01.mp3', captions: [{ text: 'مرحبا', startMs: 0, endMs: 2500 }] },
 ];
 
-describe('video compose (16 §16.7)', { timeout: 60_000 }, () => {
+describe('video compose (16 §16.8)', { timeout: 60_000 }, () => {
   it('M5.4-H6 one ffmpeg run per scene and one to join, the file placed, the answer summed, the work folder gone', async () => {
     const { kernel, workspace, ffmpeg } = await composing();
     const answer = await kernel.exec('kvvideo.video.compose', { file: 'videos/tour.mp4', scenes: twoScenes });

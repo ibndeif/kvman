@@ -1,6 +1,6 @@
 import type { Caption } from '../narration/captions.ts';
 
-// A scene's captions as an ASS file for ffmpeg's `subtitles` filter (plan 16 §16.7): white text with a black outline
+// A scene's captions as an ASS file for ffmpeg's `subtitles` filter (plan 16 §16.8): white text with a black outline
 // of 3 px, centered at the bottom or the top, 6% of the height from the edge. The style's encoding is -1, so libass
 // takes each line's direction from its text and an Arabic line reads right to left, its full stop at its left end.
 

@@ -1,7 +1,7 @@
 {
   "name": "@kvman/kvvideo",
   "version": "0.1.0",
-  "description": "kvvideo: the kvcoder extension that makes videos of the person's app, recorded, narrated, and captioned.",
+  "description": "kvvideo: the kvcoder extension that makes any kind of video, from websites and pages recorded in the browser, narrated, and captioned.",
   "license": "MIT",
   "repository": {
     "type": "git",

@@ -22,7 +22,7 @@ async function mounted(shown: Record<string, unknown>, language: 'en' | 'ar' = '
   return wrapper;
 }
 
-describe("compose's card (16 §16.8)", () => {
+describe("compose's card (16 §16.9)", () => {
   it('M5.4-H9 it shows the path, the length, and a video of the copy in the tab workspace', async () => {
     const wrapper = await mounted(output);
     expect(wrapper.find('[data-test="file"]').text()).toBe('videos/tour.mp4');

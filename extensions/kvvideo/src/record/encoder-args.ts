@@ -7,7 +7,7 @@ export function recordEncoderArgs(width: number, height: number, output: string)
     '-hide_banner', '-loglevel', 'error',
     '-f', 'image2pipe', '-framerate', String(framesPerSecond), '-c:v', 'mjpeg', '-i', '-',
     '-vf', fit,
-    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-r', String(framesPerSecond),
+    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '14', '-r', String(framesPerSecond),
     '-an', '-movflags', '+faststart', '-y', output,
   ];
 }

@@ -1,6 +1,6 @@
 import { invalid } from '../problems.ts';
 
-// A TrueType or OpenType font's family, from its `name` table (plan 16 §16.7): the Windows English name 1 when there
+// A TrueType or OpenType font's family, from its `name` table (plan 16 §16.8): the Windows English name 1 when there
 // is one, else the first Windows name 1, else the Macintosh Roman one. A collection or a file that isn't a font fails
 // `VALIDATION_FAILED`.
 

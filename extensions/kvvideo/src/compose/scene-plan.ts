@@ -3,7 +3,7 @@ import { invalid } from '../problems.ts';
 import type { Caption } from '../narration/captions.ts';
 import type { Scene } from './compose-input.ts';
 
-// A scene's length (plan 16 §16.7): its `durationMs`, else its narration's, else its video part's. A video part
+// A scene's length (plan 16 §16.8): its `durationMs`, else its narration's, else its video part's. A video part
 // shorter than the scene holds its last frame, and a longer one is cut.
 
 export const videoExtensions = ['.webm', '.mp4', '.mov', '.mkv'];

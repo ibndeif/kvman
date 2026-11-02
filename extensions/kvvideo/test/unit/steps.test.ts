@@ -19,4 +19,26 @@ describe('the steps of a recording (16 §16.5)', () => {
     expect(accepts({ width: 641 })).toBe(false);
     expect(accepts({ extra: true })).toBe(false);
   });
+
+  it('M5.5-E8 atLine is a whole number from 1, on any step but wait', () => {
+    const narrated = { narration: 'talk.mp3' };
+    expect(accepts({ ...narrated, steps: [{ do: 'click', target: '#a', atLine: 1 }, { do: 'scroll', pixels: 10, atLine: 2 }] })).toBe(true);
+    expect(accepts({ ...narrated, steps: [{ do: 'wait', ms: 0, atLine: 1 }] })).toBe(false);
+    expect(accepts({ ...narrated, steps: [{ do: 'click', target: '#a', atLine: 0 }] })).toBe(false);
+    expect(accepts({ ...narrated, steps: [{ do: 'click', target: '#a', atLine: 1.5 }] })).toBe(false);
+  });
+
+  it('M5.5-E3 M5.5-E4 exactly one of url and page, and no goto in a page; atLine needs a narration', () => {
+    expect(recordInputSchema.safeParse({ page: 'a.html', file: 'clip.mp4' }).success).toBe(true);
+    expect(accepts({ page: 'a.html' })).toBe(false);
+    expect(recordInputSchema.safeParse({ file: 'clip.mp4' }).success).toBe(false);
+    expect(recordInputSchema.safeParse({ page: 'a.html', file: 'clip.mp4', steps: [{ do: 'goto', url: 'http://localhost/' }] }).success).toBe(false);
+    expect(accepts({ steps: [{ do: 'click', target: '#a', atLine: 1 }] })).toBe(false);
+  });
+
+  it('M5.5-E12 a device is desktop or phone, and a phone may have its own size', () => {
+    expect(accepts({ device: 'phone', width: 412, height: 916 })).toBe(true);
+    expect(accepts({ device: 'desktop' })).toBe(true);
+    expect(accepts({ device: 'tablet' })).toBe(false);
+  });
 });

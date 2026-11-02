@@ -4,7 +4,7 @@ import { ProblemError } from '@kvman/sdk';
 import { bundledFonts, fontsFolder } from '../../src/fonts/bundled-fonts.ts';
 import { fontFamily } from '../../src/fonts/font-family.ts';
 
-describe("a font's family (16 §16.7)", () => {
+describe("a font's family (16 §16.8)", () => {
   it("M5.4-H5 each bundled font's file names its family as kvvideo lists it", () => {
     for (const font of bundledFonts) expect(fontFamily(readFileSync(`${fontsFolder}${font.file}`), font.file)).toBe(font.name);
   });

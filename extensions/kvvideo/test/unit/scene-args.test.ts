@@ -6,7 +6,7 @@ const size = { width: 1280, height: 720 };
 const encode = ['-map', '[v]', '-map', '[a]', '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-pix_fmt', 'yuv420p', '-r', '30', '-c:a', 'aac', '-b:a', '160k', '-ar', '48000', '-ac', '2'];
 const fit = 'scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2:color=black,fps=30,format=yuv420p';
 
-describe("each scene's ffmpeg arguments (16 §16.7, ADR 0107, 23)", () => {
+describe("each scene's ffmpeg arguments (16 §16.8, ADR 0107, 23)", () => {
   it('M5.4-H2 a video part with a narration and captions, and an image with silence', () => {
     const narrated: PlannedScene = { number: 1, kind: 'video', clip: 'C:\\Users\\O\'Brien\\clip.mp4', startMs: 2000, partMs: 3000, lengthMs: 4200, narration: '/w/n.mp3', captions: [{ text: 'Hi.', startMs: 0, endMs: 4200 }] };
     expect(sceneArgs(narrated, size, 'part-1.mp4')).toEqual([

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { assFile } from '../../src/compose/ass-file.ts';
 
-describe("a scene's ASS file (16 §16.7)", () => {
+describe("a scene's ASS file (16 §16.8)", () => {
   it('M5.4-H4 the size, the style at the bottom, and each caption as a Dialogue', () => {
     const file = assFile({ width: 1280, height: 720, family: 'IBM Plex Sans Arabic', size: undefined, position: 'bottom' }, [
       { text: 'Open the {app}. \\N', startMs: 0, endMs: 1250 },

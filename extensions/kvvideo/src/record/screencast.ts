@@ -27,7 +27,7 @@ export async function startScreencast(page: Page, size: { width: number; height:
       }
     });
   });
-  await session.send('Page.startScreencast', { format: 'jpeg', quality: 90, maxWidth: size.width, maxHeight: size.height, everyNthFrame: 1 });
+  await session.send('Page.startScreencast', { format: 'jpeg', quality: 95, maxWidth: size.width, maxHeight: size.height, everyNthFrame: 1 });
   return {
     stop: async () => {
       stopped = true;

@@ -73,6 +73,8 @@ The product owner asked (2026-11-02) for suggestions so kvvideo can make "profes
 57. **Still no music** (asked again for a generic maker; chosen over the person's or free-licensed music, and over the person's files only). Decision 13 stands.
 58. **The person's media and licensed web media** (chosen over the person's media only, and over decision 5 as it was). Still no generated images; a scene may use the person's images and clips, and images and clips the agent finds on the web under a licence that allows their use, saved in the video's folder and named with their source and licence in the script, with a credit in the end scene when the licence asks. An image scene's camera zooms slowly from 1× to 1.08×.
 
+59. **A page reaches the internet, not this computer** (found at M5.5). Chrome's local-network protection refuses a recorded page's requests to this computer and the local network, and a granted permission doesn't lift it in a headless browser; kvvideo leaves it so, which also keeps an HTML page away from the person's local servers. The browser is started at a device scale factor of 2, since the screencast sends frames at the CSS size otherwise.
+
 ## Plan changes
 
 - `16-kvvideo.md`: rewritten for decisions 1 to 58.

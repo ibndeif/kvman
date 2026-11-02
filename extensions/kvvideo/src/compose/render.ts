@@ -7,7 +7,7 @@ import type { CaptionFont } from './caption-font.ts';
 import { assName, joinArgs, joinList, sceneArgs, type Size } from './scene-args.ts';
 import type { PlannedScene } from './scene-plan.ts';
 
-// The render (plan 16 §16.7, ADR 0107, 23): one ffmpeg run per scene, in the work folder, then one that joins the
+// The render (plan 16 §16.8, ADR 0107, 23): one ffmpeg run per scene, in the work folder, then one that joins the
 // parts without encoding again. Answers the joined file.
 
 export type RenderPlan = { scenes: readonly PlannedScene[]; size: Size; font: CaptionFont | undefined; style: Omit<CaptionStyle, 'family' | 'width' | 'height'>; folder: string; ffmpeg: Program; signal: AbortSignal };

@@ -1,7 +1,7 @@
 import { framesPerSecond } from '../record/frame-writer.ts';
 import type { PlannedScene } from './scene-plan.ts';
 
-// ffmpeg's arguments for each scene's part and for the join (plan 16 §16.7, ADR 0107, 23). ffmpeg runs in the work
+// ffmpeg's arguments for each scene's part and for the join (plan 16 §16.8, ADR 0107, 23). ffmpeg runs in the work
 // folder, so a scene's ASS file and the fonts folder are named by their relative paths and no path is written into
 // the filter.
 

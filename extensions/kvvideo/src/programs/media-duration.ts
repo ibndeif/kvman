@@ -1,6 +1,6 @@
 import { lastLines, runProgram, type Program } from './run-program.ts';
 
-// A file's length, read with ffprobe (plan 16 §16.6 and §16.7).
+// A file's length, read with ffprobe (plan 16 §16.6 and §16.8).
 
 export type Duration = { ok: true; ms: number } | { ok: false; reason: string };
 

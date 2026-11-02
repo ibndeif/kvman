@@ -5,7 +5,7 @@ import { fontFamily } from '../fonts/font-family.ts';
 import { inputPath } from '../files/workspace-paths.ts';
 import { invalid } from '../problems.ts';
 
-// The captions' font (plan 16 §16.7, ADR 0107, 8 and 24): a bundled one by name, a .ttf or .otf of the workspace by
+// The captions' font (plan 16 §16.8, ADR 0107, 8 and 24): a bundled one by name, a .ttf or .otf of the workspace by
 // its own family, or, when none is named, IBM Plex Sans Arabic for captions with an Arabic letter and Poppins for
 // others.
 

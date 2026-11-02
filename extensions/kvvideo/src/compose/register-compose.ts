@@ -13,7 +13,7 @@ import { keepCopy } from './player-copies.ts';
 import { render } from './render.ts';
 import { audioExtensions, checkScene, imageExtensions, isImage, planScene, videoExtensions, type PlannedScene, type SceneFiles } from './scene-plan.ts';
 
-// `video compose` (plan 16 §16.7): every file is checked before ffmpeg runs; the render runs inside the call (ADR 0107,
+// `video compose` (plan 16 §16.8): every file is checked before ffmpeg runs; the render runs inside the call (ADR 0107,
 // 12); the video is placed at its path and copied for the chat's player.
 
 async function lengthOf(ffprobe: Program, file: string, scene: number, signal: AbortSignal): Promise<number> {
