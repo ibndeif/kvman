@@ -240,6 +240,7 @@
   "kvcoder.ask.text.check.description": "يطلب من المستخدم إجابة نصية حرة وينتظرها.",
   "kvcoder.ask.choice.check.description": "يطلب من المستخدم الاختيار من بين خيارات وينتظر الإجابة.",
   "kvcoder.ask.confirm.check.description": "يسأل المستخدم سؤال نعم أو لا وينتظر الإجابة.",
+  "kvcoder.ask.record.check.description": "يطلب من المستخدم تسجيل كل سطر بصوته، مع بيان طريقة نطقه، وينتظر التسجيلات.",
   "kvcoder.delegate.check.description": "يشغّل مساعدًا على مهمة؛ وعدة تشغيلات في رد واحد تعمل بالتوازي.",
   "kvcoder.delegate.continue.check.description": "يرسل متابعة إلى مساعد في هذه المحادثة أنهى عمله، مثل مساعد عاد متوقفًا أو بأسئلة: فيكمل بسجله نفسه.",
   "kvcoder.delegate.worker.check.description": "يتحقق من أن برنامج المساعد مثبت؛ والوكيل المساعد جاهز دائمًا.",

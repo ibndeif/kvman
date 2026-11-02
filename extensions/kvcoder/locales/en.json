@@ -240,6 +240,7 @@
   "kvcoder.ask.text.check.description": "Asks the person for a free answer and waits for it.",
   "kvcoder.ask.choice.check.description": "Asks the person to choose among options and waits for the answer.",
   "kvcoder.ask.confirm.check.description": "Asks the person yes or no and waits for the answer.",
+  "kvcoder.ask.record.check.description": "Asks the person to record each line in their own voice, shown how to say it, and waits for the takes.",
   "kvcoder.delegate.check.description": "Runs a worker on a task; several runs in one reply run in parallel.",
   "kvcoder.delegate.continue.check.description": "Sends a follow-up to a helper of this chat that has ended, such as one that came back blocked or with questions: it continues with its own history.",
   "kvcoder.delegate.worker.check.description": "Checks that a worker's program is installed; a subagent is always ready.",
