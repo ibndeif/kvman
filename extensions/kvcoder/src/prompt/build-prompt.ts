@@ -19,6 +19,8 @@ export type PromptInput = {
   decides?: boolean;
   /** The worker a subagent runs for: its instructions follow the sections (ADR 0021, 8). */
   worker?: { name: string; instructions: string; readOnly?: boolean };
+  /** Who a subagent is: its run's whole title (ADR 0116, 2). */
+  expert?: string;
   connectors: readonly { name: string; description: string; commands: readonly string[]; signatures?: readonly (string | undefined)[] }[];
 };
 
@@ -38,7 +40,7 @@ export const decideLine = 'The person asked you to decide in this chat: make eac
 function basePrompt(input: PromptInput): string {
   const shell = input.shell === 'bash' ? 'bash' : 'PowerShell';
   const identity = [
-    identityLine(input.role, `in the folder ${input.workspacePath} on ${systems[input.platform] ?? input.platform}`, input.profile?.identity),
+    identityLine(input.role, `in the folder ${input.workspacePath} on ${systems[input.platform] ?? input.platform}`, input.profile?.identity, input.expert),
     `Reply in ${languageName(input.language)} unless the person writes in another language.`,
     'Each message from the person starts with the date and time it was sent, in brackets; the newest one is the current time.',
   ].join('\n');

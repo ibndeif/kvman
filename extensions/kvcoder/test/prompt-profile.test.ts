@@ -20,7 +20,8 @@ describe("a preset's agent profile (08 §8.2, ADR 0082, 11)", { timeout: 30_000 
     for (const engineering of ['kvman Coder', '\nPlan.', 'execution-map', 'ready for production', 'add a short Commands section']) expect(lead, engineering).not.toContain(engineering);
     expect(toolResults(world.fake, 1)[0]).toMatch(/^error VALIDATION_FAILED: There is no connector execution-map/);
     const child = systemPrompt(world.helperFake, 0);
-    expect(child.startsWith(`${identity} You are doing one task that the lead agent gave you, in the folder `)).toBe(true);
+    // Superseded by QA76-H4: a product's identity, narrowed by the run's title (ADR 0116).
+    expect(child.startsWith(`${identity} Here you are the Helper, doing one task that the lead agent gave you, in the folder `)).toBe(true);
     expect(child).toContain('2. Do it. Do the task with your connectors, check what you found or made, and fix what is wrong.');
     expect(child).not.toContain('kvman Coder');
   });

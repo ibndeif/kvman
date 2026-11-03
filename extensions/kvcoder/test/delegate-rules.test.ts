@@ -75,7 +75,7 @@ describe("the rules of a worker's subagent (08 §8.5, ADR 0009, 102; ADR 0021)",
     await expect(kernel.exec('kvcoder.session.get', { sessionId: childId })).resolves.toMatchObject({ status: 'waiting' });
     await expect(kernel.exec('kvcoder.message.list', { sessionId: childId, limit: 10 })).resolves.toMatchObject({ omitted: 0 });
     await expect(kernel.exec('kvcoder.turn.list', { sessionId: childId, limit: 10 })).resolves.toHaveLength(1);
-    await expect(kernel.exec('kvcoder.prompt.get', { sessionId: childId })).resolves.toMatchObject({ prompt: expect.stringContaining('kvman Coder') as unknown });
+    await expect(kernel.exec('kvcoder.prompt.get', { sessionId: childId })).resolves.toMatchObject({ prompt: expect.stringContaining('You are the Helper, doing one task') as unknown });
   });
 
   it("QA6-E10 a child that wasn't given artifact can't use it, and its prompt has no artifact line", async () => {

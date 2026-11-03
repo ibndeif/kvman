@@ -24,7 +24,7 @@ const range = z.strictObject({
 export const delegateRunSchema = z
   .strictObject({
     worker: z.string().min(1).describe('The worker to hand the task to, by a name the system prompt lists.'),
-    title: z.string().min(1).max(200).describe("The role this run plays, in a few words, such as UI expert or Node.js expert: the person sees it as the helper's name. Keep it under 60 characters; a longer one is shortened."),
+    title: z.string().min(1).max(200).describe("Who the helper is: the expert this run needs, in a few words, such as UI expert or Node.js streams expert, never the task itself. The helper is told it is this expert, and the person sees it as the helper's name. Keep it under 60 characters; a longer one is shortened."),
     kind: z.enum(runKinds).describe('find: locate or explain code or facts; change: make one change in the files listed; check: run commands or tests and diagnose them; review: review a finished change. find and review only read; check also runs lines but changes no file.'),
     goal: sentence.describe('One sentence of what the run delivers.'),
     done: sentence.describe('One condition anyone can check that says the run is done.'),
@@ -82,5 +82,5 @@ export async function briefOf(ctx: Ctx, run: DelegateRun): Promise<{ task: strin
   if (run.files !== undefined) lines.push(`You may change only: ${run.files.join(', ')}`, "A shell line isn't limited to these files: change nothing else with it.");
   const context = await attached(ctx, run.context ?? []);
   const task = [lines.join('\n'), ...(context.length === 0 ? [] : [`## Context\n\n${context.join('\n\n')}`])].join('\n\n');
-  return { task, brief: { kind: run.kind, goal: run.goal, files, budget: run.maxSteps ?? budgetLimit } };
+  return { task, brief: { kind: run.kind, goal: run.goal, files, budget: run.maxSteps ?? budgetLimit, role: run.title } };
 }

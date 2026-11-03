@@ -26,8 +26,8 @@ describe("the lead's prompt (08 §8.2, ADR 0022, 2 to 4)", () => {
     expect(places.every((place) => place > 0)).toBe(true);
     expect(places).toEqual([...places].sort((first, second) => first - second));
     for (const gone of ['Size up the task first', '\nPlan. ', '\nConfirm the plan. ', 'These are the parts of a path']) expect(prompt, gone).not.toContain(gone);
-    // The method was 13,723 characters before ADR 0112; ADR 0113's rules keep it under that.
-    expect(workingMethod('lead').length).toBeLessThan(13_723);
+    // The method was 13,723 characters before ADR 0112; ADR 0113's rules kept it under that, and ADR 0116, 5 raised the bound.
+    expect(workingMethod('lead').length).toBeLessThan(13_900);
   });
 
   it('QA33-H3 the plan uses only what the agent has and names what runs together, and the request is understood past its words', () => {

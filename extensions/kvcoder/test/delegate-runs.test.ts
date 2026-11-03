@@ -30,7 +30,8 @@ describe('delegate runs (08 §8.5, ADR 0021; ADR 0108, 1)', { timeout: 30_000 },
     expect(toolResults(fake, 1)).toEqual(ids.map((id) => `started ${id}\n\n(helper ${id})`));
     const briefs = [0, 1].map((index) => textOf(requestMessages(helperFake, index).find((message) => message.role === 'user'))).sort();
     expect(briefs).toEqual(['Kind: find\nGoal: Task A\nDone when: It is looked at.', 'Kind: find\nGoal: Task B\nDone when: It is looked at.']);
-    expect(systemPrompt(helperFake, 0)).toContain('You are kvman Coder');
+    // Superseded by QA76-H1: a helper is the expert its run's title names (ADR 0116).
+    expect(systemPrompt(helperFake, 0)).toContain('You are the Helper, doing one task that the lead agent gave you');
     for (const id of ids) expect(await kernel.exec('kvcoder.session.get', { sessionId: id })).toMatchObject({ parentId: sessionId, model: 'helper/m1', thinking: 'medium', run: { kind: 'find', budget: 60 } });
     expect((await kernel.exec('kvcoder.session.list', { limit: 100 })).map((session) => session.id)).not.toContain(ids[0]);
     release();

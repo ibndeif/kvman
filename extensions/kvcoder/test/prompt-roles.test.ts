@@ -18,7 +18,8 @@ describe('the prompt of a chat and of its subagent (08 §8.2 and §8.5, ADR 0022
     expect(lead).not.toContain('that the lead agent gave you');
     expect(lead).toBe((await world.kernel.exec('kvcoder.prompt.get', { sessionId })).prompt);
     const child = systemPrompt(world.helperFake, 0);
-    expect(child).toContain('working on one task that the lead agent gave you');
+    // Superseded by QA76-H1: a helper is the expert its run's title names (ADR 0116).
+    expect(child).toContain('You are the Helper, doing one task that the lead agent gave you');
     expect(child).toContain('3. Return.');
     expect(child).not.toContain('the lead engineer on this work');
     expect(child).not.toContain('6. Finish.');

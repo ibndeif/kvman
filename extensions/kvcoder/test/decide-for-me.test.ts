@@ -54,7 +54,8 @@ describe('Decide for me (ADR 0092, 2)', { timeout: 30_000 }, () => {
     await world.kernel.exec('kvcoder.session.configure', { sessionId, decides: true });
     await delegated(world, sessionId, [runs(command('delegate', 'run', { worker: 'helper', title: 'Helper', kind: 'find', goal: 'Do it', done: 'It is done.' })), says('Started.'), says('ok')], [says('done')]);
     const helper = systemPrompt(world.helperFake, 0);
-    expect(helper).toContain('working on one task that the lead agent gave you');
+    // Superseded by QA76-H1: a helper is the expert its run's title names (ADR 0116).
+    expect(helper).toContain('You are the Helper, doing one task that the lead agent gave you');
     expect(helper).not.toContain(decideLine);
     expect(helper).not.toContain('\n- ask: ');
   });

@@ -76,6 +76,7 @@ export async function sessionTools(ctx: Ctx, session: Stored<SessionDoc>): Promi
     language: z.string().parse(language),
     sections: [...preferences, ...(await sectionsFor(ctx, current.id)), ...ruleSections(rules)],
     ...(current.worker === null ? {} : { worker: current.worker }),
+    ...(current.run?.role === undefined ? {} : { expert: current.run.role }),
     decides: current.decides,
     connectors: listed,
   });
