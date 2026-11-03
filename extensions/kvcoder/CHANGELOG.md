@@ -1,5 +1,14 @@
 # @kvman/kvcoder
 
+## 0.1.20
+
+### Patch Changes
+
+- 21a66ba: `ask record` asks the person to record lines in their own voice: a card shows each line with its stressed words, pauses, tone, pace, length, and an example, records with the microphone (or takes an uploaded file), and the answer writes the takes into the workspace and deletes the person's uploads (ADR 0115).
+- 7ae7412: A helper is told who it is: its `delegate run` title, the expert the run needs, is the first line of its system prompt, before a specialist worker's own instructions (ADR 0116).
+- 4fd9a8d: The `ask record` check's description has its English and Arabic text (ADR 0115).
+- 7a8de7e: A registered command with `images: true` can answer images that the model sees after the result's text (a model without images is told they weren't shown); the call card shows them as thumbnails. A running call shows its extension's newest progress, translated (ADR 0115).
+
 ## 0.1.19
 
 ### Patch Changes

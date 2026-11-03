@@ -1,5 +1,18 @@
 # @kvman/kvvideo
 
+## 0.1.1
+
+### Patch Changes
+
+- f6d9c21: A page recorded again for another size is checked as `record` checks one: its sidecar's page must be an HTML file inside the workspace, with no `goto` step, before a browser starts.
+- 81e609c: `video narrate` speaks sentence by sentence and joins them with 250 ms between them, with exact sentence starts; ElevenLabs's character times give each line and word its time, and it hears the neighbouring sentences. `tone` and `speed` direct the voice, `kvvideo.narration.pronunciations` changes how words are said, a cache makes an unchanged sentence free, and a sidecar beside the MP3 holds its captions (ADR 0115).
+- 3214385: `video compose` joins its scenes in a final pass: crossfades, cuts, fades through black, and slides; sound effects kvvideo makes itself (click, key taps, whoosh, pop); the mix levelled to −14 LUFS in two passes. A narration sits 300 ms into its scene. The `.srt`, a poster, and a sidecar go beside the video, the player shows the poster, and `extraSizes` makes other shapes, recording a page again at each; progress per scene and for the final pass (ADR 0115).
+- 9e14779: kvvideo makes any kind of video. `record` opens any website or an HTML page of the workspace, at 2× density, with an arrow pointer that appears on its first move, eased curved moves, a natural typing pace, smooth scrolling, a phone device with taps, steps that wait for a narration's caption line, each step's times and target box, a sidecar beside the recording, and progress for each step (ADR 0115).
+- 0c54071: The production guide: how a good video of any kind is made, and the steps from `video check` to `video review`; the connector's new description, and an example for each command (ADR 0115).
+- 7a8de7e: `video review` reports a video's silences, black and frozen pictures, and loudness, and makes labelled contact sheets of its frames that the agent sees through kvcoder; `check` also needs `drawtext` and `xstack` (ADR 0115).
+- eab46b0: `video compose` frames a recorded website in a window or a phone on a gradient, colour, or image background, zooms the camera smoothly to each click and typing (and an image slowly), lays callouts, highlights, and blurs on a recording, and burns captions in as boxed, outline, or word-by-word highlight, or none, from the narration's sidecar; 1920 × 1080 by default. `video brand` and `brand-set` keep the brand's logo, colours, and font. `check` asks for the filters these need (ADR 0115).
+- 21a66ba: `video voice` makes a narration from the person's own takes: each cleaned (rumble, noise, silence at both ends, level) or only converted, joined with 250 ms between them, with each take's captions and a sidecar (ADR 0115).
+
 ## 0.1.0
 
 ### Minor Changes
