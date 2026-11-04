@@ -20,6 +20,8 @@ type Point = 'kvcoder.session.created' | 'kvcoder.session.deleted' | 'kvcoder.se
 type Place = { global?: boolean; sessionId?: string };
 type JobRow = { id: string; kind: 'process' | 'subagent' | 'worker'; title: string; call: string; status: string; startedAt: string; endedAt?: string; exitCode?: number; staging?: { state: 'changed' | 'restored'; paths: number; headMoved: boolean }; links: string[] };
 type Send = { sessionId: string; text: string; fileIds?: string[] };
+type RewindState = 'restore' | 'delete' | 'changedSince' | 'tooLarge';
+type Rewound = { restored: string[]; deleted: string[]; left: { path: string; reason: 'changedSince' | 'tooLarge' }[] };
 type McpServer = { name: string; description: string; command: string; args: string[]; env: string[] } | { name: string; description: string; url: string; headers: string[] };
 type McpCheck = { status: 'ready'; tools: number } | { status: 'signInNeeded' } | { status: 'failed'; problem: { code: string; message: string; params?: Record<string, Json> } };
 
@@ -36,7 +38,7 @@ declare module '@kvman/sdk' {
     'kvcoder.mcp.sign-in.finish': { input: { state: string; code: string }; output: { name: string } };
     'kvcoder.session.export': { input: SessionId; output: { fileId: string } };
     'kvcoder.session.fork': { input: { sessionId: string; throughSeq?: number }; output: Session };
-    'kvcoder.message.send': { input: Send & { sendId?: string }; output: Empty };
+    'kvcoder.message.send': { input: Send & { attachments?: string[]; sendId?: string }; output: Empty };
     'kvcoder.message.inject': { input: Send; output: Empty };
     'kvcoder.note.add': { input: { sessionId: string; key: string; params?: Record<string, Json> }; output: Empty };
     'kvcoder.turn.retry': { input: SessionId; output: Empty };
@@ -60,6 +62,9 @@ declare module '@kvman/sdk' {
     'kvcoder.session.get': { input: SessionId; output: Session };
     'kvcoder.change.list': { input: { sessionId: string; withDiffs?: boolean; scope?: 'turn' | 'chat' }; output: { files: { path: string; added: number; removed: number; diff: string; state: 'changed' | 'created' | 'deleted' }[]; diffs: boolean } };
     'kvcoder.change.undo': { input: { sessionId: string; path: string }; output: Empty };
+    'kvcoder.rewind.files.list': { input: { sessionId: string; seq: number }; output: { files: { path: string; state: RewindState }[]; messages: number; running: boolean } };
+    'kvcoder.message.edit': { input: { sessionId: string; seq: number; text: string; fileIds?: string[]; attachments?: string[]; files: boolean; sendId?: string }; output: Rewound };
+    'kvcoder.message.undo': { input: { sessionId: string; files: boolean }; output: Rewound & { text: string; fileIds: string[]; fileNames: string[]; attachments: string[] } };
     'kvcoder.file.preview.get': { input: { path: string; edits: { oldText: string; newText: string; replaceAll?: boolean }[] } | { path: string; content: string }; output: { path: string; after: string } };
     'kvcoder.session.count': { input: { status?: Status; waitingOn?: 'person' }; output: { count: number } };
     'kvcoder.context.get': { input: { sessionId: string }; output: { tokens: number; window: number | null; compactAt: number; estimated: boolean } };

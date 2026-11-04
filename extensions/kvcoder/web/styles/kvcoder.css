@@ -206,7 +206,10 @@ a.kvc-button { text-decoration: none; color: inherit; }
 /* The confirmation of the `never` approval mode, under its control (ADR 0077, 4). */
 .kvc-confirm { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--kv-color-danger); border-radius: var(--kv-radius); }
 .kvc-preferences { inline-size: 100%; min-block-size: 6rem; resize: vertical; }
-.kvc-remember { display: block; margin-block-start: 4px; }
+.kvc-remember { display: inline; }
+.kvc-message-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-block-start: 4px; }
+.kvc-edit { display: flex; flex-direction: column; gap: 8px; inline-size: 100%; white-space: normal; }
+.kvc-edit textarea { font: inherit; inline-size: 100%; box-sizing: border-box; resize: vertical; }
 .kvc-fold-body { display: flex; flex-direction: column; gap: 6px; padding: 6px 8px 8px; border-block-start: 1px solid var(--kv-color-border); }
 .kvc-final { border-inline-start: 3px solid var(--kv-color-primary); padding-inline-start: 12px; }
 /* A step's headline reads as the agent's own line, a little quieter than its text (ADR 0102, 1). */

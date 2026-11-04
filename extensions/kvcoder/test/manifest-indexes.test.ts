@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { extensionManifestSchema } from '@kvman/sdk';
 
-// The field sets kvcoder filters its growing collections by (plan 08 §8.4, ADR 0088, 3).
+// The field sets kvcoder filters its growing collections by (plan 08 §8.4, ADR 0088, 3; ADR 0118, 3 and 5).
 const planned = {
   sessions: [['parentId'], ['parentId', 'status'], ['stepJobId'], ['status']],
   messages: [['sessionId'], ['sessionId', 'block'], ['sessionId', 'kind'], ['sessionId', 'turnId', 'kind']],
@@ -10,11 +10,12 @@ const planned = {
   queued: [['sessionId']],
   questions: [['sessionId']],
   maps: [['sessionId']],
-  'step-intents': [['sessionId', 'turnId']],
+  'step-intents': [['sessionId', 'turnId'], ['sessionId', 'jobId']],
   'answer-receipts': [['questionId']],
   'send-receipts': [['sendId']],
   'file-views': [['sessionId', 'path']],
   'file-backups': [['sessionId'], ['sessionId', 'path']],
+  'file-copies': [['sessionId']],
   'file-changes': [['sessionId'], ['sessionId', 'path']],
   'file-parts': [['sessionId', 'path'], ['sessionId', 'path', 'part']],
   artifacts: [['sessionId'], ['sessionId', 'artifactId']],

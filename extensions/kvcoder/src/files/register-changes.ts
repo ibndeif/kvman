@@ -4,9 +4,11 @@ import { z, type Ctx, type Stored } from '@kvman/sdk';
 import { invalid } from '../problems.ts';
 import type { FileChangeDoc, SessionDoc } from '../schemas/records.ts';
 import { findSession, userOnly } from '../sessions/session-lookup.ts';
+import { allDocs } from '../store/all-docs.ts';
 import { records } from '../store/collections.ts';
 import { copyDiff, gitIn, headDiff, type FileDiff, type FileState, type Git } from './change-diff.ts';
 import { undoChange } from './file-change.ts';
+import { byOrder, newestLive, type Copy } from './file-copies.ts';
 import { resolveInWorkspace } from './workspace-path.ts';
 
 // A chat's changes (plan 08 §8.6 and §8.7, ADR 0093, 2): the files its tree changed with `fs`, each diffed, and the
@@ -22,11 +24,22 @@ async function chatTree(ctx: Ctx, session: Stored<SessionDoc>): Promise<{ root: 
   return { root, sessions: [root, ...children.map((child) => child.id)] };
 }
 
-// The oldest copy the tree keeps of a file: its content before the chat changed it, `null` when the chat created it.
-async function oldestCopy(ctx: Ctx, sessions: readonly string[], real: string): Promise<{ previous: Buffer | null; sessionId: string } | undefined> {
-  const copies = (await Promise.all(sessions.map((sessionId) => records(ctx.store).fileBackups.find({ sessionId, path: real }, { limit: 1000 })))).flat();
-  const oldest = copies.sort((first, second) => first.createdAt.localeCompare(second.createdAt))[0];
-  return oldest === undefined ? undefined : { previous: oldest.previous === null ? null : Buffer.from(oldest.previous, 'base64'), sessionId: oldest.sessionId };
+// Every record the tree keeps of a file, oldest first.
+async function treeCopies(ctx: Ctx, sessions: readonly string[], real: string): Promise<Copy[]> {
+  const store = records(ctx.store);
+  return (await Promise.all(sessions.map((sessionId) => allDocs((options) => store.fileBackups.find({ sessionId, path: real }, options))))).flat().sort(byOrder);
+}
+
+// The file before the chat first changed it: its content, `null` when the chat created it, `undefined` when no copy
+// was kept (none, or over 1 MB).
+async function oldestCopy(ctx: Ctx, sessions: readonly string[], real: string): Promise<{ previous: Buffer | null } | undefined> {
+  const oldest = (await treeCopies(ctx, sessions, real))[0];
+  if (oldest === undefined || oldest.tooLarge) return undefined;
+  if (oldest.kept !== null) {
+    const kept = await records(ctx.store).fileCopies.get(oldest.kept);
+    return kept === undefined ? undefined : { previous: Buffer.from(kept.content, 'base64') };
+  }
+  return { previous: oldest.previous === null ? null : Buffer.from(oldest.previous, 'base64') };
 }
 
 const exists = (real: string): Promise<boolean> => stat(real).then(() => true, () => false);
@@ -79,9 +92,8 @@ export function registerChanges(ctx: Ctx): void {
       if (session.parentId !== null) throw invalid("A helper's chat is for reading; undo from its chat.", { sessionId });
       const tree = await chatTree(ctx, session);
       const real = await resolveInWorkspace(ctx.job.workspace.path, shown);
-      // The tree's newest change of the file, whichever session of the chat made it.
-      const copies = (await Promise.all(tree.sessions.map((id) => records(ctx.store).fileBackups.find({ sessionId: id, path: real }, { limit: 1, order: 'desc' })))).flat();
-      const newest = copies.sort((first, second) => second.createdAt.localeCompare(first.createdAt))[0];
+      // The tree's newest change of the file that may be undone, whichever session of the chat made it.
+      const newest = newestLive(await treeCopies(ctx, tree.sessions, real));
       await undoChange(ctx, { sessionId: newest?.sessionId ?? sessionId, shown, real });
       return {};
     },

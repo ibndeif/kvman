@@ -19,8 +19,8 @@ describe('records stored before the run tool (08 §8.3, ADR 0011, 12)', () => {
   it('QA39-E19, QA60-E4, and QA63-E4 a session stored before optIn connectors reads as none enabled, not deciding, and with no allowed hosts', () => {
     const usage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0 };
     const stored = { title: 'Old', autoTitle: false, status: 'idle', parentId: null, worker: null, model: 'fake/m1', thinking: 'off', stepJobId: null, turnId: null, endedTurns: 0, nextSeq: 0, usage, durationMs: 0, checks: null, connectors: null, createdAt: '2026-10-01T00:00:00.000Z', updatedAt: '2026-10-01T00:00:00.000Z' };
-    // QA60-E4: and before Decide for me, as off.
-    expect(sessionDocSchema.parse(stored)).toEqual({ ...stored, optedIn: [], stepGeneration: 0, stepIntentId: null, deleting: false, decides: false, clearedThroughSeq: null, collapsedThroughSeq: null, run: null, webHosts: [], usageBy: { summary: usage, title: usage, helpers: usage } });
+    // QA60-E4: and before Decide for me, as off; before ADR 0118, with no change counter and no `atSeq`.
+    expect(sessionDocSchema.parse(stored)).toEqual({ ...stored, optedIn: [], stepGeneration: 0, stepIntentId: null, deleting: false, decides: false, clearedThroughSeq: null, collapsedThroughSeq: null, run: null, webHosts: [], usageBy: { summary: usage, title: usage, helpers: usage }, changes: 0, atSeq: null });
   });
 
   it('QA71-E16 a session with no collapsed turns or kept rules, and a reply with no sent record, read as before', () => {

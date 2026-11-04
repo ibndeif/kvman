@@ -4,11 +4,13 @@ import { reactive } from 'vue';
 // they outlive the page's components. A draft is cleared only when its send is confirmed.
 
 export type Attachment = { id: string; name: string };
-export type Outgoing = { text: string; fileIds: string[] };
+/** `attachments` names files already saved under `attachments/`, as an undone message holds them (ADR 0118, 6). */
+export type Outgoing = { text: string; fileIds: string[]; attachments?: string[] };
 type Attempt = Outgoing & { sendId: string };
 export type MessageDraft = {
   text: string;
   files: Attachment[];
+  saved: string[];
   sending: boolean;
   error: unknown;
   attempt: Attempt | undefined;
@@ -23,12 +25,13 @@ const workspaces = new Map<string, Map<string, MessageDraft>>();
 export function messageDraft(workspaceId: string, sessionId?: string): MessageDraft {
   const drafts = workspaces.get(workspaceId) ?? new Map<string, MessageDraft>();
   workspaces.set(workspaceId, drafts);
-  const found = drafts.get(sessionId ?? newChat) ?? reactive<MessageDraft>({ text: '', files: [], sending: false, error: undefined, attempt: undefined, createdChat: undefined });
+  const found = drafts.get(sessionId ?? newChat) ?? reactive<MessageDraft>({ text: '', files: [], saved: [], sending: false, error: undefined, attempt: undefined, createdChat: undefined });
   drafts.set(sessionId ?? newChat, found);
   return found;
 }
 
-const sameMessage = (attempt: Attempt, message: Outgoing): boolean => attempt.text === message.text && attempt.fileIds.length === message.fileIds.length && attempt.fileIds.every((id, index) => id === message.fileIds[index]);
+const sameList = (first: readonly string[], second: readonly string[]): boolean => first.length === second.length && first.every((item, index) => item === second[index]);
+const sameMessage = (attempt: Attempt, message: Outgoing): boolean => attempt.text === message.text && sameList(attempt.fileIds, message.fileIds) && sameList(attempt.attachments ?? [], message.attachments ?? []);
 
 /** Sends the draft's message once: a repeat of the same message keeps its `sendId`. Says whether it was confirmed. */
 export async function sendDraft(draft: MessageDraft, message: Outgoing, send: (sendId: string) => Promise<void>): Promise<boolean> {
@@ -41,6 +44,6 @@ export async function sendDraft(draft: MessageDraft, message: Outgoing, send: (s
     Object.assign(draft, { sending: false, error });
     return false;
   }
-  Object.assign(draft, { text: '', files: [], sending: false, attempt: undefined, createdChat: undefined });
+  Object.assign(draft, { text: '', files: [], saved: [], sending: false, attempt: undefined, createdChat: undefined });
   return true;
 }

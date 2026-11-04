@@ -1,5 +1,5 @@
 import type { Store, Transaction } from '@kvman/sdk';
-import { answerReceiptDocSchema, artifactDocSchema, backgroundDocSchema, fileBackupDocSchema, fileChangeDocSchema, filePartDocSchema, fileViewDocSchema, messageDocSchema, processDocSchema, questionDocSchema, queuedDocSchema, runDocSchema, sendReceiptDocSchema, sessionDocSchema, stepIntentDocSchema, turnDocSchema } from '../schemas/records.ts';
+import { answerReceiptDocSchema, artifactDocSchema, backgroundDocSchema, fileBackupDocSchema, fileChangeDocSchema, fileCopyDocSchema, filePartDocSchema, fileViewDocSchema, messageDocSchema, processDocSchema, questionDocSchema, queuedDocSchema, runDocSchema, sendReceiptDocSchema, sessionDocSchema, stepIntentDocSchema, turnDocSchema } from '../schemas/records.ts';
 import { mapDocSchema } from '../maps/map-schema.ts';
 import { signInDocSchema } from '../mcp/sign-in-record.ts';
 import { readEndingDocSchema } from '../schemas/read-ending.ts';
@@ -23,6 +23,7 @@ export function records(store: Store) {
     sendReceipts: store.collection('send-receipts', sendReceiptDocSchema),
     fileViews: store.collection('file-views', fileViewDocSchema),
     fileBackups: store.collection('file-backups', fileBackupDocSchema),
+    fileCopies: store.collection('file-copies', fileCopyDocSchema),
     fileChanges: store.collection('file-changes', fileChangeDocSchema),
     fileParts: store.collection('file-parts', filePartDocSchema),
     artifacts: store.collection('artifacts', artifactDocSchema),
@@ -55,6 +56,7 @@ export function txRecords(tx: Transaction) {
     sendReceipts: tx.collection('send-receipts', sendReceiptDocSchema),
     fileViews: tx.collection('file-views', fileViewDocSchema),
     fileBackups: tx.collection('file-backups', fileBackupDocSchema),
+    fileCopies: tx.collection('file-copies', fileCopyDocSchema),
     fileChanges: tx.collection('file-changes', fileChangeDocSchema),
     fileParts: tx.collection('file-parts', filePartDocSchema),
     artifacts: tx.collection('artifacts', artifactDocSchema),

@@ -23,6 +23,7 @@ import { registerNotifyWatch } from './jobs/notify-watch.ts';
 import { registerConnectionResume } from './turns/connection-wait.ts';
 import { registerMcp } from './mcp/register-mcp.ts';
 import { registerMessages } from './messages/register-messages.ts';
+import { registerRewind } from './rewind/register-rewind.ts';
 import { registerPrompt } from './prompt/register-prompt.ts';
 import { clearConnectors, registerConnectors } from './registry/register-connectors.ts';
 import { registerSections } from './registry/register-sections.ts';
@@ -55,6 +56,7 @@ export default (ctx: Ctx): void => {
   registerBinaryConnector(ctx);
   registerFsConnector(ctx);
   registerChanges(ctx);
+  registerRewind(ctx);
   registerFilePreview(ctx);
   registerArtifactConnector(ctx);
   registerExecutionMapConnector(ctx);

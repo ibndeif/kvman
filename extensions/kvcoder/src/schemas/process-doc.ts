@@ -17,6 +17,9 @@ export const processDocSchema = z.object({
   starting: z.boolean().exactOptional(),
   /** Started with `notify: true`: its watcher, not the exit handler, reports its end (ADR 0108, 16). */
   notify: z.boolean().exactOptional(),
+  /** The chat's `nextSeq` when it started, and, once a rewind went back past that, `quiet`: its end is never told (ADR 0118, 1). */
+  atSeq: z.number().int().nonnegative().exactOptional(),
+  quiet: z.boolean().exactOptional(),
 });
 
 

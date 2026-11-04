@@ -13,7 +13,7 @@ import { recoverSession, recoverWorkspace } from '../turns/recover-workspace.ts'
 import { heldText } from '../turns/resolve.ts';
 import { beginTurn, dispatchStep, openTurn } from '../turns/start-turn.ts';
 import { prepareStep } from '../turns/step-intents.ts';
-import { saveAttachments, withAttachments } from './attachments.ts';
+import { saveAttachments, savedAttachments, withAttachments } from './attachments.ts';
 import { acknowledged, sentBy } from './send-receipt.ts';
 
 // A message from the person or an extension (plan 08 §8.1): on an idle session it starts a turn; on a running one it
@@ -30,15 +30,16 @@ export async function sortedFiles(ctx: Ctx, session: Stored<SessionDoc>, fileIds
   return { images, others: files.filter((file) => !imageTypes.has(file.type)) };
 }
 
-export type Incoming = { text: string; fileIds: readonly string[]; source: Source; mayStart: boolean; sendId?: string | undefined };
+export type Incoming = { text: string; fileIds: readonly string[]; attachments?: readonly string[] | undefined; source: Source; mayStart: boolean; sendId?: string | undefined };
 
 export async function receiveMessage(ctx: Ctx, session: Stored<SessionDoc>, incoming: Incoming, recover = false): Promise<void> {
-  const sent = incoming.sendId === undefined ? undefined : sentBy(incoming.sendId, session.id, incoming.text, incoming.fileIds);
+  const sent = incoming.sendId === undefined ? undefined : sentBy(incoming.sendId, session.id, incoming.text, incoming.fileIds, incoming.attachments);
   // Before any file work: an accepted send has already moved its uploads into the workspace (ADR 0048, 4).
   if (sent !== undefined && acknowledged((await records(ctx.store).sendReceipts.find({ sendId: sent.sendId }, { limit: 1 }))[0], sent)) return;
   await reportInterrupted(ctx, session.id);
   const { images, others } = await sortedFiles(ctx, session, incoming.fileIds);
-  const text = withAttachments(incoming.text, await saveAttachments(ctx, others));
+  const named = await savedAttachments(ctx, incoming.attachments ?? []);
+  const text = withAttachments(incoming.text, [...(await saveAttachments(ctx, others)), ...named]);
   const files = images.length === 0 ? { fileIds: null, fileNames: null } : { fileIds: images.map((file) => file.id), fileNames: images.map((file) => file.name) };
   if (recover) await recoverWorkspace(ctx, session.id);
   // What still runs is told with the person's message, and stored with it so what is sent never changes (ADR 0068, 4).

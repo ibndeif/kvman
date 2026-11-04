@@ -184,6 +184,12 @@ export function extensionCardOf(message: Message): ExtensionCard | undefined {
 // The files a person's message names at its end are stored under an English line for the model (ADR 0018, 4).
 const attachedFiles = /\n\nAttached files:\n((?:- .+\n?)+)$/;
 
+/** The saved files a person's message names at its end (ADR 0118, 7). */
+export function attachedOf(text: string): string[] {
+  const named = attachedFiles.exec(text)?.[1] ?? '';
+  return named.split('\n').filter((line) => line.startsWith('- ')).map((line) => line.slice(2));
+}
+
 /** A person's message as the page shows it: the line above its attached files is in the page's language (ADR 0035, 2). */
 export function shownUserText(text: string, label: string): string {
   return text.replace(attachedFiles, (_whole, files: string) => `\n\n${label}\n${files}`);

@@ -126,6 +126,10 @@
         [
           "sessionId",
           "turnId"
+        ],
+        [
+          "sessionId",
+          "jobId"
         ]
       ],
       "answer-receipts": [
@@ -224,6 +228,11 @@
         ],
         [
           "workspaceId"
+        ]
+      ],
+      "file-copies": [
+        [
+          "sessionId"
         ]
       ]
     }

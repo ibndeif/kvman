@@ -1,3 +1,4 @@
+import { chatSeqInTx } from '../rewind/chat-mark.ts';
 import type { Ctx, Stored } from '@kvman/sdk';
 import { firePoint } from '../registry/session-points.ts';
 import type { SessionDoc } from '../schemas/records.ts';
@@ -8,7 +9,7 @@ import { preparedStep, prepareStep, publishStep, type StepIdentity } from './ste
 
 /** Opens a turn and prepares its first intent in the same transaction (ADR0041). */
 export function openTurn(tx: TxRecords, session: Stored<SessionDoc>): string {
-  const turn = tx.turns.insert({ sessionId: session.id, startedAt: now(), endedAt: null, durationMs: 0, steps: 0, lost: 0, incomplete: 0, usage: noUsage(), outcome: null, calls: [], pending: [], results: [], deferredCalls: [], connectionWaits: 0 });
+  const turn = tx.turns.insert({ sessionId: session.id, startedAt: now(), endedAt: null, durationMs: 0, steps: 0, lost: 0, incomplete: 0, usage: noUsage(), outcome: null, calls: [], pending: [], results: [], deferredCalls: [], connectionWaits: 0, atSeq: chatSeqInTx(tx, session.id) });
   tx.sessions.update(session.id, { status: 'running', turnId: turn.id, stepJobId: null, updatedAt: now() });
   prepareStep(tx, session.id, turn.id);
   return turn.id;

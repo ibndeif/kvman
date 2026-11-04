@@ -4,6 +4,7 @@ import { changedSteps, mapProgress, plannedSteps, shapeProblem, unknownStep } fr
 import { mapStatuses, mapStepSchema, type MapDoc } from '../maps/map-schema.ts';
 import { invalid, notFound, tooLarge } from '../problems.ts';
 import { kebab } from '../schemas/registry.ts';
+import { chatSeqInTx } from '../rewind/chat-mark.ts';
 import { findSession, now } from '../sessions/session-lookup.ts';
 import { txRecords, type TxRecords } from '../store/collections.ts';
 import { callInput, type ConnectorCommand } from './connector-command.ts';
@@ -118,7 +119,7 @@ export function registerExecutionMapConnector(ctx: Ctx): void {
         const same = found !== undefined && found.goal === payload.goal;
         const steps = plannedSteps(planned, same ? found.steps : []);
         const stamp = now();
-        if (found === undefined) return mapProgress(store.maps.insert({ sessionId: chatId, goal: payload.goal, steps, notes: [], version: 1, createdAt: stamp, updatedAt: stamp }));
+        if (found === undefined) return mapProgress(store.maps.insert({ sessionId: chatId, goal: payload.goal, steps, notes: [], version: 1, atSeq: chatSeqInTx(store, chatId), createdAt: stamp, updatedAt: stamp }));
         return mapProgress(saved(store, found, same ? { goal: payload.goal, steps } : { goal: payload.goal, steps, notes: [] }));
       });
     },

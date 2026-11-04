@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { Info, NotebookText, ScrollText } from '@lucide/vue';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import type { Message } from '../../src/index.ts';
 import { failureReason, fields, isolateValue, problemKey, stringValues, useKvman } from './kvman.ts';
 import { answeredQuestion, artifactOf, extensionCardOf, resultImagesOf, isBackground, isKvcoderHint, exitedOnly, resultCard, shownUserText, stagingRunOf, textOf, thinkingOf, typedText } from './message-parts.ts';
 import RememberThis from './RememberThis.vue';
+import MessageEdit from './MessageEdit.vue';
+import UndoConfirm from './UndoConfirm.vue';
+import type { Undone } from './rewind-parts.ts';
+import type { Left } from './use-rewind.ts';
 import AnsweredCard from './AnsweredCard.vue';
 import BackgroundLine from './BackgroundLine.vue';
 import ArtifactCard from './ArtifactCard.vue';
@@ -15,8 +19,11 @@ import type { FinishedRun } from './use-finished-runs.ts';
 
 // One stored message (plan 08 §8.7): the person's text and images, an answer in Markdown with its thinking folded, a
 // tool result's card (an answered question shows its answer), kvcoder's notices and other extensions' notes translated, a summary, and background results as quiet lines.
-const props = defineProps<{ message: Message; calls: ReadonlyMap<string, CallView>; finishedRuns?: ReadonlyMap<string, FinishedRun> | undefined; final?: boolean | undefined }>();
-const emit = defineEmits<{ openArtifact: [id: string] }>();
+// Edit and Undo rewind the chat from a person's message (ADR 0118, 7); `rewind` is left out in a helper's chat.
+const props = defineProps<{ message: Message; calls: ReadonlyMap<string, CallView>; finishedRuns?: ReadonlyMap<string, FinishedRun> | undefined; final?: boolean | undefined; rewind?: { edit: boolean; undo: boolean } | undefined }>();
+const emit = defineEmits<{ openArtifact: [id: string]; rewound: [left: Left, undone?: Undone] }>();
+const rewinding = ref<'edit' | 'undo'>();
+const remembered = computed(() => props.message.source?.kind === 'user' && typedText(text.value).trim() !== '');
 const kvman = useKvman();
 const text = computed(() => textOf(props.message.content['content']));
 const thinking = computed(() => thinkingOf(props.message));
@@ -52,13 +59,19 @@ const markdown = (body: string) => ({ type: 'markdown' as const, text: 'kvcoder.
       <div class="kvc-card-body kvc-muted">{{ text }}</div>
     </details>
   </div>
+  <MessageEdit v-else-if="props.message.kind === 'user' && rewinding === 'edit'" :message="props.message" @cancel="rewinding = undefined" @done="(left) => { rewinding = undefined; emit('rewound', left); }" />
   <div v-else-if="props.message.kind === 'user'" dir="auto" class="kvc-user" :class="{ 'kvc-queued': props.message.queued }" data-test="user-message">
     <span>{{ shownUserText(text, kvman.t('kvcoder.ui.attachedFiles')) }}</span>
     <span v-if="props.message.fileIds" style="display: flex; gap: 6px; margin-block-start: 6px">
       <img v-for="fileId in props.message.fileIds" :key="fileId" :src="imageUrl(fileId)" :alt="kvman.t('kvcoder.ui.attachment')" style="block-size: 48px; border-radius: 6px" />
     </span>
     <span v-if="props.message.queued" class="kvc-muted" style="display: block" data-test="queued">{{ kvman.t('kvcoder.ui.queued') }}</span>
-    <RememberThis v-else-if="props.message.source?.kind === 'user' && typedText(text).trim() !== ''" :text="typedText(text).trim()" />
+    <UndoConfirm v-else-if="rewinding === 'undo'" :message="props.message" @cancel="rewinding = undefined" @done="(undone, left) => { rewinding = undefined; emit('rewound', left, undone); }" />
+    <span v-else-if="props.rewind?.edit || props.rewind?.undo || remembered" class="kvc-message-actions">
+      <button v-if="props.rewind?.edit" type="button" class="kvc-text-button kvc-muted" data-test="message-edit-button" @click="rewinding = 'edit'">{{ kvman.t('kvcoder.ui.rewind.edit') }}</button>
+      <button v-if="props.rewind?.undo" type="button" class="kvc-text-button kvc-muted" data-test="message-undo-button" @click="rewinding = 'undo'">{{ kvman.t('kvcoder.ui.rewind.undo') }}</button>
+      <RememberThis v-if="remembered" :text="typedText(text).trim()" />
+    </span>
   </div>
   <div v-else-if="props.message.kind === 'assistant' && (thinking !== '' || text !== '')" class="kvc-answer" :class="{ 'kvc-final': props.final === true && text !== '' }" :data-final="props.final === true && text !== '' ? 'true' : undefined" data-test="assistant-message">
     <details v-if="thinking !== ''" data-test="thinking"><summary class="kvc-muted">{{ kvman.t('kvcoder.ui.thought') }}</summary><p class="kvc-muted" style="white-space: pre-wrap">{{ thinking }}</p></details>

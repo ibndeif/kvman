@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { savedName } from './rewind-parts.ts';
 import { ArrowUp, Paperclip, Square, X } from '@lucide/vue';
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { clipboardImages } from './clipboard-images.ts';
@@ -18,7 +19,7 @@ import { matchingCommands, typedCommand, type ListedSlash, type RegisteredSlash,
 // Stop shows for a `stoppable` turn, reads "Stopping…" while `stopping`, and a failed stop says so too (ADR 0049, 3).
 // In the empty box, Esc presses Stop and Up brings back `lastSent`, the person's last message (ADR 0090, 6).
 const props = defineProps<{ sessionId?: string | undefined; lastSent?: string | undefined; stoppable: boolean; stopping?: boolean | undefined; stopError?: unknown; placeholder: string; blocked?: boolean | undefined; commands?: 'run' | 'wait' | undefined; registered?: readonly RegisteredSlash[] | undefined }>();
-const emit = defineEmits<{ send: [message: { text: string; fileIds: string[] }]; stop: []; command: [name: SlashName, argument: string]; registered: [command: RegisteredSlash, argument: string] }>();
+const emit = defineEmits<{ send: [message: { text: string; fileIds: string[]; attachments: string[] }]; stop: []; command: [name: SlashName, argument: string]; registered: [command: RegisteredSlash, argument: string] }>();
 const kvman = useKvman();
 const draft = computed(() => messageDraft(kvman.workspace.value.id, props.sessionId));
 const picker = ref<HTMLInputElement | null>(null);
@@ -108,7 +109,7 @@ function send(): void {
   if (typed.value !== undefined) return runCommand();
   const body = draft.value.text.trim();
   if (body === '' || uploading.value || props.blocked === true || draft.value.sending) return;
-  emit('send', { text: body, fileIds: draft.value.files.map((file) => file.id) });
+  emit('send', { text: body, fileIds: draft.value.files.map((file) => file.id), attachments: [...draft.value.saved] });
 }
 
 function move(step: number): void {
@@ -166,8 +167,9 @@ function onKey(event: KeyboardEvent): void {
       </div>
       <p v-if="draft.error !== undefined" class="kvc-muted" style="margin: 0" role="alert" data-test="send-error">{{ kvman.t('kvcoder.ui.sendFailed', { error: problemText(kvman.t, draft.error) }) }}</p>
       <p v-if="props.stopError !== undefined" class="kvc-muted" style="margin: 0" role="alert" data-test="stop-error">{{ kvman.t('kvcoder.ui.stopFailed', { error: problemText(kvman.t, props.stopError) }) }}</p>
-      <div v-if="draft.files.length > 0" style="display: flex; gap: 6px; flex-wrap: wrap">
+      <div v-if="draft.files.length > 0 || draft.saved.length > 0" style="display: flex; gap: 6px; flex-wrap: wrap">
         <span v-for="file in draft.files" :key="file.id" class="kvc-chip" data-test="attachment">{{ file.name }}<button type="button" class="kvc-ghost kvc-button kvc-chip-remove" :aria-label="kvman.t('kvcoder.ui.removeAttachment')" :disabled="draft.sending" @click="draft.files = draft.files.filter((kept) => kept.id !== file.id)"><X :size="12" /></button></span>
+        <span v-for="saved in draft.saved" :key="saved" class="kvc-chip" :title="saved" data-test="saved-attachment">{{ savedName(saved) }}<button type="button" class="kvc-ghost kvc-button kvc-chip-remove" :aria-label="kvman.t('kvcoder.ui.removeAttachment')" :disabled="draft.sending" @click="draft.saved = draft.saved.filter((kept) => kept !== saved)"><X :size="12" /></button></span>
       </div>
       <textarea ref="textBox" v-model="draft.text" :disabled="draft.sending" :aria-busy="draft.sending" :placeholder="props.placeholder" :aria-label="props.placeholder" rows="2" data-test="composer-text" @keydown="onKey" @paste="pasted" />
       <div class="kvc-composer-row">

@@ -42,18 +42,19 @@ describe("a chat takes back its own change (KVC-13, ADR 0053)", { timeout: 60_00
     expect(readFileSync(inHome(kernel, 'a.txt'), 'utf8')).toBe('the person changed it');
   });
 
-  it('M2.4-E161 a chat keeps its newest 20 copies', async () => {
+  // ADR 0118, 3: every copy is kept for the chat's life, so undo walks back past 20.
+  it('M2.4-E161 a chat keeps every copy, past 20', async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
     const versions = Array.from({ length: 22 }, (_, index) => `v${index}`);
     fake.reply(runs(...versions.map((content) => write('a.txt', content))), runs(...Array.from({ length: 21 }, () => undo('a.txt'))), says('done'));
     await send(kernel, sessionId);
     const undone = toolResults(fake, 2).slice(-21);
-    expect(undone.slice(0, 20).every((result) => result.includes('"removed":false'))).toBe(true);
-    expect(undone[20]).toMatch(/^error NOT_FOUND:/);
-    expect(readFileSync(inHome(kernel, 'a.txt'), 'utf8')).toBe('v1');
+    expect(undone.every((result) => result.includes('"removed":false'))).toBe(true);
+    expect(readFileSync(inHome(kernel, 'a.txt'), 'utf8')).toBe('v0');
   });
 
+  // ADR 0118, 3: the change keeps a record with no content, and undo says why it can't take it back.
   it('M2.4-E161 a previous content over 1 MB saves no copy, and the change still happens', async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
@@ -61,6 +62,6 @@ describe("a chat takes back its own change (KVC-13, ADR 0053)", { timeout: 60_00
     fake.reply(runs(fsCall('read', { path: 'big.txt' })), runs(write('big.txt', 'small')), runs(undo('big.txt')), says('done'));
     await send(kernel, sessionId);
     expect(readFileSync(inHome(kernel, 'big.txt'), 'utf8')).toBe('small');
-    expect(toolResults(fake).at(-1)).toMatch(/^error NOT_FOUND: This chat has no change of big\.txt to undo\./);
+    expect(toolResults(fake).at(-1)).toMatch(/^error VALIDATION_FAILED: big\.txt was over 1 MB before that change, so no copy was kept to undo it\./);
   });
 });

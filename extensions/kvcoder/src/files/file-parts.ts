@@ -2,6 +2,7 @@ import type { Ctx } from '@kvman/sdk';
 import { invalid, notFound, tooLarge } from '../problems.ts';
 import { now } from '../sessions/session-lookup.ts';
 import { txRecords, type TxRecords } from '../store/collections.ts';
+import { chatSeqInTx } from '../rewind/chat-mark.ts';
 import { changeFile, type ChangedFile } from './file-change.ts';
 
 // A long file written in numbered pieces (ADR 0054, 2 and 3): each piece is held in kvman's store, a number sent again
@@ -18,8 +19,9 @@ export function savePart(ctx: Ctx, file: ChangedFile, part: number, content: str
   return ctx.store.transaction((tx) => {
     const store = txRecords(tx);
     const [same] = store.fileParts.find({ sessionId: file.sessionId, path: file.real, part }, { limit: 1 });
-    if (same === undefined) store.fileParts.insert({ sessionId: file.sessionId, path: file.real, part, content, updatedAt: now() });
-    else store.fileParts.update(same.id, { content, updatedAt: now() });
+    const atSeq = chatSeqInTx(store, file.sessionId);
+    if (same === undefined) store.fileParts.insert({ sessionId: file.sessionId, path: file.real, part, content, atSeq, updatedAt: now() });
+    else store.fileParts.update(same.id, { content, atSeq, updatedAt: now() });
     const parts = held(store, file);
     return { path: file.shown, part, parts: parts.map((saved) => saved.part), bytes: parts.reduce((total, saved) => total + Buffer.byteLength(saved.content), 0) };
   });

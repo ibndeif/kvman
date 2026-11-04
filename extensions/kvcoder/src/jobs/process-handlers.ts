@@ -39,8 +39,11 @@ export function registerProcessHandlers(ctx: Ctx): void {
       const id = processId(name);
       if (extension !== ownerName || id === undefined) return;
       const ended = await markEnd(ctx, id, { end: 'exited', exitCode, signal, reported: true });
-      // A notify line's watcher reports its end, so that the end may start a turn (ADR 0108, 16).
-      if (ended !== undefined && ended.notify !== true && exitIsReported(ended)) await reportEnd(ctx, ended, await deleteEndedArtifacts(ctx, ended));
+      // A notify line's watcher reports its end, so that the end may start a turn (ADR 0108, 16); a quiet one's is never
+      // told, though what it served still goes (ADR 0118, 1).
+      if (ended === undefined || ended.notify === true || !exitIsReported(ended)) return;
+      const deleted = await deleteEndedArtifacts(ctx, ended);
+      if (ended.quiet !== true) await reportEnd(ctx, ended, deleted);
     },
   });
   // The records live in the global store, so a deleted workspace's go here (ADR 0061, 4).

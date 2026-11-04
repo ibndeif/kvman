@@ -27,6 +27,8 @@ export type Conversation = {
   /** Returns to the newest window, after earlier pages were loaded. */
   showLatest(): Promise<void>;
   refresh(ran?: readonly LiveCall[]): Promise<void>;
+  /** Reads the chat whole again, after a rewind removed messages (ADR 0118, 7). */
+  reloadAll(): Promise<void>;
   stream(jobId: string, ran?: readonly LiveCall[]): Promise<void>;
 };
 
@@ -164,6 +166,7 @@ export function useConversation(kvman: Kvman, sessionId: () => string | undefine
   }
 
   async function refresh(ran: readonly LiveCall[] = []): Promise<void> { await reload(ran); }
+  async function reloadAll(): Promise<void> { listed = undefined; await reload(); }
   async function stream(jobId: string, ran: readonly LiveCall[] = []): Promise<void> { await reload(ran, jobId); }
 
   const timer = setInterval(() => {
@@ -180,5 +183,5 @@ export function useConversation(kvman: Kvman, sessionId: () => string | undefine
     const expected = scope;
     if (expected !== undefined) refresh().catch(error => { if (current(expected)) failed(error); });
   }, { immediate: true, flush: 'sync' });
-  return { session, messages, omitted, turns, context, loadFailure, live, streaming, children, helpers, showEarlier, showLatest, refresh, stream };
+  return { session, messages, omitted, turns, context, loadFailure, live, streaming, children, helpers, showEarlier, showLatest, refresh, reloadAll, stream };
 }

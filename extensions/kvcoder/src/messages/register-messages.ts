@@ -15,13 +15,13 @@ const sendSchema = z.object({ sessionId: z.string(), text: z.string().min(1), fi
 export function registerMessages(ctx: Ctx): void {
   ctx.registerCommand('kvcoder.message.send', {
     description: "Sends the person's message: it starts a turn, steers the running one, or answers a waiting one. A repeat with the same sendId is acknowledged and adds nothing.",
-    input: sendSchema.extend({ sendId: z.string().min(1).max(100).exactOptional() }),
+    input: sendSchema.extend({ attachments: z.array(z.string().min(1)).exactOptional(), sendId: z.string().min(1).max(100).exactOptional() }),
     output: z.object({}),
     public: true,
     retries: 0,
-    handle: async ({ sessionId, text, fileIds, sendId }) => {
+    handle: async ({ sessionId, text, fileIds, attachments, sendId }) => {
       userOnly(ctx, 'kvcoder.message.send');
-      await receiveMessage(ctx, await ownSession(ctx, sessionId), { text, fileIds: fileIds ?? [], source: { kind: 'user' }, mayStart: true, sendId }, true);
+      await receiveMessage(ctx, await ownSession(ctx, sessionId), { text, fileIds: fileIds ?? [], attachments, source: { kind: 'user' }, mayStart: true, sendId }, true);
       return {};
     },
   });

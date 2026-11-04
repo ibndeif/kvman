@@ -1,3 +1,4 @@
+import { chatSeqInTx } from '../rewind/chat-mark.ts';
 import { z, type Ctx, type Stored } from '@kvman/sdk';
 import { availableWorker, workerCheckName, type SubagentWorker, type Worker } from '../delegate/workers.ts';
 import { firePoint } from '../registry/session-points.ts';
@@ -116,6 +117,8 @@ export async function createChild(ctx: Ctx, parent: Stored<SessionDoc>, worker: 
       checks: canonical.checks === null ? null : canonical.checks.filter((check) => !check.name.startsWith(workerCheckName(''))),
       connectors: worker.connectors,
       optedIn: [],
+      changes: 0,
+      atSeq: chatSeqInTx(store, canonical.id),
       // A helper keeps its parent's rule files (ADR 0108, 6).
       ...(canonical.rules === undefined ? {} : { rules: canonical.rules }),
       createdAt: stamp,

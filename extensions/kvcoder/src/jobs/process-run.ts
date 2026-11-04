@@ -2,6 +2,7 @@ import { ProblemError, type Ctx, type Stored } from '@kvman/sdk';
 import { delay } from '../delay.ts';
 import { plainEnvironment } from '../result-text.ts';
 import type { ShellCommand } from '../calls/shell-command.ts';
+import { chatSeqInTx } from '../rewind/chat-mark.ts';
 import { now } from '../sessions/session-lookup.ts';
 import { records, txRecords } from '../store/collections.ts';
 import { markEnd, processName } from './process-records.ts';
@@ -31,7 +32,10 @@ export function startedOutcome(doc: Pick<ProcessDoc, 'end' | 'exitCode' | 'signa
 /** Starts `line` in the real shell for a session, titled by the line (ADR 0089, 1); a line that can't start fails `VALIDATION_FAILED` and leaves no record. */
 export async function startProcess(ctx: Ctx, sessionId: string, shell: ShellCommand, line: string, notify = false): Promise<StartedProcess> {
   const store = records(ctx.store);
-  const doc = await store.processes.insert({ workspaceId: ctx.job.workspace.id, sessionId, title: line, call: line, startedAt: now(), reported: false, starting: true, ...(notify ? { notify: true } : {}) });
+  const doc = await ctx.store.transaction((tx) => {
+    const atSeq = chatSeqInTx(txRecords(tx), sessionId);
+    return txRecords(tx).processes.insert({ workspaceId: ctx.job.workspace.id, sessionId, title: line, call: line, startedAt: now(), reported: false, starting: true, ...(notify ? { notify: true } : {}), ...(atSeq === null ? {} : { atSeq }) });
+  });
   try {
     await ctx.processes.start(processName(doc.id), { command: shell.program, args: shell.args(line), env: plainEnvironment(process.env) });
   } catch (error) {
@@ -68,7 +72,7 @@ export async function stopProcess(ctx: Ctx, doc: Stored<ProcessDoc>, by: 'agent'
     if (!(error instanceof ProblemError) || error.problem.code !== 'NOT_FOUND') throw error;
   }
   const deletedArtifacts = restarting ? [] : await deleteEndedArtifacts(ctx, ended);
-  if (by === 'person') await reportEnd(ctx, ended, deletedArtifacts);
+  if (by === 'person' && ended.quiet !== true) await reportEnd(ctx, ended, deletedArtifacts);
   return { stopped: true, deletedArtifacts };
 }
 

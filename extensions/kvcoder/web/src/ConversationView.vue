@@ -13,6 +13,7 @@ import { fields, problemKey, problemOf, toastProblem, useKvman } from './kvman.t
 import ActivityLine from './ActivityLine.vue';
 import { messageDraft, sendDraft, type Outgoing } from './message-drafts.ts';
 import { callViews, lastTyped, latestHeadline } from './message-parts.ts';
+import { latestUndoable, restoreDraft, rewindActions, type Undone } from './rewind-parts.ts';
 import CallFold from './CallFold.vue';
 import MessageItem from './MessageItem.vue';
 import PendingCards from './PendingCards.vue';
@@ -56,6 +57,14 @@ const panelShown = computed(() => changes.shown.value || executionMap.shown.valu
 const stepsLeft = computed(() => (session.value?.status === 'idle' ? executionMap.counts.value?.left ?? 0 : 0));
 const calls = computed(() => callViews(messages.value));
 const lastSent = computed(() => lastTyped(messages.value));
+// Edit and Undo, in a chat that isn't a helper's (ADR 0118, 7); afterwards the chat is read whole.
+const undoable = computed(() => latestUndoable(messages.value));
+async function rewound(left: readonly unknown[], undone?: Undone): Promise<void> {
+  if (undone !== undefined && sessionId.value !== undefined) restoreDraft(messageDraft(kvman.workspace.value.id, sessionId.value), undone);
+  if (left.length > 0) kvman.toast('kvcoder.ui.rewind.left', { count: left.length });
+  follow.resume();
+  await conversation.reloadAll().catch((error: unknown) => toastProblem(kvman, error));
+}
 const { rows, rowKey, rowTotals, runningTurnId, finalAnswers } = useStory(kvman.t, messages, calls, turns, session);
 // What the running turn is doing, in the agent's own words, and the map's step in progress (ADR 0102, 1).
 const headlineNow = computed(() => latestHeadline(live.thinking, messages.value, runningTurnId.value));
@@ -76,7 +85,7 @@ async function send(message: Outgoing): Promise<void> {
   const id = sessionId.value;
   if (id === undefined) return;
   const confirmed = await sendDraft(messageDraft(kvman.workspace.value.id, id), message, async (sendId) => {
-    await kvman.exec('kvcoder.message.send', { sessionId: id, text: message.text, ...(message.fileIds.length > 0 ? { fileIds: message.fileIds } : {}), sendId });
+    await kvman.exec('kvcoder.message.send', { sessionId: id, text: message.text, ...(message.fileIds.length > 0 ? { fileIds: message.fileIds } : {}), ...((message.attachments ?? []).length > 0 ? { attachments: message.attachments } : {}), sendId });
   });
   if (!confirmed || sessionId.value !== id) return;
   try {
@@ -249,7 +258,7 @@ async function registered(entry: RegisteredSlash, argument: string): Promise<voi
               </div>
               <template v-for="row in rows" :key="rowKey(row)">
                 <CallFold v-if="row.kind === 'fold'" :messages="row.messages" :headline="row.headline" :calls="calls" :finished-runs="finishedRuns" :running="row.messages.some((message) => message.turnId !== undefined && message.turnId === runningTurnId)" />
-                <MessageItem v-else :message="row.message" :calls="calls" :finished-runs="finishedRuns" :final="finalAnswers.has(row.message.id)" @open-artifact="executionMap.selectArtifact($event)" />
+                <MessageItem v-else :message="row.message" :calls="calls" :finished-runs="finishedRuns" :final="finalAnswers.has(row.message.id)" :rewind="session.parentId === undefined ? rewindActions(row.message, undoable) : undefined" @open-artifact="executionMap.selectArtifact($event)" @rewound="rewound" />
                 <span v-if="rowTotals(row) !== undefined" class="kvc-muted" :title="rowTotals(row)?.tokens" data-test="turn-totals">{{ rowTotals(row)?.text }}</span>
               </template>
               <NotifyLine v-if="session.waitingOn === 'person'" />

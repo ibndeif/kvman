@@ -61,8 +61,11 @@ export async function reportInterrupted(ctx: Ctx, sessionId: string): Promise<vo
   const told: Ended[] = [];
   for (const doc of ended) {
     await store.processes.update(doc.id, { reported: true });
-    told.push({ doc, deleted: await deleteEndedArtifacts(ctx, doc) });
+    const deleted = await deleteEndedArtifacts(ctx, doc);
+    // A quiet process's end is never told (ADR 0118, 1).
+    if (doc.quiet !== true) told.push({ doc, deleted });
   }
+  if (told.length === 0) return;
   // The message's source names the first run; the text names them all.
-  await appendBackground(ctx, sessionId, { kind: 'job', jobId: ended[0]?.id ?? '' }, interruptedText(told), false);
+  await appendBackground(ctx, sessionId, { kind: 'job', jobId: told[0]?.doc.id ?? '' }, interruptedText(told), false);
 }

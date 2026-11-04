@@ -46,6 +46,16 @@ The header shows the chat's time, its cost, and **Memory**, how full the model's
 
 When the agent has changed files in a chat, the header shows **Changes** with their number. It opens the panel on the files the latest turn changed (**This turn**), or every file the chat changed (**Whole chat**), its helpers' changes included, each with its counts and whether it is new, changed, or deleted; press one to see its diff, against the last Git commit when Git tracks the file, or else against the copy kvman kept before the chat changed it. **Undo** takes back the chat's latest change to a file, unless the file changed since, and **Commit** asks the agent to commit the changes. Changes the agent made with shell lines aren't listed.
 
+## Editing or undoing a message
+
+Under each message you typed there is **Edit**, and under the latest message that started work (yours, or a slash command's) there is **Undo**. Both take the chat back to just before that message: it and everything after it are removed, and so are the changes kvman made to files after it, its helpers' included, when **Also undo file changes** stays checked. Uncheck it to keep the files and rewind only the conversation.
+
+- **Edit** turns the message into a box where it stands, with its images and attached files, which you can remove. **Save & send** sends the new text in its place.
+- **Undo** asks first, then puts the message back in the send box, before anything you had typed there, with its files.
+- A file that changed again since kvman's change, by you or a shell line, is left as it is, and so is one that was over 1 MB before the change; the box lists them first. Changes made by shell lines and program workers (opencode, claude) aren't undone.
+- When the agent is working, Edit and Undo stop it first. Helpers it started after the message are stopped too; a dev server it started keeps running, but no longer reports to the chat. Artifacts and an execution map made after the message are deleted.
+- The chat's time and cost still count what was spent. kvman keeps a copy of each change for the chat's life, so any message can be rewound.
+
 ## Approvals and questions
 
 - **An approval** shows each call the agent wants to run: its line or the file it would change, and **Deny** and **Allow** in a row under it. With several pending, **Deny all** and **Allow all** close the card. A denied call tells the agent "denied by the user"; **Deny and say why…** adds your reason, so the agent knows what to do instead. **Always allow** lets lines that start with the words in its box (the line's first two, which you can change) run without asking in this folder from then on, and for a file change **Always allow file changes here** does the same for changes to files (never Git's folder, `.env` files, or `AGENTS.md` and `CLAUDE.md`). The rules are listed, with **Remove**, under **Approval** in the **Agent** card. When kvman asks is the setting `kvcoder.approval` ([the-agent.md](the-agent.md#approval)).

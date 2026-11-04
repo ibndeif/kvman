@@ -6,6 +6,7 @@ import { deleteArtifact } from '../artifacts/delete-artifact.ts';
 import { applyEdits } from '../files/edit-text.ts';
 import { notFound, tooLarge } from '../problems.ts';
 import { kebab } from '../schemas/registry.ts';
+import { chatSeqInTx } from '../rewind/chat-mark.ts';
 import { findSession, now } from '../sessions/session-lookup.ts';
 import { records, txRecords, type TxRecords } from '../store/collections.ts';
 import { callInput, type ConnectorCommand } from './connector-command.ts';
@@ -72,15 +73,16 @@ async function writeArtifact(ctx: Ctx, chatId: string, input: WriteInput) {
     const also = removed.length === 0 ? {} : { removed };
     const existing = artifacts.find({ sessionId: chatId, artifactId: input.id }, { limit: 1 })[0];
     const stamp = now();
+    const atSeq = chatSeqInTx(txRecords(tx), chatId);
     if (existing === undefined) {
       const ended = replaced === undefined ? undefined : artifacts.find({ sessionId: chatId, artifactId: replaced }, { limit: 1 })[0];
       if (ended !== undefined && artifacts.count({ sessionId: chatId }) >= artifactCountLimit) {
         artifacts.delete(ended.id);
-        artifacts.insert({ sessionId: chatId, artifactId: input.id, title: input.title, format, content, version: 1, createdAt: stamp, updatedAt: stamp });
+        artifacts.insert({ sessionId: chatId, artifactId: input.id, title: input.title, format, content, version: 1, atSeq, createdAt: stamp, updatedAt: stamp });
         return { id: input.id, version: 1, created: true, bytes: Buffer.byteLength(content), replaced: ended.artifactId, ...also };
       }
       if (artifacts.count({ sessionId: chatId }) >= artifactCountLimit) throw tooLarge(`This chat already has ${artifactCountLimit} artifacts. Update one that exists (artifact list names them), or delete one.`, artifactCountLimit);
-      artifacts.insert({ sessionId: chatId, artifactId: input.id, title: input.title, format, content, version: 1, createdAt: stamp, updatedAt: stamp });
+      artifacts.insert({ sessionId: chatId, artifactId: input.id, title: input.title, format, content, version: 1, atSeq, createdAt: stamp, updatedAt: stamp });
       return { id: input.id, version: 1, created: true, bytes: Buffer.byteLength(content), ...also };
     }
     artifacts.update(existing.id, { title: input.title, format, content, version: existing.version + 1, updatedAt: stamp });

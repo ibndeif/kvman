@@ -41,7 +41,8 @@ export function registerNotifyWatch(ctx: Ctx): void {
         if (doc === undefined || (doc.end !== undefined && doc.end !== 'exited')) return {};
         if (doc.end === 'exited') {
           const claimed = await claimReport(ctx, id);
-          if (claimed !== undefined) await reportEnd(ctx, claimed, await deleteEndedArtifacts(ctx, claimed), true);
+          const deleted = claimed === undefined ? [] : await deleteEndedArtifacts(ctx, claimed);
+          if (claimed !== undefined && claimed.quiet !== true) await reportEnd(ctx, claimed, deleted, true);
           return {};
         }
         if (Date.now() >= until) {

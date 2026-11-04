@@ -1,4 +1,5 @@
 import { z } from '@kvman/sdk';
+import { atSeqSchema } from '../schemas/file-records.ts';
 
 // A chat's execution map as it is stored (plan 08 §8.5, ADR 0064): the goal, the steps with what each waits on and
 // how far it is, and the findings noted for later. `sessionId` is the chat's own id.
@@ -33,6 +34,8 @@ export const mapDocSchema = z.object({
   steps: z.array(z.preprocess(storedStep, mapStepSchema)),
   notes: z.array(mapNoteSchema),
   version: z.number().int().min(1),
+  // The chat's `nextSeq` when the map was first set (ADR 0118, 4).
+  atSeq: atSeqSchema,
   createdAt: z.string(),
   updatedAt: z.string(),
 });

@@ -7,6 +7,7 @@ import { invalid } from '../problems.ts';
 import { appendEndingInTx, backgroundText } from '../turns/background.ts';
 import { heldText, resolvePendingInTx } from '../turns/resolve.ts';
 import { beginTurn, dispatchStep } from '../turns/start-turn.ts';
+import { chatSeqInTx } from '../rewind/chat-mark.ts';
 import { commandLine } from './programs.ts';
 import type { ProgramWorker } from './workers.ts';
 
@@ -22,7 +23,7 @@ export type RunEnd = { status: Exclude<RunDoc['status'], 'running'>; exitCode: n
 /** Records a run of `worker` on `task`, named by its title (ADR 0089, 1); `toolCallId` is the call that waits on it, or `null` for a background run. */
 export function recordRun(store: TxRecords, sessionId: string, worker: ProgramWorker, run: ProgramTask, toolCallId: string | null): Stored<RunDoc> {
   const line = commandLine(worker, run.task);
-  return store.runs.insert({ sessionId, toolCallId, worker: worker.name, kind: worker.kind, call: run.title, command: line.command, args: line.args, timeoutMs: worker.timeoutMs, jobId: null, status: 'running', startedAt: now(), endedAt: null, exitCode: null, output: null, staging: null });
+  return store.runs.insert({ sessionId, toolCallId, worker: worker.name, kind: worker.kind, call: run.title, command: line.command, args: line.args, timeoutMs: worker.timeoutMs, jobId: null, status: 'running', startedAt: now(), endedAt: null, exitCode: null, output: null, staging: null, atSeq: chatSeqInTx(store, sessionId) });
 }
 
 export async function createRun(ctx: Ctx, sessionId: string, worker: ProgramWorker, run: ProgramTask, toolCallId: string | null, guard: CreationGuard): Promise<Stored<RunDoc>> {

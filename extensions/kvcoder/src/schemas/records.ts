@@ -5,7 +5,9 @@ import { thinkingLevels } from '../thinking-levels.ts';
 import { keptRuleSchema } from './kept-rule.ts';
 import { delegateBriefSchema } from './delegate-brief.ts';
 import { sentRecordSchema } from './sent-record.ts';
+import { atSeqSchema } from './file-records.ts';
 export { processDocSchema, type ProcessDoc } from './process-doc.ts';
+export { fileBackupDocSchema, fileChangeDocSchema, fileCopyDocSchema, filePartDocSchema, fileViewDocSchema, type FileBackupDoc, type FileChangeDoc } from './file-records.ts';
 
 export type { JsonValue };
 
@@ -82,6 +84,10 @@ export const sessionDocSchema = z.object({
   run: delegateBriefSchema.nullable().default(null),
   // The rule files kept for the chat's life; none yet before its first step (ADR 0108, 6).
   rules: z.array(keptRuleSchema).exactOptional(),
+  // The chat's counter of file changes, which orders them (ADR 0118, 4), and, for a helper, its parent's `nextSeq` when it
+  // was made.
+  changes: z.number().int().nonnegative().default(0),
+  atSeq: atSeqSchema,
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -170,6 +176,8 @@ export const turnDocSchema = z.object({
   deferredCalls: z.array(z.object({ toolCallId: z.string(), call: runCallSchema })).default([]),
   // The scheduled tries the turn has waited for the connection; 0 while it doesn't (ADR 0108, 15).
   connectionWaits: z.number().int().nonnegative().default(0),
+  // The chat's `nextSeq` when the turn opened (ADR 0118, 4).
+  atSeq: atSeqSchema,
 });
 
 export const questionDocSchema = z.object({
@@ -191,16 +199,6 @@ export const answerReceiptDocSchema = z.object({
   answerFingerprint: z.string().regex(/^[0-9a-f]{64}$/i),
   createdAt: z.iso.datetime(),
 });
-
-// What a chat last saw of a file, and a file's content before one of the chat's changes (ADR 0053, 2 and 4).
-export const fileViewDocSchema = z.object({ sessionId: z.string(), path: z.string(), fingerprint: z.string().regex(/^[0-9a-f]{64}$/), updatedAt: z.iso.datetime() });
-// A file a chat changed with `fs`, under the chat at the root, for its Changes view (ADR 0093, 2).
-// `turnId` is the root chat's turn of the latest change (ADR 0102, 9); records from before it read `null`.
-export const fileChangeDocSchema = z.object({ sessionId: z.string(), path: z.string(), firstAt: z.iso.datetime(), lastAt: z.iso.datetime(), turnId: z.string().nullable().default(null) });
-export const fileBackupDocSchema = z.object({ sessionId: z.string(), path: z.string(), previous: z.string().nullable(), written: z.string().regex(/^[0-9a-f]{64}$/), createdAt: z.iso.datetime() });
-
-// One numbered piece of a long file a chat is writing, held until `fs assemble` (ADR 0054, 2).
-export const filePartDocSchema = z.object({ sessionId: z.string(), path: z.string(), part: z.number().int().min(1), content: z.string(), updatedAt: z.iso.datetime() });
 
 // A send the page named with `sendId` and the session accepted (ADR 0048): it proves acceptance, and holds no text.
 export const sendReceiptDocSchema = z.object({
@@ -246,6 +244,7 @@ export const runDocSchema = z.object({
   exitCode: z.number().int().nullable(),
   output: z.string().nullable(),
   staging: runStagingSchema.nullable().default(null),
+  atSeq: atSeqSchema,
 });
 
 // A document shown beside the chat (plan 08 §8.5, ADR 0009, 175): `sessionId` is the chat's own id, `artifactId`
@@ -257,6 +256,7 @@ export const artifactDocSchema = z.object({
   format: z.enum(artifactFormats),
   content: z.string(),
   version: z.number().int().min(1),
+  atSeq: atSeqSchema,
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -266,7 +266,6 @@ export type StepIntentDoc = z.output<typeof stepIntentDocSchema>;
 export type MessageDoc = z.output<typeof messageDocSchema>;
 export type QueuedDoc = z.output<typeof queuedDocSchema>;
 export type TurnDoc = z.output<typeof turnDocSchema>;
-export type FileChangeDoc = z.output<typeof fileChangeDocSchema>;
 export type Pending = z.output<typeof pendingSchema>;
 export type HeldResult = z.output<typeof heldResultSchema>;
 export type RunCallDoc = z.output<typeof runCallSchema>;

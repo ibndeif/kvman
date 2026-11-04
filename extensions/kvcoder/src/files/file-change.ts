@@ -6,15 +6,13 @@ import { invalid, notFound } from '../problems.ts';
 import { executionRootInTx } from '../sessions/execution-root.ts';
 import { now } from '../sessions/session-lookup.ts';
 import { txRecords, type TxRecords } from '../store/collections.ts';
+import { requireCurrentStep } from './change-fence.ts';
+import { beforeOf, copiesOf, newestLive, recordChange } from './file-copies.ts';
 import { resolveInWorkspace } from './workspace-path.ts';
 
 // A change to a workspace file (ADR 0053): its read, its checks, and its replace run inside one store transaction, whose
 // write lock makes kvman's workers take turns. A chat changes an existing file only as it last saw it, the new content
-// is renamed over the file, and the previous content is kept so the change can be undone.
-
-/** The copies a chat keeps, and the largest previous content one holds. */
-export const copiesKept = 20;
-export const copyLimit = 1024 * 1024;
+// is renamed over the file, and the previous content is kept so the change can be undone or rewound (ADR 0118, 3).
 
 /** A file as a chat names it and as the file system knows it. */
 export type ChangedFile = { sessionId: string; shown: string; real: string };
@@ -24,11 +22,11 @@ export const fingerprintOf = (bytes: Uint8Array): string => createHash('sha256')
 const codeOf = (error: unknown): string | undefined => (error instanceof Error && 'code' in error && typeof error.code === 'string' ? error.code : undefined);
 
 // The file system's own refusals are the model's to read and fix; anything else is a fault.
-function refusal(error: unknown): unknown {
+export function refusal(error: unknown): unknown {
   return !(error instanceof ProblemError) && error instanceof Error && /^E[A-Z]+$/.test(codeOf(error) ?? '') ? invalid(error.message) : error;
 }
 
-function existing(file: ChangedFile): { bytes: Buffer; mode: number } | undefined {
+export function existing(file: Pick<ChangedFile, 'shown' | 'real'>): { bytes: Buffer; mode: number } | undefined {
   try {
     const found = statSync(file.real);
     if (found.isDirectory()) throw invalid(`${file.shown} is a folder.`, { path: file.shown });
@@ -40,7 +38,7 @@ function existing(file: ChangedFile): { bytes: Buffer; mode: number } | undefine
 }
 
 // Written beside the file and renamed over it, so a reader sees the old content or the new, never part of one.
-function replace(real: string, content: Buffer, mode: number | undefined, jobId: string): void {
+export function replace(real: string, content: Buffer, mode: number | undefined, jobId: string): void {
   const beside = `${real}.${jobId}.kvman-tmp`;
   try {
     writeFileSync(beside, content);
@@ -74,22 +72,17 @@ function noteChange(store: TxRecords, file: ChangedFile): void {
   else store.fileChanges.update(noted.id, { lastAt: now(), turnId });
 }
 
-function saveCopy(store: TxRecords, file: ChangedFile, previous: Buffer | undefined, written: string): void {
-  if (previous !== undefined && previous.length > copyLimit) return;
-  store.fileBackups.insert({ sessionId: file.sessionId, path: file.real, previous: previous === undefined ? null : previous.toString('base64'), written, createdAt: now() });
-  for (const old of store.fileBackups.find({ sessionId: file.sessionId }, { limit: 1000, order: 'desc' }).slice(copiesKept)) store.fileBackups.delete(old.id);
-}
-
 /** Changes the file to what `plan` makes of its current content; `created` says whether it was new. */
 export function changeFile<Value>(ctx: Ctx, file: ChangedFile, plan: (previous: Buffer | undefined, store: TxRecords) => { content: Buffer; value: Value }): Promise<Value & { created: boolean }> {
   return ctx.store.transaction((tx) => {
     const store = txRecords(tx);
+    requireCurrentStep(ctx, store, file.sessionId, file.shown);
     const found = existing(file);
     // What is wrong with the change itself is said first; then whether the chat may make it.
     const planned = plan(found?.bytes, store);
     if (found !== undefined) requireSeen(store, file, found.bytes);
     const written = fingerprintOf(planned.content);
-    saveCopy(store, file, found?.bytes, written);
+    recordChange(store, file.sessionId, file.real, found?.bytes, written);
     setView(store, file, written);
     noteChange(store, file);
     replace(file.real, planned.content, found?.mode, ctx.job.id);
@@ -97,17 +90,24 @@ export function changeFile<Value>(ctx: Ctx, file: ChangedFile, plan: (previous: 
   });
 }
 
-/** Takes back the chat's latest change to the file, when the file still holds what that change wrote. */
+/**
+ * Takes back the chat's latest change to the file, when the file still holds what that change wrote. The change is
+ * marked undone and the undo keeps a record of its own, so a rewind past it puts the file back (ADR 0118, 3).
+ */
 export function undoChange(ctx: Ctx, file: ChangedFile): Promise<{ path: string; removed: boolean; bytes: number }> {
   return ctx.store.transaction((tx) => {
     const store = txRecords(tx);
-    const [copy] = store.fileBackups.find({ sessionId: file.sessionId, path: file.real }, { limit: 1, order: 'desc' });
+    requireCurrentStep(ctx, store, file.sessionId, file.shown);
+    const copy = newestLive(copiesOf(store, file.sessionId, file.real));
     if (copy === undefined) throw notFound(`This chat has no change of ${file.shown} to undo.`, { path: file.shown });
+    const before = beforeOf(store, copy);
+    if (before.kind === 'tooLarge') throw invalid(`${file.shown} was over 1 MB before that change, so no copy was kept to undo it.`, { path: file.shown });
     const found = existing(file);
     if (found === undefined || fingerprintOf(found.bytes) !== copy.written) throw invalid(`${file.shown} changed since that change, so it isn't undone. Read it to see what it holds now.`, { path: file.shown });
-    store.fileBackups.delete(copy.id);
+    store.fileBackups.update(copy.id, { undone: true });
+    recordChange(store, file.sessionId, file.real, found.bytes, before.kind === 'absent' ? null : fingerprintOf(before.bytes), copy.id);
     noteChange(store, file);
-    const previous = copy.previous === null ? undefined : Buffer.from(copy.previous, 'base64');
+    const previous = before.kind === 'absent' ? undefined : before.bytes;
     if (previous === undefined) {
       for (const view of store.fileViews.find({ sessionId: file.sessionId, path: file.real }, { limit: 1 })) store.fileViews.delete(view.id);
       try {
