@@ -45,6 +45,14 @@ describe('video compose (16 §16.8)', { timeout: 60_000 }, () => {
     expect(workFoldersLeft(ffmpeg)).toEqual([]);
   });
 
+  it('QA78-H2 a video with no voice: scenes with durationMs and no narration compose, with no captions', async () => {
+    const { kernel, ffmpeg } = await composing();
+    const scenes = [{ clip: 'v/title.png', durationMs: 2000 }, { clip: 'v/01.mp4', durationMs: 3000 }];
+    const answer = await kernel.exec('kvvideo.video.compose', { file: 'videos/silent.mp4', scenes });
+    expect(answer).toMatchObject({ file: 'videos/silent.mp4', durationMs: 2000 + 3000 - 500 });
+    expect(runsOf(ffmpeg).slice(0, 2).map((run) => run.ass)).toEqual([null, null]);
+  });
+
   it('M5.4-H11 the connector has compose, with an example and its card', async () => {
     const { kernel } = await kvvideo.start();
     const video = (await kernel.exec('kvcoder.connector.list', {})).find((connector) => connector.name === 'video');

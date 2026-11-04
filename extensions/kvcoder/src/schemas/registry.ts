@@ -56,8 +56,8 @@ export const slashCommandSchema = z.strictObject({ name: wordSchema, description
 /** What `kvcoder.slash.register` takes: the caller's slash commands, stored together or not at all. */
 export const slashRegisterSchema = z.strictObject({ commands: z.array(slashCommandSchema).min(1) });
 
-/** A slash command in kvcoder's global store, owned by its registering extension. */
-export const slashDocSchema = z.object({ owner: z.string(), name: z.string(), description: z.string(), command: z.string(), message: z.string().nullable() });
+/** A slash command in kvcoder's global store, owned by its registering extension, with its command's English description for the lead's prompt (ADR 0119, 3). */
+export const slashDocSchema = z.object({ owner: z.string(), name: z.string(), description: z.string(), command: z.string(), message: z.string().nullable(), commandDescription: z.string() });
 
 /** The session points (plan 08 §8.4). */
 export const sessionPointSchema = z.enum(['kvcoder.session.created', 'kvcoder.session.deleted', 'kvcoder.session.forked', 'kvcoder.turn.started', 'kvcoder.turn.ended', 'kvcoder.session.waiting']);

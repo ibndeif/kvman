@@ -22,6 +22,8 @@ export type PromptInput = {
   /** Who a subagent is: its run's whole title (ADR 0116, 2). */
   expert?: string;
   connectors: readonly { name: string; description: string; commands: readonly string[]; signatures?: readonly (string | undefined)[] }[];
+  /** The slash commands the person can type, for the lead (ADR 0119, 3). */
+  slashCommands?: readonly { name: string; description: string }[];
 };
 
 export type BuiltPrompt = { prompt: string; included: ReadonlySet<Section>; left: readonly Section[] };
@@ -83,6 +85,13 @@ function keptSections(sections: readonly Section[]): { kept: Section[]; left: Se
   return { kept, left };
 }
 
+/** The lead's list of the slash commands, so it can tell the person to type one (ADR 0119, 3). */
+const slashIntro = "The person can type these in the send box to turn on more in this chat. When they ask for what one of them is for and it isn't on in this chat, tell them to type it instead of doing that work another way.";
+
+function slashBlock(commands: readonly { name: string; description: string }[]): string {
+  return ['## Slash commands', slashIntro, ...commands.map((command) => `- /${command.name}: ${command.description}`)].join('\n');
+}
+
 /** What a read-only worker's helper is told (ADR 0056, 4). */
 const readOnlyNote = 'You are read-only here: you read and search, and you report your findings in your answer. A call that could change something is refused, so don\'t make one; say what should change and why.';
 
@@ -92,5 +101,6 @@ export function buildPrompt(input: PromptInput): BuiltPrompt {
   if (input.worker !== undefined && input.worker.instructions !== '') parts.push(`## Worker: ${input.worker.name}\n${input.worker.instructions}`);
   if (input.worker?.readOnly === true) parts.push(readOnlyNote);
   if (input.connectors.length > 0) parts.push(['## Connectors', ...input.connectors.map(connectorLine)].join('\n'));
+  if (input.role === 'lead' && input.slashCommands !== undefined && input.slashCommands.length > 0) parts.push(slashBlock(input.slashCommands));
   return { prompt: parts.join('\n\n'), included: new Set(kept), left };
 }

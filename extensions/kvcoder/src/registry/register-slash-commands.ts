@@ -2,7 +2,7 @@ import { z, type Ctx } from '@kvman/sdk';
 import { invalid } from '../problems.ts';
 import { slashRegisterSchema } from '../schemas/registry.ts';
 import { records, txRecords } from '../store/collections.ts';
-import { callerExtension, loadedOwners, ownsPublicCommand, registrations } from './loaded.ts';
+import { callInfos, callerExtension, loadedOwners, ownsPublicCommand, registrations } from './loaded.ts';
 
 // Slash commands (plan 08 §8.4, ADR 0027, 8): commands other extensions add to the send box, kept in kvcoder's global
 // store for one run, owned by their registering extension.
@@ -26,13 +26,21 @@ export function registerSlashCommands(ctx: Ctx): void {
       const rows = await registrations(ctx);
       const foreign = commands.find((command) => !ownsPublicCommand(rows, owner, command.command));
       if (foreign !== undefined) throw invalid(`${foreign.command} isn't a public command of ${owner}.`, { command: foreign.command });
+      // Read once here, so building a prompt reads no schema (as a connector's signatures, ADR 0108, 14).
+      const infos = await callInfos(ctx);
+      const describe = (command: string): string => {
+        const info = infos.find((call) => call.name === command);
+        if (info === undefined) throw invalid(`${command} isn't loaded.`, { command });
+        return info.description;
+      };
+      const described = commands.map((command) => ({ ...command, commandDescription: describe(command.command) }));
       const taken = await ctx.store.transaction((tx) => {
         const stored = txRecords(tx).slashCommands;
         const existing = commands.map((command) => stored.find({ name: command.name }, { limit: 1 })[0]);
         const other = existing.find((doc) => doc !== undefined && doc.owner !== owner);
         if (other !== undefined) return { name: other.name, owner: other.owner };
         for (const doc of existing) if (doc !== undefined) stored.delete(doc.id);
-        for (const command of commands) stored.insert({ owner, name: command.name, description: command.description, command: command.command, message: command.message ?? null });
+        for (const command of described) stored.insert({ owner, name: command.name, description: command.description, command: command.command, message: command.message ?? null, commandDescription: command.commandDescription });
         return undefined;
       });
       if (taken !== undefined) throw ctx.problem('kvcoder/NAME_TAKEN', taken);
@@ -67,6 +75,17 @@ export function registerSlashCommands(ctx: Ctx): void {
         .map((doc) => ({ name: doc.name, description: doc.description, command: doc.command, ...(doc.message === null ? {} : { message: doc.message }), owner: doc.owner }));
     },
   });
+}
+
+/** The slash commands of loaded extensions, by name, as the lead's prompt lists them: each name and its command's English description (ADR 0119, 3). */
+export async function promptSlashCommands(ctx: Ctx): Promise<{ name: string; description: string }[]> {
+  const stored = await records(ctx.store).slashCommands.find({}, { limit: 1000 });
+  if (stored.length === 0) return [];
+  const loaded = await loadedOwners(ctx, stored.map((doc) => doc.owner));
+  return stored
+    .filter((doc) => loaded.has(doc.owner))
+    .sort((first, second) => first.name.localeCompare(second.name))
+    .map((doc) => ({ name: doc.name, description: doc.commandDescription }));
 }
 
 /** Clears the slash commands at kvcoder's start; extensions register theirs again in their own handlers. */

@@ -65,13 +65,16 @@ describe('the artifact panel in Chromium (08 §8.7, ADR 0009, 214 and 216)', { t
     await context.close();
   });
 
-  it('QA12-H7 a url artifact shows a page running on this machine with its own storage, in a frame that cannot read the parent', async () => {
+  it('QA12-H7 QA78-H6 a url artifact shows a page running on this machine with its own storage, in a frame that cannot read the parent', async () => {
     server = createServer((_request, response) => response.writeHead(200, { 'content-type': 'text/html' }).end(localPage));
     await new Promise<void>((resolve) => server?.listen(0, '127.0.0.1', resolve));
     const { port } = z.object({ port: z.number() }).parse(server.address() as AddressInfo);
     const { kvman, sessionId } = await chatWithArtifact({ id: 'app', title: 'The app', format: 'url', content: `http://127.0.0.1:${String(port)}/` });
     const page = await browser.newPage({ viewport: { width: 1400, height: 800 } });
-    await openPanel(page, kvman, sessionId);
+    await page.goto(`${kvman.origin}/kvcoder/session/${sessionId}`);
+    // The card's Open opens the address in a tab (ADR 0119, 5); the header's button opens the panel.
+    expect(await page.locator('[data-test="artifact-open"]').first().getAttribute('href')).toBe(`http://127.0.0.1:${String(port)}/`);
+    await page.locator('[data-test="artifacts-toggle"]').click();
     await page.locator('[data-test="artifact-url-frame"]').waitFor();
     await page.frameLocator('[data-test="artifact-url-frame"]').locator('#msg', { hasText: 'hello from the app: parent blocked, storage works' }).waitFor();
     expect(await page.locator('[data-test="artifact-open-url"]').getAttribute('href')).toBe(`http://127.0.0.1:${String(port)}/`);

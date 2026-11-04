@@ -5,6 +5,7 @@ import { invalidPayloadOutput, payloadSignature } from '../../src/connector-call
 // A payload's signature, written from its JSON Schema (plan 08 §8.3, ADR 0012, 3 and 4).
 
 describe('the payload signature (ADR 0012, 3)', () => {
+  // A number's maximum is shown since ADR 0119, 4 (QA78-H4).
   it('QA58-H7 a string with a maximum length shows it, and a field without one does not', () => {
     const schema: Json = {
       type: 'object',
@@ -16,7 +17,24 @@ describe('the payload signature (ADR 0012, 3)', () => {
       },
       required: ['goal', 'steps'],
     };
-    expect(payloadSignature(schema)).toBe('{ goal (≤300), steps: [{ id (≤50), after?, note? (≤300) }], free?, count? }');
+    expect(payloadSignature(schema)).toBe('{ goal (≤300), steps: [{ id (≤50), after?, note? (≤300) }], free?, count? (≤10) }');
+  });
+
+  it('QA78-H4 QA78-E7 a number with a maximum shows its range, and an integer\'s safe bounds are no bounds', () => {
+    const safe = Number.MAX_SAFE_INTEGER;
+    const schema: Json = {
+      type: 'object',
+      properties: {
+        a: { type: 'integer', minimum: 1, maximum: 60 },
+        b: { type: 'number', maximum: 5 },
+        c: { type: 'integer', minimum: -safe, maximum: safe },
+        d: { type: 'integer', minimum: 0, maximum: safe },
+        e: { type: 'integer', exclusiveMinimum: 0, maximum: safe },
+        f: { type: 'integer', minimum: -safe, maximum: 5 },
+      },
+      required: ['a', 'c', 'd', 'e', 'f'],
+    };
+    expect(payloadSignature(schema)).toBe('{ a (1–60), b? (≤5), c, d, e, f (≤5) }');
   });
 
   it('QA19-H2 a signature is written from a JSON Schema', () => {

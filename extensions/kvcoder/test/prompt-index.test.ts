@@ -24,7 +24,7 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
     expect(prompt).toContain('Your one tool is run: it runs one command of a connector, as { connector, command, payload }.');
   });
 
-  it("QA19-H1 the prompt gives the payloads of kvcoder's connectors", async () => {
+  it("QA19-H1 QA78-H5 the prompt gives the payloads of kvcoder's connectors", async () => {
     const { fake } = await looked(() => undefined, [command('todo', 'list')], settings);
     const prompt = systemPrompt(fake);
     const index = (prompt.split('## Connectors\n')[1] ?? '').split('\n');
@@ -46,7 +46,7 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
       '  write      { path, content, risky }',
       '  edit       { path, edits: [{ oldText, newText, replaceAll? }], risky }',
       '  undo       { path, risky }',
-      '  part       { path, part, content }',
+      '  part       { path, part (1–200), content }',
       '  assemble   { path, risky }',
       '  help       { command? }',
       '  write  { id (≤50), title (≤100), format?: "markdown" | "html" | "url", content }',
@@ -68,9 +68,9 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
       '  text    { prompt, placeholder? }',
       '  choice  { prompt, multiple, options: [{ id, label, description? }], other? }',
       '  confirm { prompt, danger? }',
-      '  record  { prompt (≤500), lines: [{ text (≤500), stress?, pauses?, seconds?, example? (≤1000) }], tone? (≤200), pace? (≤200), folder (≤1000) }',
+      '  record  { prompt (≤500), lines: [{ text (≤500), stress?, pauses?, seconds? (1–60), example? (≤1000) }], tone? (≤200), pace? (≤200), folder (≤1000) }',
       '  help    { command? }',
-      '  run      { worker, title (≤200), kind: "find" | "change" | "check" | "review", goal (≤300), done (≤300), files?, context?: [{ path, fromLine?, lines? }], maxSteps? }',
+      '  run      { worker, title (≤200), kind: "find" | "change" | "check" | "review", goal (≤300), done (≤300), files?, context?: [{ path, fromLine?, lines? }], maxSteps? (1–60) }',
       '  continue { id, message }',
       '  help     { command? }',
       '  fetch { url }',
@@ -119,7 +119,7 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
       '  write      { path, content, risky }',
       '  edit       { path, edits: [{ oldText, newText, replaceAll? }], risky }',
       '  undo       { path, risky }',
-      '  part       { path, part, content }',
+      '  part       { path, part (1–200), content }',
       '  assemble   { path, risky }',
       '  help       { command? }',
     ]);

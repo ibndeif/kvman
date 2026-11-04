@@ -97,5 +97,6 @@ This is the specification. Names, shapes, error codes, defaults, and limits here
 | `adr/0110-live-model-catalog.md` | New models from pi.dev's live catalog: `kvai.catalog.url` (off by default, `https://pi.dev` in `coder`), refreshed at start and every 4 hours, merged over the built-in list |
 | `adr/0111-no-testing-instructions-in-the-prompt.md` | No testing instructions in the prompt: the lead and its workers are told neither to run, write, nor skip tests; the `Testing:` question is gone |
 | `adr/0118-edit-and-undo-a-message.md` | Edit and undo a message: the chat rewound to just before it, kvman's own file changes after it taken back (left when changed since), copies kept for the chat's life, a stopped step's changes refused, `rewind.files.list`, `message.edit`, `message.undo`, and `attachments` on a send |
+| `adr/0119-fixes-from-the-video-chats.md` | A video with no voice (on-screen text and sound effects; review's silence expected), the lead told the slash commands, a number's range in a signature, and a `url` artifact card whose Open opens a tab |
 
 The plan is complete. Implementation starts with M1.1.

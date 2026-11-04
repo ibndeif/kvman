@@ -16,6 +16,7 @@ import CallCard from './CallCard.vue';
 import StagingNote from './StagingNote.vue';
 import type { CallView } from './call-view.ts';
 import type { FinishedRun } from './use-finished-runs.ts';
+import { frameableUrl } from './artifact-url.ts';
 
 // One stored message (plan 08 §8.7): the person's text and images, an answer in Markdown with its thinking folded, a
 // tool result's card (an answered question shows its answer), kvcoder's notices and other extensions' notes translated, a summary, and background results as quiet lines.
@@ -29,6 +30,12 @@ const text = computed(() => textOf(props.message.content['content']));
 const thinking = computed(() => thinkingOf(props.message));
 const card = computed(() => resultCard(props.message, props.calls));
 const artifact = computed(() => artifactOf(props.message));
+// The address a `url` artifact's write gave, which its card opens in a new tab (ADR 0119, 5).
+const artifactAddress = computed(() => {
+  if (artifact.value?.format !== 'url') return undefined;
+  const content = props.calls.get(String(props.message.content['toolCallId']))?.fields?.['content'];
+  return typeof content === 'string' ? frameableUrl(content, window.location) : undefined;
+});
 const extensionCard = computed(() => extensionCardOf(props.message));
 const images = computed(() => resultImagesOf(props.message).map((image) => ({ ...image, url: imageUrl(image.fileId) })));
 // A program worker's run that changed what is staged in Git names itself in its result's details (ADR 0060, 4).
@@ -77,7 +84,7 @@ const markdown = (body: string) => ({ type: 'markdown' as const, text: 'kvcoder.
     <details v-if="thinking !== ''" data-test="thinking"><summary class="kvc-muted">{{ kvman.t('kvcoder.ui.thought') }}</summary><p class="kvc-muted" style="white-space: pre-wrap">{{ thinking }}</p></details>
     <component :is="kvman.View" v-if="text !== ''" :view="markdown(text)" />
   </div>
-  <ArtifactCard v-else-if="props.message.kind === 'toolResult' && artifact !== undefined" :id="artifact.id" :title="artifact.title" :format="artifact.format" :version="artifact.version" @open="emit('openArtifact', $event)" />
+  <ArtifactCard v-else-if="props.message.kind === 'toolResult' && artifact !== undefined" :id="artifact.id" :title="artifact.title" :format="artifact.format" :version="artifact.version" :address="artifactAddress" @open="emit('openArtifact', $event)" />
   <AnsweredCard v-else-if="answered !== undefined" :answered="answered" />
   <div v-else-if="extensionCard !== undefined" data-test="extension-card"><component :is="kvman.View" :view="{ type: 'custom', component: extensionCard.component, props: extensionCard.props }" /></div>
   <template v-else-if="props.message.kind === 'toolResult'">

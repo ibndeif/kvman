@@ -12,6 +12,7 @@ import { helperAllows } from '../turns/helper-calls.ts';
 import { changesFiles } from '../turns/run-scope.ts';
 import { readOnlyAllows } from '../turns/read-only.ts';
 import { sectionsFor } from '../registry/register-sections.ts';
+import { promptSlashCommands } from '../registry/register-slash-commands.ts';
 import { invalid } from '../problems.ts';
 import { agentProfile } from '../register-settings.ts';
 import type { SessionDoc } from '../schemas/records.ts';
@@ -36,7 +37,8 @@ export type SessionTools = {
 export async function sessionTools(ctx: Ctx, session: Stored<SessionDoc>): Promise<SessionTools> {
   // The settings and files the prompt needs are read together: each read waits on the kernel, so one after another
   // they add up (the person's preferences among them, ADR 0092, 3).
-  const [rules, preferences, shell, profile, language, grants] = await Promise.all([
+  const lead = session.parentId === null;
+  const [rules, preferences, shell, profile, language, grants, slashCommands] = await Promise.all([
     // A chat's kept rule files; before its first step keeps them, the files as they are (ADR 0108, 6).
     session.rules ?? readRules(ctx.job.workspace.path),
     preferencesSection(ctx),
@@ -44,6 +46,7 @@ export async function sessionTools(ctx: Ctx, session: Stored<SessionDoc>): Promi
     agentProfile(ctx),
     ctx.settings.get('kernel.language'),
     sessionGrants(ctx, session.id),
+    lead ? promptSlashCommands(ctx) : [],
   ]);
   if (grants === undefined) throw invalid('The session ancestry is no longer available.');
   const { connectors, disabled, names, workers, servers } = grants;
@@ -79,6 +82,7 @@ export async function sessionTools(ctx: Ctx, session: Stored<SessionDoc>): Promi
     ...(current.run?.role === undefined ? {} : { expert: current.run.role }),
     decides: current.decides,
     connectors: listed,
+    slashCommands,
   });
   for (const section of built.left) ctx.log.warn('A section was left out of a prompt past 64 KB of sections.', { owner: section.owner, id: section.id });
   return { built, shell, connectors, listed, disabled };

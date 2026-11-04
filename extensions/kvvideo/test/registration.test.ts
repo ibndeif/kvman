@@ -77,6 +77,28 @@ describe('kvvideo in kvcoder (16 §16.1, §16.3)', { timeout: 60_000 }, () => {
     expect(readGuide()).not.toContain('.srt');
   });
 
+  it('QA78-H1 the guide lets a video have no voice', async () => {
+    const { kernel } = await kvvideo.start();
+    const { prompt } = await kernel.exec('kvcoder.prompt.get', { sessionId: await videoSession(kernel) });
+    for (const said of [
+      'When ffmpeg or the browser is missing, tell the person in plain words what to install, and stop until it is there',
+      'A narration service is needed only for a video with a voice: when it is the only thing missing, go on and settle the voice in the brief.',
+      "the voice: generated, the person's own, or none (on-screen text and sound effects only)",
+      '**With no voice**, the on-screen text carries the words',
+      'and leave out captions. The sound effects stay.',
+      'With no voice, `silence` and `loudness` problems are expected and aren\'t faults.',
+    ]) expect(prompt).toContain(said);
+  });
+
+  it("QA78-H3 before /video, the lead's prompt has /video's line and nothing else of kvvideo", async () => {
+    const { kernel } = await kvvideo.start();
+    const { id } = await kernel.exec('kvcoder.session.create', { title: 'Plain' });
+    const { prompt } = await kernel.exec('kvcoder.prompt.get', { sessionId: id });
+    expect(prompt).toContain("## Slash commands\nThe person can type these in the send box to turn on more in this chat.");
+    expect(prompt).toContain("\n- /video: Starts making videos in one chat: gives the chat kvvideo's connector and guide.");
+    for (const absent of ['Making videos', '- video: ', '`video check`']) expect(prompt).not.toContain(absent);
+  });
+
   it('M5.12-H2 the connector has look after record, a command whose images reach the model, with an example', async () => {
     const { kernel } = await kvvideo.start();
     const video = (await kernel.exec('kvcoder.connector.list', {})).find((connector) => connector.name === 'video');

@@ -53,7 +53,7 @@ export function artifactContent(fields: Partial<ArtifactContent> = {}): Artifact
 }
 
 /** A tool result of an artifact write or edit, carrying the card's details (ADR 0009, 177). */
-export function artifactResult(fields: { id?: string; title?: string; format?: 'markdown' | 'html'; version?: number } = {}): Message {
+export function artifactResult(fields: { id?: string; title?: string; format?: 'markdown' | 'html' | 'url'; version?: number } = {}): Message {
   const { id = 'plan', title = 'The plan', format = 'markdown', version = 1 } = fields;
   return message('toolResult', { role: 'toolResult', toolCallId: 'c1', toolName: 'bash', content: [{ type: 'text', text: `{"id":"${id}","version":${version}}` }], isError: false, details: { artifact: { id, title, format, version } } });
 }

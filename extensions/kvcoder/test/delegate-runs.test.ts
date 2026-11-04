@@ -82,7 +82,7 @@ describe('delegate runs (08 §8.5, ADR 0021; ADR 0108, 1)', { timeout: 30_000 },
     expect(refused).toHaveLength(2);
     for (const text of refused) {
       expect(text).toMatch(/^error VALIDATION_FAILED: title: /);
-      expect(text.includes('The payload of delegate run is\n{ worker, title (≤200), kind: "find" | "change" | "check" | "review", goal (≤300), done (≤300), files?, context?: [{ path, fromLine?, lines? }], maxSteps? }\n\n')).toBe(true);
+      expect(text.includes('The payload of delegate run is\n{ worker, title (≤200), kind: "find" | "change" | "check" | "review", goal (≤300), done (≤300), files?, context?: [{ path, fromLine?, lines? }], maxSteps? (1–60) }\n\n')).toBe(true);
     }
     expect(await kernel.exec('kvcoder.job.list', { sessionId })).toEqual([]);
   });
