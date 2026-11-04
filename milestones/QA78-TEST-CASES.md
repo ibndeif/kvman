@@ -50,3 +50,7 @@ Paths are relative to the repository root.
 - **QA78-E7 an integer's safe bounds are no bounds.** *Given* `z.number().int()`, `z.number().int().positive()`, and
   `z.number().int().max(5)`, *when* their signatures are written, *then* the first two show no range and the third
   `(≤5)`. Test: `extensions/kvcoder/test/unit/payload-signature.test.ts`.
+- **QA78-E8 an entry stored before 0.4.16 doesn't stop the start.** *Given* a slash command stored without its command
+  description (as 0.4.15 stored it), *when* kvman starts again, *then* kvcoder clears it, the extension registers it
+  again, and the lead's prompt lists it. Found in 0.4.16, where reading the old entry failed `VALIDATION_FAILED` and
+  `/video` and `/build-kvman` were gone. Test: `extensions/kvcoder/test/prompt-slash-commands.test.ts`.

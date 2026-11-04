@@ -83,9 +83,8 @@ export async function promptSlashCommands(ctx: Ctx): Promise<{ name: string; des
   if (stored.length === 0) return [];
   const loaded = await loadedOwners(ctx, stored.map((doc) => doc.owner));
   return stored
-    .filter((doc) => loaded.has(doc.owner))
-    .sort((first, second) => first.name.localeCompare(second.name))
-    .map((doc) => ({ name: doc.name, description: doc.commandDescription }));
+    .flatMap((doc) => (loaded.has(doc.owner) && doc.commandDescription !== null ? [{ name: doc.name, description: doc.commandDescription }] : []))
+    .sort((first, second) => first.name.localeCompare(second.name));
 }
 
 /** Clears the slash commands at kvcoder's start; extensions register theirs again in their own handlers. */

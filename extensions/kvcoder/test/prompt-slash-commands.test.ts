@@ -1,5 +1,8 @@
+import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
-import { useKvcoder } from './support/kvcoder-kernel.ts';
+import { todo, useKvcoder } from './support/kvcoder-kernel.ts';
+import { slashFixture } from './support/registry-fixtures.ts';
 import { helperIds } from './support/helpers.ts';
 import { command, runs, says, shell } from './support/model-script.ts';
 import { newSession } from './support/turns.ts';
@@ -38,5 +41,19 @@ describe("the lead's slash commands block (ADR 0119, 3)", { timeout: 30_000 }, (
     const [childId = ''] = await helperIds(kernel, sessionId);
     expect((await kernel.exec('kvcoder.prompt.get', { sessionId })).prompt).toContain('## Slash commands');
     expect((await kernel.exec('kvcoder.prompt.get', { sessionId: childId })).prompt).not.toContain('## Slash commands');
+  });
+
+  it('QA78-E8 an entry stored before 0.4.16, without its command description, is cleared at start and registered again', async () => {
+    const { kernel } = await kvcoder.start({ extensions: [todo, slashFixture] });
+    const database = new DatabaseSync(path.join(kernel.home, 'kvman.db'));
+    try {
+      database.prepare("UPDATE store_documents SET data = json_remove(data, '$.commandDescription') WHERE extension = '@kvman/kvcoder' AND collection = 'slash-commands'").run();
+    } finally {
+      database.close();
+    }
+    await kernel.restart();
+    expect((await kernel.exec('kvcoder.slash.list', {})).map((command) => command.name)).toEqual(['from-fixture']);
+    const { prompt } = await kernel.exec('kvcoder.prompt.get', { sessionId: await newSession(kernel) });
+    expect(prompt).toContain('\n- /from-fixture: Runs a fixture slash command.');
   });
 });

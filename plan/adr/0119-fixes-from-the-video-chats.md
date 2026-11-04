@@ -46,7 +46,9 @@ Four chats of the owner's `faculty` workspace (2026-11-03 and 04) showed:
    then a line per slash command of `kvcoder.slash.list`, by name, `- /<name>: <description>`, where the description is
    the English description of the command the slash command runs (its registration's, read from
    `kernel.extensions.list` once when the slash command is registered and kept on its record, so building a prompt reads
-   no schema), since a slash command's own `description` is a translation key. No block when there are none. Nothing else of an
+   no schema), since a slash command's own `description` is a translation key. An entry stored before reads as none and
+   isn't listed; 0.4.16 required it, so kvcoder's start failed to clear the old entries and `/video` and
+   `/build-kvman` were gone until 0.4.17. No block when there are none. Nothing else of an
    opted-in connector or its guide is in a chat before it is turned on, so ADR 0117, 21 stands but for this line
    (chosen over a visible kvvideo connector, and over leaving it).
 4. **A number field shows its range in a signature.** A number or integer field with a `maximum` is followed by
