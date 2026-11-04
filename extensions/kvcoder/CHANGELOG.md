@@ -1,5 +1,11 @@
 # @kvman/kvcoder
 
+## 0.1.23
+
+### Patch Changes
+
+- 706f71a: The lead is told the slash commands the person can type, so it can point to `/video` instead of making a video another way; a payload signature shows a number's range, as `maxSteps? (1–60)`; and a link artifact's card opens its address in a new tab (ADR 0119).
+
 ## 0.1.22
 
 ### Patch Changes
