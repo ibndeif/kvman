@@ -24,7 +24,7 @@ import { audioExtensions, checkScene, imageExtensions, isImage, planScene, video
 import { sceneStarts, transitionsOf } from './transitions.ts';
 
 // `video compose` (plan 16 §16.8): every file and output is checked before ffmpeg runs; each size is composed in its
-// own folder; the render runs inside the call (ADR 0107, 12); the video, its `.srt`, poster, and sidecar, and the other
+// own folder; the render runs inside the call (ADR 0107, 12); the video, its poster and sidecar, and the other
 // sizes are placed beside its path, and the video is copied for the chat's player.
 
 async function lengthOf(ffprobe: Program, file: string, scene: number, signal: AbortSignal): Promise<number> {
@@ -44,12 +44,12 @@ async function planAll(scenes: readonly Scene[], files: readonly SceneFiles[], f
   return planned;
 }
 
-// The files a size writes, each checked as an output: the video, its `.srt` and poster, and the main one's sidecar.
-function outputsOf(root: string, file: string, size: Size | undefined, replace: boolean): { video: string; srt: string; poster: string; sidecar: string | undefined } {
+// The files a size writes, each checked as an output: the video, its poster, and the main one's sidecar (no `.srt`, ADR 0117, 7).
+function outputsOf(root: string, file: string, size: Size | undefined, replace: boolean): { video: string; poster: string; sidecar: string | undefined } {
   outputPath(root, file, '.mp4', replace);
   const base = file.slice(0, file.length - path.extname(file).length) + (size === undefined ? '' : `-${String(size.width)}x${String(size.height)}`);
   const video = outputPath(root, `${base}.mp4`, '.mp4', replace);
-  return { video, srt: outputPath(root, `${base}.srt`, '.srt', replace), poster: outputPath(root, `${base}.jpg`, '.jpg', replace), sidecar: size === undefined ? sidecarOutputPath(video, replace, file) : undefined };
+  return { video, poster: outputPath(root, `${base}.jpg`, '.jpg', replace), sidecar: size === undefined ? sidecarOutputPath(video, replace, file) : undefined };
 }
 
 function checkSizes(main: Size, extra: readonly Size[]): void {
@@ -60,7 +60,7 @@ function checkSizes(main: Size, extra: readonly Size[]): void {
 
 export function registerCompose(ctx: Ctx): void {
   ctx.registerCommand('kvvideo.video.compose', {
-    description: 'Composes scenes of recorded clips, pages, or images, framed, with camera moves, overlays, transitions, sound effects, narrations, and burned-in captions, into an MP4 file in the workspace, levelled, with its .srt and poster.',
+    description: 'Composes scenes of recorded clips, pages, or images, framed, with camera moves, overlays, transitions, sound effects, narrations, and burned-in captions, into an MP4 file in the workspace, levelled, with its poster.',
     input: composeInputSchema,
     output: composeOutputSchema,
     public: true,
@@ -132,7 +132,6 @@ export function registerCompose(ctx: Ctx): void {
           if (placed === undefined) continue;
           placeOutput(result.video, placed.video);
           placeOutput(result.poster, placed.poster);
-          if (result.srt !== undefined) placeOutput(result.srt, placed.srt);
           if (index > 0) others.push({ file: answerPath(root, placed.video), bytes: statSync(placed.video).size });
         }
         if (mainOutputs.sidecar !== undefined) placeOutput(writeSidecar(work.folder, { kind: 'video', durationMs, ...size, scenes: starts.map((startMs, index) => ({ startMs, endMs: startMs + (lengths[index] ?? 0) })), captions: main.captions }), mainOutputs.sidecar);

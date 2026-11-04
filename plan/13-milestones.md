@@ -544,7 +544,7 @@ ADR 0099.
 
 ## M5 — Video
 
-ADR 0107; M5.5 to M5.11, ADR 0115.
+ADR 0107; M5.5 to M5.11, ADR 0115; M5.12, ADR 0117.
 
 ### M5.1 kvvideo set up
 
@@ -700,3 +700,21 @@ ADR 0107; M5.5 to M5.11, ADR 0115.
 - **Done when:**
   - After `/video` the chat's prompt holds the guide's seven groups and its steps, and the connector index has `video`'s new description and commands.
   - The by-hand check makes a video with a title page, a window and a phone recording of a website, a person's image and a licensed one from the web, the camera, overlays, every transition, sound effects, and English and Arabic captions in each style; `review` finds a planted silence and a black picture; each service narrates once with the owner's keys; the owner records a scene with `ask record` in the browser, the desktop app, and VS Code.
+
+### M5.12 A production workflow, `video look`, the scene's clock, and no `.srt`
+
+- **Read:** `16` §16.1, §16.3, §16.5 (The page's clock, Looking), §16.8 (Beside the video, Other sizes), §16.12; `08` §8.2 (Deliberate); ADR 0117.
+- **Build:**
+  - the guide in `docs/guide.md` as the ten stages, then the production rules, then the rules;
+  - kvcoder: the lead's Deliberate part, "or a guide in your prompt says when to", with its changeset;
+  - kvvideo: a page's animations held from before it loads until the capture starts, in `record` and `look`;
+  - kvvideo: `video look` (`kvvideo.frame.capture`, `images: true`), its connector entry and example, and the collection `lookFrames`;
+  - kvvideo: `compose` without the `.srt`, for every size;
+  - the changesets.
+- **Done when:**
+  - After `/video` the chat's prompt holds the guide's ten stages, and the connector index has `look`.
+  - The lead's prompt says to deliberate when the person asks or a guide says when to.
+  - A page whose element enters with an `animation-delay` is recorded with the element entering at that delay from the recording's start, though its page waited for the network first.
+  - `look` answers one JPEG per moment, at the viewport's CSS size, in increasing order, `[1000]` when left out; two calls give the same frames of an animated page; a 7th or a repeated moment, or one past 60 000, fails `VALIDATION_FAILED`; a page that doesn't load fails `kvvideo/STEP_FAILED`; past 24 frames the oldest are deleted with their files.
+  - `compose` writes no `.srt` beside the video or its other sizes.
+

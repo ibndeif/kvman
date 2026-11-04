@@ -1,0 +1,39 @@
+# ADR 0117 — a production workflow for every video, `video look`, the scene's clock, and no `.srt`
+
+Status: accepted, 2026-11-04. It changes plan 16 (§16.1, §16.3, §16.5, §16.8, §16.10, §16.12), plan 08 §8.2 (the lead's Deliberate part), and adds milestone M5.12 to plan 13.
+
+The product owner asked (2026-11-04) for kvvideo's prompt to become "a proper workflow to design the perfect videos": first the design (scenarios, slides, and the like, from the request, possibly with the `council` worker), then the materials (images, visuals, content), and so on until the video is finished, a workflow that "can produce any type of videos based on the user request". The guide of ADR 0115 had good production rules and six steps that were mostly mechanical (check, gather, script, narrate, record, compose); it had no brief, no concept, no storyboard the person could see, no timing budget, and no way for the agent to see an HTML scene before the whole video was composed. Two facts shaped the answer: a helper's prompt has the sections of its own session only (`sectionsFor` reads the helper's id), so a helper never sees the guide; and `record` starts capturing only once the page's fonts are loaded and the network is idle (up to 10 s), while the page's CSS animations start at its load, so an animation timed to the narration ran early by an unknown amount. Mid-way, the owner also asked to drop the `.srt` file: "no need for it". Decisions 1 to 7, 21, and 22 are the owner's answers; 8 to 20 are the smallest way to carry them out, and the owner may overrule any of them.
+
+## Decisions
+
+### Asked
+
+1. **The council debates an open concept.** When a video's concept is open (a promotion, a story, an explainer without a script, any video whose angle could go several ways), the guide has the lead hand the brief to the worker that debates approaches; a tutorial of clear steps, or a script the person gave, gets no debate (chosen over every video, and over only when the person asks). Since the lead's method allowed a debate only when the person asked (ADR 0108, 10), its Deliberate part gains "or a guide in your prompt says when to" (decision 18).
+2. **Two approvals at most**: when the concept is open, the person picks one of two or three directions; then the person agrees to the treatment (the script, the storyboard, and the style frames) before anything costs money; a clear tutorial has only the second (chosen over the treatment only, and over a third stop at a rough cut).
+3. **The production runs on an execution map, and agreeing to the treatment is its go-ahead** (chosen over the map's own approval, and over no map). The lead's method already starts a map at once when the person "already told you to go ahead with what the map does"; the guide says the treatment's agreement is that.
+4. **A new `video look`** shows the model a page's or a website's frames at chosen moments, so the style frames and each HTML scene are checked before they are narrated and recorded (chosen over recording a clip and reviewing it, and over no preview).
+5. **A page's animations wait for the recording.** `record` and `look` hold the page's CSS animations and transitions at their start until the clip's clock starts; the guide says to animate with CSS only (chosen over a start class on `<html>`, and over both).
+6. **The lead designs the look, designers build the rest.** The lead writes `style.css` and the style frames; with four or more other HTML scenes, designer workers build them in parallel, one scene file each, and the lead checks each with `video look` (chosen over the lead building all, and over designers always).
+7. **No `.srt` file.** `compose` writes none, for the main size or the other sizes (this reverses the `.srt` of ADR 0115, 18 and 44; the burned-in captions and their styles stay).
+
+### Chosen to carry them out
+
+8. **Ten stages, in order**, each ending with what it gives the next: Ready, Brief, Research, Concept, Treatment, Production map, Voice first, Pictures, Assemble and review, Deliver. A stage the request already settles takes a line (a script the person gave settles the concept). The production rules of ADR 0115, 23 follow the stages, condensed.
+9. **The video's folder carries its rules to helpers.** `videos/<name>/brief.md` holds the brief, the facts with their sources, and the chosen concept; `style.css` the colours, fonts, type sizes, spacing, and motion every HTML scene links. A designer's brief names both, and the style frames, in its context, since a helper never sees the guide.
+10. **A structure per kind** (tutorial, explainer, promotion, announcement, story, social clip) is in the guide's Concept stage, as a starting shape, not a template.
+11. **A timing budget**: about 2.5 spoken words a second in English and 2 in Arabic; each scene's narration fits its length, and the whole is within 10% of the length asked.
+12. **The brief asks once**, only what looking left open, each question with its recommendation first: what the viewer should know or do after watching, who they are, where it is shown (which sets the shapes and the length), the length, the language, and the voice.
+13. **The council is asked for two or three directions**, the strongest first, each with its hook, structure, and look; the lead offers them with `ask choice`.
+14. **The style frames are shown as HTML artifacts** with `style.css` copied into a `<style>` element, since an artifact can't load the workspace's files (plan 08 §8.5).
+15. **The clock rule**: the page's clock starts with the recording and the narration 300 ms later (plan 16 §16.5), so an element that comes in with caption line `n` has an `animation-delay` of 300 ms plus that line's `startMs`.
+16. **At most three compose-and-review rounds**, each fault fixed at its cause; after the third the lead tells the person what is still wrong.
+17. **A change asked at a time** ("at 0:42") is found in the video's sidecar's scene times; only that scene is made again, and unchanged narration comes from the cache.
+18. **The Deliberate part's first sentence** becomes "Only when the person asks for the approaches to be debated, or a guide in your prompt says when to:". Nothing else in kvcoder changes.
+19. **`video look`'s shape**: `kvvideo.frame.capture { url | page, atMs?, width?, height?, device? }` → `{ images: [{ fileId, name, atMs }] }`, a public command with `retries: 0`, a 2-minute timeout, and `images: true`: 1 to 6 distinct moments (0 to 60 000 ms; `[1000]` when left out), each a JPEG (quality 85) at the viewport's CSS size, so text and alignment can be judged; no steps, since it shows a page as it opens. The page is opened, held, and timed as `record`'s; at each moment every animation of the page is set to that time, so a frame is the same on every call. The frames are kept as `review`'s sheets are, in their own collection `lookFrames`, past 24 the oldest deleted with their files. It has no progress chunks: it takes seconds.
+20. **"Decide for me"** (no `ask`): the lead chooses the concept itself, shows the treatment, says what it chose, and goes on; the person's own voice can't be recorded there, as before.
+21. **Asked: nothing of kvvideo is in a prompt before `/video`.** The owner asked that the video prompt and guide load only when the person runs the slash command; that is already so (the connector is `optIn` and the guide a section of the chat, ADR 0107, 11), and the command stays `/video` (chosen over renaming it `/make-video`).
+22. **Asked: the generic Deliberate line is in kvcoder's lead prompt** (decision 18), since it names no video and no worker (chosen over leaving kvcoder's prompt unchanged, where the guide's rule would contradict the method's "only when the person asks").
+
+## Verification
+
+Scenarios in `milestones/M5.12-TEST-CASES.md`.

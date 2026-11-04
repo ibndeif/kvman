@@ -1,5 +1,4 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
-import path from 'node:path';
+import { mkdirSync } from 'node:fs';
 import type { Browser } from 'playwright-core';
 import type { Brand } from '../brand/brand.ts';
 import type { Caption } from '../narration/captions.ts';
@@ -17,11 +16,10 @@ import { render } from './render.ts';
 import type { SceneDrawn, SceneRender } from './scene-args.ts';
 import type { PlannedScene } from './scene-plan.ts';
 import { soundEvents } from './sound-effects.ts';
-import { srtFile } from './srt.ts';
 import type { Transition } from './transitions.ts';
 
 // One size of a composition (plan 16 §16.8): its recorded pages again at its shape when that differs, each scene's
-// picture, drawings, and captions, the render, and the captions on the video's time line for the `.srt`.
+// picture, drawings, and captions, the render, and the captions on the video's time line for its sidecar.
 
 export type Composition = {
   root: string;
@@ -41,7 +39,7 @@ export type Composition = {
   progress: { scene(): void; final(percent: number): void };
 };
 
-export type SizeResult = { video: string; poster: string; srt: string | undefined; captions: Caption[] };
+export type SizeResult = { video: string; poster: string; captions: Caption[] };
 
 const noDrawing = (picture: ScenePicture): SceneDrawn => ({ layout: undefined, chrome: undefined, mask: undefined, overlayImages: picture.look.overlays.map(() => undefined) });
 
@@ -104,7 +102,5 @@ export async function composeSize(composition: Composition, size: Size, folder: 
     finalAt: composition.progress.final,
   });
   const timeline = captions.flatMap((sceneCaptions, index) => sceneCaptions.map((caption) => ({ text: caption.text, startMs: caption.startMs + (composition.starts[index] ?? 0), endMs: caption.endMs + (composition.starts[index] ?? 0) })));
-  const srt = timeline.length === 0 ? undefined : path.join(folder, 'captions.srt');
-  if (srt !== undefined) writeFileSync(srt, srtFile(timeline));
-  return { ...made, srt, captions: timeline };
+  return { ...made, captions: timeline };
 }

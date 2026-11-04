@@ -13,18 +13,16 @@ import { recordableAddress } from './address.ts';
 import { cuesOf, type Cues } from './narration-cues.ts';
 import { ownPortOf } from './own-port.ts';
 import { record, type RecordSource } from './recorder.ts';
+import { defaultSize, sourceOf } from './record-source.ts';
 import { recordInputSchema, recordOutputSchema, type RecordInput } from './steps.ts';
 
 // `video record` (plan 16 §16.5): the addresses, the page, the narration, and the outputs are checked before a browser
 // starts; the browser is closed when the call ends, fails, or is cancelled, and the work folder removed. The
 // recording's sidecar is placed beside it (ADR 0115, 31).
 
-const defaultSize = { desktop: { width: 1280, height: 720 }, phone: { width: 390, height: 844 } };
-
-function sourceOf(root: string, input: RecordInput, ownPort: number | null): RecordSource {
+function recordSourceOf(root: string, input: RecordInput, ownPort: number | null): RecordSource {
   for (const step of input.steps ?? []) if (step.do === 'goto') recordableAddress(step.url, ownPort);
-  if (input.page !== undefined) return { kind: 'page', file: inputPath(root, input.page, ['.html', '.htm']) };
-  return { kind: 'site', url: recordableAddress(input.url ?? '', ownPort).href };
+  return sourceOf(root, input, ownPort);
 }
 
 function cuesFor(root: string, input: RecordInput): Cues | undefined {
@@ -49,7 +47,7 @@ export function registerRecord(ctx: Ctx): void {
     handle: async (input) => {
       const root = ctx.job.workspace.path;
       const ownPort = ownPortOf(process.env['KVMAN_HOME']);
-      const source = sourceOf(root, input, ownPort);
+      const source = recordSourceOf(root, input, ownPort);
       const cues = cuesFor(root, input);
       const replace = input.replace === true;
       const output = outputPath(root, input.file, '.mp4', replace);

@@ -31,14 +31,15 @@ const captioned = [
 ];
 
 describe("compose's final pass (16 §16.8, ADR 0115)", { timeout: 60_000 }, () => {
-  it('M5.8-H8 the .srt, poster, and sidecar beside the video; progress for each part and the final pass', async () => {
+  // Superseded in part by M5.12-H8: no .srt beside the video (ADR 0117, 7); its captions' time line is in the sidecar.
+  it('M5.8-H8 M5.12-H8 the poster and sidecar beside the video, and no .srt; progress for each part and the final pass', async () => {
     const { kernel, ffmpeg, workspace } = await composing();
     const chunks: { data: { key: string; params: Record<string, number> } }[] = [];
     const answer = await kernel.exec('kvvideo.video.compose', { file: 'v/tour.mp4', scenes: captioned }, { onProgress: (chunk) => chunks.push(chunk as never) });
     expect(answer.durationMs).toBe(3100 + 3100 - 500);
-    expect(readFileSync(`${workspace}/v/tour.srt`, 'utf8')).toBe('1\n00:00:00,300 --> 00:00:02,800\nOpen the app.\n\n2\n00:00:02,900 --> 00:00:05,400\nSign in.\n');
+    expect(existsSync(`${workspace}/v/tour.srt`)).toBe(false);
     expect(readFileSync(`${workspace}/v/tour.jpg`, 'utf8')).toBe('POSTER');
-    expect(JSON.parse(readFileSync(`${workspace}/v/tour.mp4.kvvideo.json`, 'utf8'))).toMatchObject({ kind: 'video', durationMs: 5700, width: 1920, height: 1080, scenes: [{ startMs: 0, endMs: 3100 }, { startMs: 2600, endMs: 5700 }] });
+    expect(JSON.parse(readFileSync(`${workspace}/v/tour.mp4.kvvideo.json`, 'utf8'))).toMatchObject({ kind: 'video', durationMs: 5700, width: 1920, height: 1080, scenes: [{ startMs: 0, endMs: 3100 }, { startMs: 2600, endMs: 5700 }], captions: [{ text: 'Open the app.', startMs: 300, endMs: 2800 }, { text: 'Sign in.', startMs: 2900, endMs: 5400 }] });
     const final = runsOf(ffmpeg).find((run) => run.kind === 'final');
     expect(final?.graph).toContain('xfade=transition=fade:duration=0.500:offset=2.600');
     expect(final?.graph).toContain('measured_I=-20.00');
@@ -46,11 +47,11 @@ describe("compose's final pass (16 §16.8, ADR 0115)", { timeout: 60_000 }, () =
     expect(chunks[1]?.data.params).toEqual({ n: 2, of: 2 });
   });
 
-  it('M5.8-H10 an extra size is composed again at its own size, beside the main one', async () => {
+  it('M5.8-H10 M5.12-H8 an extra size is composed again at its own size, beside the main one, with no .srt', async () => {
     const { kernel, ffmpeg, workspace } = await composing();
     const answer = await kernel.exec('kvvideo.video.compose', { file: 'v/tour.mp4', extraSizes: [{ width: 1080, height: 1920 }], scenes: captioned });
     expect(answer.others).toEqual([{ file: 'v/tour-1080x1920.mp4', bytes: 'PART part-1.mkv\nPART part-2.mkv\n'.length }]);
-    expect(['v/tour-1080x1920.mp4', 'v/tour-1080x1920.srt', 'v/tour-1080x1920.jpg'].map((file) => existsSync(`${workspace}/${file}`))).toEqual([true, true, true]);
+    expect(['v/tour-1080x1920.mp4', 'v/tour-1080x1920.jpg', 'v/tour-1080x1920.srt'].map((file) => existsSync(`${workspace}/${file}`))).toEqual([true, true, false]);
     const parts = runsOf(ffmpeg).filter((run) => run.kind === 'part');
     expect(parts.map((run) => run.args.find((arg) => arg.startsWith('gradients=s='))?.split(':')[0])).toEqual(['gradients=s=1920x1080', 'gradients=s=1920x1080', 'gradients=s=1080x1920', 'gradients=s=1080x1920']);
     expect(new Set(parts.map((run) => run.cwd)).size).toBe(2);
@@ -78,7 +79,7 @@ describe("compose's final pass (16 §16.8, ADR 0115)", { timeout: 60_000 }, () =
     }
   });
 
-  it('M5.8-E5 one scene with captions off: no .srt and no transition', async () => {
+  it('M5.8-E5 M5.12-E7 one scene with captions off: no .srt and no transition', async () => {
     const { kernel, ffmpeg, workspace } = await composing();
     await kernel.exec('kvvideo.video.compose', { file: 'one.mp4', captions: { style: 'off' }, scenes: [captioned[0] ?? { clip: 'v/a.png' }] });
     expect(existsSync(`${workspace}/one.srt`)).toBe(false);

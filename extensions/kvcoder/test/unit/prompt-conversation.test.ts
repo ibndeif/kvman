@@ -42,7 +42,7 @@ describe('a conversation, not a procedure (08 §8.2, ADR 0112)', () => {
       'A bug fix, a change to one or two files, or a fix the person described never gets a map.',
       'ask before any work.',
       '`ask choice` whenever you offer options, your recommended one first',
-      'Only when the person asks for the approaches to be debated:',
+      'Only when the person asks for the approaches to be debated, or a guide in your prompt says when to:',
       "Delegate find, check, and review runs, and change runs only when two or more run at once on files that don't overlap",
       "Before you say that something runs or works, check it the way the person would: run it or request its address; if you couldn't, say what is unchecked.",
       'add a short Commands section to AGENTS.md with risky set to true',

@@ -9,6 +9,7 @@ import { recordEncoderArgs } from './encoder-args.ts';
 import { frameWriter } from './frame-writer.ts';
 import { waitUntilMs, type Cues } from './narration-cues.ts';
 import { answerPageRequest, pageAddress, pageOrigin } from './page-route.ts';
+import { holdPageClock } from './page-clock.ts';
 import { waitUntilReady } from './page-ready.ts';
 import { pausesAfter, runStep, type StepState } from './run-step.ts';
 import { startScreencast } from './screencast.ts';
@@ -17,7 +18,8 @@ import type { Action, Step } from './steps.ts';
 // One recording (plan 16 §16.5; ADR 0107, 25; ADR 0115, 8 and 32): a fresh browser context at 2× density opens the
 // website or the page; once it is ready, its screencast feeds ffmpeg. The page is shown 500 ms before the first step,
 // 400 ms after each step but `wait` and `waitFor`, and 1000 ms after the last, and lasts at least as long as its
-// narration's cues ask. Requests to kvman's own address are aborted (ADR 0107, 18).
+// narration's cues ask; its animations wait for the recording's start (ADR 0117, 5). Requests to kvman's own address are
+// aborted (ADR 0107, 18).
 
 export type RecordSource = { kind: 'site'; url: string } | { kind: 'page'; file: string };
 
@@ -58,7 +60,8 @@ export async function recordingContext(browser: Browser, plan: Pick<RecordPlan, 
   return context;
 }
 
-async function open(page: Page, source: RecordSource): Promise<void> {
+/** Opens the website or the page and waits until it is ready, or fails `kvvideo/STEP_FAILED` with step 0. */
+export async function openSource(page: Page, source: RecordSource): Promise<void> {
   const address = source.kind === 'site' ? source.url : pageAddress(source.file);
   try {
     await page.goto(address, { waitUntil: 'load', timeout: 30_000 });
@@ -101,13 +104,15 @@ async function play(page: Page, plan: RecordPlan, startedAt: number): Promise<Ac
 export async function record(browser: Browser, plan: RecordPlan): Promise<Recording> {
   const context = await recordingContext(browser, plan);
   const page = await context.newPage();
-  await open(page, plan.source);
+  const clock = await holdPageClock(page);
+  await openSource(page, plan.source);
   const size = { width: plan.width * scale, height: plan.height * scale };
   const video = path.join(plan.folder, 'recording.mp4');
   const stopEncoder = new AbortController();
   const encoder = await startPiped(plan.ffmpeg, recordEncoderArgs(size.width, size.height, video), AbortSignal.any([plan.signal, stopEncoder.signal]));
   try {
     const startedAt = plan.now();
+    await clock.start();
     const writer = frameWriter((frame) => encoder.write(frame), startedAt);
     const screencast = await startScreencast(page, size, (frame, atMs) => writer.frame(frame, atMs), plan.now);
     const actions = await play(page, plan, startedAt).finally(() => screencast.stop());

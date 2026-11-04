@@ -240,14 +240,15 @@ describe('deliberating before a map, chosen apart from it (08 §8.2, ADR 0103, 6
 
   // Superseded in part by QA71-H22: deliberating runs only when the person asks (ADR 0108, 10).
   // Plan is Map since QA73-H5 (ADR 0112, 3).
-  it('QA68-H6 and QA71-H22 the lead has Deliberate before Map, only when the person asks; Decide for me has the same', () => {
+  // And by M5.12-H3: also when a guide in the prompt says when to (ADR 0117, 18).
+  it('QA68-H6, QA71-H22, and M5.12-H3 the lead has Deliberate before Map, only when the person asks or a guide says when to; Decide for me has the same', () => {
     for (const decides of [false, true]) {
       const lead = workingMethod('lead', 'engineering', decides);
       const names = lead.split('\n').map((line) => line.slice(0, line.indexOf('. ')));
       expect(names[names.indexOf('Deliberate') - 1]).toBe('Clarify');
       expect(names.indexOf('Map')).toBe(names.indexOf('Deliberate') + 1);
       for (const phrase of [
-        'Only when the person asks for the approaches to be debated:',
+        'Only when the person asks for the approaches to be debated, or a guide in your prompt says when to:',
         "before any map or change, hand it in one `delegate run` to the worker of the `delegate` connector that debates approaches, when its entry lists one",
         'the map\'s steps and details when your path has a map, or the work itself when it doesn\'t.',
         'Deliberating and mapping are separate choices, and deliberate once per request, not per step.',

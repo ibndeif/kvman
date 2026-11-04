@@ -1,4 +1,4 @@
-// The `video` connector (plan 16 §16.1 and §16.3; ADR 0107, 11; ADR 0115, 55): `optIn`, so a chat has it only after
+// The `video` connector (plan 16 §16.1 and §16.3; ADR 0107, 11; ADR 0115, 55; ADR 0117, 4): `optIn`, so a chat has it only after
 // `/video`. Each command has one example of what it takes.
 
 export const connectorName = 'video';
@@ -26,6 +26,12 @@ export const videoConnector = {
           input: { url: 'http://localhost:5173/', file: 'videos/tour/01.mp4', narration: 'videos/tour/01.mp3', steps: [{ do: 'type', target: 'role=textbox[name="Email"]', text: 'sam@example.com', atLine: 1 }, { do: 'click', target: 'role=button[name="Sign in"]', atLine: 2 }] },
         },
       ],
+    },
+    {
+      name: 'look',
+      command: 'kvvideo.frame.capture',
+      images: true as const,
+      examples: [{ description: "Look at a title scene as its words come in, before recording it", input: { page: 'videos/tour/00-title.html', atMs: [500, 1500, 3000] } }],
     },
     {
       name: 'narrate',

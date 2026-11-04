@@ -1,5 +1,6 @@
 import type { z } from '@kvman/sdk';
 import type { composeInputSchema, composeOutputSchema } from './compose/compose-input.ts';
+import type { lookInputSchema, lookOutputSchema } from './look/look-input.ts';
 import type { narrateInputSchema, narrateOutputSchema } from './narration/register-narration.ts';
 import type { recordInputSchema, recordOutputSchema } from './record/steps.ts';
 import type { reviewOutputSchema } from './review/register-review.ts';
@@ -19,6 +20,7 @@ declare module '@kvman/sdk' {
     'kvvideo.video.compose': { input: z.input<typeof composeInputSchema>; output: z.output<typeof composeOutputSchema> };
     'kvvideo.narration.make': { input: z.input<typeof narrateInputSchema>; output: z.output<typeof narrateOutputSchema> };
     'kvvideo.clip.record': { input: z.input<typeof recordInputSchema>; output: z.output<typeof recordOutputSchema> };
+    'kvvideo.frame.capture': { input: z.input<typeof lookInputSchema>; output: z.output<typeof lookOutputSchema> };
     'kvvideo.brand.set': { input: Brand; output: Empty };
     'kvvideo.voice.make': { input: z.input<typeof voiceInputSchema>; output: z.output<typeof voiceOutputSchema> };
     'kvvideo.video.review': { input: { file: string }; output: z.output<typeof reviewOutputSchema> };

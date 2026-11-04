@@ -4,7 +4,7 @@ import { z } from '@kvman/sdk';
 // device, the narration whose caption lines the steps may wait for, and the output.
 
 const target = z.string().min(1).max(500).describe('A Playwright selector: CSS, text=Save, or role=button[name="Save"]; its first match is used once visible.');
-const address = z.string().min(1).max(2000);
+export const address = z.string().min(1).max(2000);
 const atLine = z.number().int().min(1).max(1000).describe('Start no earlier than this caption line (from 1) of the narration is heard.').exactOptional();
 
 export const stepSchema = z.discriminatedUnion('do', [
@@ -21,7 +21,7 @@ export const stepSchema = z.discriminatedUnion('do', [
 /** One step of a recording. */
 export type Step = z.output<typeof stepSchema>;
 
-const side = z.number().int().min(320).max(1920).refine((pixels) => pixels % 2 === 0, 'A side is an even number of pixels.');
+export const side = z.number().int().min(320).max(1920).refine((pixels) => pixels % 2 === 0, 'A side is an even number of pixels.');
 
 const recordFields = z.strictObject({
   url: address.describe('A website to record: any http or https address.').exactOptional(),
