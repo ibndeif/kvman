@@ -1,5 +1,11 @@
 # @kvman/kvcoder
 
+## 0.1.24
+
+### Patch Changes
+
+- 6cec5d0: Slash commands stored by an earlier version no longer stop kvman's start from registering them again, so `/video` and `/build-kvman` are back after updating from 0.4.15 (ADR 0119).
+
 ## 0.1.23
 
 ### Patch Changes
