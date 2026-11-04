@@ -1,5 +1,11 @@
 # @kvman/kvcoder
 
+## 0.1.21
+
+### Patch Changes
+
+- 8a83fb3: The lead deliberates when the person asks, or when a guide in its prompt says when to (ADR 0117).
+
 ## 0.1.20
 
 ### Patch Changes
