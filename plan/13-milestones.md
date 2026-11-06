@@ -544,7 +544,7 @@ ADR 0099.
 
 ## M5 — Video
 
-ADR 0107; M5.5 to M5.11, ADR 0115; M5.12, ADR 0117.
+ADR 0107; M5.5 to M5.11, ADR 0115; M5.12, ADR 0117; M5.13 to M5.16, ADR 0120.
 
 ### M5.1 kvvideo set up
 
@@ -717,4 +717,63 @@ ADR 0107; M5.5 to M5.11, ADR 0115; M5.12, ADR 0117.
   - A page whose element enters with an `animation-delay` is recorded with the element entering at that delay from the recording's start, though its page waited for the network first.
   - `look` answers one JPEG per moment, at the viewport's CSS size, in increasing order, `[1000]` when left out; two calls give the same frames of an animated page; a 7th or a repeated moment, or one past 60 000, fails `VALIDATION_FAILED`; a page that doesn't load fails `kvvideo/STEP_FAILED`; past 24 frames the oldest are deleted with their files.
   - `compose` writes no `.srt` beside the video or its other sizes.
+
+### M5.13 Fixes from the KVCare promotion: loudness, review's reasons, even captions, phrases to stress, and the narration set up by the lead
+
+- **Read:** `16` §16.3, §16.4, §16.6 (Captions), §16.7, §16.8 (The render), §16.10; `08` §8.5 (`ask record`), §8.7 (the record card); ADR 0120.
+- **Build:**
+  - kvvideo: the final pass's loudness at `TP=-2`;
+  - kvvideo: `review`'s problems with their `reason`, `frozen` from 3 s, and a silence that ends the video within 5 s left out;
+  - kvvideo: captions cut evenly, breaking after punctuation where it can, for `narrate` and `voice`, and `voice` captioning each sentence of a take on its own;
+  - kvvideo: `video narration-set` (`kvvideo.narration.set`), its connector entry and example, and `check`'s `toolsFolder`;
+  - kvcoder: `ask record`'s `stress` and `pauses` as words or runs of words, and the record card's marks for them;
+  - the changesets.
+- **Done when:**
+  - A composed video whose narration peaks at 0 dBFS measures a true peak at or below −1 dBTP in `review`, with no `loudness` problem.
+  - Each `review` problem has its `reason` with the measure and its bound; a 3.5 s still picture is `frozen`; a 4 s silence at the video's end is not a problem, and a 4 s silence before its end is.
+  - The sentence "والفريق الطبي يقدر يوثّق بيانات الزيارة في السجل الطبي للمريض." is cut into two lines of nearly even length; a take of two sentences has captions that never join them.
+  - `narration-set` sets the three global settings, Piper with a voice file anywhere and its `.onnx.json` beside it; a missing Piper voice, a missing file, or a Piper model fails `VALIDATION_FAILED`; `check` answers `toolsFolder`.
+  - `ask record` takes `stress: ["الفريق الطبي"]`, shows both words bold, and fails a run that isn't in the line.
+
+### M5.14 kvvideo's address in a page: the motion kit, the brand, the fonts, the libraries, and failed loads
+
+- **Read:** `16` §16.5 (A page, kvvideo's address in a page, Failed loads, The motion kit, Looking); ADR 0120.
+- **Build:**
+  - kvvideo: requests to `kvvideo/` answered by kvvideo for `record` and `look` of a page: `motion.css`, `brand.css`, the logo, the bundled fonts, and the libraries;
+  - kvvideo: `motion.css`, the motion kit, in the package's files;
+  - kvvideo: the dependencies `three` 0.187.0, `animejs` 4.5.0, and `lottie-web` 5.13.0, with their licences in the package's notices;
+  - kvvideo: `record`'s and `look`'s `failed`;
+  - the changeset.
+- **Done when:**
+  - A page that links `kvvideo/brand.css` is drawn in the brand's font and colours, and shows `kvvideo/logo.png`; with no brand, the defaults; a page's own `kvvideo/motion.css` is not served.
+  - A page that imports `three` from `kvvideo/lib/three/build/three.module.js` and an addon from `examples/jsm/` draws a cube; anime.js and lottie-web load from their addresses.
+  - A page whose stylesheet names a font outside its folder answers that font in `failed` with status 404, in `record` and `look`; a website's failed request is listed with status 0; at most 20, without repeats.
+  - Each class of the motion kit moves its element as §16.5 says, mirrored in a right-to-left page.
+
+### M5.15 Scenes drawn frame by frame at 60 frames a second, kvvideo's clock, sound cues, the page's push-in, and branded captions
+
+- **Read:** `16` §16.3 (Progress, The sidecar), §16.5 (Drawn frame by frame, kvvideo's clock, Sound cues, Looking), §16.8 (The picture, A page's camera, Captions, Sound effects, The render); ADR 0120.
+- **Build:**
+  - kvvideo: kvvideo's clock, given to a page before its own scripts;
+  - kvvideo: `record` of a page with only `wait` steps drawn frame by frame at 60 frames a second, with its progress, its sound cues, and its sidecar's `drawn` and `sounds`;
+  - kvvideo: `look` of a page on kvvideo's clock;
+  - kvvideo: `compose` at 60 frames a second, a page's push-in, a drawn page's sound cues, a soft whoosh at each crossfade, and captions in the brand's colours by default;
+  - the changeset.
+- **Done when:**
+  - A drawn page's file is 60 frames a second, every frame distinct while a linear CSS animation runs, its length the real-time rules', and two recordings of it are the same frame for frame.
+  - A page animated by `requestAnimationFrame`, by a `setTimeout`, by `Math.random`, and a three.js scene each draw the same frame at the same time in `look` and in `record`.
+  - A drawn page with `data-sound="pop"` on an element entering at 1.2 s answers a pop at 1200 ms (± one frame) and `compose` mixes it there; a crossfade has a soft whoosh.
+  - A page scene's `auto` camera pushes in from 1× to 1.05×; a composed video is 60 frames a second, a website scene's frames repeated.
+  - With a brand, the default captions are boxed in its `primary` with text that contrasts; with no brand, outlined.
+
+### M5.16 The guide for videos that move, and the KVCare promotion made again
+
+- **Read:** `16` §16.1; ADR 0120.
+- **Build:**
+  - the guide in `docs/guide.md`: the own voice without a service, the narration set up after asking, the preview clip, re-timing from the voice, the motion kit, kvvideo's address, scripts and 3D on kvvideo's clock, sound cues, captions on or off, the designers' brief and steps, and no ffmpeg of the lead's own;
+  - the connector's description and examples where they changed;
+  - the changeset.
+- **Done when:**
+  - After `/video` the guide names `kvvideo/brand.css`, `kvvideo/motion.css`, `kvvideo/lib/three/`, `data-sound`, `narration-set`, the preview clip, and re-timing, and no longer says "CSS animations and transitions only" or that examples need a service.
+  - By hand: the KVCare promotion made again with `/video` in the owner's voice has scenes that move throughout, the app's font and logo, sound effects, even captions, and a `review` with no problem.
 
