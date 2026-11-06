@@ -44,7 +44,7 @@ describe('a real recording (16 §16.5, ADR 0107, 25)', () => {
     expect(answer.durationMs).toBe(1500 + (300 + 2000 + 300) - 500);
     const probed = probe(`${workspace}/tour.mp4`);
     expect(probed.streams).toEqual([
-      { codec_type: 'video', codec_name: 'h264', width: 640, height: 360, r_frame_rate: '30/1' },
+      { codec_type: 'video', codec_name: 'h264', width: 640, height: 360, r_frame_rate: '60/1' },
       { codec_type: 'audio', codec_name: 'aac', r_frame_rate: '0/0', sample_rate: '48000', channels: 2 },
     ]);
     expect(Math.abs(Number(probed.format.duration) * 1000 - answer.durationMs)).toBeLessThan(100);

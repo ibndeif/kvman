@@ -32,7 +32,7 @@ export type Composition = {
   direction: 'ltr' | 'rtl';
   sounds: boolean;
   brand: Brand | null;
-  captions: { look: CaptionLook | 'off'; position: 'bottom' | 'top'; size: number | undefined; highlight: string; font: CaptionFont | undefined };
+  captions: { look: CaptionLook | 'off'; position: 'bottom' | 'top'; size: number | undefined; highlight: string; box: string | undefined; font: CaptionFont | undefined };
   programs: { ffmpeg: Program; ffprobe: Program };
   ownPort: number | null;
   assets: SceneAssets;
@@ -83,19 +83,20 @@ export async function composeSize(composition: Composition, size: Size, folder: 
       fromMs: scene.startMs,
       partMs: scene.kind === 'image' ? scene.lengthMs : scene.partMs,
       actions: pictures[index]?.recording?.actions ?? [],
+      cues: pictures[index]?.recording?.sounds ?? [],
       calloutsFromMs: (composition.scenes[index]?.overlays ?? []).filter((overlay) => overlay.kind === 'callout').map((overlay) => overlay.fromMs),
       on: composition.scenes[index]?.sounds !== false,
     })),
     composition.transitions,
     composition.sounds,
   );
-  const { look, position, highlight } = composition.captions;
+  const { look, position, highlight, box } = composition.captions;
   const made = await render({
     scenes: renders,
     captions,
     size,
     font: composition.captions.font,
-    style: { size: composition.captions.size, position, look: look === 'off' ? 'boxed' : look, highlight },
+    style: { size: composition.captions.size, position, look: look === 'off' ? 'boxed' : look, highlight, box },
     final: { starts: composition.starts, transitions: composition.transitions, direction: composition.direction, events, durationMs: composition.durationMs },
     folder,
     ffmpeg: composition.programs.ffmpeg,

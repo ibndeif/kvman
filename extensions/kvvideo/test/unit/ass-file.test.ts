@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { assColour, assFile, type CaptionStyle } from '../../src/compose/ass-file.ts';
+import { assColour, assFile, captionChoice, type CaptionStyle } from '../../src/compose/ass-file.ts';
 
-const base: CaptionStyle = { width: 1280, height: 720, family: 'IBM Plex Sans Arabic', size: undefined, position: 'bottom', look: 'outline', highlight: '#FFD54A' };
+const base: CaptionStyle = { width: 1280, height: 720, family: 'IBM Plex Sans Arabic', size: undefined, position: 'bottom', look: 'outline', highlight: '#FFD54A', box: undefined };
 
 describe("a scene's ASS file (16 §16.8, ADR 0115, 18 and 42)", () => {
   it('M5.4-H4 the size, the outline style at the bottom, and each caption as a Dialogue', () => {
@@ -49,4 +49,23 @@ describe("a scene's ASS file (16 §16.8, ADR 0115, 18 and 42)", () => {
     expect(file[14]).toBe('Dialogue: 0,0:00:01.00,0:00:03.00,Spoken,,0,0,0,,{\\k20}{\\k40}Open {\\k30}the {\\k110}app.');
     expect(file[15]).toBe('Dialogue: 0,0:00:03.00,0:00:04.00,Default,,0,0,0,,Done.');
   });
+
+  it("M5.15-H10 the captions take the brand by default: boxed in its primary, 90% opaque, with white text", () => {
+    const choice = captionChoice(undefined, '#047857');
+    expect(choice).toEqual({ look: 'boxed', box: '#047857' });
+    const style = assFile({ ...base, ...choice, look: 'boxed', size: 60 }, []).split('\n')[9];
+    expect(style).toBe('Style: Default,IBM Plex Sans Arabic,60,&H00FFFFFF,&H00FFFFFF,&H1A577804,&H1A577804,0,0,0,0,100,100,0,0,3,20,0,2,40,40,43,-1');
+  });
+
+  it('M5.15-H11 with no brand the captions are outlined, and boxed is white on black at 65%', () => {
+    expect(captionChoice(undefined, undefined)).toEqual({ look: 'outline', box: undefined });
+    expect(captionChoice('boxed', undefined)).toEqual({ look: 'boxed', box: undefined });
+    expect(captionChoice('highlight', '#047857')).toEqual({ look: 'highlight', box: undefined });
+    expect(assFile({ ...base, look: 'boxed', size: 60 }, []).split('\n')[9]).toContain(',&H00FFFFFF,&H00FFFFFF,&H59000000,&H59000000,');
+  });
+
+  it('M5.15-E5 a light brand gets near-black caption text', () => {
+    expect(assFile({ ...base, look: 'boxed', box: '#FFD54A' }, []).split('\n')[9]).toContain(',&H00111111,&H00111111,&H1A4AD5FF,&H1A4AD5FF,');
+  });
 });
+

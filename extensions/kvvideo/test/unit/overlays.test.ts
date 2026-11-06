@@ -12,6 +12,8 @@ const recording = {
   durationMs: 5000,
   steps: [],
   actions: [{ do: 'wait', atMs: 500, endMs: 900 }, { do: 'click', atMs: 900, actMs: 1500, endMs: 1550, box: { x: 100, y: 50, width: 200, height: 40 } }],
+  drawn: false,
+  sounds: [],
 };
 
 describe('overlays on a recorded page (16 §16.8, ADR 0115, 11)', () => {

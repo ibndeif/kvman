@@ -46,12 +46,12 @@ export async function recordPageAgain(again: PageAgain): Promise<string> {
   const cues = narration?.kind === 'narration' ? cuesOf(narration) : undefined;
   const work = workFolder();
   try {
-    const plan = { source: { kind: 'page' as const, file }, steps: again.recording.steps, ...page, device: 'desktop' as const, cues, folder: work.folder, ownPort: again.ownPort, assets: again.assets, ffmpeg: again.ffmpeg, signal: again.signal, now: () => performance.now(), stepStarted: () => undefined };
+    const plan = { source: { kind: 'page' as const, file }, steps: again.recording.steps, ...page, device: 'desktop' as const, cues, folder: work.folder, ownPort: again.ownPort, assets: again.assets, ffmpeg: again.ffmpeg, signal: again.signal, now: () => performance.now(), stepStarted: () => undefined, frameDrawn: () => undefined };
     const recording = await record(await again.browser(), plan);
     mkdirSync(again.folder, { recursive: true });
     const clip = path.join(again.folder, `page-${String(again.number)}.mp4`);
     copyFileSync(recording.video, clip);
-    placeOutput(writeSidecar(work.folder, { ...again.recording, ...page, durationMs: recording.durationMs, actions: recording.actions }), sidecarPath(clip));
+    placeOutput(writeSidecar(work.folder, { ...again.recording, ...page, durationMs: recording.durationMs, actions: recording.actions, drawn: recording.drawn, sounds: recording.sounds }), sidecarPath(clip));
     return clip;
   } finally {
     work.remove();

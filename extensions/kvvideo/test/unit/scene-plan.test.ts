@@ -35,19 +35,27 @@ describe("a scene's length (16 §16.8)", () => {
   });
 
   it("M5.7-H11 M5.7-E3 a scene's frame and camera by default from what its clip is", () => {
-    const recording = (kind: 'site' | 'page', device: 'desktop' | 'phone') => ({ kind, source: 'x', width: 640, height: 360, device, scale: 2 as const, durationMs: 1000, steps: [], actions: [] });
+    const recording = (kind: 'site' | 'page', device: 'desktop' | 'phone') => ({ kind, source: 'x', width: 640, height: 360, device, scale: 2 as const, durationMs: 1000, steps: [], actions: [], drawn: false, sounds: [] });
     const look = (scene: Parameters<typeof lookOf>[1], kind: 'video' | 'image', sidecar: Parameters<typeof lookOf>[3]) => {
       const found = lookOf(1, scene, kind, sidecar, undefined, 4000);
       return [found.frame, found.camera === undefined ? 'none' : found.camera.scale === 'input' ? 'zoom' : 'auto'];
     };
     expect(look({ clip: 'a.mp4' }, 'video', recording('site', 'desktop'))).toEqual(['window', 'auto']);
     expect(look({ clip: 'a.mp4' }, 'video', recording('site', 'phone'))).toEqual(['phone', 'auto']);
-    expect(look({ clip: 'a.mp4' }, 'video', recording('page', 'desktop'))).toEqual(['none', 'none']);
+    expect(look({ clip: 'a.mp4' }, 'video', recording('page', 'desktop'))).toEqual(['none', 'auto']);
     expect(look({ clip: 'a.png', durationMs: 4000 }, 'image', undefined)).toEqual(['none', 'zoom']);
     expect(look({ clip: 'a.mp4' }, 'video', undefined)).toEqual(['none', 'none']);
-    expect(look({ clip: 'a.mp4', camera: 'auto' }, 'video', recording('page', 'desktop'))).toEqual(['none', 'none']);
+    expect(look({ clip: 'a.mp4', camera: 'auto' }, 'video', recording('page', 'desktop'))).toEqual(['none', 'auto']);
+    expect(look({ clip: 'a.mp4', camera: 'none' }, 'video', recording('page', 'desktop'))).toEqual(['none', 'none']);
     expect(look({ clip: 'a.mp4', camera: 'auto' }, 'video', undefined)).toEqual(['none', 'none']);
     expect(look({ clip: 'a.mp4', camera: 'none', frame: 'none' }, 'video', recording('site', 'desktop'))).toEqual(['none', 'none']);
     expect(look({ clip: 'a.png', durationMs: 4000, camera: 'none', frame: 'window' }, 'image', undefined)).toEqual(['window', 'none']);
   });
+
+  it("M5.15-H7 a recorded page's auto camera pushes in from 1 to 1.05, evenly, over its part", () => {
+    const page = { kind: 'page' as const, source: 'x', width: 1280, height: 720, device: 'desktop' as const, scale: 2 as const, durationMs: 6000, steps: [], actions: [], drawn: true, sounds: [] };
+    const camera = lookOf(1, { clip: 'a.mp4', from: 500 }, 'video', page, undefined, 4000).camera;
+    expect(camera).toEqual({ scale: 2, offsetMs: 500, plan: { width: 1280, height: 720, start: { x: 640, y: 360, zoom: 1 }, shots: [{ startMs: 500, endMs: 4500, from: { x: 640, y: 360, zoom: 1 }, to: { x: 640, y: 360, zoom: 1.05 }, easing: 'even' }] } });
+  });
 });
+

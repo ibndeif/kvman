@@ -1,14 +1,15 @@
 import type { z } from '@kvman/sdk';
 import type { recordingSidecarSchema } from '../files/sidecar.ts';
 import { invalid } from '../problems.ts';
-import { cameraOfActions, imageZoom, type CameraPlan } from './camera.ts';
+import { cameraOfActions, imageZoom, pagePushIn, type CameraPlan } from './camera.ts';
 import type { Overlay, Scene } from './compose-input.ts';
 import type { Rect, Size } from './frame-layout.ts';
 import { insidePage } from './overlays.ts';
 
 // How a scene looks before it is drawn (plan 16 §16.8; ADR 0115, 7, 10, 11, and 58): its frame and camera, by default
 // from what its clip is (a recorded website gets a window, or a phone, and the camera; an image gets a slow zoom; a
-// recorded page and any other video are never moved), and its overlays placed on the recording's pixels.
+// recorded page a slow push-in, ADR 0120, 1; any other video is never moved), and its overlays placed on the recording's
+// pixels.
 
 export type Recording = z.output<typeof recordingSidecarSchema>;
 
@@ -25,10 +26,11 @@ export function defaultFrame(recording: Recording | undefined): SceneLook['frame
 }
 
 function cameraOf(scene: Scene, kind: 'video' | 'image', recording: Recording | undefined, lengthMs: number): Camera | undefined {
-  const wanted = scene.camera ?? (kind === 'image' || recording?.kind === 'site' ? 'auto' : 'none');
+  const wanted = scene.camera ?? (kind === 'image' || recording !== undefined ? 'auto' : 'none');
   if (wanted === 'none') return undefined;
   if (kind === 'image') return { plan: imageZoom(lengthMs), scale: 'input', offsetMs: 0 };
-  if (recording?.kind !== 'site') return undefined;
+  if (recording === undefined) return undefined;
+  if (recording.kind === 'page') return { plan: pagePushIn(recording.width, recording.height, scene.from ?? 0, lengthMs), scale: recording.scale, offsetMs: scene.from ?? 0 };
   return { plan: cameraOfActions(recording.actions, recording.width, recording.height), scale: recording.scale, offsetMs: scene.from ?? 0 };
 }
 

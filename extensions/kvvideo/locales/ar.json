@@ -35,6 +35,7 @@
   "kvvideo.errors.RENDER_FAILED": "تعذّر على ffmpeg صنع الفيديو: {reason}",
   "kvvideo.player.unavailable": "لا يمكن تشغيل هذا الفيديو هنا. افتح {file} في مساحة العمل.",
   "kvvideo.progress.step": "تسجيل الخطوة {n} من {of}",
+  "kvvideo.progress.frame": "رسم الإطار {n} من {of}",
   "kvvideo.narration.pronunciations.title": "النطق",
   "kvvideo.narration.pronunciations.description": "كلمات يُنطق بها الراوي بطريقة مختلفة، في قائمة من { \"word\", \"say\" }: تُقرأ \"kvman\" كـ \"kay-vee-man\". تبقى الكلمة في الترجمة النصية كما كُتبت.",
   "kvvideo.progress.sentence": "قراءة الجملة {n} من {of}",

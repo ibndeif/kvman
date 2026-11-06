@@ -27,6 +27,8 @@ const recording: Sidecar = {
   durationMs: 3200,
   steps: [{ do: 'click', target: 'text=Save' }],
   actions: [{ do: 'click', atMs: 500, actMs: 1100, endMs: 1150, box: { x: 10, y: 20, width: 80, height: 30 } }],
+  drawn: false,
+  sounds: [],
 };
 
 describe("an output's sidecar (16 §16.3, ADR 0115, 31)", () => {
@@ -57,4 +59,16 @@ describe("an output's sidecar (16 §16.3, ADR 0115, 31)", () => {
     expect(() => sidecarOutputPath(clip, false, 'clip.mp4')).toThrow(ProblemError);
     expect(sidecarOutputPath(clip, true, 'clip.mp4')).toBe(sidecarPath(clip));
   });
+
+  it('M5.15-H13 a drawn recording keeps how it was made; one written before reads as real time with no cues', () => {
+    const root = folder();
+    const drawn = path.join(root, 'drawn.mp4');
+    writeFileSync(sidecarPath(drawn), JSON.stringify({ ...recording, kind: 'page', drawn: true, sounds: [{ sound: 'pop', atMs: 1200 }] }));
+    expect(readSidecar(drawn)).toMatchObject({ drawn: true, sounds: [{ sound: 'pop', atMs: 1200 }] });
+    const older = path.join(root, 'older.mp4');
+    const { drawn: _drawn, sounds: _sounds, ...before } = recording;
+    writeFileSync(sidecarPath(older), JSON.stringify(before));
+    expect(readSidecar(older)).toMatchObject({ kind: 'site', drawn: false, sounds: [] });
+  });
 });
+

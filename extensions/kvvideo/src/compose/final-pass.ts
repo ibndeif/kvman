@@ -3,6 +3,7 @@ import { z } from '@kvman/sdk';
 import { kvvideoProblem } from '../problems.ts';
 import { soundsFolder, type Sound, type SoundEvent } from './sound-effects.ts';
 import { xfadeName, type Transition } from './transitions.ts';
+import { videoFramesPerSecond } from './video-rate.ts';
 
 // The final pass (plan 16 §16.8; ADR 0115, 2, 19, and 37): the parts are joined with `xfade` and `acrossfade` (a cut
 // with `concat`), the sound effects are mixed in, the loudness is measured with `loudnorm`, and the video is encoded
@@ -13,6 +14,8 @@ export type FinalPlan = { parts: readonly string[]; starts: readonly number[]; t
 const seconds = (ms: number): string => (ms / 1000).toFixed(3);
 const target = 'I=-14:TP=-2:LRA=11';
 const gains: Record<Sound, string> = { click: '-18dB', keys: '-24dB', whoosh: '-18dB', pop: '-18dB' };
+// A crossfade's whoosh, softer than a slide's (ADR 0120, 21).
+const softGain = '-26dB';
 
 function soundsUsed(plan: FinalPlan): Sound[] {
   return [...new Set(plan.events.map((event) => event.sound))].sort();
@@ -51,7 +54,7 @@ function effects(plan: FinalPlan): string[] {
     events.forEach((event, index) => {
       const trim = event.untilMs === undefined ? '' : `atrim=0:${seconds(event.untilMs - event.atMs)},asetpts=PTS-STARTPTS,`;
       const label = `e${sound}${String(index)}`;
-      filters.push(`[${copies[index] ?? ''}]${trim}aformat=sample_rates=48000:channel_layouts=stereo,adelay=delays=${String(Math.round(event.atMs))}:all=1,volume=${gains[sound]}[${label}]`);
+      filters.push(`[${copies[index] ?? ''}]${trim}aformat=sample_rates=48000:channel_layouts=stereo,adelay=delays=${String(Math.round(event.atMs))}:all=1,volume=${event.soft === true ? softGain : gains[sound]}[${label}]`);
       labels.push(label);
     });
   });
@@ -108,7 +111,7 @@ export function finalArgs(plan: FinalPlan, graph: string, output: string): strin
     ...finalInputs(plan),
     '-filter_complex_script', graph,
     '-map', '[v]', '-map', '[a]',
-    '-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-pix_fmt', 'yuv420p', '-r', '30',
+    '-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-pix_fmt', 'yuv420p', '-r', String(videoFramesPerSecond),
     '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-ac', '2',
     '-t', seconds(plan.durationMs), '-movflags', '+faststart', '-progress', 'pipe:1', '-nostats', '-y', output,
   ];

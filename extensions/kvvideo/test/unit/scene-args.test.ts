@@ -3,7 +3,7 @@ import { sceneArgs, type SceneRender } from '../../src/compose/scene-args.ts';
 import type { PlannedScene } from '../../src/compose/scene-plan.ts';
 
 const size = { width: 1280, height: 720 };
-const encode = ['-map', '[v]', '-map', '[a]', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '14', '-pix_fmt', 'yuv420p', '-r', '30', '-c:a', 'pcm_s16le', '-ar', '48000', '-ac', '2'];
+const encode = ['-map', '[v]', '-map', '[a]', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '14', '-pix_fmt', 'yuv420p', '-r', '60', '-c:a', 'pcm_s16le', '-ar', '48000', '-ac', '2'];
 const gradient = { kind: 'gradient' as const, from: '#0F172A', to: '#1E293B' };
 const plain = (scene: PlannedScene, captioned: boolean): SceneRender => ({ scene, look: { frame: 'none', camera: undefined, overlays: [], scale: 1 }, background: gradient, drawn: { layout: undefined, chrome: undefined, mask: undefined, overlayImages: [] }, captioned });
 
@@ -15,13 +15,13 @@ describe("each scene's ffmpeg arguments (16 §16.8; ADR 0107, 23; ADR 0115, 60)"
       '-hide_banner', '-loglevel', 'error',
       '-ss', '2.000', '-t', '3.000', '-i', "C:\\Users\\O'Brien\\clip.mp4",
       '-i', '/w/n.mp3',
-      '-f', 'lavfi', '-t', '4.200', '-i', 'gradients=s=1280x720:r=30:c0=0x0F172A:c1=0x1E293B:x0=0:y0=0:x1=1280:y1=720:n=2:speed=0',
+      '-f', 'lavfi', '-t', '4.200', '-i', 'gradients=s=1280x720:r=60:c0=0x0F172A:c1=0x1E293B:x0=0:y0=0:x1=1280:y1=720:n=2:speed=0',
       '-filter_complex_script', 'scene-1.graph',
       ...encode, '-t', '4.200', '-y', 'part-1.mkv',
     ]);
     expect(graph.split(';\n')).toEqual([
-      '[0:v]fps=30,tpad=stop_mode=clone:stop_duration=4.200[clip]',
-      '[2:v]fps=30,format=yuv420p[bg]',
+      '[0:v]fps=60,tpad=stop_mode=clone:stop_duration=4.200[clip]',
+      '[2:v]fps=60,format=yuv420p[bg]',
       '[clip]scale=1280:720:force_original_aspect_ratio=decrease[fit]',
       '[bg][fit]overlay=(W-w)/2:(H-h)/2[pic]',
       '[pic]format=yuv420p,subtitles=filename=scene-1.ass:fontsdir=fonts[v]',
@@ -29,7 +29,7 @@ describe("each scene's ffmpeg arguments (16 §16.8; ADR 0107, 23; ADR 0115, 60)"
     ]);
     const still: PlannedScene = { number: 2, kind: 'image', clip: '/w/title.png', startMs: 0, partMs: 0, lengthMs: 3000, narration: undefined };
     const image = sceneArgs(plain(still, false), size, 'part-2.mp4');
-    expect(image.args.slice(3, 14)).toEqual(['-loop', '1', '-framerate', '30', '-t', '3.000', '-i', '/w/title.png', '-f', 'lavfi', '-t']);
+    expect(image.args.slice(3, 14)).toEqual(['-loop', '1', '-framerate', '60', '-t', '3.000', '-i', '/w/title.png', '-f', 'lavfi', '-t']);
     expect(image.graph).toContain('[pic]format=yuv420p[v]');
     expect(image.graph).toContain('[1:a]aformat=sample_rates=48000:channel_layouts=stereo,apad,atrim=0:3.000,');
   });

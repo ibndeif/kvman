@@ -1,14 +1,16 @@
 import type { Caption } from '../narration/captions.ts';
+import { textOn } from './contrast.ts';
 
 // A scene's captions as an ASS file for ffmpeg's `subtitles` filter (plan 16 §16.8; ADR 0115, 18 and 42), centered at
-// the bottom or the top, 6% of the height from the edge, one line at a time. `boxed` is white text on black at 65%
-// with padding of a third of the text's size; `outline` is white text with a black outline of 3 px; `highlight` is
+// the bottom or the top, 6% of the height from the edge, one line at a time. `boxed` is text on a box with padding of
+// a third of the text's size: the brand's `primary` at 90% with white or near-black text, whichever contrasts more
+// (`box`, ADR 0120, 9), or white text on black at 65% with no brand; `outline` is white text with a black outline of 3 px; `highlight` is
 // boxed, and colours the words already spoken of a line whose words are timed. The style's encoding is -1, so libass
 // takes each line's direction from its text and an Arabic line reads right to left.
 
 export type CaptionLook = 'boxed' | 'outline' | 'highlight';
 
-export type CaptionStyle = { width: number; height: number; family: string; size: number | undefined; position: 'bottom' | 'top'; look: CaptionLook; highlight: string };
+export type CaptionStyle = { width: number; height: number; family: string; size: number | undefined; position: 'bottom' | 'top'; look: CaptionLook; highlight: string; box: string | undefined };
 
 function timeOf(ms: number): string {
   const centiseconds = Math.floor(ms / 10);
@@ -29,7 +31,21 @@ export function assColour(colour: string): string {
   return `&H00${`${colour.slice(5, 7)}${colour.slice(3, 5)}${colour.slice(1, 3)}`.toUpperCase()}`;
 }
 
-const box = '&H59000000';
+const blackBox = '&H59000000';
+
+/** `#RRGGBB` as an ASS colour 90% opaque. */
+const nearlyOpaque = (colour: string): string => `&H1A${assColour(colour).slice(4)}`;
+
+/** The captions' look when the call names one or not, and their box: the brand's `primary` for `boxed` (ADR 0120, 9). */
+export function captionChoice(named: CaptionLook | 'off' | undefined, primary: string | undefined): { look: CaptionLook | 'off'; box: string | undefined } {
+  const look = named ?? (primary === undefined ? 'outline' : 'boxed');
+  return { look, box: look === 'boxed' ? primary : undefined };
+}
+
+/** The caption text's colour: white, or near black on a light brand's box. */
+export function captionText(style: Pick<CaptionStyle, 'look' | 'box'>): string {
+  return style.box === undefined || style.look === 'outline' ? '&H00FFFFFF' : assColour(textOn(style.box));
+}
 
 function styleLine(name: string, style: CaptionStyle, primary: string, secondary: string): string {
   const size = style.size ?? Math.round(style.height / 18);
@@ -37,6 +53,7 @@ function styleLine(name: string, style: CaptionStyle, primary: string, secondary
   const margin = Math.round(style.height * 0.06);
   const family = style.family.replace(/,/g, ' ');
   const border = style.look === 'outline' ? `0,0,1,3,0` : `0,0,3,${String(Math.round(size / 3))},0`;
+  const box = style.box === undefined ? blackBox : nearlyOpaque(style.box);
   const outline = style.look === 'outline' ? '&H00000000' : box;
   const back = style.look === 'outline' ? '&H00000000' : box;
   return `Style: ${name},${family},${String(size)},${primary},${secondary},${outline},${back},0,0,0,0,100,100,${border},${String(alignment)},40,40,${String(margin)},-1`;
@@ -61,7 +78,7 @@ function dialogue(style: CaptionStyle, caption: Caption): string {
 }
 
 export function assFile(style: CaptionStyle, captions: readonly Caption[]): string {
-  const white = '&H00FFFFFF';
+  const text = captionText(style);
   return [
     '[Script Info]',
     'ScriptType: v4.00+',
@@ -72,8 +89,8 @@ export function assFile(style: CaptionStyle, captions: readonly Caption[]): stri
     '',
     '[V4+ Styles]',
     'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding',
-    styleLine('Default', style, white, white),
-    ...(style.look === 'highlight' ? [styleLine('Spoken', style, assColour(style.highlight), white)] : []),
+    styleLine('Default', style, text, text),
+    ...(style.look === 'highlight' ? [styleLine('Spoken', style, assColour(style.highlight), text)] : []),
     '',
     '[Events]',
     'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text',

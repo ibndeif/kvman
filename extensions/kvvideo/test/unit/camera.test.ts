@@ -50,10 +50,10 @@ describe('the camera (16 §16.8, ADR 0115, 7 and 34)', () => {
   it('M5.7-H3 the perspective filter shows the planned view at 2x, frame by frame', () => {
     const filter = perspectiveFilter(plan, 2, 2000);
     expect(filter).toMatch(/:interpolation=cubic:sense=source:eval=frame$/);
-    expect(filter).toContain('(in*1000/30+2000)');
+    expect(filter).toContain('(in*1000/60+2000)');
     const exprs = corners(filter);
     for (const ms of [2000, 3400, 4000, 6400, 9000]) {
-      const frame = ((ms - 2000) * 30) / 1000;
+      const frame = ((ms - 2000) * 60) / 1000;
       const view = viewAt(plan, ms);
       const at = (key: string): number => evaluate(exprs[key] ?? '', frame, { W: 0, H: 0 });
       const width = (1280 * 2) / view.zoom;
@@ -70,7 +70,7 @@ describe('the camera (16 §16.8, ADR 0115, 7 and 34)', () => {
     expect(viewAt(zoom, 4000).zoom).toBe(1.08);
     const exprs = corners(perspectiveFilter(zoom, 'input', 0));
     const size = { W: 1000, H: 500 };
-    expect(evaluate(exprs['x0'] ?? '', 120, size)).toBeCloseTo(500 - 1000 / (2 * 1.08), 3);
-    expect(evaluate(exprs['y3'] ?? '', 120, size)).toBeCloseTo(250 + 500 / (2 * 1.08), 3);
+    expect(evaluate(exprs['x0'] ?? '', 240, size)).toBeCloseTo(500 - 1000 / (2 * 1.08), 3);
+    expect(evaluate(exprs['y3'] ?? '', 240, size)).toBeCloseTo(250 + 500 / (2 * 1.08), 3);
   });
 });

@@ -63,7 +63,8 @@ promotion in the owner's own voice. What went wrong:
    agreed in an `ask` card. Keys stay secrets the person adds. Piper and its voices are installed outside the
    workspace, in kvvideo's tools folder.
 9. **Captions take the brand** (chosen over always on, and over keeping them grey): `boxed` is the brand's `primary`
-   with text in white or near black, whichever contrasts more; with no brand the default style is `outline`. The guide
+   with text in white or near black, whichever contrasts more; with no brand the default style is `outline`. `highlight` keeps its dark box, so its words in the
+   brand's colour show. The guide
    turns captions off when every scene shows its words as large on-screen text, and keeps them for spoken
    explanations and social clips watched on mute.
 10. **The treatment shows a moving preview** (chosen over still images and over the HTML artifacts): the style frames,

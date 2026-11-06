@@ -1,4 +1,4 @@
-import { framesPerSecond } from '../record/frame-writer.ts';
+import { videoFramesPerSecond as framesPerSecond } from './video-rate.ts';
 import { narrationLeadMs } from '../record/narration-cues.ts';
 import { backgroundFit, backgroundInput, type Background } from './background.ts';
 import { perspectiveFilter } from './camera.ts';

@@ -79,7 +79,7 @@ export const composeInputSchema = z.strictObject({
   sounds: z.boolean().describe('false turns all sound effects off.').exactOptional(),
   captions: z
     .strictObject({
-      style: z.enum(captionStyles).describe('boxed (the default), outline, highlight (word by word where words are timed), or off.').exactOptional(),
+      style: z.enum(captionStyles).describe("boxed (in the brand's colour; the default with a brand), outline (the default with none), highlight (word by word where words are timed), or off.").exactOptional(),
       font: z.string().min(1).max(1000).describe("A bundled font (video fonts) or a .ttf or .otf file in the workspace; left out, the brand's.").exactOptional(),
       size: z.number().int().min(12).max(200).describe('The text size in pixels; the height ÷ 18 by default.').exactOptional(),
       position: z.enum(['bottom', 'top']).exactOptional(),

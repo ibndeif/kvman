@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { Browser } from 'playwright-core';
 import type { CaptionFont } from './caption-font.ts';
 import type { Layout, Rect, Size } from './frame-layout.ts';
+import { textOn } from './contrast.ts';
 
 // What the browser draws for a scene (plan 16 §16.8; ADR 0115, 10, 11, 36, and 60), each a PNG of its size: a
 // window's shadow or a phone's outline on a clear picture, the clip's rounded corners as a white-on-black mask, a
@@ -56,20 +57,6 @@ export function highlightHtml(box: Rect, scale: number): string {
 }
 
 const escaped = (text: string): string => text.replace(/[&<>"']/g, (character) => `&#${String(character.codePointAt(0))};`);
-
-const luminance = (colour: string): number => {
-  const [red, green, blue] = [1, 3, 5].map((at) => {
-    const value = Number.parseInt(colour.slice(at, at + 2), 16) / 255;
-    return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
-  });
-  return 0.2126 * (red ?? 0) + 0.7152 * (green ?? 0) + 0.0722 * (blue ?? 0);
-};
-
-/** White or near-black, whichever contrasts more with `background`. */
-export function textOn(background: string): string {
-  const light = luminance(background);
-  return 1.05 / (light + 0.05) >= (light + 0.05) / (luminance('#111111') + 0.05) ? '#ffffff' : '#111111';
-}
 
 const fontFace = (font: CaptionFont): string => `@font-face{font-family:kvvideo;src:url(data:font/${path.extname(font.file).slice(1).toLowerCase()};base64,${readFileSync(font.file).toString('base64')})}`;
 

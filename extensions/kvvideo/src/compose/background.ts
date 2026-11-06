@@ -1,5 +1,6 @@
 import type { Brand } from '../brand/brand.ts';
 import type { Size } from './frame-layout.ts';
+import { videoFramesPerSecond } from './video-rate.ts';
 
 // What is behind a scene's clip (plan 16 §16.8; ADR 0115, 10 and 60), drawn by ffmpeg: an image covering the picture,
 // or a still diagonal gradient from a colour (the scene's, else the brand's background) to that colour mixed with 18%
@@ -25,17 +26,17 @@ export function backgroundOf(background: { colour: string } | { file: string } |
 
 const seconds = (ms: number): string => (ms / 1000).toFixed(3);
 
-/** ffmpeg's input for the background, `lengthMs` long at 30 frames a second. */
+/** ffmpeg's input for the background, `lengthMs` long at the video's 60 frames a second. */
 export function backgroundInput(background: Background, size: Size, lengthMs: number): string[] {
   const { width, height } = size;
-  if (background.kind === 'image') return ['-loop', '1', '-framerate', '30', '-t', seconds(lengthMs), '-i', background.file];
+  if (background.kind === 'image') return ['-loop', '1', '-framerate', String(videoFramesPerSecond), '-t', seconds(lengthMs), '-i', background.file];
   const hex = (colour: string): string => `0x${colour.slice(1)}`;
-  return ['-f', 'lavfi', '-t', seconds(lengthMs), '-i', `gradients=s=${String(width)}x${String(height)}:r=30:c0=${hex(background.from)}:c1=${hex(background.to)}:x0=0:y0=0:x1=${String(width)}:y1=${String(height)}:n=2:speed=0`];
+  return ['-f', 'lavfi', '-t', seconds(lengthMs), '-i', `gradients=s=${String(width)}x${String(height)}:r=${String(videoFramesPerSecond)}:c0=${hex(background.from)}:c1=${hex(background.to)}:x0=0:y0=0:x1=${String(width)}:y1=${String(height)}:n=2:speed=0`];
 }
 
 /** The filter that makes the background input the picture's size. */
 export function backgroundFit(background: Background, size: Size): string {
   const { width, height } = size;
   const fit = background.kind === 'image' ? `scale=${String(width)}:${String(height)}:force_original_aspect_ratio=increase,crop=${String(width)}:${String(height)},` : '';
-  return `${fit}fps=30,format=yuv420p`;
+  return `${fit}fps=${String(videoFramesPerSecond)},format=yuv420p`;
 }

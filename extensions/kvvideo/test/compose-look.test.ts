@@ -35,7 +35,7 @@ describe("compose's look (16 §16.8, ADR 0115)", { timeout: 60_000 }, () => {
     const ass = runsOf(ffmpeg)[0]?.ass ?? '';
     expect(ass).toContain('Style: Default,Lato,60,');
     expect(ass.split('\n').filter((line) => line.startsWith('Dialogue:')).map((line) => line.split(',,0,0,0,,')[1])).toEqual(['Open the app.', 'Sign in.']);
-    expect(runsOf(ffmpeg)[0]?.args).toContain(`gradients=s=1920x1080:r=30:c0=0xFFFFFF:c1=0x${mixed('#FFFFFF', '#2563EB', 0.18).slice(1)}:x0=0:y0=0:x1=1920:y1=1080:n=2:speed=0`);
+    expect(runsOf(ffmpeg)[0]?.args).toContain(`gradients=s=1920x1080:r=60:c0=0xFFFFFF:c1=0x${mixed('#FFFFFF', '#2563EB', 0.18).slice(1)}:x0=0:y0=0:x1=1920:y1=1080:n=2:speed=0`);
   });
 
   it('M5.7-H13 the default size is 1920 × 1080, and the graph is a file in the work folder', async () => {

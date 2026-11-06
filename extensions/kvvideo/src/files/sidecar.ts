@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { z } from '@kvman/sdk';
 import { invalid } from '../problems.ts';
-import { actionSchema, stepSchema } from '../record/steps.ts';
+import { actionSchema, soundCueSchema, stepSchema } from '../record/steps.ts';
 
 // The sidecar beside an output, `<file>.kvvideo.json` (plan 16 §16.3; ADR 0115, 31): what a later command needs from
 // it, so the agent copies no numbers between calls. It is validated when read; a missing or invalid one is absent.
@@ -21,6 +21,9 @@ export const recordingSidecarSchema = z.object({
   durationMs: z.number().int().nonnegative(),
   steps: z.array(stepSchema),
   actions: z.array(actionSchema),
+  // Written since ADR 0120; a sidecar from before reads as recorded in real time, with no cues.
+  drawn: z.boolean().default(false),
+  sounds: z.array(soundCueSchema).default([]),
 });
 
 export const narrationSidecarSchema = z.object({ kind: z.literal('narration'), durationMs: z.number().int().nonnegative(), captions: z.array(sidecarCaptionSchema) });

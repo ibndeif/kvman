@@ -8,6 +8,8 @@ import { cursorScript } from './cursor-script.ts';
 import { recordEncoderArgs } from './encoder-args.ts';
 import { frameWriter } from './frame-writer.ts';
 import { waitUntilMs, type Cues } from './narration-cues.ts';
+import type { SoundCue } from './clock-script.ts';
+import { drawFrames, isDrawn, useClock } from './drawn-page.ts';
 import { failedLoads, watchLoads, type FailedLoad } from './failed-loads.ts';
 import { answerPageRequest, pageAddress, pageOrigin } from './page-route.ts';
 import type { SceneAssets } from './scene-address.ts';
@@ -17,7 +19,8 @@ import { pausesAfter, runStep, type StepState } from './run-step.ts';
 import { startScreencast } from './screencast.ts';
 import type { Action, Step } from './steps.ts';
 
-// One recording (plan 16 §16.5; ADR 0107, 25; ADR 0115, 8 and 32): a fresh browser context at 2× density opens the
+// One recording (plan 16 §16.5; ADR 0107, 25; ADR 0115, 8 and 32; ADR 0120, 2 and 13), a page of only waits drawn frame
+// by frame, anything else in real time: a fresh browser context at 2× density opens the
 // website or the page; once it is ready, its screencast feeds ffmpeg. The page is shown 500 ms before the first step,
 // 400 ms after each step but `wait` and `waitFor`, and 1000 ms after the last, and lasts at least as long as its
 // narration's cues ask; its animations wait for the recording's start (ADR 0117, 5). Requests to kvman's own address are
@@ -39,9 +42,10 @@ export type RecordPlan = {
   signal: AbortSignal;
   now(): number;
   stepStarted(number: number, of: number): void;
+  frameDrawn(number: number, of: number): void;
 };
 
-export type Recording = { video: string; durationMs: number; actions: Action[]; failed: FailedLoad[] };
+export type Recording = { video: string; durationMs: number; actions: Action[]; failed: FailedLoad[]; drawn: boolean; sounds: SoundCue[] };
 
 const scale = 2;
 
@@ -110,7 +114,23 @@ async function play(page: Page, plan: RecordPlan, startedAt: number): Promise<Ac
   return actions;
 }
 
+/** A page drawn frame by frame on kvvideo's clock (ADR 0120, 2 and 13). */
+async function draw(browser: Browser, plan: RecordPlan): Promise<Recording> {
+  const { context, failed } = await recordingContext(browser, plan);
+  try {
+    const page = await context.newPage();
+    await useClock(page);
+    await holdPageClock(page);
+    await openSource(page, plan.source);
+    const drawn = await drawFrames(page, { steps: plan.steps, cues: plan.cues, width: plan.width, height: plan.height, folder: plan.folder, ffmpeg: plan.ffmpeg, signal: plan.signal, frameDrawn: plan.frameDrawn });
+    return { ...drawn, failed: failed(), drawn: true };
+  } finally {
+    await context.close();
+  }
+}
+
 export async function record(browser: Browser, plan: RecordPlan): Promise<Recording> {
+  if (isDrawn(plan.source, plan.steps)) return draw(browser, plan);
   const { context, failed } = await recordingContext(browser, plan);
   const page = await context.newPage();
   const clock = await holdPageClock(page);
@@ -129,7 +149,7 @@ export async function record(browser: Browser, plan: RecordPlan): Promise<Record
     await writer.finish(endedAt);
     const run = await encoder.end();
     if (run.exitCode !== 0) throw kvvideoProblem('RENDER_FAILED', `ffmpeg couldn't encode the recording (exit ${String(run.exitCode)}).`, { reason: lastLines(run.output) });
-    return { video, durationMs: Math.round(endedAt - startedAt), actions, failed: failed() };
+    return { video, durationMs: Math.round(endedAt - startedAt), actions, failed: failed(), drawn: false, sounds: [] };
   } finally {
     stopEncoder.abort();
     await context.close();

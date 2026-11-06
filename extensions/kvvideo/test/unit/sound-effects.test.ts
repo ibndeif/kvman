@@ -12,10 +12,11 @@ const recorded: SceneSounds = {
     { do: 'click', atMs: 100, actMs: 500, endMs: 550 },
     { do: 'hover', atMs: 3300, actMs: 3600, endMs: 3600 },
   ],
+  cues: [],
   calloutsFromMs: [500],
   on: true,
 };
-const next: SceneSounds = { startMs: 7100, lengthMs: 2000, fromMs: 0, partMs: 2000, actions: [], calloutsFromMs: [], on: true };
+const next: SceneSounds = { startMs: 7100, lengthMs: 2000, fromMs: 0, partMs: 2000, actions: [], cues: [], calloutsFromMs: [], on: true };
 const slide = [{ kind: 'slide' as const, toward: 'start' as const, ms: 400 }];
 
 describe('sound effects (16 §16.8, ADR 0115, 14)', () => {
@@ -31,6 +32,16 @@ describe('sound effects (16 §16.8, ADR 0115, 14)', () => {
   it('M5.8-H5 a scene or the video with sounds off has none', () => {
     expect(soundEvents([{ ...recorded, on: false }, next], slide, true)).toEqual([]);
     expect(soundEvents([recorded, next], slide, false)).toEqual([]);
-    expect(soundEvents([recorded, next], [{ kind: 'crossfade', toward: 'start', ms: 400 }], true).some((event) => event.sound === 'whoosh')).toBe(false);
+    expect(soundEvents([recorded, next], [{ kind: 'cut', toward: 'start', ms: 0 }], true).some((event) => event.sound === 'whoosh')).toBe(false);
+  });
+
+  it("M5.15-H6 a drawn page's cues within its part, and a soft whoosh at a crossfade", () => {
+    const drawn: SceneSounds = { startMs: 0, lengthMs: 4000, fromMs: 0, partMs: 4000, actions: [], cues: [{ sound: 'pop', atMs: 1200 }, { sound: 'click', atMs: 9000 }], calloutsFromMs: [], on: true };
+    const after: SceneSounds = { ...next, startMs: 3500 };
+    expect(soundEvents([drawn, after], [{ kind: 'crossfade', toward: 'start', ms: 500 }], true)).toEqual([
+      { sound: 'pop', atMs: 1200 },
+      { sound: 'whoosh', atMs: 3500, soft: true },
+    ]);
   });
 });
+

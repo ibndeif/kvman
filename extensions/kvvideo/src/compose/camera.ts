@@ -1,9 +1,11 @@
 import type { Action, Box } from '../record/steps.ts';
+import { videoFramesPerSecond } from './video-rate.ts';
 
 // The camera (plan 16 §16.8; ADR 0115, 7, 34, 58, and 60). On a recorded website it zooms to each click and type:
 // 1.6× (less for a large box, never below 1), centred on the box and kept inside the page, easing in from the step's
 // start until it acts; a stop within 2.5 s of the last one's end is reached by panning over 600 ms; 1.5 s after a
-// run's last stop the view eases out over 800 ms. An image zooms from 1× to 1.08× at an even pace over its scene. The
+// run's last stop the view eases out over 800 ms. An image zooms from 1× to 1.08× at an even pace over its scene, and a
+// recorded page pushes in from 1× to 1.05× (ADR 0120, 1). The
 // plan is drawn with ffmpeg's `perspective`, evaluated each frame from the frame's number.
 
 export type View = { x: number; y: number; zoom: number };
@@ -54,6 +56,12 @@ export function cameraOfActions(actions: readonly Action[], width: number, heigh
   return { width, height, start, shots };
 }
 
+/** A recorded page's slow push-in (ADR 0120, 1): 1× to 1.05×, centred, even, over the scene's part of the recording. */
+export function pagePushIn(width: number, height: number, fromMs: number, lengthMs: number): CameraPlan {
+  const start = whole(width, height);
+  return { width, height, start, shots: [{ startMs: fromMs, endMs: fromMs + lengthMs, from: start, to: { ...start, zoom: 1.05 }, easing: 'even' }] };
+}
+
 /** An image's slow zoom over `lengthMs`; its size is the input's, read by ffmpeg. */
 export function imageZoom(lengthMs: number): CameraPlan {
   return { width: 1, height: 1, start: whole(1, 1), shots: [{ startMs: 0, endMs: lengthMs, from: whole(1, 1), to: { ...whole(1, 1), zoom: 1.08 }, easing: 'even' }] };
@@ -97,10 +105,10 @@ function partExpression(plan: CameraPlan, key: keyof View, time: string): string
 
 /**
  * The `perspective` filter that shows the plan's view of a frame `scale` times the plan's size, or of the input's own
- * size for an image's zoom. `offsetMs` is where the part starts in the recording; the frames are at 30 a second.
+ * size for an image's zoom. `offsetMs` is where the part starts in the recording; the frames are at 60 a second.
  */
 export function perspectiveFilter(plan: CameraPlan, scale: number | 'input', offsetMs: number): string {
-  const time = `(in*1000/30+${number(offsetMs)})`;
+  const time = `(in*1000/${String(videoFramesPerSecond)}+${number(offsetMs)})`;
   const zoom = partExpression(plan, 'zoom', time);
   const [pageWidth, pageHeight] = scale === 'input' ? ['W', 'H'] : [number(plan.width * scale), number(plan.height * scale)];
   const factor = scale === 'input' ? 'W' : number(scale);

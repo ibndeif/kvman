@@ -23,6 +23,7 @@ import type { Size } from './frame-layout.ts';
 import { keepCopy } from './player-copies.ts';
 import { audioExtensions, checkScene, imageExtensions, isImage, planScene, videoExtensions, type PlannedScene, type SceneFiles } from './scene-plan.ts';
 import { sceneStarts, transitionsOf } from './transitions.ts';
+import { captionChoice } from './ass-file.ts';
 
 // `video compose` (plan 16 §16.8): every file and output is checked before ffmpeg runs; each size is composed in its
 // own folder; the render runs inside the call (ADR 0107, 12); the video, its poster and sidecar, and the other
@@ -80,7 +81,7 @@ export function registerCompose(ctx: Ctx): void {
         backgroundInputOf(root, index + 1, scene.background);
       }
       const brand = await ctx.settings.get('kvvideo.brand');
-      const look = input.captions?.style ?? 'boxed';
+      const { look, box } = captionChoice(input.captions?.style, brand?.colors.primary);
       const texts = look === 'off' ? [] : input.scenes.flatMap((scene, index) => captionsOf(scene, files[index]?.narration).map((caption) => caption.text));
       const font = texts.length === 0 ? undefined : captionFont(root, input.captions?.font ?? brand?.font ?? undefined, texts);
       const programs = { ffmpeg: await programOf(ctx, 'ffmpeg'), ffprobe: await programOf(ctx, 'ffprobe') };
@@ -112,7 +113,7 @@ export function registerCompose(ctx: Ctx): void {
           direction: input.direction ?? (texts.some((text) => arabicLetter.test(text)) ? 'rtl' : 'ltr'),
           sounds: input.sounds !== false,
           brand,
-          captions: { look, position: input.captions?.position ?? 'bottom', size: input.captions?.size, highlight: brand?.colors.primary ?? defaultAccent, font },
+          captions: { look, position: input.captions?.position ?? 'bottom', size: input.captions?.size, highlight: brand?.colors.primary ?? defaultAccent, box, font },
           programs,
           ownPort: ownPortOf(process.env['KVMAN_HOME']),
           assets: sceneAssetsOf(root, brand),

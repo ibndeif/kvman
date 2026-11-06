@@ -64,13 +64,14 @@ export function registerRecord(ctx: Ctx): void {
       try {
         const stepStarted = (n: number, of: number): void => ctx.job.progress({ key: 'kvvideo.progress.step', params: { n, of } });
         const assets = sceneAssetsOf(root, await ctx.settings.get('kvvideo.brand'));
-        const recording = await record(browser, { source, steps: input.steps ?? [], width, height, device, cues, folder: work.folder, ownPort, assets, ffmpeg, signal: ctx.job.signal, now: () => performance.now(), stepStarted });
+        const frameDrawn = (n: number, of: number): void => ctx.job.progress({ key: 'kvvideo.progress.frame', params: { n, of } });
+        const recording = await record(browser, { source, steps: input.steps ?? [], width, height, device, cues, folder: work.folder, ownPort, assets, ffmpeg, signal: ctx.job.signal, now: () => performance.now(), stepStarted, frameDrawn });
         const steps = input.steps ?? [];
         const sourceName = source.kind === 'site' ? source.url : answerPath(root, source.file);
-        const made = writeSidecar(work.folder, { kind: source.kind, source: sourceName, width, height, device, scale: 2, durationMs: recording.durationMs, steps: [...steps], actions: recording.actions });
+        const made = writeSidecar(work.folder, { kind: source.kind, source: sourceName, width, height, device, scale: 2, durationMs: recording.durationMs, steps: [...steps], actions: recording.actions, drawn: recording.drawn, sounds: recording.sounds });
         placeOutput(recording.video, output);
         placeOutput(made, sidecar);
-        return { file: answerPath(root, output), durationMs: recording.durationMs, steps: recording.actions, failed: recording.failed };
+        return { file: answerPath(root, output), durationMs: recording.durationMs, steps: recording.actions, sounds: recording.sounds, failed: recording.failed };
       } finally {
         ctx.job.signal.removeEventListener('abort', stop);
         await browser.close();

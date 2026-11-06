@@ -95,7 +95,7 @@ describe('video record with the installed Chrome (16 §16.5)', () => {
     const app = await pages.app();
     const steps = [{ do: 'click' as const, target: 'text=Save' }];
     const answer = await kernel.exec('kvvideo.clip.record', { url: app.url, file: 'videos/a.mp4', width: 640, height: 360, steps });
-    expect(sidecarOf(`${workspace}/videos/a.mp4`)).toEqual({ kind: 'site', source: app.url, width: 640, height: 360, device: 'desktop', scale: 2, durationMs: answer.durationMs, steps, actions: answer.steps });
+    expect(sidecarOf(`${workspace}/videos/a.mp4`)).toEqual({ kind: 'site', source: app.url, width: 640, height: 360, device: 'desktop', scale: 2, durationMs: answer.durationMs, steps, actions: answer.steps, drawn: false, sounds: [] });
     write('clip.mp4.kvvideo.json', '{}');
     await kernel.exec('kvvideo.clip.record', { url: app.url, file: 'clip.mp4', replace: true });
     expect(sidecarOf(`${workspace}/clip.mp4`)).toMatchObject({ kind: 'site', steps: [], actions: [] });

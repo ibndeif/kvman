@@ -55,12 +55,21 @@ describe('the final pass (16 §16.8, ADR 0115, 2, 19, and 37)', () => {
     expect(measureArgs(plan, 'measure.graph').slice(0, 4)).toEqual(['-hide_banner', '-nostats', '-loglevel', 'info']);
     expect(measureArgs(plan, 'measure.graph').slice(-6)).toEqual(['[a]', '-t', '8.500', '-f', 'null', '-']);
     const final = finalArgs(plan, 'final.graph', 'video.mp4');
-    expect(final.slice(final.indexOf('-filter_complex_script'))).toEqual(['-filter_complex_script', 'final.graph', '-map', '[v]', '-map', '[a]', '-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-pix_fmt', 'yuv420p', '-r', '30', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-ac', '2', '-t', '8.500', '-movflags', '+faststart', '-progress', 'pipe:1', '-nostats', '-y', 'video.mp4']);
+    expect(final.slice(final.indexOf('-filter_complex_script'))).toEqual(['-filter_complex_script', 'final.graph', '-map', '[v]', '-map', '[a]', '-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-pix_fmt', 'yuv420p', '-r', '60', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-ac', '2', '-t', '8.500', '-movflags', '+faststart', '-progress', 'pipe:1', '-nostats', '-y', 'video.mp4']);
   });
 
   it('M5.13-H2 the final pass aims at -2 dBTP, measuring and applying', () => {
     expect(loudnessFilter(undefined)).toBe('loudnorm=I=-14:TP=-2:LRA=11:print_format=json');
     expect(loudnessFilter(measuredLoudness(measure))).toContain('loudnorm=I=-14:TP=-2:LRA=11:measured_I=');
+  });
+
+  it("M5.15-H6 M5.15-H8 a crossfade's whoosh is mixed 26 dB down, and the video is 60 frames a second", () => {
+    const soft = { ...plan, events: [{ sound: 'whoosh' as const, atMs: 1000, soft: true as const }, { sound: 'whoosh' as const, atMs: 2000 }] };
+    const graph = finalGraph(soft, measuredLoudness(measure));
+    expect(graph).toContain('adelay=delays=1000:all=1,volume=-26dB');
+    expect(graph).toContain('adelay=delays=2000:all=1,volume=-18dB');
+    const final = finalArgs(plan, 'final.graph', 'video.mp4');
+    expect(final[final.indexOf('-r') + 1]).toBe('60');
   });
 
   it("M5.8-E4 a measure without loudnorm's JSON fails RENDER_FAILED", () => {

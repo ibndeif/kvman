@@ -2,11 +2,13 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { useKvvideo } from '../support/kvvideo-kernel.ts';
+import { useTestPages } from '../support/test-page.ts';
 
 // A real final pass (plan 16 §16.8, ADR 0115, 2, 12, 19, 37, and 44) with the ffmpeg on the PATH: its length, its
 // loudness, a slide between two scenes, and a page recorded again for another shape, read back from the videos.
 
 const kvvideo = useKvvideo();
+const pages = useTestPages();
 
 function pixel(file: string, seconds: number, x: number, y: number): number[] {
   return [...execFileSync('ffmpeg', ['-v', 'error', '-ss', seconds.toFixed(3), '-i', file, '-frames:v', '1', '-vf', `format=rgb24,crop=1:1:${String(x)}:${String(y)}`, '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'])];
@@ -52,6 +54,15 @@ describe('a real final pass (16 §16.8, ADR 0115)', () => {
     expect(review.loudness?.truePeakDb).toBeLessThanOrEqual(-1);
     expect(Math.abs((review.loudness?.integratedLufs ?? 0) + 14)).toBeLessThanOrEqual(1);
     expect(review.problems.filter((problem) => problem.kind === 'loudness')).toEqual([]);
+  });
+
+  it('M5.15-H9 a composed video with a website recorded at 30 frames a second is 60 frames a second', async () => {
+    const { kernel, workspace } = await kvvideo.start({ settings: { 'kvvideo.browser': 'chrome' } });
+    const site = await pages.page('<!doctype html><html><body style="background:#123"><button id="go">Go</button></body></html>');
+    await kernel.exec('kvvideo.clip.record', { url: site.url, file: 'site.mp4', width: 640, height: 360, steps: [{ do: 'click', target: '#go' }] });
+    await kernel.exec('kvvideo.video.compose', { file: 'site-video.mp4', width: 640, height: 360, scenes: [{ clip: 'site.mp4' }] });
+    const rate = execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=r_frame_rate', '-of', 'csv=p=0', `${workspace}/site-video.mp4`], { encoding: 'utf8' }).trim();
+    expect(rate).toBe('60/1');
   });
 
   it('M5.8-H11 a page is recorded again for a size of another shape', async () => {
