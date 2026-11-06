@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { z } from '@kvman/sdk';
 import { brandSchema } from '../src/brand/brand.ts';
+import { narrationSetInputSchema } from '../src/narration/register-narration-set.ts';
 import { composeInputSchema } from '../src/compose/compose-input.ts';
 import { readGuide } from '../src/guide.ts';
 import { lookInputSchema } from '../src/look/look-input.ts';
@@ -25,6 +26,7 @@ describe('kvvideo in kvcoder (16 §16.1, §16.3)', { timeout: 60_000 }, () => {
         { name: 'fonts', command: 'kvvideo.font.list', query: true, examples: 1 },
         { name: 'brand', command: 'kvvideo.brand.get', query: true, examples: 1 },
         { name: 'brand-set', command: 'kvvideo.brand.set', query: false, examples: 1 },
+        { name: 'narration-set', command: 'kvvideo.narration.set', query: false, examples: 1 },
         { name: 'record', command: 'kvvideo.clip.record', query: false, examples: 1 },
         { name: 'look', command: 'kvvideo.frame.capture', query: false, examples: 1 },
         { name: 'narrate', command: 'kvvideo.narration.make', query: false, examples: 1 },
@@ -122,11 +124,19 @@ describe('kvvideo in kvcoder (16 §16.1, §16.3)', { timeout: 60_000 }, () => {
     }
   });
 
+  it('M5.13-H12 the connector has narration-set, a command with an example it takes', async () => {
+    const { kernel } = await kvvideo.start();
+    const video = (await kernel.exec('kvcoder.connector.list', {})).find((connector) => connector.name === 'video');
+    const entry = video?.commands?.find((command) => command.name === 'narration-set');
+    expect([entry?.command, entry?.query, entry?.examples.length]).toEqual(['kvvideo.narration.set', false, 1]);
+    expect(narrationSetInputSchema.safeParse(entry?.examples[0]?.input).success).toBe(true);
+  });
+
   it("M5.11-H2 the connector's description, and each command with one example its command takes", async () => {
     const { kernel } = await kvvideo.start();
     const video = (await kernel.exec('kvcoder.connector.list', {})).find((connector) => connector.name === 'video');
     expect(video?.description).toBe("Make any kind of video: record websites and HTML pages you write, use the person's images and clips and licensed ones from the web, narrate a script or have the person record it, and compose them with camera moves, transitions, captions, and sound into an MP4. Use it when the person asks for a video of any kind.");
-    const schemas: Record<string, { safeParse(value: unknown): { success: boolean } }> = { check: z.strictObject({}), fonts: z.strictObject({}), brand: z.strictObject({}), 'brand-set': brandSchema, record: recordInputSchema, look: lookInputSchema, narrate: narrateInputSchema, voice: voiceInputSchema, compose: composeInputSchema, review: z.strictObject({ file: z.string() }) };
+    const schemas: Record<string, { safeParse(value: unknown): { success: boolean } }> = { check: z.strictObject({}), fonts: z.strictObject({}), brand: z.strictObject({}), 'brand-set': brandSchema, 'narration-set': narrationSetInputSchema, record: recordInputSchema, look: lookInputSchema, narrate: narrateInputSchema, voice: voiceInputSchema, compose: composeInputSchema, review: z.strictObject({ file: z.string() }) };
     expect(video?.commands?.map((command) => command.name)).toEqual(Object.keys(schemas));
     for (const command of video?.commands ?? []) {
       expect(command.examples, command.name).toHaveLength(1);

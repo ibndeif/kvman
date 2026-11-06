@@ -3,8 +3,8 @@ import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { useKvvideo } from '../support/kvvideo-kernel.ts';
 
-// A real review (plan 16 §16.10; ADR 0115, 20 and 48) with the ffmpeg on the PATH: a video with a black second and a
-// silent end, and one without sound.
+// A real review (plan 16 §16.10; ADR 0115, 20 and 48; ADR 0120, 23) with the ffmpeg on the PATH: a video with a black
+// second and a silent end longer than an end card's 5 s, and one without sound.
 
 const kvvideo = useKvvideo();
 
@@ -14,7 +14,7 @@ describe('a real review (16 §16.10, ADR 0115)', () => {
   it('M5.9-H6 M5.11-H3 the black picture and the silence found, and sheets of the frames the model sees, a frame each 5 s without a sidecar', async () => {
     const { kernel, workspace } = await kvvideo.start();
     const colour = (name: string, seconds: number) => ['-f', 'lavfi', '-i', `color=c=${name}:s=640x360:d=${String(seconds)}:r=30`];
-    execFileSync('ffmpeg', ['-v', 'error', ...colour('red', 2), ...colour('black', 1), ...colour('red', 4), '-f', 'lavfi', '-i', 'sine=frequency=440:duration=3', '-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=mono:d=4', '-filter_complex', '[0:v][1:v][2:v]concat=n=3:v=1:a=0[v];[3:a][4:a]concat=n=2:v=0:a=1[a]', '-map', '[v]', '-map', '[a]', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-y', `${workspace}/look.mp4`]);
+    execFileSync('ffmpeg', ['-v', 'error', ...colour('red', 2), ...colour('black', 1), ...colour('red', 6), '-f', 'lavfi', '-i', 'sine=frequency=440:duration=3', '-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=mono:d=6', '-filter_complex', '[0:v][1:v][2:v]concat=n=3:v=1:a=0[v];[3:a][4:a]concat=n=2:v=0:a=1[a]', '-map', '[v]', '-map', '[a]', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-y', `${workspace}/look.mp4`]);
     const chunks: unknown[] = [];
     const answer = await kernel.exec('kvvideo.video.review', { file: 'look.mp4' }, { onProgress: (chunk) => chunks.push(chunk) });
     const black = answer.problems.find((problem) => problem.kind === 'black');

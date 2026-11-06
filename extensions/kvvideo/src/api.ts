@@ -5,6 +5,7 @@ import type { narrateInputSchema, narrateOutputSchema } from './narration/regist
 import type { recordInputSchema, recordOutputSchema } from './record/steps.ts';
 import type { reviewOutputSchema } from './review/register-review.ts';
 import type { voiceInputSchema, voiceOutputSchema } from './narration/register-voice.ts';
+import type { NarrationSetInput } from './narration/register-narration-set.ts';
 import type { Brand } from './brand/brand.ts';
 import type { BrowserChoice, NarrationService } from './settings.ts';
 
@@ -22,6 +23,7 @@ declare module '@kvman/sdk' {
     'kvvideo.clip.record': { input: z.input<typeof recordInputSchema>; output: z.output<typeof recordOutputSchema> };
     'kvvideo.frame.capture': { input: z.input<typeof lookInputSchema>; output: z.output<typeof lookOutputSchema> };
     'kvvideo.brand.set': { input: Brand; output: Empty };
+    'kvvideo.narration.set': { input: NarrationSetInput; output: Empty };
     'kvvideo.voice.make': { input: z.input<typeof voiceInputSchema>; output: z.output<typeof voiceOutputSchema> };
     'kvvideo.video.review': { input: { file: string }; output: z.output<typeof reviewOutputSchema> };
   }
@@ -31,7 +33,7 @@ declare module '@kvman/sdk' {
       output: {
         ffmpeg: { ready: boolean; version: string | null; missing: string[] };
         browser: { ready: boolean; channel: Channel | null };
-        narration: { service: NarrationService | null; ready: boolean; missing: string | null };
+        narration: { service: NarrationService | null; ready: boolean; missing: string | null; toolsFolder: string | null };
       };
     };
     'kvvideo.ui.get': { input: Empty; output: { pages: unknown[]; nav: unknown[]; panels: unknown[]; status: unknown[]; configuration: unknown } };

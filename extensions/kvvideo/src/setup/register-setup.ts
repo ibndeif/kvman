@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { z, type Ctx } from '@kvman/sdk';
 import { launchChannel } from '../browser/launch.ts';
 import { programOf } from '../programs/programs.ts';
@@ -8,15 +9,21 @@ import { browserReadiness } from './browser-readiness.ts';
 import { ffmpegReadiness, type Answer } from './ffmpeg-readiness.ts';
 import { narrationReadiness } from './narration-readiness.ts';
 
-// `video check` (plan 16 §16.4): what is ready, and what the person still has to install or set. It fails for none of
+// `video check` (plan 16 §16.4; ADR 0120, 26): what is ready, what the person still has to install or set, and where
+// Piper goes. It fails for none of
 // them: a program that can't start, or doesn't answer in 5 s, is reported missing.
 
 const checkTimeoutMs = 5_000;
 
+/** Where Piper and its voices are installed, outside every workspace (ADR 0120, 26); none when kvman has no home. */
+export function toolsFolderOf(home: string | undefined): string | null {
+  return home === undefined || home === '' ? null : path.join(home, 'kvvideo');
+}
+
 const setupSchema = z.object({
   ffmpeg: z.object({ ready: z.boolean(), version: z.string().nullable(), missing: z.array(z.string()) }),
   browser: z.object({ ready: z.boolean(), channel: z.enum(['chrome', 'msedge']).nullable() }),
-  narration: z.object({ service: z.enum(narrationServices).nullable(), ready: z.boolean(), missing: z.string().nullable() }),
+  narration: z.object({ service: z.enum(narrationServices).nullable(), ready: z.boolean(), missing: z.string().nullable(), toolsFolder: z.string().nullable() }),
 });
 
 async function answerOf(ctx: Ctx, name: ProgramName, args: readonly string[]): Promise<Answer> {
@@ -47,7 +54,7 @@ export function registerSetup(ctx: Ctx): void {
           piperRuns: async () => (await run('piper', ['--help']))?.exitCode === 0,
         }),
       ]);
-      return { ffmpeg, browser, narration };
+      return { ffmpeg, browser, narration: { ...narration, toolsFolder: toolsFolderOf(process.env['KVMAN_HOME']) } };
     },
   });
 }

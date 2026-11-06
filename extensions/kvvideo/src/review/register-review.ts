@@ -20,7 +20,7 @@ import { sheetArgs, sheetGraph, tileOf } from './sheet-args.ts';
 
 const keptSheets = 24;
 
-const problemSchema = z.object({ kind: z.enum(['silence', 'black', 'frozen', 'loudness']), atMs: z.number().int().nonnegative(), lengthMs: z.number().int().nonnegative() });
+const problemSchema = z.object({ kind: z.enum(['silence', 'black', 'frozen', 'loudness']), atMs: z.number().int().nonnegative(), lengthMs: z.number().int().nonnegative(), reason: z.string() });
 
 export const reviewOutputSchema = z.object({
   durationMs: z.number().int().nonnegative(),

@@ -1,4 +1,4 @@
-// The `video` connector (plan 16 §16.1 and §16.3; ADR 0107, 11; ADR 0115, 55; ADR 0117, 4): `optIn`, so a chat has it only after
+// The `video` connector (plan 16 §16.1 and §16.3; ADR 0107, 11; ADR 0115, 55; ADR 0117, 4; ADR 0120, 26): `optIn`, so a chat has it only after
 // `/video`. Each command has one example of what it takes.
 
 export const connectorName = 'video';
@@ -16,6 +16,11 @@ export const videoConnector = {
       name: 'brand-set',
       command: 'kvvideo.brand.set',
       examples: [{ description: 'Save the brand the person agreed to', input: { logo: 'brand/logo.svg', colors: { primary: '#2563EB', background: '#0F172A', text: '#F8FAFC' }, font: 'Poppins' } }],
+    },
+    {
+      name: 'narration-set',
+      command: 'kvvideo.narration.set',
+      examples: [{ description: 'Use the Piper voice the person agreed to, installed in the tools folder', input: { service: 'piper', voice: '/home/sam/.kvman/kvvideo/voices/ar_JO-kareem-medium.onnx' } }],
     },
     {
       name: 'record',

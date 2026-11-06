@@ -18,8 +18,8 @@ export const recordPayload = z.strictObject({
     .array(
       z.strictObject({
         text: z.string().min(1).max(500).describe('The line to say.'),
-        stress: z.array(word).max(10).describe('Words of the line to stress, shown in bold.').exactOptional(),
-        pauses: z.array(word).max(10).describe('Words of the line to pause after.').exactOptional(),
+        stress: z.array(word).max(10).describe('Words to stress, shown in bold: each a word or a run of words, as the line writes them.').exactOptional(),
+        pauses: z.array(word).max(10).describe('Where to pause: each a word or a run of words, as the line writes them, paused after.').exactOptional(),
         seconds: z.number().int().min(1).max(60).describe('About how long the take is.').exactOptional(),
         example: z.string().min(1).max(1000).describe('An .mp3, .wav, or .m4a of the workspace the person can hear first.').exactOptional(),
       }),
@@ -45,7 +45,8 @@ const largestExample = 10 * 1024 * 1024;
 const largestTake = 25 * 1024 * 1024;
 
 const escaped = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const hasWord = (text: string, found: string): boolean => new RegExp(`(?<![\\p{L}\\p{N}_])${escaped(found)}(?![\\p{L}\\p{N}_])`, 'iu').test(text);
+// A word or a run of words found in the line as whole words, in any case, across any spacing (ADR 0120, 25).
+const hasWords = (text: string, found: string): boolean => new RegExp(`(?<![\\p{L}\\p{N}_])${found.trim().split(/\s+/u).map(escaped).join('\\s+')}(?![\\p{L}\\p{N}_])`, 'iu').test(text);
 
 async function exampleFileId(ctx: Ctx, root: string, example: string): Promise<string> {
   const type = exampleTypes[path.extname(example).toLowerCase()];
@@ -68,8 +69,8 @@ export function registerRecordCheck(ctx: Ctx, registration: string): void {
     handle: async ({ payload }) => {
       const root = ctx.job.workspace.path;
       for (const line of payload.lines) {
-        const missing = [...(line.stress ?? []), ...(line.pauses ?? [])].find((found) => !hasWord(line.text, found));
-        if (missing !== undefined) throw invalid(`"${missing}" isn't a word of the line "${line.text}".`, { word: missing });
+        const missing = [...(line.stress ?? []), ...(line.pauses ?? [])].find((found) => !hasWords(line.text, found));
+        if (missing !== undefined) throw invalid(`"${missing}" isn't found as whole words of the line "${line.text}"; give each word as the line writes it, with what is joined to it.`, { word: missing });
       }
       await resolveInWorkspace(root, payload.folder);
       const examples: (string | null)[] = [];

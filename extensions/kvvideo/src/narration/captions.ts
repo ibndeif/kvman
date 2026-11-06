@@ -1,9 +1,10 @@
 import type { Alignment } from './alignment.ts';
 import type { Spoken } from './pronunciations.ts';
 
-// A narration's captions (plan 16 §16.6; ADR 0107, 7; ADR 0115, 17): the text in sentences, each sentence in lines of
-// whole words up to 42 characters. A sentence's lines cover its own audio: by the service's character times where it
-// gives them, else by each line's share of the sentence's characters. Each line ends where the next starts.
+// A narration's captions (plan 16 §16.6; ADR 0107, 7; ADR 0115, 17; ADR 0120, 24): the text in sentences, each
+// sentence in the fewest lines of whole words up to 42 characters, breaking after punctuation where it keeps that many
+// lines, and else as even as the words allow. A sentence's lines cover its own audio: by the service's character times
+// where it gives them, else by each line's share of the sentence's characters. Each line ends where the next starts.
 
 export type Word = { text: string; startMs: number; endMs: number };
 
@@ -22,20 +23,75 @@ export function sentencesOf(text: string): string[] {
     .filter((sentence) => sentence !== '');
 }
 
-/** A sentence's caption lines: whole words, each line as long as it can be up to 42 characters. */
-export function linesOf(sentence: string): string[] {
-  const lines: string[] = [];
-  let current = '';
-  for (const word of sentence.split(' ')) {
-    const joined = current === '' ? word : `${current} ${word}`;
-    if (current !== '' && length(joined) > maximumLine) {
-      lines.push(current);
-      current = word;
-    } else {
-      current = joined;
+// The fewest lines a run of words needs: as many as filling each line as far as it goes makes.
+function fewestLines(words: readonly string[]): number {
+  let lines = 0;
+  let current = -1;
+  for (const word of words) {
+    const joined = current < 0 ? length(word) : current + 1 + length(word);
+    if (current >= 0 && joined <= maximumLine) current = joined;
+    else {
+      lines += 1;
+      current = length(word);
     }
   }
-  if (current !== '') lines.push(current);
+  return lines;
+}
+
+const endsAPhrase = (word: string): boolean => /[,،;؛:]$/u.test(word);
+
+type Best = { breaks: number; longest: number; from: number };
+
+const better = (first: Best, second: Best | undefined): boolean => second === undefined || first.breaks > second.breaks || (first.breaks === second.breaks && first.longest < second.longest);
+
+// A run of words, none over 42 characters, in its fewest lines: the most breaks after punctuation, then the shortest
+// longest line. Each state is the best way to put the first `end` words in `count` lines; more breaks always stay
+// ahead, and a shorter longest line never loses to a longer one, so each state's best is enough.
+function evenLines(words: readonly string[]): string[] {
+  const lines = fewestLines(words);
+  const best: (Best | undefined)[][] = Array.from({ length: lines + 1 }, () => Array<Best | undefined>(words.length + 1).fill(undefined));
+  const first = best[0];
+  if (first !== undefined) first[0] = { breaks: 0, longest: 0, from: 0 };
+  for (let count = 1; count <= lines; count += 1) {
+    for (let end = 1; end <= words.length; end += 1) {
+      let width = -1;
+      for (let start = end - 1; start >= 0; start -= 1) {
+        width += length(words[start] ?? '') + 1;
+        if (width > maximumLine) break;
+        const before = best[count - 1]?.[start];
+        if (before === undefined) continue;
+        const punctuated = count < lines && endsAPhrase(words[end - 1] ?? '') ? 1 : 0;
+        const candidate = { breaks: before.breaks + punctuated, longest: Math.max(before.longest, width), from: start };
+        const row = best[count];
+        if (row !== undefined && better(candidate, row[end])) row[end] = candidate;
+      }
+    }
+  }
+  const made: string[] = [];
+  let end = words.length;
+  for (let count = lines; count > 0; count -= 1) {
+    const from = best[count]?.[end]?.from ?? 0;
+    made.unshift(words.slice(from, end).join(' '));
+    end = from;
+  }
+  return made;
+}
+
+/** A sentence's caption lines: the whole sentence when it fits 42 characters, else even lines, a longer word alone. */
+export function linesOf(sentence: string): string[] {
+  if (length(sentence) <= maximumLine) return [sentence];
+  const lines: string[] = [];
+  let run: string[] = [];
+  for (const word of sentence.split(' ')) {
+    if (length(word) <= maximumLine) {
+      run.push(word);
+      continue;
+    }
+    if (run.length > 0) lines.push(...evenLines(run));
+    lines.push(word);
+    run = [];
+  }
+  if (run.length > 0) lines.push(...evenLines(run));
   return lines;
 }
 

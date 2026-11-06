@@ -15,7 +15,7 @@ import { takeArgs } from './voice-args.ts';
 
 // `video voice` (plan 16 §16.7; ADR 0115, 28 and 50): the person's takes of a scene, as `ask record` wrote them, each
 // cleaned (or only converted), joined as `narrate` joins sentences into an MP3 of the workspace, with each take's
-// captions lasting its own length; a sidecar beside it. The takes are never changed.
+// captions lasting its own length, each of its sentences captioned on its own; a sidecar beside it. The takes are never changed.
 
 export const takeExtensions = ['.webm', '.ogg', '.m4a', '.mp4', '.mp3', '.wav'];
 
@@ -27,6 +27,21 @@ export const voiceInputSchema = z.strictObject({
 });
 
 export const voiceOutputSchema = z.object({ file: z.string(), durationMs: z.number().int().nonnegative(), captions: z.array(sidecarCaptionSchema) });
+
+const characters = (text: string): number => [...text].length;
+
+/** A take's sentences, each captioned on its own, sharing the take's length by their characters (ADR 0120, 24). */
+export function takeSentences(text: string, startMs: number, durationMs: number): PlacedSentence[] {
+  const sentences = sentencesOf(text);
+  const total = sentences.reduce((sum, sentence) => sum + characters(sentence), 0);
+  let before = 0;
+  return sentences.map((sentence) => {
+    const from = Math.floor((durationMs * before) / total);
+    before += characters(sentence);
+    const to = Math.floor((durationMs * before) / total);
+    return { text: sentence, spoken: spokenOf(sentence, []), startMs: startMs + from, durationMs: to - from, alignment: null };
+  });
+}
 
 function failed(take: number | null, reason: string): Error {
   return kvvideoProblem('RENDER_FAILED', `ffmpeg couldn't make ${take === null ? 'the joined voice' : `take ${String(take)}`}: ${reason}`, { take, reason });
@@ -59,8 +74,7 @@ export function registerVoice(ctx: Ctx): void {
           if (run.exitCode !== 0) throw failed(index + 1, lastLines(run.output));
           const length = await mediaDuration(ffprobe, made, ctx.job.signal);
           if (!length.ok) throw failed(index + 1, length.reason);
-          const text = sentencesOf(input.lines[index]?.text ?? '').join(' ');
-          placed.push({ text, spoken: spokenOf(text, []), startMs, durationMs: length.ms, alignment: null });
+          placed.push(...takeSentences(input.lines[index]?.text ?? '', startMs, length.ms));
           cleaned.push(made);
           startMs += length.ms + sentenceGapMs;
         }

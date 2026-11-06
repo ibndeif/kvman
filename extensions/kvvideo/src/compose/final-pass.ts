@@ -11,7 +11,7 @@ import { xfadeName, type Transition } from './transitions.ts';
 export type FinalPlan = { parts: readonly string[]; starts: readonly number[]; transitions: readonly Transition[]; direction: 'ltr' | 'rtl'; events: readonly SoundEvent[]; durationMs: number };
 
 const seconds = (ms: number): string => (ms / 1000).toFixed(3);
-const target = 'I=-14:TP=-1:LRA=11';
+const target = 'I=-14:TP=-2:LRA=11';
 const gains: Record<Sound, string> = { click: '-18dB', keys: '-24dB', whoosh: '-18dB', pop: '-18dB' };
 
 function soundsUsed(plan: FinalPlan): Sound[] {

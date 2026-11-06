@@ -42,7 +42,7 @@ describe('the final pass (16 §16.8, ADR 0115, 2, 19, and 37)', () => {
         '[keys0]atrim=0:0.880,asetpts=PTS-STARTPTS,aformat=sample_rates=48000:channel_layouts=stereo,adelay=delays=3820:all=1,volume=-24dB[ekeys0]',
         '[5:a]asplit=1[pop0]',
         '[joineda][eclick0][eclick1][ekeys0][epop0]amix=inputs=5:duration=first:normalize=0[mixed]',
-        '[mixed]loudnorm=I=-14:TP=-1:LRA=11:print_format=json,aresample=48000[a]',
+        '[mixed]loudnorm=I=-14:TP=-2:LRA=11:print_format=json,aresample=48000[a]',
       ]),
     );
     expect(finalGraph({ ...plan, events: [] }, undefined)).toContain('[joineda]anull[mixed]');
@@ -50,12 +50,17 @@ describe('the final pass (16 §16.8, ADR 0115, 2, 19, and 37)', () => {
 
   it('M5.8-H7 the loudness measured, then applied with linear=true; silence left as it is', () => {
     const measured = measuredLoudness(measure);
-    expect(loudnessFilter(measured)).toBe('loudnorm=I=-14:TP=-1:LRA=11:measured_I=-20.10:measured_TP=-6.00:measured_LRA=3.20:measured_thresh=-30.40:offset=0.10:linear=true');
+    expect(loudnessFilter(measured)).toBe('loudnorm=I=-14:TP=-2:LRA=11:measured_I=-20.10:measured_TP=-6.00:measured_LRA=3.20:measured_thresh=-30.40:offset=0.10:linear=true');
     expect(loudnessFilter({ ...measured, input_i: '-inf' })).toBe('anull');
     expect(measureArgs(plan, 'measure.graph').slice(0, 4)).toEqual(['-hide_banner', '-nostats', '-loglevel', 'info']);
     expect(measureArgs(plan, 'measure.graph').slice(-6)).toEqual(['[a]', '-t', '8.500', '-f', 'null', '-']);
     const final = finalArgs(plan, 'final.graph', 'video.mp4');
     expect(final.slice(final.indexOf('-filter_complex_script'))).toEqual(['-filter_complex_script', 'final.graph', '-map', '[v]', '-map', '[a]', '-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-pix_fmt', 'yuv420p', '-r', '30', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-ac', '2', '-t', '8.500', '-movflags', '+faststart', '-progress', 'pipe:1', '-nostats', '-y', 'video.mp4']);
+  });
+
+  it('M5.13-H2 the final pass aims at -2 dBTP, measuring and applying', () => {
+    expect(loudnessFilter(undefined)).toBe('loudnorm=I=-14:TP=-2:LRA=11:print_format=json');
+    expect(loudnessFilter(measuredLoudness(measure))).toContain('loudnorm=I=-14:TP=-2:LRA=11:measured_I=');
   });
 
   it("M5.8-E4 a measure without loudnorm's JSON fails RENDER_FAILED", () => {

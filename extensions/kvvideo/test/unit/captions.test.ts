@@ -70,3 +70,39 @@ describe("a narration's captions (16 §16.6, ADR 0115, 17)", () => {
     expect(line?.words?.[2]).toEqual({ text: 'now.', startMs: 17 * 100, endMs: 20 * 100 + 90 });
   });
 });
+
+describe('even caption lines (16 §16.6, ADR 0120, 24)', () => {
+  const size = (text: string): number => [...text].length;
+
+  it('M5.13-H6 a long sentence is cut into even lines', () => {
+    const record = 'والفريق الطبي يقدر يوثّق بيانات الزيارة في السجل الطبي للمريض.';
+    const lines = linesOf(record);
+    expect(lines).toHaveLength(2);
+    expect(lines.join(' ')).toBe(record);
+    expect(lines.every((line) => size(line) <= 42)).toBe(true);
+    expect(Math.abs(size(lines[0] ?? '') - size(lines[1] ?? ''))).toBeLessThanOrEqual(7);
+    expect(lines[0]?.endsWith(' في')).toBe(false);
+  });
+
+  it('M5.13-H7 a break after punctuation is preferred', () => {
+    expect(linesOf('ومن تسجيل المدفوعات للملخصات المالية، تقدر تتابع جزء مهم من شغل العيادة.')[0]).toBe('ومن تسجيل المدفوعات للملخصات المالية،');
+  });
+
+  it('M5.13-E3 a sentence of 42 characters is one line; a word over 42 is a line of its own', () => {
+    const fits = 'The notes are saved as you type, offline.';
+    expect(size(`${fits} `)).toBe(42);
+    expect(linesOf(`${fits}x`)).toEqual([`${fits}x`]);
+    const long = 'y'.repeat(50);
+    expect(linesOf(`one two three four five six seven ${long} ten`)).toEqual(['one two three four five six seven', long, 'ten']);
+  });
+
+  it('M5.13-E4 a punctuation break that would need more or longer lines is not taken', () => {
+    const sentence = 'Open it, then every note you write is saved while you type it offline.';
+    expect(size(sentence)).toBe(70);
+    const lines = linesOf(sentence);
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).not.toBe('Open it,');
+    expect(Math.abs(size(lines[0] ?? '') - size(lines[1] ?? ''))).toBeLessThanOrEqual(6);
+  });
+});
+

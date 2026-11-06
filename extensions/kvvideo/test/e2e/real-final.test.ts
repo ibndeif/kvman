@@ -42,6 +42,18 @@ describe('a real final pass (16 §16.8, ADR 0115)', () => {
     expect(existsSync(`${workspace}/final.mp4.kvvideo.json`)).toBe(true);
   });
 
+  it('M5.13-H1 a loud, peaky narration composes into a video whose true peak is at most -1 dBTP', async () => {
+    const { kernel, workspace } = await kvvideo.start();
+    execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'color=c=red:s=640x360', '-frames:v', '1', '-y', `${workspace}/a.png`]);
+    // Bursts like speech: pink noise, seeded, swelling and falling three times a second; AAC overshoots its peaks.
+    execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', "anoisesrc=c=pink:a=0.9:d=6:r=48000:seed=7,volume='pow(abs(sin(2*PI*1.5*t)),4)':eval=frame", '-ac', '2', '-y', `${workspace}/loud.wav`]);
+    await kernel.exec('kvvideo.video.compose', { file: 'loud.mp4', width: 640, height: 360, scenes: [{ clip: 'a.png', narration: 'loud.wav' }] });
+    const review = await kernel.exec('kvvideo.video.review', { file: 'loud.mp4' });
+    expect(review.loudness?.truePeakDb).toBeLessThanOrEqual(-1);
+    expect(Math.abs((review.loudness?.integratedLufs ?? 0) + 14)).toBeLessThanOrEqual(1);
+    expect(review.problems.filter((problem) => problem.kind === 'loudness')).toEqual([]);
+  });
+
   it('M5.8-H11 a page is recorded again for a size of another shape', async () => {
     const { kernel, workspace, write } = await kvvideo.start({ settings: { 'kvvideo.browser': 'chrome' } });
     write('page/shape.html', '<!doctype html><html><head><style>html,body{margin:0;height:100%;background:red}@media (orientation: portrait){html,body{background:#00ff00}}</style></head><body></body></html>');

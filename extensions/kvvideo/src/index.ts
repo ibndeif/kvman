@@ -4,6 +4,7 @@ import { registerCompose } from './compose/register-compose.ts';
 import { registerFonts } from './fonts/register-fonts.ts';
 import { registerLook } from './look/register-look.ts';
 import { registerNarration } from './narration/register-narration.ts';
+import { registerNarrationSet } from './narration/register-narration-set.ts';
 import { registerVoice } from './narration/register-voice.ts';
 import { registerRecord } from './record/register-record.ts';
 import { registerReview } from './review/register-review.ts';
@@ -27,6 +28,7 @@ export default (ctx: Ctx): void => {
   registerRecord(ctx);
   registerLook(ctx);
   registerNarration(ctx);
+  registerNarrationSet(ctx);
   registerVoice(ctx);
   registerCompose(ctx);
   registerReview(ctx);

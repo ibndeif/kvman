@@ -1,19 +1,38 @@
-// What a recording question shows and sends (plan 08 §8.7; ADR 0115, 25 and 49): a line's words with the stressed ones
-// marked and a pause mark after each word to pause after, a length as `m:ss`, and a take's file type and name.
+// What a recording question shows and sends (plan 08 §8.7; ADR 0115, 25 and 49; ADR 0120, 25): a line's words with
+// each run to stress marked and a pause mark after each run's last word, a length as `m:ss`, and a take's file type and
+// name.
 
 export type LinePart = { text: string; stress: boolean; pause: boolean };
 
 const wordPattern = /[\p{L}\p{N}_'’-]+|[^\p{L}\p{N}_'’-]+/gu;
 const isWord = (text: string): boolean => /^[\p{L}\p{N}_'’-]+$/u.test(text);
+const isSpace = (text: string): boolean => /^\s+$/u.test(text);
 
-/** The line in runs of words and the text between them; a run is a word to stress or to pause after. */
-export function lineParts(text: string, stress: readonly string[], pauses: readonly string[]): LinePart[] {
-  const stressed = new Set(stress.map((word) => word.toLowerCase()));
-  const paused = new Set(pauses.map((word) => word.toLowerCase()));
-  return (text.match(wordPattern) ?? []).map((part) => {
-    const word = isWord(part) ? part.toLowerCase() : undefined;
-    return { text: part, stress: word !== undefined && stressed.has(word), pause: word !== undefined && paused.has(word) };
+// The parts' indexes of each place the run of words is found, each word after the last with only space between.
+function runsOf(parts: readonly string[], run: string): number[][] {
+  const words = run.toLowerCase().trim().split(/\s+/u);
+  const found: number[][] = [];
+  parts.forEach((_, start) => {
+    const indexes: number[] = [];
+    let at = start;
+    for (const [index, word] of words.entries()) {
+      if (index > 0 && !isSpace(parts[at] ?? '')) return;
+      if (index > 0) at += 1;
+      if (parts[at]?.toLowerCase() !== word) return;
+      indexes.push(at);
+      at += 1;
+    }
+    found.push(indexes);
   });
+  return found;
+}
+
+/** The line in runs of words and the text between them; a word is stressed or paused after when its run says so. */
+export function lineParts(text: string, stress: readonly string[], pauses: readonly string[]): LinePart[] {
+  const parts = text.match(wordPattern) ?? [];
+  const stressed = new Set(stress.flatMap((run) => runsOf(parts, run).flat()));
+  const paused = new Set(pauses.flatMap((run) => runsOf(parts, run).map((indexes) => indexes.at(-1) ?? -1)));
+  return parts.map((part, index) => ({ text: part, stress: isWord(part) && stressed.has(index), pause: isWord(part) && paused.has(index) }));
 }
 
 /** A length as `m:ss`. */

@@ -85,6 +85,28 @@ describe('ask record (08 §8.5, ADR 0115, 49)', { timeout: 30_000 }, () => {
     }
   });
 
+  it('M5.13-H13 a run of words to stress and to pause after is asked', async () => {
+    const { kernel, fake } = await kvcoder.start();
+    const text = 'والفريق الطبي يقدر يوثّق بيانات الزيارة في السجل الطبي للمريض.';
+    const sessionId = await ask(kernel, fake, { prompt: 'p', folder: 'v', lines: [{ text, stress: ['السجل الطبي'], pauses: ['بيانات الزيارة'] }] });
+    expect((await pending(kernel, sessionId))?.question).toMatchObject({ lines: [{ text, stress: ['السجل الطبي'], pauses: ['بيانات الزيارة'] }] });
+  });
+
+  it('M5.13-E8 a run that is not whole words of the line fails and says why', async () => {
+    const { kernel, fake } = await kvcoder.start();
+    for (const run of ['الفريق الطبي', 'الطبي والفريق']) {
+      const sessionId = await ask(kernel, fake, { prompt: 'p', folder: 'v', lines: [{ text: 'والفريق الطبي يقدر يوثّق', stress: [run] }] });
+      expect(toolText(fake)).toContain(`error VALIDATION_FAILED: "${run}" isn't found as whole words of the line`);
+      expect(await pending(kernel, sessionId)).toBeUndefined();
+    }
+  });
+
+  it('M5.13-E9 a run matches across any spacing of the line', async () => {
+    const { kernel, fake } = await kvcoder.start();
+    const sessionId = await ask(kernel, fake, { prompt: 'p', folder: 'v', lines: [{ text: 'Open  the notes', stress: ['Open the'] }] });
+    expect(await pending(kernel, sessionId)).toBeDefined();
+  });
+
   it('M5.10-E2 takes that are missing, not sound, or not files fail and nothing is written (one too large: the e2e project)', async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await ask(kernel, fake, { prompt: 'Two lines', folder: 'v', lines: [{ text: 'One.' }, { text: 'Two.' }] });

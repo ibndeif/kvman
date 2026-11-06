@@ -57,6 +57,19 @@ describe('video voice (16 §16.7, ADR 0115, 28 and 50)', { timeout: 60_000 }, ()
     expect(runs(program).slice(3, 5).map((args) => args.includes('-af'))).toEqual([false, false]);
   });
 
+  it('M5.13-H8 each sentence of a take is captioned on its own, sharing the take by characters', async () => {
+    const { kernel, write } = await voicing();
+    write('v/line-5.webm', 'one two three four five six seven eight');
+    const first = 'اكتشف كي في كير بنفسك.';
+    const second = 'اطلب عرضًا توضيحيًا لعيادتك.';
+    const answer = await kernel.exec('kvvideo.voice.make', { lines: [{ take: 'v/line-5.webm', text: `${first} ${second}` }], file: 'v/05.mp3' });
+    const firstEnd = Math.floor((8000 * [...first].length) / ([...first].length + [...second].length));
+    expect(answer.captions).toEqual([
+      { text: first, startMs: 0, endMs: firstEnd },
+      { text: second, startMs: firstEnd, endMs: 8000 },
+    ]);
+  });
+
   it('M5.10-E5 takes that are not sound, missing, or outside; too many lines; an existing output; a failing take', async () => {
     const { kernel, write, ffmpeg: program } = await voicing();
     write('v/notes.txt', 'x');
