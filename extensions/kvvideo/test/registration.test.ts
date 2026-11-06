@@ -79,12 +79,30 @@ describe('kvvideo in kvcoder (16 §16.1, §16.3)', { timeout: 60_000 }, () => {
     expect(readGuide()).not.toContain('.srt');
   });
 
+  it('M5.16-H1 the guide names what makes a video move', async () => {
+    const { kernel } = await kvvideo.start();
+    const { prompt } = await kernel.exec('kvcoder.prompt.get', { sessionId: await videoSession(kernel) });
+    for (const said of ['`kvvideo/brand.css`', '`kvvideo/motion.css`', './kvvideo/lib/three/build/three.module.js', '`data-sound', '`video narration-set`', '`preview.mp4`', 're-time the treatment from what was made', '`kv-drift`', '`maxSteps` of at least 30', 'never process a video with `shell`']) expect(prompt, said).toContain(said);
+  });
+
+  it('M5.16-H2 the own voice needs no service, and a generated one is set up after asking', async () => {
+    const { kernel } = await kvvideo.start();
+    const { prompt } = await kernel.exec('kvcoder.prompt.get', { sessionId: await videoSession(kernel) });
+    for (const said of ["The person's own voice needs no service.", 'offer with `ask choice`: Piper on this computer', '<toolsFolder>/voices', 'Never install programs, models, or voices in the workspace.', 'Once the person agreed, set it with `video narration-set`; never ask the person to edit settings.']) expect(prompt, said).toContain(said);
+  });
+
+  it('M5.16-E1 the guide no longer limits scenes to CSS or examples to a service', () => {
+    const guide = readGuide();
+    for (const gone of ['CSS animations and transitions only', 'never script timers', 'whose examples are generated', 'as an HTML artifact']) expect(guide, gone).not.toContain(gone);
+  });
+
+  // Amended by M5.16-H2: a service is needed only for a generated voice (ADR 0120, 4).
   it('QA78-H1 the guide lets a video have no voice', async () => {
     const { kernel } = await kvvideo.start();
     const { prompt } = await kernel.exec('kvcoder.prompt.get', { sessionId: await videoSession(kernel) });
     for (const said of [
       'When ffmpeg or the browser is missing, tell the person in plain words what to install, and stop until it is there',
-      'A narration service is needed only for a video with a voice: when it is the only thing missing, go on and settle the voice in the brief.',
+      'A narration service is needed only for a generated voice: when it is the only thing missing, go on and settle the voice in the brief.',
       "the voice: generated, the person's own, or none (on-screen text and sound effects only)",
       '**With no voice**, the on-screen text carries the words',
       'and leave out captions. The sound effects stay.',
