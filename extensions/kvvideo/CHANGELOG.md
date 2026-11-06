@@ -1,5 +1,14 @@
 # @kvman/kvvideo
 
+## 0.1.4
+
+### Patch Changes
+
+- 8ba5fff: HTML scenes are drawn frame by frame at 60 frames a second on kvvideo's own clock (ADR 0120): a page whose steps are all `wait` has its `requestAnimationFrame`, timers, `performance.now`, `Date`, `Math.random`, animations, and media set to each frame's time, so CSS, three.js, anime.js, and Lottie are exact and smooth whatever the machine's load, and the same at every recording; `look` uses the same clock. Elements with `data-sound` (pop, whoosh, click) cue sound effects as they enter, and crossfades get a soft whoosh. Every composed video is 60 frames a second; a recorded page's camera pushes in slowly; captions are boxed in the brand's colour by default (outlined with no brand).
+- 03a8bf0: The production guide (ADR 0120): your own voice needs no narration service; a generated one is offered as Piper or a service and set with `video narration-set`, installed outside the workspace; `style.css` imports `kvvideo/brand.css` and `kvvideo/motion.css`; the treatment shows a moving `preview.mp4`; the treatment is re-timed from the recorded voice; scenes move at every moment with the kit, scripts, and three.js, with sound cues; captions are off when the words are on screen; designer helpers get at least 30 steps; and a video is never post-processed with `shell`.
+- 931ec0f: Fixes from the KVCare promotion (ADR 0120): the final pass aims at −2 dBTP so the encoded video passes its own review; `review`'s problems carry a `reason` with what was measured, a picture still for 3 s is `frozen`, and an end card's silence of up to 5 s isn't a problem; captions are cut into even lines, breaking after punctuation where it can, and `voice` captions each sentence of a take on its own; new `video narration-set` sets the narration service, voice, and model once the person agreed; `check` answers `toolsFolder`.
+- aab54f4: Scenes reach kvvideo at a fixed `kvvideo/` address (ADR 0120): `kvvideo/motion.css`, a motion kit of entrances, exits, emphasis, ambient motion, word-by-word text, line drawing, and counting numbers that combine on one element and mirror for right-to-left pages; `kvvideo/brand.css`, the workspace's brand colours and font as CSS variables with every bundled font; the brand's logo and font file; and three.js (with its addons), anime.js, and lottie-web, bundled and pinned. `record` and `look` answer `failed`, the files a page or website couldn't load.
+
 ## 0.1.3
 
 ### Patch Changes
