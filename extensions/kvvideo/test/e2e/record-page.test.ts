@@ -7,6 +7,7 @@ import { z } from '@kvman/sdk';
 import { cursorScript } from '../../src/record/cursor-script.ts';
 import { pageAddress } from '../../src/record/page-route.ts';
 import { recordingContext } from '../../src/record/recorder.ts';
+import { sceneAssetsOf } from '../../src/record/scene-address.ts';
 import { waitUntilReady } from '../../src/record/page-ready.ts';
 import { countsFrames, useFakePrograms } from '../support/fake-programs.ts';
 import { useKvvideo } from '../support/kvvideo-kernel.ts';
@@ -54,7 +55,7 @@ describe('video record of a page, a phone, and a narration (16 §16.5, ADR 0115)
     expect(JSON.parse(readFileSync(`${workspace}/videos/t/title.mp4.kvvideo.json`, 'utf8'))).toMatchObject({ kind: 'page', source: 'videos/t/title.html' });
     await withChrome(async (browser) => {
       const file = path.join(workspace, 'videos/t/title.html');
-      const context = await recordingContext(browser, { source: { kind: 'page', file }, width: 640, height: 360, device: 'desktop', ownPort: null });
+      const { context } = await recordingContext(browser, { source: { kind: 'page', file }, width: 640, height: 360, device: 'desktop', ownPort: null, assets: sceneAssetsOf(workspace, null) });
       const page = await context.newPage();
       await page.goto(pageAddress(file));
       expect(await page.evaluate('getComputedStyle(document.body).backgroundColor')).toBe('rgb(1, 2, 3)');

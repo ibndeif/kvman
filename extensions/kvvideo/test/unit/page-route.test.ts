@@ -2,7 +2,10 @@ import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { answerPageRequest, pageAddress, pageOrigin } from '../../src/record/page-route.ts';
+import { answerPageRequest as answerWith, pageAddress, pageOrigin } from '../../src/record/page-route.ts';
+import { sceneAssetsOf } from '../../src/record/scene-address.ts';
+
+const answerPageRequest = (folder: string, address: string) => answerWith(folder, address, sceneAssetsOf(folder, null));
 
 const roots: string[] = [];
 afterEach(() => {

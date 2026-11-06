@@ -28,4 +28,6 @@ export const lookInputSchema = lookFields.superRefine((input, context) => {
 /** `look`'s input. */
 export type LookInput = z.output<typeof lookInputSchema>;
 
-export const lookOutputSchema = z.object({ images: z.array(z.object({ fileId: z.string(), name: z.string(), atMs: moment })) });
+export const failedLoadSchema = z.object({ url: z.string(), status: z.number().int().nonnegative() });
+
+export const lookOutputSchema = z.object({ images: z.array(z.object({ fileId: z.string(), name: z.string(), atMs: moment })), failed: z.array(failedLoadSchema) });

@@ -91,7 +91,8 @@ promotion in the owner's own voice. What went wrong:
     the recording. `look` of a website keeps the held animations of ADR 0117, 4.
 18. **`brand.css`** defines `--brand-primary`, `--brand-background`, `--brand-text`, and `--brand-font`; with no brand
     they are `#2563EB`, `#0F172A`, `#F8FAFC`, and the bundled font of the page's language. It declares an
-    `@font-face` for each bundled font by its name, and for the brand's font file by its family name.
+    `@font-face` for each bundled font by its name, and for the brand's font file, served at
+    `kvvideo/fonts/brand.<ext>`, by its family name.
 19. **The libraries' addresses**: `kvvideo/lib/three/` answers files under three's `build/` and `examples/jsm/`;
     `kvvideo/lib/anime.js` is anime.js's ES module bundle; `kvvideo/lib/lottie.js` is lottie-web's player. A page's own
     file under a `kvvideo/` folder is never served: the address is kvvideo's.

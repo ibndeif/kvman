@@ -1,0 +1,204 @@
+/*
+ * kvvideo's motion kit (plan 16 §16.5 The motion kit; ADR 0120, 1), served to every scene at kvvideo/motion.css.
+ *
+ * An element takes one entrance, one ambient motion, one emphasis, and the exit together: each role is its own
+ * custom property, which never passes to children, and one rule plays them all. Entrances move `opacity`,
+ * `translate`, `scale`, `filter`, and `clip-path`; ambient motion moves `transform`; so they add up.
+ *
+ *   --at       when the entrance starts (0s)          --out      when kv-out starts (never)
+ *   --em-at    when the emphasis starts (1s)          --i        a kv-words child's place (0, 1, 2, …)
+ *   --length   how long kv-draw and kv-count take     --from, --to   kv-count's numbers
+ */
+
+:root {
+  --kv-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --kv-ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --kv-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --kv-ease-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --kv-enter: 600ms;
+  --kv-exit: 400ms;
+  --kv-emphasis: 700ms;
+  --kv-distance: 4vh;
+  --kv-stagger: 80ms;
+  --kv-dir: 1;
+}
+
+[dir="rtl"] {
+  --kv-dir: -1;
+}
+
+[dir="ltr"] {
+  --kv-dir: 1;
+}
+
+@property --kv-a-in {
+  syntax: '*';
+  inherits: false;
+}
+
+@property --kv-a-loop {
+  syntax: '*';
+  inherits: false;
+}
+
+@property --kv-a-em {
+  syntax: '*';
+  inherits: false;
+}
+
+@property --kv-a-out {
+  syntax: '*';
+  inherits: false;
+}
+
+@property --kv-n {
+  syntax: '<integer>';
+  inherits: false;
+  initial-value: 0;
+}
+
+@keyframes kv-none {
+}
+
+.kv-fade, .kv-rise, .kv-drop, .kv-slide, .kv-zoom, .kv-blur, .kv-wipe, .kv-pop, .kv-words > *, .kv-draw, .kv-count,
+.kv-float, .kv-breathe, .kv-drift, .kv-spin, .kv-pulse, .kv-underline, .kv-out {
+  animation: var(--kv-a-in, kv-none 1ms), var(--kv-a-loop, kv-none 1ms), var(--kv-a-em, kv-none 1ms), var(--kv-a-out, kv-none 1ms);
+}
+
+/* The stage: a scene that fills the frame, inside a safe margin of 5%. */
+
+.kv-stage {
+  position: relative;
+  box-sizing: border-box;
+  width: 100vw;
+  height: 100vh;
+  padding: 5vh 5vw;
+  overflow: hidden;
+}
+
+/* Entrances. */
+
+.kv-fade { --kv-a-in: kv-fade var(--kv-enter) var(--kv-ease-out) var(--at, 0s) both; }
+.kv-rise { --kv-a-in: kv-rise var(--kv-enter) var(--kv-ease-out) var(--at, 0s) both; }
+.kv-drop { --kv-a-in: kv-drop var(--kv-enter) var(--kv-ease-out) var(--at, 0s) both; }
+.kv-slide { --kv-a-in: kv-slide var(--kv-enter) var(--kv-ease-out) var(--at, 0s) both; }
+.kv-zoom { --kv-a-in: kv-zoom var(--kv-enter) var(--kv-ease-out) var(--at, 0s) both; }
+.kv-blur { --kv-a-in: kv-blur var(--kv-enter) var(--kv-ease-out) var(--at, 0s) both; }
+.kv-wipe { --kv-a-in: kv-wipe calc(var(--kv-enter) * 1.4) var(--kv-ease-in-out) var(--at, 0s) both; }
+.kv-pop { --kv-a-in: kv-pop var(--kv-enter) var(--kv-ease-back) var(--at, 0s) both; }
+
+.kv-words > * {
+  display: inline-block;
+  --kv-a-in: kv-rise var(--kv-enter) var(--kv-ease-out) calc(var(--at, 0s) + var(--i, 0) * var(--kv-stagger)) both;
+}
+
+@keyframes kv-fade { from { opacity: 0; } }
+@keyframes kv-rise { from { opacity: 0; translate: 0 var(--kv-distance); } }
+@keyframes kv-drop { from { opacity: 0; translate: 0 calc(-1 * var(--kv-distance)); } }
+@keyframes kv-slide { from { opacity: 0; translate: calc(-2 * var(--kv-distance) * var(--kv-dir)) 0; } }
+@keyframes kv-zoom { from { opacity: 0; scale: 0.9; } }
+@keyframes kv-blur { from { opacity: 0; filter: blur(14px); } }
+@keyframes kv-pop {
+  from { opacity: 0; scale: 0.6; }
+  60% { opacity: 1; scale: 1.06; }
+  to { scale: 1; }
+}
+@keyframes kv-wipe {
+  from { clip-path: inset(0 calc(50% + 50% * var(--kv-dir)) 0 calc(50% - 50% * var(--kv-dir))); }
+  to { clip-path: inset(0 0 0 0); }
+}
+
+/* Lines that draw: an SVG shape with pathLength="1". */
+
+.kv-draw {
+  stroke-dasharray: 1;
+  --kv-a-in: kv-draw var(--length, 1.2s) var(--kv-ease-in-out) var(--at, 0s) both;
+}
+
+@keyframes kv-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+
+/* Numbers that count, from --from to --to; kv-count-arabic writes them in Arabic-Indic digits. */
+
+.kv-count {
+  counter-reset: kv-n var(--kv-n);
+  --kv-a-in: kv-count var(--length, 1.6s) var(--kv-ease-out) var(--at, 0s) both;
+}
+
+.kv-count::after { content: counter(kv-n); }
+.kv-count.kv-count-arabic::after { content: counter(kv-n, arabic-indic); }
+
+@keyframes kv-count {
+  from { --kv-n: var(--from, 0); }
+  to { --kv-n: var(--to, 100); }
+}
+
+/* Ambient motion, for the whole scene. */
+
+.kv-float { --kv-a-loop: kv-float 6s var(--kv-ease-in-out) 0s infinite alternate both; }
+.kv-breathe { --kv-a-loop: kv-breathe 5s var(--kv-ease-in-out) 0s infinite alternate both; }
+.kv-drift { --kv-a-loop: kv-drift 14s var(--kv-ease-in-out) 0s infinite alternate both; }
+.kv-spin { --kv-a-loop: kv-spin 30s linear 0s infinite both; }
+
+@keyframes kv-float {
+  from { transform: translateY(0); }
+  to { transform: translateY(-1.4vh); }
+}
+@keyframes kv-breathe {
+  from { transform: scale(1); }
+  to { transform: scale(1.035); }
+}
+@keyframes kv-drift {
+  from { transform: translate(0, 0) scale(1.1); }
+  to { transform: translate(calc(-2.5vw * var(--kv-dir)), -1.5vh) scale(1.1); }
+}
+@keyframes kv-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Emphasis, at --em-at. */
+
+.kv-pulse { --kv-a-em: kv-pulse var(--kv-emphasis) var(--kv-ease-in-out) var(--em-at, 1s) 1 none; }
+
+.kv-underline {
+  background-image: linear-gradient(var(--brand-primary, currentColor), var(--brand-primary, currentColor));
+  background-repeat: no-repeat;
+  background-position: calc(50% - 50% * var(--kv-dir)) 100%;
+  background-size: 0% 0.12em;
+  --kv-a-em: kv-underline var(--kv-emphasis) var(--kv-ease-out) var(--em-at, 1s) 1 forwards;
+}
+
+.kv-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.kv-shine::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 40%, rgb(255 255 255 / 55%) 50%, transparent 60%);
+  translate: calc(-100% * var(--kv-dir)) 0;
+  animation: kv-shine 900ms var(--kv-ease-in-out) var(--em-at, 1s) both;
+}
+
+@keyframes kv-pulse {
+  50% { scale: 1.08; }
+}
+@keyframes kv-underline {
+  to { background-size: 100% 0.12em; }
+}
+@keyframes kv-shine {
+  to { translate: calc(100% * var(--kv-dir)) 0; }
+}
+
+/* The exit, at --out. */
+
+.kv-out { --kv-a-out: kv-out var(--kv-exit) var(--kv-ease-in) var(--out, 9999s) forwards; }
+
+@keyframes kv-out {
+  to { opacity: 0; translate: 0 calc(-0.5 * var(--kv-distance)); }
+}

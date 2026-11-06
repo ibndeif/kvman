@@ -61,4 +61,4 @@ export const actionSchema = z.object({
 /** What a step did, and when, from the recording's start. */
 export type Action = z.output<typeof actionSchema>;
 
-export const recordOutputSchema = z.object({ file: z.string(), durationMs: z.number().int().nonnegative(), steps: z.array(actionSchema) });
+export const recordOutputSchema = z.object({ file: z.string(), durationMs: z.number().int().nonnegative(), steps: z.array(actionSchema), failed: z.array(z.object({ url: z.string(), status: z.number().int().nonnegative() })) });

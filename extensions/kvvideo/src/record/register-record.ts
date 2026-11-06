@@ -14,6 +14,7 @@ import { cuesOf, type Cues } from './narration-cues.ts';
 import { ownPortOf } from './own-port.ts';
 import { record, type RecordSource } from './recorder.ts';
 import { defaultSize, sourceOf } from './record-source.ts';
+import { sceneAssetsOf } from './scene-address.ts';
 import { recordInputSchema, recordOutputSchema, type RecordInput } from './steps.ts';
 
 // `video record` (plan 16 §16.5): the addresses, the page, the narration, and the outputs are checked before a browser
@@ -62,13 +63,14 @@ export function registerRecord(ctx: Ctx): void {
       ctx.job.signal.addEventListener('abort', stop, { once: true });
       try {
         const stepStarted = (n: number, of: number): void => ctx.job.progress({ key: 'kvvideo.progress.step', params: { n, of } });
-        const recording = await record(browser, { source, steps: input.steps ?? [], width, height, device, cues, folder: work.folder, ownPort, ffmpeg, signal: ctx.job.signal, now: () => performance.now(), stepStarted });
+        const assets = sceneAssetsOf(root, await ctx.settings.get('kvvideo.brand'));
+        const recording = await record(browser, { source, steps: input.steps ?? [], width, height, device, cues, folder: work.folder, ownPort, assets, ffmpeg, signal: ctx.job.signal, now: () => performance.now(), stepStarted });
         const steps = input.steps ?? [];
         const sourceName = source.kind === 'site' ? source.url : answerPath(root, source.file);
         const made = writeSidecar(work.folder, { kind: source.kind, source: sourceName, width, height, device, scale: 2, durationMs: recording.durationMs, steps: [...steps], actions: recording.actions });
         placeOutput(recording.video, output);
         placeOutput(made, sidecar);
-        return { file: answerPath(root, output), durationMs: recording.durationMs, steps: recording.actions };
+        return { file: answerPath(root, output), durationMs: recording.durationMs, steps: recording.actions, failed: recording.failed };
       } finally {
         ctx.job.signal.removeEventListener('abort', stop);
         await browser.close();

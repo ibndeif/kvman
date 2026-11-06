@@ -4,6 +4,7 @@ import { startBrowser } from '../browser/start-browser.ts';
 import { trimOldest } from '../narration/narration-cache.ts';
 import { ownPortOf } from '../record/own-port.ts';
 import { defaultSize, sourceOf } from '../record/record-source.ts';
+import { sceneAssetsOf } from '../record/scene-address.ts';
 import { lookAt } from './look-at.ts';
 import { lookInputSchema, lookOutputSchema } from './look-input.ts';
 
@@ -33,7 +34,8 @@ export function registerLook(ctx: Ctx): void {
       const stop = (): void => void browser.close();
       ctx.job.signal.addEventListener('abort', stop, { once: true });
       try {
-        const frames = await lookAt(browser, { source, ...size, device, ownPort, moments: input.atMs ?? [1000] });
+        const assets = sceneAssetsOf(ctx.job.workspace.path, await ctx.settings.get('kvvideo.brand'));
+        const { frames, failed } = await lookAt(browser, { source, ...size, device, ownPort, assets, moments: input.atMs ?? [1000] });
         const images = [];
         for (const [index, frame] of frames.entries()) {
           const name = `look-${String(index + 1)}.jpg`;
@@ -43,7 +45,7 @@ export function registerLook(ctx: Ctx): void {
         const rows = ctx.store.collection('lookFrames', frameRowSchema);
         for (const image of images) await rows.insert({ fileId: image.fileId, createdAt: new Date().toISOString() });
         await trimOldest(rows, ctx.files, keptFrames);
-        return { images };
+        return { images, failed };
       } finally {
         ctx.job.signal.removeEventListener('abort', stop);
         await browser.close();

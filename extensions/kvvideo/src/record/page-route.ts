@@ -1,9 +1,11 @@
 import { existsSync, realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
+import { answerSceneAddress, type AddressAnswer, type SceneAssets } from './scene-address.ts';
 
 // An HTML page of the workspace, recorded without a server (plan 16 §16.5; ADR 0115, 32): it is opened on an origin
 // that never resolves, and each request to that origin is answered with the file at its path under the page's folder.
-// A path that leaves the folder, through `..` or a symlink, or a file that doesn't exist, is answered 404.
+// A path that leaves the folder, through `..` or a symlink, or a file that doesn't exist, is answered 404. The
+// `kvvideo/` address is kvvideo's, never the folder's (ADR 0120, 7).
 
 export const pageOrigin = 'http://page.kvvideo.invalid';
 
@@ -34,7 +36,7 @@ const contentTypes: Record<string, string> = {
   '.ogg': 'audio/ogg',
 };
 
-export type PageAnswer = { status: 200; file: string; contentType: string } | { status: 404 };
+export type PageAnswer = AddressAnswer;
 
 /** The address a page file is opened at. */
 export function pageAddress(page: string): string {
@@ -57,9 +59,10 @@ function decodedPath(address: string): string | undefined {
 }
 
 /** What a request of the page's origin is answered with, from the page's folder. */
-export function answerPageRequest(folder: string, address: string): PageAnswer {
+export function answerPageRequest(folder: string, address: string, assets: SceneAssets): PageAnswer {
   const relative = decodedPath(address);
   if (relative === undefined) return { status: 404 };
+  if (relative.startsWith('kvvideo/')) return answerSceneAddress(assets, relative.slice('kvvideo/'.length));
   const file = path.resolve(folder, relative);
   if (!inside(folder, file) || !existsSync(file)) return { status: 404 };
   if (!inside(realpathSync(folder), realpathSync(file)) || !statSync(file).isFile()) return { status: 404 };

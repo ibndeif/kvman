@@ -13,6 +13,7 @@ import { programOf } from '../programs/programs.ts';
 import type { Program } from '../programs/run-program.ts';
 import { invalid, kvvideoProblem } from '../problems.ts';
 import { ownPortOf } from '../record/own-port.ts';
+import { sceneAssetsOf } from '../record/scene-address.ts';
 import { arabicLetter, captionFont } from './caption-font.ts';
 import { defaultAccent } from './compose-drawing.ts';
 import { composeInputSchema, composeOutputSchema, type Scene } from './compose-input.ts';
@@ -114,6 +115,7 @@ export function registerCompose(ctx: Ctx): void {
           captions: { look, position: input.captions?.position ?? 'bottom', size: input.captions?.size, highlight: brand?.colors.primary ?? defaultAccent, font },
           programs,
           ownPort: ownPortOf(process.env['KVMAN_HOME']),
+          assets: sceneAssetsOf(root, brand),
           signal: ctx.job.signal,
           browsers: { drawing: browserOf(launchDrawing), recording: browserOf(launchChannel) },
           progress: {

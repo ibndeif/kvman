@@ -8,7 +8,9 @@ import { cursorScript } from './cursor-script.ts';
 import { recordEncoderArgs } from './encoder-args.ts';
 import { frameWriter } from './frame-writer.ts';
 import { waitUntilMs, type Cues } from './narration-cues.ts';
+import { failedLoads, watchLoads, type FailedLoad } from './failed-loads.ts';
 import { answerPageRequest, pageAddress, pageOrigin } from './page-route.ts';
+import type { SceneAssets } from './scene-address.ts';
 import { holdPageClock } from './page-clock.ts';
 import { waitUntilReady } from './page-ready.ts';
 import { pausesAfter, runStep, type StepState } from './run-step.ts';
@@ -32,32 +34,39 @@ export type RecordPlan = {
   cues: Cues | undefined;
   folder: string;
   ownPort: number | null;
+  assets: SceneAssets;
   ffmpeg: Program;
   signal: AbortSignal;
   now(): number;
   stepStarted(number: number, of: number): void;
 };
 
-export type Recording = { video: string; durationMs: number; actions: Action[] };
+export type Recording = { video: string; durationMs: number; actions: Action[]; failed: FailedLoad[] };
 
 const scale = 2;
 
 const firstLine = (error: unknown): string => (error instanceof Error ? (error.message.split('\n').find((line) => line.trim() !== '') ?? error.name) : String(error)).trim();
 
-/** A fresh browser context for a recording: its size and device, kvman's port aborted, a page's files, the pointer. */
-export async function recordingContext(browser: Browser, plan: Pick<RecordPlan, 'source' | 'width' | 'height' | 'device' | 'ownPort'>): Promise<BrowserContext> {
+export type RecordingContext = { context: BrowserContext; failed(): FailedLoad[] };
+
+/** A fresh browser context for a recording: its size and device, kvman's port aborted, a page's files, the pointer, and its failed loads. */
+export async function recordingContext(browser: Browser, plan: Pick<RecordPlan, 'source' | 'width' | 'height' | 'device' | 'ownPort' | 'assets'>): Promise<RecordingContext> {
   const phone = plan.device === 'phone';
   const context = await browser.newContext({ viewport: { width: plan.width, height: plan.height }, deviceScaleFactor: scale, isMobile: phone, hasTouch: phone });
   await context.route((url) => isOwnAddress(url, plan.ownPort), (route) => route.abort('blockedbyclient'));
   const { source } = plan;
   if (source.kind === 'page') {
     await context.route(`${pageOrigin}/**`, async (route) => {
-      const answer = answerPageRequest(path.dirname(source.file), route.request().url());
-      await (answer.status === 404 ? route.fulfill({ status: 404, body: '' }) : route.fulfill({ status: 200, path: answer.file, contentType: answer.contentType }));
+      const answer = answerPageRequest(path.dirname(source.file), route.request().url(), plan.assets);
+      if (answer.status === 404) await route.fulfill({ status: 404, body: '' });
+      else if ('body' in answer) await route.fulfill({ status: 200, body: answer.body, contentType: answer.contentType });
+      else await route.fulfill({ status: 200, path: answer.file, contentType: answer.contentType });
     });
   }
   await context.addInitScript(cursorScript(plan.device));
-  return context;
+  const loads = failedLoads(plan.ownPort);
+  watchLoads(context, loads);
+  return { context, failed: () => loads.list() };
 }
 
 /** Opens the website or the page and waits until it is ready, or fails `kvvideo/STEP_FAILED` with step 0. */
@@ -102,7 +111,7 @@ async function play(page: Page, plan: RecordPlan, startedAt: number): Promise<Ac
 }
 
 export async function record(browser: Browser, plan: RecordPlan): Promise<Recording> {
-  const context = await recordingContext(browser, plan);
+  const { context, failed } = await recordingContext(browser, plan);
   const page = await context.newPage();
   const clock = await holdPageClock(page);
   await openSource(page, plan.source);
@@ -120,7 +129,7 @@ export async function record(browser: Browser, plan: RecordPlan): Promise<Record
     await writer.finish(endedAt);
     const run = await encoder.end();
     if (run.exitCode !== 0) throw kvvideoProblem('RENDER_FAILED', `ffmpeg couldn't encode the recording (exit ${String(run.exitCode)}).`, { reason: lastLines(run.output) });
-    return { video, durationMs: Math.round(endedAt - startedAt), actions };
+    return { video, durationMs: Math.round(endedAt - startedAt), actions, failed: failed() };
   } finally {
     stopEncoder.abort();
     await context.close();

@@ -9,6 +9,7 @@ import { invalid } from '../problems.ts';
 import { cuesOf } from '../record/narration-cues.ts';
 import { record } from '../record/recorder.ts';
 import type { Program } from '../programs/run-program.ts';
+import type { SceneAssets } from '../record/scene-address.ts';
 import type { Size } from './frame-layout.ts';
 import type { Recording } from './scene-look.ts';
 
@@ -31,7 +32,7 @@ export function pageSizeFor(size: Size): Size {
   return size.width >= size.height ? { width: even((shorterSide * size.width) / size.height), height: shorterSide } : { width: shorterSide, height: even((shorterSide * size.height) / size.width) };
 }
 
-export type PageAgain = { root: string; folder: string; number: number; recording: Recording; narration: string | undefined; size: Size; browser: () => Promise<Browser>; ffmpeg: Program; ownPort: number | null; signal: AbortSignal };
+export type PageAgain = { root: string; folder: string; number: number; recording: Recording; narration: string | undefined; size: Size; browser: () => Promise<Browser>; ffmpeg: Program; ownPort: number | null; assets: SceneAssets; signal: AbortSignal };
 
 /**
  * Records the page again and answers the new clip's path, with its sidecar beside it. The sidecar is a file of the
@@ -45,7 +46,7 @@ export async function recordPageAgain(again: PageAgain): Promise<string> {
   const cues = narration?.kind === 'narration' ? cuesOf(narration) : undefined;
   const work = workFolder();
   try {
-    const plan = { source: { kind: 'page' as const, file }, steps: again.recording.steps, ...page, device: 'desktop' as const, cues, folder: work.folder, ownPort: again.ownPort, ffmpeg: again.ffmpeg, signal: again.signal, now: () => performance.now(), stepStarted: () => undefined };
+    const plan = { source: { kind: 'page' as const, file }, steps: again.recording.steps, ...page, device: 'desktop' as const, cues, folder: work.folder, ownPort: again.ownPort, assets: again.assets, ffmpeg: again.ffmpeg, signal: again.signal, now: () => performance.now(), stepStarted: () => undefined };
     const recording = await record(await again.browser(), plan);
     mkdirSync(again.folder, { recursive: true });
     const clip = path.join(again.folder, `page-${String(again.number)}.mp4`);

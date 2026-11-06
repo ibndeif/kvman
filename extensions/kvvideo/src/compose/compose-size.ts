@@ -3,6 +3,7 @@ import type { Browser } from 'playwright-core';
 import type { Brand } from '../brand/brand.ts';
 import type { Caption } from '../narration/captions.ts';
 import { narrationLeadMs } from '../record/narration-cues.ts';
+import type { SceneAssets } from '../record/scene-address.ts';
 import type { Program } from '../programs/run-program.ts';
 import type { CaptionLook } from './ass-file.ts';
 import type { CaptionFont } from './caption-font.ts';
@@ -34,6 +35,7 @@ export type Composition = {
   captions: { look: CaptionLook | 'off'; position: 'bottom' | 'top'; size: number | undefined; highlight: string; font: CaptionFont | undefined };
   programs: { ffmpeg: Program; ffprobe: Program };
   ownPort: number | null;
+  assets: SceneAssets;
   signal: AbortSignal;
   browsers: { drawing(): Promise<Browser>; recording(): Promise<Browser> };
   progress: { scene(): void; final(percent: number): void };
@@ -51,7 +53,7 @@ async function scenesFor(composition: Composition, size: Size, folder: string): 
       scenes.push(scene);
       continue;
     }
-    const clip = await recordPageAgain({ root: composition.root, folder, number: scene.number, recording, narration: scene.narration, size, browser: composition.browsers.recording, ffmpeg: composition.programs.ffmpeg, ownPort: composition.ownPort, signal: composition.signal });
+    const clip = await recordPageAgain({ root: composition.root, folder, number: scene.number, recording, narration: scene.narration, size, browser: composition.browsers.recording, ffmpeg: composition.programs.ffmpeg, ownPort: composition.ownPort, assets: composition.assets, signal: composition.signal });
     scenes.push({ ...scene, clip });
   }
   return scenes;
