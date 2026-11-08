@@ -1,6 +1,7 @@
 import type { Ctx } from '@kvman/sdk';
 import { registerBrand } from './brand/brand.ts';
 import { registerCompose } from './compose/register-compose.ts';
+import { registerCraft } from './craft/register-craft.ts';
 import { registerFonts } from './fonts/register-fonts.ts';
 import { registerLook } from './look/register-look.ts';
 import { registerNarration } from './narration/register-narration.ts';
@@ -25,6 +26,7 @@ export default (ctx: Ctx): void => {
   registerUi(ctx);
   registerSetup(ctx);
   registerFonts(ctx);
+  registerCraft(ctx);
   registerRecord(ctx);
   registerLook(ctx);
   registerNarration(ctx);

@@ -3,6 +3,7 @@ import { z } from '@kvman/sdk';
 import { brandSchema } from '../src/brand/brand.ts';
 import { narrationSetInputSchema } from '../src/narration/register-narration-set.ts';
 import { composeInputSchema } from '../src/compose/compose-input.ts';
+import { craftInputSchema } from '../src/craft/register-craft.ts';
 import { readGuide } from '../src/guide.ts';
 import { lookInputSchema } from '../src/look/look-input.ts';
 import { narrateInputSchema } from '../src/narration/register-narration.ts';
@@ -15,6 +16,7 @@ const kvvideo = useKvvideo();
 const lastToolResult = (bodies: readonly unknown[]): unknown => JSON.stringify(bodies.at(-1));
 
 describe('kvvideo in kvcoder (16 §16.1, §16.3)', { timeout: 60_000 }, () => {
+  // Amended by M5.17-H2: the connector has craft after brand (ADR 0121, 3).
   it('M5.1-H1 kvcoder has the optIn video connector and /video, again after a restart', async () => {
     const { kernel } = await kvvideo.start();
     for (let round = 0; round < 2; round += 1) {
@@ -25,6 +27,7 @@ describe('kvvideo in kvcoder (16 §16.1, §16.3)', { timeout: 60_000 }, () => {
         { name: 'check', command: 'kvvideo.setup.get', query: true, examples: 1 },
         { name: 'fonts', command: 'kvvideo.font.list', query: true, examples: 1 },
         { name: 'brand', command: 'kvvideo.brand.get', query: true, examples: 1 },
+        { name: 'craft', command: 'kvvideo.craft.get', query: true, examples: 1 },
         { name: 'brand-set', command: 'kvvideo.brand.set', query: false, examples: 1 },
         { name: 'narration-set', command: 'kvvideo.narration.set', query: false, examples: 1 },
         { name: 'record', command: 'kvvideo.clip.record', query: false, examples: 1 },
@@ -96,6 +99,37 @@ describe('kvvideo in kvcoder (16 §16.1, §16.3)', { timeout: 60_000 }, () => {
     for (const gone of ['CSS animations and transitions only', 'never script timers', 'whose examples are generated', 'as an HTML artifact']) expect(guide, gone).not.toContain(gone);
   });
 
+  it('M5.17-H2 craft is a query of the connector after brand, with an example of a topic', async () => {
+    const { kernel } = await kvvideo.start();
+    const video = (await kernel.exec('kvcoder.connector.list', {})).find((connector) => connector.name === 'video');
+    const names = video?.commands?.map((command) => command.name) ?? [];
+    expect(names.indexOf('craft')).toBe(names.indexOf('brand') + 1);
+    const craft = video?.commands?.find((command) => command.name === 'craft');
+    expect(craft).toMatchObject({ command: 'kvvideo.craft.get', query: true });
+    expect(craft?.examples).toHaveLength(1);
+    expect(craftInputSchema.safeParse(craft?.examples[0]?.input).success).toBe(true);
+  });
+
+  it('M5.17-H3 the guide reads each craft note at its stage, and keeps the craft it summarizes', async () => {
+    const { kernel } = await kvvideo.start();
+    const { prompt } = await kernel.exec('kvcoder.prompt.get', { sessionId: await videoSession(kernel) });
+    const between = (from: string, to: string): string => prompt.slice(prompt.indexOf(from), prompt.indexOf(to));
+    const concept = between('4. **Concept.**', '5. **Treatment.**');
+    const treatment = between('5. **Treatment.**', '6. **Production map.**');
+    const pictures = between('8. **Pictures.**', '9. **Assemble and review.**');
+    const review = between('9. **Assemble and review.**', '10. **Deliver.**');
+    for (const said of ["`video craft { topic: 'story' }`", '`tutorial`', '`social`']) expect(concept, said).toContain(said);
+    for (const said of ['`video craft` `scenes` and `motion`', '`charts` when a scene shows numbers', 'its pattern', 'its motion (a verb per element)']) expect(treatment, said).toContain(said);
+    expect(pictures).toContain('says to read `video craft` `scenes` and `motion` (and `charts` when it shows numbers) before building');
+    expect(review).toContain('Name each fault with its time and what to change, look for the same fault in the rest of the video');
+    for (const said of ['held 1 to 2 s past its narration', 'Write numbers, symbols, and addresses in the narration as they are said', 'a second element for the eye to travel to', "`camera: 'none'`", '`cut` for a change, a surprise, or a fast list']) expect(prompt, said).toContain(said);
+  });
+
+  it('M5.17-E3 the guide no longer crossfades every scene, keeps one focal point, or retypes the motion rules', () => {
+    const guide = readGuide();
+    for (const gone of ['Use `crossfade` between scenes', 'one focal point', 'the motion rules below']) expect(guide, gone).not.toContain(gone);
+  });
+
   // Amended by M5.16-H2: a service is needed only for a generated voice (ADR 0120, 4).
   it('QA78-H1 the guide lets a video have no voice', async () => {
     const { kernel } = await kvvideo.start();
@@ -150,11 +184,12 @@ describe('kvvideo in kvcoder (16 §16.1, §16.3)', { timeout: 60_000 }, () => {
     expect(narrationSetInputSchema.safeParse(entry?.examples[0]?.input).success).toBe(true);
   });
 
+  // Amended by M5.17-H2: craft, after brand, takes a topic (ADR 0121, 3).
   it("M5.11-H2 the connector's description, and each command with one example its command takes", async () => {
     const { kernel } = await kvvideo.start();
     const video = (await kernel.exec('kvcoder.connector.list', {})).find((connector) => connector.name === 'video');
     expect(video?.description).toBe("Make any kind of video: record websites and HTML pages you write, use the person's images and clips and licensed ones from the web, narrate a script or have the person record it, and compose them with camera moves, transitions, captions, and sound into an MP4. Use it when the person asks for a video of any kind.");
-    const schemas: Record<string, { safeParse(value: unknown): { success: boolean } }> = { check: z.strictObject({}), fonts: z.strictObject({}), brand: z.strictObject({}), 'brand-set': brandSchema, 'narration-set': narrationSetInputSchema, record: recordInputSchema, look: lookInputSchema, narrate: narrateInputSchema, voice: voiceInputSchema, compose: composeInputSchema, review: z.strictObject({ file: z.string() }) };
+    const schemas: Record<string, { safeParse(value: unknown): { success: boolean } }> = { check: z.strictObject({}), fonts: z.strictObject({}), brand: z.strictObject({}), craft: craftInputSchema, 'brand-set': brandSchema, 'narration-set': narrationSetInputSchema, record: recordInputSchema, look: lookInputSchema, narrate: narrateInputSchema, voice: voiceInputSchema, compose: composeInputSchema, review: z.strictObject({ file: z.string() }) };
     expect(video?.commands?.map((command) => command.name)).toEqual(Object.keys(schemas));
     for (const command of video?.commands ?? []) {
       expect(command.examples, command.name).toHaveLength(1);

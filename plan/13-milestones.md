@@ -544,7 +544,7 @@ ADR 0099.
 
 ## M5 — Video
 
-ADR 0107; M5.5 to M5.11, ADR 0115; M5.12, ADR 0117; M5.13 to M5.16, ADR 0120.
+ADR 0107; M5.5 to M5.11, ADR 0115; M5.12, ADR 0117; M5.13 to M5.16, ADR 0120; M5.17, ADR 0121.
 
 ### M5.1 kvvideo set up
 
@@ -776,4 +776,18 @@ ADR 0107; M5.5 to M5.11, ADR 0115; M5.12, ADR 0117; M5.13 to M5.16, ADR 0120.
 - **Done when:**
   - After `/video` the guide names `kvvideo/brand.css`, `kvvideo/motion.css`, `kvvideo/lib/three/`, `data-sound`, `narration-set`, the preview clip, and re-timing, and no longer says "CSS animations and transitions only" or that examples need a service.
   - By hand: the KVCare promotion made again with `/video` in the owner's voice has scenes that move throughout, the app's font and logo, sound effects, even captions, and a `review` with no problem.
+
+### M5.17 Craft notes for better videos
+
+- **Read:** `16` §16.1, §16.3, §16.4, and §16.12; ADR 0121.
+- **Build:**
+  - kvvideo: the six notes in `docs/craft/` (`story`, `scenes`, `motion`, `charts`, `tutorial`, `social`), in kvvideo's own words, and in the package's files;
+  - kvvideo: `kvvideo.craft.get` and the connector's `craft`, with its example, among a read-only helper's queries;
+  - the guide in `docs/guide.md`: the notes read at the Concept and Treatment stages and named in a designer's brief in place of the motion rules, the scene's pattern and a verb per element in the treatment, the held key moment, numbers written as said, one main focus with a second element, varied ambient motion, a `cut` for a change, `camera: 'none'` for a scene that holds, and each fault in the review named with its time and what to change;
+  - the changeset.
+- **Done when:**
+  - `video craft` answers each of the six notes' text; any other topic fails `VALIDATION_FAILED`; a read-only helper's `video` connector lists `craft`.
+  - Each note is at most 8 KB, and the guide at most 16 KB.
+  - After `/video` the guide names `video craft` and each of the six topics at its stage, a designer's brief names `scenes` and `motion`, and the guide no longer says to use `crossfade` between every scene.
+  - By hand: an explainer with a chart and a tutorial of a workspace app made with `/video` read `story`, `scenes`, `motion`, `charts`, and `tutorial` at their stages, and their designers read `scenes` and `motion`.
 

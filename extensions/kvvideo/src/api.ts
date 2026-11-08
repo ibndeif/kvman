@@ -1,5 +1,6 @@
 import type { z } from '@kvman/sdk';
 import type { composeInputSchema, composeOutputSchema } from './compose/compose-input.ts';
+import type { craftInputSchema, craftOutputSchema } from './craft/register-craft.ts';
 import type { lookInputSchema, lookOutputSchema } from './look/look-input.ts';
 import type { narrateInputSchema, narrateOutputSchema } from './narration/register-narration.ts';
 import type { recordInputSchema, recordOutputSchema } from './record/steps.ts';
@@ -39,6 +40,7 @@ declare module '@kvman/sdk' {
     'kvvideo.ui.get': { input: Empty; output: { pages: unknown[]; nav: unknown[]; panels: unknown[]; status: unknown[]; configuration: unknown } };
     'kvvideo.font.list': { input: Empty; output: { name: string; scripts: ('latin' | 'arabic')[] }[] };
     'kvvideo.brand.get': { input: Empty; output: Brand | null };
+    'kvvideo.craft.get': { input: z.input<typeof craftInputSchema>; output: z.output<typeof craftOutputSchema> };
   }
   interface Settings {
     'kvvideo.narration.service': NarrationService | null;

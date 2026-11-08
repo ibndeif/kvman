@@ -1,4 +1,4 @@
-// The `video` connector (plan 16 §16.1 and §16.3; ADR 0107, 11; ADR 0115, 55; ADR 0117, 4; ADR 0120, 26): `optIn`, so a chat has it only after
+// The `video` connector (plan 16 §16.1 and §16.3; ADR 0107, 11; ADR 0115, 55; ADR 0117, 4; ADR 0120, 26; ADR 0121, 3): `optIn`, so a chat has it only after
 // `/video`. Each command has one example of what it takes.
 
 export const connectorName = 'video';
@@ -12,6 +12,7 @@ export const videoConnector = {
     { name: 'check', command: 'kvvideo.setup.get', examples: [{ description: 'See what is ready before making a video', input: {} }] },
     { name: 'fonts', command: 'kvvideo.font.list', examples: [{ description: 'List the bundled caption fonts', input: {} }] },
     { name: 'brand', command: 'kvvideo.brand.get', examples: [{ description: "Read the workspace's brand", input: {} }] },
+    { name: 'craft', command: 'kvvideo.craft.get', examples: [{ description: 'Read how to design scenes before writing the treatment', input: { topic: 'scenes' } }] },
     {
       name: 'brand-set',
       command: 'kvvideo.brand.set',
