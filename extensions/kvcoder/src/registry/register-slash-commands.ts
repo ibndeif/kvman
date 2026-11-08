@@ -2,7 +2,7 @@ import { z, type Ctx } from '@kvman/sdk';
 import { invalid } from '../problems.ts';
 import { slashRegisterSchema } from '../schemas/registry.ts';
 import { records, txRecords } from '../store/collections.ts';
-import { callInfos, callerExtension, loadedOwners, ownsPublicCommand, registrations } from './loaded.ts';
+import { callerExtension, loadedOwners, ownsPublicCommand, registrations } from './loaded.ts';
 
 // Slash commands (plan 08 §8.4, ADR 0027, 8): commands other extensions add to the send box, kept in kvcoder's global
 // store for one run, owned by their registering extension.
@@ -26,12 +26,12 @@ export function registerSlashCommands(ctx: Ctx): void {
       const rows = await registrations(ctx);
       const foreign = commands.find((command) => !ownsPublicCommand(rows, owner, command.command));
       if (foreign !== undefined) throw invalid(`${foreign.command} isn't a public command of ${owner}.`, { command: foreign.command });
-      // Read once here, so building a prompt reads no schema (as a connector's signatures, ADR 0108, 14).
-      const infos = await callInfos(ctx);
+      // Kept here, so building a prompt reads nothing more (as a connector's signatures, ADR 0108, 14); the
+      // registrations carry each description without converting every schema of the run.
       const describe = (command: string): string => {
-        const info = infos.find((call) => call.name === command);
-        if (info === undefined) throw invalid(`${command} isn't loaded.`, { command });
-        return info.description;
+        const row = rows.find((registration) => registration.name === command);
+        if (row === undefined) throw invalid(`${command} isn't loaded.`, { command });
+        return row.description;
       };
       const described = commands.map((command) => ({ ...command, commandDescription: describe(command.command) }));
       const taken = await ctx.store.transaction((tx) => {

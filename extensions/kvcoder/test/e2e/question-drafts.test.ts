@@ -3,6 +3,7 @@ import { chromium, type Browser } from 'playwright';
 import { z } from '@kvman/sdk';
 import { kvmanWorld, type KvmanWorld } from '../support/kvman-child.ts';
 import { command, runs, says } from '../support/model-script.ts';
+import { wait } from '../support/wait.ts';
 
 let browser: Browser;
 let world: KvmanWorld | undefined;
@@ -60,7 +61,7 @@ describe('KVC20 question draft acceptance in Chromium', { timeout: 120_000 }, ()
         }
         await page.locator('[data-test="answer"]').click();
         await page.locator('[data-test="answer-sending"]').waitFor();
-        await expect.poll(() => requests).toBe(2);
+        await expect.poll(() => requests, wait).toBe(2);
         expect(await page.locator('[data-test="question-card"]').getAttribute('aria-busy')).toBe('true');
         expect(await page.locator('[data-test="answer"]').isDisabled()).toBe(true);
         expect(await page.locator(kind === 'text' ? '[data-test="answer-text"]' : '[data-test="answer-other"]').isDisabled()).toBe(true);

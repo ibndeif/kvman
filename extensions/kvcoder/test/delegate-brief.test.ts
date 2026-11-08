@@ -62,28 +62,28 @@ describe("a run's brief (ADR 0108, 2)", { timeout: 30_000 }, () => {
     expect(await firstMessage({ goal: 'Read it.', context: [] })).toBe(['Kind: find', 'Goal: Read it.', 'Done when: It is looked at.'].join('\n'));
   });
 
-  it('QA71-E1, E3, E4, E5, and E6, and QA74-E4, what the brief refuses fails VALIDATION_FAILED and starts no helper', async () => {
-    const refusals: [Record<string, unknown>, RegExp][] = [
-      [{ background: true }, /Unrecognized key: "background"/],
-      [{ kind: 'review', files: ['a.ts'] }, /files: A review run changes no file, so it takes no files\./],
-      [{ kind: 'change' }, /files: A change run names the files it may change\./],
-      [{ goal: '' }, /goal: /],
-      [{ done: 'd'.repeat(301) }, /done: /],
-      [{ kind: 'change', files: ['src/*.ts'] }, /files\.0: Name each file; no wildcards\./],
-      [{ kind: 'change', files: Array.from({ length: 51 }, (_, index) => `f${String(index)}.ts`) }, /files: /],
-      [{ context: Array.from({ length: 21 }, () => ({ path: 'a.ts' })) }, /context: /],
-      [{ maxSteps: 0 }, /maxSteps: /],
-      [{ maxSteps: 61 }, /maxSteps: /],
-      [{ budget: 30 }, /Unrecognized key: "budget"/],
-      [{ kind: 'change', files: ['../outside.ts'] }, /outside the workspace folder/],
-      [{ context: [{ path: '../outside.ts' }] }, /outside the workspace folder/],
-    ];
-    for (const [fields, problem] of refusals) {
-      const { kernel, fake, sessionId } = await delegated(fields);
-      const [result = ''] = toolResults(fake, 1);
-      expect(result, JSON.stringify(fields)).toMatch(/^error VALIDATION_FAILED: /);
-      expect(result, JSON.stringify(fields)).toMatch(problem);
-      expect(await kernel.exec('kvcoder.job.list', { sessionId })).toEqual([]);
-    }
+  // One test per refusal, so each kernel this starts has a test's whole time to itself.
+  const refusals: [Record<string, unknown>, RegExp][] = [
+    [{ background: true }, /Unrecognized key: "background"/],
+    [{ kind: 'review', files: ['a.ts'] }, /files: A review run changes no file, so it takes no files\./],
+    [{ kind: 'change' }, /files: A change run names the files it may change\./],
+    [{ goal: '' }, /goal: /],
+    [{ done: 'd'.repeat(301) }, /done: /],
+    [{ kind: 'change', files: ['src/*.ts'] }, /files\.0: Name each file; no wildcards\./],
+    [{ kind: 'change', files: Array.from({ length: 51 }, (_, index) => `f${String(index)}.ts`) }, /files: /],
+    [{ context: Array.from({ length: 21 }, () => ({ path: 'a.ts' })) }, /context: /],
+    [{ maxSteps: 0 }, /maxSteps: /],
+    [{ maxSteps: 61 }, /maxSteps: /],
+    [{ budget: 30 }, /Unrecognized key: "budget"/],
+    [{ kind: 'change', files: ['../outside.ts'] }, /outside the workspace folder/],
+    [{ context: [{ path: '../outside.ts' }] }, /outside the workspace folder/],
+  ];
+
+  it.each(refusals)('QA71-E1, E3, E4, E5, and E6, and QA74-E4, what the brief refuses fails VALIDATION_FAILED and starts no helper: %j', async (fields, problem) => {
+    const { kernel, fake, sessionId } = await delegated(fields);
+    const [result = ''] = toolResults(fake, 1);
+    expect(result, JSON.stringify(fields)).toMatch(/^error VALIDATION_FAILED: /);
+    expect(result, JSON.stringify(fields)).toMatch(problem);
+    expect(await kernel.exec('kvcoder.job.list', { sessionId })).toEqual([]);
   });
 });

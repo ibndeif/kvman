@@ -10,10 +10,10 @@ import { useSessionActions } from './use-session-actions.ts';
 const props = defineProps<{ session: Session }>();
 const emit = defineEmits<{ changed: [] }>();
 const kvman = useKvman();
-const groups = useModelGroups(kvman, () => props.session.model, (error) => toastProblem(kvman, error));
+const { groups, loaded } = useModelGroups(kvman, () => props.session.model, (error) => toastProblem(kvman, error));
 const actions = useSessionActions(kvman, () => props.session.id, () => emit('changed'));
 </script>
 
 <template>
-  <ModelControls :groups="groups" :model="props.session.model ?? null" :thinking="props.session.thinking" :decides="props.session.decides" @model="(model) => actions.configure({ model })" @thinking="(thinking) => actions.configure({ thinking })" @decides="(decides) => actions.configure({ decides })" />
+  <ModelControls :groups="groups" :loading="!loaded" :model="props.session.model ?? null" :thinking="props.session.thinking" :decides="props.session.decides" @model="(model) => actions.configure({ model })" @thinking="(thinking) => actions.configure({ thinking })" @decides="(decides) => actions.configure({ decides })" />
 </template>

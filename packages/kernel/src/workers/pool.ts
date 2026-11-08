@@ -43,6 +43,9 @@ type Queued = { job: RootJob; pending: Pending };
 const fromSource = import.meta.url.endsWith('.ts');
 const workerFile = new URL(fromSource ? './worker-main.ts' : './worker-main.js', import.meta.url);
 const execArgv = fromSource ? ['--conditions=@kvman/source'] : [];
+// A worker that goes idle after loading the extensions holds its young garbage until it runs again, so a smaller
+// young generation keeps an idle kvman's memory low (ADR 0122).
+const resourceLimits = { maxYoungGenerationSizeMb: 16 };
 
 // Asks a worker to close its connection and exit, once, and resolves when it has.
 function stopWorker(worker: PoolWorker): Promise<void> {
@@ -131,7 +134,7 @@ export async function startPool(options: PoolOptions): Promise<WorkerPool> {
 
   const spawn = (checkPresetSettings: boolean): Promise<{ worker: PoolWorker; summary: RegistrySummary }> =>
     new Promise((resolve, reject) => {
-      const thread = new Worker(workerFile, { workerData: { ...options.setup, checkPresetSettings, mainArgv: process.argv }, execArgv });
+      const thread = new Worker(workerFile, { workerData: { ...options.setup, checkPresetSettings, mainArgv: process.argv }, execArgv, resourceLimits });
       const exited = new Promise<void>((resolveExit) => thread.once('exit', () => resolveExit()));
       const worker: PoolWorker = { thread, running: new Map(), exited, stopAsked: false };
       let ready = false;

@@ -12,7 +12,7 @@ import { useModelGroups } from './use-model-groups.ts';
 const props = defineProps<{ sessionId: string; failedWith?: string | undefined }>();
 const emit = defineEmits<{ sent: [] }>();
 const kvman = useKvman();
-const groups = useModelGroups(kvman, () => null, (error) => toastProblem(kvman, error));
+const { groups } = useModelGroups(kvman, () => null, (error) => toastProblem(kvman, error));
 
 async function resume(): Promise<void> {
   await kvman.exec('kvcoder.turn.retry', { sessionId: props.sessionId });

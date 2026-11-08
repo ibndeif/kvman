@@ -37,6 +37,13 @@ export async function startHttp(kernel: Kernel, options: { port: number }): Prom
   const app = createHttpApp({ kernel, port: () => port, stopping: stopping.signal, logger: kernel.web.logger });
   const server = createAdaptorServer({ fetch: app.fetch });
   if (!(server instanceof Server)) throw new Error('the HTTP server must be node:http');
+  // While kvman stops, a connection closes as soon as its answer ends (a job stream ends with the stop), so an open page
+  // that asks again on its kept-alive connection can't hold kvman open (plan 02 §2.14).
+  server.on('request', (_request, response) => {
+    response.once('finish', () => {
+      if (stopping.signal.aborted) server.closeIdleConnections();
+    });
+  });
   port = await listen(server, options.port);
   return {
     port,

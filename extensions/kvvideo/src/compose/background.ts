@@ -31,7 +31,9 @@ export function backgroundInput(background: Background, size: Size, lengthMs: nu
   const { width, height } = size;
   if (background.kind === 'image') return ['-loop', '1', '-framerate', String(videoFramesPerSecond), '-t', seconds(lengthMs), '-i', background.file];
   const hex = (colour: string): string => `0x${colour.slice(1)}`;
-  return ['-f', 'lavfi', '-t', seconds(lengthMs), '-i', `gradients=s=${String(width)}x${String(height)}:r=${String(videoFramesPerSecond)}:c0=${hex(background.from)}:c1=${hex(background.to)}:x0=0:y0=0:x1=${String(width)}:y1=${String(height)}:n=2:speed=0`];
+  // The gradient's first frame, repeated, so it never moves: ffmpeg before 7 refuses `speed=0`.
+  const gradient = `gradients=s=${String(width)}x${String(height)}:r=${String(videoFramesPerSecond)}:c0=${hex(background.from)}:c1=${hex(background.to)}:x0=0:y0=0:x1=${String(width)}:y1=${String(height)}:n=2`;
+  return ['-f', 'lavfi', '-t', seconds(lengthMs), '-i', `${gradient},trim=end_frame=1,loop=loop=-1:size=1`];
 }
 
 /** The filter that makes the background input the picture's size. */

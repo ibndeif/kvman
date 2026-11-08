@@ -29,6 +29,28 @@ describe("the composer's pickers (08 §8.7, ADR 0101, 15)", () => {
     wrapper.unmount();
   });
 
+  it("QA79-E2 the thinking picker is disabled until the model list arrives, then lists only the model's own levels", async () => {
+    const fake = createFakeKvman();
+    let arrive: () => void = () => undefined;
+    const arrived = new Promise<void>((resolve) => (arrive = resolve));
+    fake.handle('kvai.provider.list', () => [{ id: 'fake', title: 'Fake', status: 'ready' }]);
+    fake.handle('kvai.model.list', async () => {
+      await arrived;
+      return [{ id: 'fake/big', name: 'Big', provider: 'fake', thinkingLevels: ['off', 'low', 'high'] }];
+    });
+    const wrapper = mount(SessionModel, { props: { session: session({ model: 'fake/big', thinking: 'low' }) }, global: { provide: { kvman: fake.kvman } }, attachTo: document.body });
+    await flushPromises();
+    expect(wrapper.find('[data-test="thinking-picker"]').attributes('disabled')).toBeDefined();
+    arrive();
+    await flushPromises();
+    const thinking = wrapper.find('[data-test="thinking-picker"]');
+    expect(thinking.attributes('disabled')).toBeUndefined();
+    await thinking.trigger('click');
+    await flushPromises();
+    expect(wrapper.findAll('[data-test="thinking-picker-list"] [role="option"]').map((option) => option.attributes('data-test'))).toEqual(['thinking-picker-off', 'thinking-picker-low', 'thinking-picker-high']);
+    wrapper.unmount();
+  });
+
   it('M4.7-H14 a list opens toward the inline start when it would pass the end of its area', () => {
     expect(passesEnd({ left: 140, right: 290 }, { left: 0, right: 257 }, false)).toBe(true);
     expect(passesEnd({ left: 20, right: 170 }, { left: 0, right: 257 }, false)).toBe(false);

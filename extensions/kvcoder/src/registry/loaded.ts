@@ -5,7 +5,7 @@ import { invalid } from '../problems.ts';
 // (ADR 0011, 25); the schemas of `help` and of an invalid payload come from `kernel.extensions.list`. Entries whose
 // owner isn't loaded are ignored (plan 08 §8.4).
 
-const rowSchema = z.object({ name: z.string(), kind: z.enum(['command', 'query']), extension: z.string(), public: z.boolean() });
+const rowSchema = z.object({ name: z.string(), kind: z.enum(['command', 'query']), extension: z.string(), public: z.boolean(), description: z.string() });
 
 export type Registrations = z.output<typeof rowSchema>[];
 

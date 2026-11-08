@@ -3,6 +3,7 @@ import { chromium, type Browser, type Frame } from 'playwright';
 import { z } from '@kvman/sdk';
 import { kvmanWorld, until, type KvmanWorld, type Running } from '../support/kvman-child.ts';
 import { command, runs, says } from '../support/model-script.ts';
+import { wait } from '../support/wait.ts';
 
 let browser: Browser;
 let world: KvmanWorld | undefined;
@@ -44,7 +45,7 @@ describe('a generated page works inside the artifact panel (KVC-27)', { timeout:
     await frame.locator('#add').click();
     await frame.locator('#text').fill('bread');
     await frame.locator('#text').press('Enter');
-    await expect.poll(() => frame.locator('#items li').allTextContents()).toEqual(['milk', 'bread']);
+    await expect.poll(() => frame.locator('#items li').allTextContents(), wait).toEqual(['milk', 'bread']);
   });
 
   it("M2.4-E188 a page that relies on a form's submit adds nothing, as the description says", async () => {

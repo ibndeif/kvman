@@ -15,7 +15,7 @@ describe("each scene's ffmpeg arguments (16 §16.8; ADR 0107, 23; ADR 0115, 60)"
       '-hide_banner', '-loglevel', 'error',
       '-ss', '2.000', '-t', '3.000', '-i', "C:\\Users\\O'Brien\\clip.mp4",
       '-i', '/w/n.mp3',
-      '-f', 'lavfi', '-t', '4.200', '-i', 'gradients=s=1280x720:r=60:c0=0x0F172A:c1=0x1E293B:x0=0:y0=0:x1=1280:y1=720:n=2:speed=0',
+      '-f', 'lavfi', '-t', '4.200', '-i', 'gradients=s=1280x720:r=60:c0=0x0F172A:c1=0x1E293B:x0=0:y0=0:x1=1280:y1=720:n=2,trim=end_frame=1,loop=loop=-1:size=1',
       '-filter_complex_script', 'scene-1.graph',
       ...encode, '-t', '4.200', '-y', 'part-1.mkv',
     ]);

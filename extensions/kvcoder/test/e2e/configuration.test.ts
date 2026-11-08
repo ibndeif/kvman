@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { chromium, type Browser } from 'playwright';
 import { z } from '@kvman/sdk';
 import { kvmanWorld, type KvmanWorld } from '../support/kvman-child.ts';
+import { wait } from '../support/wait.ts';
 
 let browser: Browser;
 let world: KvmanWorld | undefined;
@@ -80,7 +81,7 @@ describe("kvcoder's configuration in Chromium (06 §6.6, 08 §8.7, ADR 0014)", {
 
     await page.reload();
     await cog.click();
-    await expect.poll(() => field.inputValue()).toBe('/bin/sh');
+    await expect.poll(() => field.inputValue(), wait).toBe('/bin/sh');
     await page.close();
   });
 
@@ -97,14 +98,14 @@ describe("kvcoder's configuration in Chromium (06 §6.6, 08 §8.7, ADR 0014)", {
     expect(await page.locator('[data-test="approval-never-cancel"]:focus').count()).toBe(1);
     expect(await approval()).toBe('auto');
     await page.locator('[data-test="approval-never-cancel"]').click();
-    await expect.poll(() => select.inputValue()).toBe('auto');
+    await expect.poll(() => select.inputValue(), wait).toBe('auto');
     await select.selectOption('never');
     await page.locator('[data-test="approval-never-yes"]').click();
     await page.locator('[data-test="approval-setting-saved"]').waitFor();
     expect(await approval()).toBe('never');
     expect(await page.locator('[data-test="approval-mode"]').getAttribute('data-mode')).toBe('never');
     await page.reload();
-    await expect.poll(() => select.inputValue()).toBe('never');
+    await expect.poll(() => select.inputValue(), wait).toBe('never');
     await page.close();
   });
 

@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { Agent, request } from 'node:http';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { api, childWait, jobOf, queue, untilJob } from '../support/api.ts';
@@ -6,6 +7,34 @@ import { startKvman, stopKvman } from '../support/kvman-child.ts';
 import { useSandbox } from '../support/sandbox.ts';
 
 const sandbox = useSandbox();
+
+// Asks for `route` on one kept-alive connection, again each time an answer ends, until kvman closes the connection.
+// `opened` resolves once the first answer has started; `closed` with how many answers ended.
+function askAgain(port: number, route: string): { opened: Promise<void>; closed: Promise<number> } {
+  const agent = new Agent({ keepAlive: true, maxSockets: 1 });
+  let answers = 0;
+  let open: () => void = () => undefined;
+  const opened = new Promise<void>((resolve) => (open = resolve));
+  const closed = new Promise<number>((resolve) => {
+    const ask = (): void => {
+      const asked = request({ host: '127.0.0.1', port, path: route, agent }, (response) => {
+        open();
+        response.resume();
+        response.once('end', () => {
+          answers += 1;
+          ask();
+        });
+      });
+      asked.once('error', () => {
+        agent.destroy();
+        resolve(answers);
+      });
+      asked.end();
+    };
+    ask();
+  });
+  return { opened, closed };
+}
 
 describe('stopping kvman (02 §2.14, ADR 0009, 50)', { timeout: 90_000 }, () => {
   it('M1.8-H8 Ctrl+C fails unfinished attempts with INTERRUPTED, and a job with retries left runs again', async () => {
@@ -29,6 +58,17 @@ describe('stopping kvman (02 §2.14, ADR 0009, 50)', { timeout: 90_000 }, () => 
     const kvman = await startKvman(world, ['--preset', world.appPreset()]);
     expect(await stopKvman(kvman, 'SIGTERM')).toBe(0);
     expect(existsSync(path.join(world.home, 'kvman.lock'))).toBe(false);
+  });
+
+  it('QA79-E1 a client that asks again on its kept-alive connection, as an open page does, does not hold kvman open after SIGTERM', async () => {
+    const world = sandbox();
+    const kvman = await startKvman(world, ['--preset', world.appPreset()]);
+    const job = await queue(kvman.port, 'app.wait', { gate: 'held' });
+    await api(kvman.port).until('app.waiting', { gate: 'held' }, (waiting) => waiting === true);
+    const asking = askAgain(kvman.port, `/api/jobs/${job}/stream`);
+    await asking.opened;
+    expect(await stopKvman(kvman, 'SIGTERM')).toBe(0);
+    expect(await asking.closed).toBeGreaterThanOrEqual(1);
   });
 
   it('M1.8-E21 a second SIGINT while a kernel.stopping handler waits exits 130 at once, and removes the lock', async () => {

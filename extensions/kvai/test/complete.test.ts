@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { ProgressChunk } from '@kvman/testkit';
+import { wait } from './support/wait.ts';
 import { kvaiDeltas, m1Cost, useKvai, userSays } from './support/kvai-kernel.ts';
 
 const kvai = useKvai();
@@ -56,10 +57,10 @@ describe('kvai.complete (07 §7.1)', () => {
     fake.reply({ chunks: [{ text: 'Once' }, { wait: new Promise<void>((resolve) => (release = resolve)) }, { text: ' more' }] });
     const chunks: ProgressChunk[] = [];
     const jobId = await kernel.execAsync('harness.turn', { model: 'fake/m1', messages: [userSays('tell a story')] }, { onProgress: (chunk) => chunks.push(chunk) });
-    await vi.waitFor(() => expect(kvaiDeltas(chunks)).toEqual([{ type: 'text', delta: 'Once' }]));
+    await vi.waitFor(() => expect(kvaiDeltas(chunks)).toEqual([{ type: 'text', delta: 'Once' }]), wait);
     kernel.cancel(jobId);
     await expect(kernel.waitForJob(jobId)).resolves.toMatchObject({ status: 'cancelled' });
-    await vi.waitFor(() => expect(fake.requests()[0]?.state).toBe('aborted'));
+    await vi.waitFor(() => expect(fake.requests()[0]?.state).toBe('aborted'), wait);
     release();
   });
 

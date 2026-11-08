@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { silenceMeter } from '../src/complete/silences.ts';
+import { wait } from './support/wait.ts';
 import { useKvai, userSays } from './support/kvai-kernel.ts';
 
 const kvai = useKvai();
@@ -23,7 +24,7 @@ describe("a model call's silences (ADR 0094, 2)", { timeout: 30_000 }, () => {
     fake.reply({ chunks: [{ text: 'secret words before' }, { wait: held }, { text: ' and after' }] });
     const done = kernel.exec('kvai.complete', { model: 'fake/m1', messages: [userSays('a private question')] });
     // The hold starts once the fake has the request and has sent the first text.
-    await vi.waitFor(() => expect(fake.requests()).toHaveLength(1));
+    await vi.waitFor(() => expect(fake.requests()).toHaveLength(1), wait);
     setTimeout(release, 400);
     await done;
     const lines = readFileSync(path.join(kernel.home, 'logs', 'kvman.log'), 'utf8').split('\n').filter((line) => line.includes('A model call ended its stream.'));

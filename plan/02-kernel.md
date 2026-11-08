@@ -33,6 +33,7 @@ Everything an extension does runs as a **job**. A job runs a registered **comman
 - The kernel starts a pool of `worker_threads`. The size is the `kernel.workers` setting: default CPU cores − 1, minimum 1.
 - Every worker loads every extension of the run. Any job runs on any free worker: a job that starts goes to the worker running the fewest jobs, the earliest started on a tie (ADR 0088, 2).
 - A worker's `process.argv` is the main thread's, copied in when it starts, so `process.argv[1]` is kvman's entry file in every handler (ADR 0009, 114).
+- A worker's young generation is at most 16 MB (`resourceLimits.maxYoungGenerationSizeMb`), so a worker that goes idle after loading the extensions doesn't hold its start's garbage (ADR 0122).
 - A worker runs up to `kernel.workerConcurrency` jobs at once (default 32), since handlers mostly wait on I/O. A job that hogs the CPU slows only its own worker.
 - **The current job.** A worker tracks each running job with `AsyncLocalStorage`. Inside a handler, `ctx.store`, `ctx.files`, `ctx.settings`, `ctx.secrets`, and the job calls use that job's workspace and caller, and `ctx.job` describes it (§3.3). Calling any of these outside a job fails with `NO_JOB`.
 - Handlers keep no in-memory state between jobs. Anything that must last goes in the store.
@@ -274,7 +275,7 @@ Going over a limit fails loudly and never cuts anything off.
 11. Listen on the port (`PORT_IN_USE`), then print the URL and open the browser. With `--pipe`, the URL is a `running` line, and a start that fails at any step is a `failed` line (§14.2).
 
 **Stop (Ctrl+C).**
-1. HTTP stops taking requests.
+1. HTTP stops taking requests: the job streams end, and each connection closes once its answer ends, so an open page can't keep kvman running (QA79-E1).
 2. The `kernel.stopping` handlers run.
 3. Every running job's signal is aborted with the reason `shutdown`.
 4. kvman waits up to 10 s for handlers to return, then stops the workers. Every process from §2.16 is stopped (§2.16), with the kill at the 10 s mark.

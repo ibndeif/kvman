@@ -3,6 +3,7 @@ import { chromium, type Browser } from 'playwright';
 import { z } from '@kvman/sdk';
 import { kvmanWorld, type KvmanWorld } from '../support/kvman-child.ts';
 import { says } from '../support/model-script.ts';
+import { wait } from '../support/wait.ts';
 
 let browser: Browser;
 let world: KvmanWorld | undefined;
@@ -44,7 +45,7 @@ describe('KVC19 message draft acceptance in Chromium', { timeout: 120_000 }, () 
       expect(await page.evaluate('document.documentElement.dataset.draftNavigation')).toBe('same-document');
       expect(await page.locator('[data-test="composer-text"]').inputValue()).toBe('Make a notes page');
       await page.locator('[data-test="send"]').click();
-      await expect.poll(() => page.locator('[data-test="composer-text"]').inputValue()).toBe('');
+      await expect.poll(() => page.locator('[data-test="composer-text"]').inputValue(), wait).toBe('');
       await page.getByText('Done.').waitFor();
       expect(requests).toBe(2);
       expect(await page.locator('[data-test="send-error"]').count()).toBe(0);

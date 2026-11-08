@@ -3,6 +3,7 @@ import { chromium, type Browser, type Page } from 'playwright';
 import { z } from '@kvman/sdk';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { kvmanWorld, type KvmanWorld } from '../support/kvman-child.ts';
+import { wait } from '../support/wait.ts';
 
 let browser: Browser;
 let world: KvmanWorld | undefined;
@@ -18,11 +19,11 @@ function copy(kind: 'ask' | 'auto' | 'limits'): string {
 // The Chat page's one line for the loaded mode (ADR 0082, 6); the full note is in kvcoder's configuration.
 async function line(page: Page, expected: 'ask' | 'auto'): Promise<void> {
   await page.locator('[data-test="approval-line"]').waitFor();
-  await expect.poll(() => page.locator('[data-test="approval-line"]').getAttribute('data-mode')).toBe(expected);
+  await expect.poll(() => page.locator('[data-test="approval-line"]').getAttribute('data-mode'), wait).toBe(expected);
 }
 async function mode(page: Page, expected: 'ask' | 'auto'): Promise<void> {
   await page.locator('[data-test="approval-mode"]').waitFor();
-  await expect.poll(() => page.locator('[data-test="approval-mode"]').textContent()).toBe(copy(expected));
+  await expect.poll(() => page.locator('[data-test="approval-mode"]').textContent(), wait).toBe(copy(expected));
   expect(await page.locator('[data-test="approval-limits"]').textContent()).toBe(copy('limits'));
 }
 
