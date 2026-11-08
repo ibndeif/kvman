@@ -1,11 +1,12 @@
 import type { Stored } from '@kvman/sdk';
 import type { JsonValue } from '../connector-call.ts';
 import type { MessageDoc, TurnDoc } from '../schemas/records.ts';
+import { collapsedArtifactLines } from './collapsed-artifacts.ts';
 
 // Finished turns sent collapsed (plan 08 §8.1, ADR 0108, 5): at or before the chat's `collapsedThroughSeq`, a turn is
-// the person's messages and its final answer, with the files it changed; its calls, results, reasoning, and background
-// messages aren't sent. `mcp tools` lookups stay whole, so a server's tools are looked up once a chat (ADR 0108, 7).
-// The stored messages don't change.
+// the person's messages and its final answer, with the files it changed and the artifacts it changed (ADR 0123, 2); its
+// calls, results, reasoning, and background messages aren't sent. `mcp tools` lookups stay whole, so a server's tools
+// are looked up once a chat (ADR 0108, 7). The stored messages don't change.
 
 type Fields = { [key: string]: JsonValue };
 const fields = (value: JsonValue | undefined): Fields => (typeof value === 'object' && value !== null && !Array.isArray(value) ? value : {});
@@ -48,14 +49,14 @@ function finalAnswers(messages: readonly Stored<MessageDoc>[], collapsedThrough:
 
 const filesLine = (paths: readonly string[] | undefined): string => (paths === undefined || paths.length === 0 ? '' : `\n\n[kvman: files changed in this turn: ${paths.join(', ')}]`);
 
-function collapsedMessage(message: Stored<MessageDoc>, finals: ReadonlyMap<string, string>, lookups: ReadonlySet<string>, files: ReadonlyMap<string, readonly string[]>): Stored<MessageDoc> | undefined {
+function collapsedMessage(message: Stored<MessageDoc>, finals: ReadonlyMap<string, string>, lookups: ReadonlySet<string>, files: ReadonlyMap<string, readonly string[]>, artifacts: ReadonlyMap<string, string>): Stored<MessageDoc> | undefined {
   if (message.kind === 'user') return message.source?.kind === 'user' ? message : undefined;
   if (message.kind === 'toolResult') return lookups.has(String(message.content['toolCallId'])) ? message : undefined;
   if (message.kind !== 'assistant') return undefined;
   const blocks = blocksOf(message);
   const kept = blocks.filter(isToolsLookupBlock);
   const final = message.turnId !== null && finals.get(message.turnId) === message.id;
-  if (final) return { ...message, content: { ...message.content, content: [{ type: 'text', text: `${textOfBlocks(blocks)}${filesLine(files.get(message.turnId ?? ''))}` }] } };
+  if (final) return { ...message, content: { ...message.content, content: [{ type: 'text', text: `${textOfBlocks(blocks)}${filesLine(files.get(message.turnId ?? ''))}${artifacts.get(message.turnId ?? '') ?? ''}` }] } };
   return kept.length === 0 ? undefined : { ...message, content: { ...message.content, content: kept } };
 }
 
@@ -64,9 +65,10 @@ export function collapsedView(messages: readonly Stored<MessageDoc>[], collapsed
   if (collapsedThrough < 0) return [...messages];
   const finals = finalAnswers(messages, collapsedThrough);
   const lookups = toolsLookups(messages);
+  const artifacts = collapsedArtifactLines(messages, collapsedThrough);
   return messages.flatMap((message) => {
     if (message.seq > collapsedThrough) return [message];
-    const shown = collapsedMessage(message, finals, lookups, files);
+    const shown = collapsedMessage(message, finals, lookups, files, artifacts);
     return shown === undefined ? [] : [shown];
   });
 }

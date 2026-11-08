@@ -1,6 +1,6 @@
 import { z, type Ctx } from '@kvman/sdk';
 import { artifactFormats, contentFor, detectFormat } from '../artifacts/artifact-format.ts';
-import { artifactCountLimit, assertWithinLimit, chatIdOf } from '../artifacts/artifact-records.ts';
+import { artifactCountLimit, assertWithinLimit, chatArtifacts, chatIdOf } from '../artifacts/artifact-records.ts';
 import { endedUrlArtifact } from '../artifacts/ended-url.ts';
 import { deleteArtifact } from '../artifacts/delete-artifact.ts';
 import { applyEdits } from '../files/edit-text.ts';
@@ -33,6 +33,7 @@ const payloads = {
     content: z.string().min(1).describe('The whole content, up to 64 KB.'),
   }),
   edit: z.strictObject({ id: artifactId, edits }),
+  list: z.strictObject({}),
   get: z.strictObject({ id: artifactId }),
   delete: z.strictObject({ id: artifactId }),
 };
@@ -43,6 +44,7 @@ const writeNotes =
 export const artifactCommands = {
   write: { registration: 'kvcoder.artifact.write', description: 'Creates an artifact, or replaces its title, format, and content.', payload: payloads.write, asks: false, notes: writeNotes },
   edit: { registration: 'kvcoder.artifact.edit', description: 'Replaces exact pieces of text in an existing artifact; if one replacement fails, nothing changes.', payload: payloads.edit, asks: false },
+  list: { registration: 'kvcoder.artifact.entry.list', description: "Lists this chat's artifacts, newest change first, each with its id, title, format, version, and when it last changed.", payload: payloads.list, asks: false },
   get: { registration: 'kvcoder.artifact.content.get', description: 'Reads an artifact with its content.', payload: payloads.get, asks: false },
   delete: { registration: 'kvcoder.artifact.delete', description: 'Deletes an artifact that is superseded or no longer true.', payload: payloads.delete, asks: false },
 } satisfies Record<string, ConnectorCommand>;
@@ -145,5 +147,11 @@ export function registerArtifactConnector(ctx: Ctx): void {
       if (found === undefined) throw missing(payload.id);
       return { id: payload.id, title: found.title, format: found.format, version: found.version, content: found.content };
     },
+  });
+  ctx.registerQuery('kvcoder.artifact.entry.list', {
+    description: commands.list.description,
+    input: callInput(payloads.list),
+    output: z.array(z.object({ id: z.string(), title: z.string(), format: z.enum(artifactFormats), version: z.number().int(), updatedAt: z.string() })),
+    handle: async ({ sessionId }) => (await chatArtifacts(ctx, await chatOf(ctx, sessionId))).map((doc) => ({ id: doc.artifactId, title: doc.title, format: doc.format, version: doc.version, updatedAt: doc.updatedAt })),
   });
 }

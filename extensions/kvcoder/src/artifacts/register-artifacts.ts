@@ -3,7 +3,7 @@ import { notFound } from '../problems.ts';
 import { findSession } from '../sessions/session-lookup.ts';
 import { records } from '../store/collections.ts';
 import { artifactFormats } from './artifact-format.ts';
-import { chatIdOf } from './artifact-records.ts';
+import { chatArtifacts, chatIdOf } from './artifact-records.ts';
 
 // The person's view of a chat's artifacts (plan 08 §8.6, ADR 0009, 176): list and read. Only the agent writes, and a
 // subagent session answers with the artifacts of the chat at its root.
@@ -18,9 +18,7 @@ export function registerArtifacts(ctx: Ctx): void {
     public: true,
     handle: async ({ sessionId }) => {
       const chatId = chatIdOf(await findSession(ctx, sessionId));
-      return (await records(ctx.store).artifacts.find({ sessionId: chatId }, { limit: 1000 }))
-        .sort((first, second) => second.updatedAt.localeCompare(first.updatedAt) || first.artifactId.localeCompare(second.artifactId))
-        .map((doc) => ({ id: doc.artifactId, title: doc.title, format: doc.format, version: doc.version, size: Buffer.byteLength(doc.content), updatedAt: doc.updatedAt }));
+      return (await chatArtifacts(ctx, chatId)).map((doc) => ({ id: doc.artifactId, title: doc.title, format: doc.format, version: doc.version, size: Buffer.byteLength(doc.content), updatedAt: doc.updatedAt }));
     },
   });
   ctx.registerQuery('kvcoder.artifact.get', {

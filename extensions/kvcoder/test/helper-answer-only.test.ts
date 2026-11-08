@@ -11,14 +11,14 @@ const settings = workers(worker('free'));
 const lead = [runs(delegate), says('Started.'), says('done')];
 
 describe('a helper answers the lead only (ADR 0063)', { timeout: 30_000 }, () => {
-  it("M2.4-E214 a helper's prompt has no ask, only artifact get, and the shape of its answer", async () => {
+  it("M2.4-E214 a helper's prompt has no ask, only artifact list and get, and the shape of its answer", async () => {
     const world = await kvcoder.start({ settings });
     const sessionId = await newSession(world.kernel);
     await delegated(world, sessionId, lead, [says('found')]);
     const leadPrompt = systemPrompt(world.fake, 0);
     const helper = systemPrompt(world.helperFake, 0);
     expect(helper).not.toContain('- ask: ');
-    expect(helper).toMatch(/- artifact: [^\n]*\n {2}get +\{ id \(≤50\) \}\n {2}help +\{ command\? \}/);
+    expect(helper).toMatch(/- artifact: [^\n]*\n {2}list +\{\}\n {2}get +\{ id \(≤50\) \}\n {2}help +\{ command\? \}/);
     expect(helper).toContain('Result: what you did or found. Evidence: ');
     expect(helper).toContain('Files changed: ');
     expect(helper).toContain('Unchecked: ');

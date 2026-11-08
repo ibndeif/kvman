@@ -18,6 +18,7 @@ const connectorJobs = [
   'kvcoder.artifact.write',
   'kvcoder.artifact.edit',
   'kvcoder.artifact.content.get',
+  'kvcoder.artifact.entry.list',
   'kvcoder.background.list',
   'kvcoder.background.output.get',
   'kvcoder.background.stop',

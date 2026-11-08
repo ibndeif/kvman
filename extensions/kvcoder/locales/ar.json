@@ -224,6 +224,7 @@
   "kvcoder.artifact.write.description": "ينشئ مخرجًا، أو يستبدل عنوانه وصيغته ومحتواه.",
   "kvcoder.artifact.edit.description": "يستبدل مقاطع نصية محددة في مخرج موجود؛ وإذا فشل أحد الاستبدالات لا يتغير شيء.",
   "kvcoder.artifact.content.get.description": "يقرأ مخرجًا مع محتواه.",
+  "kvcoder.artifact.entry.list.description": "يسرد مخرجات هذه المحادثة، الأحدث تعديلًا أولًا، كلٌّ بمعرّفه وعنوانه وصيغته وإصداره ووقت آخر تعديل له.",
   "kvcoder.map.set.description": "ينشئ هيكل خريطة التنفيذ أو يستبدله، والخطوة التي يبقى معرّفها تحتفظ بتفاصيلها وبما وصلت إليه.",
   "kvcoder.map.step.details.set.description": "يكتب تفاصيل خطوة واحدة من الخريطة.",
   "kvcoder.map.step.update.description": "يغيّر حالة خطوة أو أكثر من خطوات الخريطة.",

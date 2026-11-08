@@ -51,6 +51,7 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
       '  help       { command? }',
       '  write  { id (≤50), title (≤100), format?: "markdown" | "html" | "url", content }',
       '  edit   { id (≤50), edits: [{ oldText, newText, replaceAll? }] }',
+      '  list   {}',
       '  get    { id (≤50) }',
       '  delete { id (≤50) }',
       '  help   { command? }',
