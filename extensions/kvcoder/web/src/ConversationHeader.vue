@@ -5,6 +5,7 @@ import type { Session } from '../../src/index.ts';
 import { contextLine, costParts, titleText, tokensUsed, totals, useKvman } from './kvman.ts';
 import type { ContextSize } from './use-conversation.ts';
 import JobsChip from './JobsChip.vue';
+import type { Job } from './use-jobs.ts';
 import { useDismiss } from './use-dismiss.ts';
 import { useNow } from './use-now.ts';
 import type { WaitingAction } from './use-session-actions.ts';
@@ -15,7 +16,7 @@ import type { WaitingAction } from './use-session-actions.ts';
 // The menu and its delete confirmation close on a press outside them and on Escape. The conversation runs what the
 // menu picks, and while one of its actions is `working` the four that wait are disabled (ADR 0019, 2 and 3).
 const props = withDefaults(defineProps<{ session: Session; tab: 'chat' | 'prompt'; turns: number; context?: ContextSize | null; runningSince?: string | undefined; artifacts?: number; artifactsOpen?: boolean; map?: { done: number; total: number } | undefined; mapOpen?: boolean; changes?: number; changesOpen?: boolean; working?: boolean }>(), { context: null, runningSince: undefined, artifacts: 0, artifactsOpen: false, map: undefined, mapOpen: false, changes: 0, changesOpen: false, working: false });
-const emit = defineEmits<{ tab: [tab: 'chat' | 'prompt']; action: [name: WaitingAction | 'delete', argument: string]; toggleArtifacts: []; toggleMap: []; toggleChanges: []; backgroundRunning: [count: number] }>();
+const emit = defineEmits<{ tab: [tab: 'chat' | 'prompt']; action: [name: WaitingAction | 'delete', argument: string]; toggleArtifacts: []; toggleMap: []; toggleChanges: []; backgroundRunning: [jobs: readonly Job[]] }>();
 const kvman = useKvman();
 const menu = ref(false);
 const renaming = ref<string | null>(null);
@@ -61,7 +62,7 @@ function rename(): void {
         <template v-if="filled !== undefined"> · <span :title="filled.full" :aria-label="filled.full" data-test="session-context">{{ filled.short }}</span></template>
       </span>
     </div>
-    <JobsChip :session-id="props.session.id" :stamp="props.session.updatedAt" @running="(count) => emit('backgroundRunning', count)" />
+    <JobsChip :session-id="props.session.id" :stamp="props.session.updatedAt" @running="(jobs) => emit('backgroundRunning', jobs)" />
     <button v-if="props.map !== undefined" type="button" class="kvc-button" :aria-pressed="props.mapOpen" :aria-label="mapLabel" :title="mapLabel" data-test="map-toggle" @click="emit('toggleMap')"><Workflow :size="16" aria-hidden="true" />{{ kvman.t('kvcoder.ui.map.count', props.map) }}</button>
     <button v-if="props.changes > 0" type="button" class="kvc-button" :aria-pressed="props.changesOpen" :aria-label="changesLabel" :title="changesLabel" data-test="changes-toggle" @click="emit('toggleChanges')"><FileDiff :size="16" aria-hidden="true" />{{ props.changes }}</button>
     <button v-if="props.artifacts > 0" type="button" class="kvc-button" :aria-pressed="props.artifactsOpen" :aria-label="artifactsLabel" :title="artifactsLabel" data-test="artifacts-toggle" @click="emit('toggleArtifacts')"><PanelRight :size="16" aria-hidden="true" />{{ props.artifacts }}</button>

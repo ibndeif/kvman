@@ -3,14 +3,14 @@ import { ChevronDown, Layers } from '@lucide/vue';
 import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue';
 import JobItem from './JobItem.vue';
 import { useKvman } from './kvman.ts';
-import { useJobs } from './use-jobs.ts';
+import { useJobs, type Job } from './use-jobs.ts';
 
 // The Running chip (plan 08 §8.7, ADR 0009, 153): `● 2 running` while the chat has background jobs running, opening a
 // list of its jobs. It stays while the list is open, so a job that ends shows how; once they have all ended it is a quiet
 // `Background (N)`, so an ended process can be run again (ADR 0102, 7). At side-bar width it is the dot or an icon with
 // the count, its words its label and tooltip (ADR 0106, 2).
 const props = defineProps<{ sessionId: string; stamp: string }>();
-const emit = defineEmits<{ running: [count: number] }>();
+const emit = defineEmits<{ running: [jobs: readonly Job[]] }>();
 const kvman = useKvman();
 const open = ref(false);
 const trigger = useTemplateRef<HTMLButtonElement>('trigger');
@@ -27,8 +27,9 @@ function outside(event: Event): void {
   if (event.target instanceof Node && !trigger.value?.parentElement?.contains(event.target)) open.value = false;
 }
 
-// The conversation says whether Stop leaves background jobs running (ADR 0049, 4).
-watch(() => running.value.length, (count) => emit('running', count), { immediate: true });
+// The conversation says whether Stop leaves background jobs running (ADR 0049, 4), and holds the map's line while a
+// helper runs (ADR 0126).
+watch(running, (jobs) => emit('running', jobs), { immediate: true });
 onMounted(load);
 watch(() => [props.sessionId, props.stamp], load);
 watch(open, (isOpen) => (isOpen ? document.addEventListener('pointerdown', outside) : document.removeEventListener('pointerdown', outside)));

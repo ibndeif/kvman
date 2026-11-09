@@ -32,6 +32,7 @@ import { useConversation } from './use-conversation.ts';
 import { useExecutionMap } from './use-execution-map.ts';
 import { useFollowLatest } from './use-follow-latest.ts';
 import { useFinishedRuns } from './use-finished-runs.ts';
+import type { Job } from './use-jobs.ts';
 import { useSessionActions } from './use-session-actions.ts';
 import { useSlashCommands } from './use-slash-commands.ts';
 import { useWorkspaceSession } from './use-workspace-session.ts';
@@ -54,8 +55,11 @@ const executionMap = useExecutionMap(kvman, () => sessionId.value, () => session
 const changes = useChanges(kvman, () => sessionId.value, () => session.value?.updatedAt, readFailed);
 const { toggleChanges, closePanel } = useChangesPanel(changes, executionMap, artifacts);
 const panelShown = computed(() => changes.shown.value || executionMap.shown.value || (artifacts.open.value && artifacts.shown.value !== undefined));
-// An ending with steps left says so (ADR 0064, 11).
-const stepsLeft = computed(() => (session.value?.status === 'idle' ? executionMap.counts.value?.left ?? 0 : 0));
+// The chat's running background jobs, from the Running chip.
+const backgroundRunning = ref<readonly Job[]>([]);
+// An ending with steps left says so (ADR 0064, 11), once no helper is still working on them (ADR 0126).
+const helpersRunning = computed(() => backgroundRunning.value.some((job) => job.kind !== 'process'));
+const stepsLeft = computed(() => (session.value?.status === 'idle' && !helpersRunning.value ? executionMap.counts.value?.left ?? 0 : 0));
 const calls = computed(() => callViews(messages.value));
 const lastSent = computed(() => lastTyped(messages.value));
 // Edit and Undo, in a chat that isn't a helper's (ADR 0118, 7); afterwards the chat is read whole.
@@ -118,11 +122,10 @@ async function stop(): Promise<void> {
   }
 }
 // What the turn waits for, and what Stop does to it (ADR 0049, 4).
-const backgroundRunning = ref(0);
 const waitingHint = computed(() => [
   ...(waitingOnYou.value.some((item) => item.kind !== 'subagent' && item.kind !== 'worker') ? [kvman.t('kvcoder.ui.messageDismisses')] : []),
   kvman.t('kvcoder.ui.stopEnds'),
-  ...(backgroundRunning.value > 0 ? [kvman.t('kvcoder.ui.stopKeepsBackground')] : []),
+  ...(backgroundRunning.value.length > 0 ? [kvman.t('kvcoder.ui.stopKeepsBackground')] : []),
 ].join(' '));
 
 // Questions remain visible until acceptance; requests and drafts bind to the displayed scope.
@@ -236,7 +239,7 @@ async function registered(entry: RegisteredSlash, argument: string): Promise<voi
   <div class="kvc-workspace">
     <div class="kvc-topline" data-test="topline">
     <ChatsDrawer :session-id="sessionId" />
-    <ConversationHeader v-if="session && sessionId !== undefined" :session="session" :tab="tab" :turns="turns.length" :context="conversation.context.value" :running-since="runningSince" :artifacts="artifacts.list.value.length" :artifacts-open="artifacts.open.value && !executionMap.shown.value" :map="executionMap.counts.value" :map-open="executionMap.shown.value" :changes="changes.count.value" :changes-open="changes.shown.value" :working="actions.working.value !== undefined" @tab="tab = $event" @action="command" @toggle-artifacts="executionMap.toggleArtifacts()" @toggle-map="executionMap.toggle()" @toggle-changes="toggleChanges" @background-running="(count) => (backgroundRunning = count)" />
+    <ConversationHeader v-if="session && sessionId !== undefined" :session="session" :tab="tab" :turns="turns.length" :context="conversation.context.value" :running-since="runningSince" :artifacts="artifacts.list.value.length" :artifacts-open="artifacts.open.value && !executionMap.shown.value" :map="executionMap.counts.value" :map-open="executionMap.shown.value" :changes="changes.count.value" :changes-open="changes.shown.value" :working="actions.working.value !== undefined" @tab="tab = $event" @action="command" @toggle-artifacts="executionMap.toggleArtifacts()" @toggle-map="executionMap.toggle()" @toggle-changes="toggleChanges" @background-running="(jobs) => (backgroundRunning = jobs)" />
     <div v-if="sessionId !== undefined && !kvman.host.embedded" class="kvc-new-chat"><button type="button" class="kvc-button kvc-ghost" :aria-label="kvman.t('kvcoder.ui.newChat')" :title="kvman.t('kvcoder.ui.newChat')" data-test="new-chat-compact" @click="kvman.navigate('kvcoder.chat')"><Plus :size="18" aria-hidden="true" /></button></div>
     </div>
     <div class="kvc-stage">

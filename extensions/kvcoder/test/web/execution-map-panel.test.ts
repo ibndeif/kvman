@@ -1,8 +1,9 @@
 import { flushPromises } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import ConversationView from '../../web/src/ConversationView.vue';
+import type { Job } from '../../web/src/use-jobs.ts';
 import { createFakeKvman } from './support/fake-kvman.ts';
-import { artifactContent, artifactSummary, choose, executionMap, mapStep, mounted, serve, session, turn, user, type World } from './support/fixtures.ts';
+import { artifactContent, artifactSummary, choose, executionMap, job, mapStep, mounted, serve, session, turn, user, type World } from './support/fixtures.ts';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -133,5 +134,30 @@ describe('the execution map beside the conversation (08 §8.7, ADR 0064)', () =>
     ];
     for (const wrapper of quiet) expect(part(wrapper, 'map-remaining').exists()).toBe(false);
     for (const wrapper of [left, ...quiet]) wrapper.unmount();
+  });
+
+  it('QA82-H1 the line waits while a helper runs, and shows once it ends', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] });
+    const fake = createFakeKvman();
+    const world = chatWorld({ map: executionMap(steps()), jobs: [job({ id: 'h1', kind: 'subagent', status: 'running' })] });
+    serve(fake, world);
+    const wrapper = await mounted(ConversationView, fake, { sessionId: 's1' });
+    expect(part(wrapper, 'map-remaining').exists()).toBe(false);
+    await later(world, { jobs: [job({ id: 'h1', kind: 'subagent', status: 'succeeded', endedAt: '2026-10-01T09:01:00.000Z' })] }, '2026-10-01T09:01:00.000Z');
+    expect(part(wrapper, 'map-remaining').text()).toBe('2 steps of the execution map are not done. Show the map Continue');
+    wrapper.unmount();
+  });
+
+  it('QA82-E1 a running program worker or a waiting helper hides the line; QA82-E2 a running background process does not', async () => {
+    const shown = async (running: Pick<Job, 'kind' | 'status'>) => {
+      const fake = createFakeKvman();
+      serve(fake, chatWorld({ map: executionMap(steps()), jobs: [job({ id: 'j1', ...running })] }));
+      return mounted(ConversationView, fake, { sessionId: 's1' });
+    };
+    const hidden = [await shown({ kind: 'worker', status: 'running' }), await shown({ kind: 'subagent', status: 'waiting' })];
+    for (const wrapper of hidden) expect(part(wrapper, 'map-remaining').exists()).toBe(false);
+    const server = await shown({ kind: 'process', status: 'running' });
+    expect(part(server, 'map-remaining').text()).toBe('2 steps of the execution map are not done. Show the map Continue');
+    for (const wrapper of [...hidden, server]) wrapper.unmount();
   });
 });
