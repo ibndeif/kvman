@@ -4,7 +4,10 @@ import { card, chatCard } from './card.ts';
 import { chatAccordion, chatAccordionItem, chatSectionBlock, chatSectionItem, chatTabItem, chatTabs } from './chat-containers.ts';
 import { callout, cardHeader, codeBlock, inlineHeader, markDownRenderer, textCallout, textContent } from './content.ts';
 import { icon, tag, tagBlock } from './data-display.ts';
+import { areaChart, barChart, horizontalBarChart, lineChart, pieChart, point, radarChart, radialChart, scatterChart, scatterSeries, series, singleStackedBarChart, slice } from './charts.ts';
 import { followUpBlock, followUpItem } from './follow-ups.ts';
+import { entityList, listBlock, listItem } from './lists.ts';
+import { col, editableTable, table } from './tables.ts';
 import { chatNotes, fullNotes } from './group-notes.ts';
 import { checkBoxGroup, checkBoxItem, chipItem, chips, datePicker, form, formControl, input, label, radioGroup, radioItem, select, selectItem, slider, switchGroup, switchItem, textArea } from './forms.ts';
 import { accordion, accordionItem, stack, tabItem, tabs } from './layout.ts';
@@ -13,22 +16,42 @@ import { separator, steps, stepsItem } from './layout-items.ts';
 // The two libraries of OpenUI (plan 06 §6.1, ADR 0124, 4, 13): a reply is read with the chat library, root `Card`, and
 // an artifact with `openuiLibrary`, root `Stack`. A group holds only the components this milestone builds.
 
+// A group with OpenUI's notes for it, from `group-notes.ts`.
+const grouped =
+  (notes: Readonly<Record<string, readonly string[]>>) =>
+  (name: string, components: string[]): ComponentGroup => ({ name, components, notes: [...(notes[name] ?? [])] });
+const chat = grouped(chatNotes);
+const full = grouped(fullNotes);
+const forms = ['Form', 'FormControl', 'Label', 'Input', 'TextArea', 'Select', 'SelectItem', 'DatePicker', 'Slider', 'CheckBoxGroup', 'CheckBoxItem', 'RadioGroup', 'RadioItem', 'SwitchGroup', 'SwitchItem', 'Chips', 'ChipItem'];
+const tables = ['Table', 'Col', 'EditableTable'];
+const charts2d = ['BarChart', 'LineChart', 'AreaChart', 'RadarChart', 'HorizontalBarChart', 'Series'];
+const charts1d = ['PieChart', 'RadialChart', 'SingleStackedBarChart', 'Slice'];
+const scatter = ['ScatterChart', 'ScatterSeries', 'Point'];
+
 const chatGroups: ComponentGroup[] = [
-  { name: 'Content', components: ['CardHeader', 'TextContent', 'MarkDownRenderer', 'Callout', 'TextCallout', 'CodeBlock', 'Separator', 'InlineHeader'], notes: [...(chatNotes['Content'] ?? [])] },
-  { name: 'Forms', components: ['Form', 'FormControl', 'Label', 'Input', 'TextArea', 'Select', 'SelectItem', 'DatePicker', 'Slider', 'CheckBoxGroup', 'CheckBoxItem', 'RadioGroup', 'RadioItem', 'SwitchGroup', 'SwitchItem', 'Chips', 'ChipItem'], notes: [...(chatNotes['Forms'] ?? [])] },
-  { name: 'Buttons', components: ['Button', 'Buttons', 'Icon', 'IconButton'], notes: [...(chatNotes['Buttons'] ?? [])] },
-  { name: 'Lists & Follow-ups', components: ['FollowUpBlock', 'FollowUpItem'], notes: [...(chatNotes['Lists & Follow-ups'] ?? [])] },
-  { name: 'Sections', components: ['SectionBlock', 'SectionItem'], notes: [...(chatNotes['Sections'] ?? [])] },
-  { name: 'Layout', components: ['Tabs', 'TabItem', 'Accordion', 'AccordionItem', 'Steps', 'StepsItem'], notes: [...(chatNotes['Layout'] ?? [])] },
-  { name: 'Data Display', components: ['TagBlock', 'Tag'], notes: [...(chatNotes['Data Display'] ?? [])] },
+  chat('Content', ['CardHeader', 'TextContent', 'MarkDownRenderer', 'Callout', 'TextCallout', 'CodeBlock', 'Separator', 'InlineHeader']),
+  chat('Tables', tables),
+  chat('Charts (2D)', charts2d),
+  chat('Charts (1D)', charts1d),
+  chat('Charts (Scatter)', scatter),
+  chat('Forms', forms),
+  chat('Buttons', ['Button', 'Buttons', 'Icon', 'IconButton']),
+  chat('Lists & Follow-ups', ['ListBlock', 'ListItem', 'FollowUpBlock', 'FollowUpItem']),
+  chat('Sections', ['SectionBlock', 'SectionItem']),
+  chat('Layout', ['Tabs', 'TabItem', 'Accordion', 'AccordionItem', 'Steps', 'StepsItem']),
+  chat('Data Display', ['TagBlock', 'Tag', 'EntityList']),
 ];
 
 const fullGroups: ComponentGroup[] = [
-  { name: 'Layout', components: ['Stack', 'Tabs', 'TabItem', 'Accordion', 'AccordionItem', 'Steps', 'StepsItem', 'Separator'], notes: [...(fullNotes['Layout'] ?? [])] },
-  { name: 'Content', components: ['Card', 'CardHeader', 'TextContent', 'MarkDownRenderer', 'Callout', 'TextCallout', 'CodeBlock', 'InlineHeader'], notes: [...(fullNotes['Content'] ?? [])] },
-  { name: 'Forms', components: ['Form', 'FormControl', 'Label', 'Input', 'TextArea', 'Select', 'SelectItem', 'DatePicker', 'Slider', 'CheckBoxGroup', 'CheckBoxItem', 'RadioGroup', 'RadioItem', 'SwitchGroup', 'SwitchItem', 'Chips', 'ChipItem'], notes: [...(fullNotes['Forms'] ?? [])] },
-  { name: 'Buttons', components: ['Button', 'Buttons', 'IconButton'], notes: [...(fullNotes['Buttons'] ?? [])] },
-  { name: 'Data Display', components: ['TagBlock', 'Tag', 'Icon'], notes: [...(fullNotes['Data Display'] ?? [])] },
+  full('Layout', ['Stack', 'Tabs', 'TabItem', 'Accordion', 'AccordionItem', 'Steps', 'StepsItem', 'Separator']),
+  full('Content', ['Card', 'CardHeader', 'TextContent', 'MarkDownRenderer', 'Callout', 'TextCallout', 'CodeBlock', 'InlineHeader']),
+  full('Tables', tables),
+  full('Charts (2D)', charts2d),
+  full('Charts (1D)', charts1d),
+  full('Charts (Scatter)', scatter),
+  full('Forms', forms),
+  full('Buttons', ['Button', 'Buttons', 'IconButton']),
+  full('Data Display', ['TagBlock', 'Tag', 'Icon', 'EntityList', 'ListBlock', 'ListItem']),
 ];
 
 export const chatLibraryDefinition = {
@@ -42,6 +65,25 @@ export const chatLibraryDefinition = {
     codeBlock,
     separator,
     inlineHeader,
+    table,
+    col,
+    editableTable,
+    barChart,
+    lineChart,
+    areaChart,
+    radarChart,
+    horizontalBarChart,
+    series,
+    pieChart,
+    radialChart,
+    singleStackedBarChart,
+    slice,
+    scatterChart,
+    scatterSeries,
+    point,
+    entityList,
+    listBlock,
+    listItem,
     form,
     formControl,
     label,
@@ -99,6 +141,25 @@ export const fullLibraryDefinition = {
     textCallout,
     codeBlock,
     inlineHeader,
+    table,
+    col,
+    editableTable,
+    barChart,
+    lineChart,
+    areaChart,
+    radarChart,
+    horizontalBarChart,
+    series,
+    pieChart,
+    radialChart,
+    singleStackedBarChart,
+    slice,
+    scatterChart,
+    scatterSeries,
+    point,
+    entityList,
+    listBlock,
+    listItem,
     form,
     formControl,
     label,

@@ -12,6 +12,22 @@ import { accordion, accordionItem, stack, tabItem, tabs } from './definitions/la
 import { separator, steps, stepsItem } from './definitions/layout-items.ts';
 import { chatLibraryDefinition, fullLibraryDefinition } from './definitions/libraries.ts';
 import AccordionRenderer from './renderers/AccordionRenderer.vue';
+import { areaChart, barChart, horizontalBarChart, lineChart, pieChart, point, radarChart, radialChart, scatterChart, scatterSeries, series, singleStackedBarChart, slice } from './definitions/charts.ts';
+import { entityList, listBlock, listItem } from './definitions/lists.ts';
+import { col, editableTable, table } from './definitions/tables.ts';
+import AreaChartRenderer from './charts/AreaChartRenderer.vue';
+import BarChartRenderer from './charts/BarChartRenderer.vue';
+import HorizontalBarChartRenderer from './charts/HorizontalBarChartRenderer.vue';
+import LineChartRenderer from './charts/LineChartRenderer.vue';
+import PieChartRenderer from './charts/PieChartRenderer.vue';
+import RadarChartRenderer from './charts/RadarChartRenderer.vue';
+import RadialChartRenderer from './charts/RadialChartRenderer.vue';
+import ScatterChartRenderer from './charts/ScatterChartRenderer.vue';
+import SingleStackedBarChartRenderer from './charts/SingleStackedBarChartRenderer.vue';
+import EditableTableRenderer from './renderers/EditableTableRenderer.vue';
+import EntityListRenderer from './renderers/EntityListRenderer.vue';
+import ListBlockRenderer from './renderers/ListBlockRenderer.vue';
+import TableRenderer from './renderers/TableRenderer.vue';
 import ButtonRenderer from './renderers/ButtonRenderer.vue';
 import CheckBoxGroupRenderer from './renderers/CheckBoxGroupRenderer.vue';
 import ChipsRenderer from './renderers/ChipsRenderer.vue';
@@ -82,6 +98,25 @@ const renderers = new Map<OpenuiComponentDefinition, Component>([
   [followUpItem, NullRenderer],
   [chatSectionBlock, SectionBlockRenderer],
   [chatSectionItem, NullRenderer],
+  [table, TableRenderer],
+  [col, NullRenderer],
+  [editableTable, EditableTableRenderer],
+  [barChart, BarChartRenderer],
+  [lineChart, LineChartRenderer],
+  [areaChart, AreaChartRenderer],
+  [radarChart, RadarChartRenderer],
+  [horizontalBarChart, HorizontalBarChartRenderer],
+  [series, NullRenderer],
+  [pieChart, PieChartRenderer],
+  [radialChart, RadialChartRenderer],
+  [singleStackedBarChart, SingleStackedBarChartRenderer],
+  [slice, NullRenderer],
+  [scatterChart, ScatterChartRenderer],
+  [scatterSeries, NullRenderer],
+  [point, NullRenderer],
+  [entityList, EntityListRenderer],
+  [listBlock, ListBlockRenderer],
+  [listItem, NullRenderer],
   [form, FormRenderer],
   [formControl, FormControlRenderer],
   [label, LabelRenderer],

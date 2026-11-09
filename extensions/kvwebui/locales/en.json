@@ -171,5 +171,19 @@
   "kvwebui.openui.rules.max": "Must be no more than {value}",
   "kvwebui.openui.rules.minLength": "Must be at least {value} characters",
   "kvwebui.openui.rules.maxLength": "Must be no more than {value} characters",
-  "kvwebui.openui.rules.pattern": "This doesn't match the expected format"
+  "kvwebui.openui.rules.pattern": "This doesn't match the expected format",
+  "kvwebui.openui.chart.barChart": "Bar chart",
+  "kvwebui.openui.chart.horizontalBarChart": "Horizontal bar chart",
+  "kvwebui.openui.chart.lineChart": "Line chart",
+  "kvwebui.openui.chart.areaChart": "Area chart",
+  "kvwebui.openui.chart.radarChart": "Radar chart",
+  "kvwebui.openui.chart.pieChart": "Pie chart",
+  "kvwebui.openui.chart.radialChart": "Radial chart",
+  "kvwebui.openui.chart.singleStackedBarChart": "Stacked bar",
+  "kvwebui.openui.chart.scatterChart": "Scatter chart",
+  "kvwebui.openui.previousPage": "Previous page",
+  "kvwebui.openui.nextPage": "Next page",
+  "kvwebui.openui.saveChanges": "Save changes",
+  "kvwebui.openui.reset": "Reset",
+  "kvwebui.openui.changes": "{count} change | {count} changes"
 }

@@ -82,7 +82,6 @@ function indexPage(place: Place, sections: ReadonlyMap<string, string>, groups: 
     builtins(section(sections, 'Built-in Functions')),
     section(sections, 'Action — Button Behavior'),
     streamingRules(definition.root),
-    section(sections, 'Important Rules'),
     section(sections, 'Final Verification'),
     ['## Components', '', intro, '', `Read a group's signatures and notes with \`openui guide { place: '${place}', groups: ['<group>', …] }\`. The groups:`, '', ...listed].join('\n'),
     ['## Example', '', placeExample(place)].join('\n'),

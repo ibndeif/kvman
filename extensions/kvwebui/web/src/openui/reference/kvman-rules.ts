@@ -6,23 +6,20 @@ export type Place = 'reply' | 'artifact';
 const presses = [
   '## What a press does',
   '',
-  "- A Button sends its @ToAssistant text as the person's next message; a Button with no action sends its label; a FollowUpItem sends its text.",
-  '- A Button inside a Form checks the form\'s rules, then sends its text, a blank line, and one `<label>: <value>` line per FormControl, in order. Nothing typed or chosen reads `(empty)`.',
-  '- @OpenUrl opens an http or https address in a new tab; any other address does nothing.',
-  '- @Set and @Reset change only what the page shows. Tabs, accordions, and sections open and close without sending anything.',
+  "- A Button sends its @ToAssistant text as the person's next message (its label when it has no action); a FollowUpItem sends its text.",
+  "- A Button in a Form checks the form's rules, then sends its text, a blank line, and a `<label>: <value>` line per FormControl; nothing chosen reads `(empty)`.",
+  '- @OpenUrl opens only an http or https address. @Set, @Reset, tabs, accordions, and sections change only the page.',
   '',
   '## What OpenUI cannot do here',
   '',
-  '- There is no Query, Mutation, or @Run: no UI fetches or changes data. Write the data into the UI itself, as literals or $variables.',
+  '- There is no Query, Mutation, or @Run: write the data into the UI, as literals or $variables.',
   '- An image is only a path in the workspace or a `data:` address; a web address is not loaded.',
 ].join('\n');
 
 const reply = [
   '# OpenUI in a reply',
   '',
-  'Draw UI in a reply when the person has something to act on now: a choice, a short form, a summary of numbers, or follow-up suggestions. Write it as a fenced `openui` block inside your Markdown reply; the text around it stays Markdown. Each block stands alone: it starts with `root = Card(...)` and defines every name it uses. Keep prose in Markdown and a diagram in a Mermaid block. For a dashboard or a report the person keeps, write an artifact with `format: \'openui\'` instead.',
-  '',
-  "Only the newest reply's UI can be pressed; the UI of older replies is shown disabled.",
+  "Draw UI in a reply when the person has something to act on now: a choice, a short form, numbers, or follow-ups. Write it as a fenced `openui` block in your Markdown reply; each block stands alone, starting with `root = Card(...)` and defining every name it uses. Keep prose in Markdown and diagrams in Mermaid; a dashboard or report the person keeps is an artifact with `format: 'openui'`. Only the newest reply's UI can be pressed.",
   '',
   presses,
 ].join('\n');
@@ -30,9 +27,7 @@ const reply = [
 const artifact = [
   '# OpenUI in an artifact',
   '',
-  "Write an artifact with `format: 'openui'` for a dashboard or a report the person keeps. Its content is OpenUI Lang only, with no fence around it, and starts with `root = Stack(...)`. Change part of it with `artifact edit`. For a small piece the person acts on now, use a fenced `openui` block in a reply instead; keep prose in Markdown.",
-  '',
-  'The UI of an openui artifact can always be pressed.',
+  "Write an artifact with `format: 'openui'` for a dashboard or report the person keeps: OpenUI Lang only, with no fence, starting with `root = Stack(...)`; change part of it with `artifact edit`. Its UI can always be pressed. For something to act on now, use a fenced `openui` block in a reply; keep prose in Markdown.",
   '',
   presses,
 ].join('\n');
@@ -81,7 +76,6 @@ export function streamingRules(root: string): string {
 
 /** The composition and data lines that replace the generated ones, which speak of `Query` results and tables. */
 export const builtinUse = [
-  'Use them on arrays you write in the UI or keep in $variables, such as `items = [{name: "Build", status: "open"}]`. Builtins compose — output of one is input to the next:',
-  '`@Count(@Filter(items, "status", "==", "open"))`, `@Round(@Avg(scores), 1)`, `@Each(items, "item", Tag(item.name))` for per-item rendering. Array pluck: `items.name` extracts a field from every item.',
-  'IMPORTANT @Each rule: the loop variable (e.g. "item") is ONLY available inside the @Each template expression. Always inline the template — do NOT extract it to a separate statement.',
+  'Use them on arrays the UI holds, such as `items = [{name: "Build", status: "open"}]`; they compose: `@Count(@Filter(items, "status", "==", "open"))`, `@Each(items, "item", Tag(item.name))`. `items.name` plucks a field from every item.',
+  "@Each's loop variable exists only inside its template: write the template inline, never as a statement of its own.",
 ].join('\n');

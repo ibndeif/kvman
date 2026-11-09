@@ -84,7 +84,7 @@ describe('OpenUI in Chromium (06 §6.1, ADR 0124)', { timeout: 120_000 }, () => 
     await page.close();
   });
 
-  it('M5.18-H11 the components use the theme in light and in dark, never pure white or black', async () => {
+  it('M5.18-H11 M5.19-H7 the components use the theme in light and in dark, never pure white or black', async () => {
     for (const theme of ['light', 'dark']) {
       const kvman = await started('en', { 'kvwebui.theme': theme });
       const { page } = await gallery(kvman);
@@ -93,7 +93,7 @@ describe('OpenUI in Chromium (06 §6.1, ADR 0124)', { timeout: 120_000 }, () => 
     }
   });
 
-  it('M5.18-H11 in Arabic the stack, the tabs, the steps, and the form labels mirror', async () => {
+  it('M5.18-H11 M5.19-H7 in Arabic the stack, the tabs, the steps, the form labels, a bar chart, and a table mirror, its numbers left to right', async () => {
     const kvman = await started('ar');
     const { page } = await gallery(kvman);
     expect(await page.evaluate('document.documentElement.dir')).toBe('rtl');
@@ -104,6 +104,13 @@ describe('OpenUI in Chromium (06 §6.1, ADR 0124)', { timeout: 120_000 }, () => 
     const number = await page.evaluate(left('[data-test="demo-openui"] ol li span[aria-hidden="true"]'));
     const title = await page.evaluate(left('[data-test="demo-openui"] ol li p'));
     expect(Number(number)).toBeGreaterThan(Number(title));
+    const categories = await page.evaluate(`[...document.querySelectorAll('[data-test="chart-category"]')].map((label) => label.getBoundingClientRect().left)`);
+    expect(Array.isArray(categories) && Number(categories[0]) > Number(categories[1])).toBe(true);
+    const valueTick = await page.evaluate(left('[data-test="chart-value-tick"]'));
+    expect(Number(valueTick)).toBeGreaterThan(Number(Array.isArray(categories) ? categories[0] : 0));
+    expect(await page.evaluate(`getComputedStyle(document.querySelector('[data-test="chart-value-tick"]')).direction`)).toBe('ltr');
+    const headers = await page.evaluate(`[...document.querySelectorAll('[data-test="demo-openui"] thead th')].map((cell) => cell.getBoundingClientRect().left)`);
+    expect(Array.isArray(headers) && Number(headers[0]) > Number(headers[1])).toBe(true);
     const label = await page.evaluate(`document.querySelector('label[for]').getBoundingClientRect().right`);
     const field = await page.evaluate(`document.querySelector('input[name="name"]').getBoundingClientRect().right`);
     expect(Math.abs(Number(label) - Number(field))).toBeLessThan(2);

@@ -73,4 +73,13 @@ describe("kvwebui's catalogs (02 §2.11)", () => {
     }
     expect(catalog('ar')['kvwebui.openui.rules.min']).toContain('{value}');
   });
+
+  it("M5.19-E6 en and ar have the tables' and charts' texts, and the changes count has each language's plural forms", () => {
+    const charts = ['barChart', 'horizontalBarChart', 'lineChart', 'areaChart', 'radarChart', 'pieChart', 'radialChart', 'singleStackedBarChart', 'scatterChart'].map((chart) => `kvwebui.openui.chart.${chart}`);
+    for (const language of ['en', 'ar']) {
+      for (const key of ['kvwebui.openui.previousPage', 'kvwebui.openui.nextPage', 'kvwebui.openui.saveChanges', 'kvwebui.openui.reset', 'kvwebui.openui.changes', ...charts]) expect(catalog(language)[key], `${language} ${key}`).toBeTypeOf('string');
+    }
+    expect(catalog('en')['kvwebui.openui.changes']?.split('|')).toHaveLength(2);
+    expect(catalog('ar')['kvwebui.openui.changes']?.split('|')).toHaveLength(6);
+  });
 });

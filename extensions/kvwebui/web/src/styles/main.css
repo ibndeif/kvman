@@ -76,9 +76,26 @@
   --kvwebui-toast: #242a31;
   --kvwebui-on-toast: #f7f8fa;
   --kvwebui-online: #2f8a4f;
+  /* The eight colors of OpenUI's charts (ADR 0124, 9). */
+  --kvwebui-chart-1: #35507a;
+  --kvwebui-chart-2: #2f8578;
+  --kvwebui-chart-3: #b6772a;
+  --kvwebui-chart-4: #a2475f;
+  --kvwebui-chart-5: #665aa6;
+  --kvwebui-chart-6: #4b7f3a;
+  --kvwebui-chart-7: #ad5536;
+  --kvwebui-chart-8: #557590;
 }
 
 .dark {
+  --kvwebui-chart-1: #8fb0e3;
+  --kvwebui-chart-2: #6cc6b9;
+  --kvwebui-chart-3: #e3a95e;
+  --kvwebui-chart-4: #e08aa1;
+  --kvwebui-chart-5: #a798e0;
+  --kvwebui-chart-6: #93c77e;
+  --kvwebui-chart-7: #e5917a;
+  --kvwebui-chart-8: #9db8d1;
   --kvwebui-ground: #151513;
   --kvwebui-surface: #1d1c1a;
   --kvwebui-sunken: #1a1917;
@@ -119,6 +136,14 @@
   --kv-color-danger: var(--kvwebui-danger);
   --kv-color-warning: var(--kvwebui-warning-ink);
   --kv-color-success: var(--kvwebui-success-ink);
+  --kv-color-chart-1: var(--kvwebui-chart-1);
+  --kv-color-chart-2: var(--kvwebui-chart-2);
+  --kv-color-chart-3: var(--kvwebui-chart-3);
+  --kv-color-chart-4: var(--kvwebui-chart-4);
+  --kv-color-chart-5: var(--kvwebui-chart-5);
+  --kv-color-chart-6: var(--kvwebui-chart-6);
+  --kv-color-chart-7: var(--kvwebui-chart-7);
+  --kv-color-chart-8: var(--kvwebui-chart-8);
   --kv-space-sm: 8px;
   --kv-space-md: 16px;
   --kv-space-lg: 24px;

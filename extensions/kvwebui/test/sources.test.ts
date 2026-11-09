@@ -35,4 +35,14 @@ describe("kvwebui's sources (06 §6.1)", () => {
     const physical = openui.filter((file) => readFileSync(file, 'utf8').split('\n').some((line) => physicalClasses.test(line) || physicalProperties.test(line)));
     expect(physical).toEqual([]);
   });
+
+  it('M5.19-E7 the eight chart colors are defined for the light theme and again for the dark one, none pure white or black', () => {
+    const css = readFileSync(path.join(web, 'styles', 'main.css'), 'utf8');
+    const block = (selector: string): string => css.slice(css.indexOf(`${selector} {`), css.indexOf('}', css.indexOf(`${selector} {`)));
+    for (const selector of [':root', '.dark']) {
+      const colors = [1, 2, 3, 4, 5, 6, 7, 8].map((index) => new RegExp(`--kvwebui-chart-${String(index)}: (#[0-9a-f]{6});`).exec(block(selector))?.[1]);
+      expect(colors.every((color) => color !== undefined && color !== '#ffffff' && color !== '#000000'), `${selector} ${colors.join(' ')}`).toBe(true);
+    }
+    for (const index of [1, 2, 3, 4, 5, 6, 7, 8]) expect(css).toContain(`--kv-color-chart-${String(index)}: var(--kvwebui-chart-${String(index)});`);
+  });
 });

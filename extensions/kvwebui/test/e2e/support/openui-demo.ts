@@ -5,7 +5,7 @@
 export const iconsSource = ['root = Stack([rocket, launch])', 'rocket = Icon("rocket")', 'launch = IconButton("Launch", Icon("rocket"), Action([@ToAssistant("Launch")]))'].join('\n');
 
 const fullSource = [
-  'root = Stack([title, row, views, more, guide, rule, info, careful, totals, form, notify, label, tags, done, go, launch, code, notes])',
+  'root = Stack([title, row, views, more, guide, rule, info, careful, totals, form, notify, label, tags, done, go, launch, code, notes, scores, prices, bars, pie, facts, picks])',
   'title = CardHeader("Gallery", "Every component")',
   'row = Stack([one, two], "row", "m", null, null, true)',
   'one = Card([TextContent("One")])',
@@ -41,6 +41,12 @@ const fullSource = [
   'launch = IconButton("Launch", Icon("rocket"), Action([@ToAssistant("Launch")]))',
   'code = CodeBlock("ts", "const a = 1;")',
   'notes = MarkDownRenderer("See ![chart](https://example.com/chart.png) and [the docs](https://example.com/docs).", "card")',
+  'scores = Table([Col("Team", ["Red", "Blue"]), Col("Points", [1200, 980], "number")])',
+  'prices = EditableTable("prices", [{type: "text", key: "name", header: "Item"}, {type: "number", key: "price", header: "Price"}], [{id: "1", values: ["Tea", 3]}])',
+  'bars = BarChart(["Mon", "Tue", "Wed"], [Series("Views", [30, 50, 20]), Series("Users", [10, 20, 15])])',
+  'pie = PieChart(["A", "B", "C"], [1, 2, 3], "donut")',
+  'facts = EntityList([{left: "Plan", right: "Pro"}, {left: "Seats", right: "12", rightVariant: "number"}])',
+  'picks = ListBlock([ListItem("First", "One"), ListItem("Second", "Two")])',
 ].join('\n');
 
 /** A reply's fenced block of the chat library: a card with a source, sections, and a follow-up. A catalog text is

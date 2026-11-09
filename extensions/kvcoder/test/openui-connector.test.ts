@@ -46,6 +46,12 @@ describe('the openui connector (08 §8.5, ADR 0124, 5, 12, 13, 17)', { timeout: 
     expect(guideOf(results[1])).toBe(page('openui-chat-lists-follow-ups'));
   });
 
+  it('M5.19-H9 openui guide gives the tables and charts groups', async () => {
+    const { kernel, fake } = await kvcoder.start();
+    const results = await guided(kernel, fake, { place: 'artifact', groups: ['Tables', 'Charts (2D)'] });
+    expect(guideOf(results[0])).toBe(`${page('openui-tables')}\n${page('openui-charts-2d')}`);
+  });
+
   it("M5.18-H16 the lead's index lists openui with its one command line and none of the guide", async () => {
     const { kernel, fake } = await kvcoder.start();
     await guided(kernel, fake);
@@ -59,9 +65,9 @@ describe('the openui connector (08 §8.5, ADR 0124, 5, 12, 13, 17)', { timeout: 
 
   it('M5.18-E17 an unknown group fails and names the groups of the place', async () => {
     const { kernel, fake } = await kvcoder.start();
-    const results = await guided(kernel, fake, { place: 'reply', groups: ['Charts (2D)'] }, { place: 'artifact', groups: ['Forms', 'Nope'] });
-    expect(results[0]).toBe('error VALIDATION_FAILED: There is no group Charts (2D) for a reply. The groups are: Buttons, Content, Data Display, Forms, Layout, Lists & Follow-ups, Other, Sections.');
-    expect(results[1]).toBe('error VALIDATION_FAILED: There is no group Nope for an artifact. The groups are: Buttons, Content, Data Display, Forms, Layout.');
+    const results = await guided(kernel, fake, { place: 'reply', groups: ['Maps'] }, { place: 'artifact', groups: ['Forms', 'Nope'] });
+    expect(results[0]).toBe('error VALIDATION_FAILED: There is no group Maps for a reply. The groups are: Buttons, Charts (1D), Charts (2D), Charts (Scatter), Content, Data Display, Forms, Layout, Lists & Follow-ups, Other, Sections, Tables.');
+    expect(results[1]).toBe('error VALIDATION_FAILED: There is no group Nope for an artifact. The groups are: Buttons, Charts (1D), Charts (2D), Charts (Scatter), Content, Data Display, Forms, Layout, Tables.');
   });
 
   it('M5.18-E18 a payload with no place, an unknown place, no groups or 14 of them, or an unknown key fails', async () => {

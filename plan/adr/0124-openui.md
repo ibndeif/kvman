@@ -94,7 +94,9 @@ What was found (npm and the repository, 2026-11-09):
     - `openui-chat-<group>` and `openui-<group>`, one per group: its component signatures and OpenUI's notes for it;
       `<group>` is the group's name in lowercase with each run of other characters a `-` (`Charts (2D)` is
       `charts-2d`, `Lists & Follow-ups` is `lists-follow-ups`), and components in no group form the group `Other`.
-    OpenUI's whole-program examples are left out, and so is every note that uses `Query`, `Mutation`, or `@Run`. A test
+    OpenUI's whole-program examples are left out, and so is every note that uses `Query`, `Mutation`, or `@Run`; a
+    note about a query's rows (`data.rows`) reads `items`, an array the UI holds (M5.19), and lang-core's generic
+    "Important Rules" section is left out of the index to keep it within its size. A test
     fails when a page differs from what the script writes. Until M5.20, a group has only the components that are built,
     and a group with none has no page.
     `openui guide { place, groups? }`, with `place` `'reply'` (the chat library) or `'artifact'` (`openuiLibrary`),

@@ -13,11 +13,11 @@ const indexes = { 'openui-chat': chatLibraryDefinition, openui: fullLibraryDefin
 const bytes = (text: string): number => Buffer.byteLength(text, 'utf8');
 const groupPages = (index: string): string[] => [...pages.keys()].filter((topic) => topic.startsWith(`${index}-`) && !(index === 'openui' && topic.startsWith('openui-chat')));
 
-// The components of M5.19 and M5.20 (ADR 0124, 4), which no page may name before they are built. A name that is also
-// an ordinary word is matched only as a call or as a type in a signature.
-const later = ['Table', 'EditableTable', 'BarChart', 'LineChart', 'AreaChart', 'RadarChart', 'HorizontalBarChart', 'PieChart', 'RadialChart', 'SingleStackedBarChart', 'ScatterChart', 'ScatterSeries', 'EntityList', 'ListBlock', 'ListItem', 'SnippetCardBlock', 'SnippetCardItem', 'OverviewCardBlock', 'OverviewCardItem', 'ContextCardBlock', 'ContextCardItem', 'CompositeCardBlock', 'CompositeCardItem', 'VisualCardBlock', 'VisualCardItem', 'BoldText', 'IconText', 'ImageText', 'ImageTextLarge', 'MetricIndicatorInline', 'MetricIndicatorWithStrikethrough', 'ImageBlock', 'ImageGallery', 'Modal', 'Carousel', 'OptionCards', 'OptionCard'];
-const laterWords = ['Col', 'Series', 'Slice', 'Point', 'Text', 'Image'];
-const laterGroups = ['Tables', 'Charts (2D)', 'Charts (1D)', 'Charts (Scatter)', 'Cards'];
+// The components of M5.20 (ADR 0124, 4), which no page may name before they are built. A name that is also an ordinary
+// word is matched only as a call or as a type in a signature.
+const later = ['SnippetCardBlock', 'SnippetCardItem', 'OverviewCardBlock', 'OverviewCardItem', 'ContextCardBlock', 'ContextCardItem', 'CompositeCardBlock', 'CompositeCardItem', 'VisualCardBlock', 'VisualCardItem', 'BoldText', 'IconText', 'ImageText', 'ImageTextLarge', 'MetricIndicatorInline', 'MetricIndicatorWithStrikethrough', 'ImageBlock', 'ImageGallery', 'Modal', 'Carousel', 'OptionCards', 'OptionCard'];
+const laterWords = ['Text', 'Image'];
+const laterGroups = ['Cards'];
 
 // The `@` steps that aren't inside an `Action([…])` list.
 function bareSteps(text: string): string[] {
@@ -58,14 +58,14 @@ describe('the OpenUI reference pages (06 §6.9, ADR 0124, 12)', () => {
     expect(await kernel.exec('kvwebui.docs.get', { topic: 'openui-chat-forms' })).toEqual({ topic: 'openui-chat-forms', title: 'Forms', markdown: pages.get('openui-chat-forms') });
   });
 
-  it('M5.18-E14 no page uses Query, Mutation, or @Run, and every step is inside Action([…])', () => {
+  it('M5.18-E14 M5.19-E5 no page uses Query, Mutation, @Run, or a query\'s rows, and every step is inside Action([…])', () => {
     for (const [topic, markdown] of pages) {
-      expect(markdown, topic).not.toMatch(/Query\(|Mutation\(|@Run\(/);
+      expect(markdown, topic).not.toMatch(/Query\(|Mutation\(|@Run\(|data\.rows/);
       expect(bareSteps(markdown), topic).toEqual([]);
     }
   });
 
-  it('M5.18-E15 no page names a component of M5.19 or M5.20, and a group with none built has no page and no line', () => {
+  it('M5.18-E15 M5.19-E5 no page names a component of M5.20, and a group with none built has no page and no line', () => {
     for (const [topic, markdown] of pages) {
       for (const name of later) expect(markdown, `${topic}: ${name}`).not.toMatch(new RegExp(`\\b${name}\\b`));
       for (const name of laterWords) expect(markdown, `${topic}: ${name}`).not.toMatch(new RegExp(`\\b${name}\\(|[(|:]\\s*${name}(\\[\\])?(?=[\\s|)\\],])`));
@@ -78,11 +78,23 @@ describe('the OpenUI reference pages (06 §6.9, ADR 0124, 12)', () => {
     }
   });
 
-  it("M5.18-E16 each index is at most 8 KB, and a library's group pages joined are at most 30 KB", () => {
+  it("M5.18-E16 M5.19-E5 each index is at most 8 KB, and a library's group pages joined are at most 30 KB", () => {
     for (const index of Object.keys(indexes)) {
       expect(bytes(pages.get(index) ?? ''), index).toBeLessThanOrEqual(8 * 1024);
       const joined = groupPages(index).map((topic) => pages.get(topic) ?? '').join('\n\n');
       expect(bytes(joined), index).toBeLessThanOrEqual(30 * 1024);
     }
+  });
+
+  it("M5.19-H8 the tables, charts, and lists have their groups' pages, with OpenUI's notes in terms of an array the UI holds", () => {
+    for (const index of Object.keys(indexes)) {
+      for (const group of ['Tables', 'Charts (2D)', 'Charts (1D)', 'Charts (Scatter)']) expect(pages.has(`${index}-${groupSlug(group)}`), `${index}: ${group}`).toBe(true);
+    }
+    expect(pages.get('openui-data-display')).toContain('ListBlock(items: ListItem[]');
+    expect(pages.get('openui-data-display')).toContain('EntityList(');
+    expect(pages.get('openui-chat-lists-follow-ups')).toContain('ListItem(title: string');
+    expect(pages.get('openui-tables')).toContain('- Sortable: sorted = @Sort(items, $sortField, "desc")');
+    expect(pages.get('openui-charts-2d')).toContain('LineChart(items.day, [Series("Views", items.views)])');
+    expect(pages.get('openui-chat-lists-follow-ups')).toContain('ListItem("Option A", "Details about A", null, null, Action([@ToAssistant("Option A")]))');
   });
 });

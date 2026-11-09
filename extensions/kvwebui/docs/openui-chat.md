@@ -1,19 +1,16 @@
 # OpenUI in a reply
 
-Draw UI in a reply when the person has something to act on now: a choice, a short form, a summary of numbers, or follow-up suggestions. Write it as a fenced `openui` block inside your Markdown reply; the text around it stays Markdown. Each block stands alone: it starts with `root = Card(...)` and defines every name it uses. Keep prose in Markdown and a diagram in a Mermaid block. For a dashboard or a report the person keeps, write an artifact with `format: 'openui'` instead.
-
-Only the newest reply's UI can be pressed; the UI of older replies is shown disabled.
+Draw UI in a reply when the person has something to act on now: a choice, a short form, numbers, or follow-ups. Write it as a fenced `openui` block in your Markdown reply; each block stands alone, starting with `root = Card(...)` and defining every name it uses. Keep prose in Markdown and diagrams in Mermaid; a dashboard or report the person keeps is an artifact with `format: 'openui'`. Only the newest reply's UI can be pressed.
 
 ## What a press does
 
-- A Button sends its @ToAssistant text as the person's next message; a Button with no action sends its label; a FollowUpItem sends its text.
-- A Button inside a Form checks the form's rules, then sends its text, a blank line, and one `<label>: <value>` line per FormControl, in order. Nothing typed or chosen reads `(empty)`.
-- @OpenUrl opens an http or https address in a new tab; any other address does nothing.
-- @Set and @Reset change only what the page shows. Tabs, accordions, and sections open and close without sending anything.
+- A Button sends its @ToAssistant text as the person's next message (its label when it has no action); a FollowUpItem sends its text.
+- A Button in a Form checks the form's rules, then sends its text, a blank line, and a `<label>: <value>` line per FormControl; nothing chosen reads `(empty)`.
+- @OpenUrl opens only an http or https address. @Set, @Reset, tabs, accordions, and sections change only the page.
 
 ## What OpenUI cannot do here
 
-- There is no Query, Mutation, or @Run: no UI fetches or changes data. Write the data into the UI itself, as literals or $variables.
+- There is no Query, Mutation, or @Run: write the data into the UI, as literals or $variables.
 - An image is only a path in the workspace or a `data:` address; a web address is not loaded.
 
 ## Syntax Rules
@@ -55,9 +52,8 @@ Data functions prefixed with `@` to distinguish from components. These are the O
 @Ceil(number) → number — Round up to nearest integer
 @Each(array, varName, template) — Evaluate template for each element. varName is the loop variable — use it ONLY inside the template expression (inline). Do NOT create a separate statement for the template.
 
-Use them on arrays you write in the UI or keep in $variables, such as `items = [{name: "Build", status: "open"}]`. Builtins compose — output of one is input to the next:
-`@Count(@Filter(items, "status", "==", "open"))`, `@Round(@Avg(scores), 1)`, `@Each(items, "item", Tag(item.name))` for per-item rendering. Array pluck: `items.name` extracts a field from every item.
-IMPORTANT @Each rule: the loop variable (e.g. "item") is ONLY available inside the @Each template expression. Always inline the template — do NOT extract it to a separate statement.
+Use them on arrays the UI holds, such as `items = [{name: "Build", status: "open"}]`; they compose: `@Count(@Filter(items, "status", "==", "open"))`, `@Each(items, "item", Tag(item.name))`. `items.name` plucks a field from every item.
+@Each's loop variable exists only inside its template: write the template inline, never as a statement of its own.
 
 ## Action — Button Behavior
 
@@ -81,9 +77,6 @@ viewBtn = Button("View", Action([@OpenUrl("https://example.com")]))
 
 A reference can be used before it is defined. While it streams, the UI is parsed again on every chunk and appears top down, so write `root = Card(...)` first, then the $variable declarations, then the components, then leaf data. A reference that hasn't arrived yet draws nothing until it does.
 
-## Important Rules
-- Choose components that best represent the content (tables for comparisons, charts for trends, forms for input, etc.)
-
 ## Final Verification
 Before finishing, walk your output and verify:
 1. root = Card(...) is the FIRST line (for optimal streaming).
@@ -99,12 +92,16 @@ Props marked `$binding<type>` accept a `$variable` reference for two-way binding
 Read a group's signatures and notes with `openui guide { place: 'reply', groups: ['<group>', …] }`. The groups:
 
 - Content: CardHeader, TextContent, MarkDownRenderer, Callout, TextCallout, CodeBlock, Separator, InlineHeader
+- Tables: Table, Col, EditableTable
+- Charts (2D): BarChart, LineChart, AreaChart, RadarChart, HorizontalBarChart, Series
+- Charts (1D): PieChart, RadialChart, SingleStackedBarChart, Slice
+- Charts (Scatter): ScatterChart, ScatterSeries, Point
 - Forms: Form, FormControl, Label, Input, TextArea, Select, SelectItem, DatePicker, Slider, CheckBoxGroup, CheckBoxItem, RadioGroup, RadioItem, SwitchGroup, SwitchItem, Chips, ChipItem
 - Buttons: Button, Buttons, Icon, IconButton
-- Lists & Follow-ups: FollowUpBlock, FollowUpItem
+- Lists & Follow-ups: ListBlock, ListItem, FollowUpBlock, FollowUpItem
 - Sections: SectionBlock, SectionItem
 - Layout: Tabs, TabItem, Accordion, AccordionItem, Steps, StepsItem
-- Data Display: TagBlock, Tag
+- Data Display: TagBlock, Tag, EntityList
 - Other: Card
 
 ## Example

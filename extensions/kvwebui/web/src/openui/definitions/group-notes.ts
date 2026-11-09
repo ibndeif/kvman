@@ -1,7 +1,15 @@
 // OpenUI's notes for its component groups (plan 06 §6.1, ADR 0124, 12), from `@openuidev/react-ui` 0.18.5, as the
 // reference pages give them. A note is left out while it names a component kvman hasn't built, and for good when it
 // uses `Query`, `Mutation`, `@Run`, or a query's result (there is no tool provider, ADR 0124, 3) or tells the model to
-// load images from the web (ADR 0124, 7). A step is always inside `Action([…])`, as OpenUI Lang 0.5 reads it.
+// load images from the web (ADR 0124, 7). A step is always inside `Action([…])`, as OpenUI Lang 0.5 reads it, and a
+// query's rows (`data.rows`) read `items`, an array the UI holds, since there are no queries here.
+
+const editableTableNotes = [
+  '- EditableTable lets the user edit cells inline. Give it a unique name, columns of { type, key, header } with type one of text | number | date-single | select | url (select also needs options: [{ value, label }]).',
+  '- data is an array of { id, values } rows where values are ordered positionally to match columns. Edited data is submitted when the user clicks Save Changes.',
+];
+
+const entityListNote = "- EntityList is a compact two-column list of { left, right } rows (e.g. name / value). size='default' also supports a header and footer row; size='small' does not.";
 
 const formRules = [
   '- rules is an optional object: {required: true, email: true, minLength: 8, maxLength: 100}',
@@ -20,6 +28,28 @@ export const fullNotes: Readonly<Record<string, readonly string[]>> = {
   Content: [
     '- InlineHeader is a compact heading + description pair for labelling a block (lighter than CardHeader).',
     '- Use Cards to group related KPIs or sections. Stack with direction "row" for side-by-side layouts.',
+    '- KPI card: Card([TextContent("Label", "small"), TextContent("" + @Count(@Filter(items, "field", "==", "value")), "large-heavy")])',
+  ],
+  Tables: [
+    ...editableTableNotes,
+    '- Table is COLUMN-oriented: Table([Col("Label", dataArray), Col("Count", countArray, "number")]). Use array pluck for data: items.fieldName',
+    '- Col data can be component arrays for styled cells: Col("Status", @Each(items, "item", Tag(item.status, null, "sm", item.status == "open" ? "success" : "danger")))',
+    '- Row actions: Col("Actions", @Each(items, "t", Button("Edit", Action([@Set($showEdit, true), @Set($editId, t.id)]))))',
+    '- Sortable: sorted = @Sort(items, $sortField, "desc"). Bind $sortField to Select. Use sorted.fieldName for Col data',
+    '- Searchable: filtered = @Filter(items, "title", "contains", $search). Bind $search to Input',
+    '- Chain sort + filter: filtered = @Filter(...) then sorted = @Sort(filtered, ...) — use sorted for both Table and Charts',
+    '- Empty state: @Count(items) > 0 ? Table([...]) : TextContent("No data yet")',
+  ],
+  'Charts (2D)': [
+    '- Charts accept column arrays: LineChart(labels, [Series("Name", values)]). Use array pluck: LineChart(items.day, [Series("Views", items.views)])',
+    '- Use Cards to wrap charts with CardHeader for titled sections',
+    '- Chart + Table from same source: use @Sort or @Filter result for both LineChart and Table Col data',
+    '- Multiple chart views: use Tabs — Tabs([TabItem("line", "Line", [LineChart(...)]), TabItem("bar", "Bar", [BarChart(...)])])',
+  ],
+  'Charts (1D)': [
+    '- PieChart and BarChart need NUMBERS, not objects. For list data, use @Count(@Filter(...)) to aggregate:',
+    '- PieChart from list: `PieChart(["Low", "Med", "High"], [@Count(@Filter(items, "priority", "==", "low")), @Count(@Filter(items, "priority", "==", "medium")), @Count(@Filter(items, "priority", "==", "high"))], "donut")`',
+    '- KPI from count: `TextContent("" + @Count(@Filter(items, "status", "==", "open")), "large-heavy")`',
   ],
   Forms: [
     '- Chips: compact single/multiple selection pills. Use ChipItem references for each option.',
@@ -30,10 +60,11 @@ export const fullNotes: Readonly<Record<string, readonly string[]>> = {
     '- Conditional fields: $country == "US" ? stateField : $country == "UK" ? postcodeField : addressField',
   ],
   Buttons: ['- Toggle in @Each: @Each(rows, "t", Button(t.status == "open" ? "Close" : "Reopen", Action([...])))'],
-  'Data Display': ['- Color-mapped Tag: Tag(value, null, "sm", value == "high" ? "danger" : value == "medium" ? "warning" : "neutral")'],
+  'Data Display': ['- Color-mapped Tag: Tag(value, null, "sm", value == "high" ? "danger" : value == "medium" ? "warning" : "neutral")', entityListNote, '- ListBlock is a numbered or image list of ListItem references. An action on ListItem is optional.'],
 };
 
 export const chatNotes: Readonly<Record<string, readonly string[]>> = {
+  Tables: editableTableNotes,
   Content: [
     '- InlineHeader is a compact heading + description pair for labelling a block inside the response (lighter than CardHeader).',
     '- Pass sources on Card ([{ title, sourceName, url }]) when the answer relies on references, and cite them inline in TextContent as [1], [2] (1-based index into sources). A Sources strip renders at the bottom of the card.',
@@ -46,7 +77,13 @@ export const chatNotes: Readonly<Record<string, readonly string[]>> = {
     '- rules is an optional object: { required: true, email: true, min: 8, maxLength: 100 }',
     '- The renderer shows error messages automatically — do NOT generate error text in the UI',
   ],
-  'Lists & Follow-ups': ['- Use FollowUpBlock with FollowUpItem references at the end of a response to suggest next actions.'],
+  'Lists & Follow-ups': [
+    '- Use ListBlock with ListItem references for numbered lists.',
+    '- Use FollowUpBlock with FollowUpItem references at the end of a response to suggest next actions.',
+    '- A ListItem is clickable ONLY when given an action (5th argument); without one it is plain text.',
+    '- Clicking a FollowUpItem, or a ListItem with a @ToAssistant action, sends text to the LLM as a user message.',
+    '- Example: list = ListBlock([item1, item2])  item1 = ListItem("Option A", "Details about A", null, null, Action([@ToAssistant("Option A")]))',
+  ],
   Sections: [
     '- SectionBlock renders collapsible accordion sections that auto-open as they stream.',
     '- Each section needs a unique `value` id, a `trigger` label, and a `content` array.',
@@ -54,4 +91,5 @@ export const chatNotes: Readonly<Record<string, readonly string[]>> = {
     '- Set isFoldable=false to render sections as flat headers instead of accordion.',
   ],
   Layout: ['- Use Tabs to present alternative views — each TabItem has a value id, trigger label, and content array.'],
+  'Data Display': [entityListNote],
 };
