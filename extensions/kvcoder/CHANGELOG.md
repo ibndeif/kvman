@@ -1,5 +1,12 @@
 # @kvman/kvcoder
 
+## 0.1.27
+
+### Patch Changes
+
+- d006819: The "N steps of the execution map are not done." line and its Continue no longer show while the chat's background helpers are working; a running dev server doesn't hide it (ADR 0126).
+- 74b12b3: The running line's turn and seconds, and a running helper's step and time, stay on one line beside a long headline; at side-bar width the running line puts them on a row of their own.
+
 ## 0.1.26
 
 ### Patch Changes
