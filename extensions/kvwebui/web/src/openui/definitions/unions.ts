@@ -1,5 +1,6 @@
 import { z } from 'zod/v4';
 import { buttons, iconButton } from './buttons.ts';
+import { compositeCardBlock, contextCardBlock, overviewCardBlock, snippetCardBlock, visualCardBlock } from './cards.ts';
 import { areaChart, barChart, horizontalBarChart, lineChart, pieChart, radarChart, radialChart, scatterChart, singleStackedBarChart } from './charts.ts';
 import { callout, cardHeader, codeBlock, inlineHeader, markDownRenderer, textCallout, textContent } from './content.ts';
 import { tagBlock } from './data-display.ts';
@@ -8,9 +9,9 @@ import { form } from './forms.ts';
 import { entityList, listBlock } from './lists.ts';
 import { editableTable, table } from './tables.ts';
 import { separator, steps } from './layout-items.ts';
+import { image, imageBlock, imageGallery } from './media.ts';
 
-// The unions OpenUI's containers accept (plan 06 §6.1, ADR 0124, 4). Later milestones add their members in OpenUI's
-// order; a component a milestone hasn't built is left out, so the reference names only built components.
+// The unions OpenUI's containers accept (plan 06 §6.1, ADR 0124, 4), with their members in OpenUI's order.
 
 export const contentChildUnion = z.union([
   textContent.props,
@@ -19,6 +20,9 @@ export const contentChildUnion = z.union([
   callout.props,
   textCallout.props,
   codeBlock.props,
+  image.props,
+  imageBlock.props,
+  imageGallery.props,
   separator.props,
   horizontalBarChart.props,
   radarChart.props,
@@ -38,6 +42,11 @@ export const contentChildUnion = z.union([
   inlineHeader.props,
   entityList.props,
   editableTable.props,
+  snippetCardBlock.props,
+  overviewCardBlock.props,
+  contextCardBlock.props,
+  compositeCardBlock.props,
+  visualCardBlock.props,
 ]);
 
 /** The chat content union without the section block, which holds the containers that would close the circle. */

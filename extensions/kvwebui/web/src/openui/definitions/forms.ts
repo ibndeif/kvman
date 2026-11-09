@@ -1,6 +1,7 @@
 import { z } from 'zod/v4';
 import { buttons } from './buttons.ts';
 import { icon } from './data-display.ts';
+import { image } from './media.ts';
 import { bound, defineOpenuiComponent } from './define.ts';
 
 // OpenUI's form components (plan 06 §6.1, ADR 0124, 4, 11, 14): OpenUI's names, schemas, and descriptions.
@@ -127,11 +128,29 @@ export const chips = defineOpenuiComponent(
   'A form field of compact selectable chips for choosing one or many short options; the selection is stored under `name`.',
 );
 
+export const optionCard = defineOpenuiComponent(
+  'OptionCard',
+  z.object({ value: z.string(), title: z.string(), subtitle: z.string().optional(), topContent: z.union([icon.ref, image.ref]).optional(), disabled: z.boolean().optional() }),
+  'A single selectable card inside an OptionCards group, with a value, title, optional subtitle and an optional Icon or Image on top.',
+);
+
+export const optionCards = defineOpenuiComponent(
+  'OptionCards',
+  z.object({
+    name: z.string(),
+    type: z.enum(['single', 'multiple']).default('single'),
+    items: z.array(optionCard.ref).default([]),
+    rules: rulesSchema,
+    defaultValue: z.union([z.string(), z.array(z.string())]).optional(),
+  }),
+  'A form field of selectable cards (title, optional subtitle, optional icon or image) laid out in a responsive grid for choosing one or many options; the selection is stored under `name`.',
+);
+
 export const formControl = defineOpenuiComponent(
   'FormControl',
   z.object({
     label: z.string(),
-    input: z.union([input.ref, textArea.ref, select.ref, datePicker.ref, slider.ref, checkBoxGroup.ref, radioGroup.ref, chips.ref]),
+    input: z.union([input.ref, textArea.ref, select.ref, datePicker.ref, slider.ref, checkBoxGroup.ref, radioGroup.ref, chips.ref, optionCards.ref]),
     hint: z.string().optional(),
   }),
   'Field with label, input component, and optional hint text',
@@ -154,5 +173,6 @@ export type CheckBoxGroupProps = z.infer<typeof checkBoxGroup.props>;
 export type RadioGroupProps = z.infer<typeof radioGroup.props>;
 export type SwitchGroupProps = z.infer<typeof switchGroup.props>;
 export type ChipsProps = z.infer<typeof chips.props>;
+export type OptionCardsProps = z.infer<typeof optionCards.props>;
 export type FormControlProps = z.infer<typeof formControl.props>;
 export type FormProps = z.infer<typeof form.props>;

@@ -5,7 +5,7 @@
 export const iconsSource = ['root = Stack([rocket, launch])', 'rocket = Icon("rocket")', 'launch = IconButton("Launch", Icon("rocket"), Action([@ToAssistant("Launch")]))'].join('\n');
 
 const fullSource = [
-  'root = Stack([title, row, views, more, guide, rule, info, careful, totals, form, notify, label, tags, done, go, launch, code, notes, scores, prices, bars, pie, facts, picks])',
+  'root = Stack([title, row, views, more, guide, rule, info, careful, totals, form, notify, label, tags, done, go, launch, code, notes, scores, prices, bars, pie, facts, picks, kpis, photo, slides, plans])',
   'title = CardHeader("Gallery", "Every component")',
   'row = Stack([one, two], "row", "m", null, null, true)',
   'one = Card([TextContent("One")])',
@@ -47,6 +47,10 @@ const fullSource = [
   'pie = PieChart(["A", "B", "C"], [1, 2, 3], "donut")',
   'facts = EntityList([{left: "Plan", right: "Pro"}, {left: "Seats", right: "12", rightVariant: "number"}])',
   'picks = ListBlock([ListItem("First", "One"), ListItem("Second", "Two")])',
+  'kpis = OverviewCardBlock([OverviewCardItem("a", Text("text", "Revenue"), MetricIndicatorInline("$12k", null, {direction: "up", value: 8})), OverviewCardItem("b", Text("text", "Churn"), MetricIndicatorInline("2%"))])',
+  'photo = Image("A web photo", "https://example.com/photo.png")',
+  'slides = Carousel([[TextContent("One")], [TextContent("Two")], [TextContent("Three")], [TextContent("Four")]])',
+  'plans = OptionCards("plan", "single", [OptionCard("basic", "Basic", "For one", Icon("user")), OptionCard("team", "Team")])',
 ].join('\n');
 
 /** A reply's fenced block of the chat library: a card with a source, sections, and a follow-up. A catalog text is

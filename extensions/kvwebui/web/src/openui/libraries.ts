@@ -1,13 +1,14 @@
 import { createLibrary, defineComponent } from '@openuidev/vue-lang';
-import type { Component } from 'vue';
+import { defineComponent as defineVueComponent, h, type Component } from 'vue';
+import { withoutSkipped } from './skipped-props.ts';
 import { button, buttons, iconButton } from './definitions/buttons.ts';
 import { card, chatCard } from './definitions/card.ts';
-import { chatAccordion, chatAccordionItem, chatSectionBlock, chatSectionItem, chatTabItem, chatTabs } from './definitions/chat-containers.ts';
+import { chatAccordion, chatAccordionItem, chatCarousel, chatSectionBlock, chatSectionItem, chatTabItem, chatTabs } from './definitions/chat-containers.ts';
 import { callout, cardHeader, codeBlock, inlineHeader, markDownRenderer, textCallout, textContent } from './definitions/content.ts';
 import { icon, tag, tagBlock } from './definitions/data-display.ts';
 import type { OpenuiComponentDefinition } from './definitions/define.ts';
 import { followUpBlock, followUpItem } from './definitions/follow-ups.ts';
-import { checkBoxGroup, checkBoxItem, chipItem, chips, datePicker, form, formControl, input, label, radioGroup, radioItem, select, selectItem, slider, switchGroup, switchItem, textArea } from './definitions/forms.ts';
+import { checkBoxGroup, checkBoxItem, chipItem, chips, datePicker, form, formControl, input, label, optionCard, optionCards, radioGroup, radioItem, select, selectItem, slider, switchGroup, switchItem, textArea } from './definitions/forms.ts';
 import { accordion, accordionItem, stack, tabItem, tabs } from './definitions/layout.ts';
 import { separator, steps, stepsItem } from './definitions/layout-items.ts';
 import { chatLibraryDefinition, fullLibraryDefinition } from './definitions/libraries.ts';
@@ -28,6 +29,28 @@ import EditableTableRenderer from './renderers/EditableTableRenderer.vue';
 import EntityListRenderer from './renderers/EntityListRenderer.vue';
 import ListBlockRenderer from './renderers/ListBlockRenderer.vue';
 import TableRenderer from './renderers/TableRenderer.vue';
+import { boldText, iconText, imageText, imageTextLarge, metricIndicatorInline, metricIndicatorWithStrikethrough, text } from './definitions/card-parts.ts';
+import { compositeCardBlock, compositeCardItem, contextCardBlock, contextCardItem, overviewCardBlock, overviewCardItem, snippetCardBlock, snippetCardItem, visualCardBlock, visualCardItem } from './definitions/cards.ts';
+import { image, imageBlock, imageGallery } from './definitions/media.ts';
+import { carousel, modal } from './definitions/overlays.ts';
+import BoldTextRenderer from './cards/BoldTextRenderer.vue';
+import CompositeCardBlockRenderer from './cards/CompositeCardBlockRenderer.vue';
+import ContextCardBlockRenderer from './cards/ContextCardBlockRenderer.vue';
+import IconTextRenderer from './cards/IconTextRenderer.vue';
+import ImageTextLargeRenderer from './cards/ImageTextLargeRenderer.vue';
+import ImageTextRenderer from './cards/ImageTextRenderer.vue';
+import MetricIndicatorInlineRenderer from './cards/MetricIndicatorInlineRenderer.vue';
+import MetricIndicatorWithStrikethroughRenderer from './cards/MetricIndicatorWithStrikethroughRenderer.vue';
+import OverviewCardBlockRenderer from './cards/OverviewCardBlockRenderer.vue';
+import SnippetCardBlockRenderer from './cards/SnippetCardBlockRenderer.vue';
+import TextRenderer from './cards/TextRenderer.vue';
+import VisualCardBlockRenderer from './cards/VisualCardBlockRenderer.vue';
+import CarouselRenderer from './renderers/CarouselRenderer.vue';
+import ImageBlockRenderer from './renderers/ImageBlockRenderer.vue';
+import ImageGalleryRenderer from './renderers/ImageGalleryRenderer.vue';
+import ImageRenderer from './renderers/ImageRenderer.vue';
+import ModalRenderer from './renderers/ModalRenderer.vue';
+import OptionCardsRenderer from './renderers/OptionCardsRenderer.vue';
 import ButtonRenderer from './renderers/ButtonRenderer.vue';
 import CheckBoxGroupRenderer from './renderers/CheckBoxGroupRenderer.vue';
 import ChipsRenderer from './renderers/ChipsRenderer.vue';
@@ -117,6 +140,31 @@ const renderers = new Map<OpenuiComponentDefinition, Component>([
   [entityList, EntityListRenderer],
   [listBlock, ListBlockRenderer],
   [listItem, NullRenderer],
+  [snippetCardBlock, SnippetCardBlockRenderer],
+  [snippetCardItem, NullRenderer],
+  [overviewCardBlock, OverviewCardBlockRenderer],
+  [overviewCardItem, NullRenderer],
+  [contextCardBlock, ContextCardBlockRenderer],
+  [contextCardItem, NullRenderer],
+  [compositeCardBlock, CompositeCardBlockRenderer],
+  [compositeCardItem, NullRenderer],
+  [visualCardBlock, VisualCardBlockRenderer],
+  [visualCardItem, NullRenderer],
+  [text, TextRenderer],
+  [boldText, BoldTextRenderer],
+  [iconText, IconTextRenderer],
+  [imageText, ImageTextRenderer],
+  [imageTextLarge, ImageTextLargeRenderer],
+  [metricIndicatorInline, MetricIndicatorInlineRenderer],
+  [metricIndicatorWithStrikethrough, MetricIndicatorWithStrikethroughRenderer],
+  [image, ImageRenderer],
+  [imageBlock, ImageBlockRenderer],
+  [imageGallery, ImageGalleryRenderer],
+  [modal, ModalRenderer],
+  [carousel, CarouselRenderer],
+  [chatCarousel, CarouselRenderer],
+  [optionCards, OptionCardsRenderer],
+  [optionCard, NullRenderer],
   [form, FormRenderer],
   [formControl, FormControlRenderer],
   [label, LabelRenderer],
@@ -136,10 +184,18 @@ const renderers = new Map<OpenuiComponentDefinition, Component>([
   [chipItem, NullRenderer],
 ]);
 
+// Each renderer gets its props with the arguments the model skipped with `null` left out.
+function withoutSkippedProps(renderer: Component): Component {
+  return defineVueComponent({
+    props: { props: { type: Object, required: true }, renderNode: { type: Function, required: true } },
+    setup: (given) => () => h(renderer, { props: withoutSkipped(given.props), renderNode: given.renderNode }),
+  });
+}
+
 function componentOf(definition: OpenuiComponentDefinition) {
   const component = renderers.get(definition);
   if (component === undefined) throw new Error(`No renderer for OpenUI's ${definition.name}.`);
-  return defineComponent({ ...definition, component });
+  return defineComponent({ ...definition, component: withoutSkippedProps(component) });
 }
 
 export const openuiLibraries = {

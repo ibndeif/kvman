@@ -13,11 +13,6 @@ const indexes = { 'openui-chat': chatLibraryDefinition, openui: fullLibraryDefin
 const bytes = (text: string): number => Buffer.byteLength(text, 'utf8');
 const groupPages = (index: string): string[] => [...pages.keys()].filter((topic) => topic.startsWith(`${index}-`) && !(index === 'openui' && topic.startsWith('openui-chat')));
 
-// The components of M5.20 (ADR 0124, 4), which no page may name before they are built. A name that is also an ordinary
-// word is matched only as a call or as a type in a signature.
-const later = ['SnippetCardBlock', 'SnippetCardItem', 'OverviewCardBlock', 'OverviewCardItem', 'ContextCardBlock', 'ContextCardItem', 'CompositeCardBlock', 'CompositeCardItem', 'VisualCardBlock', 'VisualCardItem', 'BoldText', 'IconText', 'ImageText', 'ImageTextLarge', 'MetricIndicatorInline', 'MetricIndicatorWithStrikethrough', 'ImageBlock', 'ImageGallery', 'Modal', 'Carousel', 'OptionCards', 'OptionCard'];
-const laterWords = ['Text', 'Image'];
-const laterGroups = ['Cards'];
 
 // The `@` steps that aren't inside an `Action([…])` list.
 function bareSteps(text: string): string[] {
@@ -65,17 +60,15 @@ describe('the OpenUI reference pages (06 §6.9, ADR 0124, 12)', () => {
     }
   });
 
-  it('M5.18-E15 M5.19-E5 no page names a component of M5.20, and a group with none built has no page and no line', () => {
-    for (const [topic, markdown] of pages) {
-      for (const name of later) expect(markdown, `${topic}: ${name}`).not.toMatch(new RegExp(`\\b${name}\\b`));
-      for (const name of laterWords) expect(markdown, `${topic}: ${name}`).not.toMatch(new RegExp(`\\b${name}\\(|[(|:]\\s*${name}(\\[\\])?(?=[\\s|)\\],])`));
+  it('M5.18-E15 M5.20-H9 every component of both libraries has its signature in its library\'s pages, Cards among the groups', () => {
+    for (const [index, definition] of Object.entries(indexes)) {
+      const joined = groupPages(index).map((topic) => pages.get(topic) ?? '').join('\n');
+      for (const component of definition.components) expect(joined, `${index}: ${component.name}`).toContain(`\n${component.name}(`);
+      expect(pages.has(`${index}-cards`), index).toBe(true);
+      expect(definition.components.length, index).toBeGreaterThan(70);
     }
-    for (const index of Object.keys(indexes)) {
-      for (const group of laterGroups) {
-        expect(pages.has(`${index}-${groupSlug(group)}`), `${index}: ${group}`).toBe(false);
-        expect(pages.get(index), `${index}: ${group}`).not.toContain(`\n- ${group}:`);
-      }
-    }
+    expect(new Set([...chatLibraryDefinition.components, ...fullLibraryDefinition.components].map((component) => component.name)).size).toBe(86);
+    for (const [topic, markdown] of pages) expect(markdown, topic).not.toMatch(/picsum|real image URL|must be a real URL/);
   });
 
   it("M5.18-E16 M5.19-E5 each index is at most 8 KB, and a library's group pages joined are at most 30 KB", () => {

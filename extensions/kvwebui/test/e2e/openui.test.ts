@@ -68,7 +68,7 @@ describe('OpenUI in Chromium (06 §6.1, ADR 0124)', { timeout: 120_000 }, () => 
     await page.close();
   });
 
-  it('M5.18-E10 drawing every component and pressing them makes no request but to kvman', async () => {
+  it('M5.18-E10 M5.20-H10 drawing every component and pressing them makes no request but to kvman', async () => {
     const kvman = await started('en');
     const { page, requests } = await gallery(kvman);
     await page.getByRole('button', { name: 'Go', exact: true }).click();
@@ -79,12 +79,12 @@ describe('OpenUI in Chromium (06 §6.1, ADR 0124)', { timeout: 120_000 }, () => 
     await page.getByRole('tab', { name: 'Second' }).click();
     await page.locator('[data-test="sent"]').filter({ hasText: 'Book it' }).waitFor();
     expect(await page.locator('[data-test="sent"]').textContent()).toBe('Go now|Launch|Tell me more|Book it\n\nName: Ada\nNotes: (empty)\nRoom: (empty)\nDay: (empty)\nGuests: 2\nExtras: (empty)\nSize: (empty)\nColors: (empty)');
-    expect(await page.locator('[data-test="openui-image-placeholder"]').textContent()).toBe('chart (https://example.com/chart.png)');
+    expect(await page.locator('[data-test="openui-image-placeholder"]').allTextContents()).toEqual(['chart (https://example.com/chart.png)', 'A web photo (https://example.com/photo.png)']);
     expect(requests.filter((url) => !url.startsWith(kvman.origin))).toEqual([]);
     await page.close();
   });
 
-  it('M5.18-H11 M5.19-H7 the components use the theme in light and in dark, never pure white or black', async () => {
+  it('M5.18-H11 M5.19-H7 M5.20-H10 the components use the theme in light and in dark, never pure white or black', async () => {
     for (const theme of ['light', 'dark']) {
       const kvman = await started('en', { 'kvwebui.theme': theme });
       const { page } = await gallery(kvman);
@@ -93,7 +93,7 @@ describe('OpenUI in Chromium (06 §6.1, ADR 0124)', { timeout: 120_000 }, () => 
     }
   });
 
-  it('M5.18-H11 M5.19-H7 in Arabic the stack, the tabs, the steps, the form labels, a bar chart, and a table mirror, its numbers left to right', async () => {
+  it('M5.18-H11 M5.19-H7 M5.20-H10 in Arabic the stack, the tabs, the steps, the form labels, a bar chart, a table, and a carousel mirror, numbers left to right', async () => {
     const kvman = await started('ar');
     const { page } = await gallery(kvman);
     expect(await page.evaluate('document.documentElement.dir')).toBe('rtl');
@@ -111,6 +111,8 @@ describe('OpenUI in Chromium (06 §6.1, ADR 0124)', { timeout: 120_000 }, () => 
     expect(await page.evaluate(`getComputedStyle(document.querySelector('[data-test="chart-value-tick"]')).direction`)).toBe('ltr');
     const headers = await page.evaluate(`[...document.querySelectorAll('[data-test="demo-openui"] thead th')].map((cell) => cell.getBoundingClientRect().left)`);
     expect(Array.isArray(headers) && Number(headers[0]) > Number(headers[1])).toBe(true);
+    await page.locator('[data-test="carousel-next"]').click();
+    await page.waitForFunction(`document.querySelector('[data-test="carousel-track"]').scrollLeft < 0`);
     const label = await page.evaluate(`document.querySelector('label[for]').getBoundingClientRect().right`);
     const field = await page.evaluate(`document.querySelector('input[name="name"]').getBoundingClientRect().right`);
     expect(Math.abs(Number(label) - Number(field))).toBeLessThan(2);

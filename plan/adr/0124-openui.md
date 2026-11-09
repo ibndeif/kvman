@@ -44,7 +44,8 @@ What was found (npm and the repository, 2026-11-09):
    libraries, recommended in three milestones over one and over `openuiLibrary` alone). Each component's name, props
    schema, and description are OpenUI's, from `@openuidev/react-ui` 0.18.5, so the agent writes OpenUI as OpenUI
    documents it; the Vue component that draws it is kvwebui's. A reply is read with the chat library, an artifact with
-   `openuiLibrary` (decision 13). The milestones are M5.18 (the renderer, the connector, layout, content, forms,
+   `openuiLibrary` (decision 13). An argument the model skips with `null`, as OpenUI Lang allows, reaches a component
+   as left out (M5.20). The milestones are M5.18 (the renderer, the connector, layout, content, forms,
    buttons, icons, tags, follow-ups), M5.19 (tables, charts, lists), and M5.20 (card blocks, images, modal,
    carousel, option cards).
 5. **A connector, read on demand** (asked: "it should be a connector, so the user can switch it off", and "read on
@@ -96,7 +97,9 @@ What was found (npm and the repository, 2026-11-09):
       `charts-2d`, `Lists & Follow-ups` is `lists-follow-ups`), and components in no group form the group `Other`.
     OpenUI's whole-program examples are left out, and so is every note that uses `Query`, `Mutation`, or `@Run`; a
     note about a query's rows (`data.rows`) reads `items`, an array the UI holds (M5.19), and lang-core's generic
-    "Important Rules" section is left out of the index to keep it within its size. A test
+    "Important Rules" section is left out of the index to keep it within its size. The descriptions of `ImageText`,
+    `ImageTextLarge`, and `VisualCardItem`, which say an image "must be a real URL", say a path in the workspace or a
+    `data:` image instead (M5.20), as decision 7 has it. A test
     fails when a page differs from what the script writes. Until M5.20, a group has only the components that are built,
     and a group with none has no page.
     `openui guide { place, groups? }`, with `place` `'reply'` (the chat library) or `'artifact'` (`openuiLibrary`),
@@ -114,7 +117,9 @@ What was found (npm and the repository, 2026-11-09):
     `<value>` is the text typed (`Input`, `TextArea`), the date (`DatePicker`, a range as `<start> – <end>`), the number
     (`Slider`, a range as `<low> – <high>`), or the label of each item chosen (`Select`, `RadioGroup`, `Chips`,
     `CheckBoxGroup`, `OptionCards`) joined by `, `; nothing typed or chosen is `(empty)`. An `EditableTable`'s save sends
-    its text and the table as Markdown. `@OpenUrl` opens only an `http` or `https` address; any other does nothing. A
+    its text and the table as Markdown. A card of a card block with an action sends the action's text, a blank line,
+    and the card's label (its title, value, or body text), since OpenUI passes which card was pressed as hidden context
+    and a person's message has none (decided while building M5.20); a block without an action has no pressable card. `@OpenUrl` opens only an `http` or `https` address; any other does nothing. A
     form's values are kept only while the page shows it.
 15. **When it can't be drawn** (accepted). While a block streams, what has parsed is drawn. After the stream, a block
     whose parse has no root (no statement parses, or the root is an unknown component; with no `root` statement the first

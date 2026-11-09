@@ -1,6 +1,7 @@
 import { z, type Ctx } from '@kvman/sdk';
 import { registerDocs } from './docs.ts';
 import { registerEffects } from './effects/register-effects.ts';
+import { registerWorkspaceImage } from './workspace-image.ts';
 
 // kvwebui (plan 06): the web app, served from `dist/web`. The kernel side declares kvwebui's settings and keeps the
 // effects extensions add for the UI (§6.5, §6.8); everything else runs in the browser.
@@ -51,4 +52,5 @@ export default (ctx: Ctx): void => {
   });
   registerEffects(ctx);
   registerDocs(ctx);
+  registerWorkspaceImage(ctx);
 };

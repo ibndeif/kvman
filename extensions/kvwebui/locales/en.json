@@ -185,5 +185,10 @@
   "kvwebui.openui.nextPage": "Next page",
   "kvwebui.openui.saveChanges": "Save changes",
   "kvwebui.openui.reset": "Reset",
-  "kvwebui.openui.changes": "{count} change | {count} changes"
+  "kvwebui.openui.changes": "{count} change | {count} changes",
+  "kvwebui.image.get.description": "Gives a PNG, JPEG, GIF, or WebP image of the workspace, up to 5 MiB, as base64, for OpenUI's images.",
+  "kvwebui.openui.close": "Close",
+  "kvwebui.openui.carousel": "Carousel",
+  "kvwebui.openui.previousSlide": "Previous slide",
+  "kvwebui.openui.nextSlide": "Next slide"
 }

@@ -8,8 +8,8 @@ import { mountApp } from './mount-app.ts';
 // Pages for the OpenUI tests (plan 06 §6.1, ADR 0124): a custom component showing `kvman.View` with an `openui` view,
 // or with a Markdown view whose text a test grows line by line.
 
-/** Mounts an `openui` view of `source`, with `onMessage` when one is given. */
-export async function mountOpenui(source: string, onMessage?: (text: string) => void) {
+/** The page of an `openui` view of `source`, with `onMessage` when one is given, to answer its calls before mounting. */
+export function openuiPage(source: string, onMessage?: (text: string) => void) {
   const components = createFakeComponents();
   components.define(
     'notes.openui',
@@ -20,7 +20,12 @@ export async function mountOpenui(source: string, onMessage?: (text: string) => 
       },
     }),
   );
-  const api = customApi(custom('notes.openui'));
+  return { api: customApi(custom('notes.openui')), components };
+}
+
+/** Mounts an `openui` view of `source`, with `onMessage` when one is given. */
+export async function mountOpenui(source: string, onMessage?: (text: string) => void) {
+  const { api, components } = openuiPage(source, onMessage);
   const app = await mountApp(api, '/notes/custom', components);
   return { api, app };
 }

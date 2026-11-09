@@ -1,7 +1,8 @@
 import { z } from 'zod/v4';
-import { chatSectionBlock, chatTabs } from './chat-containers.ts';
+import { chatCarousel, chatSectionBlock, chatTabs } from './chat-containers.ts';
 import { defineOpenuiComponent } from './define.ts';
 import { flexPropsShape, stack, tabs } from './layout.ts';
+import { carousel } from './overlays.ts';
 import { chatNestedContentUnion, contentChildUnion } from './unions.ts';
 
 // OpenUI's Card, in both libraries (plan 06 §6.1, ADR 0124, 4, 11): `openuiLibrary`'s Card takes Stack children and
@@ -11,8 +12,8 @@ export const cardSourceSchema = z.object({ url: z.string().optional(), title: z.
 
 export type CardSource = z.infer<typeof cardSourceSchema>;
 
-/** OpenUI's card children: the content union, then Tabs and Stack. */
-const cardChildUnion = z.union([...contentChildUnion.options, tabs.props, stack.props]);
+/** OpenUI's card children: the content union, then Tabs, Carousel, and Stack. */
+const cardChildUnion = z.union([...contentChildUnion.options, tabs.props, carousel.props, stack.props]);
 
 export const card = defineOpenuiComponent(
   'Card',
@@ -23,7 +24,7 @@ export const card = defineOpenuiComponent(
 export const chatCard = defineOpenuiComponent(
   'Card',
   z.object({
-    children: z.array(z.union([...chatNestedContentUnion.options, chatSectionBlock.props, chatTabs.props])),
+    children: z.array(z.union([...chatNestedContentUnion.options, chatSectionBlock.props, chatTabs.props, chatCarousel.props])),
     sources: z.array(cardSourceSchema).optional(),
   }),
   'Vertical container for all content in a chat response. Children stack top to bottom automatically. Optional sources ([{ title, sourceName, url }]) render as a Sources strip at the bottom and back inline [n] citations in TextContent.',

@@ -91,15 +91,16 @@ Props marked `$binding<type>` accept a `$variable` reference for two-way binding
 
 Read a group's signatures and notes with `openui guide { place: 'artifact', groups: ['<group>', …] }`. The groups:
 
-- Layout: Stack, Tabs, TabItem, Accordion, AccordionItem, Steps, StepsItem, Separator
-- Content: Card, CardHeader, TextContent, MarkDownRenderer, Callout, TextCallout, CodeBlock, InlineHeader
+- Layout: Stack, Tabs, TabItem, Accordion, AccordionItem, Steps, StepsItem, Carousel, Separator, Modal
+- Content: Card, CardHeader, TextContent, MarkDownRenderer, Callout, TextCallout, Image, ImageBlock, ImageGallery, CodeBlock, InlineHeader
 - Tables: Table, Col, EditableTable
 - Charts (2D): BarChart, LineChart, AreaChart, RadarChart, HorizontalBarChart, Series
 - Charts (1D): PieChart, RadialChart, SingleStackedBarChart, Slice
 - Charts (Scatter): ScatterChart, ScatterSeries, Point
-- Forms: Form, FormControl, Label, Input, TextArea, Select, SelectItem, DatePicker, Slider, CheckBoxGroup, CheckBoxItem, RadioGroup, RadioItem, SwitchGroup, SwitchItem, Chips, ChipItem
+- Forms: Form, FormControl, Label, Input, TextArea, Select, SelectItem, DatePicker, Slider, CheckBoxGroup, CheckBoxItem, RadioGroup, RadioItem, SwitchGroup, SwitchItem, Chips, ChipItem, OptionCards, OptionCard
 - Buttons: Button, Buttons, IconButton
 - Data Display: TagBlock, Tag, Icon, EntityList, ListBlock, ListItem
+- Cards: SnippetCardBlock, SnippetCardItem, OverviewCardBlock, OverviewCardItem, ContextCardBlock, ContextCardItem, CompositeCardBlock, CompositeCardItem, VisualCardBlock, VisualCardItem, Text, BoldText, IconText, ImageText, ImageTextLarge, MetricIndicatorInline, MetricIndicatorWithStrikethrough
 
 ## Example
 

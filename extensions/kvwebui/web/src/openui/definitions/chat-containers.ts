@@ -26,6 +26,12 @@ export const chatTabItem = defineOpenuiComponent(
 
 export const chatTabs = defineOpenuiComponent('Tabs', z.object({ items: z.array(chatTabItem.ref) }), 'Tabbed container');
 
+export const chatCarousel = defineOpenuiComponent(
+  'Carousel',
+  z.object({ children: z.array(z.array(chatNestedContentUnion)), variant: z.enum(['card', 'sunk']).optional() }),
+  'Horizontal scrollable carousel',
+);
+
 export const chatSectionItem = defineOpenuiComponent(
   'SectionItem',
   z.object({

@@ -27,6 +27,17 @@ export function sendsToAssistant(action: unknown): boolean {
   return action.steps.some((step: unknown) => typeof step === 'object' && step !== null && 'type' in step && step.type === ACTION_STEPS.ToAssistant);
 }
 
+/** A card block's action for one card: each @ToAssistant step sends its text, a blank line, and the card's label, so
+ * the message says which card was pressed (OpenUI passes it as hidden context, which a person's message has none of). */
+export function withCardLabel(action: unknown, label: string): unknown {
+  if (typeof action !== 'object' || action === null || !('steps' in action) || !Array.isArray(action.steps)) return action;
+  const steps = action.steps.map((step: unknown) => {
+    if (typeof step !== 'object' || step === null || !('type' in step) || step.type !== ACTION_STEPS.ToAssistant || !('message' in step)) return step;
+    return { ...step, message: `${String(step.message)}\n\n${label}` };
+  });
+  return { ...action, steps };
+}
+
 /** The block's forms, by name: each gives the `<label>: <value>` lines of its controls, in order (ADR 0124, 14). */
 export const formMessagesKey: InjectionKey<Map<string, () => string[]>> = Symbol('kvwebui-openui-form-messages');
 

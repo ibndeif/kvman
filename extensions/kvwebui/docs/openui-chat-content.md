@@ -5,6 +5,9 @@ TextContent(text: string, size?: "small" | "default" | "large" | "small-heavy" |
 MarkDownRenderer(textMarkdown: string, variant?: "clear" | "card" | "sunk") — Renders markdown text with optional container variant
 Callout(variant: "info" | "warning" | "error" | "success" | "neutral", title: string, description: string, visible?: $binding<boolean>) — Callout banner. Optional visible is a reactive $boolean — auto-dismisses after 3s by setting $visible to false.
 TextCallout(variant?: "neutral" | "info" | "warning" | "success" | "danger", title?: string, description?: string) — Text callout with variant, title, and description
+Image(alt: string, src?: string) — Image with alt text and optional URL
+ImageBlock(src: string, alt?: string) — Image block with loading state
+ImageGallery(images: {src: string, alt?: string, details?: string}[]) — Gallery grid of images with modal preview
 CodeBlock(language: string, codeString: string) — Syntax-highlighted code block
 Separator(orientation?: "horizontal" | "vertical", decorative?: boolean) — Visual divider between content sections
 InlineHeader(heading: string, description?: string) — Compact section heading with an optional one-line description, for use inside cards.

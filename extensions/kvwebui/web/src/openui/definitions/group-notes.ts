@@ -1,7 +1,6 @@
 // OpenUI's notes for its component groups (plan 06 §6.1, ADR 0124, 12), from `@openuidev/react-ui` 0.18.5, as the
-// reference pages give them. A note is left out while it names a component kvman hasn't built, and for good when it
-// uses `Query`, `Mutation`, `@Run`, or a query's result (there is no tool provider, ADR 0124, 3) or tells the model to
-// load images from the web (ADR 0124, 7). A step is always inside `Action([…])`, as OpenUI Lang 0.5 reads it, and a
+// reference pages give them. A note is left out when it uses `Query`, `Mutation`, `@Run`, or a query's result (there is
+// no tool provider, ADR 0124, 3) or tells the model to load images from the web (ADR 0124, 7). A step is always inside `Action([…])`, as OpenUI Lang 0.5 reads it, and a
 // query's rows (`data.rows`) read `items`, an array the UI holds, since there are no queries here.
 
 const editableTableNotes = [
@@ -10,6 +9,19 @@ const editableTableNotes = [
 ];
 
 const entityListNote = "- EntityList is a compact two-column list of { left, right } rows (e.g. name / value). size='default' also supports a header and footer row; size='small' does not.";
+
+const cardNotes = [
+  '- Card blocks lay out 2+ items in a responsive grid (or carousel where supported). Every item in a block must have the same structure.',
+  '- SnippetCardItem: small card with lhs (IconText | ImageText) and optional rhs (Text | BoldText) — good for key/value facts.',
+  '- OverviewCardItem: small card with top (IconText | ImageText | Text) and optional bottom MetricIndicatorInline — good for KPIs.',
+  '- ContextCardItem: medium card with a title (string or Tag), body text and optional background image — good for summaries.',
+  '- CompositeCardItem: rich card with header, body array (Text, BoldText, MetricIndicatorInline, IconText, Image, charts, ListBlock, TagBlock, EntityList) and footer (price + Button) — good for products/offers.',
+  '- VisualCardItem: image-first card with a BoldText body and optional Tag.',
+  '- Text / BoldText / IconText / ImageText / ImageTextLarge / MetricIndicator* are the inline building blocks used INSIDE card items; do not place them directly in the root Card.',
+];
+
+const iconNote = '- Icon renders a lucide icon by kebab-case name; it is also used as the icon of IconButton, IconText and OptionCard.';
+const optionCardsNote = '- OptionCards: larger selectable cards with title, subtitle and an optional Icon or Image on top. Use OptionCard references for each option.';
 
 const formRules = [
   '- rules is an optional object: {required: true, email: true, minLength: 8, maxLength: 100}',
@@ -23,6 +35,7 @@ export const fullNotes: Readonly<Record<string, readonly string[]>> = {
     '- Prefer justify "start" (or omit justify) with wrap=true for stable columns instead of uneven gutters.',
     '- Use nested Stacks when you need explicit rows/sections.',
     '- Show/hide sections: $editId != "" ? Card([editForm]) : null',
+    '- Modal: Modal("Title", $showModal, [content]) — $showModal is boolean, X/Escape auto-closes. Put Form with its own buttons inside children.',
     '- Use Tabs for alternative views (chart types, data sections) — no $variable needed',
   ],
   Content: [
@@ -53,14 +66,17 @@ export const fullNotes: Readonly<Record<string, readonly string[]>> = {
   ],
   Forms: [
     '- Chips: compact single/multiple selection pills. Use ChipItem references for each option.',
+    optionCardsNote,
     '- For Form fields, define EACH FormControl as its own reference — do NOT inline all controls in one array. This allows progressive field-by-field streaming.',
     '- NEVER nest Form inside Form — each Form should be a standalone container.',
     '- Form requires explicit buttons. Always pass a Buttons(...) reference as the second Form argument: Form(name, buttons, fields).',
     ...formRules,
     '- Conditional fields: $country == "US" ? stateField : $country == "UK" ? postcodeField : addressField',
+    '- Edit form in Modal: Modal("Edit", $showEdit, [Form("edit", Buttons([saveBtn, cancelBtn]), [fields...])]). Save button should include @Set($showEdit, false) to close modal.',
   ],
-  Buttons: ['- Toggle in @Each: @Each(rows, "t", Button(t.status == "open" ? "Close" : "Reopen", Action([...])))'],
+  Buttons: [iconNote, '- Toggle in @Each: @Each(rows, "t", Button(t.status == "open" ? "Close" : "Reopen", Action([...])))'],
   'Data Display': ['- Color-mapped Tag: Tag(value, null, "sm", value == "high" ? "danger" : value == "medium" ? "warning" : "neutral")', entityListNote, '- ListBlock is a numbered or image list of ListItem references. An action on ListItem is optional.'],
+  Cards: cardNotes,
 };
 
 export const chatNotes: Readonly<Record<string, readonly string[]>> = {
@@ -71,6 +87,7 @@ export const chatNotes: Readonly<Record<string, readonly string[]>> = {
   ],
   Forms: [
     '- Chips: compact single/multiple selection pills. Use ChipItem references for each option.',
+    optionCardsNote,
     '- Define EACH FormControl as its own reference — do NOT inline all controls in one array.',
     '- NEVER nest Form inside Form.',
     '- Form requires explicit buttons. Always pass a Buttons(...) reference as the second Form argument: Form(name, buttons, fields).',
@@ -90,6 +107,13 @@ export const chatNotes: Readonly<Record<string, readonly string[]>> = {
     '- Example: sections = SectionBlock([s1, s2])  s1 = SectionItem("intro", "Introduction", [content1])',
     '- Set isFoldable=false to render sections as flat headers instead of accordion.',
   ],
-  Layout: ['- Use Tabs to present alternative views — each TabItem has a value id, trigger label, and content array.'],
+  Buttons: [iconNote],
+  Layout: [
+    '- Use Tabs to present alternative views — each TabItem has a value id, trigger label, and content array.',
+    '- Carousel takes an array of slides, where each slide is an array of content: carousel = Carousel([[t1, img1], [t2, img2]])',
+    '- IMPORTANT: Every slide in a Carousel must have the same structure — same component types in the same order.',
+    '- For image carousels use: [[title, image, description, tags], ...] — every slide must follow this exact pattern.',
+  ],
   'Data Display': [entityListNote],
+  Cards: cardNotes,
 };

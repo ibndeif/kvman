@@ -22,7 +22,7 @@ function sources(folder: string): string[] {
 const placeholders = (text: string): string[] => [...new Set([...text.matchAll(/\{(\w+)\}/g)].map((match) => match[1] ?? ''))].sort();
 
 // Names under `kvwebui.` that aren't texts: setting keys, page ids, what a tab remembers, and the commands the app calls.
-const notTexts = new Set(['kvwebui.home', 'kvwebui.nav.order', 'kvwebui.nav.hidden', 'kvwebui.status.hidden', 'kvwebui.workspacePicker', 'kvwebui.folder', 'kvwebui.theme', 'kvwebui.settings', 'kvwebui.extensions', 'kvwebui.workspace', 'kvwebui.panel', 'kvwebui.nav.collapsed', 'kvwebui.effect.take', 'kvwebui.embed']);
+const notTexts = new Set(['kvwebui.home', 'kvwebui.nav.order', 'kvwebui.nav.hidden', 'kvwebui.status.hidden', 'kvwebui.workspacePicker', 'kvwebui.folder', 'kvwebui.theme', 'kvwebui.settings', 'kvwebui.extensions', 'kvwebui.workspace', 'kvwebui.panel', 'kvwebui.nav.collapsed', 'kvwebui.effect.take', 'kvwebui.embed', 'kvwebui.image.get']);
 // The keys the sources build from a template.
 const built = ['global', 'workspace'].flatMap((scope) => [`kvwebui.settings.reset.${scope}`, `kvwebui.settings.scope.${scope}`, `kvwebui.settings.source.${scope}`, `kvwebui.settings.changed.${scope}`]);
 const themes = ['system', 'light', 'dark'].map((theme) => `kvwebui.theme.${theme}`);
@@ -81,5 +81,11 @@ describe("kvwebui's catalogs (02 §2.11)", () => {
     }
     expect(catalog('en')['kvwebui.openui.changes']?.split('|')).toHaveLength(2);
     expect(catalog('ar')['kvwebui.openui.changes']?.split('|')).toHaveLength(6);
+  });
+
+  it("M5.20-E5 en and ar have the dialog's Close, the carousel's texts, and the image query's description", () => {
+    for (const language of ['en', 'ar']) {
+      for (const key of ['kvwebui.openui.close', 'kvwebui.openui.carousel', 'kvwebui.openui.previousSlide', 'kvwebui.openui.nextSlide', 'kvwebui.image.get.description']) expect(catalog(language)[key], `${language} ${key}`).toBeTypeOf('string');
+    }
   });
 });

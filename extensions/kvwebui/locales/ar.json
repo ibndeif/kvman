@@ -185,5 +185,10 @@
   "kvwebui.openui.nextPage": "الصفحة التالية",
   "kvwebui.openui.saveChanges": "حفظ التغييرات",
   "kvwebui.openui.reset": "إعادة",
-  "kvwebui.openui.changes": "لا تغييرات | تغيير واحد | تغييران | {count} تغييرات | {count} تغييرًا | {count} تغيير"
+  "kvwebui.openui.changes": "لا تغييرات | تغيير واحد | تغييران | {count} تغييرات | {count} تغييرًا | {count} تغيير",
+  "kvwebui.image.get.description": "يعطي صورة PNG أو JPEG أو GIF أو WebP من مساحة العمل، حتى 5 ميبيبايت، بترميز base64، لصور OpenUI.",
+  "kvwebui.openui.close": "إغلاق",
+  "kvwebui.openui.carousel": "شريط عرض",
+  "kvwebui.openui.previousSlide": "الشريحة السابقة",
+  "kvwebui.openui.nextSlide": "الشريحة التالية"
 }

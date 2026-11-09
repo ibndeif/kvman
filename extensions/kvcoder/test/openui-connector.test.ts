@@ -66,8 +66,8 @@ describe('the openui connector (08 §8.5, ADR 0124, 5, 12, 13, 17)', { timeout: 
   it('M5.18-E17 an unknown group fails and names the groups of the place', async () => {
     const { kernel, fake } = await kvcoder.start();
     const results = await guided(kernel, fake, { place: 'reply', groups: ['Maps'] }, { place: 'artifact', groups: ['Forms', 'Nope'] });
-    expect(results[0]).toBe('error VALIDATION_FAILED: There is no group Maps for a reply. The groups are: Buttons, Charts (1D), Charts (2D), Charts (Scatter), Content, Data Display, Forms, Layout, Lists & Follow-ups, Other, Sections, Tables.');
-    expect(results[1]).toBe('error VALIDATION_FAILED: There is no group Nope for an artifact. The groups are: Buttons, Charts (1D), Charts (2D), Charts (Scatter), Content, Data Display, Forms, Layout, Tables.');
+    expect(results[0]).toBe('error VALIDATION_FAILED: There is no group Maps for a reply. The groups are: Buttons, Cards, Charts (1D), Charts (2D), Charts (Scatter), Content, Data Display, Forms, Layout, Lists & Follow-ups, Other, Sections, Tables.');
+    expect(results[1]).toBe('error VALIDATION_FAILED: There is no group Nope for an artifact. The groups are: Buttons, Cards, Charts (1D), Charts (2D), Charts (Scatter), Content, Data Display, Forms, Layout, Tables.');
   });
 
   it('M5.18-E18 a payload with no place, an unknown place, no groups or 14 of them, or an unknown key fails', async () => {
