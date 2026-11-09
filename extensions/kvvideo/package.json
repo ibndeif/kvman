@@ -1,6 +1,6 @@
 {
   "name": "@kvman/kvvideo",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "kvvideo: the kvcoder extension that makes any kind of video, from websites and pages recorded in the browser, narrated, and captioned.",
   "license": "MIT",
   "repository": {
@@ -35,7 +35,7 @@
     "typecheck": "tsc -p tsconfig.json && vue-tsc -p tsconfig.web.json"
   },
   "peerDependencies": {
-    "@kvman/sdk": "^0.1.5"
+    "@kvman/sdk": "^0.1.6"
   },
   "dependencies": {
     "animejs": "4.5.0",

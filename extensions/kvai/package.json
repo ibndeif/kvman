@@ -37,7 +37,7 @@
     "typecheck": "tsc -p tsconfig.json && vue-tsc -p tsconfig.web.json"
   },
   "peerDependencies": {
-    "@kvman/sdk": "^0.1.5"
+    "@kvman/sdk": "^0.1.6"
   },
   "devDependencies": {
     "@kvman/sdk": "workspace:*",

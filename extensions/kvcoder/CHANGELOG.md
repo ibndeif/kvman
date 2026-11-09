@@ -1,5 +1,18 @@
 # @kvman/kvcoder
 
+## 0.1.26
+
+### Patch Changes
+
+- b7c8fa9: The agent can list a chat's artifacts with `artifact list`, and a turn the history trim collapsed names the artifacts it changed, so the agent keeps their ids after a trim (ADR 0123).
+- 0f2463f: A background line wakes its chat when it ends by itself, so the agent goes on after a build or a test without a "Continue.": `notify` is true by default with `background`, and `notify: false` keeps a server quiet (ADR 0125).
+- 81b7a34: `kvcoder.slash.register` reads each command's description from `kernel.registrations.list` instead of converting every schema of the run, so registering slash commands at each start leaves far less garbage in a worker (ADR 0122).
+- 81b7a34: The thinking picker stays disabled until the model list has arrived, instead of offering every level before the chat's model's own levels are known.
+- fb10188: The `openui` connector: `openui guide` reads kvman's OpenUI reference by place and by group, the `openui` artifact format, and presses in the lead's newest reply and in an `openui` artifact that send the person's message (ADR 0124).
+- Updated dependencies [fb10188]
+  - @kvman/sdk@0.1.6
+  - @kvman/kvai@0.1.9
+
 ## 0.1.25
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # @kvman/testkit
 
+## 0.1.11
+
+### Patch Changes
+
+- Updated dependencies [fb10188]
+  - @kvman/sdk@0.1.6
+  - @kvman/kernel@0.4.19
+
 ## 0.1.10
 
 ### Patch Changes

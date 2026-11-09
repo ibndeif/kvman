@@ -1,5 +1,15 @@
 # @kvman/kvwebui
 
+## 0.1.9
+
+### Patch Changes
+
+- 01d67b3: OpenUI's card blocks, images, modal, carousel, and option cards (M5.20, ADR 0124), the public query `kvwebui.image.get` for a workspace image, and arguments skipped with `null` read as left out: all 86 of OpenUI's components are drawn.
+- 4e721e3: OpenUI's tables, charts, and lists (M5.19, ADR 0124): `Table`, `EditableTable`, nine charts drawn with d3 in the theme's chart colors, `EntityList`, and `ListBlock`, by OpenUI's names, with their reference pages.
+- fb10188: OpenUI in kvwebui (ADR 0124): a fenced `openui` block in any Markdown view and the `openui` view, drawn with OpenUI's components in kvman's theme, `View`'s `onMessage`, and the generated OpenUI reference pages.
+- Updated dependencies [fb10188]
+  - @kvman/sdk@0.1.6
+
 ## 0.1.8
 
 ### Patch Changes

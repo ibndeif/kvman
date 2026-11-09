@@ -1,5 +1,12 @@
 # @kvman/kernel
 
+## 0.4.19
+
+### Patch Changes
+
+- Updated dependencies [fb10188]
+  - @kvman/sdk@0.1.6
+
 ## 0.4.7
 
 ### Patch Changes
