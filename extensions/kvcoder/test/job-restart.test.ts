@@ -16,7 +16,7 @@ function posixShell(): void {
 async function chatWith(line: string) {
   const world = await kvcoder.start({ settings: workers(worker('helper')) });
   const sessionId = await newSession(world.kernel);
-  world.fake.reply(runs(shell(line, { background: true })), says('ok'));
+  world.fake.reply(runs(shell(line, { background: true, notify: false })), says('ok'));
   await world.kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
   await world.kernel.clock.advance(0);
   const [job] = await world.kernel.exec('kvcoder.job.list', { sessionId });

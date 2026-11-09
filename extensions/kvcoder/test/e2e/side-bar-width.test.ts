@@ -49,7 +49,7 @@ async function chat(script: Parameters<KvmanWorld['fake']['reply']>, text: strin
 
 describe('the chat at side-bar width in Chromium (08 §8.7, ADR 0106)', { timeout: 120_000 }, () => {
   it('M4.8-H11 the header is one row with the Background chip as its dot and count, and the chat menu opens inside the view', async () => {
-    const { kvman, sessionId } = await chat([runs(shell('echo "Serving on http://localhost:8124"; sleep 120', { background: true })), says('The server is running.')], 'serve the app');
+    const { kvman, sessionId } = await chat([runs(shell('echo "Serving on http://localhost:8124"; sleep 120', { background: true, notify: false })), says('The server is running.')], 'serve the app');
     const page = await browser.newPage({ viewport: { width: 300, height: 800 } });
     await page.goto(`${kvman.origin}/kvcoder/session/${sessionId}?embed=parent`);
     await page.locator('[data-test="jobs-chip"]').waitFor();

@@ -13,7 +13,7 @@ describe('cancel (08 §8.1)', { timeout: 30_000 }, () => {
   it('M2.4-H10 cancel stops the turn and its questions, leaves the helpers, and background work still reports back', async () => {
     const { kernel, fake, helperFake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    fake.reply(runs(shell('sleep 2; echo finished', { background: true }), command('delegate', 'run', { worker: 'general', title: 'Helper', kind: 'check', goal: 'Ask them', done: 'It is done.' })), runs(command('ask', 'confirm', { prompt: 'Go on?' })), says('after'));
+    fake.reply(runs(shell('sleep 2; echo finished', { background: true, notify: false }), command('delegate', 'run', { worker: 'general', title: 'Helper', kind: 'check', goal: 'Ask them', done: 'It is done.' })), runs(command('ask', 'confirm', { prompt: 'Go on?' })), says('after'));
     helperFake.reply(runs(shell('true', { risky: true })));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
     const childId = await vi.waitFor(async () => {

@@ -16,7 +16,7 @@ describe('the agent knows what runs in the background (08 §8.5, ADR 0068, 4 and
     posixShell();
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    fake.reply(runs(shell('sleep 30', { background: true })), says('started'));
+    fake.reply(runs(shell('sleep 30', { background: true, notify: false })), says('started'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'start it' });
     await kernel.clock.advance(0);
     const id = /^started (\S+)/.exec(toolResults(fake)[0] ?? '')?.[1] ?? '';
@@ -45,6 +45,6 @@ describe('the agent knows what runs in the background (08 §8.5, ADR 0068, 4 and
     // ADR 0114, 2: the Delegate part says it once.
     expect(prompt).toContain('you never wait for a helper with `background wait`');
     expect(prompt).toMatch(/\n {2}list +\{\}\n {2}output +\{ id, lines\? \}\n {2}wait +\{ id, timeoutMs\? \}\n {2}stop +\{ id \}\n {2}help +\{ command\? \}/);
-    for (const role of ['lead', 'worker'] as const) expect(workingMethod(role), role).toContain("When you need a background process's result before you can go on, call `background wait` once; don't ask for its output again and again, and a run that ends tells you in a message.");
+    for (const role of ['lead', 'worker'] as const) expect(workingMethod(role), role).toContain("When you need a background process's result before you can go on, call `background wait` once; don't ask for its output again and again, and a background run that ends wakes you with its result in a message, so you may end your turn while it runs.");
   });
 });

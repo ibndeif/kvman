@@ -25,7 +25,7 @@ async function idle(kernel: TestKernel, fake: FakeOpenAI, sessionId: string, req
 }
 
 describe('notify on a background line (ADR 0108, 16)', { timeout: 60_000 }, () => {
-  it('QA71-H29 a notify line that ends starts a turn, and the same line without notify starts none', async () => {
+  it('QA71-H29 a notify line that ends starts a turn', async () => {
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
     fake.reply(runs(line(2500, true)), says('Downloading; I go on when it ends.'), says('It finished.'));
@@ -34,16 +34,6 @@ describe('notify on a background line (ADR 0108, 16)', { timeout: 60_000 }, () =
     await idle(kernel, fake, sessionId, 3);
     expect(JSON.stringify(fake.requests().at(-1))).toContain(') finished:');
     expect(await turnCount(kernel, sessionId)).toBe(2);
-
-    // Its end is appended in the transaction that would open a turn, so once the message is there no turn started.
-    const plain = await kvcoder.start();
-    const plainId = await newSession(plain.kernel);
-    plain.fake.reply(runs(line(2500)), says('started'), says('never'));
-    await plain.kernel.exec('kvcoder.message.send', { sessionId: plainId, text: 'run it' });
-    await idle(plain.kernel, plain.fake, plainId, 2);
-    await vi.waitFor(async () => expect(await finishedMessages(plain.kernel, plainId)).toHaveLength(1), { timeout: 30_000, interval: 100 });
-    expect((await plain.kernel.exec('kvcoder.session.get', { sessionId: plainId })).status).toBe('idle');
-    expect(await turnCount(plain.kernel, plainId)).toBe(1);
   });
 
   it('QA71-E25 notify without background is refused', async () => {

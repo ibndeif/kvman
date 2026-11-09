@@ -35,7 +35,7 @@ describe('a deleted workspace (02 §2.6, ADR 0061, 4)', { timeout: 60_000 }, () 
     for (const workspaceId of [workspace.id, undefined]) {
       const at = workspaceId === undefined ? {} : { workspaceId };
       const sessionId = await newSession(kernel, workspaceId);
-      fake.reply(runs(shell('sleep 30', { background: true })), says('ok'));
+      fake.reply(runs(shell('sleep 30', { background: true, notify: false })), says('ok'));
       await kernel.exec('kvcoder.message.send', { sessionId, text: 'go' }, at);
       await kernel.clock.advance(0);
       await vi.waitFor(async () => expect(await kernel.exec('kvcoder.job.list', { sessionId }, at)).toHaveLength(1), wait);

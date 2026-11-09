@@ -28,7 +28,7 @@ describe('the background connector (08 §8.5, ADR 0011, 6)', { timeout: 60_000 }
     posixShell();
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    const [started = ''] = await say(kernel, fake, sessionId, shell('echo up; sleep 30', { background: true }));
+    const [started = ''] = await say(kernel, fake, sessionId, shell('echo up; sleep 30', { background: true, notify: false }));
     const id = /^started (\S+)\nup\n\[running\]$/.exec(started)?.[1] ?? '';
     expect(id).not.toBe('');
     const [list = ''] = await say(kernel, fake, sessionId, command('background', 'list'));
@@ -67,7 +67,7 @@ describe('the background connector (08 §8.5, ADR 0011, 6)', { timeout: 60_000 }
     posixShell();
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    const [started = ''] = await say(kernel, fake, sessionId, shell('sleep 30', { background: true }));
+    const [started = ''] = await say(kernel, fake, sessionId, shell('sleep 30', { background: true, notify: false }));
     const id = /^started (\S+)/.exec(started)?.[1] ?? '';
     const other = await newSession(kernel);
     const [output = '', stop = ''] = [...(await say(kernel, fake, other, command('background', 'output', { id }))), ...(await say(kernel, fake, other, command('background', 'stop', { id })))];

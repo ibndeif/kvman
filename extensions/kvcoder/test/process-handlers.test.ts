@@ -26,7 +26,7 @@ async function jobMessages(kernel: TestKernel, sessionId: string): Promise<strin
 async function startJob(command: string) {
   const world = await kvcoder.start();
   const sessionId = await newSession(world.kernel);
-  world.fake.reply(runs(shell(command, { background: true })), says('ok'));
+  world.fake.reply(runs(shell(command, { background: true, notify: false })), says('ok'));
   await world.kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
   await world.kernel.clock.advance(0);
   const [turn] = await world.kernel.exec('kvcoder.turn.list', { sessionId, limit: 1 });

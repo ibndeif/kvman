@@ -131,7 +131,8 @@ on the research app, gpt-6.1-sol for the lead and gpt-6-luna for helpers, throug
     then resumes the turn itself or ends it as today. A usage limit moves to the fallback model as today.
 16. **`notify` on a background line** (asked; recommended). `shell exec` and a binary's `exec` with `background: true`
     take `notify?: true`: when that run ends while the chat is idle, its background message starts a turn. A run
-    without it never does.
+    without it never does. (Amended by ADR 0125: `notify` is true by default with `background`, and `notify: false`
+    keeps a line quiet.)
 17. **A worker's card says where it is** (asked; recommended). While it runs: its newest thinking headline, `step <n>
     of <budget>`, its time so far, and its last action as its call's closed line says it.
 18. **The artifact limit reuses ended pages** (asked; recommended). At 20 artifacts, writing a new `url` artifact

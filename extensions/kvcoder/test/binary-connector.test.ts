@@ -36,7 +36,7 @@ describe('a binary connector (08 §8.4, ADR 0011, 5)', { timeout: 30_000 }, () =
   });
 
   it('QA18-E10 exec with background starts the program, and background lists it by its line', async () => {
-    const started = await looked(nothing, [exec('-e "setTimeout(() => 0, 30000)"', { background: true })], node());
+    const started = await looked(nothing, [exec('-e "setTimeout(() => 0, 30000)"', { background: true, notify: false })], node());
     const id = /^started (\S+)/.exec(started.results[0] ?? '')?.[1] ?? '';
     expect(id).not.toBe('');
     const rows = z.array(z.object({ id: z.string(), kind: z.string(), call: z.string(), status: z.string() })).parse(await started.kernel.exec('kvcoder.job.list', { sessionId: started.sessionId }));

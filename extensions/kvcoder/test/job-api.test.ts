@@ -18,7 +18,7 @@ const messagesSchema = z.object({ messages: z.array(z.object({ kind: z.string(),
 async function startJob(command: string) {
   const world = await kvcoder.start();
   const sessionId = await newSession(world.kernel);
-  world.fake.reply(runs(shell(command, { background: true })), says('ok'));
+  world.fake.reply(runs(shell(command, { background: true, notify: false })), says('ok'));
   await world.kernel.exec('kvcoder.message.send', { sessionId, text: 'go' });
   await world.kernel.clock.advance(0);
   const [job] = await world.kernel.exec('kvcoder.job.list', { sessionId });
@@ -74,7 +74,7 @@ describe("a chat's background jobs for the person (08 §8.6, ADR 0009, 152)", { 
     posixShell();
     const { kernel, fake, sessionId, jobId } = await startJob('echo quick');
     await vi.waitFor(async () => expect(await kernel.exec('kvcoder.job.get', { sessionId, id: jobId })).toMatchObject({ status: 'succeeded', output: 'quick' }), wait);
-    fake.reply(runs(shell('sleep 30', { background: true })), says('ok'));
+    fake.reply(runs(shell('sleep 30', { background: true, notify: false })), says('ok'));
     await kernel.exec('kvcoder.message.send', { sessionId, text: 'one more' });
     await kernel.clock.advance(0);
     const rows = await kernel.exec('kvcoder.job.list', { sessionId });

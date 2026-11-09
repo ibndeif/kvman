@@ -82,7 +82,8 @@ Paths are relative to `extensions/kvcoder/` unless they start with `extensions/`
   times, then succeeds, *then* the turn gets `CONNECTION_WAITING` once, waits, and goes on at the schedule's next run,
   with a fake clock. `test/connection-waiting.test.ts`
 - **QA71-H29 notify wakes the chat.** *Given* `shell exec` with `background: true, notify: true` and an idle chat,
-  *when* the process exits, *then* its message starts a turn; the same line without `notify` starts none.
+  *when* the process exits, *then* its message starts a turn. (A line without `notify` now wakes the chat too, and
+  `notify: false` starts none: QA81-H1 and QA81-E1, ADR 0125.)
   `test/background-notices.test.ts`
 - **QA71-H30 the worker card says where it is.** *Given* a running helper whose newest thinking headline is
   `**Reading the importer**`, at step 12 of 60, after 3 minutes, whose last call read `src/a.ts`, *then* its card

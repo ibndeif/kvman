@@ -65,7 +65,7 @@ describe('a background helper that waits on the person (ADR 0085, 2)', { timeout
 
   it('QA53-E9 a process has no progress, and an ended helper waits on nothing', async () => {
     const { kernel, fake, helperFake, sessionId, helperId } = await waitingHelper();
-    const [started = ''] = await say(kernel, fake, sessionId, { connector: 'shell', command: 'exec', payload: { line: 'node -e "setTimeout(() => {}, 30000)"', risky: false, background: true } });
+    const [started = ''] = await say(kernel, fake, sessionId, { connector: 'shell', command: 'exec', payload: { line: 'node -e "setTimeout(() => {}, 30000)"', risky: false, background: true, notify: false } });
     const processId = /^started (\S+)/.exec(started)?.[1] ?? '';
     const [processOutput] = await say(kernel, fake, sessionId, command('background', 'output', { id: processId }));
     expect(parsed(processOutput)).not.toHaveProperty('progress');

@@ -26,7 +26,7 @@ async function say(kernel: TestKernel, fake: FakeOpenAI, sessionId: string, ...c
 async function started(line: string, options: StartOptions = {}) {
   const world = await kvcoder.start(options);
   const sessionId = await newSession(world.kernel);
-  const [result = ''] = await say(world.kernel, world.fake, sessionId, shell(line, { background: true }));
+  const [result = ''] = await say(world.kernel, world.fake, sessionId, shell(line, { background: true, notify: false }));
   return { ...world, sessionId, result, jobId: /^started (\S+)/.exec(result)?.[1] ?? '' };
 }
 
@@ -107,7 +107,7 @@ describe('a background start reports what really happened (08 §8.3, ADR 0012, 7
     const node = { 'kvcoder.connectors': [{ name: 'node', description: 'Node.js.', binary: { check: 'node --version' } }] } as unknown as Record<string, string>;
     const world = await kvcoder.start({ settings: node });
     const sessionId = await newSession(world.kernel);
-    const [result = ''] = await say(world.kernel, world.fake, sessionId, command('node', 'exec', { args: '-e "process.exit(4)"', background: true, risky: false }));
+    const [result = ''] = await say(world.kernel, world.fake, sessionId, command('node', 'exec', { args: '-e "process.exit(4)"', background: true, notify: false, risky: false }));
     const jobId = /^started (\S+)/.exec(result)?.[1] ?? '';
     expect(result).toBe(`started ${jobId}\n[the process has already ended]\n[exit code 4]`);
     const { isError, details } = await toolResult(world.kernel, sessionId);

@@ -22,7 +22,7 @@ describe('numbers that bound how long or how much are cut (08 §8.5, ADR 0090, 4
     if (process.platform === 'win32') throw new Error('These lines are bash; Windows runs PowerShell.');
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    const [printer = '', slow = ''] = await say(kernel, fake, sessionId, shell('for n in $(seq 1 600); do echo line $n; done', { background: true }), shell('sleep 30', { background: true }));
+    const [printer = '', slow = ''] = await say(kernel, fake, sessionId, shell('for n in $(seq 1 600); do echo line $n; done', { background: true, notify: false }), shell('sleep 30', { background: true, notify: false }));
     const [ended, waited, tail] = await say(
       kernel,
       fake,

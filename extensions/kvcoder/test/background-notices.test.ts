@@ -16,7 +16,7 @@ import { worker, workers } from './support/workers.ts';
 const kvcoder = useKvcoder();
 const programs = useWorkerPrograms();
 const messageSchema = z.object({ source: z.object({ kind: z.string() }).nullish(), content: z.record(z.string(), z.unknown()) });
-const lasting: RunCallSpec = { connector: 'shell', command: 'exec', payload: { line: 'node -e "setTimeout(() => {}, 30000)"', risky: false, background: true } };
+const lasting: RunCallSpec = { connector: 'shell', command: 'exec', payload: { line: 'node -e "setTimeout(() => {}, 30000)"', risky: false, background: true, notify: false } };
 const helper = command('delegate', 'run', { worker: 'helper', title: 'Helper', kind: 'find', goal: 'Do it', done: 'It is done.' });
 const startedIds = (results: readonly string[]): string[] => results.flatMap((text) => /^started (\S+)/.exec(text)?.[1] ?? []);
 

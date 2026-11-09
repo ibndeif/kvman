@@ -9,7 +9,7 @@ import { wait } from './support/wait.ts';
 
 const kvcoder = useKvcoder();
 const parsed = (text: string | undefined) => z.record(z.string(), z.unknown()).parse(JSON.parse(text ?? 'null'));
-const lasting = (milliseconds: number) => ({ connector: 'shell', command: 'exec', payload: { line: `node -e "setTimeout(() => {}, ${String(milliseconds)})"`, risky: false, background: true } });
+const lasting = (milliseconds: number) => ({ connector: 'shell', command: 'exec', payload: { line: `node -e "setTimeout(() => {}, ${String(milliseconds)})"`, risky: false, background: true, notify: false } });
 const idOf = (started: string | undefined): string => /^started (\S+)/.exec(started ?? '')?.[1] ?? '';
 
 describe("the person's message ends a wait (ADR 0085, 3)", { timeout: 60_000 }, () => {

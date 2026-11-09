@@ -20,7 +20,7 @@ const programs = useWorkerPrograms();
 
 const startedIds = (results: readonly string[]): string[] => results.flatMap((text) => /^started (\S+)/.exec(text)?.[1] ?? []);
 const backgroundTexts = async (kernel: TestKernel, sessionId: string) => (await stored(kernel, sessionId)).filter((message) => message.source?.kind === 'job' || message.source?.kind === 'subagent');
-const untilGate = (gate: string): RunCallSpec => ({ connector: 'shell', command: 'exec', payload: { line: `node -e "const fs=require('fs');setInterval(()=>{if(fs.existsSync('${gate}'))process.exit(0)},50)"`, risky: false, background: true } });
+const untilGate = (gate: string): RunCallSpec => ({ connector: 'shell', command: 'exec', payload: { line: `node -e "const fs=require('fs');setInterval(()=>{if(fs.existsSync('${gate}'))process.exit(0)},50)"`, risky: false, background: true, notify: false } });
 
 describe('what started after the message (ADR 0118)', { timeout: 60_000 }, () => {
   it('QA77-H9 a helper started after the message is stopped, its file goes, and its records are deleted', async () => {

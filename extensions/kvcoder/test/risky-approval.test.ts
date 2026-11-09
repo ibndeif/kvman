@@ -80,7 +80,7 @@ describe('risky calls ask, the others run (08 §8.3, ADR 0009, 161)', { timeout:
 
   it('QA4-E16 a risky background call asks too, and starts only when allowed', async () => {
     if (process.platform === 'win32') throw new Error('These calls are bash; Windows runs PowerShell.');
-    const { kernel, sessionId } = await started({ 'kvcoder.approval': 'auto' }, shell('sleep 30', { background: true, risky: true }));
+    const { kernel, sessionId } = await started({ 'kvcoder.approval': 'auto' }, shell('sleep 30', { background: true, notify: false, risky: true }));
     expect(await kernel.exec('kvcoder.job.list', { sessionId })).toEqual([]);
     expect((await turnState(kernel, sessionId)).turn?.pending[0]?.question).toMatchObject({ payload: { background: true } });
     await answer(kernel, sessionId, 0, true);

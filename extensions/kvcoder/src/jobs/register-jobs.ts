@@ -81,7 +81,7 @@ export function registerJobs(ctx: Ctx): void {
       // Stopped as the agent stops one, so no background message tells the chat; the new process reports its own end.
       // It serves its address again, so its url artifacts stay (ADR 0104, 3).
       if (doc.end === undefined) await stopProcess(ctx, doc, 'agent', true);
-      const started = await startProcess(ctx, sessionId, await shellFor(ctx), doc.call);
+      const started = await startProcess(ctx, sessionId, await shellFor(ctx), doc.call, doc.notify === true);
       return { id: started.jobId };
     },
   });

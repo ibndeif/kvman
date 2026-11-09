@@ -49,7 +49,7 @@ async function servingChat(line: string) {
   posixShell();
   const world = await kvcoder.start();
   const sessionId = await newSession(world.kernel);
-  await send(world.kernel, world.fake, sessionId, 'go', runs(...writes, shell(line, { background: true })), says('ok'));
+  await send(world.kernel, world.fake, sessionId, 'go', runs(...writes, shell(line, { background: true, notify: false })), says('ok'));
   const started = toolResults(world.fake).find((text) => text.startsWith('started ')) ?? '';
   const jobId = /^started (\S+)/.exec(started)?.[1] ?? '';
   expect(await artifactIds(world.kernel, sessionId)).toEqual(['docs', 'notes', 'preview']);
@@ -101,7 +101,7 @@ describe('url artifacts end with their server (08 §8.5, ADR 0104)', { timeout: 
 
   it('QA69-E2 an exit inside the startup second deletes nothing', async () => {
     const { kernel, fake, sessionId } = await servingChat('sleep 30');
-    await send(kernel, fake, sessionId, 'again', runs(shell('echo "Local: http://localhost:4173/"', { background: true })), says('ok'));
+    await send(kernel, fake, sessionId, 'again', runs(shell('echo "Local: http://localhost:4173/"', { background: true, notify: false })), says('ok'));
     const jobId = /^started (\S+)/.exec(toolResults(fake).at(-1) ?? '')?.[1] ?? '';
     await vi.waitFor(async () => expect(await kernel.exec('kvcoder.job.get', { sessionId, id: jobId })).toMatchObject({ status: 'succeeded' }), wait);
     await kernel.clock.advance(0);
@@ -121,7 +121,7 @@ describe('url artifacts end with their server (08 §8.5, ADR 0104)', { timeout: 
     const { kernel, fake } = world;
     const sessionId = await newSession(kernel);
     await send(kernel, fake, sessionId, 'go', runs(previewWrite), says('ok'));
-    await delegated(world, sessionId, [runs(command('delegate', 'run', { worker: 'general', title: 'Helper', kind: 'check', goal: 'Serve it', done: 'It is done.' })), says('Started.'), says('parent done')], [runs(shell(serving, { background: true })), says('child done')], 'serve');
+    await delegated(world, sessionId, [runs(command('delegate', 'run', { worker: 'general', title: 'Helper', kind: 'check', goal: 'Serve it', done: 'It is done.' })), says('Started.'), says('parent done')], [runs(shell(serving, { background: true, notify: false })), says('child done')], 'serve');
     writeFileSync(path.join(kernel.homeFolder, 'go'), 'go\n');
     await vi.waitFor(async () => expect(await artifactIds(kernel, sessionId)).toEqual([]), wait);
   });

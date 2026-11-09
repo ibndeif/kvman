@@ -27,12 +27,12 @@ describe('waiting for a background run, and reading less of it (08 §8.5, ADR 00
     posixShell();
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
-    const [quick = ''] = await say(kernel, fake, sessionId, shell('echo up; sleep 2; echo down', { background: true }));
+    const [quick = ''] = await say(kernel, fake, sessionId, shell('echo up; sleep 2; echo down', { background: true, notify: false }));
     const began = Date.now();
     const [waited] = await say(kernel, fake, sessionId, command('background', 'wait', { id: idOf(quick) }));
     expect(parsed(waited)).toMatchObject({ id: idOf(quick), kind: 'process', call: 'echo up; sleep 2; echo down', status: 'succeeded', exitCode: 0, output: 'up\ndown' });
     expect(Date.now() - began).toBeLessThan(20_000);
-    const [slow = ''] = await say(kernel, fake, sessionId, shell('sleep 30', { background: true }));
+    const [slow = ''] = await say(kernel, fake, sessionId, shell('sleep 30', { background: true, notify: false }));
     const [still] = await say(kernel, fake, sessionId, command('background', 'wait', { id: idOf(slow), timeoutMs: 1000 }));
     expect(parsed(still)).toMatchObject({ id: idOf(slow), status: 'running' });
     await say(kernel, fake, sessionId, command('background', 'stop', { id: idOf(slow) }));
@@ -51,7 +51,7 @@ describe('waiting for a background run, and reading less of it (08 §8.5, ADR 00
     const { kernel, fake } = await kvcoder.start();
     const sessionId = await newSession(kernel);
     const line = `echo one; echo two; echo three; sleep 30 # ${'so that the title is long '.repeat(3)}`.trim();
-    const [started = ''] = await say(kernel, fake, sessionId, shell(line, { background: true }));
+    const [started = ''] = await say(kernel, fake, sessionId, shell(line, { background: true, notify: false }));
     const [list, tail] = await say(kernel, fake, sessionId, command('background', 'list'), command('background', 'output', { id: idOf(started), lines: 2 }));
     const [row] = JSON.parse(list ?? '[]') as Record<string, unknown>[];
     expect(Object.keys(row ?? {}).sort()).toEqual(['id', 'kind', 'startedAt', 'status', 'title']);

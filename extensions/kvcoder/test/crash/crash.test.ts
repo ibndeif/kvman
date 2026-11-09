@@ -56,7 +56,7 @@ describe('crash invariants 3 and 5 (12 §12.2)', { timeout: 120_000 }, () => {
     const { fake } = world;
     const first = await world.start();
     const sessionId = sessionSchema.parse(await first.call('commands', 'kvcoder.session.create', { title: 'Server' })).id;
-    fake.reply(runs(shell('echo serving; sleep 60', { background: true })), says('Started.'));
+    fake.reply(runs(shell('echo serving; sleep 60', { background: true, notify: false })), says('Started.'));
     await first.call('commands', 'kvcoder.message.send', { sessionId, text: 'serve' });
     await until(() => first.call('queries', 'kvcoder.session.get', { sessionId }), sessionSchema, (session) => session.status === 'idle');
     const [job] = jobsSchema.parse(await first.call('queries', 'kvcoder.job.list', { sessionId }));

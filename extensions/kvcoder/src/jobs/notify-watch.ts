@@ -3,8 +3,8 @@ import { delay } from '../delay.ts';
 import { records, txRecords } from '../store/collections.ts';
 import { deleteEndedArtifacts, reportEnd } from './process-report.ts';
 
-// A background line started with `notify: true` (plan 08 §8.3, ADR 0108, 16): its end starts a turn when the chat is
-// idle. A handler's jobs carry the `fromHandler` mark and may not start a turn, so the step that started the line also
+// A background line whose call didn't set `notify: false` (plan 08 §8.3, ADR 0108, 16; ADR 0125): its end starts a
+// turn when the chat is idle. A handler's jobs carry the `fromHandler` mark and may not start a turn, so the step that started the line also
 // starts this watcher, which reports the end itself; the exit handler leaves such a line to it.
 
 const lookEveryMs = 1_000;

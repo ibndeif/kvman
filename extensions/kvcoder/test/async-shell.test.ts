@@ -27,7 +27,7 @@ async function say(kernel: TestKernel, fake: FakeOpenAI, sessionId: string, ...c
 async function started(line: string, options: StartOptions = {}) {
   const world = await kvcoder.start(options);
   const sessionId = await newSession(world.kernel);
-  const [result = ''] = await say(world.kernel, world.fake, sessionId, shell(line, { background: true }));
+  const [result = ''] = await say(world.kernel, world.fake, sessionId, shell(line, { background: true, notify: false }));
   return { ...world, sessionId, result, jobId: /^started (\S+)/.exec(result)?.[1] ?? '' };
 }
 
@@ -84,7 +84,7 @@ describe('background shell calls (08 §8.3, ADR 0009, 149 to 151)', { timeout: 6
     posixShell();
     const world = await kvcoder.start();
     const sessionId = await newSession(world.kernel);
-    const [result = ''] = await say(world.kernel, world.fake, sessionId, shell('sleep 30', { background: true, timeoutMs: 100 }));
+    const [result = ''] = await say(world.kernel, world.fake, sessionId, shell('sleep 30', { background: true, notify: false, timeoutMs: 100 }));
     const jobId = /^started (\S+)/.exec(result)?.[1] ?? '';
     expect(result).toBe(`started ${jobId}\n[running]`);
     expect(await running(world.kernel, jobId)).toBe(true);
