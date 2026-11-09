@@ -1,0 +1,3 @@
+# Other
+
+Card(children: (TextContent | MarkDownRenderer | CardHeader | Callout | TextCallout | CodeBlock | Separator | TagBlock | Form | Buttons | IconButton | Steps | InlineHeader | FollowUpBlock | SectionBlock | Tabs)[], sources?: {url?: string, title: string, sourceName: string}[]) — Vertical container for all content in a chat response. Children stack top to bottom automatically. Optional sources ([{ title, sourceName, url }]) render as a Sources strip at the bottom and back inline [n] citations in TextContent.

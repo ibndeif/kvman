@@ -155,5 +155,21 @@
   "kvwebui.workspacePicker.description": "هل يُظهر الشريط العلوي منتقي مساحة العمل.",
   "kvwebui.settings.portThisRun": "يستمع هذا التشغيل على المنفذ {port}.",
   "kvwebui.pages.menu": "الصفحات",
-  "kvwebui.host.reconnecting": "لا يستجيب kvman. تجري إعادة الاتصال…"
+  "kvwebui.host.reconnecting": "لا يستجيب kvman. تجري إعادة الاتصال…",
+  "kvwebui.openui.failed": "تعذّر رسم هذه الواجهة",
+  "kvwebui.openui.markdown": "{text}",
+  "kvwebui.openui.sources": "المصادر",
+  "kvwebui.openui.copy": "نسخ",
+  "kvwebui.openui.copied": "تم النسخ",
+  "kvwebui.openui.copyFailed": "تعذّر النسخ",
+  "kvwebui.openui.rules.required": "هذا الحقل مطلوب",
+  "kvwebui.openui.rules.requiredOption": "اختر خيارًا واحدًا على الأقل",
+  "kvwebui.openui.rules.email": "أدخل بريدًا إلكترونيًا صحيحًا",
+  "kvwebui.openui.rules.url": "أدخل عنوان ويب صحيحًا",
+  "kvwebui.openui.rules.numeric": "أدخل رقمًا",
+  "kvwebui.openui.rules.min": "يجب ألا يقل عن {value}",
+  "kvwebui.openui.rules.max": "يجب ألا يزيد على {value}",
+  "kvwebui.openui.rules.minLength": "يجب ألا يقل عن {value} حرفًا",
+  "kvwebui.openui.rules.maxLength": "يجب ألا يزيد على {value} حرفًا",
+  "kvwebui.openui.rules.pattern": "لا يطابق الصيغة المطلوبة"
 }

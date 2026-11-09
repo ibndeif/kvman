@@ -4,7 +4,7 @@ import { useKvman } from './kvman.ts';
 
 // A compact card for an artifact write or edit (plan 08 §8.7, ADR 0009, 177): its title, version, and an Open button.
 // A `url` artifact's address, when known and local, opens in a new tab as the panel's link does (ADR 0119, 5).
-const props = defineProps<{ id: string; title: string; format: 'markdown' | 'html' | 'url'; version: number; address?: string | undefined }>();
+const props = defineProps<{ id: string; title: string; format: 'markdown' | 'html' | 'url' | 'openui'; version: number; address?: string | undefined }>();
 const emit = defineEmits<{ open: [id: string] }>();
 const kvman = useKvman();
 </script>

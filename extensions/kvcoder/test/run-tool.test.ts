@@ -29,7 +29,7 @@ describe('the run tool (08 §8.2 and §8.3, ADR 0011)', { timeout: 30_000 }, () 
     // A calls list is the fourth, and none is required (ADR 0108, 19).
     expect(Object.keys(tools[0]?.parameters.properties ?? {})).toEqual(['connector', 'command', 'payload', 'calls']);
     expect(tools[0]?.parameters.required).toBeUndefined();
-    expect(tools[0]?.parameters.properties['connector']?.enum).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'web', 'todo']);
+    expect(tools[0]?.parameters.properties['connector']?.enum).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'web', 'openui', 'todo']);
   });
 
   it('QA18-H2 a commands connector runs with the payload as its input and returns JSON with no indentation', async () => {
@@ -68,7 +68,7 @@ describe('the run tool (08 §8.2 and §8.3, ADR 0011)', { timeout: 30_000 }, () 
 
   it("QA18-E4 an unknown connector names the connectors, and an unknown command names the connector's commands", async () => {
     const connector = await call({ connector: 'nope', command: 'add' });
-    expect(connector.results[0]).toBe('error VALIDATION_FAILED: There is no connector nope. The connectors are: shell, fs, artifact, execution-map, background, ask, delegate, web, todo.');
+    expect(connector.results[0]).toBe('error VALIDATION_FAILED: There is no connector nope. The connectors are: shell, fs, artifact, execution-map, background, ask, delegate, web, openui, todo.');
     const command = await call({ connector: 'todo', command: 'remove' });
     expect(command.results[0]).toBe('error NOT_FOUND: todo has no command remove. Its commands are: add, wait, fail, list, help.');
   });

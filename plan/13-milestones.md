@@ -791,3 +791,53 @@ ADR 0107; M5.5 to M5.11, ADR 0115; M5.12, ADR 0117; M5.13 to M5.16, ADR 0120; M5
   - After `/video` the guide names `video craft` and each of the six topics at its stage, a designer's brief names `scenes` and `motion`, and the guide no longer says to use `crossfade` between every scene.
   - By hand: an explainer with a chart and a tutorial of a workspace app made with `/video` read `story`, `scenes`, `motion`, `charts`, and `tutorial` at their stages, and their designers read `scenes` and `motion`.
 
+### M5.18 OpenUI in the conversation and in artifacts: the renderer, the connector, and the first 43 components
+
+- **Read:** `06` §6.1, §6.4, §6.8, and §6.9; `08` §8.5 (openui, artifact, delegate) and §8.7; ADR 0124.
+- **Build:**
+  - kvwebui: `@openuidev/vue-lang` 0.4.2, `@openuidev/lang-core` 0.4.1, and `zod` 4.6.5 as exact `devDependencies`, bundled into `dist/web`, and `THIRD-PARTY-NOTICES.md` with OpenUI's MIT notice;
+  - kvwebui: the chat library and `openuiLibrary` with OpenUI's names, schemas, and descriptions (from `@openuidev/react-ui` 0.18.5), holding this milestone's components, drawn in Vue in the theme's variables and logical CSS: layout `Stack`, `Tabs`, `TabItem`, `Accordion`, `AccordionItem`, `Steps`, `StepsItem`, `Separator`, `SectionBlock`, `SectionItem`; content `Card`, `CardHeader`, `TextContent`, `MarkDownRenderer`, `Callout`, `TextCallout`, `CodeBlock`, `InlineHeader`; forms `Form`, `FormControl`, `Label`, `Input`, `TextArea`, `Select`, `SelectItem`, `DatePicker`, `Slider`, `CheckBoxGroup`, `CheckBoxItem`, `RadioGroup`, `RadioItem`, `SwitchGroup`, `SwitchItem`, `Chips`, `ChipItem`; buttons `Button`, `Buttons`, `IconButton`; `Icon` (every Lucide icon, each its own module loaded on first use, with OpenUI's fallback); `Tag`, `TagBlock`; `FollowUpBlock`, `FollowUpItem`;
+  - kvwebui: the fenced `openui` block in the `markdown` view (chat library), the `openui` view (`openuiLibrary`), `View`'s `onMessage`, the message a press makes (ADR 0124, 14), `$variables` with `@Set` and `@Reset`, no tool provider, `@OpenUrl` through `kvman.open`, and the source shown when nothing draws, with their `en` and `ar` texts;
+  - kvwebui: the script `openui:reference`, and the generated index and group pages of both libraries in `docs/`;
+  - kvcoder: the `openui` connector (`guide { place }`, `kvcoder.openui.guide.get`), left out of a helper's connectors; the `openui` artifact format and its refusal while the connector is off;
+  - kvcoder's conversation: `onMessage` for the lead's newest reply, disabled UI in older replies and in a helper's chat, and the panel's `openui` artifact;
+  - the changesets for kvwebui and kvcoder.
+- **Done when:**
+  - A Markdown view with a fenced `openui` block draws its components; a block streamed line by line draws as it arrives and ends as a whole parse does; a block that draws nothing shows its source; an unknown component is left out and the rest drawn; a `Query` draws nothing and `@Run` does nothing.
+  - Each of the 43 components draws from an example of OpenUI's signature in light and dark and in Arabic right to left, with no physical CSS property; an `Input` bound to a `$variable` updates what depends on it; `Icon` loads an icon's module only when a block first shows it, and an unknown name falls back to its category's icon, else `circle-dot`.
+  - Without `onMessage`, presses do nothing and controls are disabled; with it, a button calls it with its text, a `FollowUpItem` with its text, and a button in a `Form` with its text and `<label>: <value>` lines once the form's rules pass, its rule errors shown otherwise; `@OpenUrl` opens only `http` and `https` addresses; drawing a block makes no network request.
+  - Each generated page is what `openui:reference` writes, names only the built components, and has no `Query`, `Mutation`, or `@Run`; an index is at most 8 KB; `kvwebui.docs.get` answers `openui-chat`, `openui`, and each group page, and a group with no built component has none.
+  - `openui guide` answers the chat index for `reply` and the `openuiLibrary` index for `artifact`, and with `groups` those groups' pages joined in order; an unknown group fails `VALIDATION_FAILED` naming the groups; asking for every group is at most 30 KB; the lead's index lists `openui` with its one command line and no guide text; a helper's prompt has no `openui`, and its call gets the answer for a connector that doesn't exist.
+  - `artifact write { format: 'openui' }` stores and shows the artifact through the `openui` view, never inferred; with `openui` in `kvcoder.connectors.disabled` it fails `VALIDATION_FAILED`, the connector is gone from the index, and existing blocks and artifacts still draw.
+  - In a chat, a press in the newest reply sends its message as the person's, steering a running turn; the same block in an older reply is disabled; a press in an `openui` artifact sends too.
+  - By hand: in a real chat, the lead reads `openui guide` and the groups it needs, offers a choice as buttons and follow-ups in a reply and a short form whose answer it reads, in English and Arabic.
+
+### M5.19 OpenUI's tables, charts, and lists
+
+- **Read:** `06` §6.1; ADR 0124, 4, 9, 10, 12, 14, and 16.
+- **Build:**
+  - kvwebui: `d3-scale` 4.0.3, `d3-shape` 3.2.1, `@types/d3-scale` 4.0.9, and `@types/d3-shape` 3.2.0 as exact `devDependencies`, and `--kv-color-chart-1` to `-8` for light and dark;
+  - kvwebui: in both libraries, by OpenUI's names and schemas: `Table`, `Col`, `EditableTable`; `BarChart`, `HorizontalBarChart`, `LineChart`, `AreaChart`, `RadarChart`, `Series`, `PieChart`, `RadialChart`, `SingleStackedBarChart`, `Slice`, `ScatterChart`, `ScatterSeries`, `Point`; `EntityList`, `ListBlock`, `ListItem`;
+  - the reference pages regenerated, and the changeset.
+- **Done when:**
+  - Each of the 19 components draws from an example of OpenUI's signature in light and dark and in Arabic right to left (a chart's axis mirrored, its numbers left to right), with no physical CSS property.
+  - `Table` takes column arrays and `@Each` cells; `@Sort` and `@Filter` over a literal array bound to a `Select` or an `Input` change the table and a chart drawn from it.
+  - An `EditableTable`'s save, with `onMessage`, sends its text and the edited table as Markdown.
+  - A chart with no data, a negative value, or a single point draws without an error; a pie's slices sum to its circle.
+  - The group pages name the new components; asking `openui guide` for every group stays at most 30 KB.
+  - By hand: the lead makes an `openui` artifact dashboard with numbers, a table, and three kinds of chart from a workspace's data.
+
+### M5.20 OpenUI's card blocks, images, modal, carousel, and option cards
+
+- **Read:** `06` §6.1 and §6.8; ADR 0124, 4, 7, 12, 16, and 19.
+- **Build:**
+  - kvwebui: `kvwebui.image.get`;
+  - kvwebui: in both libraries, by OpenUI's names and schemas: `SnippetCardBlock`, `SnippetCardItem`, `OverviewCardBlock`, `OverviewCardItem`, `ContextCardBlock`, `ContextCardItem`, `CompositeCardBlock`, `CompositeCardItem`, `VisualCardBlock`, `VisualCardItem`, `Text`, `BoldText`, `IconText`, `ImageText`, `ImageTextLarge`, `MetricIndicatorInline`, `MetricIndicatorWithStrikethrough`; `Image`, `ImageBlock`, `ImageGallery`; `Modal`; `Carousel`; `OptionCards`, `OptionCard`;
+  - the reference pages regenerated, and the changeset.
+- **Done when:**
+  - All 86 names of the two libraries are drawn; each of these 24 draws from an example of OpenUI's signature in light and dark and in Arabic right to left, with no physical CSS property.
+  - `kvwebui.image.get` returns a workspace PNG, JPEG, GIF, or WebP as base64; a path that leaves the workspace (`..` or a link) or an SVG fails `VALIDATION_FAILED`, a missing file `NOT_FOUND`, and one over 5 MiB `TOO_LARGE`.
+  - An image whose `src` is a workspace path draws through `kvwebui.image.get`, a `data:` image draws, and a web address draws the placeholder with the address as text and loads nothing.
+  - A `Modal` bound to a `$variable` opens with `@Set`, closes with Escape, its button, and a press outside, and keeps focus inside while open; a `Carousel` scrolls by its buttons and keys, mirrored right to left; an `OptionCards` choice is a form value.
+  - The pages name every component and have no `Query`, `Mutation`, or `@Run`; asking `openui guide` for every group stays at most 30 KB.
+  - By hand: the lead shows workspace screenshots in a gallery and options as option cards in a reply, and an overview of KPIs as card blocks in an artifact.

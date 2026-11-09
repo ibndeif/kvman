@@ -7,6 +7,7 @@ import { delegateCommands, delegateDescription } from './delegate.ts';
 import { executionMapCommands, executionMapDescription } from './execution-map.ts';
 import { fsCommands, fsDescription } from './fs.ts';
 import { mcpCommands, mcpDescription } from './mcp.ts';
+import { openuiCommands, openuiDescription } from './openui.ts';
 import { shellCommands, shellDescription } from './shell.ts';
 import { webCommands, webDescription } from './web.ts';
 
@@ -23,6 +24,7 @@ export const builtinCommands = {
   delegate: delegateCommands,
   mcp: mcpCommands,
   web: webCommands,
+  openui: openuiCommands,
 } satisfies Record<BuiltinConnector, Record<string, ConnectorCommand>>;
 
 /** A built-in connector's commands by name, in the order `help` lists them. */
@@ -32,7 +34,7 @@ export function commandsOf(connector: BuiltinConnector): Readonly<Record<string,
 
 /** What the prompt's connector index and `help` say each built-in connector is for; `shell` names the shell this run uses. */
 export function builtinDescriptions(shell: 'bash' | 'powershell'): Record<BuiltinConnector, string> {
-  return { shell: shellDescription(shell), fs: fsDescription, artifact: artifactDescription, 'execution-map': executionMapDescription, background: backgroundDescription, ask: askDescription, delegate: delegateDescription, mcp: mcpDescription, web: webDescription };
+  return { shell: shellDescription(shell), fs: fsDescription, artifact: artifactDescription, 'execution-map': executionMapDescription, background: backgroundDescription, ask: askDescription, delegate: delegateDescription, mcp: mcpDescription, web: webDescription, openui: openuiDescription };
 }
 
 // Each built-in payload is an object, so a missing signature is a programming error, not a case the prompt may fall
@@ -56,4 +58,5 @@ export const builtinSignatures: Record<BuiltinConnector, readonly string[]> = {
   delegate: signaturesOf('delegate'),
   mcp: signaturesOf('mcp'),
   web: signaturesOf('web'),
+  openui: signaturesOf('openui'),
 };

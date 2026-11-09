@@ -129,4 +129,11 @@ describe("kvcoder's catalogs (02 §2.11)", { timeout: 30_000 }, () => {
     expect(catalog('en')['kvcoder.errors.SUMMARY_EMPTY']).toBe('The model returned no summary.');
     expect(catalog('ar')['kvcoder.errors.SUMMARY_EMPTY']).toBe('لم يُرجع النموذج ملخصًا.');
   });
+
+  it("M5.18-E26 the openui artifact kind, the openui connector, and its guide are in both languages", () => {
+    expect(catalog('en')['kvcoder.ui.artifacts.format.openui']).toBe('OpenUI');
+    for (const language of ['en', 'ar']) {
+      for (const key of ['kvcoder.ui.artifacts.format.openui', 'kvcoder.config.connector.openui', 'kvcoder.openui.guide.get.description']) expect(catalog(language)[key], `${language} ${key}`).toBeTypeOf('string');
+    }
+  });
 });

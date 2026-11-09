@@ -11,6 +11,7 @@ import { registerFsConnector } from './connectors/fs.ts';
 import { registerChanges } from './files/register-changes.ts';
 import { registerFilePreview } from './files/register-preview.ts';
 import { registerMcpConnector } from './connectors/mcp.ts';
+import { registerOpenuiConnector } from './connectors/openui.ts';
 import { registerWebConnector } from './connectors/web.ts';
 import { registerShellConnector } from './connectors/shell.ts';
 import { registerDelegateConnector } from './connectors/delegate.ts';
@@ -68,6 +69,7 @@ export default (ctx: Ctx): void => {
   registerWorkerRun(ctx);
   registerMcpConnector(ctx);
   registerWebConnector(ctx);
+  registerOpenuiConnector(ctx);
   registerMcp(ctx);
   registerConnectorHelp(ctx);
   registerInterruptions(ctx);

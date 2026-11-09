@@ -77,10 +77,10 @@ declare module '@kvman/sdk' {
     'kvcoder.slash.list': { input: Empty; output: (SlashCommand & { owner: string })[] };
     'kvcoder.section.list': { input: { sessionId?: string }; output: { id: string; title: string; order: number; owner: string; global: boolean; sessionId?: string; size: number }[] };
     'kvcoder.handler.list': { input: Empty; output: { point: Point; command: string; owner: string }[] };
-    'kvcoder.artifact.list': { input: SessionId; output: { id: string; title: string; format: 'markdown' | 'html' | 'url'; version: number; size: number; updatedAt: string }[] };
+    'kvcoder.artifact.list': { input: SessionId; output: { id: string; title: string; format: 'markdown' | 'html' | 'url' | 'openui'; version: number; size: number; updatedAt: string }[] };
     'kvcoder.map.get': { input: SessionId; output: { goal: string; steps: { id: string; title: string; details: string | null; after: string[]; uses: string | null; check: string; status: 'todo' | 'doing' | 'done' | 'failed' | 'skipped'; evidence: string | null; note: string | null }[]; notes: { text: string; createdAt: string }[]; version: number; updatedAt: string } | null };
-    'kvcoder.artifact.get': { input: { sessionId: string; id: string }; output: { id: string; title: string; format: 'markdown' | 'html' | 'url'; version: number; content: string; createdAt: string; updatedAt: string } };
-    'kvcoder.artifact.write': { input: { sessionId: string; payload: { id: string; title: string; format?: 'markdown' | 'html' | 'url'; content: string } }; output: { id: string; version: number; created: boolean; bytes: number } };
+    'kvcoder.artifact.get': { input: { sessionId: string; id: string }; output: { id: string; title: string; format: 'markdown' | 'html' | 'url' | 'openui'; version: number; content: string; createdAt: string; updatedAt: string } };
+    'kvcoder.artifact.write': { input: { sessionId: string; payload: { id: string; title: string; format?: 'markdown' | 'html' | 'url' | 'openui'; content: string } }; output: { id: string; version: number; created: boolean; bytes: number } };
     'kvcoder.artifact.delete': { input: { sessionId: string; payload: { id: string } }; output: { id: string; deleted: true } };
     'kvcoder.artifact.edit': { input: { sessionId: string; payload: { id: string; edits: { oldText: string; newText: string; replaceAll?: boolean }[] } }; output: { id: string; version: number; replacements: number; firstChangedLine: number } };
   }

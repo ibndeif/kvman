@@ -8,14 +8,15 @@ import type { SessionDoc } from '../schemas/records.ts';
 import { executionRootInTx } from '../sessions/execution-root.ts';
 import { txRecords, type TxRecords } from '../store/collections.ts';
 
-const leadOnly: ReadonlySet<string> = new Set(['ask', 'delegate', 'execution-map']);
+const leadOnly: ReadonlySet<string> = new Set(['ask', 'delegate', 'execution-map', 'openui']);
 
 /** The existing connector scope predicate, shared by prompt and execution (ADR0044). */
 function allowedNames(session: SessionDoc, connectors: readonly ConnectorRow[], disabled: ReadonlySet<string>): Set<string> {
   const names = [...builtinConnectors, ...connectors.map(connector => connector.name)].filter(name => !disabled.has(name));
   // A chat set to "Decide for me" asks the person nothing (ADR 0092, 2).
   if (session.parentId === null) return new Set(session.decides ? names.filter(name => name !== 'ask') : names);
-  // A helper hands work to no one, asks the person nothing (ADR 0063, 2), and keeps no map: the lead's is the chat's (ADR 0064, 1).
+  // A helper hands work to no one, asks the person nothing (ADR 0063, 2), keeps no map: the lead's is the chat's (ADR 0064, 1),
+  // and draws no UI, since it doesn't talk to the person (ADR 0124, 13).
   return new Set(names.filter(name => !leadOnly.has(name) && (session.connectors === null || session.connectors.includes(name))));
 }
 

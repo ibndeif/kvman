@@ -21,7 +21,7 @@ import type { ArtifactContent, ArtifactSummary } from './use-artifacts.ts';
 // link, or copy (ADR 0064), then its artifacts. The person drags the panel's width, which the browser keeps; one
 // outside the limits is shown at the nearest (ADR 0071, 4). The chat's changes are an entry after the map (ADR 0093, 2).
 const props = defineProps<{ list: ArtifactSummary[]; shown: string | undefined; content: ArtifactContent | undefined; map?: ExecutionMapView | null | undefined; mapShown?: boolean | undefined; sessionId?: string | undefined; changes?: ChangeList | undefined; changesCount?: number | undefined; changesShown?: boolean | undefined; changesScope?: ChangeScope | undefined }>();
-const emit = defineEmits<{ select: [id: string]; selectMap: []; selectChanges: []; close: []; changed: []; commit: []; changesScope: [scope: ChangeScope]; deleted: [] }>();
+const emit = defineEmits<{ select: [id: string]; selectMap: []; selectChanges: []; close: []; changed: []; commit: []; changesScope: [scope: ChangeScope]; deleted: []; press: [text: string] }>();
 const kvman = useKvman();
 const summary = computed(() => props.list.find((item) => item.id === props.shown));
 // The content of the artifact shown: while another one is being read, the old one's must not stay under the new title.
@@ -127,6 +127,7 @@ const markdownView = computed(() => ({ type: 'markdown' as const, text: 'kvcoder
       <ExecutionMap v-else-if="onMap && props.map" :map="props.map" />
       <pre v-else-if="mode === 'source' && current !== undefined" class="kvc-artifact-source" dir="ltr" data-test="artifact-source">{{ body }}</pre>
       <component :is="kvman.View" v-else-if="format === 'markdown' && current !== undefined" :view="markdownView" />
+      <component :is="kvman.View" v-else-if="format === 'openui' && current !== undefined" :view="{ type: 'openui', source: body }" :on-message="(pressed: string) => emit('press', pressed)" />
       <ArtifactFrame v-else-if="format === 'html' && current !== undefined" :label="frameLabel" :content="body" />
       <ArtifactUrlFrame v-else-if="format === 'url' && current !== undefined" :label="frameLabel" :content="body" />
     </div>

@@ -37,7 +37,8 @@ describe('the /build-kvman installed index (ADR 0030, 7)', { timeout: 60_000 }, 
     expect(text).toContain(`- @kvman/kvwebui (kvwebui), bundled, ${webui?.version}`);
     expect(webuiBlock).toContain(`  settings: ${webui?.settings.map((setting) => setting.key).sort().join(', ')}`);
     expect(webuiBlock).toContain('  public queries: kvwebui.docs.get, kvwebui.docs.list');
-    expect(webuiBlock).toContain('  pages: components (Custom components (Vue)), views (Pages and views (kvwebui))');
+    expect(webuiBlock).toContain('  pages: components (Custom components (Vue)), openui (OpenUI in an artifact), openui-buttons (Buttons), openui-chat (OpenUI in a reply),');
+    expect(webuiBlock).toContain(', openui-layout (Layout), views (Pages and views (kvwebui))');
     expect(text).toContain('- todo (todo), bundled, 0.1.0\n  settings: todo.alpha, todo.zebra\n  public commands: todo.a.add, todo.z.add\n  public queries: todo.a.get, todo.z.list\n  pages: none');
     expect(text).not.toContain('todo.hidden');
     expect(text.endsWith(lastLine)).toBe(true);

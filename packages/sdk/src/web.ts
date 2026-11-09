@@ -46,7 +46,8 @@ export type View =
   | ({ type: 'link'; to: PageLink } & Text)
   | ButtonView
   | { type: 'setting'; key: string }
-  | { type: 'custom'; component: string; props: ViewValues };
+  | { type: 'custom'; component: string; props: ViewValues }
+  | { type: 'openui'; source: string };
 
 /** An event of a job's stream: progress chunks, then one result or Problem. */
 export type StreamEvent = { type: 'progress'; source: string; data: Json } | { type: 'result'; output: Json } | { type: 'problem'; problem: Problem };
@@ -95,6 +96,6 @@ export type Kvman = {
   workspace: { readonly value: Workspace };
   /** What the extension's page is set to save to, a live read-only ref; `global` anywhere else. */
   scope: { readonly value: 'global' | 'workspace' };
-  /** A component that renders a view tree with kvwebui's built-in components. */
-  View: new () => { $props: { view: View } };
+  /** A component that renders a view tree with kvwebui's built-in components; an OpenUI block's presses call `onMessage` when it is given. */
+  View: new () => { $props: { view: View; onMessage?: (text: string) => void } };
 };

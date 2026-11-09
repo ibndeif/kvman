@@ -90,5 +90,6 @@ export const viewSchema: z.ZodType<View> = z.lazy(() =>
     buttonSchema,
     z.object({ type: z.literal('setting'), key: z.string().min(1) }),
     z.object({ type: z.literal('custom'), component: z.string().regex(new RegExp(`^${kebab}\\.${kebab}$`), 'A component is <namespace>.<name>.'), props: values }),
+    z.object({ type: z.literal('openui'), source: z.string() }),
   ]),
 );

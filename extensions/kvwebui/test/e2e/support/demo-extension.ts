@@ -1,10 +1,11 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { iconsSource, openuiComponent } from './openui-demo.ts';
 
 // The `demo` fixture extension for Chromium: a page with two custom components, plain ES modules that import `vue` (as
 // a component built with `vue` external would): `demo.progress`, with a CSS file, starts `demo.count` with `execAsync`,
 // shows its stream, releases it, and renders Markdown through `View`; `demo.plain` has no CSS file. A second page is
-// Markdown with Mermaid blocks.
+// Markdown with Mermaid blocks; `icons` and `gallery` show OpenUI (`openui-demo.ts`).
 
 const entry = `import { z, type Ctx } from '@kvman/sdk';
 
@@ -14,6 +15,8 @@ export default (ctx: Ctx): void => {
     pages: [
       { id: 'progress', title: 'demo.page', view: { type: 'stack', direction: 'vertical', children: [custom('demo.progress', { title: 'demo.title' }), custom('demo.plain', {})] } },
       { id: 'diagram', title: 'demo.page', view: { type: 'markdown', text: 'demo.diagram' } },
+      { id: 'icons', title: 'demo.page', view: { type: 'openui', source: ${JSON.stringify(iconsSource)} } },
+      { id: 'gallery', title: 'demo.page', view: custom('demo.openui', {}) },
     ],
     nav: [],
     panels: [],
@@ -81,8 +84,8 @@ export default defineComponent({ render: () => h('p', { 'data-test': 'demo-plain
 const diagram = ['Before.', '', '```mermaid', 'flowchart TD', '  start[Start here] --> finish[All done]', '```', '', '```mermaid', 'this is not a diagram', '```', '', '```js', 'const a = 1;', '```'].join('\n');
 
 const catalogs = {
-  en: { 'demo.page': 'Demo', 'demo.title': 'Counting', 'demo.done': '**done**', 'demo.diagram': diagram },
-  ar: { 'demo.page': 'تجربة', 'demo.title': 'العدّ', 'demo.done': '**تم**', 'demo.diagram': diagram },
+  en: { 'demo.page': 'Demo', 'demo.title': 'Counting', 'demo.done': '**done**', 'demo.diagram': diagram, 'demo.chat': '{text}' },
+  ar: { 'demo.page': 'تجربة', 'demo.title': 'العدّ', 'demo.done': '**تم**', 'demo.diagram': diagram, 'demo.chat': '{text}' },
 };
 
 export function writeDemo(root: string): void {
@@ -95,6 +98,7 @@ export function writeDemo(root: string): void {
     'web/components/progress.js': progress,
     'web/components/progress.css': progressCss,
     'web/components/plain.js': plain,
+    'web/components/openui.js': openuiComponent,
     ...Object.fromEntries(Object.entries(catalogs).map(([language, catalog]) => [`locales/${language}.json`, JSON.stringify(catalog)])),
   };
   for (const [name, text] of Object.entries(files)) writeFileSync(path.join(demo, name), text);

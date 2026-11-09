@@ -56,7 +56,7 @@ export function registerDocs(ctx: Ctx): void {
   ctx.registerQuery('kvwebui.docs.get', {
     description: 'Gives one documentation page of kvwebui.',
     public: true,
-    input: z.object({ topic: z.string().describe('The page topic: views or components.') }),
+    input: z.object({ topic: z.string().describe('The page topic: views, components, or an OpenUI page (openui, openui-chat, and their group pages).') }),
     output: z.object({ topic: z.string(), title: z.string(), markdown: z.string() }),
     handle: (input) => getDoc(input.topic),
   });

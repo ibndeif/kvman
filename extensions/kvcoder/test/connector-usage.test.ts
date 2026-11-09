@@ -20,7 +20,7 @@ describe("a built-in connector's invalid payload says what the command takes (08
     expect(artifact).toContain('id: ');
     expect(artifact).toContain('title: ');
     expect(artifact).toContain('payload: Unrecognized key: "name"');
-    expect(artifact.includes('The payload of artifact write is\n{ id (≤50), title (≤100), format?: "markdown" | "html" | "url", content }\n\n')).toBe(true);
+    expect(artifact.includes('The payload of artifact write is\n{ id (≤50), title (≤100), format?: "markdown" | "html" | "url" | "openui", content }\n\n')).toBe(true);
     const choice = await resultOf(command('ask', 'choice', { question: 'Which?', choices: ['a', 'b'] }));
     expect(choice.includes('The payload of ask choice is\n{ prompt, multiple, options: [{ id, label, description? }], other? }\n\n')).toBe(true);
     const file = await resultOf(fsCall('write', { content: 'x' }));

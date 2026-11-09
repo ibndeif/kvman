@@ -26,6 +26,7 @@ import WorkerCard from './WorkerCard.vue';
 import { useAnswers } from './use-answers.ts';
 import { useArtifacts } from './use-artifacts.ts';
 import { useChanges, useChangesPanel } from './use-changes.ts';
+import { usePresses } from './use-presses.ts';
 import { useStory } from './use-story.ts';
 import { useConversation } from './use-conversation.ts';
 import { useExecutionMap } from './use-execution-map.ts';
@@ -160,6 +161,7 @@ const loadError = computed(() => {
 });
 const list = useTemplateRef<HTMLElement>('list');
 const follow = useFollowLatest(list, () => [messages.value, live.text, live.thinking, live.calls.length, live.summarizing, running.value, pending.value, children.size, helpers.size, answers.hidden.value, actions.working.value], () => sessionId.value);
+const { newestReply, press } = usePresses(kvman, () => sessionId.value, conversation, () => follow.resume());
 
 watch(follow.away, (away) => (reading.value = away));
 
@@ -258,7 +260,7 @@ async function registered(entry: RegisteredSlash, argument: string): Promise<voi
               </div>
               <template v-for="row in rows" :key="rowKey(row)">
                 <CallFold v-if="row.kind === 'fold'" :messages="row.messages" :headline="row.headline" :calls="calls" :finished-runs="finishedRuns" :running="row.messages.some((message) => message.turnId !== undefined && message.turnId === runningTurnId)" />
-                <MessageItem v-else :message="row.message" :calls="calls" :finished-runs="finishedRuns" :final="finalAnswers.has(row.message.id)" :rewind="session.parentId === undefined ? rewindActions(row.message, undoable) : undefined" @open-artifact="executionMap.selectArtifact($event)" @rewound="rewound" />
+                <MessageItem v-else :message="row.message" :calls="calls" :finished-runs="finishedRuns" :final="finalAnswers.has(row.message.id)" :rewind="session.parentId === undefined ? rewindActions(row.message, undoable) : undefined" :pressable="row.message.id === newestReply" @open-artifact="executionMap.selectArtifact($event)" @rewound="rewound" @press="press" />
                 <span v-if="rowTotals(row) !== undefined" class="kvc-muted" :title="rowTotals(row)?.tokens" data-test="turn-totals">{{ rowTotals(row)?.text }}</span>
               </template>
               <NotifyLine v-if="session.waitingOn === 'person'" />
@@ -288,7 +290,7 @@ async function registered(entry: RegisteredSlash, argument: string): Promise<voi
         </MessageComposer>
       </template>
     </section>
-    <ArtifactPanel v-if="panelShown" :list="artifacts.list.value" :shown="artifacts.shown.value" :content="artifacts.content.value" :map="executionMap.map.value" :map-shown="executionMap.shown.value" :session-id="sessionId" :changes="changes.list.value" :changes-count="changes.count.value" :changes-shown="changes.shown.value" :changes-scope="changes.scope.value" @changes-scope="changes.scope.value = $event" @select="changes.shown.value = false; executionMap.selectArtifact($event)" @select-map="changes.shown.value = false; executionMap.shown.value = true" @select-changes="toggleChanges" @close="closePanel" @changed="changes.reload()" @deleted="artifacts.reload()" @commit="send({ text: kvman.t('kvcoder.ui.changes.commitMessage'), fileIds: [] })" />
+    <ArtifactPanel v-if="panelShown" :list="artifacts.list.value" :shown="artifacts.shown.value" :content="artifacts.content.value" :map="executionMap.map.value" :map-shown="executionMap.shown.value" :session-id="sessionId" :changes="changes.list.value" :changes-count="changes.count.value" :changes-shown="changes.shown.value" :changes-scope="changes.scope.value" @changes-scope="changes.scope.value = $event" @select="changes.shown.value = false; executionMap.selectArtifact($event)" @select-map="changes.shown.value = false; executionMap.shown.value = true" @select-changes="toggleChanges" @close="closePanel" @changed="changes.reload()" @deleted="artifacts.reload()" @commit="send({ text: kvman.t('kvcoder.ui.changes.commitMessage'), fileIds: [] })" @press="press" />
     </div>
   </div>
 </template>

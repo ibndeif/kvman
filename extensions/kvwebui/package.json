@@ -25,11 +25,13 @@
   "files": [
     "dist",
     "docs",
-    "locales"
+    "locales",
+    "THIRD-PARTY-NOTICES.md"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json && vite build",
-    "typecheck": "tsc -p tsconfig.json && vue-tsc -p tsconfig.web.json"
+    "typecheck": "tsc -p tsconfig.json && vue-tsc -p tsconfig.web.json",
+    "openui:reference": "node scripts/openui-reference.ts"
   },
   "peerDependencies": {
     "@kvman/sdk": "^0.1.5"
@@ -49,6 +51,8 @@
   "devDependencies": {
     "@kvman/sdk": "workspace:*",
     "@kvman/testkit": "workspace:*",
+    "@openuidev/lang-core": "0.4.1",
+    "@openuidev/vue-lang": "0.4.2",
     "@tailwindcss/vite": "4.3.3",
     "@types/markdown-it": "14.2.0",
     "@vitejs/plugin-vue": "6.0.9",
@@ -57,7 +61,8 @@
     "playwright": "1.63.0",
     "tailwindcss": "4.3.3",
     "vite": "8.3.1",
-    "vue-tsc": "3.3.11"
+    "vue-tsc": "3.3.11",
+    "zod": "4.6.5"
   },
   "kvman": {
     "namespace": "kvwebui",

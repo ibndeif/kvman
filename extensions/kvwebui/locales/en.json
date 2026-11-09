@@ -155,5 +155,21 @@
   "kvwebui.workspacePicker.description": "Whether the top bar shows the workspace picker.",
   "kvwebui.settings.portThisRun": "This run listens on port {port}.",
   "kvwebui.pages.menu": "Pages",
-  "kvwebui.host.reconnecting": "kvman doesn't answer. Reconnecting…"
+  "kvwebui.host.reconnecting": "kvman doesn't answer. Reconnecting…",
+  "kvwebui.openui.failed": "Couldn't draw this UI",
+  "kvwebui.openui.markdown": "{text}",
+  "kvwebui.openui.sources": "Sources",
+  "kvwebui.openui.copy": "Copy",
+  "kvwebui.openui.copied": "Copied",
+  "kvwebui.openui.copyFailed": "Couldn't copy",
+  "kvwebui.openui.rules.required": "This field is required",
+  "kvwebui.openui.rules.requiredOption": "Choose at least one option",
+  "kvwebui.openui.rules.email": "Enter a valid email address",
+  "kvwebui.openui.rules.url": "Enter a valid web address",
+  "kvwebui.openui.rules.numeric": "Enter a number",
+  "kvwebui.openui.rules.min": "Must be at least {value}",
+  "kvwebui.openui.rules.max": "Must be no more than {value}",
+  "kvwebui.openui.rules.minLength": "Must be at least {value} characters",
+  "kvwebui.openui.rules.maxLength": "Must be no more than {value} characters",
+  "kvwebui.openui.rules.pattern": "This doesn't match the expected format"
 }

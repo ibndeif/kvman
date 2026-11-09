@@ -16,7 +16,7 @@ describe("an invalid payload returns its problems and the command's payload (08 
     expect(results[0]).toContain('id: ');
     expect(results[0]).toContain('title: ');
     expect(results[0]).toContain('payload: Unrecognized key: "name"');
-    expect(results[0]?.includes('The payload of artifact write is\n{ id (≤50), title (≤100), format?: "markdown" | "html" | "url", content }\n\n')).toBe(true);
+    expect(results[0]?.includes('The payload of artifact write is\n{ id (≤50), title (≤100), format?: "markdown" | "html" | "url" | "openui", content }\n\n')).toBe(true);
     // The help that follows holds the JSON Schema (ADR 0108, 14); the problems and the signature don't.
     const [head = ''] = results[0]?.split('\n\n') ?? [];
     expect(head).not.toContain('$schema');

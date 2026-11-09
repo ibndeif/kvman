@@ -30,6 +30,12 @@ describe('extension import walls (plan 01 §1.4, 03 §3.2)', () => {
     await expectBlocked('imports-fast-check.ts', 'extensions/notes/src/vite.config.ts', /does not declare "fast-check"/);
   });
 
+  it("M5.18-E27 an extension's bundled web code may import its devDependencies, but not a test tool", async () => {
+    await expectClean('imports-fast-check.ts', 'extensions/notes/web/src/fixture.ts');
+    await expectBlocked('imports-left-pad.ts', 'extensions/notes/web/src/fixture.ts', /does not declare "left-pad"/);
+    await expectBlocked('imports-vitest.ts', 'extensions/notes/web/src/fixture.ts', /does not declare "vitest"/);
+  });
+
   it('M1.1-E14 another extension is type-imported only when it is a kvman.dependencies entry', async () => {
     await expectClean('type-imports-tasks.ts', notes);
     await expectBlocked('imports-tasks.ts', notes, /at runtime only through a subpath it exports/);

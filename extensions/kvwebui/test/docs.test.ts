@@ -6,13 +6,16 @@ import { useKvwebuiKernel } from './support/kvwebui-kernel.ts';
 
 const kvwebui = useKvwebuiKernel();
 const docsFolder = fileURLToPath(new URL('../docs/', import.meta.url));
-const topics = ['components', 'views'];
+const topics = readdirSync(docsFolder)
+  .filter((file) => file.endsWith('.md'))
+  .map((file) => file.slice(0, -'.md'.length))
+  .sort();
 const failed = (code: string) => expect.objectContaining({ problem: expect.objectContaining({ code }) });
 
 const titleOf = (markdown: string) => (markdown.split('\n').find((line) => line.startsWith('# ')) ?? '').slice(2);
 
 describe('kvwebui documents itself (06 §6.9, 09 §9.5, ADR 0010, 15 and 16)', () => {
-  it('QA17-H25 docs.list answers views and components, docs.get their files, both public, and bad topics are NOT_FOUND', async () => {
+  it('QA17-H25 docs.list answers every page of docs/ (views, components, and the OpenUI pages), docs.get their files, both public, and bad topics are NOT_FOUND', async () => {
     const kernel = await kvwebui.start([]);
     expect(await kernel.exec('kvwebui.docs.list', {})).toEqual(
       topics.map((topic) => ({ topic, title: titleOf(readFileSync(path.join(docsFolder, `${topic}.md`), 'utf8')) })),

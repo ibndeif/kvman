@@ -4,7 +4,8 @@ import { artifactCountLimit, assertWithinLimit, chatArtifacts, chatIdOf } from '
 import { endedUrlArtifact } from '../artifacts/ended-url.ts';
 import { deleteArtifact } from '../artifacts/delete-artifact.ts';
 import { applyEdits } from '../files/edit-text.ts';
-import { notFound, tooLarge } from '../problems.ts';
+import { invalid, notFound, tooLarge } from '../problems.ts';
+import { disabledConnectors } from '../register-settings.ts';
 import { kebab } from '../schemas/registry.ts';
 import { chatSeqInTx } from '../rewind/chat-mark.ts';
 import { findSession, now } from '../sessions/session-lookup.ts';
@@ -29,7 +30,7 @@ const payloads = {
   write: z.strictObject({
     id: artifactId,
     title: z.string().min(1).max(100).describe('The title the person sees, up to 100 characters.'),
-    format: z.enum(artifactFormats).describe('markdown, html, or url. Left out, a page that starts with <!doctype html or <html is html, a lone localhost address is url, and anything else markdown.').exactOptional(),
+    format: z.enum(artifactFormats).describe('markdown, html, url, or openui (OpenUI Lang; see the openui connector). Left out, a page that starts with <!doctype html or <html is html, a lone localhost address is url, and anything else markdown.').exactOptional(),
     content: z.string().min(1).describe('The whole content, up to 64 KB.'),
   }),
   edit: z.strictObject({ id: artifactId, edits }),
@@ -66,6 +67,8 @@ function removeSameAddress(artifacts: TxRecords['artifacts'], chatId: string, id
 
 async function writeArtifact(ctx: Ctx, chatId: string, input: WriteInput) {
   const format = input.format ?? detectFormat(input.content);
+  // An OpenUI artifact needs the connector that teaches it: turned off, none is written (ADR 0124, 17).
+  if (format === 'openui' && (await disabledConnectors(ctx)).has('openui')) throw invalid('The openui connector is turned off.');
   const replaced = format === 'url' ? await endedUrlArtifact(ctx, chatId, input.id) : undefined;
   return ctx.store.transaction((tx) => {
     const content = contentFor(format, input.content);

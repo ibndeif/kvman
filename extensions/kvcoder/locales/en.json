@@ -707,5 +707,8 @@
   "kvcoder.ui.record.unavailable": "The microphone can't be opened here.",
   "kvcoder.ui.record.refused": "Microphone access was refused. Allow it in your browser or system settings.",
   "kvcoder.ui.record.openInBrowser": "Open this chat in a browser",
-  "kvcoder.ui.record.use": "Use these takes"
+  "kvcoder.ui.record.use": "Use these takes",
+  "kvcoder.openui.guide.get.description": "Reads kvman's OpenUI reference: the index of a place, or the signatures and notes of some of its groups.",
+  "kvcoder.config.connector.openui": "Draws cards, choices, forms, and buttons in its replies and artifacts; a press sends your answer.",
+  "kvcoder.ui.artifacts.format.openui": "OpenUI"
 }

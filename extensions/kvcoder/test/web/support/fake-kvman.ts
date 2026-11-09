@@ -29,9 +29,11 @@ export type FakeKvman = {
 
 const catalogs: Record<'en' | 'ar', Record<string, string>> = { en, ar };
 
+// `onMessage` is kept as a prop, so a test sees which views were given one and presses through it (ADR 0124, 18).
 export const MarkdownStub = defineComponent({
-  props: { view: { type: Object as PropType<View>, required: true } },
-  setup: (props) => () => h('div', { 'data-test': 'markdown' }, props.view.type === 'markdown' ? String(props.view.params?.['text'] ?? '') : ''),
+  props: { view: { type: Object as PropType<View>, required: true }, onMessage: { type: Function as PropType<(text: string) => void>, required: false } },
+  setup: (props) => () =>
+    props.view.type === 'openui' ? h('div', { 'data-test': 'openui' }, props.view.source) : h('div', { 'data-test': 'markdown' }, props.view.type === 'markdown' ? String(props.view.params?.['text'] ?? '') : ''),
 });
 
 type Channel = { events: StreamEvent[]; ended: boolean; wake: (() => void) | undefined };

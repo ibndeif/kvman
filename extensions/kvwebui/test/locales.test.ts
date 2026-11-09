@@ -62,4 +62,15 @@ describe("kvwebui's catalogs (02 §2.11)", () => {
       for (const theme of ['system', 'light', 'dark']) expect(texts[`kvwebui.theme.options.${theme}`], `${language} ${theme}`).toBeTypeOf('string');
     }
   });
+
+  it("M5.18-E13 en and ar have OpenUI's texts: the failure, Copy, Sources, and every form rule", () => {
+    const rules = ['required', 'requiredOption', 'email', 'url', 'numeric', 'min', 'max', 'minLength', 'maxLength', 'pattern'].map((rule) => `kvwebui.openui.rules.${rule}`);
+    for (const language of ['en', 'ar']) {
+      const texts = catalog(language);
+      for (const key of ['kvwebui.openui.failed', 'kvwebui.openui.markdown', 'kvwebui.openui.sources', 'kvwebui.openui.copy', 'kvwebui.openui.copied', 'kvwebui.openui.copyFailed', ...rules]) {
+        expect(texts[key], `${language} ${key}`).toBeTypeOf('string');
+      }
+    }
+    expect(catalog('ar')['kvwebui.openui.rules.min']).toContain('{value}');
+  });
 });

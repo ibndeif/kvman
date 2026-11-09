@@ -100,6 +100,12 @@ export function isToolingFile(unit: Unit, file: string): boolean {
   return !inside.includes(path.sep) && inside.endsWith('.config.ts');
 }
 
+// A file of an extension's web app or components, under `web/`: its build bundles what it imports into `dist/web`, so
+// it may import devDependencies, which npm then never installs for a person (ADR 0124, 10).
+export function isBundledWebFile(unit: Unit, file: string): boolean {
+  return unit.kind === 'extension' && path.relative(unit.root, file).split(path.sep)[0] === 'web';
+}
+
 // A file that an extension's package.json exports under a subpath other than its root.
 export function isExportedSubpathFile(unit: Unit, file: string): boolean {
   if (unit.kind !== 'extension') return false;

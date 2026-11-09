@@ -390,6 +390,12 @@ importers:
       '@kvman/testkit':
         specifier: workspace:*
         version: link:../../packages/testkit
+      '@openuidev/lang-core':
+        specifier: 0.4.1
+        version: 0.4.1(@modelcontextprotocol/sdk@1.32.1(zod@4.6.5))(zod@4.6.5)
+      '@openuidev/vue-lang':
+        specifier: 0.4.2
+        version: 0.4.2(@modelcontextprotocol/sdk@1.32.1(zod@4.6.5))(vue@3.5.43(typescript@6.0.3))(zod@4.6.5)
       '@tailwindcss/vite':
         specifier: 4.3.3
         version: 4.3.3(vite@8.3.1(@types/node@24.19.0)(jiti@2.7.0)(yaml@2.9.1))
@@ -417,6 +423,9 @@ importers:
       vue-tsc:
         specifier: 3.3.11
         version: 3.3.11(typescript@6.0.3)
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
 
   packages/cli:
     dependencies:
@@ -1246,6 +1255,21 @@ packages:
 
   '@one-ini/wasm@0.2.1':
     resolution: {integrity: sha512-TUqERXGNTifZ9y2g3wPxQrw3HpHv/02DsW3D90T9x0hhonrL1ZqpSmNrU2XkoIq0fP1N6gZfVQzy2Fw1ZvGBNg==}
+
+  '@openuidev/lang-core@0.4.1':
+    resolution: {integrity: sha512-t9XSiORKTgyn6pWv8qqBkgD45PBhORdGWpQAHo3APvj9SYy7YprKURQgmXNu3z6E/Ds8tsLAI+AZjX3errH+jQ==}
+    peerDependencies:
+      '@modelcontextprotocol/sdk': '>=1.0.0'
+      zod: ^3.25.0 || ^4.0.0
+    peerDependenciesMeta:
+      '@modelcontextprotocol/sdk':
+        optional: true
+
+  '@openuidev/vue-lang@0.4.2':
+    resolution: {integrity: sha512-jkBA09Y//tktcIW3I32ovtMqL/pp2pX5lgZhaOzmHAEi9t7jMSLkcZayUvE7S6pqyAIKYuRJ30Hb35d3MYMLOQ==}
+    peerDependencies:
+      vue: '>=3.5.0'
+      zod: ^3.25.0 || ^4.0.0
 
   '@oxc-project/types@0.151.0':
     resolution: {integrity: sha512-J1yXrIlNDZVzE3ada310xeAw7nH8yCAyLPuUIsjKatFPmfn5bS1oW+cM+QsGOtVWd5nhSpbwZWx/rue+r5Z+PA==}
@@ -2135,6 +2159,10 @@ packages:
 
   ci-info@2.0.0:
     resolution: {integrity: sha512-5tK7EtrZ0N+OLFMthtqOj4fI2Jeb88C4CAZPu25LDVUgXJ0A3Js4PMGqrn0JU1W0Mh1/Z8wZzYPxqUrXeBboCQ==}
+
+  ci-info@4.4.0:
+    resolution: {integrity: sha512-77PSwercCZU2Fc4sX94eF8k8Pxte6JAwL4/ICZLFjJLqegs7kCuAsqqj/70NQF6TvDpgFjkubQB2FW2ZZddvQg==}
+    engines: {node: '>=8'}
 
   cli-width@4.1.0:
     resolution: {integrity: sha512-ouuZd4/dm2Sw5Gmqy6bGyNNNe1qt9RpmxveLSO7KcgsTnU7RXfsw+/bukWGo1abgBiMAic068rclZsO4IWmmxQ==}
@@ -4916,6 +4944,21 @@ snapshots:
 
   '@one-ini/wasm@0.2.1': {}
 
+  '@openuidev/lang-core@0.4.1(@modelcontextprotocol/sdk@1.32.1(zod@4.6.5))(zod@4.6.5)':
+    dependencies:
+      ci-info: 4.4.0
+      zod: 4.6.5
+    optionalDependencies:
+      '@modelcontextprotocol/sdk': 1.32.1(zod@4.6.5)
+
+  '@openuidev/vue-lang@0.4.2(@modelcontextprotocol/sdk@1.32.1(zod@4.6.5))(vue@3.5.43(typescript@6.0.3))(zod@4.6.5)':
+    dependencies:
+      '@openuidev/lang-core': 0.4.1(@modelcontextprotocol/sdk@1.32.1(zod@4.6.5))(zod@4.6.5)
+      vue: 3.5.43(typescript@6.0.3)
+      zod: 4.6.5
+    transitivePeerDependencies:
+      - '@modelcontextprotocol/sdk'
+
   '@oxc-project/types@0.151.0': {}
 
   '@pinojs/redact@0.4.0': {}
@@ -5796,6 +5839,8 @@ snapshots:
       readdirp: 5.1.1
 
   ci-info@2.0.0: {}
+
+  ci-info@4.4.0: {}
 
   cli-width@4.1.0: {}
 

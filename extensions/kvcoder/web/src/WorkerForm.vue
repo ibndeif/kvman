@@ -22,8 +22,8 @@ const text = (key: string): string => kvman.t(`kvcoder.config.workers.form.${key
 // A worker's name and kind are fixed once it is saved: the agent calls it by that name.
 const editing = props.entry !== undefined;
 
-// A subagent never has `delegate` (ADR 0021, 24), `ask` (ADR 0063), or `execution-map` (ADR 0064), so they aren't offered.
-const leadOnly: readonly string[] = ['delegate', 'ask', 'execution-map'];
+// A subagent never has `delegate` (ADR 0021, 24), `ask` (ADR 0063), `execution-map` (ADR 0064), or `openui` (ADR 0124, 13), so they aren't offered.
+const leadOnly: readonly string[] = ['delegate', 'ask', 'execution-map', 'openui'];
 const offered = computed(() => [...ownConnectors.filter((name) => !leadOnly.includes(name)), ...added.value]);
 const groups = computed(() => modelGroups(providers.value, models.value, draft.model));
 // The levels of the worker's model, or every level for the chat's own (ADR 0087, 11); a chosen level moves with the model.

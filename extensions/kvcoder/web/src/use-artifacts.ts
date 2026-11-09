@@ -5,9 +5,9 @@ import type { Kvman } from '@kvman/sdk/web';
 // content, and whether the panel is open. The first load marks what is there without opening; every later load opens
 // on an artifact that is new or was updated, the latest of them, and says so in `surfaced` (ADR 0071, 2).
 
-export type ArtifactSummary = { id: string; title: string; format: 'markdown' | 'html' | 'url'; version: number; size: number; updatedAt: string };
+export type ArtifactSummary = { id: string; title: string; format: 'markdown' | 'html' | 'url' | 'openui'; version: number; size: number; updatedAt: string };
 
-export type ArtifactContent = { id: string; title: string; format: 'markdown' | 'html' | 'url'; version: number; content: string; createdAt: string; updatedAt: string };
+export type ArtifactContent = { id: string; title: string; format: 'markdown' | 'html' | 'url' | 'openui'; version: number; content: string; createdAt: string; updatedAt: string };
 
 // What a read of an artifact is told apart by.
 const mark = (item: ArtifactSummary): string => `${item.version} ${item.updatedAt}`;

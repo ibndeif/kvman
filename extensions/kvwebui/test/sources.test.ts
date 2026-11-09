@@ -27,4 +27,12 @@ describe("kvwebui's sources (06 §6.1)", () => {
     const withHtml = files(web).filter((file) => readFileSync(file, 'utf8').includes('v-html'));
     expect(withHtml.map((file) => path.relative(web, file))).toEqual([path.join('components', 'views', 'MarkdownView.vue')]);
   });
+
+  it('M5.18-E12 every OpenUI component is a source the styles check reads, and uses logical styles only', () => {
+    const openui = files(path.join(web, 'openui', 'renderers')).filter((file) => file.endsWith('.vue'));
+    expect(openui.length).toBeGreaterThan(30);
+    expect(files(web)).toEqual(expect.arrayContaining(openui));
+    const physical = openui.filter((file) => readFileSync(file, 'utf8').split('\n').some((line) => physicalClasses.test(line) || physicalProperties.test(line)));
+    expect(physical).toEqual([]);
+  });
 });

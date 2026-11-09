@@ -80,7 +80,8 @@ describe('/build-kvman: the person starts building kvman in a chat (09 §9.4, AD
     expect(prompt).toContain('Installed in this app');
     expect(prompt).toContain('Preset: ');
     expect(prompt).toContain('- @kvman/kvwebui (kvwebui), ');
-    expect(prompt).toContain('  pages: components (Custom components (Vue)), views (Pages and views (kvwebui))');
+    expect(prompt).toContain('  pages: components (Custom components (Vue)), openui (OpenUI in an artifact), openui-buttons (Buttons), openui-chat (OpenUI in a reply),');
+    expect(prompt).toContain(', openui-layout (Layout), views (Pages and views (kvwebui))');
     expect(prompt).toContain('This is what ran when /build-kvman was typed.');
   });
 

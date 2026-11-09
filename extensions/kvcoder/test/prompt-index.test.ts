@@ -17,7 +17,7 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
     const prompt = systemPrompt(fake);
     const index = (prompt.split('## Connectors\n')[1] ?? '').split('\n');
     const headers = index.filter((line) => line.startsWith('- '));
-    expect(headers.map((line) => /^- ([\w-]+): /.exec(line)?.[1])).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'web', 'todo', 'node']);
+    expect(headers.map((line) => /^- ([\w-]+): /.exec(line)?.[1])).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'web', 'openui', 'todo', 'node']);
     // Superseded by QA71-H26: a registered connector's commands have their signatures (ADR 0108, 14).
     expect(headers.at(-2)).toBe('- todo: Keep a todo list.');
     expect(headers.at(-1)).toBe('- node: Node.js. Commands: exec, help.');
@@ -29,7 +29,7 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
     const prompt = systemPrompt(fake);
     const index = (prompt.split('## Connectors\n')[1] ?? '').split('\n');
     const headers = index.filter((line) => line.startsWith('- '));
-    expect(headers.map((line) => /^- ([\w-]+): /.exec(line)?.[1])).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'web', 'todo', 'node']);
+    expect(headers.map((line) => /^- ([\w-]+): /.exec(line)?.[1])).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'web', 'openui', 'todo', 'node']);
     expect(headers.slice(0, 8).every((line) => /^- [\w-]+: \S.*[.!?]$/.test(line) && !line.includes('Commands:'))).toBe(true);
     // Superseded by QA71-H26: a registered connector's commands have their signatures (ADR 0108, 14).
     expect(headers.at(-2)).toBe('- todo: Keep a todo list.');
@@ -49,7 +49,7 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
       '  part       { path, part (1–200), content }',
       '  assemble   { path, risky }',
       '  help       { command? }',
-      '  write  { id (≤50), title (≤100), format?: "markdown" | "html" | "url", content }',
+      '  write  { id (≤50), title (≤100), format?: "markdown" | "html" | "url" | "openui", content }',
       '  edit   { id (≤50), edits: [{ oldText, newText, replaceAll? }] }',
       '  list   {}',
       '  get    { id (≤50) }',
@@ -75,6 +75,8 @@ describe("the prompt's connector index (08 §8.2, ADR 0011, 3)", { timeout: 30_0
       '  continue { id, message }',
       '  help     { command? }',
       '  fetch { url }',
+      '  help  { command? }',
+      '  guide { place: "reply" | "artifact", groups? }',
       '  help  { command? }',
       '  add  { text }',
       '  wait { gate, text }',

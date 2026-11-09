@@ -21,8 +21,9 @@ import { frameableUrl } from './artifact-url.ts';
 // One stored message (plan 08 §8.7): the person's text and images, an answer in Markdown with its thinking folded, a
 // tool result's card (an answered question shows its answer), kvcoder's notices and other extensions' notes translated, a summary, and background results as quiet lines.
 // Edit and Undo rewind the chat from a person's message (ADR 0118, 7); `rewind` is left out in a helper's chat.
-const props = defineProps<{ message: Message; calls: ReadonlyMap<string, CallView>; finishedRuns?: ReadonlyMap<string, FinishedRun> | undefined; final?: boolean | undefined; rewind?: { edit: boolean; undo: boolean } | undefined }>();
-const emit = defineEmits<{ openArtifact: [id: string]; rewound: [left: Left, undone?: Undone] }>();
+// `pressable` marks the lead's newest reply, whose OpenUI presses send the person's message (ADR 0124, 6).
+const props = defineProps<{ message: Message; calls: ReadonlyMap<string, CallView>; finishedRuns?: ReadonlyMap<string, FinishedRun> | undefined; final?: boolean | undefined; rewind?: { edit: boolean; undo: boolean } | undefined; pressable?: boolean | undefined }>();
+const emit = defineEmits<{ openArtifact: [id: string]; rewound: [left: Left, undone?: Undone]; press: [text: string] }>();
 const rewinding = ref<'edit' | 'undo'>();
 const remembered = computed(() => props.message.source?.kind === 'user' && typedText(text.value).trim() !== '');
 const kvman = useKvman();
@@ -82,7 +83,7 @@ const markdown = (body: string) => ({ type: 'markdown' as const, text: 'kvcoder.
   </div>
   <div v-else-if="props.message.kind === 'assistant' && (thinking !== '' || text !== '')" class="kvc-answer" :class="{ 'kvc-final': props.final === true && text !== '' }" :data-final="props.final === true && text !== '' ? 'true' : undefined" data-test="assistant-message">
     <details v-if="thinking !== ''" data-test="thinking"><summary class="kvc-muted">{{ kvman.t('kvcoder.ui.thought') }}</summary><p class="kvc-muted" style="white-space: pre-wrap">{{ thinking }}</p></details>
-    <component :is="kvman.View" v-if="text !== ''" :view="markdown(text)" />
+    <component :is="kvman.View" v-if="text !== ''" :view="markdown(text)" v-bind="props.pressable === true ? { onMessage: (pressed: string) => emit('press', pressed) } : {}" />
   </div>
   <ArtifactCard v-else-if="props.message.kind === 'toolResult' && artifact !== undefined" :id="artifact.id" :title="artifact.title" :format="artifact.format" :version="artifact.version" :address="artifactAddress" @open="emit('openArtifact', $event)" />
   <AnsweredCard v-else-if="answered !== undefined" :answered="answered" />

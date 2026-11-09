@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { isExportedSubpathFile, isTestFile, isToolingFile, type Unit, type Workspace } from './workspace.ts';
+import { isBundledWebFile, isExportedSubpathFile, isTestFile, isToolingFile, type Unit, type Workspace } from './workspace.ts';
 
 // The import walls of plan 01 §1.4. Each check returns the reason an import breaks a wall, or undefined.
 
@@ -29,7 +29,7 @@ const testTools: readonly string[] = ['vitest', '@playwright/test'];
 
 export type ImportUse = { specifier: string; typeOnly: boolean; fromFile: string };
 
-type Context = { unit: Unit; wall: PackageWall; use: ImportUse; inTest: boolean };
+type Context = { unit: Unit; wall: PackageWall; use: ImportUse; inTest: boolean; bundled: boolean };
 
 const reference = '(plan 01 §1.4)';
 
@@ -78,7 +78,7 @@ function checkKvmanPackage(context: Context, target: Unit, subpath: string, subp
   return allowed ? undefined : `${unit.label} may not import ${name} ${reference}`;
 }
 
-function checkThirdParty({ unit, wall, use, inTest }: Context, name: string, subpathFile: boolean): string | undefined {
+function checkThirdParty({ unit, wall, use, inTest, bundled }: Context, name: string, subpathFile: boolean): string | undefined {
   if (subpathFile) return `an exported subpath imports only @kvman/sdk, not "${use.specifier}" ${reference}`;
   if (inTest && testTools.includes(name)) return undefined;
   if (wall.thirdParty !== 'declared' && !wall.thirdParty.includes(name)) {
@@ -86,7 +86,7 @@ function checkThirdParty({ unit, wall, use, inTest }: Context, name: string, sub
     return `${unit.label} may import ${only}, not "${use.specifier}" ${reference}`;
   }
   if (wall.provided?.includes(name) === true) return undefined;
-  const declared = [...unit.manifest.dependencies, ...(inTest ? unit.manifest.devDependencies : [])];
+  const declared = [...unit.manifest.dependencies, ...(inTest || bundled ? unit.manifest.devDependencies : [])];
   if (declared.includes(name)) return undefined;
   return `${unit.label} does not declare "${name}" in its package.json ${reference}`;
 }
@@ -95,7 +95,7 @@ export function checkImport(workspace: Workspace, unit: Unit | string, use: Impo
   if (typeof unit === 'string') return `${unit} has no import wall; add it to eslint/walls.ts ${reference}`;
   const wall = unit.kind === 'extension' ? extensionWall : packageWalls[unit.folder];
   if (wall === undefined) return `${unit.label} has no import wall; add it to eslint/walls.ts ${reference}`;
-  const context = { unit, wall, use, inTest: isTestFile(unit, use.fromFile) || isToolingFile(unit, use.fromFile) };
+  const context = { unit, wall, use, inTest: isTestFile(unit, use.fromFile) || isToolingFile(unit, use.fromFile), bundled: isBundledWebFile(unit, use.fromFile) };
   const subpathFile = isExportedSubpathFile(unit, use.fromFile);
   if (use.specifier.startsWith('.')) return checkRelative(context, subpathFile);
   if (use.specifier.startsWith('node:')) return checkNodeBuiltin(context, subpathFile);

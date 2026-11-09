@@ -76,9 +76,9 @@ describe("an artifact's format (08 §8.5, ADR 0009, 215 and 216)", { timeout: 30
     expect(await get('old')).toMatchObject({ format: 'html', version: 2 });
   });
 
-  it("QA12-E8 artifact write's help names the three formats and what is read from a format left out", async () => {
+  it("QA12-E8 artifact write's help names the formats and what is read from a format left out", async () => {
     const { results } = await written(command('artifact', 'help', { command: 'write' }));
-    expect(results[0]).toContain('markdown, html, or url. Left out,');
+    expect(results[0]).toContain('markdown, html, url, or openui (OpenUI Lang; see the openui connector). Left out,');
     expect(results[0]).toContain('a lone localhost address is url');
     expect(results[0]).toContain('scripts-only frame');
   });

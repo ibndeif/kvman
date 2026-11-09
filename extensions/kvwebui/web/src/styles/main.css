@@ -175,6 +175,15 @@ body {
   text-decoration: underline;
 }
 /* A Mermaid diagram (ADR 0067): as wide as it needs, scrolling sideways in its block. */
+.kvwebui-markdown .kvwebui-openui-image {
+  display: inline-block;
+  padding-block: 0.125rem;
+  padding-inline: 0.5rem;
+  border: 1px dashed var(--kvwebui-line);
+  border-radius: 0.5rem;
+  color: var(--kvwebui-muted);
+  font-size: 0.85em;
+}
 .kvwebui-markdown .kvwebui-mermaid {
   overflow-x: auto;
 }

@@ -707,5 +707,8 @@
   "kvcoder.ui.record.unavailable": "لا يمكن فتح الميكروفون هنا.",
   "kvcoder.ui.record.refused": "رُفض الوصول إلى الميكروفون. اسمح به في إعدادات المتصفح أو النظام.",
   "kvcoder.ui.record.openInBrowser": "افتح هذه المحادثة في متصفح",
-  "kvcoder.ui.record.use": "استخدم هذه التسجيلات"
+  "kvcoder.ui.record.use": "استخدم هذه التسجيلات",
+  "kvcoder.openui.guide.get.description": "يقرأ مرجع OpenUI في kvman: فهرس مكان العرض، أو التوقيعات والملاحظات لبعض مجموعاته.",
+  "kvcoder.config.connector.openui": "يرسم بطاقات وخيارات ونماذج وأزرارًا في ردوده ومخرجاته؛ والضغط على أحدها يرسل إجابتك.",
+  "kvcoder.ui.artifacts.format.openui": "OpenUI"
 }

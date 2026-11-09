@@ -10,7 +10,7 @@ kvwebui is the web app, and it is an extension like any other. The kernel serves
 - `@lucide/vue` for icons (the successor of the deprecated `lucide-vue-next`, with the same icon names).
 - The IBM Plex Sans, IBM Plex Sans Arabic, and IBM Plex Mono fonts, bundled into the app.
 - Every enabled clickable control (button, link, summary, select, checkbox) shows `cursor: pointer`, which the CSS reset removes from buttons (ADR 0009, 209).
-- `markdown-it` with HTML disabled, its output sanitized with `DOMPurify`. `v-html` appears only in that one component. Each rendered block has `dir="auto"`, so it takes its direction from its own text (ADR 0013, 12). A fenced `mermaid` block is drawn as a diagram with the `mermaid` package, which is loaded only when a page shows such a block; it runs with `securityLevel: 'strict'` and no HTML labels, its SVG goes through DOMPurify's SVG profile, and a block that isn't a valid diagram stays as its source (ADR 0067).
+- `markdown-it` with HTML disabled, its output sanitized with `DOMPurify`. `v-html` appears only in that one component. Each rendered block has `dir="auto"`, so it takes its direction from its own text (ADR 0013, 12). A fenced `mermaid` block is drawn as a diagram with the `mermaid` package, which is loaded only when a page shows such a block; it runs with `securityLevel: 'strict'` and no HTML labels, its SVG goes through DOMPurify's SVG profile, and a block that isn't a valid diagram stays as its source (ADR 0067). A fenced `openui` block is drawn as UI (ADR 0124): OpenUI Lang 0.5, read by `@openuidev/vue-lang`'s `Renderer` with OpenUI's chat library (the `openui` view uses `openuiLibrary`), every component by OpenUI's name and schema and drawn by kvwebui's own Vue (§6.9's pages `openui-chat` and `openui`); drawn while it streams; with no tool provider, so it calls nothing; presses work only when the `View` was given `onMessage`; an image only from the workspace (`kvwebui.image.get`) or a `data:` address; icons from `@lucide/vue`'s full set, each its own module loaded the first time it is shown, falling back as OpenUI's do; charts drawn from `d3-scale` and `d3-shape`; and a block that draws nothing once the stream ends stays as its source.
 
 ## 6.2 The frame
 
@@ -110,6 +110,7 @@ An extension contributes UI by registering the public query `<namespace>.ui.get`
 | `link` | `{ text, params?, to: { page: '<ns>.<page>', params? } }`: navigation with no command; `params` fill the text, `to.params` fill the route |
 | `button` | `{ text, command, input, confirm?, style?: 'primary' \| 'secondary' \| 'danger', then? }` |
 | `setting` | `{ key }`: one of the extension's own settings as a row (title, description, a control from its schema that saves as it changes, "Changed" with a reset, and its details, §6.6); only in `configuration` (ADR 0014, 3) |
+| `openui` | `{ source }`: OpenUI Lang drawn with `openuiLibrary` (root `Stack`), as a fenced `openui` block is with the chat library (§6.1; ADR 0124) |
 | `custom` | `{ component: '<namespace>.<name>', props }`: the namespace is a loaded extension's, and the name is lowercase kebab case (ADR 0009, 82) |
 
 There is no `tabs` component: an extension that wants tabs ships a custom component (ADR 0009, 68).
@@ -127,7 +128,7 @@ There is no `tabs` component: an extension that wants tabs ships a custom compon
   - It loads `/web/<namespace>/components/<name>.js`, which default-exports a Vue component, and `components/<name>.css` beside it when that exists. The URL carries the extension's `revision` (§2.12), so after a hot reload a page refresh loads the new code.
   - While the module loads, placeholder rows show. A module that can't be loaded, has no default export, or throws an error it doesn't catch shows an error card with `kvwebui/COMPONENT_FAILED` (`params: { component }`) in its place, and the rest of the page keeps working (ADR 0009, 84).
   - kvwebui provides `vue` through an import map, so extensions build with `vue` as an external. The `kvman-new` scaffold sets this up (§9.2).
-  - **Styling.** The light theme is soft slate, with nothing pure white or pure black (ground `#e9edf2`, surface `#f7f8fa`, text `#242a31`, primary `#35507a`; ADR 0037, 3). kvwebui defines CSS variables for light and dark: `--kv-color-*` (background, surface, text, muted, border, primary, on-primary, danger, warning, success), `--kv-space-*` (`sm`, `md`, `lg`: 8, 16, and 24 px), `--kv-radius` (12 px), and `--kv-font-mono` (ADR 0009, 85). Extensions style with these variables and logical properties; kvwebui's Tailwind classes aren't available to them.
+  - **Styling.** The light theme is soft slate, with nothing pure white or pure black (ground `#e9edf2`, surface `#f7f8fa`, text `#242a31`, primary `#35507a`; ADR 0037, 3). kvwebui defines CSS variables for light and dark: `--kv-color-*` (background, surface, text, muted, border, primary, on-primary, danger, warning, success, and `chart-1` to `chart-8`, ADR 0124, 9), `--kv-space-*` (`sm`, `md`, `lg`: 8, 16, and 24 px), `--kv-radius` (12 px), and `--kv-font-mono` (ADR 0009, 85). Extensions style with these variables and logical properties; kvwebui's Tailwind classes aren't available to them.
   - **Types.** `@kvman/sdk/web` types the injected `kvman` object and view trees (§3.2).
   - The component gets `props` and an injected `kvman` object (`inject('kvman')`): `exec`, `execAsync`, `stream(jobId)`, `follow(jobId)`, `navigate`, `toast`, `panel`, `open`, `host`, `refresh`, `t`, `workspace`, `scope`, and `View` (ADR 0009, 83, 138; ADR 0014, 8; ADR 0099, 33; ADR 0100, 14).
   - `exec(name, input)` and `execAsync(name, input)` return promises that reject with a `ProblemError`, without a toast. `exec` of a command counts as a command the UI ran: the page's queries rerun and its effects apply. A job started with `execAsync` is followed as by `follow`.
@@ -139,7 +140,7 @@ There is no `tabs` component: an extension that wants tabs ships a custom compon
   - `navigate(page, params?)`, `toast(text, params?, level?)` (level `info` by default), and `panel(id, open)` act at once in the browser, like the effects of the same name. A `panel` with an unknown id does nothing; a `navigate` to an unknown page shows the "page not found" card.
   - `open(url)` opens an address in a new tab (`noopener`), or, while the page is embedded (§6.2), posts `{ kind: 'kvman.open', url }` to its host. It returns `'opened'`, or `'blocked'` when the browser refused the tab. A component opens windows with it, never with `window.open` (ADR 0099, 33).
   - `host` (ADR 0100, 14): `embedded`, true while the page is embedded (§6.2); `openFile(path, line?)`, `openDiff(title, path, after)`, and `openChange(path)`, which post the host messages of §6.2 and do nothing outside embedded mode; `onInsert(handler)`, which gets each `kvman.insert` text and returns its removal; and `offerNew(handler)`, which offers the host's New button while embedded, gets each `kvman.new`, and returns the offer's removal (ADR 0101, 5). A component shows its host buttons only while `embedded` is true.
-  - `View` is a component that renders a view tree with kvwebui's built-in components: `<View :view="{ type: 'markdown', text }" />`. Custom components use it for Markdown, so the sanitized renderer stays the only `v-html`. `View` checks its tree like a `ui.get` view; an invalid tree shows an error card with `VALIDATION_FAILED` and its issues.
+  - `View` is a component that renders a view tree with kvwebui's built-in components: `<View :view="{ type: 'markdown', text }" />`. Custom components use it for Markdown, so the sanitized renderer stays the only `v-html`. `View` checks its tree like a `ui.get` view; an invalid tree shows an error card with `VALIDATION_FAILED` and its issues. `View` takes an optional `onMessage(text)`: OpenUI buttons and forms in its tree are live only when it is given, and a press calls it with the message of ADR 0124, 14 (ADR 0124, 18).
 
 ## 6.5 Effects: extensions controlling the UI
 
@@ -179,6 +180,7 @@ There is no `tabs` component: an extension that wants tabs ships a custom compon
 | `kvwebui.effect.add` | command, public | an effect → `{}` |
 | `kvwebui.effect.take` | command, public | `{ jobId }` → `effect[]` |
 | `kvwebui.effect.clean` | command, private | `{}` → `{}` |
+| `kvwebui.image.get` | query, public | `{ path }` → `{ type, data }`: a workspace image (PNG, JPEG, GIF, or WebP by its content, never SVG) as base64, at most 5 MiB; a path that leaves the workspace or another type fails `VALIDATION_FAILED`, a missing file `NOT_FOUND`, a larger one `TOO_LARGE` (ADR 0124, 19) |
 
 | Setting | Default |
 |---|---|
@@ -192,4 +194,4 @@ There is no `tabs` component: an extension that wants tabs ships a custom compon
 
 ## 6.9 Documentation
 
-kvwebui serves `kvwebui.docs.list` and `kvwebui.docs.get` (plan 09 §9.5): the pages `views` (the view tree, forms, effects) and `components` (custom Vue components, the import map, CSS variables, `@kvman/sdk/web`), as Markdown from its `docs/` folder (ADR 0010, 16).
+kvwebui serves `kvwebui.docs.list` and `kvwebui.docs.get` (plan 09 §9.5): the pages `views` (the view tree, forms, effects), `components` (custom Vue components, the import map, CSS variables, `@kvman/sdk/web`), and the OpenUI pages generated by the script `openui:reference` (ADR 0124, 12): `openui-chat` and `openui`, the index of the chat library and of `openuiLibrary` (at most 8 KB), and one page per component group, `openui-chat-<group>` and `openui-<group>`, as Markdown from its `docs/` folder (ADR 0010, 16).

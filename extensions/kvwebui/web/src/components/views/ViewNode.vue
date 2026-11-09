@@ -12,6 +12,7 @@ import DetailView from './DetailView.vue';
 import FormView from './FormView.vue';
 import ListView from './ListView.vue';
 import MarkdownView from './MarkdownView.vue';
+import OpenuiBlock from '../../openui/OpenuiBlock.vue';
 import SettingView from './SettingView.vue';
 import TableView from './TableView.vue';
 
@@ -56,4 +57,5 @@ const headings = { 1: 'text-[26px] font-semibold tracking-tight in-[.kvwebui-emb
   <ButtonView v-else-if="props.view.type === 'button'" :view="props.view" :scope="props.scope" />
   <SettingView v-else-if="props.view.type === 'setting'" :view="props.view" />
   <CustomView v-else-if="props.view.type === 'custom'" :view="props.view" :scope="props.scope" />
+  <OpenuiBlock v-else-if="props.view.type === 'openui'" library="full" :source="props.view.source" :streaming="false" />
 </template>

@@ -6,6 +6,7 @@ allowBuilds:
   '@google/genai': false
   protobufjs: false
   '@vscode/vsce-sign': false
+  '@openuidev/lang-core': false
 minimumReleaseAgeExclude:
   - hono@4.13.12
   - '@earendil-works/pi-ai@1.0.4'

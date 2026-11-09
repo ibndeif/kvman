@@ -1,9 +1,9 @@
 import { invalid } from '../problems.ts';
 
-// The formats of an artifact (plan 08 §8.5, ADR 0009, 215 and 216): Markdown, an HTML page, or the URL of a page running on
-// this machine. A format the agent leaves out is read from the content.
+// The formats of an artifact (plan 08 §8.5, ADR 0009, 215 and 216): Markdown, an HTML page, the URL of a page running on
+// this machine, or OpenUI Lang (ADR 0124, 13). A format the agent leaves out is read from the content; OpenUI never is.
 
-export const artifactFormats = ['markdown', 'html', 'url'] as const;
+export const artifactFormats = ['markdown', 'html', 'url', 'openui'] as const;
 
 export type ArtifactFormat = (typeof artifactFormats)[number];
 

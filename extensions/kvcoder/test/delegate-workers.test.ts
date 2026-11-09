@@ -28,10 +28,10 @@ describe('the delegate connector and its workers (08 §8.5, ADR 0021)', { timeou
   it('QA31-H1 delegate replaces subagent: the index, the run line, and a call to subagent', async () => {
     const { fake } = await turn({}, runs(command('subagent', 'run', { kind: 'find', goal: 'x', done: 'It is done.', mode: 'fresh' })), says('done'));
     const prompt = systemPrompt(fake, 0);
-    expect(prompt.split('\n').filter((line) => line.startsWith('- ')).map((line) => line.slice(2, line.indexOf(':')))).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'web', 'todo']);
+    expect(prompt.split('\n').filter((line) => line.startsWith('- ')).map((line) => line.slice(2, line.indexOf(':')))).toEqual(['shell', 'fs', 'artifact', 'execution-map', 'background', 'ask', 'delegate', 'web', 'openui', 'todo']);
     expect(prompt).not.toContain('- subagent: ');
     expect(prompt).toContain('\n  run      { worker, title (≤200), kind: "find" | "change" | "check" | "review", goal (≤300), done (≤300), files?, context?: [{ path, fromLine?, lines? }], maxSteps? (1–60) }\n  continue { id, message }\n  help     { command? }');
-    expect(toolResults(fake)).toEqual(['error VALIDATION_FAILED: There is no connector subagent. The connectors are: shell, fs, artifact, execution-map, background, ask, delegate, web, todo.']);
+    expect(toolResults(fake)).toEqual(['error VALIDATION_FAILED: There is no connector subagent. The connectors are: shell, fs, artifact, execution-map, background, ask, delegate, web, openui, todo.']);
   });
 
   // Superseded by QA68-H1 and QA68-H3: six workers, the council thinking at high (ADR 0103).
@@ -134,7 +134,7 @@ describe('the delegate connector and its workers (08 §8.5, ADR 0021)', { timeou
     const { fake } = await turn(settings, runs(delegate('general')), says('done'));
     expect(systemPrompt(fake, 0)).not.toContain('- delegate: ');
     expect(JSON.stringify(requestTools(fake, 0))).not.toContain('"delegate"');
-    expect(toolResults(fake)).toEqual(['error VALIDATION_FAILED: There is no connector delegate. The connectors are: shell, fs, artifact, execution-map, background, ask, web, todo.']);
+    expect(toolResults(fake)).toEqual(['error VALIDATION_FAILED: There is no connector delegate. The connectors are: shell, fs, artifact, execution-map, background, ask, web, openui, todo.']);
   });
 });
 
