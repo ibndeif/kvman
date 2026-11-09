@@ -117,10 +117,11 @@ a.kvc-button { text-decoration: none; color: inherit; }
 .kvc-menu button { justify-content: flex-start; text-align: start; }
 .kvc-prompt { margin: 0; padding: var(--kv-space-md); border: 1px solid var(--kv-color-border); border-radius: var(--kv-radius); background: var(--kv-color-background); font-family: var(--kv-font-mono); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
 /* The activity line and the searchable model picker (ADR 0009, 140, 142). */
-.kvc-activity { display: flex; align-items: center; gap: 10px; padding-block: 8px; padding-inline: 12px; border: 1px solid var(--kv-color-border); border-radius: var(--kv-radius); background: var(--kv-color-background); font-size: 13.5px; }
-.kvc-activity-text { display: flex; flex-direction: column; gap: 6px; flex: 1 1 auto; min-inline-size: 0; }
+.kvc-activity { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-block: 8px; padding-inline: 12px; border: 1px solid var(--kv-color-border); border-radius: var(--kv-radius); background: var(--kv-color-background); font-size: 13.5px; }
+.kvc-activity-text { display: flex; flex-direction: column; gap: 6px; flex: 1 1 12rem; min-inline-size: 0; }
 .kvc-activity-call { display: flex; flex-direction: column; gap: 2px; }
 .kvc-oneline { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kvc-nowrap { flex: 0 0 auto; white-space: nowrap; }
 .kvc-fold-words { flex: 1 1 auto; text-align: start; }
 .kvc-fold-failed { color: var(--kv-color-danger); }
 .kvc-background-line > summary { display: flex; align-items: center; gap: 6px; min-inline-size: 0; padding-block: 2px; cursor: pointer; list-style: none; }

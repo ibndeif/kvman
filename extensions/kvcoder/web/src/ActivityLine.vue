@@ -43,9 +43,9 @@ const seconds = computed(() => Math.max(0, Math.floor((now.value - props.live.st
       </template>
       <span v-else style="font-weight: 500" dir="auto" data-test="activity-title">{{ title }}</span>
     </span>
-    <span v-if="props.live.calls.length > 0" class="kvc-muted" data-test="activity-phase">{{ kvman.t(`kvcoder.ui.activity.${phase}`) }}</span>
-    <span v-if="soFar" class="kvc-muted" data-test="activity-turn">{{ soFar }}</span>
+    <span v-if="props.live.calls.length > 0" class="kvc-muted kvc-nowrap" data-test="activity-phase">{{ kvman.t(`kvcoder.ui.activity.${phase}`) }}</span>
+    <span v-if="soFar" class="kvc-muted kvc-nowrap" data-test="activity-turn">{{ soFar }}</span>
     <span v-if="props.step" class="kvc-muted kvc-oneline" dir="auto" data-test="activity-step">{{ kvman.t('kvcoder.ui.mapStepNow', { title: props.step }) }}</span>
-    <span class="kvc-muted" data-test="activity-seconds">{{ kvman.t('kvcoder.ui.seconds', { count: seconds }) }}</span>
+    <span class="kvc-muted kvc-nowrap" data-test="activity-seconds">{{ kvman.t('kvcoder.ui.seconds', { count: seconds }) }}</span>
   </div>
 </template>

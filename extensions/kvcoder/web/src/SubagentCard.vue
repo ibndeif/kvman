@@ -51,8 +51,8 @@ const lastCall = computed(() => props.child.live.calls.at(-1)?.label);
     </div>
     <div v-if="running && (headline !== undefined || step !== undefined)" class="kvc-card-row kvc-muted" data-test="subagent-progress">
       <span v-if="headline !== undefined" class="kvc-oneline" dir="auto" style="font-weight: 600" data-test="subagent-headline">{{ headline }}</span>
-      <span v-if="step !== undefined" data-test="subagent-step">{{ step }}</span>
-      <span v-if="elapsed !== undefined" data-test="subagent-elapsed">{{ elapsed }}</span>
+      <span v-if="step !== undefined" class="kvc-nowrap" data-test="subagent-step">{{ step }}</span>
+      <span v-if="elapsed !== undefined" class="kvc-nowrap" data-test="subagent-elapsed">{{ elapsed }}</span>
       <span v-if="lastCall !== undefined" class="kvc-mono kvc-oneline" data-test="subagent-call">{{ lastCall }}</span>
     </div>
     <div v-if="props.child.live.text !== '' || (props.child.turn?.pending.length ?? 0) > 0" class="kvc-card-body">
